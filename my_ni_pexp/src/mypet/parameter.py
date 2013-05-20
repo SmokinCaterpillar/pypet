@@ -24,7 +24,12 @@ class BaseParameter(object):
     
     def set(self, *args):
         raise NotImplementedError( "Should have implemented this" )
-        
+    
+    def explore(self, *args):
+        raise NotImplementedError( "Should have implemented this" )
+    
+    def make_experiment(self, n):
+        raise NotImplementedError( "Should have implemented this" )
         
         
         
@@ -41,6 +46,11 @@ class Parameter(BaseParameter):
     
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
+    #def become_array(self):
+    #    self._isarray = True
+    
+    def become_array(self):
+        self._isarray = True
     
     def __init__(self, name, fullname):
         self._name=name
@@ -75,7 +85,7 @@ class Parameter(BaseParameter):
         return True
         
 
-    def addcomment(self,comment):
+    def add_comment(self,comment):
         ''' Extends the existing comment
         :param comment: The comment as string which is added to the existing comment'''
         if self._comment == Parameter.standard_comment:
@@ -83,11 +93,11 @@ class Parameter(BaseParameter):
         else:
             self._comment = self._comment + '; ' + comment
             
-    def add_attributes(self, attribute_dict):
-        for key, val in attribute_dict.items():
-            if hasattr(self._data[0], key):
-                self._logger.warning('Parameter entry ' + key +' exists, I will replace it.')
-            self.key = val
+#     def add_attributes(self, attribute_dict):
+#         for key, val in attribute_dict.items():
+#             if hasattr(self._data[0], key):
+#                 self._logger.warning('Parameter entry ' + key +' exists, I will replace it.')
+#             self._set_single(key, val)
             
        
     def __setattr__(self,name,value):
@@ -106,7 +116,7 @@ class Parameter(BaseParameter):
             for key, val in valuedict.items():
                 self._set_single(key, val)
         elif len(args) == 2:
-            self._set_single(args[0], val[1])
+            self._set_single(args[0], args[1])
         else:
             raise TypeError('Set takes at max two arguments, but ' +str(len(args)) + ' provided.')
     
@@ -121,11 +131,16 @@ class Parameter(BaseParameter):
         if not type(val) in self._supported_data:
             raise AttributeError('Unsupported data type: ' +str(type(val)))
         elif not self._isarray:
+            if name in self._data[0].__dict__:
+                self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val
         else:
             self._logger.warning('Redefinition of Parameter, the Array will be deleted.')
+            if name in self._data[0].__dict__:
+                self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val;
             del self._data[1:]
+            self._isarray = False
     
     def lock(self):
         self._locked = True;
@@ -136,15 +151,15 @@ class Parameter(BaseParameter):
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
         
         if self._locked:
-            raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is locked!') 
+            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!') 
     
     
         if not type(positions) is list:
             positions = [positions];
             values = [values];
         else:
-            if len(positions) == len(values):
-                raise pex.ParameterModifyExcpetion('Parameter ' + self._name + ': List are not of equal length, positions has ' +len(positions)  +' entries and values ' + len(values) +'.')
+            if not len(positions) == len(values):
+                raise AttributeError('Parameter ' + self._name + ': List are not of equal length, positions has ' +len(positions)  +' entries and values ' + len(values) +'.')
         
         
         
@@ -153,31 +168,31 @@ class Parameter(BaseParameter):
             val = values[idx]
             
             if not len(self._data) >= pos:
-                raise pex.ParameterModifyExcpetion('Parameter ' + self._name + ' does not have ' +str(pos) +' data items.')
+                raise AttributeError('Parameter ' + self._name + ' does not have ' +str(pos) +' data items.')
             
            
             if not hasattr(self._data[0], name):
-                raise pex.ParameterModifyExcpetion('Parameter ' + self._name + ' does not have ' + name +' data.')
+                raise AttributeError('Parameter ' + self._name + ' does not have ' + name +' data.')
             
-            if not val in self._supported_data:
+            if not type(val) in self._supported_data:
                     raise AttributeError()
             
-            default_val = self._data[0].name
+            default_val = self._data[0].__dict__[name]
             
             if not self._values_of_same_type(val,default_val):
-                raise pex.ParameterModifyExcpetion('Parameter ' + self._name + ' has different default type for ' + name)
+                raise AttributeError('Parameter ' + self._name + ' has different default type for ' + name)
             
-            self._data[pos]=val
+            self._data[pos].__dict__[name]=val
             
-    def full_parameter_to_dict(self):
+    def to_list_of_dicts(self):
         
         if not self._isarray:
-            resultdict = self._data[0].__dict__
+            resultdict = self._data[0].__dict__.copy()
         
         else:
             resultdict = []
             for item in self._data:
-                resultdict.append(item.__dict__)
+                resultdict.append(item.__dict__.copy())
         
         return resultdict
     
@@ -189,42 +204,104 @@ class Parameter(BaseParameter):
         return self._locked
         
 
-#     def parameter_to_dict(self):
-#         resultdict = self._data[0].__dict__
-#         
-#         if self._isarray:
-#             for key in resultdict.iterkeys():
-#                 resultdict[key] = [resultdict[key]]
-#                 for dataitem in self._data[1:]:
-#                     resultdict[key] = resultdict[key].append(dataitem.key)
-#         return resultdict
+    def to_dict_of_lists(self):
+        resultdict = self._data[0].__dict__.copy()
+         
+        if self._isarray:
+            for key in resultdict.iterkeys():
+                resultdict[key] = [resultdict[key]]
+                for dataitem in self._data[1:]:
+                    curr_list = resultdict[key]
+                    curr_list.append(dataitem.__dict__[key])
+                    resultdict[key] = curr_list
+        return resultdict
 
+    def explore(self, explore_dict):
+        for key,values in explore_dict.items():
+            if not type(values) is list:
+                raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
+            
+            val=values[0]
+            
+            
+            if not key in self._data[0].__dict__:
+                self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
+            elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
+                self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
+            if  key in self._data[0].__dict__:
+                del self._data[0].__dict__[key]
+            self._set_single(key, val)
+        
+        del self._data[1:]
+        self.become_array()
+        self.add_items_as_dict(explore_dict)
+        self._data = self._data[1:]
     
     
-    def add_item_to_array(self,itemdicts):
+    def add_items_as_dict(self,itemdict):
+        
+        if self._locked:
+            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!') 
+        
+        if not self._isarray:
+            raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
+    
+        if not type(itemdict[itemdict.keys()[0]]) is list:
+            act_length = 1
+        else:
+            act_length = len(itemdict[itemdict.keys()[0]])
+            
+        for key in itemdict.keys():
+            if not key in self._data[0].__dict__:
+                self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
+            if not type(itemdict[key]) is list:
+                itemdict[key] = [list]
+            if not act_length == len(itemdict[key]):
+                raise AttributeError('The entries of the dictionary do not have the same length.')
+        
+        for idx in range(act_length):
+            newdata = Parameter.Data();
+            
+            for key, val in self._data[0].__dict__.items():
+                if not key in itemdict:
+                    itemdict[key] = [val for idy in range(act_length)]
+                else:
+                    newval = itemdict[key][idx];
+                    if not self._values_of_same_type(val,newval):
+                        raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
+                    
+                newdata.__dict__[key] = itemdict[key][idx]
+            
+            self._data.append(newdata) 
+          
+    
+    def add_items_as_list(self,itemdicts):
+        
+        if self._locked:
+            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!') 
          
         if not self._isarray:
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
         
         if not type(itemdicts) is list:
             itemdicts = [itemdicts]
-        
-        for key in itemdicts.keys:
-            if not key in self._data[0]:
-                self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
+    
         
         for itemdict in itemdicts:
+            for key in itemdict.keys():
+                if not key in self._data[0].__dict__:
+                    self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
             newdata = Parameter.Data();
             
             for key, val in self._data[0].__dict__.items():
-                if not itemdict.haskey(key):
+                if not key in itemdict:
                     itemdict[key] = val
                 else:
                     newval = itemdict[key];
                     if not self._values_of_same_type(val,newval):
-                        raise pex.ParameterModifyExcpetion('Parameter ' + self._name + ' has different default type for ' + key)
+                        raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
                     
-                newdata.key = itemdict[key]
+                newdata.__dict__[key] = itemdict[key]
             
             self._data.append(newdata)
      
@@ -313,11 +390,11 @@ class Parameter(BaseParameter):
         
                 
     
-    def parameter_to_dict(self):
-        if self._accesspointer <= len(self._data):
+    def to_dict(self):
+        if self._accesspointer >= len(self._data):
             raise IndexError('Accesspointer of explored Parameter points to a wrong entity')
         
-        return self._data[self._accesspointer].__dict__
+        return self._data[self._accesspointer].__dict__.copy()
         
     def get(self, name):
         if  not hasattr(self._data[0],name):

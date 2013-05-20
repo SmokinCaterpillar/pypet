@@ -3,7 +3,7 @@ Created on 17.05.2013
 
 @author: robert
 '''
-class ParamterLockedException(Exception):
+class ParameterLockedException(Exception):
     '''Exception raised if someone tries to modify a locked Parameter'''
     def __init__(self,msg):
         self._msg=msg
@@ -19,11 +19,11 @@ class ParameterNotArrayException(Exception):
     def __str__(self):
         return repr(self._msg)
     
-class ParameterModifyExcpetion(Exception):
-    '''Exception raised if someone tries to modify a Parameter Array Value which is not existent or does not fit'''
-    def __init__(self,msg):
-        self._msg=msg
-        
-    def __str__(self):
-        return repr(self._msg)
+# class ParameterModifyExcpetion(Exception):
+#     '''Exception raised if someone tries to modify a Parameter Array Value which is not existent or does not fit'''
+#     def __init__(self,msg):
+#         self._msg=msg
+#         
+#     def __str__(self):
+#         return repr(self._msg)
     
