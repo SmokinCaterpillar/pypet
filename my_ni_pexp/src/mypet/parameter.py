@@ -10,13 +10,26 @@ import tables as pt
 import numpy as np
 
 
-
+class BaseParameter(object):
+    
+    
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        raise NotImplementedError( "Should have implemented this" )
+    
+    def open_hdf5_and_create_group(self, filepath, pregroup):
+        raise NotImplementedError( "Should have implemented this" )
+    
+    def __init__(self, name, fullname):
+        raise NotImplementedError( "Should have implemented this" )
+    
+    def set(self, *args):
+        raise NotImplementedError( "Should have implemented this" )
         
         
         
         
 
-class Parameter(object):
+class Parameter(BaseParameter):
     ''' The standard Parameter that handles creation and access to Simulation Parameters '''
     
     
@@ -30,7 +43,6 @@ class Parameter(object):
 
     
     def __init__(self, name, fullname):
-        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self.name)
         self._name=name
         self._fullname = fullname
         self._locked=False
@@ -39,7 +51,7 @@ class Parameter(object):
         self._isarray = False
         self._accesspointer = 0
         
-        
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._name)
         
         self._supported_data = self._get_supported_data()
         
@@ -89,7 +101,7 @@ class Parameter(object):
         
         if len(args) == 1:
             valuedict = args[0]
-            if not valuedict is dict:
+            if not type(valuedict) is dict:
                 raise AttributeError('Input is not a dictionary.')
             for key, val in valuedict.items():
                 self._set_single(key, val)
@@ -99,20 +111,20 @@ class Parameter(object):
             raise TypeError('Set takes at max two arguments, but ' +str(len(args)) + ' provided.')
     
     def _set_single(self,name,val):
-        if self._islocked:
+        if self._locked:
             raise pex.ParamterLockedException('Parameter ' + self._name + ' is locked!')
         
-        if name == 'comment':
+        if name == 'Comment':
             self._comment = val
             return
 
-        if not val in self._supported_data:
+        if not type(val) in self._supported_data:
             raise AttributeError('Unsupported data type: ' +str(type(val)))
         elif not self._isarray:
-            self._data[0].key = val
+            self._data[0].__dict__[name] = val
         else:
             self._logger.warning('Redefinition of Parameter, the Array will be deleted.')
-            self._data[0].key = val;
+            self._data[0].__dict__[name] = val;
             del self._data[1:]
     
     def lock(self):
@@ -127,7 +139,7 @@ class Parameter(object):
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is locked!') 
     
     
-        if not positions is list:
+        if not type(positions) is list:
             positions = [positions];
             values = [values];
         else:
@@ -186,13 +198,15 @@ class Parameter(object):
 #                 for dataitem in self._data[1:]:
 #                     resultdict[key] = resultdict[key].append(dataitem.key)
 #         return resultdict
+
+    
     
     def add_item_to_array(self,itemdicts):
          
         if not self._isarray:
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
         
-        if not itemdicts is list:
+        if not type(itemdicts) is list:
             itemdicts = [itemdicts]
         
         for key in itemdicts.keys:
@@ -306,12 +320,12 @@ class Parameter(object):
         return self._data[self._accesspointer].__dict__
         
     def get(self, name):
-        if  not self._data[0].hasKey(name):
+        if  not hasattr(self._data[0],name):
             raise AttributeError('Parameter ' + self._name + ' does not have attribute ' + name +'.')
-        if self._accesspointer <= len(self._data):
+        if self._accesspointer >= len(self._data):
             raise IndexError('Accesspointer is beyond the parameter values')
         
-        return self._data[self._accesspointer].name
+        return self._data[self._accesspointer].__dict__[name]
         
     
     def __getattr__(self,name):
