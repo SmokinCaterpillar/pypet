@@ -8,6 +8,8 @@ import logging
 import petexceptions as pex
 import tables as pt
 import numpy as np
+import scipy.sparse as spsp
+from numpy.numarray.numerictypes import IsType
 
 
 class BaseParameter(object):
@@ -16,8 +18,7 @@ class BaseParameter(object):
     def store_to_hdf5(self,hdf5file,hdf5group):
         raise NotImplementedError( "Should have implemented this" )
     
-    def open_hdf5_and_create_group(self, filepath, pregroup):
-        raise NotImplementedError( "Should have implemented this" )
+    def load_from_hdf5(self,hdf5file,hdf5group):
     
     def __init__(self, name, fullname):
         raise NotImplementedError( "Should have implemented this" )
@@ -28,7 +29,7 @@ class BaseParameter(object):
     def explore(self, *args):
         raise NotImplementedError( "Should have implemented this" )
     
-    def make_experiment(self, n):
+    def get_next(self, n):
         raise NotImplementedError( "Should have implemented this" )
         
         
@@ -97,11 +98,6 @@ class Parameter(BaseParameter):
         else:
             self._comment = self._comment + '; ' + comment
             
-#     def add_attributes(self, attribute_dict):
-#         for key, val in attribute_dict.items():
-#             if hasattr(self._data[0], key):
-#                 self._logger.warning('Parameter entry ' + key +' exists, I will replace it.')
-#             self._set_single(key, val)
             
        
     def __setattr__(self,name,value):
@@ -313,7 +309,7 @@ class Parameter(BaseParameter):
             
             self._data.append(newdata)
      
-    def get_longest_stringsize(self,key):   
+    def _get_longest_stringsize(self,key):   
 
         maxlength = 0
         for dataitem in self._data:
@@ -322,32 +318,32 @@ class Parameter(BaseParameter):
         return maxlength
         
           
-    def make_description(self):
+    def _make_description(self):
         
         descriptiondict={}
         
         for key, val in self._data[0].__dict__.items():
             
-            valtype = type(val)
+            #valtype = type(val)
                        
-            if valtype is int:
+            if isinstance(val, int):
                 descriptiondict[key] = pt.IntCol()
-            elif valtype is float:
+            elif isinstance(val, float):
                 descriptiondict[key] = pt.Float64Col()
-            elif valtype is bool:
+            elif isinstance(val, bool):
                 descriptiondict[key] = pt.BoolCol()
-            elif valtype is str:
-                itemsize = int(self.get_longest_stringsize(key) * 1.5)
+            elif isinstance(val, str):
+                itemsize = int(self._get_longest_stringsize(key) * 1.5)
                 descriptiondict[key] = pt.StringCol(itemsize=itemsize)
-            elif valtype is np.ndarray:
+            elif isinstance(val, np.ndarray):
                 valdtype = val.dtype
                 valshape = np.shape(val)
                 
-                if valdtype == int:
+                if np.issubdtype(valdtype, int):
                     descriptiondict[key] = pt.IntCol(shape=valshape)
-                elif valdtype == float:
+                elif np.issubdtype(valdtype, float):
                     descriptiondict[key] = pt.Float64Col(shape=valshape)
-                elif valdtype == bool:
+                elif np.issubdtype(valdtype, bool):
                     descriptiondict[key] = pt.BoolCol(shape=valshape)
                 else:
                     self._logger.error('You should NOT be here, something is wrong!')
@@ -356,28 +352,12 @@ class Parameter(BaseParameter):
                 
         return descriptiondict
                     
-        
-#     def open_hdf5_and_create_group(self, filepath, pregroup):
-#         hdf5file = pt.File(filename=filepath, mode='a',rootUEP=pregroup)
-# 
-#         self.store_to_hdf5(hdf5file, '/') 
-#         
-#         hdf5file.close()       
+            
     
     def store_to_hdf5(self,hdf5file,hdf5group):
         
         
-        #hdf5file = pt.File()
-        
-#         if not hdf5file is pt.File:
-#             raise TypeError('File is not hdf5 file.')
-#         
-#         if not hdf5group is pt.Group:
-#             raise TypeError('Group is not hdf5group.')
-        
-        #hdf5paramgroup= hdf5file.createGroup(where=hdf5group, name=self._name, title=self._name)
-        
-        tabledict = self.make_description()
+        tabledict = self._make_description()
 
         table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
         
@@ -429,7 +409,157 @@ class Parameter(BaseParameter):
     def __getattr__(self,name):
         #self._accessedfrom = self._accessname
         return self.get(name)
+ 
+ 
+    
+     
+
+
+
+
+class SparseParameter(Parameter):
+    
+
+    
+    def _is_supported_data(self, data):
+        ''' Simply checks if data is supported '''
+        if type(data) in [np.ndarray, int, str, float, bool]:
+            return True
+        if spsp.issparse(data):
+            return True
+        return False
+    
+    def _make_description(self):
         
+        descriptiondict={}
+        
+        for key, val in self._data[0].__dict__.items():
+            
+            #valtype = type(val)
+                       
+            if isinstance(val, int):
+                descriptiondict[key] = pt.IntCol()
+            elif isinstance(val, float):
+                descriptiondict[key] = pt.Float64Col()
+            elif isinstance(val, bool):
+                descriptiondict[key] = pt.BoolCol()
+            elif isinstance(val, str):
+                itemsize = int(self._get_longest_stringsize(key) * 1.5)
+                descriptiondict[key] = pt.StringCol(itemsize=itemsize)
+            elif isinstance(val, np.ndarray):
+                valdtype = val.dtype
+                valshape = np.shape(val)
+                
+                if np.issubdtype(valdtype, int):
+                    descriptiondict[key] = pt.IntCol(shape=valshape)
+                elif np.issubdtype(valdtype, float):
+                    descriptiondict[key] = pt.Float64Col(shape=valshape)
+                elif np.issubdtype(valdtype, bool):
+                    descriptiondict[key] = pt.BoolCol(shape=valshape)
+                else:
+                    self._logger.error('You should NOT be here, something is wrong!')
+            elif spsp.issparse(val):
+                
+                sparsedict={}
+                #val = spsp.lil_matrix(100,100)
+                valformat = val.format
+                sparsedict['format']=pt.StringCol(3)
+                val = val.tocsr()
+                data_list= [ val.data,val.indptr,val.indices]
+                idx_list = ['data', 'indptr','indices']
+                for idx, dat in enumerate(data_list):
+                    sidx = idx_list[idx]
+                    valdtype = dat.dtype
+                    valshape = dat.shape
+                    if np.issubdtype(valdtype,int):
+                        sparsedict[sidx] = pt.IntCol(shape=valshape)
+                    elif np.issubdtype(valdtype, float):
+                        sparsedict[sidx] = pt.Float64Col(shape=valshape)
+                    elif np.issubdtype(valdtype, bool):
+                        sparsedict[sidx] = pt.BoolCol(shape=valshape)
+                    else:
+                        self._logger.error('You should NOT be here, something is wrong!')
+                        
+                descriptiondict[key]=sparsedict
+                    
+                
+            else:
+                self._logger.error('You should NOT be here, something is wrong!')
+            
+                
+        return descriptiondict
+                         
+    
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        
+        
+        
+        tabledict = self._make_description()
+
+        table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
+        
+        for item in self._data:
+            newrow = table.row
+            for key, val in item.__dict__.items():
+                if not spsp.issparse(val):
+                    newrow[key] = val
+                else:
+                    val = val.tocsr()
+                    newrow[key+'/format'] = val.format
+                    newrow[key+'/data'] = val.data
+                    newrow[key+'/indptr'] = val.indptr
+                    newrow[key+'/indices'] = val.indices
+
+                    
+            
+            newrow.append()
+        
+        table.flush()
+        
+        commentlength = int(len(self._comment)*1.5)
+        infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
+                   'Full_Name': pt.StringCol(self._string_length_large(self._fullname)), 
+                   'Comment':pt.StringCol(self._string_length_large(self._comment)),
+                   'Type':pt.StringCol(self._string_length_large(str(type(self)))),
+                   'Constructor': pt.StringCol(self._string_length_large('Parameter'))}
+        ctable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
+        newrow = ctable.row
+        newrow['Name'] = self._name
+        newrow['Full_Name'] = self._fullname
+        newrow['Comment'] = self._comment
+        newrow['Type'] = str(type(self))
+        newrow['Constructor'] = str('SparseParameter')
+        newrow.append()
+        
+        ctable.flush()
+
+
+    def _values_of_same_type(self,val1, val2):
+        if not type(val1) == type(val2):
+            return False
+        
+        if type(val1) == np.array:
+            if not val1.dtype == val2.dtype:
+                return False
+            
+            if not np.shape(val1)==np.shape(val2):
+                return False
+        
+        if spsp.issparse(val1):
+            if not val1.format == val2.format:
+                return False
+            if not val1.dtype == val2.dtype:
+                return False
+            if not val1.shape == val2.shape:
+                return False
+            if not len(val1.nonzero()[0]) == len(val2.nonzero()[0]):
+                return False
+
+        return True
+        
+
+
+
 
 # 
 # class DerivedParameter(Parameter): 

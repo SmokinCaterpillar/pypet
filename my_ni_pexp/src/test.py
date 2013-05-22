@@ -6,6 +6,7 @@ Created on 20.05.2013
 from mypet.parameter import *
 from mypet.trajectory import *
 import numpy as np
+import scipy.sparse as spsp
 
 
 def main():
@@ -49,6 +50,11 @@ def main():
     print traj.Parameters.test.testparam.to_dict_of_lists()
     
     print traj.Parameters.test.testparam.to_list_of_dicts()
+    
+    lilma = spsp.lil_matrix((10000,1000))
+    lilma[0,100] = 555
+    traj.add_parameter('test.sparseparam', {'Fuechse2':lilma}, param_type=SparseParameter)
+
     
     traj.store_to_hdf5()
     
