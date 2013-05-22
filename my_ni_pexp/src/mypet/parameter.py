@@ -32,8 +32,8 @@ class BaseParameter(object):
     def get_next(self, n):
         raise NotImplementedError( "Should have implemented this" )
         
-        
-        
+    def get_constructor_name(self):  
+        raise NotImplementedError( "Should have implemented this" )
 
 class Parameter(BaseParameter):
     ''' The standard Parameter that handles creation and access to Simulation Parameters '''
@@ -49,6 +49,8 @@ class Parameter(BaseParameter):
 
     #def become_array(self):
     #    self._isarray = True
+    def get_constructor_name(self): 
+        return self._constructor
     
     def become_array(self):
         self._isarray = True
@@ -61,6 +63,7 @@ class Parameter(BaseParameter):
         self._data=[Parameter.Data()]
         self._isarray = False
         self._accesspointer = 0
+        self._constructor='Parameter'
         
         #self._accessname = accessname
         
@@ -376,16 +379,42 @@ class Parameter(BaseParameter):
                    'Comment':pt.StringCol(self._string_length_large(self._comment)),
                    'Type':pt.StringCol(self._string_length_large(str(type(self)))),
                    'Constructor': pt.StringCol(self._string_length_large('Parameter'))}
-        ctable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
-        newrow = ctable.row
+        infotable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
+        newrow = infotable.row
         newrow['Name'] = self._name
         newrow['Full_Name'] = self._fullname
         newrow['Comment'] = self._comment
         newrow['Type'] = str(type(self))
-        newrow['Constructor'] = str('Parameter')
+        newrow['Constructor'] = self._constructor
         newrow.append()
         
-        ctable.flush()
+        infotable.flush()
+        
+    def load_from_hdf5(self, hdf5group):
+        
+        assert isinstance(hdf5group,pt.Group)
+        
+        infotable = hdf5group.Info
+        
+        assert isinstance(infotable,pt.Table)
+        
+        inforow = infotable[0]
+
+        self._comment = inforow['Comment']
+        
+        table = hdf5group.getAttr(self._name)
+        assert isinstance(table,pt.Table)
+        
+        nrows = table.nrows
+        
+        dataitem = table[0]
+        self.set(dataitem)
+        
+        if nrows > 1:
+            self.become_array()
+            itemlist = [ dataitem in table.iterrows(start=1)]
+            self.add_items_as_list(itemlist)
+        
     
     def _string_length_large(self,string):  
         return  int(len(self._comment)*1.5)
@@ -419,7 +448,9 @@ class Parameter(BaseParameter):
 
 class SparseParameter(Parameter):
     
-
+    def __init__(self,name,fullname):
+        super(SparseParameter,self)__init__(name,fullname)
+        self._constructor='SparseParameter'
     
     def _is_supported_data(self, data):
         ''' Simply checks if data is supported '''
@@ -492,8 +523,6 @@ class SparseParameter(Parameter):
     
     def store_to_hdf5(self,hdf5file,hdf5group):
         
-        
-        
         tabledict = self._make_description()
 
         table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
@@ -522,16 +551,16 @@ class SparseParameter(Parameter):
                    'Comment':pt.StringCol(self._string_length_large(self._comment)),
                    'Type':pt.StringCol(self._string_length_large(str(type(self)))),
                    'Constructor': pt.StringCol(self._string_length_large('Parameter'))}
-        ctable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
-        newrow = ctable.row
+        infotable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
+        newrow = infotable.row
         newrow['Name'] = self._name
         newrow['Full_Name'] = self._fullname
         newrow['Comment'] = self._comment
         newrow['Type'] = str(type(self))
-        newrow['Constructor'] = str('SparseParameter')
+        newrow['Constructor'] = self._constructor
         newrow.append()
         
-        ctable.flush()
+        infotable.flush()
 
 
     def _values_of_same_type(self,val1, val2):
@@ -558,35 +587,3 @@ class SparseParameter(Parameter):
         return True
         
 
-
-
-
-# 
-# class DerivedParameter(Parameter): 
-#     
-#     def __init__(self,name,fullname,listofparents):
-#         super(DerivedParameter,self).__init__(name,fullname):
-#             self._listofparents=listofparents
-#      
-#     def become_array(self):
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#         
-#         
-#     def change_values_in_array(self,name,values,positions):  
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#         
-#     
-#     def to_list_of_dicts(self):
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#             
-#     def to_dict_of_lists(self):  
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#         
-#     def explore(self, explore_dict):  
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#     
-#     def add_items_as_dict(self,itemdict):
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
-#         
-#     def add_items_as_list(self,itemdicts):
-#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
