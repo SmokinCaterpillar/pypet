@@ -61,15 +61,19 @@ class Parameter(BaseParameter):
         self._isarray = False
         self._accesspointer = 0
         
+        #self._accessname = accessname
+        
+        #self._accessedfrom = None
+        
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._name)
         
-        self._supported_data = self._get_supported_data()
+        
         
         self._logger.debug('Created the Parameter ' + self._name)
 
-    def _get_supported_data(self):
-        ''' Simply returns the supported data types can be extended if wished '''
-        return [np.ndarray, int, str, float, bool]
+    def _is_supported_data(self, data):
+        ''' Simply checks if data is supported '''
+        return type(data) in [np.ndarray, int, str, float, bool]
     
     def _values_of_same_type(self,val1, val2):
         if not type(val1) == type(val2):
@@ -128,14 +132,14 @@ class Parameter(BaseParameter):
             self._comment = val
             return
 
-        if not type(val) in self._supported_data:
+        if not self._is_supported_data(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
         elif not self._isarray:
             if name in self._data[0].__dict__:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val
         else:
-            self._logger.warning('Redefinition of Parameter, the Array will be deleted.')
+            self._logger.warning('Redefinition of Parameter, the array will be deleted.')
             if name in self._data[0].__dict__:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val;
@@ -144,6 +148,8 @@ class Parameter(BaseParameter):
     
     def lock(self):
         self._locked = True;
+        
+    
         
     def change_values_in_array(self,name,values,positions):  
         
@@ -174,7 +180,7 @@ class Parameter(BaseParameter):
             if not hasattr(self._data[0], name):
                 raise AttributeError('Parameter ' + self._name + ' does not have ' + name +' data.')
             
-            if not type(val) in self._supported_data:
+            if not self._is_supported_data(val):
                     raise AttributeError()
             
             default_val = self._data[0].__dict__[name]
@@ -217,6 +223,8 @@ class Parameter(BaseParameter):
         return resultdict
 
     def explore(self, explore_dict):
+        if self._locked:
+            self._logger.warning('Parameter ' + self._name + 'is locked, but I will allow exploration.')
         for key,values in explore_dict.items():
             if not type(values) is list:
                 raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
@@ -309,16 +317,16 @@ class Parameter(BaseParameter):
 
         maxlength = 0
         for dataitem in self._data:
-            maxlength = max(len(dataitem.key),maxlength)
+            maxlength = max(len(dataitem.__dict__[key]),maxlength)
         
         return maxlength
         
           
-    def make_descripion(self):
+    def make_description(self):
         
         descriptiondict={}
         
-        for key, val in self._data[0].items():
+        for key, val in self._data[0].__dict__.items():
             
             valtype = type(val)
                        
@@ -345,19 +353,21 @@ class Parameter(BaseParameter):
                     self._logger.error('You should NOT be here, something is wrong!')
             else:
                 self._logger.error('You should NOT be here, something is wrong!')
+                
+        return descriptiondict
                     
         
-    def open_hdf5_and_create_group(self, filepath, pregroup):
-        hdf5file = pt.File(filename=filepath, mode='a',rootUEP=pregroup)
-
-        self.store_to_hdf5(hdf5file, '/') 
-        
-        hdf5file.close()       
+#     def open_hdf5_and_create_group(self, filepath, pregroup):
+#         hdf5file = pt.File(filename=filepath, mode='a',rootUEP=pregroup)
+# 
+#         self.store_to_hdf5(hdf5file, '/') 
+#         
+#         hdf5file.close()       
     
     def store_to_hdf5(self,hdf5file,hdf5group):
         
         
-        hdf5file = pt.File()
+        #hdf5file = pt.File()
         
 #         if not hdf5file is pt.File:
 #             raise TypeError('File is not hdf5 file.')
@@ -365,14 +375,14 @@ class Parameter(BaseParameter):
 #         if not hdf5group is pt.Group:
 #             raise TypeError('Group is not hdf5group.')
         
-        hdf5paramgroup= hdf5file.createGroup(where=hdf5group, name=self._name, title=self._name)
+        #hdf5paramgroup= hdf5file.createGroup(where=hdf5group, name=self._name, title=self._name)
         
-        tabledict = self.make_descritpion()
+        tabledict = self.make_description()
 
-        table = hdf5file.createTable(where=hdf5paramgroup, name=self._name, description=tabledict, title=self._name);
+        table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
         
         for item in self._data:
-            newrow = table.row()
+            newrow = table.row
             for key, val in item.__dict__.items():
                 newrow[key] = val
             
@@ -381,13 +391,24 @@ class Parameter(BaseParameter):
         table.flush()
         
         commentlength = int(len(self._comment)*1.5)
-        ctable=hdf5file.createTable(where=hdf5paramgroup, name='Comment', description={'Comment':pt.StringCol(commentlength)}, title='Comment')
-        newrow = ctable.row();
-        newrow['comment'] = self._comment
+        infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
+                   'Full_Name': pt.StringCol(self._string_length_large(self._fullname)), 
+                   'Comment':pt.StringCol(self._string_length_large(self._comment)),
+                   'Type':pt.StringCol(self._string_length_large(str(type(self)))),
+                   'Constructor': pt.StringCol(self._string_length_large('Parameter'))}
+        ctable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
+        newrow = ctable.row
+        newrow['Name'] = self._name
+        newrow['Full_Name'] = self._fullname
+        newrow['Comment'] = self._comment
+        newrow['Type'] = str(type(self))
+        newrow['Constructor'] = str('Parameter')
         newrow.append()
         
         ctable.flush()
-        
+    
+    def _string_length_large(self,string):  
+        return  int(len(self._comment)*1.5)
                 
     
     def to_dict(self):
@@ -406,10 +427,36 @@ class Parameter(BaseParameter):
         
     
     def __getattr__(self,name):
+        #self._accessedfrom = self._accessname
         return self.get(name)
         
-            
-        
-            
-           
-        
+
+# 
+# class DerivedParameter(Parameter): 
+#     
+#     def __init__(self,name,fullname,listofparents):
+#         super(DerivedParameter,self).__init__(name,fullname):
+#             self._listofparents=listofparents
+#      
+#     def become_array(self):
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#         
+#         
+#     def change_values_in_array(self,name,values,positions):  
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#         
+#     
+#     def to_list_of_dicts(self):
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#             
+#     def to_dict_of_lists(self):  
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#         
+#     def explore(self, explore_dict):  
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#     
+#     def add_items_as_dict(self,itemdict):
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
+#         
+#     def add_items_as_list(self,itemdicts):
+#         raise pex.ParameterOperationNotSupportedException('DerivedParameters do not support arrays')
