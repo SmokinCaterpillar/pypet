@@ -9,10 +9,13 @@ import numpy as np
 import scipy.sparse as spsp
 
 
+
 def main():
     
     logging.basicConfig(level=logging.DEBUG)
     traj = Trajectory('MyTrajectory','../experiments/test.hdf5')
+    
+    traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
     traj.add_parameter('test.testparam', {'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
 
@@ -51,10 +54,19 @@ def main():
     
     print traj.Parameters.test.testparam.to_list_of_dicts()
     
+    print traj.Parameters.test.testparam.get_class_name()
+    
     lilma = spsp.lil_matrix((10000,1000))
     lilma[0,100] = 555
     traj.add_parameter('test.sparseparam', {'Fuechse2':lilma}, param_type=SparseParameter)
+    
+    print traj.Parameters.test.sparseparam.get_class_name()
+    
+    
+    traj.add_derived_parameter('test.sparseparam', {'Fuechse2':lilma*2}, param_type=SparseParameter)
 
+    print traj.DerivedParameters.pwt.test.sparseparam.Fuechse2
+    
     
     traj.store_to_hdf5()
     
