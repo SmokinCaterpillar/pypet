@@ -67,6 +67,8 @@ class Trajectory(object):
         self._dynamic_imports=['mypet.parameter.SparseParameter']
         self._dynamic_imports.append(dynamicly_imported_classes)
         
+        self._loadedfrom = 'None'
+        
         
         
 #         try:
@@ -186,15 +188,22 @@ class Trajectory(object):
         
         assert isinstance(hdf5file,pt.File)
         
+        loaddict = {'Trajectory' : pt.StringCol(self.MAX_NAME_LENGTH),
+                    'Filename' : pt.StringCol(self.MAX_NAME_LENGTH)}
+        
         descriptiondict={'Name': pt.StringCol(len(self._name)), 
                          'Timestamp': pt.StringCol(len(self._time)),
-                         'Comment': pt.StringCol(len(self._comment))}
+                         'Comment': pt.StringCol(len(self._comment)),
+                         'Loaded_From': loaddict.copy()}
         
         infotable = hdf5file.createTable(where=trajectorygroup, name='Info', description=descriptiondict, title='Info')
         newrow = infotable.row
         newrow['Name']=self._name
         newrow['Timestamp']=self._time
         newrow['Comment']=self._comment
+        newrow['Loaded_From/Trajectory']=self._loadedfrom[0]
+        newrow['Loaded_From/Filename']=self._loadedfrom[1]
+        
         newrow.append()
         infotable.flush()
         
@@ -219,10 +228,14 @@ class Trajectory(object):
         
     def load_trajectory(self, trajectoryname, filename = None, load_derived_params = True, load_results = True):  
         
+        
+        
         if filename:
             openfilename = filename
         else:
             openfilename = self._filename
+            
+        self._loadedfrom = (trajectoryname,os.path.abspath(openfilename))
             
         if not os.path.isfile(openfilename):
             raise AttributeError('Filename ' + openfilename + ' does not exist.')
@@ -242,6 +255,9 @@ class Trajectory(object):
         if load_results:
             self._load_results(trajectorygroup)
     
+    def _load_results(self,trajectorygroup):
+        pass #TODO: Write that bitch
+        
     def _create_class(self,class_name):
         try:
             new_class = eval(class_name)
@@ -254,9 +270,14 @@ class Trajectory(object):
                 raise ImportError('Could not create the class named ' + class_name)
     
     def _load_params(self,trajectorygroup):
-        
         paramtable = trajectorygroup.ParameterTable
+        self._load_any_param(paramtable,trajectorygroup)
         
+    def _load_derived_params(self,trajectorygroup):
+        paramtable = trajectorygroup.DerivedParameterTable
+        self._load_any_param(paramtable,trajectorygroup)
+        
+    def _load_any_param(self,paramtable,trajectorygroup):
         assert isinstance(paramtable,pt.Table)
         
         for row in paramtable.iterrows():
@@ -272,12 +293,15 @@ class Trajectory(object):
             
             paraminstance = new_class(name,fullname)
             
-            paramgroup = eval('trajectorygroup.' + fullname)
+            where = 'trajectorygroup.' + fullname
+            paramgroup = eval(where)
             
             assert isinstance(paraminstance, BaseParameter)
             paraminstance.load_from_hdf5(paramgroup)
             
             self._parameters[fullname]=paraminstance
+            
+            self._add_to_tree(fullname, paraminstance)
                 
     def _load_meta_data(self,trajectorygroup): 
         

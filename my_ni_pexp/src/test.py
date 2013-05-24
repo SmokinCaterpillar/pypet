@@ -15,7 +15,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     traj = Trajectory('MyTrajectory','../experiments/test.hdf5')
     
-    traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
+    #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
     traj.add_parameter('test.testparam', {'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
 
@@ -58,19 +58,27 @@ def main():
     
     lilma = spsp.lil_matrix((10000,1000))
     lilma[0,100] = 555
+    lilma[9999,999] = 11
     traj.add_parameter('test.sparseparam', {'Fuechse2':lilma}, param_type=SparseParameter)
     
     print traj.Parameters.test.sparseparam.get_class_name()
     
     
     traj.add_derived_parameter('test.sparseparam', {'Fuechse2':lilma*2}, param_type=SparseParameter)
-
-    print traj.DerivedParameters.pwt.test.sparseparam.Fuechse2
     
+    sparseparam = traj.DerivedParameters.pwt.test.sparseparam
+    
+    sparseparam.become_array()
+
+    sparseparam.add_items_as_dict({'Fuechse2' : [lilma*3, lilma*4]})
+
+    print sparseparam.Fuechse2
+    
+    print len(sparseparam)
     
     traj.store_to_hdf5()
     
-    print type(traj.Parameters.test.testparam)
+    print type(sparseparam)
 
 if __name__ == '__main__':
     main()

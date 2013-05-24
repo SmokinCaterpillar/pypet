@@ -15,12 +15,13 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     traj = Trajectory('MyTrajectory','../experiments/test.hdf5')
     
-    traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
+    traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_24_16h32m01s',filename='../experiments/load.hdf5')
     
+    print type(traj.Parameters.test.testparam)
     
     traj.store_to_hdf5()
     
-    print type(traj.Parameters.test.testparam)
+ 
 
 if __name__ == '__main__':
     main()

@@ -43,6 +43,9 @@ class BaseParameter(object):
     def get_name(self):
         return (self._name,self._fullname)
     
+    def __len__(self):
+        raise NotImplementedError( "Should have implemented this" )
+    
 class Parameter(BaseParameter):
     ''' The standard Parameter that handles creation and access to Simulation Parameters '''
     
@@ -75,6 +78,8 @@ class Parameter(BaseParameter):
         self._logger.debug('Created the Parameter ' + self._name)
 
 
+    def __len__(self):
+        return len(self._data)
 
     
     def become_array(self):
@@ -258,7 +263,7 @@ class Parameter(BaseParameter):
         if not self._isarray:
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
     
-        if not type(itemdict[itemdict.keys()[0]]) is list:
+        if not isinstance(itemdict[itemdict.keys()[0]], list):
             act_length = 1
         else:
             act_length = len(itemdict[itemdict.keys()[0]])
@@ -266,7 +271,7 @@ class Parameter(BaseParameter):
         for key in itemdict.keys():
             if not key in self._data[0].__dict__:
                 self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
-            if not type(itemdict[key]) is list:
+            if not isinstance(itemdict[key],list):
                 itemdict[key] = [list]
             if not act_length == len(itemdict[key]):
                 raise AttributeError('The entries of the dictionary do not have the same length.')
@@ -295,7 +300,7 @@ class Parameter(BaseParameter):
         if not self._isarray:
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
         
-        if not type(itemdicts) is list:
+        if not isinstance(itemdicts,list):
             itemdicts = [itemdicts]
     
         
@@ -445,20 +450,6 @@ class Parameter(BaseParameter):
             list_data  =[a for a in col_data]
         return list_data
 
-#     def _convert_to_data(self,col_data):
-#         assert isinstance(col_data,pt.Col)
-#         
-#         valdtype = col_data.dtype
-#         value = col_data[:]
-#         if col_data.shape
-#         
-#             if np.issubdtype(valdtype, int):
-#                         if not=col_data.shape
-#                             
-#             if np.issubdtype(valdtype, float):###TODOOO
-#                         return pt.Float64Col(shape=valshape)
-#             if np.issubdtype(valdtype, bool):
-#                         return pt.BoolCol(shape=valshape)
         
     
     def _string_length_large(self,string):  
@@ -508,9 +499,14 @@ class SparseParameter(Parameter):
                 #val = spsp.lil_matrix(100,100)
                 valformat = val.format
                 sparsedict['format']=pt.StringCol(3)
+                sparsedict['storedformat']=pt.StringCol(3)
                 val = val.tocsr()
-                data_list= [ val.data,val.indptr,val.indices]
-                idx_list = ['data', 'indptr','indices']
+                
+                shape = np.shape(val)
+                shape = np.array(shape)
+                data_list= [ val.data,val.indptr,val.indices,shape]
+                
+                idx_list = ['data', 'indptr','indices','shape']
                 for idx, dat in enumerate(data_list):
                     sidx = idx_list[idx]
                     valdtype = dat.dtype
@@ -529,21 +525,25 @@ class SparseParameter(Parameter):
             return super(SparseParameter,self)._get_table_col(key,val)
                          
     def _store_single_item(self,row,key,val):
-        val = val.tocsr()
         row[key+'/format'] = val.format
+        val = val.tocsr()
+        row[key+'/storedformat'] = val.format
         row[key+'/data'] = val.data
         row[key+'/indptr'] = val.indptr
         row[key+'/indices'] = val.indices
+        shape = np.shape(val)
+        shape = np.array(shape)
+        row[key+'/shape'] = shape
     
 
 
     def _values_of_same_type(self,val1, val2):
-        if not super(SparseParameter,self)._values_of_same_type(self,val1, val2):
+        if not super(SparseParameter,self)._values_of_same_type(val1, val2):
             return False
         
         if spsp.issparse(val1):
-            if not val1.format == val2.format:
-                return False
+            #if not val1.format == val2.format:
+            #    return False
             if not val1.dtype == val2.dtype:
                 return False
             if not val1.shape == val2.shape:
@@ -553,9 +553,49 @@ class SparseParameter(Parameter):
 
         return True
     
-    
-    def load_from_hdf5(self, hdf5group):
-        pass
+
+      
+    def _load_single_col(self,table,colname):
+        assert isinstance(table, pt.Table)
+        
+        col = table.col(colname)
+        
+        coldtype = col.dtype
+        
+        if len(coldtype)>1:
+            arformat = col['format']
+            ardata = col['data']
+            arindptr= col['indptr']
+            arindices = col['indices']
+            arshape = col['shape']
+            arstoredformat=col['storedformat']
+            
+            sparsematlist = []
+            for idx in range(len(arformat)):
+                matformat = arformat[idx]
+                storedformat=arstoredformat[idx]
+                data = ardata[idx]
+                indptr = arindptr[idx]
+                indices = arindices[idx]
+                shape = arshape[idx]
+                
+                if storedformat == 'csr':
+                    sparsemat = spsp.csr_matrix((data, indices, indptr),shape)
+                    if matformat == 'lil':
+                        sparsemat = sparsemat.tolil() #Ui Ui might be expensive
+                    if matformat == 'csc':
+                        sparsemat = sparsemat.tocsc()
+                else:
+                    self._logger.error('If the matrix was not stored in csr format, I am afraid I have to tell you that other formats are not supported yet.')
+
+                
+                sparsematlist.append(sparsemat)
+            
+            return sparsematlist
+        else:
+            return super(SparseParameter,self)._load_single_col(table,colname)
+            
+                            
    
 
 
