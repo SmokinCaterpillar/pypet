@@ -25,6 +25,17 @@ class BaseParameter(object):
         self._name=name
         self._fullname = fullname
     
+    
+    def get_fullname(self,valuename=None):
+        if not valuename:
+            return self._fullname
+        if not self.has_value(valuename):
+            raise AttributeError('Parameter has not entry ' + valuename +'.')
+        return self._fullname +'.'+ valuename
+    
+    def has_value(self,valuename):
+        raise NotImplementedError( "Should have implemented this" )
+        
     def set(self, *args):
         raise NotImplementedError( "Should have implemented this" )
     
@@ -45,6 +56,9 @@ class BaseParameter(object):
     
     def __len__(self):
         raise NotImplementedError( "Should have implemented this" )
+    
+    def __call__(self,name=None):
+        return self.get_fullname(name)
     
 class Parameter(BaseParameter):
     ''' The standard Parameter that handles creation and access to Simulation Parameters '''
@@ -77,6 +91,8 @@ class Parameter(BaseParameter):
         
         self._logger.debug('Created the Parameter ' + self._name)
 
+    def has_value(self,valuename):
+        return valuename in self._data[0].__dict__
 
     def __len__(self):
         return len(self._data)
@@ -231,28 +247,47 @@ class Parameter(BaseParameter):
                     resultdict[key] = curr_list
         return resultdict
 
-    def explore(self, explore_dict):
+    def explore(self, explore):
         if self._locked:
             self._logger.warning('Parameter ' + self._name + 'is locked, but I will allow exploration.')
-        for key,values in explore_dict.items():
-            if not type(values) is list:
-                raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
+              
+        if isinstance(explore, dict):
+            for key,values in explore.items():
+                if not isinstance(values, list):
+                    raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
+                
+                val=values[0]
+                
+                
+                if not key in self._data[0].__dict__:
+                    self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
+                elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
+                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
+                if  key in self._data[0].__dict__:
+                    del self._data[0].__dict__[key]
+                self._set_single(key, val)
             
-            val=values[0]
+            del self._data[1:]
+            self.become_array()
+            self.add_items_as_dict(explore)
+            self._data = self._data[1:]
+        elif isinstance(explore, list):
+            for key,val in explore[0].items():
+                                
+                if not key in self._data[0].__dict__:
+                    self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
+                elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
+                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
+                if  key in self._data[0].__dict__:
+                    del self._data[0].__dict__[key]
+                self._set_single(key, val)
             
+            del self._data[1:]
+            self.become_array()
+            self.add_items_as_list(explore)
+            self._data = self._data[1:]
             
-            if not key in self._data[0].__dict__:
-                self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
-            elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
-                self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
-            if  key in self._data[0].__dict__:
-                del self._data[0].__dict__[key]
-            self._set_single(key, val)
         
-        del self._data[1:]
-        self.become_array()
-        self.add_items_as_dict(explore_dict)
-        self._data = self._data[1:]
     
     
     def add_items_as_dict(self,itemdict):

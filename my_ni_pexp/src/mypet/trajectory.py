@@ -41,8 +41,6 @@ class Trajectory(object):
             
             raise AttributeError('Trajectory does not have attribute ' + name +'.')
             
-     
-
     
     def __init__(self, name, filename, filetitle='Experiment', dynamicly_imported_classes=[]):
     
@@ -54,6 +52,7 @@ class Trajectory(object):
         self._parameters={}
         self._derivedparameters={}
         self._results={}
+        self._exploredparameters={}
         
         self.Parameters = Trajectory.TreeNode()
         self.DerivedParameters = Trajectory.TreeNode()
@@ -63,26 +62,15 @@ class Trajectory(object):
         self._filetitle=filetitle
         self._comment= Trajectory.standard_comment
         
+        self.last = None
+        
         
         self._dynamic_imports=['mypet.parameter.SparseParameter']
         self._dynamic_imports.append(dynamicly_imported_classes)
         
         self._loadedfrom = 'None'
         
-        
-        
-#         try:
-#             for key, importlist in dynamic_imports.items():
-#                 if not importlist:
-#                     execstring = 'from ' + key + ' import *'
-#                     exec execstring in globals()
-#                 else:
-#                     for imp in importlist:
-#                         execstring = 'from ' + key + ' import ' + imp
-#                         exec execstring in globals()
-#         except ImportError:
-#             self._logger.error('Failed importing from ' + key +'.')
-                
+                        
     
     def _load_class(self,full_class_string):
         """
@@ -129,6 +117,8 @@ class Trajectory(object):
         self._derivedparameters[full_parameter_name] = instance
         
         self._add_to_tree(full_parameter_name, instance)
+        
+        self.last = instance
 
     
     def add_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):  
@@ -151,6 +141,8 @@ class Trajectory(object):
         self._parameters[full_parameter_name] = instance
         
         self._add_to_tree(full_parameter_name, instance)
+        
+        self.last = instance
        
     
     def _add_to_tree(self, where, instance):
@@ -170,14 +162,16 @@ class Trajectory(object):
         
         
         
-            
-    def explore(self,build_function,params): 
+    
+    def explore(self,build_function,*params): 
         
-        build_dict = build_function(params) 
+        build_dict = build_function(*params) 
         
         for key, builder in build_dict.items():
+
             act_param = self._parameters[key]
             act_param.explore(builder)
+            self._exploredparameters[key] = self._parameters[key]
             
     def lock_parameters(self):
         for key, par in self._parameters.items():
@@ -208,12 +202,13 @@ class Trajectory(object):
         infotable.flush()
         
         
-        tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters}
+        tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters, 'ExploredParameterTable' :self._exploredparameters}
         for key, dictionary in tostore_dict.items():
             
             paramdescriptiondict={'Full_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
                                   'Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH)}
+                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
+                                  'Size' : pt.IntCol()}
             
             paramtable = hdf5file.createTable(where=trajectorygroup, name=key, description=paramdescriptiondict, title=key)
             
@@ -222,6 +217,7 @@ class Trajectory(object):
                 newrow['Full_Name'] = key
                 newrow['Name'] = val.get_name()[0]
                 newrow['Class_Name'] = val.get_class_name()
+                newrow['Size'] = len(val)
                 newrow.append()
             
             paramtable.flush()
@@ -300,6 +296,9 @@ class Trajectory(object):
             paraminstance.load_from_hdf5(paramgroup)
             
             self._parameters[fullname]=paraminstance
+            
+            if len(paraminstance>1):
+                self._exploredparameters[fullname] = paraminstance
             
             self._add_to_tree(fullname, paraminstance)
                 
