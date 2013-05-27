@@ -161,14 +161,30 @@ class Trajectory(object):
         act_inst.__dict__[param_name] = instance
         
         
+    def _split_dictionary(self, tosplit_dict):
+        result_dict={}
+        for param,val in tosplit_dict.items():
+            name_data = param.split(".")
+            param_name = ".".join(name_data[:-1])
+            value_str = name_data[-1]
+            
+            if not param_name in result_dict:
+                result_dict[param_name]={}
+            
+            result_dict[param_name][value_str] = val
         
+        return result_dict     
     
     def explore(self,build_function,*params): 
         
         build_dict = build_function(*params) 
         
-        for key, builder in build_dict.items():
-
+        if isinstance(build_dict, tuple):
+            build_dict, dummy = build_dict
+        
+        split_dict = self._split_dictionary(build_dict)   
+            
+        for key, builder in split_dict.items():
             act_param = self._parameters[key]
             act_param.explore(builder)
             self._exploredparameters[key] = self._parameters[key]
