@@ -9,6 +9,7 @@ import petexceptions as pex
 import tables as pt
 import numpy as np
 import scipy.sparse as spsp
+import copy
 from numpy.numarray.numerictypes import IsType
 
 
@@ -25,6 +26,8 @@ class BaseParameter(object):
         self._name=name
         self._fullname = fullname
     
+    def gfn(self,valuename=None):
+        return self.get_fullname(valuename)
     
     def get_fullname(self,valuename=None):
         if not valuename:
@@ -42,7 +45,7 @@ class BaseParameter(object):
     def explore(self, *args):
         raise NotImplementedError( "Should have implemented this" )
     
-    def shrink(self):
+    def access_parameter(self, n=0):
         raise NotImplementedError( "Should have implemented this" )
     
     def get_next(self, n):
@@ -57,8 +60,11 @@ class BaseParameter(object):
     def __len__(self):
         raise NotImplementedError( "Should have implemented this" )
     
-    def __call__(self,name=None):
-        return self.get_fullname(name)
+    def __call__(self,*args):
+        raise NotImplementedError( "Should have implemented this" )
+    
+    def lock(self):
+        raise NotImplementedError( "Should have implemented this" )
     
 class Parameter(BaseParameter):
     ''' The standard Parameter that handles creation and access to Simulation Parameters '''
@@ -78,6 +84,7 @@ class Parameter(BaseParameter):
         self._comment= Parameter.standard_comment
         self._data=[Parameter.Data()]
         self._isarray = False
+        self._default = None
         #self._accesspointer = 0
         #self._constructor='Parameter'
         
@@ -90,6 +97,31 @@ class Parameter(BaseParameter):
         
         
         self._logger.debug('Created the Parameter ' + self._name)
+        
+    def access_parameter(self, n=0):
+        if not self.is_array():
+            return self
+        else:
+            if n >= len(self):
+                raise ValueError('n %i is larger than entries in parameter %s, only has %i entries.' % (n,self.gfn(),len(self)))
+            
+            interims_data = self._data
+            self._data= [self._data[0]]
+            newParam = copy.deepcopy(self)
+            self._data = interims_data
+            return newParam
+            
+    def __call__(self,valuename=None):
+        if not valuename:
+            if not self._default:
+                self._logger.info('Parameter has no entries yet.')
+                return None
+            else:
+                return self.get(self._default)
+        if not self.has_value(valuename):
+            return None
+        
+        return self.get(valuename)
 
     def has_value(self,valuename):
         return valuename in self._data[0].__dict__
@@ -165,11 +197,15 @@ class Parameter(BaseParameter):
             if name in self._data[0].__dict__:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val
+            if not self._default:
+                self._default=name
         else:
             self._logger.warning('Redefinition of Parameter, the array will be deleted.')
             if name in self._data[0].__dict__:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
             self._data[0].__dict__[name] = val;
+            if not self._default:
+                self._default=name
             del self._data[1:]
             self._isarray = False
     

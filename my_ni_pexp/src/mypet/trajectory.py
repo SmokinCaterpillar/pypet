@@ -9,9 +9,12 @@ import datetime
 import time
 import tables as pt
 import os
+import petexceptions as pex
 from numpy.core.numeric import empty
 from mypet.parameter import Parameter, BaseParameter
 import importlib as imp
+import copy
+import multiprocessing as multip
 
 class Trajectory(object):
     '''The trajectory class'''
@@ -22,7 +25,8 @@ class Trajectory(object):
     
     class TreeNode(object):
         ''' Standard Object to construct the file tree'''
-        def __init__(self, present_wokring_type='Trajectory'):
+        def __init__(self, name, present_wokring_type='None'):
+            self._name = name
             self._pwt = present_wokring_type
             
         def store_to_hdf5(self,hdf5file,hdf5group):
@@ -36,13 +40,21 @@ class Trajectory(object):
                 self.__dict__[key].store_to_hdf5(hdf5file,newhdf5group)
         
         def __getattr__(self,name):
-            if name == 'pwt':
-                return self.__dict__[self._pwt]
             
-            raise AttributeError('Trajectory does not have attribute ' + name +'.')
+            if self._name in ['DerivedParameters', 'Results']:
+                if name == 'pwt':
+                    return self.__dict__[self._pwt]
+                try:
+                    return self.pwt.name
+                except AttributeError:
+                    raise AttributeError('%s does not have attribute %s' (self._pwt,name))
             
+            raise AttributeError('%s does not have attribute %s' (self._pwt,name))
+            
+    def __len__(self): 
+        return self._length      
     
-    def __init__(self, name, filename, filetitle='Experiment', dynamicly_imported_classes=[]):
+    def __init__(self, name, filename, filetitle='Experiment', dynamicly_imported_classes=[], multiprocessing = False, lock=None):
     
         self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         self._givenname = name;
@@ -54,13 +66,21 @@ class Trajectory(object):
         self._results={}
         self._exploredparameters={}
         
-        self.Parameters = Trajectory.TreeNode()
-        self.DerivedParameters = Trajectory.TreeNode()
-        self.Results = Trajectory.TreeNode()
+        self._multiproc = multiprocessing    
+        self._mplock = lock
+        
+        #Even if there are no parameters yet length is 1 for convention
+        self._length = 1
+        
+        self.Parameters = Trajectory.TreeNode('Parameters',self._name)
+        self.DerivedParameters = Trajectory.TreeNode('DerivedParameters',self._name)
+        self.Results = Trajectory.TreeNode('Results',self._name)
         
         self._filename = filename 
         self._filetitle=filetitle
         self._comment= Trajectory.standard_comment
+
+        
         
         self.last = None
         
@@ -97,13 +117,13 @@ class Trajectory(object):
         else:
             self._comment = self._comment + '; ' + comment
                   
-               
     def add_derived_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):
+        
         assert isinstance(full_parameter_name, str)
         
         assert isinstance(value_dict, dict)
         
-        full_parameter_name = 'DerivedParameters.Trajectory.'+ full_parameter_name
+        full_parameter_name = 'DerivedParameters.' + self._name+'.'+ full_parameter_name
         
         if self._derivedparameters.has_key(full_parameter_name):
             self._logger.warn(full_parameter_name + ' is already part of trajectory, ignoring the adding.')
@@ -143,6 +163,8 @@ class Trajectory(object):
         self._add_to_tree(full_parameter_name, instance)
         
         self.last = instance
+        
+
        
     
     def _add_to_tree(self, where, instance):
@@ -156,7 +178,7 @@ class Trajectory(object):
         act_inst = self
         for token in treetokens:
             if not hasattr(act_inst, token):
-                act_inst.__dict__[token] = Trajectory.TreeNode()
+                act_inst.__dict__[token] = Trajectory.TreeNode(token,self._name)
             act_inst = act_inst.__dict__[token]
         act_inst.__dict__[param_name] = instance
         
@@ -184,15 +206,28 @@ class Trajectory(object):
         
         split_dict = self._split_dictionary(build_dict)   
             
+        count = 0#Don't like it but ok
         for key, builder in split_dict.items():
             act_param = self._parameters[key]
             act_param.explore(builder)
             self._exploredparameters[key] = self._parameters[key]
             
+            if count == 0:
+                self._length = len(self._parameters[key])#Not so nice, but this should always be the same numbert
+            else:
+                if not self._length == len(self._parameters[key]):
+                    raise ValueError('The Parameters to explore have not the same size!')
+       
+            
+        
+            
     def lock_parameters(self):
         for key, par in self._parameters.items():
             par.lock()
     
+    def lock_derived_parameters(self):
+        for key, par in self._derivedparameters.items():
+            par.lock()
             
     def _store_meta_data(self,hdf5file,trajectorygroup):
         
@@ -204,13 +239,15 @@ class Trajectory(object):
         descriptiondict={'Name': pt.StringCol(len(self._name)), 
                          'Timestamp': pt.StringCol(len(self._time)),
                          'Comment': pt.StringCol(len(self._comment)),
-                         'Loaded_From': loaddict.copy()}
+                         'Loaded_From': loaddict.copy(),
+                         'Length':pt.IntCol}
         
         infotable = hdf5file.createTable(where=trajectorygroup, name='Info', description=descriptiondict, title='Info')
         newrow = infotable.row
         newrow['Name']=self._name
         newrow['Timestamp']=self._time
         newrow['Comment']=self._comment
+        newrow['Length'] = self._length
         newrow['Loaded_From/Trajectory']=self._loadedfrom[0]
         newrow['Loaded_From/Filename']=self._loadedfrom[1]
         
@@ -324,13 +361,18 @@ class Trajectory(object):
         metatable = trajectorygroup.Info
         metarow = metatable[0]
         
+        self._length = metarow['Length']
         self.add_comment(metarow['Comment'])
       
                 
     def store_to_hdf5(self):
-        
+
+        if self._mplock:
+            self._mplock.acquire()
+            
+            
+            
         self._logger.info('Start storing Parameters.')
-        
         (path, filename)=os.path.split(self._filename)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -350,6 +392,9 @@ class Trajectory(object):
         
         hdf5file.close()
         self._logger.info('Finished storing Parameters.')
+        
+        if self._mplock:
+            self._mplock.release()
     
     
     def _store_params(self,hdf5file,trajectorygroup):
@@ -364,5 +409,75 @@ class Trajectory(object):
         paramgroup = hdf5file.createGroup(where=trajectorygroup,name='DerivedParameters', title='DerivedParameters')
         
         self.DerivedParameters.store_to_hdf5(hdf5file, paramgroup)      
-        
     
+    def get_paramspacepoint(self,n):
+        
+        newtraj = copy.copy(self)
+        
+        assert isinstance(newtraj, Trajectory) #Just for autocompletion
+        
+        #Do not copy the results, this is way too much in case of multiprocessing
+        if self._multiproc:
+            newtraj.Results = Trajectory.TreeNode('Results',self._name)
+            
+        # extract only one particular paramspacepoint
+        for key,val in newtraj._exploredparameters.items():
+            assert isinstance(val, BaseParameter)
+            newtraj._exploredparameters[key] = val.access_parameter(n)
+        
+        return newtraj 
+        
+            
+    def make_experiment(self):
+        self.lock_parameters()
+        self.lock_derived_parameters()
+        
+        if self._multiproc:
+            if not self._mplock:
+                self._mplock = multip.Lock()
+                
+        for n in xrange(self._length):
+            yield self.make_single_run(n)
+     
+    def make_single_run(self,n):  
+        return SingleRun(filename = self._filename, self,n) 
+
+
+
+class SingleRun(object):
+    
+    def __init__(self, filename, parent_trajectory,  n):
+        
+        assert isinstance(parent_trajectory, Trajectory)
+        
+
+        self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        self._name = 'Run'+'_'+str(self._time)+'_No_' + str(n)
+        self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._name)
+        
+        self._n = n
+        self._filename = filename 
+        
+        self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
+        self._single_run = Trajectory(name=self._name, filename=filename)
+        
+    def add_derived_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):
+        self._single_run.add_deradd_derived_parameter(full_parameter_name, value_dict, param_type)
+
+    
+    def add_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):  
+        self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
+        self.add_derived_parameter(full_parameter_name, value_dict, param_type)
+       
+    def __getattr__(self,name):
+        if name == 'pt' or name == 'ParentTrajectory':
+            return self._small_parent_trajectory
+        
+        try:
+            return self._single_run.__dict__[name]
+        except Exception:
+            return self._small_parent_trajectory.__dict__[name]
+    
+    def store_to_hdf5(self):
+        self._single_run.store_to_hdf5()
+
