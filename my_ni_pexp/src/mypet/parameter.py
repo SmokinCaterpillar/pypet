@@ -105,10 +105,10 @@ class Parameter(BaseParameter):
             if n >= len(self):
                 raise ValueError('n %i is larger than entries in parameter %s, only has %i entries.' % (n,self.gfn(),len(self)))
             
-            interims_data = self._data
-            self._data= [self._data[0]]
-            newParam = copy.deepcopy(self)
-            self._data = interims_data
+
+            newParam = Parameter(self._name,self._fullname)
+            newParam._data[0].__dict__ = self._data[n].__dict__.copy()
+
             return newParam
             
     def __call__(self,valuename=None):

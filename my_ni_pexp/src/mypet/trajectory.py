@@ -34,7 +34,7 @@ class Trajectory(object):
             assert isinstance(hdf5group, pt.Group)
             
             for key in self.__dict__:
-                if key == '_pwt':
+                if key == '_pwt' or key == '_name':
                     continue;
                 newhdf5group=hdf5file.createGroup(where=hdf5group, name=key, title=key)
                 self.__dict__[key].store_to_hdf5(hdf5file,newhdf5group)
@@ -90,7 +90,8 @@ class Trajectory(object):
         
         self._loadedfrom = 'None'
         
-                        
+    def get_name(self):  
+        return self._name                 
     
     def _load_class(self,full_class_string):
         """
@@ -239,8 +240,8 @@ class Trajectory(object):
         descriptiondict={'Name': pt.StringCol(len(self._name)), 
                          'Timestamp': pt.StringCol(len(self._time)),
                          'Comment': pt.StringCol(len(self._comment)),
-                         'Loaded_From': loaddict.copy(),
-                         'Length':pt.IntCol}
+                         'Length':pt.IntCol(),
+                         'Loaded_From': loaddict.copy()}
         
         infotable = hdf5file.createTable(where=trajectorygroup, name='Info', description=descriptiondict, title='Info')
         newrow = infotable.row
@@ -363,15 +364,25 @@ class Trajectory(object):
         
         self._length = metarow['Length']
         self.add_comment(metarow['Comment'])
-      
-                
-    def store_to_hdf5(self):
-
+    
+    def store_single_run(self,trajectory_name):  
+        
         if self._mplock:
             self._mplock.acquire()
             
-            
-            
+        hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
+        
+        trajectorygroup = hdf5file.getNode(where='/', name=trajectory_name)
+        
+        self.DerivedParameters.store_to_hdf5(hdf5file, trajectorygroup.DerivedParameters) 
+        
+        
+        if self._mplock:
+            self._mplock.release()
+    
+                
+    def store_to_hdf5(self):
+
         self._logger.info('Start storing Parameters.')
         (path, filename)=os.path.split(self._filename)
         if not os.path.exists(path):
@@ -388,14 +399,13 @@ class Trajectory(object):
         self._store_params(hdf5file,trajectorygroup)
         self._store_derived_params(hdf5file, trajectorygroup)
         
+        
         hdf5file.flush()
         
         hdf5file.close()
         self._logger.info('Finished storing Parameters.')
         
-        if self._mplock:
-            self._mplock.release()
-    
+
     
     def _store_params(self,hdf5file,trajectorygroup):
         
@@ -423,14 +433,24 @@ class Trajectory(object):
         # extract only one particular paramspacepoint
         for key,val in newtraj._exploredparameters.items():
             assert isinstance(val, BaseParameter)
-            newtraj._exploredparameters[key] = val.access_parameter(n)
+            newparam = val.access_parameter(n)
+            newtraj._exploredparameters[key] = newparam
+            if key in newtraj._parameters:
+                newtraj._parameters[key] = newparam
+            if key in newtraj._derivedparameters:
+                newtraj._derivedparameters[key] = newparam
+            self._add_to_tree(key, newparam)
+            
         
         return newtraj 
+    
         
-            
+        
+        
     def make_experiment(self):
         self.lock_parameters()
         self.lock_derived_parameters()
+        self.store_to_hdf5()
         
         if self._multiproc:
             if not self._mplock:
@@ -440,8 +460,7 @@ class Trajectory(object):
             yield self.make_single_run(n)
      
     def make_single_run(self,n):  
-        return SingleRun(filename = self._filename, self,n) 
-
+        return SingleRun(self._filename, self, n) 
 
 
 class SingleRun(object):
@@ -452,17 +471,18 @@ class SingleRun(object):
         
 
         self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._name = 'Run'+'_'+str(self._time)+'_No_' + str(n)
-        self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._name)
+
         
         self._n = n
         self._filename = filename 
         
+        name = 'Run_No_%08d' % n
         self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
-        self._single_run = Trajectory(name=self._name, filename=filename)
+        self._single_run = Trajectory(name=name, filename=filename)
+        self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
         
     def add_derived_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):
-        self._single_run.add_deradd_derived_parameter(full_parameter_name, value_dict, param_type)
+        self._single_run.add_derived_parameter(full_parameter_name, value_dict, param_type)
 
     
     def add_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):  
@@ -479,5 +499,5 @@ class SingleRun(object):
             return self._small_parent_trajectory.__dict__[name]
     
     def store_to_hdf5(self):
-        self._single_run.store_to_hdf5()
+        self._single_run.store_single_run(trajectory_name=self._small_parent_trajectory.get_name())
 
