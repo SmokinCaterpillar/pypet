@@ -17,9 +17,11 @@ def main():
     traj = Trajectory('MyTrajectory','../experiments/test.hdf5')
     
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
+    traj.adp(full_parameter_name='foo', value_dict={'bar' : -1}).moo = 'zip'
     
     traj.add_parameter('test.testparam', {'Fuechse':1,'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
 
+    
     traj.last.foo = 'bar'
     
     traj.add_parameter('Network.Cm')

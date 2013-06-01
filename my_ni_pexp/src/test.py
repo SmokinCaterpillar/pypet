@@ -17,11 +17,13 @@ def main():
     
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
-    traj.add_parameter('test.testparam', {'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
+    traj.adp('frrrr')
+    traj.adp('humus', peter = 4.9, mama = '15')
+    traj.add_parameter('test.testparam', **{'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'})
 
-    traj.add_parameter('test.testparam', {'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
+    traj.add_parameter('test.testparam', **{'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'})
 
-    traj.add_parameter(full_parameter_name='honky', value_dict={'mirta':np.array([[1,2,7],[3,2,17]])}, param_type=Parameter)
+    traj.add_parameter(full_parameter_name='honky',param_type=Parameter, **{'mirta':np.array([[1,2,7],[3,2,17]])})
 
     arr= traj.Parameters.test.testparam.Fuechse
     
@@ -59,12 +61,12 @@ def main():
     lilma = spsp.lil_matrix((10000,1000))
     lilma[0,100] = 555
     lilma[9999,999] = 11
-    traj.add_parameter('test.sparseparam', {'Fuechse2':lilma}, param_type=SparseParameter)
+    traj.add_parameter('test.sparseparam', Fuechse2=lilma, param_type=SparseParameter)
     
     print traj.Parameters.test.sparseparam.get_class_name()
     
     
-    traj.add_derived_parameter('test.sparseparam', {'Fuechse2':lilma*2}, param_type=SparseParameter)
+    traj.add_derived_parameter('test.sparseparam', Fuechse2=lilma*2, param_type=SparseParameter)
     
     sparseparam = traj.DerivedParameters.pwt.test.sparseparam
     

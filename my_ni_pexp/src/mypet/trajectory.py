@@ -3,31 +3,24 @@ Created on 17.05.2013
 
 @author: robert
 '''
-import numpy as np
+
 import logging
 import datetime
 import time
 import tables as pt
 import os
-import petexceptions as pex
-from numpy.core.numeric import empty
 from mypet.parameter import Parameter, BaseParameter
 import importlib as imp
 import copy
-import multiprocessing as multip
+#from multiprocessing.synchronize import Lock
 
-class Trajectory(object):
-    '''The trajectory class'''
-    
-    MAX_NAME_LENGTH = 1024
-    
-    standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
-    
-    class TreeNode(object):
+
+class TreeNode(object):
         ''' Standard Object to construct the file tree'''
-        def __init__(self, name, present_wokring_type='None'):
+        def __init__(self, name, present_working_type='None'):
             self._name = name
-            self._pwt = present_wokring_type
+            self._pwt = present_working_type
+      
             
         def store_to_hdf5(self,hdf5file,hdf5group):
             assert isinstance(hdf5file,pt.File)
@@ -40,21 +33,28 @@ class Trajectory(object):
                 self.__dict__[key].store_to_hdf5(hdf5file,newhdf5group)
         
         def __getattr__(self,name):
-            
+                       
             if self._name in ['DerivedParameters', 'Results']:
                 if name == 'pwt':
                     return self.__dict__[self._pwt]
-                try:
-                    return self.pwt.name
-                except AttributeError:
-                    raise AttributeError('%s does not have attribute %s' (self._pwt,name))
+                else:
+                    return self.__dict__[self._pwt].name
+             
+            raise AttributeError('%s does not have attribute %s' % (self._pwt,name))
             
-            raise AttributeError('%s does not have attribute %s' (self._pwt,name))
-            
+
+class Trajectory(object):
+    '''The trajectory class'''
+    
+    MAX_NAME_LENGTH = 1024
+    
+    standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
+    
+   
     def __len__(self): 
         return self._length      
     
-    def __init__(self, name, filename, filetitle='Experiment', dynamicly_imported_classes=[], multiprocessing = False, lock=None):
+    def __init__(self, name, filename, filetitle='Experiment', dynamicly_imported_classes=[], multiprocessing = False):
     
         self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         self._givenname = name;
@@ -67,14 +67,13 @@ class Trajectory(object):
         self._exploredparameters={}
         
         self._multiproc = multiprocessing    
-        self._mplock = lock
         
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
         
-        self.Parameters = Trajectory.TreeNode('Parameters',self._name)
-        self.DerivedParameters = Trajectory.TreeNode('DerivedParameters',self._name)
-        self.Results = Trajectory.TreeNode('Results',self._name)
+        self.Parameters = TreeNode('Parameters',self._name)
+        self.DerivedParameters = TreeNode('DerivedParameters',self._name)
+        self.Results = TreeNode('Results',self._name)
         
         self._filename = filename 
         self._filetitle=filetitle
@@ -89,6 +88,31 @@ class Trajectory(object):
         self._dynamic_imports.append(dynamicly_imported_classes)
         
         self._loadedfrom = 'None'
+        
+    
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['_logger']
+        del result['Parameters']
+        del result['DerivedParameters']
+        del result['Results']
+        return result
+    
+    def __setstate__(self, statedict):
+        self.__dict__.update(statedict)
+        
+        self.Parameters = TreeNode('Parameters',self._name)
+        self.DerivedParameters = TreeNode('DerivedParameters',self._name)
+        self.Results = TreeNode('Results',self._name)
+        
+        two_dicts = {}
+        two_dicts.update(self._parameters)
+        two_dicts.update(self._derivedparameters)
+        
+        for key, val in two_dicts.items():
+            self._add_to_tree(val.gfn(), val)
+        self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
+        
         
     def get_name(self):  
         return self._name                 
@@ -117,8 +141,11 @@ class Trajectory(object):
             self._comment = comment
         else:
             self._comment = self._comment + '; ' + comment
+            
+    def adp(self, full_parameter_name, param_type=Parameter,**value_dict):
+        return self.add_derived_parameter(full_parameter_name, param_type, **value_dict)
                   
-    def add_derived_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):
+    def add_derived_parameter(self, full_parameter_name, param_type=Parameter,**value_dict):
         
         assert isinstance(full_parameter_name, str)
         
@@ -133,16 +160,21 @@ class Trajectory(object):
         
         instance =   param_type(param_name,full_parameter_name)
         
-        instance.set(value_dict)
+        if value_dict:
+            instance.set(value_dict)
         
         self._derivedparameters[full_parameter_name] = instance
         
         self._add_to_tree(full_parameter_name, instance)
         
         self.last = instance
+        
+        return instance
 
+    def ap(self, full_parameter_name, param_type=Parameter, **value_dict):
+        return self.add_parameter( full_parameter_name,param_type, **value_dict)
     
-    def add_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):  
+    def add_parameter(self, full_parameter_name,  param_type=Parameter, **value_dict):  
         
         assert isinstance(full_parameter_name, str)
         
@@ -156,14 +188,16 @@ class Trajectory(object):
         param_name = full_parameter_name.split('.')[-1]
         
         instance =   param_type(param_name,full_parameter_name)
-        
-        instance.set(value_dict)
+        if value_dict:
+            instance.set(value_dict)
         
         self._parameters[full_parameter_name] = instance
         
         self._add_to_tree(full_parameter_name, instance)
         
         self.last = instance
+        
+        return instance
         
 
        
@@ -179,7 +213,7 @@ class Trajectory(object):
         act_inst = self
         for token in treetokens:
             if not hasattr(act_inst, token):
-                act_inst.__dict__[token] = Trajectory.TreeNode(token,self._name)
+                act_inst.__dict__[token] = TreeNode(token,self._name)
             act_inst = act_inst.__dict__[token]
         act_inst.__dict__[param_name] = instance
         
@@ -257,6 +291,7 @@ class Trajectory(object):
         
         
         tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters, 'ExploredParameterTable' :self._exploredparameters}
+        
         for key, dictionary in tostore_dict.items():
             
             paramdescriptiondict={'Full_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
@@ -266,8 +301,15 @@ class Trajectory(object):
             
             paramtable = hdf5file.createTable(where=trajectorygroup, name=key, description=paramdescriptiondict, title=key)
             
+            self._store_single_table(dictionary, paramtable)
+    
+    def _store_single_table(self,paramdict,paramtable):
+                                 
+            assert isinstance(paramtable, pt.Table)    
+
+
             newrow = paramtable.row
-            for key, val in dictionary.items():
+            for key, val in paramdict.items():
                 newrow['Full_Name'] = key
                 newrow['Name'] = val.get_name()[0]
                 newrow['Class_Name'] = val.get_class_name()
@@ -366,9 +408,7 @@ class Trajectory(object):
         self.add_comment(metarow['Comment'])
     
     def store_single_run(self,trajectory_name):  
-        
-        if self._mplock:
-            self._mplock.acquire()
+
             
         hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
         
@@ -376,9 +416,8 @@ class Trajectory(object):
         
         self.DerivedParameters.store_to_hdf5(hdf5file, trajectorygroup.DerivedParameters) 
         
-        
-        if self._mplock:
-            self._mplock.release()
+        paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
+        self._store_single_table(self._derivedparameters, paramtable)
     
                 
     def store_to_hdf5(self):
@@ -428,7 +467,7 @@ class Trajectory(object):
         
         #Do not copy the results, this is way too much in case of multiprocessing
         if self._multiproc:
-            newtraj.Results = Trajectory.TreeNode('Results',self._name)
+            newtraj.Results = TreeNode('Results',self._name)
             
         # extract only one particular paramspacepoint
         for key,val in newtraj._exploredparameters.items():
@@ -447,20 +486,26 @@ class Trajectory(object):
         
         
         
-    def make_experiment(self):
+    def prepare_experiment(self):
         self.lock_parameters()
         self.lock_derived_parameters()
         self.store_to_hdf5()
-        
-        if self._multiproc:
-            if not self._mplock:
-                self._mplock = multip.Lock()
-                
-        for n in xrange(self._length):
-            yield self.make_single_run(n)
+
      
     def make_single_run(self,n):  
         return SingleRun(self._filename, self, n) 
+    
+    def __getattr__(self,name):
+        
+        if not hasattr(self, 'Parameters') or not hasattr(self, 'DerivedParameters'):
+            raise AttributeError('This is to avoid pickling issues!')
+     
+        if name in self.Parameters.__dict__:
+            return self.Parameters.__dict__[name]
+        elif name in self.DerivedParameters:
+            return self.DerivedParameters.__dict__[name]
+        
+        raise AttributeError('Trajectory does not contain %s' % name)
 
 
 class SingleRun(object):
@@ -479,25 +524,45 @@ class SingleRun(object):
         name = 'Run_No_%08d' % n
         self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
         self._single_run = Trajectory(name=name, filename=filename)
-        self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
+        #self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
+    
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        #del result['_logger']
+        return result
+    
+    def __setstate__(self, statedict):
+        self.__dict__.update(statedict)
+        #self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
         
-    def add_derived_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):
-        self._single_run.add_derived_parameter(full_parameter_name, value_dict, param_type)
+    def add_derived_parameter(self, full_parameter_name,  param_type=Parameter, **value_dict):
+        self._single_run.add_derived_parameter(full_parameter_name, param_type, **value_dict)
 
     
-    def add_parameter(self, full_parameter_name, value_dict={}, param_type=Parameter):  
-        self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
-        self.add_derived_parameter(full_parameter_name, value_dict, param_type)
+    def add_parameter(self, full_parameter_name, param_type=Parameter, **value_dict):  
+        #self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
+        self.add_derived_parameter(full_parameter_name, param_type, **value_dict)
        
     def __getattr__(self,name):
+        
+        if not hasattr(self, '_small_parent_trajectory') or not hasattr(self, '_single_run'):
+            raise AttributeError('This is to avoid pickling issues!')
+        
         if name == 'pt' or name == 'ParentTrajectory':
             return self._small_parent_trajectory
         
         try:
-            return self._single_run.__dict__[name]
+            return getattr(self._single_run,name)
         except Exception:
-            return self._small_parent_trajectory.__dict__[name]
+            return getattr(self._small_parent_trajectory,(name))
     
-    def store_to_hdf5(self):
+    
+    def store_to_hdf5(self, lock=None):
+        if lock:
+            lock.acquire()
+            print 'Start storing run %d.' % self._n
         self._single_run.store_single_run(trajectory_name=self._small_parent_trajectory.get_name())
+        if lock:
+            print 'Finished storing run %d,' % self._n
+            lock.release()
 

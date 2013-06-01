@@ -19,7 +19,11 @@ def main():
     
     print type(traj.Parameters.test.testparam)
     
+    
+    
     traj.store_to_hdf5()
+    
+    
     
  
 

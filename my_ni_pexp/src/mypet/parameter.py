@@ -65,16 +65,16 @@ class BaseParameter(object):
     
     def lock(self):
         raise NotImplementedError( "Should have implemented this" )
-    
-class Parameter(BaseParameter):
-    ''' The standard Parameter that handles creation and access to Simulation Parameters '''
-    
-    
-    class Data(object):
+  
+  
+class Data(object):
         '''The most fundamental entity that contains the actual data, it is separated to simplify the naming.
         It could also be used as dict but I'll stick to that use for now'''
         pass
-    
+      
+class Parameter(BaseParameter):
+    ''' The standard Parameter that handles creation and access to Simulation Parameters '''
+   
     
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
@@ -82,7 +82,7 @@ class Parameter(BaseParameter):
         super(Parameter,self).__init__(name,fullname)
         self._locked=False
         self._comment= Parameter.standard_comment
-        self._data=[Parameter.Data()]
+        self._data=[Data()]
         self._isarray = False
         self._default = None
         #self._accesspointer = 0
@@ -92,11 +92,19 @@ class Parameter(BaseParameter):
         
         #self._accessedfrom = None
         
-        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._name)
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
+        #self._logger.debug('Created the Parameter ' + self._name)
         
-        
-        
-        self._logger.debug('Created the Parameter ' + self._name)
+       
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['_logger']
+        return result
+    
+    def __setstate__(self, statedict):
+        self.__dict__.update( statedict)
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
+      
         
     def access_parameter(self, n=0):
         if not self.is_array():
@@ -174,7 +182,7 @@ class Parameter(BaseParameter):
         
         if len(args) == 1:
             valuedict = args[0]
-            if not type(valuedict) is dict:
+            if not isinstance(valuedict, dict):
                 raise AttributeError('Input is not a dictionary.')
             for key, val in valuedict.items():
                 self._set_single(key, val)
@@ -348,7 +356,7 @@ class Parameter(BaseParameter):
                 raise AttributeError('The entries of the dictionary do not have the same length.')
         
         for idx in range(act_length):
-            newdata = Parameter.Data();
+            newdata = Data();
             
             for key, val in self._data[0].__dict__.items():
                 if not key in itemdict:
@@ -379,7 +387,7 @@ class Parameter(BaseParameter):
             for key in itemdict.keys():
                 if not key in self._data[0].__dict__:
                     self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
-            newdata = Parameter.Data();
+            newdata = Data();
             
             for key, val in self._data[0].__dict__.items():
                 if not key in itemdict:
@@ -538,7 +546,9 @@ class Parameter(BaseParameter):
         
     
     def __getattr__(self,name):
-        #self._accessedfrom = self._accessname
+        if not hasattr(self, '_data'):
+            raise AttributeError('This is to avoid pickling issues!')
+        
         return self.get(name)
  
     def shrink(self):
