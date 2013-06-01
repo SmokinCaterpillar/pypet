@@ -161,7 +161,7 @@ class Trajectory(object):
         instance =   param_type(param_name,full_parameter_name)
         
         if value_dict:
-            instance.set(value_dict)
+            instance.set(**value_dict)
         
         self._derivedparameters[full_parameter_name] = instance
         
@@ -189,7 +189,7 @@ class Trajectory(object):
         
         instance =   param_type(param_name,full_parameter_name)
         if value_dict:
-            instance.set(value_dict)
+            instance.set(**value_dict)
         
         self._parameters[full_parameter_name] = instance
         

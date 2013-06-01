@@ -14,22 +14,71 @@ from numpy.numarray.numerictypes import IsType
 
 
 class BaseParameter(object):
+    ''' Specifies the methods that need to be implemented for a Trajectory Parameter
     
+    It is initialized with a fullname that specifies its position within the Trajectory, i.e:
+    Parameters.group.paramname
+    The shorter name of the paremeter is name=paramname, accordingly.
+        
+    For storing a parameter into hdf5 format the parameter implements a full node, how the items in the node are handled is left to the user.
+        
+    The parameter class can instantiate a single parameter as well as an array with several entries for exploration.
+    It is recommended to also implement the __getatr__ and __setatr__ methods, because para.val should return the value only of the very first entry of a parameter array.
+    param.val = 1 should also only modify the very first entry.
+    he other entries can only be accessed during a particular run. Therefore, explored parameters create for each run a copy of themselves with the corresponding array element as the only parameter entries.
     
-    def store_to_hdf5(self,hdf5file,hdf5group):
-        raise NotImplementedError( "Should have implemented this" )
-    
-    def load_from_hdf5(self,hdf5group):
-        raise NotImplementedError( "Should have implemented this" )
-    
+    Parameters can be locked to forbid further modification.
+    If multiprocessing is desired the parameter must be pickable!
+    ''' 
     def __init__(self, name, fullname):
         self._name=name
         self._fullname = fullname
+        
+    def __len__(self):
+        ''' Returns the length of the parameter.
+        
+        Only parameters that will be explored have a length larger than 1.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
     
+    def __call__(self,*args):
+        ''' param(name) -> Value stored at param.name
+        
+        A call to the parameter with the given argument returns the value of the argument. If the parameter is an array only the first entry of the given name should be returned.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
+    
+    def lock(self):
+        ''' Locks the parameter and allows no further modification except exploration.'''
+        raise NotImplementedError( "Should have implemented this." )
+        
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        ''' Method to store a parameter to an hdf5file.
+        
+        :param hdf5group: is the group where the parameter is stored in the hdf5file. The name of the group is the name of the parameter.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
+    
+    def load_from_hdf5(self,hdf5group):
+        ''' param.load_from_hdf5(hdf5group)-> Recovers parameter from the given group in a hdf5file.
+        
+            The name of the group is equal to the parameter name.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
+    
+
     def gfn(self,valuename=None):
+        ''' Short for get_fullname '''
         return self.get_fullname(valuename)
     
     def get_fullname(self,valuename=None):
+        ''' param.get_fullname(valuname) -> Returns the fullname of the parameter 
+        
+        For example:
+            param.gfn('myentry') could return Parameter.myparam.myentry
+        
+        Calling get_fullname() returns the full name of the parameter ignoring the entries.
+        '''
         if not valuename:
             return self._fullname
         if not self.has_value(valuename):
@@ -37,45 +86,63 @@ class BaseParameter(object):
         return self._fullname +'.'+ valuename
     
     def has_value(self,valuename):
-        raise NotImplementedError( "Should have implemented this" )
+        ''' Checks whether a parameter as a specific value entry.'''
+        raise NotImplementedError( "Should have implemented this." )
         
-    def set(self, *args):
-        raise NotImplementedError( "Should have implemented this" )
+    def set(self, **args):
+        ''' Sets specific values for a parameter.
+        Has to raise ParameterLockedException if parameter is locked.
+
+        For example:
+        >>> param1.set(val1=5, val2=6.0)
+        
+        >>> print parm1.val1 
+        >>> 5
+        '''
+        raise NotImplementedError( "Should have implemented this." )
     
     def explore(self, *args):
-        raise NotImplementedError( "Should have implemented this" )
+        ''' The default method to create and explored parameter containing an array of entries.
+        
+        args is a dictionary containing lists of all entreis.
+        For example:
+        >>> param.explore({'entry1':[1,2,3],'entry2'=[3.0,2.0,1.0]})
+        
+        '''
+        raise NotImplementedError( "Should have implemented this." )
     
     def access_parameter(self, n=0):
-        raise NotImplementedError( "Should have implemented this" )
-    
-    def get_next(self, n):
-        raise NotImplementedError( "Should have implemented this" )
+        ''' Returns a shallow copy of the parameter for the nth run.
+        
+        If the parameter is an array only the nth element of the array is used to build a novel parameter.
+        If the parameter's length is only 1, the parameter itself is returned.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
         
     def get_class_name(self):  
         return self.__class__.__name__
 
     def get_name(self):
-        return (self._name,self._fullname)
+        ''' Returns the name of the parameter.'''
+        return self._name
     
-    def __len__(self):
-        raise NotImplementedError( "Should have implemented this" )
-    
-    def __call__(self,*args):
-        raise NotImplementedError( "Should have implemented this" )
-    
-    def lock(self):
-        raise NotImplementedError( "Should have implemented this" )
+
   
   
 class Data(object):
         '''The most fundamental entity that contains the actual data, it is separated to simplify the naming.
-        It could also be used as dict but I'll stick to that use for now'''
+        It could also be used as dict but I'll stick to that use for now.'''
         pass
       
 class Parameter(BaseParameter):
-    ''' The standard Parameter that handles creation and access to Simulation Parameters '''
-   
+    ''' The standard Parameter that handles creation and access to Simulation Parameters 
     
+    Supported Data types are int, string, bool, float and numpy arrays.
+    The actual data entries are stored in the _data list.
+    If the parameter is not an array the list has only a single entry.
+    '''
+   
+    # The comment that is added if no comment is specified
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
     def __init__(self, name, fullname):
@@ -97,16 +164,22 @@ class Parameter(BaseParameter):
         
        
     def __getstate__(self):
+        ''' Returns the actual state of the parameter for pickling. '''
         result = self.__dict__.copy()
-        del result['_logger']
+        del result['_logger'] #pickling does not work with loggers
         return result
     
     def __setstate__(self, statedict):
+        ''' Sets the state for unpickling.'''
         self.__dict__.update( statedict)
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
       
         
     def access_parameter(self, n=0):
+        ''' Returns a shallow copy of the parameter for a single trajectory run.
+        
+        If the parameter is an array the copy contains only the nth data element as the first data element.
+        '''
         if not self.is_array():
             return self
         else:
@@ -138,16 +211,21 @@ class Parameter(BaseParameter):
         return len(self._data)
 
     
-    def become_array(self):
+    def _become_array(self):
         self._isarray = True
     
     
     
     def _is_supported_data(self, data):
-        ''' Simply checks if data is supported '''
+        ''' Checks if input data is supported by the parameter'''
         return type(data) in [np.ndarray, int, str, float, bool]
     
     def _values_of_same_type(self,val1, val2):
+        ''' Checks if two values are of the same type.
+        
+        This is important for exploration and adding of elements to the parameter array.
+        New added elements must agree with the type of previous elements.
+        '''
         if not type(val1) == type(val2):
             return False
         
@@ -162,8 +240,9 @@ class Parameter(BaseParameter):
         
 
     def add_comment(self,comment):
-        ''' Extends the existing comment
+        ''' Adds a comment to the current comment
         :param comment: The comment as string which is added to the existing comment'''
+        #Replace the standard comment:
         if self._comment == Parameter.standard_comment:
             self._comment = comment
         else:
@@ -178,23 +257,24 @@ class Parameter(BaseParameter):
         else:
             self._set_single(name,value)
         
-    def set(self,*args):
-        
-        if len(args) == 1:
-            valuedict = args[0]
-            if not isinstance(valuedict, dict):
-                raise AttributeError('Input is not a dictionary.')
-            for key, val in valuedict.items():
-                self._set_single(key, val)
-        elif len(args) == 2:
-            self._set_single(args[0], args[1])
-        else:
-            raise TypeError('Set takes at max two arguments, but ' +str(len(args)) + ' provided.')
+    def set(self,**args):
+
+        for key, val in args.items():
+            self._set_single(key, val)
+
     
     def _set_single(self,name,val):
+        ''' Adds a single entry to the parameter.
+        
+        This method is called for statements like:
+        >>> param.entry = 4
+        
+        If the parameter was originally an array the array is deleted because a setting is change of the default entries of the parameter.
+        '''
         if self._locked:
             raise pex.ParamterLockedException('Parameter ' + self._name + ' is locked!')
         
+        # The comment is not in the _data list:
         if name == 'Comment':
             self._comment = val
             return
@@ -222,7 +302,14 @@ class Parameter(BaseParameter):
         
     
         
-    def change_values_in_array(self,name,values,positions):  
+    def change_values_in_array(self,name,values,positions):
+        ''' Changes the values of entries for given positions if the parameter is an array
+        
+        For example:
+        
+        >>> param.change_values_in_array('entry',[18.0,3.0,4.0],[1,5,9])
+        
+        '''  
         
         if not self._isarray:
             raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
@@ -231,7 +318,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!') 
     
     
-        if not type(positions) is list:
+        if not isinstance(positions, list):
             positions = [positions];
             values = [values];
         else:
@@ -312,7 +399,7 @@ class Parameter(BaseParameter):
                 self._set_single(key, val)
             
             del self._data[1:]
-            self.become_array()
+            self._become_array()
             self.add_items_as_dict(explore)
             self._data = self._data[1:]
         elif isinstance(explore, list):
@@ -327,7 +414,7 @@ class Parameter(BaseParameter):
                 self._set_single(key, val)
             
             del self._data[1:]
-            self.become_array()
+            self._become_array()
             self.add_items_as_list(explore)
             self._data = self._data[1:]
             
@@ -514,7 +601,7 @@ class Parameter(BaseParameter):
             self._set_single(colname, val)
           
         if nrows > 1:
-            self.become_array()  
+            self._become_array()  
         
         if self.is_array():
             self.add_items_as_dict(dict_of_lists)

@@ -23,7 +23,6 @@ def main():
     traj.add_parameter('test.testparam', **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
 
 
-
     traj.last.foo = 'bar'
     
     traj.add_parameter('Network.Cm')
