@@ -8,8 +8,6 @@ import mypet.utils.explore as ut
 from multiprocessing import log_to_stderr, get_logger, Pool, freeze_support, Manager
 from multiprocessing.synchronize import Lock
 from mypet.configuration import config
-from mypet.mplogging import  listener_configurer,listener_process,worker_configurer
-import multiprocessing
 
 
 def do_stuff(args):
@@ -17,9 +15,6 @@ def do_stuff(args):
     print args
     srun = args[0]
     lock=args[1]
-    queue = args[2]
-    configurer = args[3]
-    configurer(queue)
     print srun
     assert isinstance(srun, SingleRun)
     srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._n})
@@ -31,18 +26,11 @@ def do_stuff(args):
     print srun.pt.DerivedParameters.pwt.foo.bar
 
 def main():
-    queue = multiprocessing.Manager().Queue(-1)
-    listener = multiprocessing.Process(target=listener_process,
-                                       args=(queue, listener_configurer))
-    listener.start()
     
+    log_to_stderr(level=logging.INFO)
+    pool = Pool(2)
     lock = Manager().Lock()
     logging.basicConfig(level=logging.DEBUG)
-    
-    pool = Pool(2)
-    
-    
-  
     traj = Trajectory(name='MyTrajectory',filename='../experiments/test.hdf5')
     config['multiproc'] = True
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
@@ -96,13 +84,12 @@ def main():
     traj.explore(ut.cartesian_product,explore_dict,cmb_list)
     
     traj.prepare_experiment()
-    it = ((traj.make_single_run(n),lock,queue,worker_configurer) for n in xrange(len(traj)))
+    it = ((traj.make_single_run(n),lock) for n in xrange(len(traj)))
     moo = pool.imap(do_stuff, it)
     
 
     pool.close()
     pool.join()
-    listener.join()
     
 
 
