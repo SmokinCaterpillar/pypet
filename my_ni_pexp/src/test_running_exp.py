@@ -7,7 +7,7 @@ import scipy.sparse as spsp
 import mypet.utils.explore as ut
 from multiprocessing import log_to_stderr, get_logger, Pool, freeze_support, Manager
 from multiprocessing.synchronize import Lock
-
+from mypet.configuration import config
 
 
 def do_stuff(args):
@@ -31,8 +31,8 @@ def main():
     pool = Pool(2)
     lock = Manager().Lock()
     logging.basicConfig(level=logging.DEBUG)
-    traj = Trajectory(name='MyTrajectory',filename='../experiments/test.hdf5',multiprocessing =True)
-    
+    traj = Trajectory(name='MyTrajectory',filename='../experiments/test.hdf5')
+    config['multiproc'] = True
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
     traj.add_parameter('test.testparam', param_type=Parameter, **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
