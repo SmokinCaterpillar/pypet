@@ -12,6 +12,7 @@ from mypet.mplogging import  listener_configurer,listener_process,worker_configu
 import multiprocessing
 
 
+
 def do_stuff(args):
     print 'in do stuff'
     print args

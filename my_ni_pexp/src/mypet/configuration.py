@@ -11,24 +11,30 @@ class Config(object):
 
     >>> from configuration import config
     >>> config['multiproc'] = True
-    or
-    >>> config.multiproc = True
+
     
     
     """
     def __init__(self):
         self._config={}
         self.default_config()
+        
+    def __setstate__(self, statedict):
+        self.__dict__ = statedict
+        
+    def __getstate__(self, statedict):
+        return self.__dict__.copy()
 
     def default_config(self):
         self._config['multiproc'] = False
         
 
         ## logging
-        self._config['logfiles']='../log/logs.log'
+        #self._config['mplogfiles']='../log/logs.log'
+        self._config['logfolder']='../log/'
         self._config['loglevel']=logging.DEBUG
     
-            
+    
     def __getitem__(self, key):
         
         if key not in self._config:

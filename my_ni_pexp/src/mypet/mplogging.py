@@ -85,7 +85,7 @@ class QueueHandler(logging.Handler):
 
 def listener_configurer():
     root = logging.getLogger()
-    h = logging.handlers.RotatingFileHandler(config['logfiles'], 'a', 300000, 10)
+    h = logging.handlers.RotatingFileHandler(config['mplogfiles'], 'a', 300000, 10)
     f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
     h.setFormatter(f)
     root.addHandler(h)

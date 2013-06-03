@@ -616,8 +616,11 @@ class SingleRun(object):
         except Exception:
             return getattr(self._small_parent_trajectory,(name))
     
+    def get_name(self):
+        return self._single_run.get_name()
     
     def store_to_hdf5(self, lock=None):
+        #print config['multiproc']
         if lock:
             lock.acquire()
             #print 'Start storing run %d.' % self._n

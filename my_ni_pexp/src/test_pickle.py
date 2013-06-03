@@ -9,6 +9,7 @@ import numpy as np
 import scipy.sparse as spsp
 import mypet.utils.explore as ut
 import pickle
+from mypet.configuration import config
 
 
 
@@ -64,6 +65,7 @@ def main():
 
     pfile = open('../experiments/pickle.txt','wb')
     
+    config['multiproc'] = True
     pickle.dump(traj, pfile)
     pfile.close()
     print 'pickling finished'
@@ -87,6 +89,7 @@ def main():
     print 'loading ok'
     pfile.close()
     
+    srun2.store_to_hdf5()
     
     
     param12 = traj2.Parameters.test.testparam

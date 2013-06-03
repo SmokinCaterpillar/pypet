@@ -8,13 +8,20 @@ import mypet.utils.explore as ut
 from multiprocessing import log_to_stderr, get_logger, Pool, freeze_support, Manager
 from multiprocessing.synchronize import Lock
 from mypet.configuration import config
-
+import os
 
 def do_stuff(args):
     print 'in do stuff'
     print args
+    filepath = args[2]
     srun = args[0]
     lock=args[1]
+    filename = srun.get_name()
+    fname=os.path.join(filepath,filename )
+    f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+    h=logging.FileHandler(filename=fname)
+    h.setFormatter(f)
+    logging.getLogger().addHandler(h)
     print srun
     assert isinstance(srun, SingleRun)
     srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._n})
@@ -24,10 +31,10 @@ def do_stuff(args):
     print 'woop'
     print srun.DerivedParameters.pwt.foo.bar
     print srun.pt.DerivedParameters.pwt.foo.bar
+    logging.getLogger().removeHandler(h)
 
 def main():
     
-    log_to_stderr(level=logging.INFO)
     pool = Pool(2)
     lock = Manager().Lock()
     logging.basicConfig(level=logging.DEBUG)
@@ -84,7 +91,8 @@ def main():
     traj.explore(ut.cartesian_product,explore_dict,cmb_list)
     
     traj.prepare_experiment()
-    it = ((traj.make_single_run(n),lock) for n in xrange(len(traj)))
+    pathname = config['logfolder']
+    it = ((traj.make_single_run(n),lock, pathname) for n in xrange(len(traj)))
     moo = pool.imap(do_stuff, it)
     
 
