@@ -25,7 +25,9 @@ def _single_run(args):
     root = logging.getLogger()
     n = traj.get_n()
     #If the logger has no handler, add one:
-    if not root.handlers:
+    print root.handlers
+    if len(root.handlers)<3:
+        print 'do i come here?'
         filename = 'process%03d.txt' % n
         h=logging.FileHandler(filename=logpath+'/'+filename)
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
@@ -56,14 +58,14 @@ class Environment(object):
         logging.basicConfig(level=config['loglevel'])
         logpath = config['logfolder']
         
-        logpath = os.path.join(logpath,trajectoryname+'_'+thetime)
+        self._logpath = os.path.join(logpath,trajectoryname+'_'+thetime)
         
-        if not os.path.isdir(logpath):
-            os.makedirs(logpath)
+        if not os.path.isdir(self._logpath):
+            os.makedirs(self._logpath)
         
         
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h=logging.FileHandler(filename=logpath+'/main.txt')
+        h=logging.FileHandler(filename=self._logpath+'/main.txt')
         #sh = logging.StreamHandler(sys.stdout)
         h.setFormatter(f)
         logging.getLogger().addHandler(h)
@@ -117,7 +119,7 @@ class Environment(object):
             print 'Starting run in parallel with %d cores.' % ncores
             print '------------------'
             
-            iterator = ((self._traj.make_single_run(n),logpath,lock,runfunc,runparams) for n in xrange(len(self._traj)))
+            iterator = ((self._traj.make_single_run(n),self._logpath,lock,runfunc,runparams) for n in xrange(len(self._traj)))
         
             results = mpool.imap(_single_run,iterator)
             
@@ -130,7 +132,7 @@ class Environment(object):
             return results
         else:
             
-            results = [_single_run((self._traj.make_single_run(n),logpath,None,runfunc,runparams)) for n in xrange(len(self._traj))]
+            results = [_single_run((self._traj.make_single_run(n),self._logpath,None,runfunc,runparams)) for n in xrange(len(self._traj))]
             return results
                 
         
