@@ -6,6 +6,9 @@ Created on 24.05.2013
 import itertools as itools
 
 
+def identity(param_value_list_dict):
+    return param_value_list_dict
+
 
 def cartesian_product(param_value_list_dict, combined_parameter_list=[]):
     

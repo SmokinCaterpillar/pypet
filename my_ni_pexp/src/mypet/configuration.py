@@ -27,12 +27,16 @@ class Config(object):
 
     def default_config(self):
         self._config['multiproc'] = False
+        self._config['ncores'] = 1
         
 
         ## logging
         #self._config['mplogfiles']='../log/logs.log'
         self._config['logfolder']='../log/'
         self._config['loglevel']=logging.DEBUG
+        
+    def items(self):
+        return self._config.items()
     
     
     def __getitem__(self, key):
