@@ -38,6 +38,7 @@ def main():
     pool = Pool(2)
     lock = Manager().Lock()
     logging.basicConfig(level=logging.DEBUG)
+    log_to_stderr()
     traj = Trajectory(name='MyTrajectory',filename='../experiments/test.hdf5')
     config['multiproc'] = True
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')

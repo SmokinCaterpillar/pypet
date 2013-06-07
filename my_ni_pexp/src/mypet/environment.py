@@ -13,22 +13,28 @@ import datetime
 import multiprocessing as multip
 
 
-def _single_run_mp(traj, logpath, lock, runfunc, **runparams):
+def _single_run(args):
+
+    traj=args[0] 
+    logpath=args[1] 
+    lock=args[2] 
+    runfunc=args[3] 
+    runparams = args[4]
+
     assert isinstance(traj, SingleRun)
     root = logging.getLogger()
     n = traj.get_n()
     #If the logger has no handler, add one:
     if not root.handlers:
-        
-        filename = 'process' + str(n) + '.txt'
-        h=logging.FileHandler(filename=logpath+filename)
+        filename = 'process%03d.txt' % n
+        h=logging.FileHandler(filename=logpath+'/'+filename)
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h.setFormatter(f)
-        logging.getLogger().addHandler(h)
+        root.addHandler(h)
     
     root.debug('Starting single run #%d' % n)
     result =runfunc(traj,**runparams)
-    root.debug('Finished single run #&d' % n)
+    root.debug('Finished single run #%d' % n)
     traj.store_to_hdf5(lock)
     
     return result
@@ -57,7 +63,7 @@ class Environment(object):
         
         
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h=logging.FileHandler(filename=logpath+'main.txt')
+        h=logging.FileHandler(filename=logpath+'/main.txt')
         #sh = logging.StreamHandler(sys.stdout)
         h.setFormatter(f)
         logging.getLogger().addHandler(h)
@@ -81,19 +87,19 @@ class Environment(object):
         return self._traj
     
     
-    def _single_run(self,traj,runfunc, **runparams):
-        n = traj.get_n()
-        self._logger.debug('Starting single run #%d' % n)
-        result =runfunc(traj,**runparams)
-        self._logger.debug('Finished single run #%d' % n)
-        traj.store_to_hdf5()
-        return result
+#     def _single_run(self,traj,runfunc, **runparams):
+#         n = traj.get_n()
+#         self._logger.debug('Starting single run #%d' % n)
+#         result =runfunc(traj,**runparams)
+#         self._logger.debug('Finished single run #%d' % n)
+#         traj.store_to_hdf5()
+#         return result
 
     def run(self, runfunc, **runparams):
         
         #Store the config file as parameters
         self._add_config()
-        
+        logpath = config['logfolder']
         #Prepares the trajecotry for running
         self._traj.prepare_experiment()
         
@@ -102,19 +108,29 @@ class Environment(object):
         if multiproc:
             
             lock = multip.Manager().Lock()
-            logpath = config['logfolder']
+           
             ncores = config['ncores']
             
             mpool = multip.Pool(ncores)
         
+            print '------------------'
+            print 'Starting run in parallel with %d cores.' % ncores
+            print '------------------'
+            
             iterator = ((self._traj.make_single_run(n),logpath,lock,runfunc,runparams) for n in xrange(len(self._traj)))
         
-            results = mpool.imap(_single_run_mp,iterator)
+            results = mpool.imap(_single_run,iterator)
+            
+            mpool.close()
+            mpool.join()
+            print '------------------'
+            print 'Finished run in parallel with %d cores.' % ncores
+            print '------------------'
             
             return results
         else:
             
-            results = [self._single_run(self._traj.make_single_run(n),runfunc,**runparams) for n in xrange(len(self._traj))]
+            results = [_single_run((self._traj.make_single_run(n),logpath,None,runfunc,runparams)) for n in xrange(len(self._traj))]
             return results
                 
         
