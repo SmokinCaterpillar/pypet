@@ -12,6 +12,35 @@ import scipy.sparse as spsp
 import copy
 from numpy.numarray.numerictypes import IsType
 
+class BaseResult(object):
+    ''' The basic result class.
+    
+    It is a subnode of the tree, but how storage is handled is completely determined by the user.
+    
+    The result does know the name of the parent trajectory and the file because it might
+    autonomously write results to the hdf5 file.
+    '''
+            
+    def __init__(self, name, fullname, parent_trajectory_name, filename):
+        self._name=name
+        self._fullname = fullname
+        self._paren_trajectory = parent_trajectory_name
+        self._filename = filename
+        
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        ''' Method to store a result to an hdf5file.
+        
+        It is called by the trajectory if a single run should be stored.
+        
+        Does not throw an exception if not implemented, because you might want to
+        store your results at a different point in time, so if the function is called
+        by the trajectory via storing a single run, nothing happens.
+        '''
+        pass
+        #raise NotImplementedError( "Should have implemented this." )
+
+            
+            
 
 class BaseParameter(object):
     ''' Specifies the methods that need to be implemented for a Trajectory Parameter

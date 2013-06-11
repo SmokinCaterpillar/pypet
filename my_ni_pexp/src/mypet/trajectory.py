@@ -34,7 +34,11 @@ class TreeNode(object):
             for key in self.__dict__:
                 if key == '_pwt' or key == '_name':
                     continue;
-                newhdf5group=hdf5file.createGroup(where=hdf5group, name=key, title=key)
+                
+                if not hdf5group.__contains__(key):
+                    newhdf5group=hdf5file.createGroup(where=hdf5group, name=key, title=key)
+                else:
+                    newhdf5group = getattr(hdf5group, key)
                 self.__dict__[key].store_to_hdf5(hdf5file,newhdf5group)
         
         def __getattr__(self,name):
@@ -435,7 +439,7 @@ class Trajectory(object):
         infotable.flush()
         
         
-        tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters, 'ExploredParameterTable' :self._exploredparameters}
+        tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters, 'ExploredParameterTable' :self._exploredparameters,'ResultsTable' : self._results}
         
         for key, dictionary in tostore_dict.items():
             
@@ -444,7 +448,7 @@ class Trajectory(object):
                                   'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
                                   'Size' : pt.IntCol()}
             
-            if key in ['DerivedParameterTable', 'Results']:
+            if key in ['DerivedParameterTable', 'ResultsTable']:
                 paramdescriptiondict.update({'Creator_Name':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
                                              'Creator_ID':pt.IntCol()})
             
@@ -461,6 +465,8 @@ class Trajectory(object):
         assert isinstance(paramtable, pt.Table)    
 
 
+        #print paramtable._v_name
+        
         newrow = paramtable.row
         for key, val in paramdict.items():
             newrow['Full_Name'] = key
@@ -468,9 +474,9 @@ class Trajectory(object):
             newrow['Class_Name'] = val.get_class_name()
             newrow['Size'] = len(val)
             
-            if key in ['DerivedParameterTable', 'Results']:
+            if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
                 newrow['Creator_Name'] = creator_name
-                newrow['Creator_ID'] = id
+                newrow['Creator_ID'] = creator_id
                 
             newrow.append()
         
@@ -481,6 +487,10 @@ class Trajectory(object):
         
         Per default derived parameters and results are not loaded. If the filename is not specified
         the file where the current trajectory is supposed to be stored is taken.
+        
+        If the user wants to load results, the actual data is not loaded, only dummy objects
+        are created, which must load their data independently. It is assumed that 
+        results of many simulations are large and should not be loaded all together into memory.
         
         If replace is true than the current trajectory name is replaced by the name of the loaded
         trajectory, so is the filename.
@@ -598,12 +608,18 @@ class Trajectory(object):
         '''
         hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
         
+        #print 'Storing %d' %n
         trajectorygroup = hdf5file.getNode(where='/', name=trajectory_name)
         
         self.DerivedParameters.store_to_hdf5(hdf5file, trajectorygroup.DerivedParameters) 
         
         paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
-        self._store_single_table(self._derivedparameters, paramtable, trajectory_name,n)
+        self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n)
+        
+        self.Results.store_to_hdf5(hdf5file, trajectorygroup.Results)
+        
+        paramtable = getattr(trajectorygroup, 'ResultsTable')
+        self._store_single_table(self._results, paramtable, self.get_name(),n)
         
         hdf5file.flush()
         hdf5file.close()
@@ -623,10 +639,18 @@ class Trajectory(object):
         hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
         
         trajectorygroup = hdf5file.createGroup(where='/', name=self._name, title=self._name)
+    
+        if not trajectorygroup.__contains__('Parameters'):
+            hdf5file.createGroup(where= trajectorygroup, name='Parameters', title='Parameters')
+        if not trajectorygroup.__contains__('DerivedParameters'):
+            hdf5file.createGroup(where= trajectorygroup, name='DerivedParameters', title='DerivedParameters')
+        if not trajectorygroup.__contains__('Results'):
+            hdf5file.createGroup(where= trajectorygroup, name='Results', title='Results')
         
         self._store_meta_data(hdf5file, trajectorygroup)
-        self._store_params(hdf5file,trajectorygroup)
-        self._store_derived_params(hdf5file, trajectorygroup)
+        
+        self.Parameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'Parameters'))
+        self.DerivedParameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'DerivedParameters'))
         
         
         hdf5file.flush()
@@ -635,19 +659,7 @@ class Trajectory(object):
         self._logger.info('Finished storing Parameters.')
         
 
-    
-    def _store_params(self,hdf5file,trajectorygroup):
-        
-        paramgroup = hdf5file.createGroup(where=trajectorygroup,name='Parameters', title='Parameters')
-        
-        self.Parameters.store_to_hdf5(hdf5file, paramgroup)
-        
-        
-    def _store_derived_params(self,hdf5file,trajectorygroup):   
-        
-        paramgroup = hdf5file.createGroup(where=trajectorygroup,name='DerivedParameters', title='DerivedParameters')
-        
-        self.DerivedParameters.store_to_hdf5(hdf5file, paramgroup)      
+      
     
     def get_paramspacepoint(self,n):
         ''' Returns the nth parameter space point of the trajectory.
