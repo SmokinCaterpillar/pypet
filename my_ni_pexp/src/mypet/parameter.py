@@ -12,35 +12,7 @@ import scipy.sparse as spsp
 import copy
 from numpy.numarray.numerictypes import IsType
 
-class BaseResult(object):
-    ''' The basic result class.
-    
-    It is a subnode of the tree, but how storage is handled is completely determined by the user.
-    
-    The result does know the name of the parent trajectory and the file because it might
-    autonomously write results to the hdf5 file.
-    '''
-            
-    def __init__(self, name, fullname, parent_trajectory_name, filename):
-        self._name=name
-        self._fullname = fullname
-        self._paren_trajectory = parent_trajectory_name
-        self._filename = filename
-        
-    def store_to_hdf5(self,hdf5file,hdf5group):
-        ''' Method to store a result to an hdf5file.
-        
-        It is called by the trajectory if a single run should be stored.
-        
-        Does not throw an exception if not implemented, because you might want to
-        store your results at a different point in time, so if the function is called
-        by the trajectory via storing a single run, nothing happens.
-        '''
-        pass
-        #raise NotImplementedError( "Should have implemented this." )
 
-            
-            
 
 class BaseParameter(object):
     ''' Specifies the methods that need to be implemented for a Trajectory Parameter
@@ -843,17 +815,21 @@ class SparseParameter(Parameter):
         return super(SparseParameter,self)._get_table_col(key,val)
                          
     def _store_single_item(self,row,key,val):
-        ''' Stores a single sparse matric into a nested pytables row.
+        ''' Stores a single sparse matrix into a nested pytables row.
         '''
-        row[key+'/format'] = val.format
-        val = val.tocsr()
-        row[key+'/storedformat'] = val.format
-        row[key+'/data'] = val.data
-        row[key+'/indptr'] = val.indptr
-        row[key+'/indices'] = val.indices
-        shape = np.shape(val)
-        shape = np.array(shape)
-        row[key+'/shape'] = shape
+        # Check if this is a sparse matrix
+        if not hasattr(val, 'format'):
+            super(SparseParameter,self)._store_single_item(row,key,val)
+        else:
+            row[key+'/format'] = val.format
+            val = val.tocsr()
+            row[key+'/storedformat'] = val.format
+            row[key+'/data'] = val.data
+            row[key+'/indptr'] = val.indptr
+            row[key+'/indices'] = val.indices
+            shape = np.shape(val)
+            shape = np.array(shape)
+            row[key+'/shape'] = shape
     
 
 
@@ -922,7 +898,45 @@ class SparseParameter(Parameter):
             return super(SparseParameter,self)._load_single_col(table,colname)
             
                             
-   
+
+class BaseResult(object):
+    ''' The basic result class.
+    
+    It is a subnode of the tree, but how storage is handled is completely determined by the user.
+    
+    The result does know the name of the parent trajectory and the file because it might
+    autonomously write results to the hdf5 file.
+    '''
+            
+    def __init__(self, name, fullname, parent_trajectory_name, filename):
+        self._name=name
+        self._fullname = fullname
+        self._paren_trajectory = parent_trajectory_name
+        self._filename = filename
+        
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        ''' Method to store a result to an hdf5file.
+        
+        It is called by the trajectory if a single run should be stored.
+        
+        Does not throw an exception if not implemented, because you might want to
+        store your results at a different point in time, so if the function is called
+        by the trajectory via storing a single run, nothing happens.
+        '''
+        pass
+        #raise NotImplementedError( "Should have implemented this." )
+
+class SimpleResult(BaseResult,SparseParameter):  
+    ''' Simple Container for results. 
+    
+    In fact this is a lazy implementation, its simply a sparse parameter^^
+    '''        
+    def __init__(self, name, fullname, parent_trajectory_name, filename):
+        super(SimpleResult,self).__init__(name, fullname, parent_trajectory_name, filename)
+        super(SparseParameter,self).__init__(name,fullname)
+
+    def store_to_hdf5(self,hdf5file,hdf5group):
+        super(SparseParameter,self).store_to_hdf5(hdf5file,hdf5group)
 
 
 

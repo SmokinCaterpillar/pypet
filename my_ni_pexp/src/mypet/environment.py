@@ -115,9 +115,9 @@ class Environment(object):
             
             mpool = multip.Pool(ncores)
         
-            print '------------------'
+            print '----------------------------------------'
             print 'Starting run in parallel with %d cores.' % ncores
-            print '------------------'
+            print '----------------------------------------'
             
             iterator = ((self._traj.make_single_run(n),self._logpath,lock,runfunc,runparams) for n in xrange(len(self._traj)))
         
@@ -125,9 +125,9 @@ class Environment(object):
             
             mpool.close()
             mpool.join()
-            print '------------------'
+            print '----------------------------------------'
             print 'Finished run in parallel with %d cores.' % ncores
-            print '------------------'
+            print '----------------------------------------'
             
             return results
         else:

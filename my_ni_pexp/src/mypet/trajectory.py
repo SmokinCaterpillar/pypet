@@ -9,7 +9,7 @@ import datetime
 import time
 import tables as pt
 import os
-from mypet.parameter import Parameter, BaseParameter
+from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 import copy
 from mypet.configuration import config
@@ -136,13 +136,19 @@ class Trajectory(object):
         
         
         self.last = None
-        
+        self._standard_param_type = Parameter
         
         self._dynamic_imports=['mypet.parameter.SparseParameter']
         self._dynamic_imports.append(dynamicly_imported_classes)
         
         self._loadedfrom = ('None','None')
+     
+    def set_standard_param_type(self,param_type):   
+        ''' Sets the standard parameter type.
         
+        If param_type is not specified for add_parameter, than the standard parameter is used.
+        '''
+        self._standard_param_type = param_type
     
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -196,7 +202,47 @@ class Trajectory(object):
             self._comment = comment
         else:
             self._comment = self._comment + '; ' + comment
-            
+         
+    def add_result(self, full_result_name, result_type,*args,**kwargs):  
+        ''' Adds a result to the trajectory, 
+        
+        This is a rather open implementation the user can provide *args as well as **kwargs
+        which will be fed to the init function of your result.
+        
+        If result_type is already the instance of a Result a new instance will not be created.
+        
+        Does not update the 'last' shortcut of the trajectory.
+        ''' 
+        
+        assert isinstance(full_result_name, str)
+        
+        
+        full_result_name = 'Results.' + self._name+'.'+ full_result_name
+        
+        if self._results.has_key(full_result_name):
+            self._logger.warn(full_result_name + ' is already part of trajectory, I will replace it.')
+
+        result_name = full_result_name.split('.')[-1]
+        
+        if isinstance(result_type, BaseResult):
+            if not result_type._name == result_name or not result_type._fullname == full_result_name or not result_type._paren_trajectory == self._name or not result_type._filename == self._filename:
+                self._logger.warn('Something is wrong with the naming and or filename of your result, I will correct that.')
+                result_type._name = result_name
+                result_type._fullname = full_result_name
+                result_type._paren_trajectory = self._name
+                result_type._filename = self._filename
+            instance = result_type
+        else:
+            instance =   result_type(result_name,full_result_name,self._name,self._filename,*args,**kwargs)
+        
+        
+        self._results[full_result_name] = instance
+        
+        self._add_to_tree(full_result_name, instance)
+        
+        return instance
+        
+        
     def adp(self, full_parameter_name, param_type=Parameter,**value_dict):
         ''' Short for add_derived_parameter
         '''
@@ -215,6 +261,11 @@ class Trajectory(object):
                                     
         :param param_type: The type of parameter, standard is the Parameter class, another example 
                             would be the SparseParameter class.
+                            If you already have an instance of the parameter (that takes care of
+                            proper naming and stuff) you can pass it here, than the instance
+                            will be added to the trajectory instead of creating a new
+                            instance via calling instance = param_type(name,full_parameter_name),
+                            i.e. instance = param_type
         
         :param **valuedict: Any kinds of desired parameter entries.
         
@@ -233,11 +284,19 @@ class Trajectory(object):
         full_parameter_name = 'DerivedParameters.' + self._name+'.'+ full_parameter_name
         
         if self._derivedparameters.has_key(full_parameter_name):
-            self._logger.warn(full_parameter_name + ' is already part of trajectory, ignoring the adding.')
+            self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
 
         param_name = full_parameter_name.split('.')[-1]
         
-        instance =   param_type(param_name,full_parameter_name)
+        if isinstance(param_type, BaseParameter):
+            if not param_type.get_full_name() == full_parameter_name or not param_type.get_name() == param_name:
+                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (param_type.get_full_name(),full_parameter_name,param_type.get_name,param_name))
+                param_type._name = param_name
+                param_type._fullname = full_parameter_name
+            instance = param_type
+        else:
+            instance =   param_type(param_name,full_parameter_name)
+            
         
         if value_dict:
             instance.set(**value_dict)
@@ -255,7 +314,7 @@ class Trajectory(object):
         '''
         return self.add_parameter( full_parameter_name,param_type, **value_dict)
     
-    def add_parameter(self, full_parameter_name,  param_type=Parameter, **value_dict):  
+    def add_parameter(self, full_parameter_name,  param_type=None, **value_dict):  
         ''' Adds a new parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -263,8 +322,14 @@ class Trajectory(object):
                                     For example, the parameter named paramgroup1.param1 becomes:
                                     Parameters.paramgroup1.param1
                                     
-        :param param_type: The type of parameter, standard is the Parameter class, another example 
-                            would be the SparseParameter class.
+        :param param_type: The type of parameter, if not specified the standard parameter is chosen.
+                             The standard parameter is the Parameter, but get be change via
+                             the set_standard_param_type method.
+                             If you already have an instance of the parameter (that takes care of
+                            proper naming and stuff) you can pass it here, than the instance
+                            will be added to the trajectory instead of creating a new
+                            instance via calling instance = param_type(name,full_parameter_name)
+                            i.e. instance = param_type
         
         :param **valuedict: Any kinds of desired parameter entries.
         
@@ -279,14 +344,25 @@ class Trajectory(object):
         
         assert isinstance(value_dict, dict)
         
+        if not param_type:
+            param_type = self._standard_param_type
+        
         full_parameter_name = 'Parameters.' + full_parameter_name
         
         if self._parameters.has_key(full_parameter_name):
-            self._logger.warn(full_parameter_name + ' is already part of trajectory, ignoring the adding.')
+            self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
 
         param_name = full_parameter_name.split('.')[-1]
         
-        instance =   param_type(param_name,full_parameter_name)
+        if isinstance(param_type, BaseParameter):
+            if not param_type.get_full_name() == full_parameter_name or not param_type.get_name() == param_name:
+                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (param_type.get_full_name(),full_parameter_name,param_type.get_name,param_name))
+                param_type._name = param_name
+                param_type._fullname = full_parameter_name
+            instance = param_type
+        else:
+            instance =   param_type(param_name,full_parameter_name)
+            
         if value_dict:
             instance.set(**value_dict)
         
