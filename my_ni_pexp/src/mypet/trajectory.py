@@ -251,12 +251,12 @@ class Trajectory(object):
         return instance
         
         
-    def adp(self, full_parameter_name, param_type=Parameter,**value_dict):
+    def adp(self, full_parameter_name, *value_list,**value_dict):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, param_type, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
                   
-    def add_derived_parameter(self, full_parameter_name, param_type=Parameter,**value_dict):
+    def add_derived_parameter(self, full_parameter_name, *value_list,**value_dict):
         ''' Adds a new derived parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -267,15 +267,19 @@ class Trajectory(object):
                                     becomes:
                             DerivedParameters.Run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
                                     
-        :param param_type: The type of parameter, standard is the Parameter class, another example 
+        :param param_type: The type of parameter, should be passed in **value_dict or as first
+                            entry in *value_list.
+                            If not specified the standard parameter is chosen.
+                            Standard is the Parameter class, another example 
                             would be the SparseParameter class.
                             If you already have an instance of the parameter (that takes care of
                             proper naming and stuff) you can pass it here, than the instance
                             will be added to the trajectory instead of creating a new
                             instance via calling instance = param_type(name,full_parameter_name),
                             i.e. instance = param_type
-        
-        :param **valuedict: Any kinds of desired parameter entries.
+        :param **value_lsit: Any kinds of desired parameter entries, will be added as val, val1,
+                            ...,valN
+        :param **value_dict: Any kinds of desired parameter entries.
         
         Example use:
         >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=Parameter, 
@@ -287,7 +291,14 @@ class Trajectory(object):
         
         assert isinstance(full_parameter_name, str)
         
-        assert isinstance(value_dict, dict)
+        if not 'param_type' in value_dict:
+            if value_list and( isinstance(value_list[0] ,BaseParameter) or (isinstance(value_list[0], type) and issubclass(value_list[0] , BaseParameter))):
+                    value_list = list(value_list)
+                    param_type = value_list.pop(0)
+            else:
+                param_type = self._standard_param_type
+        else:
+            param_type = value_dict.pop('param_type')
         
         full_parameter_name = 'DerivedParameters.' + self._name+'.'+ full_parameter_name
         
@@ -303,11 +314,8 @@ class Trajectory(object):
                 param_type._fullname = full_parameter_name
             instance = param_type
         else:
-            instance =   param_type(param_name,full_parameter_name)
-            
-        
-        if value_dict:
-            instance.set(**value_dict)
+            instance =   param_type(param_name,full_parameter_name,*value_list, **value_dict)
+
         
         self._derivedparameters[full_parameter_name] = instance
         
@@ -317,12 +325,12 @@ class Trajectory(object):
         
         return instance
 
-    def ap(self, full_parameter_name, param_type=None, **value_dict):
+    def ap(self, full_parameter_name, *value_list, **value_dict):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,param_type, **value_dict)
+        return self.add_parameter( full_parameter_name,*value_list, **value_dict)
     
-    def add_parameter(self, full_parameter_name,  param_type=None, **value_dict):  
+    def add_parameter(self, full_parameter_name,  *value_list, **value_dict):  
         ''' Adds a new parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -331,6 +339,7 @@ class Trajectory(object):
                                     Parameters.paramgroup1.param1
                                     
         :param param_type: The type of parameter, if not specified the standard parameter is chosen.
+                            Should be passed in **value_dict or as first entry in *value_list.
                              The standard parameter is the Parameter, but get be change via
                              the set_standard_param_type method.
                              If you already have an instance of the parameter (that takes care of
@@ -350,10 +359,16 @@ class Trajectory(object):
         '''
         assert isinstance(full_parameter_name, str)
         
-        assert isinstance(value_dict, dict)
+        if not 'param_type' in value_dict:
+            if value_list and( isinstance(value_list[0] ,BaseParameter) or (isinstance(value_list[0], type) and issubclass(value_list[0] , BaseParameter))):
+                    value_list = list(value_list)
+                    param_type = value_list.pop(0)
+            else:
+                param_type = self._standard_param_type
+        else:
+            param_type = value_dict.pop('param_type')
         
-        if not param_type:
-            param_type = self._standard_param_type
+
         
         full_parameter_name = 'Parameters.' + full_parameter_name
         
@@ -369,10 +384,8 @@ class Trajectory(object):
                 param_type._fullname = full_parameter_name
             instance = param_type
         else:
-            instance =   param_type(param_name,full_parameter_name)
-            
-        if value_dict:
-            instance.set(**value_dict)
+            instance =   param_type(param_name,full_parameter_name,*value_list,**value_dict)
+
         
         self._parameters[full_parameter_name] = instance
         
@@ -930,26 +943,26 @@ class SingleRun(object):
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
         #self._logger = multip.get_logger()
     
-    def adp(self, full_parameter_name, param_type=Parameter,**value_dict):
+    def adp(self, full_parameter_name, *value_list,**value_dict):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, param_type, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
         
-    def add_derived_parameter(self, full_parameter_name,  param_type=Parameter, **value_dict):
-        return self._single_run.add_derived_parameter(full_parameter_name, param_type, **value_dict)
+    def add_derived_parameter(self, full_parameter_name,  *value_list, **value_dict):
+        return self._single_run.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
 
     
-    def ap(self, full_parameter_name, param_type=Parameter, **value_dict):
+    def ap(self, full_parameter_name, *value_list, **value_dict):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,param_type, **value_dict)
+        return self.add_parameter( full_parameter_name,*value_list, **value_dict)
     
     
-    def add_parameter(self, full_parameter_name, param_type=Parameter, **value_dict): 
+    def add_parameter(self, full_parameter_name, *value_list, **value_dict): 
         ''' Adds a DERIVED Parameter to the trajectory and emits a warning.
         ''' 
         self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
-        return self.add_derived_parameter(full_parameter_name, param_type, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
        
     def __getattr__(self,name):
         

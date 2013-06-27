@@ -179,7 +179,7 @@ class Parameter(BaseParameter):
     # The comment that is added if no comment is specified
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
-    def __init__(self, name, fullname):
+    def __init__(self, name, fullname,*args,**kwargs):
         super(Parameter,self).__init__(name,fullname)
         self._locked=False
         self._comment= Parameter.standard_comment
@@ -195,6 +195,17 @@ class Parameter(BaseParameter):
         
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
         #self._logger.debug('Created the Parameter ' + self._name)
+        
+                
+        for idx, arg in enumerate(args):
+            if idx == 0:
+                self.val = arg
+            else:
+                valname = 'val' + str(idx)
+                setattr(self, valname, arg)
+        
+        for key, arg in kwargs.items():
+            setattr(self, key, arg)
         
        
     def __getstate__(self):
