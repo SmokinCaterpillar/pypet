@@ -19,7 +19,9 @@ def _single_run(args):
     logpath=args[1] 
     lock=args[2] 
     runfunc=args[3] 
-    runparams = args[4]
+    total_runs = args[4]
+    runparams = args[5]
+    kwrunparams = args[6]
 
     assert isinstance(traj, SingleRun)
     root = logging.getLogger()
@@ -27,18 +29,17 @@ def _single_run(args):
     #If the logger has no handler, add one:
     print root.handlers
     if len(root.handlers)<3:
-        print 'do i come here?'
+        #print 'do i come here?'
         filename = 'process%03d.txt' % n
         h=logging.FileHandler(filename=logpath+'/'+filename)
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h.setFormatter(f)
         root.addHandler(h)
     
-    root.debug('Starting single run #%d' % n)
-    result =runfunc(traj,**runparams)
-    root.debug('Finished single run #%d' % n)
+    root.info('------------------------\n Starting single run #%d of %d \n--------------------------------' % (n,total_runs))
+    result =runfunc(traj,*runparams,**kwrunparams)
     traj.store_to_hdf5(lock)
-    
+    root.info('------------------------\n Finished single run #%d of %d \n--------------------------------' % (n,total_runs))
     return result
  
 
@@ -97,7 +98,7 @@ class Environment(object):
 #         traj.store_to_hdf5()
 #         return result
 
-    def run(self, runfunc, **runparams):
+    def run(self, runfunc, *runparams,**kwrunparams):
         
         #Store the config file as parameters
         self._add_config()
@@ -119,7 +120,7 @@ class Environment(object):
             print 'Starting run in parallel with %d cores.' % ncores
             print '----------------------------------------'
             
-            iterator = ((self._traj.make_single_run(n),self._logpath,lock,runfunc,runparams) for n in xrange(len(self._traj)))
+            iterator = ((self._traj.make_single_run(n),self._logpath,lock,runfunc,len(self._traj),runparams,kwrunparams) for n in xrange(len(self._traj)))
         
             results = mpool.imap(_single_run,iterator)
             
@@ -132,7 +133,7 @@ class Environment(object):
             return results
         else:
             
-            results = [_single_run((self._traj.make_single_run(n),self._logpath,None,runfunc,runparams)) for n in xrange(len(self._traj))]
+            results = [_single_run((self._traj.make_single_run(n),self._logpath,None,runfunc,len(self._traj),runparams,kwrunparams)) for n in xrange(len(self._traj))]
             return results
                 
         

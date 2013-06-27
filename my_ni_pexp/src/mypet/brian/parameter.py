@@ -32,20 +32,21 @@ class BrianParameter(Parameter):
 
     def __call__(self,valuename=None):
         if not valuename or valuename == 'val':
+            if not self.has_value('unit') or  not self.has_value('value'):
+                self._logger.info('Brian Parameter has no unit and value.')
+                return None
             unit = eval(self.unit)
             value = self.value
             return value*unit   
         else:
             super(BrianParameter,self).__call__(valuename)
             
-    def __getattr__(self,name):
-        if not hasattr(self, '_data'):
-            raise AttributeError('This is to avoid pickling issues!')
+    def get(self, name):
         
         if name == 'val':
             return self()
-        
-        return self.get(name)
+            
+        return super(BrianParameter,self).get(name)
     
     def _set_single(self,name,val):
         

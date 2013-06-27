@@ -44,6 +44,7 @@ class BaseParameter(object):
         ''' Returns the length of the parameter.
         
         Only parameters that will be explored have a length larger than 1.
+        If no values have been added to the parameter it's length is 0.
         '''
         raise NotImplementedError( "Should have implemented this." )
     
@@ -224,11 +225,12 @@ class Parameter(BaseParameter):
             
 
             newParam = Parameter(self._name,self._fullname)
+            newParam._default = self._default
             newParam._data[0].__dict__ = self._data[n].__dict__.copy()
 
             return newParam
             
-    def __call__(self,valuename=None):
+    def __call__(self,valuename=None,n=0):
         ''' Returns the value which was called for.
         
         For example:
@@ -238,21 +240,26 @@ class Parameter(BaseParameter):
         If the the parameter is called via param(), the default value is returned, which is the 
         first stored item.
         '''
+        
         if not valuename:
             if not self._default:
                 self._logger.info('Parameter has no entries yet.')
                 return None
             else:
-                return self.get(self._default)
+                return self.get(self._default,n)
         if not self.has_value(valuename):
             return None
         
-        return self.get(valuename)
+        return self.get(valuename,n)
+
 
     def has_value(self,valuename):
         return valuename in self._data[0].__dict__
 
     def __len__(self):
+        if len(self._data)==1:
+            if len(self._data[0].__dict__) == 0:
+                return 0
         return len(self._data)
 
     
@@ -263,14 +270,17 @@ class Parameter(BaseParameter):
     
     def _is_supported_data(self, data):
         ''' Checks if input data is supported by the parameter'''
-        return type(data) in [np.ndarray, int, str, float, bool]
+        return isinstance(data, (np.ndarray, int, str, float, bool))
     
+
+      
     def _values_of_same_type(self,val1, val2):
         ''' Checks if two values are of the same type.
         
         This is important for exploration and adding of elements to the parameter array.
         New added elements must agree with the type of previous elements.
         '''
+        
         if not type(val1) == type(val2):
             return False
         
@@ -323,10 +333,11 @@ class Parameter(BaseParameter):
             raise pex.ParamterLockedException('Parameter ' + self._name + ' is locked!')
         
         # The comment is not in the _data list:
-        if name == 'Comment':
+        if name == 'Comment' or name=='comment':
             self._comment = val
             return
-
+        
+     
         if not self._is_supported_data(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
         elif not self._isarray:
@@ -449,6 +460,7 @@ class Parameter(BaseParameter):
                     raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
                 
                 val=values[0]
+             
                 
                 
                 if not key in self._data[0].__dict__:
@@ -466,6 +478,8 @@ class Parameter(BaseParameter):
         #...or if a list is given:
         elif explore_list:
             for key,val in explore_list[0].items():
+                
+              
                                 
                 if not key in self._data[0].__dict__:
                     self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
@@ -526,6 +540,7 @@ class Parameter(BaseParameter):
                     itemdict[key] = [val for id in range(act_length)]
                 else:
                     newval = itemdict[key][idx];
+                  
                     if not self._values_of_same_type(val,newval):
                         raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
                     
@@ -566,6 +581,7 @@ class Parameter(BaseParameter):
                     itemdict[key] = val
                 else:
                     newval = itemdict[key];
+                   
                     if not self._values_of_same_type(val,newval):
                         raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
                     
@@ -641,6 +657,7 @@ class Parameter(BaseParameter):
         First adds a table called 'Info' with basic information of the parameter.
         The second table has the name of the parameter and contains all entries stored in _data.
         '''
+        self._logger.debug('Start storing.')
         tabledict = self._make_description()
 
         table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
@@ -670,6 +687,8 @@ class Parameter(BaseParameter):
         newrow.append()
         
         infotable.flush()
+        
+        self._logger.debug('Finished storing.')
   
         
     def load_from_hdf5(self, hdf5group):
@@ -708,7 +727,7 @@ class Parameter(BaseParameter):
             self._become_array()  
         
         if self.is_array():
-            self.add_items_as_dict(dict_of_lists)
+            self.add_items_as_dict(**dict_of_lists)
             
     def _load_single_col(self,table,colname):
         ''' Loads a single entry of a parameter (array) from a pytables column.
@@ -735,11 +754,17 @@ class Parameter(BaseParameter):
     '''
         return self._data[0].__dict__.copy()
         
-    def get(self, name):
+    def get(self, name,n=0):
+        
+        if name == 'val':
+            name = self._default
+            
         if  not hasattr(self._data[0],name):
             raise AttributeError('Parameter ' + self._name + ' does not have attribute ' + name +'.')
         
-        return self._data[0].__dict__[name]
+        if n >= len(self):
+            raise ValueError('Cannot access %dth element, parameter has only %d elements.' % (n,len(self)))
+        return self._data[n].__dict__[name]
         
     
     def __getattr__(self,name):
@@ -771,7 +796,7 @@ class SparseParameter(Parameter):
     
     def _is_supported_data(self, data):
         ''' Simply checks if data is supported '''
-        if type(data) in [np.ndarray, int, str, float, bool]:
+        if super(SparseParameter,self)._is_supported_data(data):
             return True
         if spsp.issparse(data):
             return True
@@ -925,6 +950,15 @@ class BaseResult(object):
         '''
         pass
         #raise NotImplementedError( "Should have implemented this." )
+    
+    def get_name(self):
+        return self._name
+    
+    def get_fullname(self):
+        return self._fullname
+    
+    def gfn(self):
+        return self.get_fullname()
 
 class SimpleResult(BaseResult,SparseParameter):  
     ''' Simple Container for results. 
@@ -939,7 +973,22 @@ class SimpleResult(BaseResult,SparseParameter):
         super(SparseParameter,self).store_to_hdf5(hdf5file,hdf5group)
 
 
-
+    def load_from_hdf5(self):
+        hdf5file = pt.openFile(filename=self._filename, mode='r')
+        trajectorygroup = hdf5file.getNode('/', self._paren_trajectory)
+        
+        where = 'trajectorygroup.' + self._fullname
+        hdf5group = eval(where)
+        
+        super(SparseParameter,self).load_from_hdf5(hdf5group)
+        
+        hdf5file.close()
+        
+        return self
+    
+    def erase(self):
+        del self._data
+        
 
 
      

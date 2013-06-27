@@ -123,6 +123,9 @@ class Trajectory(object):
         self._results={}
         self._exploredparameters={}  
         
+        self._result_ids={} #the numbering of the results, only important if results have been
+    
+        
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
         
@@ -139,7 +142,7 @@ class Trajectory(object):
         self._standard_param_type = Parameter
         
         self._dynamic_imports=['mypet.parameter.SparseParameter']
-        self._dynamic_imports.append(dynamicly_imported_classes)
+        self._dynamic_imports.extend(dynamicly_imported_classes)
         
         self._loadedfrom = ('None','None')
      
@@ -224,16 +227,21 @@ class Trajectory(object):
 
         result_name = full_result_name.split('.')[-1]
         
+        if 'parent_trajectory' in kwargs.keys():
+            parent_trajectory = kwargs.pop('parent_trajectory')
+        else:
+            parent_trajectory = self._name
+        
         if isinstance(result_type, BaseResult):
             if not result_type._name == result_name or not result_type._fullname == full_result_name or not result_type._paren_trajectory == self._name or not result_type._filename == self._filename:
                 self._logger.warn('Something is wrong with the naming and or filename of your result, I will correct that.')
                 result_type._name = result_name
                 result_type._fullname = full_result_name
-                result_type._paren_trajectory = self._name
+                result_type._paren_trajectory = parent_trajectory
                 result_type._filename = self._filename
             instance = result_type
         else:
-            instance =   result_type(result_name,full_result_name,self._name,self._filename,*args,**kwargs)
+            instance =   result_type(result_name,full_result_name,parent_trajectory,self._filename,*args,**kwargs)
         
         
         self._results[full_result_name] = instance
@@ -309,7 +317,7 @@ class Trajectory(object):
         
         return instance
 
-    def ap(self, full_parameter_name, param_type=Parameter, **value_dict):
+    def ap(self, full_parameter_name, param_type=None, **value_dict):
         ''' Short for add_parameter.
         '''
         return self.add_parameter( full_parameter_name,param_type, **value_dict)
@@ -521,18 +529,21 @@ class Trajectory(object):
             
             paramdescriptiondict={'Full_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
                                   'Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Size' : pt.IntCol()}
+                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH)}
+            
+            if not key == 'ResultsTable':
+                paramdescriptiondict.update({'Size' : pt.IntCol()})
             
             if key in ['DerivedParameterTable', 'ResultsTable']:
                 paramdescriptiondict.update({'Creator_Name':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
+                                             'Parent_Trajectory':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
                                              'Creator_ID':pt.IntCol()})
             
             paramtable = hdf5file.createTable(where=trajectorygroup, name=key, description=paramdescriptiondict, title=key)
             
-            self._store_single_table(dictionary, paramtable, self._name,-1)
+            self._store_single_table(dictionary, paramtable, self._name,-1,self._name)
     
-    def _store_single_table(self,paramdict,paramtable, creator_name, creator_id):
+    def _store_single_table(self,paramdict,paramtable, creator_name, creator_id, parent_trajectory):
         ''' Stores a single overview table.
         
         Called from _store_meta_data and store_single_run
@@ -546,13 +557,15 @@ class Trajectory(object):
         newrow = paramtable.row
         for key, val in paramdict.items():
             newrow['Full_Name'] = key
-            newrow['Name'] = val.get_name()[0]
+            newrow['Name'] = val.get_name()
             newrow['Class_Name'] = val.get_class_name()
-            newrow['Size'] = len(val)
+            if not paramtable._v_name == 'ResultsTable' :
+                newrow['Size'] = len(val)
             
             if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
                 newrow['Creator_Name'] = creator_name
                 newrow['Creator_ID'] = creator_id
+                newrow['Parent_Trajectory'] = parent_trajectory
                 
             newrow.append()
         
@@ -599,10 +612,13 @@ class Trajectory(object):
         if load_derived_params:
             self._load_derived_params(trajectorygroup)
         if load_results:
-            self._load_results(trajectorygroup)
+            self._load_results(trajectorygroup,trajectoryname,filename)
+        
+        hdf5file.close()
     
-    def _load_results(self,trajectorygroup):
-        pass #TODO: Write that bitch
+    def _load_results(self,trajectorygroup,trajectoryname,filename):
+        resulttable = trajectorygroup.ResultsTable
+        self._load_any_param_or_result(self._results,resulttable,trajectorygroup,True,trajectoryname,filename)
         
     def _create_class(self,class_name):
         ''' Dynamically creates a class.
@@ -622,13 +638,13 @@ class Trajectory(object):
     
     def _load_params(self,trajectorygroup):
         paramtable = trajectorygroup.ParameterTable
-        self._load_any_param(paramtable,trajectorygroup)
+        self._load_any_param_or_result(self._parameters,paramtable,trajectorygroup)
         
     def _load_derived_params(self,trajectorygroup):
         paramtable = trajectorygroup.DerivedParameterTable
-        self._load_any_param(paramtable,trajectorygroup)
+        self._load_any_param_or_result(self._derivedparameters,paramtable,trajectorygroup)
         
-    def _load_any_param(self,paramtable,trajectorygroup):
+    def _load_any_param_or_result(self,wheredict,paramtable,trajectorygroup,creating_result_tree=False, trajectory_name = None, filename = None):
         ''' Loads a single parameter from a pytable.
         
         :param paramtable: The overiew pytable containing all parameters
@@ -640,28 +656,49 @@ class Trajectory(object):
             fullname = row['Full_Name']
             name = row['Name']
             class_name = row['Class_Name']
-            if fullname in self._parameters:
+            if fullname in wheredict:
                 self._logger.warn('Paremeter ' + fullname + ' is already in your trajectory, I am overwriting it.')
-                del self._parameters[fullname]
+                del wheredict[fullname]
                 continue
+            
+            if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
+                #creator_name = row['Creator_Name'] 
+                creator_id = row['Creator_ID']
                            
             new_class = self._create_class(class_name)    
             
-            paraminstance = new_class(name,fullname)
+            if not creating_result_tree:
+                paraminstance = new_class(name,fullname)
+            else:
+                paraminstance= new_class(name, fullname, trajectory_name, filename)
+                if not creator_id in self._result_ids:
+                    self._result_ids[creator_id]=[]
+                self._result_ids[creator_id].append(paraminstance)
             
             where = 'trajectorygroup.' + fullname
             paramgroup = eval(where)
             
-            assert isinstance(paraminstance, BaseParameter)
-            paraminstance.load_from_hdf5(paramgroup)
+            assert isinstance(paraminstance, (BaseParameter,BaseResult))
             
-            self._parameters[fullname]=paraminstance
+            if not creating_result_tree:
+                paraminstance.load_from_hdf5(paramgroup)
+                
+                if len(paraminstance)>1:
+                    self._exploredparameters[fullname] = paraminstance
             
-            if len(paraminstance>1):
-                self._exploredparameters[fullname] = paraminstance
+            wheredict[fullname]=paraminstance
             
             self._add_to_tree(fullname, paraminstance)
-                
+    
+    def get_result_ids(self):
+        return self._result_ids
+    
+    def get_results(self):
+        return self._results
+    
+    def get_explored_params(self):  
+        return self._exploredparameters
+             
     def _load_meta_data(self,trajectorygroup, replace): 
         metatable = trajectorygroup.Info
         metarow = metatable[0]
@@ -672,10 +709,10 @@ class Trajectory(object):
             self._comment = metarow['Comment']
             self._time = metarow['Timestamp']
             self._formatted_time = metarow['Time']
-            self._loadedfrom[0] = metarow['Loaded_From/Trajectory']
-            self._loadedfrom[1]= metarow['Loaded_From/Filename']
+            self._loadedfrom=metarow['Loaded_From']
         else:
             self.add_comment(metarow['Comment'])
+
         
         
     
@@ -690,12 +727,12 @@ class Trajectory(object):
         self.DerivedParameters.store_to_hdf5(hdf5file, trajectorygroup.DerivedParameters) 
         
         paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
-        self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n)
+        self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n,trajectory_name)
         
         self.Results.store_to_hdf5(hdf5file, trajectorygroup.Results)
         
         paramtable = getattr(trajectorygroup, 'ResultsTable')
-        self._store_single_table(self._results, paramtable, self.get_name(),n)
+        self._store_single_table(self._results, paramtable, self.get_name(),n,trajectory_name)
         
         hdf5file.flush()
         hdf5file.close()
@@ -727,7 +764,7 @@ class Trajectory(object):
         
         self.Parameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'Parameters'))
         self.DerivedParameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'DerivedParameters'))
-        
+        self.Results.store_to_hdf5(hdf5file, getattr(trajectorygroup,'Results'))
         
         hdf5file.flush()
         
@@ -744,6 +781,15 @@ class Trajectory(object):
         but only single parameters. From every array the nth parameter is used.
         '''
         newtraj = copy.copy(self)
+        newtraj._derivedparameters = self._derivedparameters.copy()
+        newtraj._parameters = self._parameters.copy()
+        newtraj._exploredparameters = {}
+        
+        newtraj.Parameters = TreeNode('Parameters',self._name)
+        newtraj.DerivedParameters = TreeNode('DerivedParameters',self._name)
+        newtraj.Results = TreeNode('Results',self._name)
+        
+
         
         assert isinstance(newtraj, Trajectory) #Just for autocompletion
         
@@ -752,7 +798,7 @@ class Trajectory(object):
             newtraj.Results = TreeNode('Results',self._name)
             
         # extract only one particular paramspacepoint
-        for key,val in newtraj._exploredparameters.items():
+        for key,val in self._exploredparameters.items():
             assert isinstance(val, BaseParameter)
             newparam = val.access_parameter(n)
             newtraj._exploredparameters[key] = newparam
@@ -760,7 +806,15 @@ class Trajectory(object):
                 newtraj._parameters[key] = newparam
             if key in newtraj._derivedparameters:
                 newtraj._derivedparameters[key] = newparam
-            self._add_to_tree(key, newparam)
+            #newtraj._add_to_tree(key, newparam)
+        
+        two_dicts = {}
+        two_dicts.update(newtraj._parameters)
+        two_dicts.update(newtraj._derivedparameters)
+        
+        #Builds a new tree for the derived and normal parameters
+        for key, val in two_dicts.items():
+            newtraj._add_to_tree(val.gfn(), val)
             
         
         return newtraj 
@@ -789,7 +843,7 @@ class Trajectory(object):
     
     def __getattr__(self,name):
         
-        if not hasattr(self, 'Parameters') or not hasattr(self, 'DerivedParameters'):
+        if not hasattr(self, 'Parameters') or not hasattr(self, 'DerivedParameters') or not hasattr(self, 'Results'):
             raise AttributeError('This is to avoid pickling issues!')
      
 
@@ -797,6 +851,22 @@ class Trajectory(object):
             return self.DerivedParameters.__dict__[name]
         elif name in self.Parameters.__dict__:
             return self.Parameters.__dict__[name]
+        else:
+            #check if the paramter can be found solely by the name
+            for [key,param] in self._derivedparameters.iteritems():
+                if name == param.get_name():
+                    return param
+            for [key,param] in self._parameters.iteritems():
+                if name == param.get_name():
+                    return param
+        
+        if name in self.Results.__dict__:
+            return self.Results.__dict__[name]
+        else:
+            for [key, val] in self._results:
+                if name == val.get_name():
+                    return val
+                
         
         raise AttributeError('Trajectory does not contain %s' % name)
 
@@ -829,7 +899,7 @@ class SingleRun(object):
     
     The instance of a SingleRun is never instantiated by the user but by the parent trajectory.
     From the trajectory it gets assigned the current hdf5filename, a link to the parent trajectory,
-    and the corresponing index n within the trajectory, i.e. the index of the parameter space point.
+    and the corresponding index n within the trajectory, i.e. the index of the parameter space point.
     '''
     
     def __init__(self, filename, parent_trajectory,  n):
@@ -892,10 +962,17 @@ class SingleRun(object):
         try:
             return getattr(self._single_run,name)
         except Exception:
-            return getattr(self._small_parent_trajectory,(name))
+            return getattr(self._small_parent_trajectory,name)
+           
+    def get_parent_name(self):
+        return self._small_parent_trajectory.get_name()
     
     def get_name(self):
         return self._single_run.get_name()
+    
+    def add_result(self, full_result_name, result_type,*args,**kwargs):
+        kwargs['parent_trajectory'] = self._small_parent_trajectory.get_name()
+        return self._single_run.add_result(full_result_name, result_type,*args,**kwargs)
     
     def store_to_hdf5(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
