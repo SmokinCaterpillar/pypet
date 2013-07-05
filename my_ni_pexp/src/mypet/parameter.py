@@ -9,7 +9,7 @@ import petexceptions as pex
 import tables as pt
 import numpy as np
 import scipy.sparse as spsp
-import copy
+
 from numpy.numarray.numerictypes import IsType
 
 
@@ -274,7 +274,7 @@ class Parameter(BaseParameter):
         return len(self._data)
 
     
-    def _become_array(self):
+    def become_array(self):
         self._isarray = True
     
     
@@ -483,8 +483,8 @@ class Parameter(BaseParameter):
                 self._set_single(key, val)
             
             del self._data[1:]
-            self._become_array()
-            self.add_items_as_dict(**explore_dict)
+            self.become_array()
+            self.add_items_as_dict(explore_dict)
             self._data = self._data[1:]
         #...or if a list is given:
         elif explore_list:
@@ -501,14 +501,14 @@ class Parameter(BaseParameter):
                 self._set_single(key, val)
             
             del self._data[1:]
-            self._become_array()
-            self.add_items_as_list(*explore_list)
+            self.become_array()
+            self.add_items_as_list(explore_list)
             self._data = self._data[1:]
             
         
     
     
-    def add_items_as_dict(self,**itemdict):
+    def add_items_as_dict(self,itemdict):
         ''' Adds entries for a given input dictionary containing lists.
         
         For example:
@@ -560,7 +560,7 @@ class Parameter(BaseParameter):
             self._data.append(newdata) 
           
     
-    def add_items_as_list(self,*itemdicts):
+    def add_items_as_list(self,itemdicts):
         ''' Adds entries given a list containing dictionaries.
         
         For example:
@@ -661,14 +661,25 @@ class Parameter(BaseParameter):
         SparseParameter.
         '''
         row[key] = val
-    
+        
+         
     def store_to_hdf5(self,hdf5file,hdf5group):
         ''' Writes a parameter as a pytable to an hdf5 file.
         
         First adds a table called 'Info' with basic information of the parameter.
         The second table has the name of the parameter and contains all entries stored in _data.
         '''
+        
         self._logger.debug('Start storing.')
+        
+        self.store_information(hdf5file,hdf5group)
+        self.store_data(hdf5file,hdf5group)
+
+        self._logger.debug('Finished storing.')
+        
+        
+    def store_data(self,hdf5file,hdf5group):
+       
         tabledict = self._make_description()
 
         table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
@@ -681,25 +692,28 @@ class Parameter(BaseParameter):
             newrow.append()
         
         table.flush()
-        
-        commentlength = int(len(self._comment)*1.5)
+
+
+    def store_information(self,hdf5file,hdf5group):
         infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
                    'Full_Name': pt.StringCol(self._string_length_large(self._fullname)), 
                    'Comment':pt.StringCol(self._string_length_large(self._comment)),
                    'Type':pt.StringCol(self._string_length_large(str(type(self)))),
                    'Class_Name': pt.StringCol(self._string_length_large(self.__class__.__name__))}
+        
         infotable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
+        
         newrow = infotable.row
         newrow['Name'] = self._name
         newrow['Full_Name'] = self._fullname
         newrow['Comment'] = self._comment
         newrow['Type'] = str(type(self))
         newrow['Class_Name'] = self.__class__.__name__
+        
         newrow.append()
         
         infotable.flush()
-        
-        self._logger.debug('Finished storing.')
+    
   
         
     def load_from_hdf5(self, hdf5group):
@@ -735,7 +749,7 @@ class Parameter(BaseParameter):
             self._set_single(colname, val)
           
         if nrows > 1:
-            self._become_array()  
+            self.become_array()  
         
         if self.is_array():
             self.add_items_as_dict(**dict_of_lists)
@@ -755,7 +769,7 @@ class Parameter(BaseParameter):
         
     
     def _string_length_large(self,string):  
-        return  int(len(self._comment)*1.5)
+        return  int(len(string)+1*1.5)
                 
     
     def to_dict(self):
@@ -947,10 +961,10 @@ class BaseResult(object):
     def __init__(self, name, fullname, parent_trajectory_name, filename):
         self._name=name
         self._fullname = fullname
-        self._paren_trajectory = parent_trajectory_name
+        self._parent_trajectory = parent_trajectory_name
         self._filename = filename
         
-    def store_to_hdf5(self,hdf5file,hdf5group):
+    def store_to_hdf5(self,hdf5file,hdf5group=None):
         ''' Method to store a result to an hdf5file.
         
         It is called by the trajectory if a single run should be stored.
@@ -962,6 +976,9 @@ class BaseResult(object):
         pass
         #raise NotImplementedError( "Should have implemented this." )
     
+    def load_from_hdf5(self):
+        pass
+    
     def get_name(self):
         return self._name
     
@@ -970,6 +987,9 @@ class BaseResult(object):
     
     def gfn(self):
         return self.get_fullname()
+    
+    def get_class_name(self):  
+        return self.__class__.__name__
 
 class SimpleResult(BaseResult,SparseParameter):  
     ''' Simple Container for results. 
@@ -986,7 +1006,7 @@ class SimpleResult(BaseResult,SparseParameter):
 
     def load_from_hdf5(self):
         hdf5file = pt.openFile(filename=self._filename, mode='r')
-        trajectorygroup = hdf5file.getNode('/', self._paren_trajectory)
+        trajectorygroup = hdf5file.getNode('/', self._parent_trajectory)
         
         where = 'trajectorygroup.' + self._fullname
         hdf5group = eval(where)
