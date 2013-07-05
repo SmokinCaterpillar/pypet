@@ -48,7 +48,7 @@ class BrianParameter(Parameter):
         
         splitunit = unitstr.split('*')
         value = splitunit.pop(0)
-        self.value=value
+        self.value=float(value)
         unit = '*'.join(splitunit)
         self.unit = unit
         
@@ -57,7 +57,7 @@ class BrianParameter(Parameter):
     def __call__(self,valuename=None):
         if not valuename or valuename == 'val':
             if not self.has_value('unit') or  not self.has_value('value'):
-                self._logger.info('Brian Parameter has no unit and value.')
+                self._logger.info('Brian Parameter has no unit or value.')
                 return None
             unit = eval(self.unit)
             value = self.value

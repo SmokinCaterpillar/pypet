@@ -976,9 +976,9 @@ class SimpleResult(BaseResult,SparseParameter):
     
     In fact this is a lazy implementation, its simply a sparse parameter^^
     '''        
-    def __init__(self, name, fullname, parent_trajectory_name, filename):
+    def __init__(self, name, fullname, parent_trajectory_name, filename, *args,**kwargs):
         super(SimpleResult,self).__init__(name, fullname, parent_trajectory_name, filename)
-        super(SparseParameter,self).__init__(name,fullname)
+        super(SparseParameter,self).__init__(name,fullname,*args,**kwargs)
 
     def store_to_hdf5(self,hdf5file,hdf5group):
         super(SparseParameter,self).store_to_hdf5(hdf5file,hdf5group)

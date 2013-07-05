@@ -206,7 +206,7 @@ class Trajectory(object):
         else:
             self._comment = self._comment + '; ' + comment
          
-    def add_result(self, full_result_name, result_type,*args,**kwargs):  
+    def add_result(self, full_result_name, *args,**kwargs):  
         ''' Adds a result to the trajectory, 
         
         This is a rather open implementation the user can provide *args as well as **kwargs
@@ -232,17 +232,29 @@ class Trajectory(object):
         else:
             parent_trajectory = self._name
         
-        if isinstance(result_type, BaseResult):
-            if not result_type._name == result_name or not result_type._fullname == full_result_name or not result_type._paren_trajectory == self._name or not result_type._filename == self._filename:
+        if 'result' in kwargs or (args and isinstance(args[0], BaseResult)):
+            if 'result' in kwargs:
+                instance = kwargs.pop('result')
+            else:
+                instance = args.pop(0)
+            
+            if not instance._name == result_name or not instance._fullname == full_result_name or not instance._paren_trajectory == self._name or not instance._filename == self._filename:
                 self._logger.warn('Something is wrong with the naming and or filename of your result, I will correct that.')
-                result_type._name = result_name
-                result_type._fullname = full_result_name
-                result_type._paren_trajectory = parent_trajectory
-                result_type._filename = self._filename
-            instance = result_type
+                instance._name = result_name
+                instance._fullname = full_result_name
+                instance._paren_trajectory = parent_trajectory
+                instance._filename = self._filename
+            
         else:
-            instance =   result_type(result_name,full_result_name,parent_trajectory,self._filename,*args,**kwargs)
-        
+            if 'result_type' in kwargs or (args and isinstance(args[0], type) and issubclass(args[0], BaseResult)):
+                if 'result_type' in kwargs:
+                    result_type = kwargs.pop('result_type')
+                else:
+                    args = list(args)
+                    result_type = args.pop(0)
+                instance =  result_type(result_name,full_result_name,parent_trajectory,self._filename,*args,**kwargs)
+            else:
+                raise AttributeError('No instance of a result or a result type is specified')
         
         self._results[full_result_name] = instance
         
@@ -251,12 +263,12 @@ class Trajectory(object):
         return instance
         
         
-    def adp(self, full_parameter_name, *value_list,**value_dict):
+    def adp(self, full_parameter_name, *args,**kwargs):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
                   
-    def add_derived_parameter(self, full_parameter_name, *value_list,**value_dict):
+    def add_derived_parameter(self, full_parameter_name, *args,**kwargs):
         ''' Adds a new derived parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -267,19 +279,21 @@ class Trajectory(object):
                                     becomes:
                             DerivedParameters.Run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
                                     
-        :param param_type: The type of parameter, should be passed in **value_dict or as first
-                            entry in *value_list.
+        :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first
+                            entry in *args.
                             If not specified the standard parameter is chosen.
                             Standard is the Parameter class, another example 
                             would be the SparseParameter class.
-                            If you already have an instance of the parameter (that takes care of
-                            proper naming and stuff) you can pass it here, than the instance
+                            
+         :param param (or args[0]):      If you already have an instance of the parameter (that takes care of
+                            proper naming and stuff) you can pass it here, then the instance
                             will be added to the trajectory instead of creating a new
-                            instance via calling instance = param_type(name,full_parameter_name),
-                            i.e. instance = param_type
-        :param **value_lsit: Any kinds of desired parameter entries, will be added as val, val1,
-                            ...,valN
-        :param **value_dict: Any kinds of desired parameter entries.
+                            instance via calling instance = param(name,full_parameter_name),
+                            i.e. instance = param
+                            
+        :param *args: Any kinds of desired parameter entries.
+        
+        :param **kwargs: Any kinds of desired parameter entries.
         
         Example use:
         >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=Parameter, 
@@ -291,30 +305,38 @@ class Trajectory(object):
         
         assert isinstance(full_parameter_name, str)
         
-        if not 'param_type' in value_dict:
-            if value_list and( isinstance(value_list[0] ,BaseParameter) or (isinstance(value_list[0], type) and issubclass(value_list[0] , BaseParameter))):
-                    value_list = list(value_list)
-                    param_type = value_list.pop(0)
-            else:
-                param_type = self._standard_param_type
-        else:
-            param_type = value_dict.pop('param_type')
-        
         full_parameter_name = 'DerivedParameters.' + self._name+'.'+ full_parameter_name
         
+        param_name = full_parameter_name.split('.')[-1]
+
         if self._derivedparameters.has_key(full_parameter_name):
             self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
-
-        param_name = full_parameter_name.split('.')[-1]
         
-        if isinstance(param_type, BaseParameter):
-            if not param_type.get_full_name() == full_parameter_name or not param_type.get_name() == param_name:
-                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (param_type.get_full_name(),full_parameter_name,param_type.get_name,param_name))
-                param_type._name = param_name
-                param_type._fullname = full_parameter_name
-            instance = param_type
+        if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
+            if 'param' in kwargs:
+                instance = kwargs.pop('param')
+            else:
+                args = list(args)
+                instance = args.pop(0)
+                
+                
+            if not instance.get_full_name() == full_parameter_name or not instance.get_name() == param_name:
+                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (instance.get_full_name(),full_parameter_name,instance.get_name,param_name))
+                instance._name = param_name
+                instance._fullname = full_parameter_name
+        
         else:
-            instance =   param_type(param_name,full_parameter_name,*value_list, **value_dict)
+        
+            if not 'param_type' in kwargs:
+                if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
+                        args = list(args)
+                        param_type = args.pop(0)
+                else:
+                    param_type = self._standard_param_type
+            else:
+                param_type = kwargs.pop('param_type')
+
+            instance =   param_type(param_name,full_parameter_name,*args, **kwargs)
 
         
         self._derivedparameters[full_parameter_name] = instance
@@ -325,12 +347,12 @@ class Trajectory(object):
         
         return instance
 
-    def ap(self, full_parameter_name, *value_list, **value_dict):
+    def ap(self, full_parameter_name, *args, **kwargs):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,*value_list, **value_dict)
+        return self.add_parameter( full_parameter_name,*args, **kwargs)
     
-    def add_parameter(self, full_parameter_name,  *value_list, **value_dict):  
+    def add_parameter(self, full_parameter_name,  *args, **kwargs):  
         ''' Adds a new parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -338,17 +360,20 @@ class Trajectory(object):
                                     For example, the parameter named paramgroup1.param1 becomes:
                                     Parameters.paramgroup1.param1
                                     
-        :param param_type: The type of parameter, if not specified the standard parameter is chosen.
-                            Should be passed in **value_dict or as first entry in *value_list.
+        :param param_type (or args[0]): The type of parameter, if not specified the standard parameter is chosen.
+                            Should be passed in **kwargs or as first entry in *args.
                              The standard parameter is the Parameter, but get be change via
                              the set_standard_param_type method.
-                             If you already have an instance of the parameter (that takes care of
+                            
+        :param param (or args[0]): If you already have an instance of the parameter (that takes care of
                             proper naming and stuff) you can pass it here, than the instance
                             will be added to the trajectory instead of creating a new
                             instance via calling instance = param_type(name,full_parameter_name)
                             i.e. instance = param_type
         
-        :param **valuedict: Any kinds of desired parameter entries.
+        :param*args: Any kinds of desired parameter entries
+        
+        :param **kwargs: Any kinds of desired parameter entries.
         
         Example use:
         >>> myparam=traj.add_parameter(self, paramgroup1.param1, param_type=Parameter, 
@@ -359,32 +384,40 @@ class Trajectory(object):
         '''
         assert isinstance(full_parameter_name, str)
         
-        if not 'param_type' in value_dict:
-            if value_list and( isinstance(value_list[0] ,BaseParameter) or (isinstance(value_list[0], type) and issubclass(value_list[0] , BaseParameter))):
-                    value_list = list(value_list)
-                    param_type = value_list.pop(0)
-            else:
-                param_type = self._standard_param_type
-        else:
-            param_type = value_dict.pop('param_type')
+        assert isinstance(full_parameter_name, str)
         
+        full_parameter_name = 'Parameters.'+ full_parameter_name
+        
+        param_name = full_parameter_name.split('.')[-1]
 
-        
-        full_parameter_name = 'Parameters.' + full_parameter_name
-        
         if self._parameters.has_key(full_parameter_name):
             self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
-
-        param_name = full_parameter_name.split('.')[-1]
         
-        if isinstance(param_type, BaseParameter):
-            if not param_type.get_full_name() == full_parameter_name or not param_type.get_name() == param_name:
-                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (param_type.get_full_name(),full_parameter_name,param_type.get_name,param_name))
-                param_type._name = param_name
-                param_type._fullname = full_parameter_name
-            instance = param_type
+        if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
+            if 'param' in kwargs:
+                instance = kwargs.pop('param')
+            else:
+                args = list(args)
+                instance = args.pop(0)
+                
+                
+            if not instance.get_full_name() == full_parameter_name or not instance.get_name() == param_name:
+                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (instance.get_full_name(),full_parameter_name,instance.get_name,param_name))
+                instance._name = param_name
+                instance._fullname = full_parameter_name
+        
         else:
-            instance =   param_type(param_name,full_parameter_name,*value_list,**value_dict)
+        
+            if not 'param_type' in kwargs:
+                if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
+                        args = list(args)
+                        param_type = args.pop(0)
+                else:
+                    param_type = self._standard_param_type
+            else:
+                param_type = kwargs.pop('param_type')
+
+            instance =   param_type(param_name,full_parameter_name,*args, **kwargs)
 
         
         self._parameters[full_parameter_name] = instance
@@ -569,11 +602,19 @@ class Trajectory(object):
         
         newrow = paramtable.row
         for key, val in paramdict.items():
+            if not paramtable._v_name == 'ResultsTable' :
+                newrow['Size'] = len(val)
+            else:
+                #check if this is simply an added explored parameter to easily comprehend the 
+                # hdf5 tree with a viewer
+                if 'ExploredParameters' in key:
+                    continue;
+                
+                
             newrow['Full_Name'] = key
             newrow['Name'] = val.get_name()
             newrow['Class_Name'] = val.get_class_name()
-            if not paramtable._v_name == 'ResultsTable' :
-                newrow['Size'] = len(val)
+            
             
             if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
                 newrow['Creator_Name'] = creator_name
@@ -725,9 +766,7 @@ class Trajectory(object):
             self._loadedfrom=metarow['Loaded_From']
         else:
             self.add_comment(metarow['Comment'])
-
-        
-        
+            
     
     def store_single_run(self,trajectory_name,n):  
         ''' Stores the derived parameters and results of a single run.
@@ -943,26 +982,26 @@ class SingleRun(object):
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
         #self._logger = multip.get_logger()
     
-    def adp(self, full_parameter_name, *value_list,**value_dict):
+    def adp(self, full_parameter_name, *args,**kwargs):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
         
-    def add_derived_parameter(self, full_parameter_name,  *value_list, **value_dict):
-        return self._single_run.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
+    def add_derived_parameter(self, full_parameter_name,  *args, **kwargs):
+        return self._single_run.add_derived_parameter(full_parameter_name, *args, **kwargs)
 
     
-    def ap(self, full_parameter_name, *value_list, **value_dict):
+    def ap(self, full_parameter_name, *args, **kwargs):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,*value_list, **value_dict)
+        return self.add_parameter( full_parameter_name,*args, **kwargs)
     
     
-    def add_parameter(self, full_parameter_name, *value_list, **value_dict): 
+    def add_parameter(self, full_parameter_name, *args, **kwargs): 
         ''' Adds a DERIVED Parameter to the trajectory and emits a warning.
         ''' 
         self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
-        return self.add_derived_parameter(full_parameter_name, *value_list, **value_dict)
+        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
        
     def __getattr__(self,name):
         
@@ -983,9 +1022,9 @@ class SingleRun(object):
     def get_name(self):
         return self._single_run.get_name()
     
-    def add_result(self, full_result_name, result_type,*args,**kwargs):
+    def add_result(self, full_result_name, *args,**kwargs):
         kwargs['parent_trajectory'] = self._small_parent_trajectory.get_name()
-        return self._single_run.add_result(full_result_name, result_type,*args,**kwargs)
+        return self._single_run.add_result(full_result_name, *args,**kwargs)
     
     def store_to_hdf5(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
@@ -998,6 +1037,7 @@ class SingleRun(object):
             #print 'Start storing run %d.' % self._n
             self._logger.debug('Start storing run %d.' % self._n)
             
+        self._add_explored_params()
         self._single_run.store_single_run(self._small_parent_trajectory.get_name(), self._n)
         
         if lock:
@@ -1005,3 +1045,17 @@ class SingleRun(object):
             self._logger.debug('Finished storing run %d,' % self._n)
             lock.release()
 
+    def _add_explored_params(self):
+        ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
+        '''
+        for fullname,param in self._small_parent_trajectory._exploredparameters.items():
+            splitname = fullname.split('.')
+            
+            #remove the Parameters tag
+            splitname = ['ExploredParameters']+splitname[1:]
+            newfullname = '.'.join(splitname)
+            
+            # adds the entry 'is_explored_param' to prevent the listing of the parameter again
+            # in the ResultsTable list
+            self.add_result(full_result_name=newfullname, result_type=SimpleResult,  **param.to_dict())
+            

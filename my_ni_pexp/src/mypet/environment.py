@@ -4,6 +4,7 @@ Created on 03.06.2013
 @author: robert
 '''
 from mypet.configuration import config
+from mypet.mplogging import StreamToLogger
 from mypet.trajectory import Trajectory, SingleRun
 import os
 import sys
@@ -11,36 +12,60 @@ import logging
 import time
 import datetime
 import multiprocessing as multip
+import traceback
 
 
 def _single_run(args):
 
-    traj=args[0] 
-    logpath=args[1] 
-    lock=args[2] 
-    runfunc=args[3] 
-    total_runs = args[4]
-    runparams = args[5]
-    kwrunparams = args[6]
-
-    assert isinstance(traj, SingleRun)
-    root = logging.getLogger()
-    n = traj.get_n()
-    #If the logger has no handler, add one:
-    print root.handlers
-    if len(root.handlers)<3:
-        #print 'do i come here?'
-        filename = 'process%03d.txt' % n
-        h=logging.FileHandler(filename=logpath+'/'+filename)
-        f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h.setFormatter(f)
-        root.addHandler(h)
+    try:
+        traj=args[0] 
+        logpath=args[1] 
+        lock=args[2] 
+        runfunc=args[3] 
+        total_runs = args[4]
+        runparams = args[5]
+        kwrunparams = args[6]
     
-    root.info('------------------------\n Starting single run #%d of %d \n--------------------------------' % (n,total_runs))
-    result =runfunc(traj,*runparams,**kwrunparams)
-    traj.store_to_hdf5(lock)
-    root.info('------------------------\n Finished single run #%d of %d \n--------------------------------' % (n,total_runs))
-    return result
+        assert isinstance(traj, SingleRun)
+        root = logging.getLogger()
+        n = traj.get_n()
+        #If the logger has no handler, add one:
+        #print root.handlers
+        if len(root.handlers)<3:
+            
+            #print 'do i come here?'
+
+            filename = 'process%03d.txt' % n
+            h=logging.FileHandler(filename=logpath+'/'+filename)
+            f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+            h.setFormatter(f)
+            root.addHandler(h)
+    
+            #Redirect standard out and error to the file
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
+
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
+            
+            
+        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+        sys.stdout = outstl
+
+        
+    
+        root.info('\n--------------------------------\n Starting single run #%d of %d \n--------------------------------' % (n,total_runs))
+        result =runfunc(traj,*runparams,**kwrunparams)
+        root.info('Storing Parameters')
+        traj.store_to_hdf5(lock)
+        root.info('Storing Parameters Finished')
+        root.info('\n--------------------------------\n Finished single run #%d of %d \n--------------------------------' % (n,total_runs))
+        return result
+
+    except:
+        errstr = "\n\n########## ERROR ##########\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
+        logging.getLogger('STDERR').error(errstr)
+        raise Exception("".join(traceback.format_exception(*sys.exc_info())))
  
 
     
@@ -68,9 +93,16 @@ class Environment(object):
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h=logging.FileHandler(filename=self._logpath+'/main.txt')
         #sh = logging.StreamHandler(sys.stdout)
-        h.setFormatter(f)
-        logging.getLogger().addHandler(h)
-        #logging.getLogger().addHandler(sh)
+        root = logging.getLogger()
+        root.addHandler(h)
+
+        for handler in root.handlers:
+            handler.setFormatter(f)
+            
+        
+        
+        
+
 
         self._traj = Trajectory(trajectoryname, filename, filetitle, dynamicly_imported_classes,init_time)
         self._logger = logging.getLogger('Environment')
