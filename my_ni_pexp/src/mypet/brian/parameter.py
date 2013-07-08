@@ -33,14 +33,14 @@ class BrianParameter(Parameter):
     The brian quantity can also be accessed via param.val
     
     '''
-    def __init__(self,name,fullname,*value_list,**value_dict):
+    def __init__(self,name,location,*value_list,**value_dict):
         value_list = list(value_list)
         unit = None
         
         if value_list and isinstance(value_list[0],Quantity):
             unit = value_list.pop(0)
     
-        super(BrianParameter,self).__init__(name,fullname,*value_list,**value_dict)
+        super(BrianParameter,self).__init__(name,location,*value_list,**value_dict)
     
         if unit:
             self._add_brian_quantity(unit)
@@ -93,13 +93,13 @@ class BrianParameter(Parameter):
 
 class BrianMonitorResult(BaseResult):  
     
-    def __init__(self, name, fullname, parent_trajectory_name, filename, monitor, comment =''): 
+    def __init__(self, name, location, parent_trajectory_name, filename, monitor, comment =''): 
 
 
         self._comment = comment
         self._monitor = monitor
         
-        super(BrianMonitorResult,self).__init__(name,fullname,parent_trajectory_name,filename)
+        super(BrianMonitorResult,self).__init__(name,location,parent_trajectory_name,filename)
     
     def __getattr__(self,name):
         if name =='Comment' or name == 'comment':
@@ -160,6 +160,64 @@ class BrianMonitorResult(BaseResult):
         
         self._store_information(hdf5file, hdf5group)
     
+     
+    def _store_spike_monitor(self,hdf5file, hdf5group):
+        
+        assert isinstance(self._monitor, SpikeMonitor)
+         
+        store_param = Parameter(name='monitor_data', fullname='')
+        store_param.source = str(self._monitor.source)
+        
+        record =  self._monitor.record
+        if isinstance(record, list):
+            record = np.array(record)
+            
+        store_param.record = record
+        
+        if hasattr(self._monitor, 'function'):
+            store_param.function = getsource(self._monitor.function)
+        
+        store_param.nspikes = self._monitor.nspikes
+        store_param.store_data(hdf5file, hdf5group)
+        
+        neuron_param = Parameter(name='spike_data', fullname='')
+        neuron_param.time = self._monitor.spikes[0][1]
+        neuron_param.index = self._monitor.spikes[0][0]
+        
+        result_list = []
+        for neuron_spike in self._monitor.spikes[1:]:
+            temp_dict ={}
+            temp_dict['time'] = neuron_spike[1]
+            temp_dict['index'] = neuron_spike[0]
+            result_list.append(temp_dict)
+        
+        neuron_param.become_array()
+        neuron_param.add_items_as_list(result_list)
+        
+        neuron_param.store_data(hdf5file, hdf5group)
+        
+    def _store_population_rate_monitor(self,hdf5file,hdf5group):
+        assert isinstance(self._monitor, PopulationRateMonitor)
+        assert isinstance(hdf5file,pt.File)
+        
+        store_param =  Parameter(name='monitor_data', fullname='')
+        store_param.bin = self._monitor.bin
+        
+        ### Store times ###
+        times = np.expand_dims(self._monitor.times,axis=0)
+        atom = pt.Atom.from_dtype(times.dtype)
+        carray=hdf5file.createCArray(where=hdf5group, name='times',atom=atom,shape=times.shape)
+        carray[:]=times
+        hdf5file.flush()
+        
+        ## Store Rate
+        rate = np.expand_dims(self._monitor.rate,axis=0)
+        atom = pt.Atom.from_dtype(rate.dtype)
+        carray=hdf5file.createCArray(where=hdf5group, name='rate',atom=atom,shape=rate.shape)
+        carray[:]=rate
+        hdf5file.flush()
+        
+        
     def _store_population_spike_counter(self,hdf5file,hdf5group):
         
         assert isinstance(self._monitor, PopulationSpikeCounter)
@@ -216,43 +274,3 @@ class BrianMonitorResult(BaseResult):
         
         
             
-        
-        
-        
-        
-        
-    def _store_spike_monitor(self,hdf5file, hdf5group):
-        
-        assert isinstance(self._monitor, SpikeMonitor)
-         
-        store_param = Parameter(name='monitor_data', fullname='')
-        store_param.source = str(self._monitor.source)
-        
-        record =  self._monitor.record
-        if isinstance(record, list):
-            record = np.array(record)
-            
-        store_param.record = record
-        
-        if hasattr(self._monitor, 'function'):
-            store_param.function = getsource(self._monitor.function)
-        
-        store_param.nspikes = self._monitor.nspikes
-        store_param.store_data(hdf5file, hdf5group)
-        
-        neuron_param = Parameter(name='spike_data', fullname='')
-        neuron_param.time = self._monitor.spikes[0][1]
-        neuron_param.index = self._monitor.spikes[0][0]
-        
-        result_list = []
-        for neuron_spike in self._monitor.spikes[1:]:
-            temp_dict ={}
-            temp_dict['time'] = neuron_spike[1]
-            temp_dict['index'] = neuron_spike[0]
-            result_list.append(temp_dict)
-        
-        neuron_param.become_array()
-        neuron_param.add_items_as_list(result_list)
-        
-        neuron_param.store_data(hdf5file, hdf5group)
-        

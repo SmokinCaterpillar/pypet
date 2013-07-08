@@ -17,7 +17,7 @@ from numpy.numarray.numerictypes import IsType
 class BaseParameter(object):
     ''' Specifies the methods that need to be implemented for a Trajectory Parameter
     
-    It is initialized with a fullname that specifies its position within the Trajectory, e.g.:
+    It is initialized with a location that specifies its position within the Trajectory, e.g.:
     Parameters.group.paramname
     The shorter name of the parameter is name=paramname, accordingly.
         
@@ -36,10 +36,14 @@ class BaseParameter(object):
     Parameters can be locked to forbid further modification.
     If multiprocessing is desired the parameter must be pickable!
     ''' 
-    def __init__(self, name, fullname):
+    def __init__(self, name, location):
         self._name=name
-        self._fullname = fullname
-        
+        self._location = location
+        self._fullname = self._location+'.'+self._name
+    
+    def get_location(self):
+        return self._location
+     
     def __len__(self):
         ''' Returns the length of the parameter.
         
@@ -47,6 +51,14 @@ class BaseParameter(object):
         If no values have been added to the parameter it's length is 0.
         '''
         raise NotImplementedError( "Should have implemented this." )
+    
+    def __getitem__(self,key):
+        if not self.has_value(key):
+            raise KeyError('%s has entry named %s.' %(self._fullname,key))
+        if not isinstance(key, str):
+            raise TypeError('None string keys are not supported!')
+        
+        return getattr(self, key)
     
     def __call__(self,*args):
         ''' param(name) -> Value stored at param.name
@@ -179,8 +191,8 @@ class Parameter(BaseParameter):
     # The comment that is added if no comment is specified
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
-    def __init__(self, name, fullname,*args,**kwargs):
-        super(Parameter,self).__init__(name,fullname)
+    def __init__(self, name, location,*args,**kwargs):
+        super(Parameter,self).__init__(name,location)
         self._locked=False
         self._comment= Parameter.standard_comment
         self._data=[Data()] #The list
@@ -235,7 +247,7 @@ class Parameter(BaseParameter):
                 raise ValueError('n %i is larger than entries in parameter %s, only has %i entries.' % (n,self.gfn(),len(self)))
             
 
-            newParam = Parameter(self._name,self._fullname)
+            newParam = Parameter(self._name,self._location)
             newParam._default = self._default
             newParam._data[0].__dict__ = self._data[n].__dict__.copy()
 
@@ -696,7 +708,7 @@ class Parameter(BaseParameter):
 
     def store_information(self,hdf5file,hdf5group):
         infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
-                   'Full_Name': pt.StringCol(self._string_length_large(self._fullname)), 
+                   'Location': pt.StringCol(self._string_length_large(self._fullname)), 
                    'Comment':pt.StringCol(self._string_length_large(self._comment)),
                    'Type':pt.StringCol(self._string_length_large(str(type(self)))),
                    'Class_Name': pt.StringCol(self._string_length_large(self.__class__.__name__))}
@@ -705,7 +717,7 @@ class Parameter(BaseParameter):
         
         newrow = infotable.row
         newrow['Name'] = self._name
-        newrow['Full_Name'] = self._fullname
+        newrow['Location'] = self._fullname
         newrow['Comment'] = self._comment
         newrow['Type'] = str(type(self))
         newrow['Class_Name'] = self.__class__.__name__
@@ -958,9 +970,10 @@ class BaseResult(object):
     autonomously write results to the hdf5 file.
     '''
             
-    def __init__(self, name, fullname, parent_trajectory_name, filename):
+    def __init__(self, name, location, parent_trajectory_name, filename):
         self._name=name
-        self._fullname = fullname
+        self._location = location
+        self._fullname = location+'.'+name
         self._parent_trajectory = parent_trajectory_name
         self._filename = filename
         
@@ -996,9 +1009,9 @@ class SimpleResult(BaseResult,SparseParameter):
     
     In fact this is a lazy implementation, its simply a sparse parameter^^
     '''        
-    def __init__(self, name, fullname, parent_trajectory_name, filename, *args,**kwargs):
-        super(SimpleResult,self).__init__(name, fullname, parent_trajectory_name, filename)
-        super(SparseParameter,self).__init__(name,fullname,*args,**kwargs)
+    def __init__(self, name, location, parent_trajectory_name, filename, *args,**kwargs):
+        super(SimpleResult,self).__init__(name, location, parent_trajectory_name, filename)
+        super(SparseParameter,self).__init__(name,location,*args,**kwargs)
 
     def store_to_hdf5(self,hdf5file,hdf5group):
         super(SparseParameter,self).store_to_hdf5(hdf5file,hdf5group)
