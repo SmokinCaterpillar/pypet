@@ -19,24 +19,34 @@ from twisted.python.rebuild import __getattr__
 
 #from multiprocessing.synchronize import Lock
 
-
+class PickleDummy(object):
+    def __getattr__(self,name):
+        raise AttributeError('This is only to avoid pickling issues')
+    
 class NameCollector(object):
     ''' A helper class that resolves natural Naming
     '''
-    def __init__(self,name='',parent_name='',parent_regexp=''):
+    def __init__(self,traj,name='',parent_name='',parent_regexp=''):
 
+        self._traj=traj
+        
         if name == '':
             self._fullname = ''
             self._regexp=''
         elif parent_name == '':
             self._fullname = name
-            self._regexp = '(\w+.)*'+name
+            self._regexp = '(\\w+.)*\\b'+name+'\\b'
         else:
             self._fullname = parent_name + '.' + name
-            self._regexp = parent_name+'(.\w+)*.' +name
+            self._regexp = parent_regexp+'(.\\w+)*.\\b' +name+'\\b'
 
     def __getattr__(self,name):
-        return NameCollector(name,self._fullname, self._regexp)
+        
+        new_collector = NameCollector(self._traj,name,self._fullname, self._regexp)
+        if name in self._traj._leaves:
+            return self._traj._find_in_dictionaries(new_collector)
+            
+        return new_collector
     
     def get_fullname(self):
         return self._fullname
@@ -157,7 +167,7 @@ class Trajectory(object):
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
         
-        self._collector = NameCollector()#TreeNode('Parameters',self._name)
+        self._collector = NameCollector(self)#TreeNode('Parameters',self._name)
         #self.DerivedParameters = NameCollector()#TreeNode('DerivedParameters',self._name)
         #self.Results = NameCollector()#TreeNode('Results',self._name)
         
@@ -169,6 +179,9 @@ class Trajectory(object):
         
         self.last = None
         self._standard_param_type = Parameter
+        
+        self._leaves = []
+        self._groups = []
         
         self._dynamic_imports=['mypet.parameter.SparseParameter']
         self._dynamic_imports.extend(dynamicly_imported_classes)
@@ -188,29 +201,15 @@ class Trajectory(object):
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
-        del result['_collector']
-        # The tree nodes are not pickled, if the trajectory is unpickled a new tree is build
-        #del result['Parameters']
-        #del result['DerivedParameters']
-        #del result['Results']
+        #del result['_collector']
+        result['_collector'] = PickleDummy()
         return result
     
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        
-        #self.Parameters = TreeNode('Parameters',self._name)
-        #self.DerivedParameters = TreeNode('DerivedParameters',self._name)
-        #self.Results = TreeNode('Results',self._name)
-        
-        two_dicts = {}
-        two_dicts.update(self._parameters)
-        two_dicts.update(self._derivedparameters)
-        
-        #Builds a new tree for the derived and normal parameters
-        for key, val in two_dicts.items():
-            self._add_to_tree(val.gfn(), val)
+        #self._collector=NameCollector(self)
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
-        self._collector=NameCollector()
+        
         
         
     def get_name(self):  
@@ -262,6 +261,16 @@ class Trajectory(object):
         split_name = full_result_name.split('.')
         result_name = split_name.pop()
         result_location = '.'.join(split_name)
+        
+        for loc in split_name:
+            if not loc in self._groups:
+                self._groups.append(loc)
+        
+        if result_name in self._groups:
+            raise ValueError('It is not allowed to have a result with the name of a hdf5 intermediate node. Result %s is already a node!' % result_name)
+        else:
+            if not result_name in self._leaves:
+                self._leaves.append(result_name)
         
         if 'parent_trajectory' in kwargs.keys():
             parent_trajectory = kwargs.pop('parent_trajectory')
@@ -350,6 +359,16 @@ class Trajectory(object):
         split_name = full_parameter_name.split('.')
         param_name = split_name.pop()
         param_location = '.'.join(split_name)
+        
+        for loc in split_name:
+            if not loc in self._groups:
+                self._groups.append(loc)
+        
+        if param_name in self._groups:
+            raise ValueError('It is not allowed to have a parameter with the name of a hdf5 intermediate node. Parameter %s is already a node!' % param_name)
+        else:
+            if not param_name in self._leaves:
+                self._leaves.append(param_name)
 
         if full_parameter_name in where_dict:
             self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
@@ -811,19 +830,31 @@ class Trajectory(object):
         hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
         
         trajectorygroup = hdf5file.createGroup(where='/', name=self._name, title=self._name)
-    
-        if not trajectorygroup.__contains__('Parameters'):
-            hdf5file.createGroup(where= trajectorygroup, name='Parameters', title='Parameters')
-        if not trajectorygroup.__contains__('DerivedParameters'):
-            hdf5file.createGroup(where= trajectorygroup, name='DerivedParameters', title='DerivedParameters')
-        if not trajectorygroup.__contains__('Results'):
-            hdf5file.createGroup(where= trajectorygroup, name='Results', title='Results')
-        
+#     
+#         if not trajectorygroup.__contains__('Parameters'):
+#             hdf5file.createGroup(where= trajectorygroup, name='Parameters', title='Parameters')
+#         if not trajectorygroup.__contains__('DerivedParameters'):
+#             hdf5file.createGroup(where= trajectorygroup, name='DerivedParameters', title='DerivedParameters')
+#         if not trajectorygroup.__contains__('Results'):
+#             hdf5file.createGroup(where= trajectorygroup, name='Results', title='Results')
+#         
         self._store_meta_data(hdf5file, trajectorygroup)
         
-        self.Parameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'Parameters'))
-        self.DerivedParameters.store_to_hdf5(hdf5file, getattr(trajectorygroup,'DerivedParameters'))
-        self.Results.store_to_hdf5(hdf5file, getattr(trajectorygroup,'Results'))
+        three_dicts = [self._parameters,self._derivedparameters,self._results]
+        
+        for adict in three_dicts:
+            for key, val in adict.items():
+                
+                fullname = val.get_fullname()
+                splitname = fullname.split('.')
+                curr_node = trajectorygroup
+                for part in splitname:
+                    if not curr_node.__contains__(part):
+                        hdf5file.createGroup(where=curr_node, name=part)
+                    
+                    curr_node = getattr(curr_node,part)
+          
+                val.store_to_hdf5(hdf5file,curr_node)
         
         hdf5file.flush()
         
@@ -831,7 +862,12 @@ class Trajectory(object):
         self._logger.info('Finished storing Parameters.')
         
 
-      
+    def copy(self):
+        self._collector=PickleDummy()
+        newcopy = copy.copy(self)
+        self._collector=NameCollector(self)
+        newcopy._collector=NameCollector(newcopy)
+        return newcopy
     
     def get_paramspacepoint(self,n):
         ''' Returns the nth parameter space point of the trajectory.
@@ -839,22 +875,24 @@ class Trajectory(object):
         The returned instance is a a shallow copy of the trajectory without the parameter arrays
         but only single parameters. From every array the nth parameter is used.
         '''
-        newtraj = copy.copy(self)
+        #self._collector=PickleDummy
+        newtraj = self.copy()
+        #self._collector = NameCollector(self)
+        
         newtraj._derivedparameters = self._derivedparameters.copy()
         newtraj._parameters = self._parameters.copy()
         newtraj._exploredparameters = {}
-        
-        newtraj.Parameters = TreeNode('Parameters',self._name)
-        newtraj.DerivedParameters = TreeNode('DerivedParameters',self._name)
-        newtraj.Results = TreeNode('Results',self._name)
+        newtraj._leaves = self._leaves
+        newtraj._groups = self.groups
+        #newtraj.Parameters = TreeNode('Parameters',self._name)
+        #newtraj.DerivedParameters = TreeNode('DerivedParameters',self._name)
+        #newtraj.Results = TreeNode('Results',self._name)
         
 
         
         assert isinstance(newtraj, Trajectory) #Just for autocompletion
         
-        #Do not copy the results, this is way too much in case of multiprocessing
-        if config['multiproc']:
-            newtraj.Results = TreeNode('Results',self._name)
+
             
         # extract only one particular paramspacepoint
         for key,val in self._exploredparameters.items():
@@ -866,14 +904,7 @@ class Trajectory(object):
             if key in newtraj._derivedparameters:
                 newtraj._derivedparameters[key] = newparam
             #newtraj._add_to_tree(key, newparam)
-        
-        two_dicts = {}
-        two_dicts.update(newtraj._parameters)
-        two_dicts.update(newtraj._derivedparameters)
-        
-        #Builds a new tree for the derived and normal parameters
-        for key, val in two_dicts.items():
-            newtraj._add_to_tree(val.gfn(), val)
+    
             
         
         return newtraj 
@@ -905,8 +936,10 @@ class Trajectory(object):
         if not hasattr(self, '_collector'):
             raise AttributeError('This is to avoid pickling issues!')
    
+        return getattr(self._collector, name)
         
-        candidate_collection = getattr(self._collector, name)
+    def _find_in_dictionaries(self, candidate_collection):
+        
         single_solution = candidate_collection.get_fullname()
         
         if single_solution in self._parameters:
@@ -923,7 +956,13 @@ class Trajectory(object):
             result_list = self._find_candidate_solutions(regexp)
             
             if len(result_list) > 1:
-                return result_list
+                resstr = ''
+                for res in result_list:
+                    resstr=resstr+res.gfn() +', '
+                    
+                    
+                self._logger.warn('Your naming >>%s<< found more than 1 parameter or result: %s, I will return the first one.' %(single_solution,resstr))
+                result_val = result_list[0]
             elif len(result_list) == 1:
                 result_val = result_list[0]
             else:
@@ -935,7 +974,7 @@ class Trajectory(object):
             return result_val
             
     def _find_candidate_solutions(self,regexp):
-        shortcut = regexp.split('.')[0]
+        shortcut = regexp.split('(')[0]
         
         comp_regexp = re.compile(regexp)
         result_list = []
@@ -957,7 +996,9 @@ class Trajectory(object):
             name_list = try_dict.keys()
             
             candidate_list = [m.group(0) for string in name_list for m in [comp_regexp.match(string)] if m]
-        
+            
+            #remove double entries
+            candidate_list = set(candidate_list)
             if candidate_list:
                 result_list.extend([try_dict[key] for key in candidate_list])
         
@@ -1051,7 +1092,8 @@ class SingleRun(object):
     
     def get_n(self): 
         return self._n   
-            
+           
+        
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
