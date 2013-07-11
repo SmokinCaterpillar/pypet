@@ -13,82 +13,204 @@ from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 import copy
 from mypet.configuration import config
-import multiprocessing as multip
-import re
-from twisted.python.rebuild import __getattr__
+#import multiprocessing as multip
+
+
 
 #from multiprocessing.synchronize import Lock
-
-class PickleDummy(object):
-    def __getattr__(self,name):
-        raise AttributeError('This is only to avoid pickling issues')
-    
-class NameCollector(object):
-    ''' A helper class that resolves natural Naming
+class Tree(object):
+    ''' Object that manage the Tree Nodes
     '''
-    def __init__(self,traj,name='',parent_name='',parent_regexp=''):
-
-        self._traj=traj
+    
+    def __init__(self, working_trajectory_name, parent_trajectory_name):
         
-        if name == '':
-            self._fullname = ''
-            self._regexp=''
-        elif parent_name == '':
-            self._fullname = name
-            self._regexp = '(\\w+.)*\\b'+name+'\\b'
-        else:
-            self._fullname = parent_name + '.' + name
-            self._regexp = parent_regexp+'(.\\w+)*.\\b' +name+'\\b'
-
+        self._quick_access = False
+        self._double_checking = True
+        self._working_trajectory_name=working_trajectory_name
+        self._root = TreeNode(tree=self, predecessors=[], depth=0, name='_root', fullname='_root')
+        self._parent_trajectory_name=''
+        
+        self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
+        
     def __getattr__(self,name):
+        if not hasattr(self, '_root'):
+            raise AttributeError('This is to avoid Pickling issues!')
         
-        new_collector = NameCollector(self._traj,name,self._fullname, self._regexp)
-        if name in self._traj._leaves:
-            return self._traj._find_in_dictionaries(new_collector)
+        return getattr(self._root, name)
+    
+    def _rebuild(self):
+        newtree = Tree(working_trajectory_name=self._working_trajectory_name, parent_trajectory_name=self._parent_trajectory_name)
+        newtree._root = self._root._rebuild(newtree, predecessors = [])
+        return newtree
+        
+    def _add_to_tree(self, where_list, instance):
+        self._root._add_to_tree(where_list, instance)
+        
+    def _store_to_hdf5(self,hdf5file,hdf5group, key_list = None):
+        self._root._store_to_hdf5(hdf5file, hdf5group, key_list)
+        
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['_logger']
+        return result
+    
+    def __setstate__(self, statedict):
+        self.__dict__.update(statedict)
+        self._logger = logging.getLogger('mypet.trajectory.Trajectory=' +  self._working_trajectory_name)
+        
+class TreeNode(object):
+        '''Object to construct the file tree.
+        
+        The recursive structure allows access to parameters via natural naming.
+        '''
+        def __init__(self, tree, predecessors, depth, name, fullname):
             
-        return new_collector
-    
-    def get_fullname(self):
-        return self._fullname
-    
-    def get_regexp(self):
-        return self._regexp
+            self._tree = tree
+            
+            self._suc_dict = {}
+            self._suc_dict[1]={}
+            
+            self._pred_list = predecessors
+            
+            self._leaf = False
+            self._data = None
+            self._depth = depth
+            
+            self._name = name
+            self._fullname = fullname
+            
+            
+            self._signal_predecessors()
+      
+      
+        def _rebuild(self,newtree, predecessors):
+  
+            new_node = TreeNode(tree=newtree, predecessors=predecessors, depth=self._depth, name=self._name, fullname = self._fullname)
+            
+            if self._leaf:
+                new_node._leaf=True;
+                new_node._data = self._data
+            else:
+                new_predecessors = predecessors[:]
+                new_predecessors.append(new_node)
+                for key,val in self._suc_dict[1].items():
+                    successor_node = val._rebuild(newtree,new_predecessors)
+                    new_node._suc_dict[1][key] = successor_node
+            
+            return new_node
+            
+        def _signal_predecessors(self):
+            for pred in self._pred_list:
+                pred._add_to_successors(self,self._depth, self._fullname)
+        
+        def _add_to_successors(self,successor,depth,key):
+            relative_depth = depth-self._depth
+            
+            if not relative_depth in self._suc_dict:
+                self._suc_dict[relative_depth]={}
+                
+            self._suc_dict[relative_depth][key]= successor
+                
+        def _add_to_tree(self, where_list, instance):
+            
+            if not where_list:
+                self._data = instance
+                self._leaf = True
+                return
+            
+            where = where_list.pop(0)
+            
+            successor = self._get_successor(where)
+            
+            successor._add_to_tree(where_list, instance)
+                
+        def _get_successor(self, where):
+            
+            key = self._fullname + '.' + where
+            if not key in self._suc_dict[1]:
+                new_pred_list = self._pred_list[:]
+                new_pred_list.append(self)
+                #The new tree node is automatically added to self._suc_dict via signal_precedors in init:
+                TreeNode(tree=self._tree, predecessors=new_pred_list, depth=self._depth+1, name=where,fullname=key)
+                
+                
+            return self._suc_dict[1][key]
+                
+                
+            
+        def _store_to_hdf5(self,hdf5file,hdf5group, key_list = None):
+            
+            assert isinstance(hdf5file,pt.File)
+            assert isinstance(hdf5group, pt.Group)
+            
+            if self._leaf:
+                self._data.store_to_hdf5(hdf5file,hdf5group)
+            
+            if key_list == None:
+                for key,successor in self._suc_dict[1].items():
+                    
+                    name = successor._name
+                    if not hdf5group.__contains__(name):
+                        newhdf5group=hdf5file.createGroup(where=hdf5group, name=name, title=name)
+                    else:
+                        newhdf5group = getattr(hdf5group, name)
+                        
+                    successor._store_to_hdf5(hdf5file,newhdf5group)
+            else:
+                name = key_list.pop(0)
+                
+                key = self._fullname+'.'+key
+                successor = self._suc_dict[1][key]
+                
+                if not hdf5group.__contains__(key):
+                    newhdf5group=hdf5file.createGroup(where=hdf5group, name=name, title=name)
+                else:
+                    newhdf5group = getattr(hdf5group, name)
+                    
+                successor._store_to_hdf5(hdf5file,newhdf5group, key_list)
+                    
+        
+        def _get_return(self):
+            if self._leaf:
+                if self._tree._quick_access and isinstance(self._data, BaseParameter) and not isinstance(self._data, BaseResult):
+                    return self._data()
+                else:
+                    return self._data
+            else:
+                return self
+            
+        def __getattr__(self,name):
+                       
+            if not hasattr(self, '_name') or not hasattr(self, '_suc_dict') or not hasattr(self, '_tree') or not hasattr(self._tree, '_working_trajectory_name'):
+                raise AttributeError('This is to avoid pickling issues!')
+                
+            if self._name in ['DerivedParameters', 'Results']:
+                if name == 'wt' or name ==  'Working_Trajectory' or name == 'WorkingTrajectory' or name == 'workingtrajectory' or name == 'working_trajectory' :
+                    name = self._tree._working_trajectory_name
+                
+                if name == 'pt' or 'Parent_Trajectory' or 'ParentTrajectory' or name == 'parent_trajectory' or name == 'parenttrajectory':
+                    name = self._tree._parent_trajectory_name
+                
+            
+            
 
-# class TreeNode(object):
-#         '''Object to construct the file tree.
-#         
-#         The recursive structure allows access to parameters via natural naming.
-#         '''
-#         def __init__(self, name, trajectory):
-#             self._name = name
-#             self._traj = trajectory
-#       
-#             
-#         def store_to_hdf5(self,hdf5file,hdf5group):
-#             assert isinstance(hdf5file,pt.File)
-#             assert isinstance(hdf5group, pt.Group)
-#             
-#             for key in self.__dict__:
-#                 if key == '_pwt' or key == '_name':
-#                     continue;
-#                 
-#                 if not hdf5group.__contains__(key):
-#                     newhdf5group=hdf5file.createGroup(where=hdf5group, name=key, title=key)
-#                 else:
-#                     newhdf5group = getattr(hdf5group, key)
-#                 self.__dict__[key].store_to_hdf5(hdf5file,newhdf5group)
-#         
-# 
-#         def __getattr__(self,name):
-#                        
-#             if self._name in ['DerivedParameters', 'Results']:
-#                 if name == 'pwt':
-#                     return = self.__dict__[self._pwt]
-#                 else:
-#                     return self.__dict__[self._pwt].name
-#              
-#             raise AttributeError('%s does not have attribute %s' % (self._pwt,name))
+            successor = None
+            for depth in self._suc_dict:
+                for key,val in self._suc_dict[depth].items():
+                    if val._name == name:
+                        if not successor == None:
+                            self._tree._logger.warning('Entry %s has been found more than once, I will choose the closest match in the tree, that is I will choose >>%s<< over >>%s<<.' % (name,successor._fullname,key))
+                            break;
+                        else:
+                            successor = val
+                            if not self._tree._double_checking:
+                                break;
             
+            if successor == None:
+                raise AttributeError('%s or it\'s tree does not have attribute %s' % (self._tree._working_trajectory_name,name))
+            else:
+                return successor._get_return()
+ 
 
 class Trajectory(object):
     '''The trajectory manages the handling of simulation parameters and results.
@@ -167,21 +289,19 @@ class Trajectory(object):
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
         
-        self._collector = NameCollector(self)#TreeNode('Parameters',self._name)
-        #self.DerivedParameters = NameCollector()#TreeNode('DerivedParameters',self._name)
-        #self.Results = NameCollector()#TreeNode('Results',self._name)
+        self._tree = Tree(working_trajectory_name=self._name, parent_trajectory_name = self._name)
+        
         
         self._filename = filename 
         self._filetitle=filetitle
         self._comment= Trajectory.standard_comment
         
         self._quick_access = False
+        self._double_checking = True
         
         self.last = None
         self._standard_param_type = Parameter
         
-        self._leaves = []
-        self._groups = []
         
         self._dynamic_imports=['mypet.parameter.SparseParameter']
         self._dynamic_imports.extend(dynamicly_imported_classes)
@@ -189,7 +309,12 @@ class Trajectory(object):
         self._loadedfrom = ('None','None')
     
     def set_quick_access(self, val):
-        self._quick_access = val
+        assert isinstance(val,bool)
+        self._tree._quick_access = val
+    
+    def set_double_checking(self, val):
+        assert isinstance(val,bool)
+        self._tree._double_checking=val
     
     def set_standard_param_type(self,param_type):   
         ''' Sets the standard parameter type.
@@ -201,13 +326,16 @@ class Trajectory(object):
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
-        #del result['_collector']
-        result['_collector'] = PickleDummy()
+        result['_tree'] =self._tree._rebuild()
+        result['_derivedparameters']=self._derivedparameters.copy()
+        result['_parameters'] = self._parameters.copy()
+        result['_results'] = self._results.copy()
         return result
     
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        #self._collector=NameCollector(self)
+
+        #self._tree= TreeNode(parent_trajectory=self, predecessors=[], depth=0, name='root')
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
         
         
@@ -262,15 +390,6 @@ class Trajectory(object):
         result_name = split_name.pop()
         result_location = '.'.join(split_name)
         
-        for loc in split_name:
-            if not loc in self._groups:
-                self._groups.append(loc)
-        
-        if result_name in self._groups:
-            raise ValueError('It is not allowed to have a result with the name of a hdf5 intermediate node. Result %s is already a node!' % result_name)
-        else:
-            if not result_name in self._leaves:
-                self._leaves.append(result_name)
         
         if 'parent_trajectory' in kwargs.keys():
             parent_trajectory = kwargs.pop('parent_trajectory')
@@ -304,7 +423,7 @@ class Trajectory(object):
         
         self._results[full_result_name] = instance
         
-        #self._add_to_tree(full_result_name, instance)
+        self._tree._add_to_tree(full_result_name.split('.'), instance)
         
         return instance
         
@@ -360,15 +479,6 @@ class Trajectory(object):
         param_name = split_name.pop()
         param_location = '.'.join(split_name)
         
-        for loc in split_name:
-            if not loc in self._groups:
-                self._groups.append(loc)
-        
-        if param_name in self._groups:
-            raise ValueError('It is not allowed to have a parameter with the name of a hdf5 intermediate node. Parameter %s is already a node!' % param_name)
-        else:
-            if not param_name in self._leaves:
-                self._leaves.append(param_name)
 
         if full_parameter_name in where_dict:
             self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
@@ -403,7 +513,9 @@ class Trajectory(object):
         
         where_dict[full_parameter_name] = instance
         
-        #self._add_to_tree(full_parameter_name, instance)
+        
+        self._tree._add_to_tree(full_parameter_name.split('.'), instance)
+        
         
         self.last = instance
         
@@ -454,29 +566,6 @@ class Trajectory(object):
         return self._add_any_param(full_parameter_name, self._parameters, *args,**kwargs)
         
 
-#        
-#     
-#     def _add_to_tree(self, where, instance):
-#         ''' Adds stuff to the trajectory tree to allow natural naming.
-#         
-#         For example:
-#         >>> traj._add_to_tree(self, Parameters.test.testobject, someobject
-#         
-#         then using traj.Parameters.test.testobject will return someobject.
-#         
-#         '''
-#         tokenized_name = where.split('.')
-#         
-#         treetokens = tokenized_name[:-1]
-#         
-#         param_name = tokenized_name[-1]
-# 
-#         act_inst = self
-#         for token in treetokens:
-#             if not hasattr(act_inst, token):
-#                 act_inst.__dict__[token] = TreeNode(token,self._name)
-#             act_inst = act_inst.__dict__[token]
-#         act_inst.__dict__[param_name] = instance
         
         
     def _split_dictionary(self, tosplit_dict):
@@ -767,8 +856,8 @@ class Trajectory(object):
                     self._exploredparameters[fullname] = paraminstance
             
             wheredict[fullname]=paraminstance
-            
-            self._add_to_tree(fullname, paraminstance)
+
+            self._tree._add_to_tree(fullname.split('.'), paraminstance)
     
     def get_result_ids(self):
         return self._result_ids
@@ -802,16 +891,21 @@ class Trajectory(object):
         #print 'Storing %d' %n
         trajectorygroup = hdf5file.getNode(where='/', name=trajectory_name)
         
-        self.DerivedParameters.store_to_hdf5(hdf5file, trajectorygroup.DerivedParameters) 
+
         
         paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
         self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n,trajectory_name)
         
-        self.Results.store_to_hdf5(hdf5file, trajectorygroup.Results)
+        for key in self._derivedparameters:
+            self._tree._store_to_hdf5(hdf5file,trajectorygroup, key.split('.'))
+            
         
         paramtable = getattr(trajectorygroup, 'ResultsTable')
         self._store_single_table(self._results, paramtable, self.get_name(),n,trajectory_name)
         
+        for key in self._results:
+            self._tree._store_to_hdf5(hdf5file,trajectorygroup, key.split('.'))
+                
         hdf5file.flush()
         hdf5file.close()
     
@@ -840,21 +934,10 @@ class Trajectory(object):
 #         
         self._store_meta_data(hdf5file, trajectorygroup)
         
-        three_dicts = [self._parameters,self._derivedparameters,self._results]
+        #three_dicts = [self._parameters,self._derivedparameters,self._results]
         
-        for adict in three_dicts:
-            for key, val in adict.items():
-                
-                fullname = val.get_fullname()
-                splitname = fullname.split('.')
-                curr_node = trajectorygroup
-                for part in splitname:
-                    if not curr_node.__contains__(part):
-                        hdf5file.createGroup(where=curr_node, name=part)
-                    
-                    curr_node = getattr(curr_node,part)
-          
-                val.store_to_hdf5(hdf5file,curr_node)
+        self._tree._store_to_hdf5(hdf5file, trajectorygroup)
+        
         
         hdf5file.flush()
         
@@ -862,12 +945,7 @@ class Trajectory(object):
         self._logger.info('Finished storing Parameters.')
         
 
-    def copy(self):
-        self._collector=PickleDummy()
-        newcopy = copy.copy(self)
-        self._collector=NameCollector(self)
-        newcopy._collector=NameCollector(newcopy)
-        return newcopy
+        
     
     def get_paramspacepoint(self,n):
         ''' Returns the nth parameter space point of the trajectory.
@@ -876,14 +954,13 @@ class Trajectory(object):
         but only single parameters. From every array the nth parameter is used.
         '''
         #self._collector=PickleDummy
-        newtraj = self.copy()
+        newtraj = copy.copy(self)
         #self._collector = NameCollector(self)
         
-        newtraj._derivedparameters = self._derivedparameters.copy()
-        newtraj._parameters = self._parameters.copy()
-        newtraj._exploredparameters = {}
-        newtraj._leaves = self._leaves
-        newtraj._groups = self.groups
+        #newtraj._derivedparameters = self._derivedparameters.copy()
+       #newtraj._parameters = self._parameters.copy()
+        #newtraj._exploredparameters = self._results.copy()
+        #newtraj._NNtree = self._tree._rebuild()
         #newtraj.Parameters = TreeNode('Parameters',self._name)
         #newtraj.DerivedParameters = TreeNode('DerivedParameters',self._name)
         #newtraj.Results = TreeNode('Results',self._name)
@@ -893,8 +970,12 @@ class Trajectory(object):
         assert isinstance(newtraj, Trajectory) #Just for autocompletion
         
 
-            
+#         two_dicts = {}
+#         two_dicts.update(self._derivedparameters)
+#         two_dicts.update(self._parameters)
+
         # extract only one particular paramspacepoint
+
         for key,val in self._exploredparameters.items():
             assert isinstance(val, BaseParameter)
             newparam = val.access_parameter(n)
@@ -903,7 +984,9 @@ class Trajectory(object):
                 newtraj._parameters[key] = newparam
             if key in newtraj._derivedparameters:
                 newtraj._derivedparameters[key] = newparam
-            #newtraj._add_to_tree(key, newparam)
+            
+            newtraj._tree._add_to_tree(key.split('.'), newparam)
+       
     
             
         
@@ -933,115 +1016,13 @@ class Trajectory(object):
 
     def __getattr__(self,name):
         
-        if not hasattr(self, '_collector'):
+        if not hasattr(self, '_tree'):
             raise AttributeError('This is to avoid pickling issues!')
    
-        return getattr(self._collector, name)
+        return getattr(self._tree, name)
         
-    def _find_in_dictionaries(self, candidate_collection):
-        
-        single_solution = candidate_collection.get_fullname()
-        
-        if single_solution in self._parameters:
-            result_val= self._parameters[single_solution]
-        elif single_solution in self._derivedparameters:
-            result_val= self._derivedparameters[single_solution]
-        elif single_solution in self._results:
-            # There is no quick access to results:
-            return self._results[single_solution]
-        
-        else:
-            #No comes the computationally expensive stuff:
-            regexp = candidate_collection.get_regexp()
-            result_list = self._find_candidate_solutions(regexp)
-            
-            if len(result_list) > 1:
-                resstr = ''
-                for res in result_list:
-                    resstr=resstr+res.gfn() +', '
-                    
-                    
-                self._logger.warn('Your naming >>%s<< found more than 1 parameter or result: %s, I will return the first one.' %(single_solution,resstr))
-                result_val = result_list[0]
-            elif len(result_list) == 1:
-                result_val = result_list[0]
-            else:
-                raise AttributeError('Trajectory does not contain %s.' % single_solution)
-        
-        if self._quick_access and isinstance(result_val, BaseParameter):
-            return result_val()
-        else:
-            return result_val
-            
-    def _find_candidate_solutions(self,regexp):
-        shortcut = regexp.split('(')[0]
-        
-        comp_regexp = re.compile(regexp)
-        result_list = []
-        
-        if shortcut == 'Parameters':
-            try_list = [0]
-        elif shortcut == 'DerivedParameters':
-            try_list = [1]
-        elif shortcut == 'Results':
-            try_list = [2]
-        else:
-            try_list = [0,1,2]
-        
-        dict_list = [self._parameters,self._derivedparameters, self._results]
-            
-        for irun in try_list:
-            
-            try_dict = dict_list[irun]
-            name_list = try_dict.keys()
-            
-            candidate_list = [m.group(0) for string in name_list for m in [comp_regexp.match(string)] if m]
-            
-            #remove double entries
-            candidate_list = set(candidate_list)
-            if candidate_list:
-                result_list.extend([try_dict[key] for key in candidate_list])
-        
-        return result_list
-            
-            
-            
-        #if not hasattr(self, 'Parameters') or not hasattr(self, 'DerivedParameters') or not hasattr(self, 'Results'):
-            #raise AttributeError('This is to avoid pickling issues!')
 
-#         return_val=None
-#         
-#         if name in self.DerivedParameters.__dict__:
-#             return_val= self.DerivedParameters.__dict__[name]
-#         elif name in self.Parameters.__dict__:
-#             return_val= self.Parameters.__dict__[name]
-#         else:
-#             #check if the parameter can be found solely by the name
-#             for [key,param] in self._derivedparameters.iteritems():
-#                 if name == param.get_name():
-#                     return_val= param
-#                     break
-#             
-#             if return_val==None:
-#                 for [key,param] in self._parameters.iteritems():
-#                     if name == param.get_name():
-#                         return_val= param
-#                         break
-#         
-#         if not return_val == None:
-#             if self._quick_access and isinstance(return_val, BaseParameter):
-#                 return return_val()
-#             else:
-#                 return return_val
-#         
-#         
-#         else:
-#             for [key, val] in self._results:
-#                 if name == val.get_name():
-#                     return val
-                
-        
-        raise AttributeError('Trajectory does not contain %s' % name)
+
 
     def multiproc(self):
         return self._multiproc
@@ -1088,6 +1069,13 @@ class SingleRun(object):
         self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
         self._single_run = Trajectory(name=name, filename=filename)
         
+        self._tree = self._small_parent_trajectory._tree
+        del self._single_run._tree
+        self._single_run._tree = self._tree
+        
+        self._tree._parent_trajectory_name = self._small_parent_trajectory.get_name()
+        self._tree._working_trajectory_name = self._single_run.get_name()
+        
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
     
     def get_n(self): 
@@ -1127,22 +1115,12 @@ class SingleRun(object):
        
     def __getattr__(self,name):
         
-        if not hasattr(self, '_small_parent_trajectory') or not hasattr(self, '_single_run'):
+        if not hasattr(self, '_tree'):
             raise AttributeError('This is to avoid pickling issues!')
         
-        if name == 'pt' or name == 'ParentTrajectory':
-            return self._small_parent_trajectory
+        return getattr(self._tree, name)
         
-        try:
-            result= getattr(self._single_run,name)
-        except Exception:
-            result= getattr(self._small_parent_trajectory,name)
-        
-        if  result in dir(self._single_run):
-            raise AttributeError('SingleRun does not support method %s.' %name)
-        else:
-            return result
-           
+     
     def get_parent_name(self):
         return self._small_parent_trajectory.get_name()
     
@@ -1154,8 +1132,12 @@ class SingleRun(object):
         return self._single_run.add_result(full_result_name, *args,**kwargs)
     
     def set_quick_access(self,val):
-        self._single_run.set_quick_access(val)
-        self._small_parent_trajectory.set_quick_access(val)
+        assert isinstance(val, bool)
+        self._tree._quick_access=val
+        
+    def set_double_checking(self,val):
+        assert isinstance(val, bool)
+        self._tree._double_checking=val
         
     def store_to_hdf5(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
