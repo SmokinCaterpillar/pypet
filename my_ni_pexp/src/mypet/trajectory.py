@@ -13,203 +13,254 @@ from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 import copy
 from mypet.configuration import config
-#import multiprocessing as multip
+
 
 
 
 #from multiprocessing.synchronize import Lock
-class Tree(object):
-    ''' Object that manage the Tree Nodes
-    '''
+
+class NaturalNamingInterface(object):
+
     
-    def __init__(self, working_trajectory_name, parent_trajectory_name):
-        
+    def __init__(self, working_trajectory_name, parent_trajectory_name):   
         self._quick_access = False
-        self._double_checking = True
+        #self._double_checking = True
         self._working_trajectory_name=working_trajectory_name
-        self._root = TreeNode(tree=self, predecessors=[], depth=0, name='_root', fullname='_root')
         self._parent_trajectory_name=''
         
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
         
+        #self._debug = {}
+        self._storage_dict =  {} 
+        self._nodes_dict = {}
+        self._leaves_dict = {}
+        
+        self._root = TreeNode(self,'_root')
+        self._root._dict_list = [self._storage_dict]
+        
     def __getattr__(self,name):
-        if not hasattr(self, '_root'):
-            raise AttributeError('This is to avoid Pickling issues!')
-        
+         
+        if not hasattr(self, '_root') or \
+             not hasattr(self,'_shortcut') or \
+             not hasattr(self, '_find') or \
+             not hasattr(self, '_find_candidates') or \
+             not hasattr(self, '_find_recursively') or \
+             not hasattr(self, '_select') or \
+             not hasattr(self, '_sort_according_to_type') or \
+             not hasattr(self, '_get_result') or \
+             not hasattr(self, '_nodes_dict') or \
+             not hasattr(self, '_leaves_dict') or \
+             not hasattr(self, '_storage_dict'):
+
+            raise AttributeError('This is to avoid pickling issues and problems with internal variables!')
+             
         return getattr(self._root, name)
+        
+    def _shortcut(self, name):
+        
+        expanded = None
+        
+        if name in ['wt', 'WorkingTrajectory', 'workintrajectory', 'Working_Trajectory', 'working_trajectory']:
+            expanded= self._working_trajectory_name
+            
+        
+        if name in ['pt', 'ParentTrajectory', 'parenttrajectory', 'Parent_Trajectory', 'parent_trajectory']:
+            expanded = self._parent_trajectory_name
+        
+        return expanded
+         
+        
     
-    def _rebuild(self):
-        newtree = Tree(working_trajectory_name=self._working_trajectory_name, parent_trajectory_name=self._parent_trajectory_name)
-        newtree._root = self._root._rebuild(newtree, predecessors = [])
-        return newtree
+    def _add_to_nninterface(self, leaf_name, key, data):
         
-    def _add_to_tree(self, where_list, instance):
-        self._root._add_to_tree(where_list, instance)
+        key = '_root.'+key
+        split_name = key.split('.')
+        leaf = split_name.pop()
+
+        if leaf in self._nodes_dict or not self._shortcut(leaf) == None:
+            raise AttributeError('%s is already a group name, this is not allowed as a parameter name.' % leaf)
         
-    def _store_to_hdf5(self,hdf5file,hdf5group, key_list = None):
-        self._root._store_to_hdf5(hdf5file, hdf5group, key_list)
+        if not leaf in self._leaves_dict:
+            self._leaves_dict[leaf] = 1
+        else:
+            self._leaves_dict[leaf] = self._leaves_dict[leaf]+1
+        
+        
+        for node in split_name:
+
+            if node in self._leaves_dict or not self._shortcut(node) == None:
+                raise AttributeError('%s is already a parameter name, this is not allowed as a group name.' % node)
+        
+            if not node in self._nodes_dict:
+                self._nodes_dict[node] = 1
+            else:
+                self._nodes_dict[node] = self._nodes_dict[node] +1 
+    
+        
+        self._add_to_storage_dict(split_name, leaf, data)
+    
+    def _add_to_storage_dict(self, where_list, leaf, data):
+        act_dict = self._storage_dict
+        for node in where_list:
+            if not node in act_dict:
+                act_dict[node] ={}
+            
+            act_dict = act_dict[node]
+        
+        act_dict[leaf] = data
+            
+
+
         
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
+        del result['_root'] 
+        result['_storage_dict'] = self._recursive_shallow_copy(self._storage_dict)
+        result['_leaves_dict'] = self._leaves_dict.copy()
+        result['_nodes_dict'] = self._nodes_dict.copy()
         return result
+    
+    def _recursive_shallow_copy(self, dictionary):
+        
+        new_dict = dictionary.copy()
+        for key, val in dictionary.items():
+            if isinstance(val, dict):
+                new_dict[key] = self._recursive_shallow_copy(val)
     
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' +  self._working_trajectory_name)
+        self._root = TreeNode(nninterface=self, name='_root')
+        self._root._dict_list = [self._storage_dict]
+      
+    def _find(self, node, dict_list): 
         
+        assert isinstance(node, TreeNode)
+        
+        candidate_list = self._find_candidates(node._name, dict_list)
+        
+        return self._select(candidate_list, node)
+
+                
+     
+    def _find_candidates(self,name, dict_list):
+        
+        result_list = []
+        for dictionary in dict_list:
+            result_list.append(self._find_recursively(dictionary, name))      
+    
+    def _find_recursively(self,dictionary, name): 
+        result_list = []
+        for key, val in dictionary.items():
+            if key == name:
+                result_list.append(val)
+            
+            if isinstance(val, dict):
+                result_list.append(self._find_recursively(val, name))
+        
+        return result_list
+
+    def _select(self, candidate_list, node):
+        
+        dict_list, item_list = self._sort_according_to_type(candidate_list)
+    
+        
+        if len(candidate_list) > 0:
+            
+            if (candidate_list) > 1:
+                name_list = [item.get_fullname() for item in item_list]
+                
+                if dict_list():
+                    name_list.append('Another TreeNode')
+                    
+                self._logger.warning('There are several solutions for your query >>%s<<. The following list has been found: %s. I have chosen >>%s<<.' %(node._fullname,str(name_list),name_list[0]))
+            
+            if item_list:
+                return self._get_result(item_list[0])
+            else:
+                node._dict_list = dict_list
+                return node
+        else:
+            raise AttributeError('Your query >>%s<< failed, it is not contained in the trajectory.' % node._fullname)
+        
+        
+    
+    
+    def _sort_according_to_type(self, candidate_list):
+        
+        dict_list = []
+        result_list = []
+        parameter_list=[]
+        derived_traj_list=[]
+        derived_run_list = []
+        
+        for candidate in candidate_list:
+            if isinstance(candidate, dict):
+                dict_list.append(candidate)
+            else:
+                fullname = candidate.get_fullname()
+                split_name = fullname.split('.')
+                first = split_name[1]
+                second = split_name[2]
+                if first == 'Results':
+                    result_list.append(candidate)
+                elif first == 'Parameters':
+                    parameter_list.append(candidate)
+                else:
+                    if second == self._parent_trajectory_name:
+                        derived_traj_list.append(candidate)
+                    else:
+                        derived_run_list.append(candidate)
+        
+        return dict_list, derived_run_list+derived_traj_list+parameter_list+result_list
+     
+       
+    def _get_result(self, data):
+        
+        if self._quick_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
+            return data()
+        else:
+            return data
+
+            
+
+        
+
 class TreeNode(object):
         '''Object to construct the file tree.
         
         The recursive structure allows access to parameters via natural naming.
         '''
-        def __init__(self, tree, predecessors, depth, name, fullname):
+        def __init__(self, nninterface, name, parents_fullname=''):
             
-            self._tree = tree
-            
-            self._suc_dict = {}
-            self._suc_dict[1]={}
-            
-            self._pred_list = predecessors
-            
-            self._leaf = False
-            self._data = None
-            self._depth = depth
-            
+            self._nninterface = nninterface
             self._name = name
-            self._fullname = fullname
             
-            
-            self._signal_predecessors()
+            if parents_fullname == '':
+                self._fullname = self._name
+            else:
+                self._fullname = parents_fullname+'.'+self._name
+         
+            self._dict_list =[]
       
-      
-        def _rebuild(self,newtree, predecessors):
-  
-            new_node = TreeNode(tree=newtree, predecessors=predecessors, depth=self._depth, name=self._name, fullname = self._fullname)
-            
-            if self._leaf:
-                new_node._leaf=True;
-                new_node._data = self._data
-            else:
-                new_predecessors = predecessors[:]
-                new_predecessors.append(new_node)
-                for key,val in self._suc_dict[1].items():
-                    successor_node = val._rebuild(newtree,new_predecessors)
-                    new_node._suc_dict[1][key] = successor_node
-            
-            return new_node
-            
-        def _signal_predecessors(self):
-            for pred in self._pred_list:
-                pred._add_to_successors(self,self._depth, self._fullname)
-        
-        def _add_to_successors(self,successor,depth,key):
-            relative_depth = depth-self._depth
-            
-            if not relative_depth in self._suc_dict:
-                self._suc_dict[relative_depth]={}
-                
-            self._suc_dict[relative_depth][key]= successor
-                
-        def _add_to_tree(self, where_list, instance):
-            
-            if not where_list:
-                self._data = instance
-                self._leaf = True
-                return
-            
-            where = where_list.pop(0)
-            
-            successor = self._get_successor(where)
-            
-            successor._add_to_tree(where_list, instance)
-                
-        def _get_successor(self, where):
-            
-            key = self._fullname + '.' + where
-            if not key in self._suc_dict[1]:
-                new_pred_list = self._pred_list[:]
-                new_pred_list.append(self)
-                #The new tree node is automatically added to self._suc_dict via signal_precedors in init:
-                TreeNode(tree=self._tree, predecessors=new_pred_list, depth=self._depth+1, name=where,fullname=key)
-                
-                
-            return self._suc_dict[1][key]
-                
-                
-            
-        def _store_to_hdf5(self,hdf5file,hdf5group, key_list = None):
-            
-            assert isinstance(hdf5file,pt.File)
-            assert isinstance(hdf5group, pt.Group)
-            
-            if self._leaf:
-                self._data.store_to_hdf5(hdf5file,hdf5group)
-            
-            if key_list == None:
-                for key,successor in self._suc_dict[1].items():
-                    
-                    name = successor._name
-                    if not hdf5group.__contains__(name):
-                        newhdf5group=hdf5file.createGroup(where=hdf5group, name=name, title=name)
-                    else:
-                        newhdf5group = getattr(hdf5group, name)
-                        
-                    successor._store_to_hdf5(hdf5file,newhdf5group)
-            else:
-                name = key_list.pop(0)
-                
-                key = self._fullname+'.'+key
-                successor = self._suc_dict[1][key]
-                
-                if not hdf5group.__contains__(key):
-                    newhdf5group=hdf5file.createGroup(where=hdf5group, name=name, title=name)
-                else:
-                    newhdf5group = getattr(hdf5group, name)
-                    
-                successor._store_to_hdf5(hdf5file,newhdf5group, key_list)
-                    
-        
-        def _get_return(self):
-            if self._leaf:
-                if self._tree._quick_access and isinstance(self._data, BaseParameter) and not isinstance(self._data, BaseResult):
-                    return self._data()
-                else:
-                    return self._data
-            else:
-                return self
-            
         def __getattr__(self,name):
-                       
-            if not hasattr(self, '_name') or not hasattr(self, '_suc_dict') or not hasattr(self, '_tree') or not hasattr(self._tree, '_working_trajectory_name'):
-                raise AttributeError('This is to avoid pickling issues!')
-                
-            if self._name in ['DerivedParameters', 'Results']:
-                if name == 'wt' or name ==  'Working_Trajectory' or name == 'WorkingTrajectory' or name == 'workingtrajectory' or name == 'working_trajectory' :
-                    name = self._tree._working_trajectory_name
-                
-                if name == 'pt' or 'Parent_Trajectory' or 'ParentTrajectory' or name == 'parent_trajectory' or name == 'parenttrajectory':
-                    name = self._tree._parent_trajectory_name
-                
             
+            if not hasattr(self, '_nninterface') or not hasattr(self, '_fullname') or not hasattr(self, '_name') or not hasattr(self,'_dict_list'):
+                raise AttributeError('This is to avoid pickling issues')
             
+            if not name in self._nninterface._leaves_dict and not name in self._nninterface._nodes_dict:
+                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+        
+            shortcut = self._nninterface._shortcut(name) 
+            if not shortcut == None:
+                name = shortcut 
+                
+                
+            new_node = TreeNode(self._nninterface, name, self._fullname, self._regexp) 
 
-            successor = None
-            for depth in self._suc_dict:
-                for key,val in self._suc_dict[depth].items():
-                    if val._name == name:
-                        if not successor == None:
-                            self._tree._logger.warning('Entry %s has been found more than once, I will choose the closest match in the tree, that is I will choose >>%s<< over >>%s<<.' % (name,successor._fullname,key))
-                            break;
-                        else:
-                            successor = val
-                            if not self._tree._double_checking:
-                                break;
-            
-            if successor == None:
-                raise AttributeError('%s or it\'s tree does not have attribute %s' % (self._tree._working_trajectory_name,name))
-            else:
-                return successor._get_return()
+            return self._nninterface._find(new_node, self._dict_list)
+
  
 
 class Trajectory(object):
@@ -289,7 +340,7 @@ class Trajectory(object):
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
         
-        self._tree = Tree(working_trajectory_name=self._name, parent_trajectory_name = self._name)
+        self._nninterface = NaturalNamingInterface(working_trajectory_name=self._name, parent_trajectory_name = self._name)
         
         
         self._filename = filename 
@@ -310,11 +361,11 @@ class Trajectory(object):
     
     def set_quick_access(self, val):
         assert isinstance(val,bool)
-        self._tree._quick_access = val
+        self._nninterface._quick_access = val
     
-    def set_double_checking(self, val):
-        assert isinstance(val,bool)
-        self._tree._double_checking=val
+#     def set_double_checking(self, val):
+#         assert isinstance(val,bool)
+#         self._nninterface._double_checking=val
     
     def set_standard_param_type(self,param_type):   
         ''' Sets the standard parameter type.
@@ -326,7 +377,7 @@ class Trajectory(object):
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
-        result['_tree'] =self._tree._rebuild()
+        result['_nninterface'] =copy.copy(self._nninterface)
         result['_derivedparameters']=self._derivedparameters.copy()
         result['_parameters'] = self._parameters.copy()
         result['_results'] = self._results.copy()
@@ -423,7 +474,7 @@ class Trajectory(object):
         
         self._results[full_result_name] = instance
         
-        self._tree._add_to_tree(full_result_name.split('.'), instance)
+        self._nninterface._add_to_nninterface(full_result_name.split('.'), instance)
         
         return instance
         
@@ -514,7 +565,8 @@ class Trajectory(object):
         where_dict[full_parameter_name] = instance
         
         
-        self._tree._add_to_tree(full_parameter_name.split('.'), instance)
+        #self._nninterface.peter ='Dubb'
+        self._nninterface._add_to_nninterface(param_name, full_parameter_name, instance)
         
         
         self.last = instance
@@ -857,7 +909,7 @@ class Trajectory(object):
             
             wheredict[fullname]=paraminstance
 
-            self._tree._add_to_tree(fullname.split('.'), paraminstance)
+            self._nninterface._add_to_nninterface(name,fullname, paraminstance)
     
     def get_result_ids(self):
         return self._result_ids
@@ -896,15 +948,15 @@ class Trajectory(object):
         paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
         self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n,trajectory_name)
         
-        for key in self._derivedparameters:
-            self._tree._store_to_hdf5(hdf5file,trajectorygroup, key.split('.'))
+        
+        self._store_dict(self._derivedparameters,hdf5file,trajectorygroup)
             
         
         paramtable = getattr(trajectorygroup, 'ResultsTable')
         self._store_single_table(self._results, paramtable, self.get_name(),n,trajectory_name)
         
-        for key in self._results:
-            self._tree._store_to_hdf5(hdf5file,trajectorygroup, key.split('.'))
+        
+        self._store_dict(self._results, hdf5file,trajectorygroup)
                 
         hdf5file.flush()
         hdf5file.close()
@@ -936,7 +988,10 @@ class Trajectory(object):
         
         #three_dicts = [self._parameters,self._derivedparameters,self._results]
         
-        self._tree._store_to_hdf5(hdf5file, trajectorygroup)
+        
+        self._store_dict(self._parameters,hdf5file, trajectorygroup)
+        self._store_dict(self._results, hdf5file, trajectorygroup)
+        self._store_dict(self._derivedparameters, hdf5file, trajectorygroup)
         
         
         hdf5file.flush()
@@ -945,7 +1000,17 @@ class Trajectory(object):
         self._logger.info('Finished storing Parameters.')
         
 
+    def _store_dict(self, data_dict, hdf5file, hdf5group): 
         
+        for key,val in data_dict.items():
+            newhdf5group = hdf5group
+            split_key = key.split('.')   
+            for name in split_key:
+                if not newhdf5group.__contains__(name):
+                    newhdf5group=hdf5file.createGroup(where=newhdf5group, name=name, title=name)
+                else:
+                    newhdf5group = getattr(newhdf5group, name)
+            val.store_to_hdf5(hdf5file,newhdf5group)
     
     def get_paramspacepoint(self,n):
         ''' Returns the nth parameter space point of the trajectory.
@@ -985,7 +1050,7 @@ class Trajectory(object):
             if key in newtraj._derivedparameters:
                 newtraj._derivedparameters[key] = newparam
             
-            newtraj._tree._add_to_tree(key.split('.'), newparam)
+            newtraj._nninterface._add_to_nninterface(newparam.get_name(),newparam.get_fullname(), newparam)
        
     
             
@@ -1016,10 +1081,10 @@ class Trajectory(object):
 
     def __getattr__(self,name):
         
-        if not hasattr(self, '_tree'):
+        if not hasattr(self, '_nninterface'):
             raise AttributeError('This is to avoid pickling issues!')
    
-        return getattr(self._tree, name)
+        return getattr(self._nninterface, name)
         
 
 
@@ -1069,12 +1134,12 @@ class SingleRun(object):
         self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
         self._single_run = Trajectory(name=name, filename=filename)
         
-        self._tree = self._small_parent_trajectory._tree
-        del self._single_run._tree
-        self._single_run._tree = self._tree
+        self._nninterface = self._small_parent_trajectory._nninterface
+        del self._single_run._nninterface
+        self._single_run._nninterface = self._nninterface
         
-        self._tree._parent_trajectory_name = self._small_parent_trajectory.get_name()
-        self._tree._working_trajectory_name = self._single_run.get_name()
+        self._nninterface._parent_trajectory_name = self._small_parent_trajectory.get_name()
+        self._nninterface._working_trajectory_name = self._single_run.get_name()
         
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
     
@@ -1115,10 +1180,10 @@ class SingleRun(object):
        
     def __getattr__(self,name):
         
-        if not hasattr(self, '_tree'):
+        if not hasattr(self, '_nninterface'):
             raise AttributeError('This is to avoid pickling issues!')
         
-        return getattr(self._tree, name)
+        return getattr(self._nninterface, name)
         
      
     def get_parent_name(self):
@@ -1133,11 +1198,11 @@ class SingleRun(object):
     
     def set_quick_access(self,val):
         assert isinstance(val, bool)
-        self._tree._quick_access=val
+        self._nninterface._quick_access=val
         
-    def set_double_checking(self,val):
-        assert isinstance(val, bool)
-        self._tree._double_checking=val
+#     def set_double_checking(self,val):
+#         assert isinstance(val, bool)
+#         self._nninterface._double_checking=val
         
     def store_to_hdf5(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
