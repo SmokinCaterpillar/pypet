@@ -10,7 +10,7 @@ import tables as pt
 import numpy as np
 import scipy.sparse as spsp
 
-from numpy.numarray.numerictypes import IsType
+
 
 
 
@@ -60,7 +60,7 @@ class BaseParameter(object):
         
         return getattr(self, key)
     
-    def __call__(self,*args):
+    def __call__(self,*args,**kwargs):
         ''' param(name) -> Value stored at param.name
         
         A call to the parameter with the given argument returns the value of the argument. If the parameter is an array only the first entry of the given name should be returned.
@@ -250,6 +250,7 @@ class Parameter(BaseParameter):
             newParam = Parameter(self._name,self._location)
             newParam._default = self._default
             newParam._data[0].__dict__ = self._data[n].__dict__.copy()
+            newParam._locked = self._locked
 
             return newParam
             
@@ -353,7 +354,7 @@ class Parameter(BaseParameter):
         of the default entries of the parameter.
         '''
         if self._locked:
-            raise pex.ParamterLockedException('Parameter ' + self._name + ' is locked!')
+            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!')
         
         # The comment is not in the _data list:
         if name == 'Comment' or name=='comment':
@@ -474,7 +475,8 @@ class Parameter(BaseParameter):
         both methods cannot be used at the same time.
         '''
         if self._locked:
-            self._logger.warning('Parameter ' + self._name + 'is locked, but I will allow exploration.')
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
+            #self._logger.warning('Parameter ' + self._name + 'is locked, but I will allow exploration.')
         
         # Check whether a dictionary is provided...
         if explore_dict:
@@ -792,6 +794,8 @@ class Parameter(BaseParameter):
         return self._data[0].__dict__.copy()
         
     def get(self, name,n=0):
+        
+        self.lock()
         
         if name == 'val':
             name = self._default

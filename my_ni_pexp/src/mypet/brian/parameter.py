@@ -121,7 +121,7 @@ class BrianMonitorResult(BaseResult):
     
     def _store_information(self,hdf5file,hdf5group):
         infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
-                   'Full_Name': pt.StringCol(self._string_length_large(self._fullname)), 
+                   'Location': pt.StringCol(self._string_length_large(self._location)), 
                    'Comment':pt.StringCol(self._string_length_large(self._comment)),
                    'Type':pt.StringCol(self._string_length_large(str(type(self)))),
                    'Class_Name': pt.StringCol(self._string_length_large(self.__class__.__name__)),
@@ -131,7 +131,7 @@ class BrianMonitorResult(BaseResult):
         
         newrow = infotable.row
         newrow['Name'] = self._name
-        newrow['Full_Name'] = self._fullname
+        newrow['Location'] = self._location
         newrow['Comment'] = self._comment
         newrow['Type'] = str(type(self))
         newrow['Class_Name'] = self.__class__.__name__
@@ -165,7 +165,7 @@ class BrianMonitorResult(BaseResult):
         
         assert isinstance(self._monitor, SpikeMonitor)
          
-        store_param = Parameter(name='monitor_data', fullname='')
+        store_param = Parameter(name='monitor_data', location='')
         store_param.source = str(self._monitor.source)
         
         record =  self._monitor.record
@@ -180,7 +180,7 @@ class BrianMonitorResult(BaseResult):
         store_param.nspikes = self._monitor.nspikes
         store_param.store_data(hdf5file, hdf5group)
         
-        neuron_param = Parameter(name='spike_data', fullname='')
+        neuron_param = Parameter(name='spike_data', location='')
         neuron_param.time = self._monitor.spikes[0][1]
         neuron_param.index = self._monitor.spikes[0][0]
         
@@ -200,7 +200,7 @@ class BrianMonitorResult(BaseResult):
         assert isinstance(self._monitor, PopulationRateMonitor)
         assert isinstance(hdf5file,pt.File)
         
-        store_param =  Parameter(name='monitor_data', fullname='')
+        store_param =  Parameter(name='monitor_data', location='')
         store_param.bin = self._monitor.bin
         
         ### Store times ###
@@ -222,7 +222,7 @@ class BrianMonitorResult(BaseResult):
         
         assert isinstance(self._monitor, PopulationSpikeCounter)
  
-        store_param = Parameter(name='monitor_data', fullname='')
+        store_param = Parameter(name='monitor_data', location='')
         store_param.nspikes = self._monitor.nspikes
         store_param.source = str(self._monitor.source)
         
@@ -233,7 +233,7 @@ class BrianMonitorResult(BaseResult):
         assert isinstance(self._monitor, StateMonitor)
         assert isinstance(hdf5file,pt.File)
         
-        store_param =  Parameter(name='monitor_data', fullname='')
+        store_param =  Parameter(name='monitor_data', location='')
         store_param.varname = self._monitor.varname
         
         record =  self._monitor.record

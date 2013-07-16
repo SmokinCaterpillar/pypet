@@ -26,14 +26,14 @@ class NaturalNamingInterface(object):
         self._quick_access = False
         #self._double_checking = True
         self._working_trajectory_name=working_trajectory_name
-        self._parent_trajectory_name=''
+        self._parent_trajectory_name=parent_trajectory_name
         
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
         
         #self._debug = {}
         self._storage_dict =  {} 
-        self._nodes_dict = {}
-        self._leaves_dict = {}
+        self._nodes_and_leaves = set()
+
         
         self._root = TreeNode(self,'_root')
         self._root._dict_list = [self._storage_dict]
@@ -48,8 +48,7 @@ class NaturalNamingInterface(object):
              not hasattr(self, '_select') or \
              not hasattr(self, '_sort_according_to_type') or \
              not hasattr(self, '_get_result') or \
-             not hasattr(self, '_nodes_dict') or \
-             not hasattr(self, '_leaves_dict') or \
+             not hasattr(self, '_nodes_and_leaves') or \
              not hasattr(self, '_storage_dict'):
 
             raise AttributeError('This is to avoid pickling issues and problems with internal variables!')
@@ -71,42 +70,38 @@ class NaturalNamingInterface(object):
          
         
     
-    def _add_to_nninterface(self, leaf_name, key, data):
+    def _add_to_nninterface(self, fullname, data):
         
-        key = '_root.'+key
-        split_name = key.split('.')
-        leaf = split_name.pop()
-
-        if leaf in self._nodes_dict or not self._shortcut(leaf) == None:
-            raise AttributeError('%s is already a group name, this is not allowed as a parameter name.' % leaf)
+        split_name = fullname.split('.')
         
-        if not leaf in self._leaves_dict:
-            self._leaves_dict[leaf] = 1
-        else:
-            self._leaves_dict[leaf] = self._leaves_dict[leaf]+1
+        for name in split_name:
+            
+            if not self._shortcut(name) == None:
+                raise AttributeError('%s is already an important shortcut, cannot add it.' % name)
         
-        
-        for node in split_name:
-
-            if node in self._leaves_dict or not self._shortcut(node) == None:
-                raise AttributeError('%s is already a parameter name, this is not allowed as a group name.' % node)
-        
-            if not node in self._nodes_dict:
-                self._nodes_dict[node] = 1
-            else:
-                self._nodes_dict[node] = self._nodes_dict[node] +1 
+            
     
+        leaf = split_name.pop()
         
         self._add_to_storage_dict(split_name, leaf, data)
+
+        split_name.append(leaf) 
+        
+        for name in split_name:
+            self._nodes_and_leaves.add(name)
+        
     
     def _add_to_storage_dict(self, where_list, leaf, data):
         act_dict = self._storage_dict
-        for node in where_list:
-            if not node in act_dict:
-                act_dict[node] ={}
-            
-            act_dict = act_dict[node]
+        for name in where_list:
+            if not name in act_dict:
+                act_dict[name] ={}
+
+            act_dict = act_dict[name]
         
+        if leaf in act_dict and isinstance(act_dict[leaf], dict):
+            raise AttributeError('Your addition does not work, you would have a tree node called %s as well as a leaf containing data, both hanging below %s.' % (leaf,name))
+                
         act_dict[leaf] = data
             
 
@@ -117,8 +112,7 @@ class NaturalNamingInterface(object):
         del result['_logger']
         del result['_root'] 
         result['_storage_dict'] = self._recursive_shallow_copy(self._storage_dict)
-        result['_leaves_dict'] = self._leaves_dict.copy()
-        result['_nodes_dict'] = self._nodes_dict.copy()
+        result['_nodes_and_leaves'] = self._nodes_and_leaves.copy()
         return result
     
     def _recursive_shallow_copy(self, dictionary):
@@ -127,6 +121,8 @@ class NaturalNamingInterface(object):
         for key, val in dictionary.items():
             if isinstance(val, dict):
                 new_dict[key] = self._recursive_shallow_copy(val)
+        
+        return new_dict
     
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
@@ -148,7 +144,9 @@ class NaturalNamingInterface(object):
         
         result_list = []
         for dictionary in dict_list:
-            result_list.append(self._find_recursively(dictionary, name))      
+            result_list.extend(self._find_recursively(dictionary, name))    
+        
+        return result_list  
     
     def _find_recursively(self,dictionary, name): 
         result_list = []
@@ -157,29 +155,35 @@ class NaturalNamingInterface(object):
                 result_list.append(val)
             
             if isinstance(val, dict):
-                result_list.append(self._find_recursively(val, name))
+                result_list.extend(self._find_recursively(val, name))
         
         return result_list
 
     def _select(self, candidate_list, node):
         
         dict_list, item_list = self._sort_according_to_type(candidate_list)
-    
         
-        if len(candidate_list) > 0:
+        items = len(item_list)
+        if dict_list:
+            node._dict_list = dict_list
+            items = items +1
+        
+        if items > 0:
             
-            if (candidate_list) > 1:
+            if items > 1:
                 name_list = [item.get_fullname() for item in item_list]
                 
-                if dict_list():
+                if dict_list:
                     name_list.append('Another TreeNode')
-                    
-                self._logger.warning('There are several solutions for your query >>%s<<. The following list has been found: %s. I have chosen >>%s<<.' %(node._fullname,str(name_list),name_list[0]))
+                    item_list.append(node)
+
+                self._logger.warning('There are %d solutions for your query >>%s<<. The following list has been found: %s. You will get the full list!' %(items,node._fullname,str(name_list)))
             
-            if item_list:
+                return item_list
+            
+            elif item_list:
                 return self._get_result(item_list[0])
             else:
-                node._dict_list = dict_list
                 return node
         else:
             raise AttributeError('Your query >>%s<< failed, it is not contained in the trajectory.' % node._fullname)
@@ -201,8 +205,8 @@ class NaturalNamingInterface(object):
             else:
                 fullname = candidate.get_fullname()
                 split_name = fullname.split('.')
-                first = split_name[1]
-                second = split_name[2]
+                first = split_name[0]
+                second = split_name[1]
                 if first == 'Results':
                     result_list.append(candidate)
                 elif first == 'Parameters':
@@ -249,15 +253,17 @@ class TreeNode(object):
             if not hasattr(self, '_nninterface') or not hasattr(self, '_fullname') or not hasattr(self, '_name') or not hasattr(self,'_dict_list'):
                 raise AttributeError('This is to avoid pickling issues')
             
-            if not name in self._nninterface._leaves_dict and not name in self._nninterface._nodes_dict:
-                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
-        
             shortcut = self._nninterface._shortcut(name) 
             if not shortcut == None:
                 name = shortcut 
+            
+            if not name in self._nninterface._nodes_and_leaves:
+                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+        
+            
                 
                 
-            new_node = TreeNode(self._nninterface, name, self._fullname, self._regexp) 
+            new_node = TreeNode(self._nninterface, name, self._fullname) 
 
             return self._nninterface._find(new_node, self._dict_list)
 
@@ -474,7 +480,7 @@ class Trajectory(object):
         
         self._results[full_result_name] = instance
         
-        self._nninterface._add_to_nninterface(full_result_name.split('.'), instance)
+        self._nninterface._add_to_nninterface(full_result_name, instance)
         
         return instance
         
@@ -530,9 +536,17 @@ class Trajectory(object):
         param_name = split_name.pop()
         param_location = '.'.join(split_name)
         
+        if 'param_replace' in kwargs:
+            param_replace = kwargs.pop('param_replace')
+        else:
+            param_replace = False
 
         if full_parameter_name in where_dict:
-            self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace it.')
+            if param_replace:
+                self._logger.debug(full_parameter_name + ' is already part of trajectory, I will replace it since you called with param_replace=True!')
+            else:
+                self._logger.warn(full_parameter_name + ' is already part of trajectory, I will keep the old one. If you want to replace the parameter, call the adding with param_replace=True!')
+                return where_dict[full_parameter_name]
         
         if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
             if 'param' in kwargs:
@@ -566,7 +580,7 @@ class Trajectory(object):
         
         
         #self._nninterface.peter ='Dubb'
-        self._nninterface._add_to_nninterface(param_name, full_parameter_name, instance)
+        self._nninterface._add_to_nninterface(full_parameter_name, instance)
         
         
         self.last = instance
@@ -909,7 +923,7 @@ class Trajectory(object):
             
             wheredict[fullname]=paraminstance
 
-            self._nninterface._add_to_nninterface(name,fullname, paraminstance)
+            self._nninterface._add_to_nninterface(fullname, paraminstance)
     
     def get_result_ids(self):
         return self._result_ids
@@ -1050,7 +1064,7 @@ class Trajectory(object):
             if key in newtraj._derivedparameters:
                 newtraj._derivedparameters[key] = newparam
             
-            newtraj._nninterface._add_to_nninterface(newparam.get_name(),newparam.get_fullname(), newparam)
+            newtraj._nninterface._add_to_nninterface(newparam.get_fullname(), newparam)
        
     
             
