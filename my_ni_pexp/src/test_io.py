@@ -18,7 +18,8 @@ def main():
     traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_24_16h32m01s',filename='../experiments/load.hdf5')
     
     print type(traj.Parameters.test.testparam)
-    
+
+    print 'test'
     
     
     traj.store_to_hdf5()
