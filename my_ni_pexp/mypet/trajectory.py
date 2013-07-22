@@ -7,8 +7,8 @@ Created on 17.05.2013
 import logging
 import datetime
 import time
-import tables as pt
 import os
+from twisted.python.deprecate import _fullyQualifiedName
 from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 import copy
@@ -313,15 +313,22 @@ class Trajectory(object):
     For example, traj.paramgroup.param1 would map to print traj.Parameters.paramgroup.param1                     
     '''
     
-    MAX_NAME_LENGTH = 1024
+
     
     standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
-    
+
+    def store(self):
+        self.lock_parameters()
+        self._storageservice.store(self,type='Trajectory')
+
+
+    def store_single_run(self,trajectory_name,n):
+        self._storageservice.store(self,type='SingleRun', n=n)
    
     def __len__(self): 
         return self._length      
     
-    def __init__(self, name,filename,  filetitle='Experiment', dynamicly_imported_classes=[], init_time=None):
+    def __init__(self, storageservice, dynamicly_imported_classes=[], init_time=None):
     
         if init_time is None:
             init_time = time.time()
@@ -349,8 +356,8 @@ class Trajectory(object):
         self._nninterface = NaturalNamingInterface(working_trajectory_name=self._name, parent_trajectory_name = self._name)
         
         
-        self._filename = filename 
-        self._filetitle=filetitle
+        self._storageservice = storageservice
+
         self._comment= Trajectory.standard_comment
         
         self._quick_access = False
@@ -364,7 +371,7 @@ class Trajectory(object):
         self._dynamic_imports.extend(dynamicly_imported_classes)
         
         self._loadedfrom = ('None','None')
-    
+
     def set_quick_access(self, val):
         assert isinstance(val,bool)
         self._nninterface._quick_access = val
@@ -424,7 +431,7 @@ class Trajectory(object):
         else:
             self._comment = self._comment + '; ' + comment
          
-    def add_result(self, full_result_name, *args,**kwargs):  
+    def add_result(self, *args,**kwargs):
         ''' Adds a result to the trajectory, 
         
         This is a rather open implementation the user can provide *args as well as **kwargs
@@ -433,19 +440,7 @@ class Trajectory(object):
         If result_type is already the instance of a Result a new instance will not be created.
         
         Does not update the 'last' shortcut of the trajectory.
-        ''' 
-        
-        assert isinstance(full_result_name, str)
-        
-        
-        full_result_name = 'Results.' + self._name+'.'+ full_result_name
-        
-        if full_result_name in self._results:
-            self._logger.warn(full_result_name + ' is already part of trajectory, I will replace it.')
-
-        split_name = full_result_name.split('.')
-        result_name = split_name.pop()
-        result_location = '.'.join(split_name)
+        '''
         
         
         if 'parent_trajectory' in kwargs.keys():
@@ -459,25 +454,37 @@ class Trajectory(object):
             else:
                 instance = args.pop(0)
             
-            if not instance._name == result_name or not instance._location == result_location or not  instance._fullname == full_result_name or not instance._paren_trajectory == self._name or not instance._filename == self._filename:
-                self._logger.warn('Something is wrong with the naming and or filename of your result, I will correct that.')
-                instance._name = result_name
-                instance._fullname = full_result_name
-                instance._location = result_location
-                instance._paren_trajectory = parent_trajectory
-                instance._filename = self._filename
+
             
         else:
+            if not 'result_name' in kwargs:
+                raise ValueError('Your new Parameter needs a name, please call the function with result_name=...')
+
+            full_result_name = kwargs.pop('result_name')
+
             if 'result_type' in kwargs or (args and isinstance(args[0], type) and issubclass(args[0], BaseResult)):
                 if 'result_type' in kwargs:
                     result_type = kwargs.pop('result_type')
                 else:
                     args = list(args)
                     result_type = args.pop(0)
-                instance =  result_type(result_name,result_location,parent_trajectory,self._filename,*args,**kwargs)
+                instance =  result_type(full_result_name,parent_trajectory,self._filename,*args,**kwargs)
             else:
                 raise AttributeError('No instance of a result or a result type is specified')
-        
+
+
+        full_result_name = instance._fullname
+        split_name = full_result_name.split('.')
+        if not split_name[0] == 'Results':
+            instance._fullname = 'Results.'+instance._fullname
+            instance._location = 'Results.'+instance._location
+            self._logger.debug('I added %s to the result name it is now: %s.' % (where, instance._fullname))
+
+
+        if full_result_name in self._results:
+            self._logger.warn(full_result_name + ' is already part of trajectory, I will replace it.')
+
+
         self._results[full_result_name] = instance
         
         self._nninterface._add_to_nninterface(full_result_name, instance)
@@ -485,12 +492,12 @@ class Trajectory(object):
         return instance
         
         
-    def adp(self, full_parameter_name, *args,**kwargs):
+    def adp(self,  *args,**kwargs):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
+        return self.add_derived_parameter( *args, **kwargs)
                   
-    def add_derived_parameter(self, full_parameter_name, *args,**kwargs):
+    def add_derived_parameter(self, *args,**kwargs):
         ''' Adds a new derived parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -524,46 +531,32 @@ class Trajectory(object):
         >>> print myparam.entry1
         >>> 42
         '''
+
+        return self._add_any_param(where = 'DerivedParameters',where_dict=self._derivedparameters,*args,**kwargs)
         
-        assert isinstance(full_parameter_name, str)
-        
-        full_parameter_name = 'DerivedParameters.' + self._name+'.'+ full_parameter_name
-        
-        return self._add_any_param(full_parameter_name, self._derivedparameters,*args,**kwargs)
-        
-    def _add_any_param(self, full_parameter_name, where_dict, *args,**kwargs):
-        split_name = full_parameter_name.split('.')
-        param_name = split_name.pop()
-        param_location = '.'.join(split_name)
+    def _add_any_param(self, where, where_dict, *args,**kwargs):
+
         
         if 'param_replace' in kwargs:
             param_replace = kwargs.pop('param_replace')
         else:
             param_replace = False
 
-        if full_parameter_name in where_dict:
-            if param_replace:
-                self._logger.debug(full_parameter_name + ' is already part of trajectory, I will replace it since you called with param_replace=True!')
-            else:
-                self._logger.warn(full_parameter_name + ' is already part of trajectory, I will keep the old one. If you want to replace the parameter, call the adding with param_replace=True!')
-                return where_dict[full_parameter_name]
-        
+
         if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
             if 'param' in kwargs:
                 instance = kwargs.pop('param')
             else:
                 args = list(args)
                 instance = args.pop(0)
-                
-                
-            if not instance.get_full_name() == full_parameter_name or not instance.get_location() == param_location or not instance.get_name() == param_name:
-                self._logger.warn('The name of the new parameter and the specified name do not match, I will change it(from  %s to %s, and/or from %s to %s).' % (instance.get_full_name(),full_parameter_name,instance.get_name,param_name))
-                instance._name = param_name
-                instance._location = param_location
-                instance._fullname = full_parameter_name
-        
+
         else:
-        
+
+            if not 'param_name' in kwargs:
+                raise ValueError('Your new Parameter needs a name, please call the function with param_name=...')
+
+            full_parameter_name = kwargs.pop('param_name')
+
             if not 'param_type' in kwargs:
                 if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
                         args = list(args)
@@ -573,9 +566,26 @@ class Trajectory(object):
             else:
                 param_type = kwargs.pop('param_type')
 
-            instance =   param_type(param_name,param_location,*args, **kwargs)
 
-        
+            instance =   param_type(full_parameter_name,*args, **kwargs)
+
+
+        full_parameter_name = instance._fullname
+        split_name = full_parameter_name.split('.')
+        if not where == split_name[0]:
+            instance._fullname = where+'.'+instance._fullname
+            instance._location = where+'.'+instance._location
+            self._logger.debug('I added %s to the parameter name it is now: %s.' % (where, instance._fullname))
+
+
+        if full_parameter_name in where_dict:
+            if param_replace:
+                self._logger.debug(full_parameter_name + ' is already part of trajectory, I will replace it since you called with param_replace=True!')
+            else:
+                self._logger.warn(full_parameter_name + ' is already part of trajectory, I will keep the old one. If you want to replace the parameter, call the adding with param_replace=True!')
+                return where_dict[full_parameter_name]
+
+
         where_dict[full_parameter_name] = instance
         
         
@@ -589,12 +599,12 @@ class Trajectory(object):
     
     
 
-    def ap(self, full_parameter_name, *args, **kwargs):
+    def ap(self, *args, **kwargs):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,*args, **kwargs)
+        return self.add_parameter( *args, **kwargs)
     
-    def add_parameter(self, full_parameter_name,  *args, **kwargs):  
+    def add_parameter(self,   *args, **kwargs):
         ''' Adds a new parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
@@ -624,12 +634,9 @@ class Trajectory(object):
         >>> print myparam.entry1
         >>> 42
         '''
-        assert isinstance(full_parameter_name, str)
+
         
-        
-        full_parameter_name = 'Parameters.'+ full_parameter_name
-        
-        return self._add_any_param(full_parameter_name, self._parameters, *args,**kwargs)
+        return self._add_any_param('Parameters',self._parameters, *args,**kwargs)
         
 
         
@@ -710,150 +717,13 @@ class Trajectory(object):
         for key, par in self._derivedparameters.items():
             par.lock()
             
-    def _store_meta_data(self,hdf5file,trajectorygroup):
-        ''' Stores general information about the trajectory in the hdf5file.
-        
-        The 'Info' table will contain ththane name of the trajectory, it's timestamp, a comment,
-        the length (aka the number of single runs), and if applicable a previous trajectory the
-        current one was originally loaded from.
-        The name of all derived and normal parameters as well as the results are stored in
-        appropriate overview tables.
-        Thes include the fullname, the name, the name of the class (e.g. SparseParameter),
-        the size (1 for single parameter, >1 for explored parameter arrays).
-        In case of a derived parameter or a result, the name of the creator trajectory or run
-        and the id (-1 for trajectories) are stored.
-        '''
-        assert isinstance(hdf5file,pt.File)
-        
-        loaddict = {'Trajectory' : pt.StringCol(self.MAX_NAME_LENGTH),
-                    'Filename' : pt.StringCol(self.MAX_NAME_LENGTH)}
-        
-        descriptiondict={'Name': pt.StringCol(len(self._name)), 
-                         'Time': pt.StringCol(len(self._formatted_time)),
-                         'Timestamp' : pt.FloatCol(),
-                         'Comment': pt.StringCol(len(self._comment)),
-                         'Length':pt.IntCol(),
-                         'Loaded_From': loaddict.copy()}
-        
-        infotable = hdf5file.createTable(where=trajectorygroup, name='Info', description=descriptiondict, title='Info')
-        newrow = infotable.row
-        newrow['Name']=self._name
-        newrow['Timestamp']=self._time
-        newrow['Time']=self._formatted_time
-        newrow['Comment']=self._comment
-        newrow['Length'] = self._length
-        newrow['Loaded_From/Trajectory']=self._loadedfrom[0]
-        newrow['Loaded_From/Filename']=self._loadedfrom[1]
-        
-        newrow.append()
-        infotable.flush()
-        
-        
-        tostore_dict =  {'ParameterTable':self._parameters, 'DerivedParameterTable':self._derivedparameters, 'ExploredParameterTable' :self._exploredparameters,'ResultsTable' : self._results}
-        
-        for key, dictionary in tostore_dict.items():
-            
-            paramdescriptiondict={'Full_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH)}
-            
-            if not key == 'ResultsTable':
-                paramdescriptiondict.update({'Size' : pt.IntCol()})
-            
-            if key in ['DerivedParameterTable', 'ResultsTable']:
-                paramdescriptiondict.update({'Creator_Name':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                             'Parent_Trajectory':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                             'Creator_ID':pt.IntCol()})
-            
-            paramtable = hdf5file.createTable(where=trajectorygroup, name=key, description=paramdescriptiondict, title=key)
-            
-            self._store_single_table(dictionary, paramtable, self._name,-1,self._name)
-    
-    def _store_single_table(self,paramdict,paramtable, creator_name, creator_id, parent_trajectory):
-        ''' Stores a single overview table.
-        
-        Called from _store_meta_data and store_single_run
-        '''
-                                 
-        assert isinstance(paramtable, pt.Table)    
 
+    def load(self,trajectoryname, filename = None, load_derived_params = False, load_results = False, replace = False):
+        self._storageservice.load(self,trajectoryname, filename, load_derived_params, load_results, replace)
 
-        #print paramtable._v_name
-        
-        newrow = paramtable.row
-        for key, val in paramdict.items():
-            if not paramtable._v_name == 'ResultsTable' :
-                newrow['Size'] = len(val)
-            else:
-                #check if this is simply an added explored parameter to easily comprehend the 
-                # hdf5 tree with a viewer
-                if 'ExploredParameters' in key:
-                    continue;
-                
-                
-            newrow['Full_Name'] = key
-            newrow['Name'] = val.get_name()
-            newrow['Class_Name'] = val.get_class_name()
-            
-            
-            if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
-                newrow['Creator_Name'] = creator_name
-                newrow['Creator_ID'] = creator_id
-                newrow['Parent_Trajectory'] = parent_trajectory
-                
-            newrow.append()
-        
-        paramtable.flush()
    
-    def load_trajectory(self, trajectoryname, filename = None, load_derived_params = False, load_results = False, replace = False):  
-        ''' Loads a single trajectory from a given file.
-        
-        Per default derived parameters and results are not loaded. If the filename is not specified
-        the file where the current trajectory is supposed to be stored is taken.
-        
-        If the user wants to load results, the actual data is not loaded, only dummy objects
-        are created, which must load their data independently. It is assumed that 
-        results of many simulations are large and should not be loaded all together into memory.
-        
-        If replace is true than the current trajectory name is replaced by the name of the loaded
-        trajectory, so is the filename.
-        '''
-        if filename:
-            openfilename = filename
-        else:
-            openfilename = self._filename
-            
-        if replace:
-            self._name = trajectoryname
-            self._filename = filename
-            
-            
-        self._loadedfrom = (trajectoryname,os.path.abspath(openfilename))
-            
-        if not os.path.isfile(openfilename):
-            raise AttributeError('Filename ' + openfilename + ' does not exist.')
-        
-        hdf5file = pt.openFile(filename=openfilename, mode='r')
-    
-            
-        try:
-            trajectorygroup = hdf5file.getNode(where='/', name=trajectoryname)
-        except Exception:
-            raise AttributeError('Trajectory ' + trajectoryname + ' does not exist.')
-                
-        self._load_meta_data(trajectorygroup, replace)
-        self._load_params(trajectorygroup)
-        if load_derived_params:
-            self._load_derived_params(trajectorygroup)
-        if load_results:
-            self._load_results(trajectorygroup,trajectoryname,filename)
-        
-        hdf5file.close()
-    
-    def _load_results(self,trajectorygroup,trajectoryname,filename):
-        resulttable = trajectorygroup.ResultsTable
-        self._load_any_param_or_result(self._results,resulttable,trajectorygroup,True,trajectoryname,filename)
-        
+
+
     def _create_class(self,class_name):
         ''' Dynamically creates a class.
         
@@ -870,60 +740,9 @@ class Trajectory(object):
                         return new_class 
                 raise ImportError('Could not create the class named ' + class_name)
     
-    def _load_params(self,trajectorygroup):
-        paramtable = trajectorygroup.ParameterTable
-        self._load_any_param_or_result(self._parameters,paramtable,trajectorygroup)
-        
-    def _load_derived_params(self,trajectorygroup):
-        paramtable = trajectorygroup.DerivedParameterTable
-        self._load_any_param_or_result(self._derivedparameters,paramtable,trajectorygroup)
-        
-    def _load_any_param_or_result(self,wheredict,paramtable,trajectorygroup,creating_result_tree=False, trajectory_name = None, filename = None):
-        ''' Loads a single parameter from a pytable.
-        
-        :param paramtable: The overiew pytable containing all parameters
-        :param trajectorygroup: The hdf5 group of the trajectory
-        '''
-        assert isinstance(paramtable,pt.Table)
-        
-        for row in paramtable.iterrows():
-            location = row['Location']
-            name = row['Name']
-            fullname = location+'.'+name
-            class_name = row['Class_Name']
-            if location in wheredict:
-                self._logger.warn('Paremeter ' + fullname + ' is already in your trajectory, I am overwriting it.')
-                del wheredict[fullname]
-                continue
-            
-            if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
-                #creator_name = row['Creator_Name'] 
-                creator_id = row['Creator_ID']
-                           
-            new_class = self._create_class(class_name)    
-            
-            if not creating_result_tree:
-                paraminstance = new_class(name,location)
-            else:
-                paraminstance= new_class(name, location, trajectory_name, filename)
-                if not creator_id in self._result_ids:
-                    self._result_ids[creator_id]=[]
-                self._result_ids[creator_id].append(paraminstance)
-            
-            where = 'trajectorygroup.' + fullname
-            paramgroup = eval(where)
-            
-            assert isinstance(paraminstance, (BaseParameter,BaseResult))
-            
-            if not creating_result_tree:
-                paraminstance.load_from_hdf5(paramgroup)
-                
-                if len(paraminstance)>1:
-                    self._exploredparameters[fullname] = paraminstance
-            
-            wheredict[fullname]=paraminstance
 
-            self._nninterface._add_to_nninterface(fullname, paraminstance)
+        
+
     
     def get_result_ids(self):
         return self._result_ids
@@ -934,98 +753,16 @@ class Trajectory(object):
     def get_explored_params(self):  
         return self._exploredparameters
              
-    def _load_meta_data(self,trajectorygroup, replace): 
-        metatable = trajectorygroup.Info
-        metarow = metatable[0]
-        
-        self._length = metarow['Length']
-        
-        if replace:
-            self._comment = metarow['Comment']
-            self._time = metarow['Timestamp']
-            self._formatted_time = metarow['Time']
-            self._loadedfrom=metarow['Loaded_From']
-        else:
-            self.add_comment(metarow['Comment'])
+
             
     
-    def store_single_run(self,trajectory_name,n):  
-        ''' Stores the derived parameters and results of a single run.
-        '''
-        hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
-        
-        #print 'Storing %d' %n
-        trajectorygroup = hdf5file.getNode(where='/', name=trajectory_name)
-        
 
-        
-        paramtable = getattr(trajectorygroup, 'DerivedParameterTable')
-        self._store_single_table(self._derivedparameters, paramtable, self.get_name(),n,trajectory_name)
-        
-        
-        self._store_dict(self._derivedparameters,hdf5file,trajectorygroup)
-            
-        
-        paramtable = getattr(trajectorygroup, 'ResultsTable')
-        self._store_single_table(self._results, paramtable, self.get_name(),n,trajectory_name)
-        
-        
-        self._store_dict(self._results, hdf5file,trajectorygroup)
-                
-        hdf5file.flush()
-        hdf5file.close()
     
                 
-    def store_to_hdf5(self):
-        ''' Stores a trajectory to the in __init__ specified hdf5file.
-        '''
-        self._logger.info('Start storing Parameters.')
-        (path, filename)=os.path.split(self._filename)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        
-        self.lock_parameters()
-        
-        
-        hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
-        
-        trajectorygroup = hdf5file.createGroup(where='/', name=self._name, title=self._name)
-#     
-#         if not trajectorygroup.__contains__('Parameters'):
-#             hdf5file.createGroup(where= trajectorygroup, name='Parameters', title='Parameters')
-#         if not trajectorygroup.__contains__('DerivedParameters'):
-#             hdf5file.createGroup(where= trajectorygroup, name='DerivedParameters', title='DerivedParameters')
-#         if not trajectorygroup.__contains__('Results'):
-#             hdf5file.createGroup(where= trajectorygroup, name='Results', title='Results')
-#         
-        self._store_meta_data(hdf5file, trajectorygroup)
-        
-        #three_dicts = [self._parameters,self._derivedparameters,self._results]
-        
-        
-        self._store_dict(self._parameters,hdf5file, trajectorygroup)
-        self._store_dict(self._results, hdf5file, trajectorygroup)
-        self._store_dict(self._derivedparameters, hdf5file, trajectorygroup)
-        
-        
-        hdf5file.flush()
-        
-        hdf5file.close()
-        self._logger.info('Finished storing Parameters.')
+
         
 
-    def _store_dict(self, data_dict, hdf5file, hdf5group): 
-        
-        for key,val in data_dict.items():
-            newhdf5group = hdf5group
-            split_key = key.split('.')   
-            for name in split_key:
-                if not newhdf5group.__contains__(name):
-                    newhdf5group=hdf5file.createGroup(where=newhdf5group, name=name, title=name)
-                else:
-                    newhdf5group = getattr(newhdf5group, name)
-            val.store_to_hdf5(hdf5file,newhdf5group)
-    
+
     def get_paramspacepoint(self,n):
         ''' Returns the nth parameter space point of the trajectory.
         

@@ -5,6 +5,7 @@ Created on 17.05.2013
 '''
 
 import logging
+from twisted.python.deprecate import _fullyQualifiedName
 import petexceptions as pex
 import tables as pt
 import numpy as np
@@ -26,20 +27,16 @@ class BaseParameter(object):
         
     The parameter class can instantiate a single parameter as well as an array with several 
     parameters (of the same type) for exploration.
-    It is recommended to also implement the __getatr__ and __setatr__ methods, because para.val 
-    should return the value of the entry only for the first parameter in an array.
-    param.val = 1 should also only modify the very first parameter only.
-    The other entries can only be accessed during a particular run. Therefore, explored parameters 
-    create for each run a copy of themselves with the corresponding array element as the only 
-    parameter entries.
     
     Parameters can be locked to forbid further modification.
     If multiprocessing is desired the parameter must be pickable!
     ''' 
-    def __init__(self, name, location):
-        self._name=name
-        self._location = location
-        self._fullname = self._location+'.'+self._name
+    def __init__(self, fullname):
+        self._fullname = fullname
+        split_name = fullname.split('.')
+        self._name=split_name.pop()
+        self._location('.'.join(split_name))
+
     
     def get_location(self):
         return self._location
@@ -60,12 +57,12 @@ class BaseParameter(object):
         
         return getattr(self, key)
     
-    def __call__(self,*args,**kwargs):
-        ''' param(name) -> Value stored at param.name
-        
-        A call to the parameter with the given argument returns the value of the argument. If the parameter is an array only the first entry of the given name should be returned.
-        '''
-        raise NotImplementedError( "Should have implemented this." )
+    # def __call__(self,*args,**kwargs):
+    #     ''' param(name) -> Value stored at param.name
+    #
+    #     A call to the parameter with the given argument returns the value of the argument. If the parameter is an array only the first entry of the given name should be returned.
+    #     '''
+    #     raise NotImplementedError( "Should have implemented this." )
     
     def lock(self):
         ''' Locks the parameter and allows no further modification except exploration.'''
@@ -108,7 +105,7 @@ class BaseParameter(object):
         ''' Checks whether a parameter as a specific value entry.'''
         raise NotImplementedError( "Should have implemented this." )
         
-    def set(self, **args):
+    def set(self, **kwargs):
         ''' Sets specific values for a parameter.
         Has to raise ParameterLockedException if parameter is locked.
 
@@ -151,19 +148,7 @@ class BaseParameter(object):
         return self._name
     
 
-  
-  
-class Data(object):
-        '''The most fundamental entity that contains the actual data, it is separated to simplify the naming.
-        It is more a placeholder for a dictionary.
-        
-        This allows storing of data in the form:
-        data.entry = 1
-        
-        which maps to
-        data.__dict__['entry']=1
-        '''
-        pass
+
       
 class Parameter(BaseParameter):
     ''' The standard parameter that handles creation and access to simulation parameters.
@@ -191,11 +176,11 @@ class Parameter(BaseParameter):
     # The comment that is added if no comment is specified
     standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
-    def __init__(self, name, location,*args,**kwargs):
-        super(Parameter,self).__init__(name,location)
+    def __init__(self, fullname,*args,**kwargs):
+        super(Parameter,self).__init__(fullname)
         self._locked=False
         self._comment= Parameter.standard_comment
-        self._data=[Data()] #The list
+        self._data=[{}] #The list
         self._isarray = False
         self._default = None
         #self._accesspointer = 0
@@ -247,9 +232,9 @@ class Parameter(BaseParameter):
                 raise ValueError('n %i is larger than entries in parameter %s, only has %i entries.' % (n,self.gfn(),len(self)))
             
 
-            newParam = Parameter(self._name,self._location)
+            newParam = self.__class__(self._fullname)
             newParam._default = self._default
-            newParam._data[0].__dict__ = self._data[n].__dict__.copy()
+            newParam._data[0] = self._data[n].copy()
             newParam._locked = self._locked
 
             return newParam
@@ -278,11 +263,11 @@ class Parameter(BaseParameter):
 
 
     def has_value(self,valuename):
-        return valuename in self._data[0].__dict__
+        return valuename in self._data[0]
 
     def __len__(self):
         if len(self._data)==1:
-            if len(self._data[0].__dict__) == 0:
+            if len(self._data[0]) == 0:
                 return 0
         return len(self._data)
 
@@ -338,9 +323,9 @@ class Parameter(BaseParameter):
         else:
             self._set_single(name,value)
         
-    def set(self,**args):
+    def set(self,**kwargs):
 
-        for key, val in args.items():
+        for key, val in kwargs.items():
             self._set_single(key, val)
 
     
@@ -365,16 +350,16 @@ class Parameter(BaseParameter):
         if not self._is_supported_data(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
         elif not self._isarray:
-            if name in self._data[0].__dict__:
+            if name in self._data[0]:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
-            self._data[0].__dict__[name] = val
+            self._data[0][name] = val
             if not self._default:
                 self._default=name
         else:
             self._logger.warning('Redefinition of Parameter, the array will be deleted.')
-            if name in self._data[0].__dict__:
+            if name in self._data[0]:
                 self._logger.warning('Redefinition of Parameter, the old value of ' + name + ' will be overwritten.')
-            self._data[0].__dict__[name] = val;
+            self._data[0][name] = val;
             if not self._default:
                 self._default=name
             del self._data[1:]
@@ -422,27 +407,19 @@ class Parameter(BaseParameter):
             if not self._is_supported_data(val):
                     raise AttributeError()
             
-            default_val = self._data[0].__dict__[name]
+            default_val = self._data[0][name]
             
             if not self._values_of_same_type(val,default_val):
                 raise AttributeError('Parameter ' + self._name + ' has different default type for ' + name)
             
-            self._data[pos].__dict__[name]=val
+            self._data[pos][name]=val
             
     def to_list_of_dicts(self):
         ''' Returns a list of dictionaries of the data items.
         
         Each data item is a separate dictionary
         '''
-#         if not self._isarray:
-#             resultdict = self._data[0].__dict__.copy()
-#         
-#         else:
-        resultdict = []
-        for item in self._data:
-            resultdict.append(item.__dict__.copy())
-        
-        return resultdict
+        return self._data
     
     
     def is_array(self):  
@@ -456,14 +433,14 @@ class Parameter(BaseParameter):
         ''' Returns a dictionary with all value names as keys and a list of values.
         '''
         
-        resultdict = self._data[0].__dict__.copy()
+        resultdict = self._data[0].copy()
          
         for key in resultdict.iterkeys():
             resultdict[key] = [resultdict[key]]
             if self.is_array():
                 for dataitem in self._data[1:]:
                     curr_list = resultdict[key]
-                    curr_list.append(dataitem.__dict__[key])
+                    curr_list.append(dataitem[key])
                     resultdict[key] = curr_list
         return resultdict
 
@@ -488,12 +465,12 @@ class Parameter(BaseParameter):
              
                 
                 
-                if not key in self._data[0].__dict__:
+                if not key in self._data[0]:
                     self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
-                elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
-                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
-                if  key in self._data[0].__dict__:
-                    del self._data[0].__dict__[key]
+                elif not self._values_of_same_type(val, self._data[0][key]):
+                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0][key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
+                if  key in self._data[0]:
+                    del self._data[0][key]
                 self._set_single(key, val)
             
             del self._data[1:]
@@ -506,12 +483,12 @@ class Parameter(BaseParameter):
                 
               
                                 
-                if not key in self._data[0].__dict__:
+                if not key in self._data[0]:
                     self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
-                elif not self._values_of_same_type(val, self._data[0].__dict__[key]):
-                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0].__dict__[key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
-                if  key in self._data[0].__dict__:
-                    del self._data[0].__dict__[key]
+                elif not self._values_of_same_type(val, self._data[0][key]):
+                    self._logger.warning('Key ' + key + ' found for parameter ' + self._name + ', but the types are not matching.\n Previous type was ' + str(type( self._data[0][key])) + ', type now is ' + str(type(val))+ '. I don not appreciate this but will overwrite the parameter.')
+                if  key in self._data[0]:
+                    del self._data[0][key]
                 self._set_single(key, val)
             
             del self._data[1:]
@@ -546,7 +523,7 @@ class Parameter(BaseParameter):
         # Check if all new entries follow the default configuration of the parameter:
         for key in itemdict.keys():
             # Check if the parameter contains the value names:
-            if not key in self._data[0].__dict__:
+            if not key in self._data[0]:
                 self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
             # If not a list is supplied it is assumed that only a single parameter entry is added:
             if not isinstance(itemdict[key],list):
@@ -557,9 +534,9 @@ class Parameter(BaseParameter):
         
         # Add the data entries to the parameter:
         for idx in range(act_length):
-            newdata = Data();
+            newdata = {};
             
-            for key, val in self._data[0].__dict__.items():
+            for key, val in self._data[0].items():
                 # If an entry of the parameter is not specified for exploration use the default value:
                 if not key in itemdict:
                     itemdict[key] = [val for id in range(act_length)]
@@ -569,7 +546,7 @@ class Parameter(BaseParameter):
                     if not self._values_of_same_type(val,newval):
                         raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
                     
-                newdata.__dict__[key] = itemdict[key][idx]
+                newdata[key] = itemdict[key][idx]
             
             self._data.append(newdata) 
           
@@ -596,11 +573,11 @@ class Parameter(BaseParameter):
         # Check if all new entries follow the default configuration of the parameter:
         for itemdict in itemdicts:
             for key in itemdict.keys():
-                if not key in self._data[0].__dict__:
+                if not key in self._data[0]:
                     self._logger.warning('Key ' + key + ' not found in Parameter, I am ignoring it.')
-            newdata = Data();
+            newdata = {};
             
-            for key, val in self._data[0].__dict__.items():
+            for key, val in self._data[0].items():
                 # If an entry of the parameter is not specified for exploration use the default value:
                 if not key in itemdict:
                     itemdict[key] = val
@@ -610,188 +587,42 @@ class Parameter(BaseParameter):
                     if not self._values_of_same_type(val,newval):
                         raise AttributeError('Parameter ' + self._name + ' has different default type for ' + key)
                     
-                newdata.__dict__[key] = itemdict[key]
+                newdata[key] = itemdict[key]
             
             self._data.append(newdata)
      
-    def _get_longest_stringsize(self,key):   
-        ''' Returns the longest stringsize for a string entry across the parameter array.
-        '''
-        maxlength = 0
-        for dataitem in self._data:
-            maxlength = max(len(dataitem.__dict__[key]),maxlength)
+
         
-        return maxlength
-        
-    def _get_table_col(self, key, val):
-        ''' Creates a pytables column instance.
-        
-        The type of column depends on the type of parameter entry.
-        '''
-        if isinstance(val, int):
-                return pt.IntCol()
-        if isinstance(val, float):
-                return pt.Float64Col()
-        if isinstance(val, bool):
-                return pt.BoolCol()
-        if isinstance(val, str):
-                itemsize = int(self._get_longest_stringsize(key) * 1.5)
-                return pt.StringCol(itemsize=itemsize)
-        if isinstance(val, np.ndarray):
-            valdtype = val.dtype
-            valshape = np.shape(val)
+
+
+    def __store__(self):
+        result_dict={}
+        result_dict[self._name] = self._data
+        result_dict['Info'] = [{'Name':self._name,
+                   'Location':self._location,
+                   'Comment':self._comment,
+                   'Type':str(type(self)),
+                   'Class_Name': self.__class__.__name__)}]
+        return result_dict
+
+    def __load__(self,load_dict):
+        info_dict = load_dict['Info'][0]
+
+        self._name = info_dict['Name']
+        self._location = info_dict['Location']
+        self._comment = info_dict['Comment']
+        assert str(type(self)) == info_dict['Type']
+        assert self.__class__.__name__ == info_dict['Name']
+
+        self._data = load_dict[self._name]
                 
-            if np.issubdtype(valdtype, int):
-                    return pt.IntCol(shape=valshape)
-            if np.issubdtype(valdtype, float):
-                    return pt.Float64Col(shape=valshape)
-            if np.issubdtype(valdtype, bool):
-                    return pt.BoolCol(shape=valshape)
-        
-        return None
-            
-                
-    def _make_description(self):
-        ''' Returns a dictionary that describes a pytbales row.
-        '''
-        
-        descriptiondict={}
-        
-        for key, val in self._data[0].__dict__.items():
-                       
-            col = self._get_table_col(key, val)
-            
-            if col is None:
-                raise TypeError('Entry ' + key + ' cannot be translated into pytables column')
-            
-            descriptiondict[key]=col
-             
-        return descriptiondict
-                    
-    def _store_single_item(self,row,key,val):
-        ''' Adds a signle entry value to a pytables row.
-        
-        This one liner is only added to simplify inheritance for other parameter classes like the 
-        SparseParameter.
-        '''
-        row[key] = val
-        
-         
-    def store_to_hdf5(self,hdf5file,hdf5group):
-        ''' Writes a parameter as a pytable to an hdf5 file.
-        
-        First adds a table called 'Info' with basic information of the parameter.
-        The second table has the name of the parameter and contains all entries stored in _data.
-        '''
-        
-        self._logger.debug('Start storing.')
-        
-        self.store_information(hdf5file,hdf5group)
-        self.store_data(hdf5file,hdf5group)
 
-        self._logger.debug('Finished storing.')
-        
-        
-    def store_data(self,hdf5file,hdf5group):
-       
-        tabledict = self._make_description()
-
-        table = hdf5file.createTable(where=hdf5group, name=self._name, description=tabledict, title=self._name);
-        
-        for item in self._data:
-            newrow = table.row
-            for key, val in item.__dict__.items():
-                self._store_single_item(newrow,key,val)
-            
-            newrow.append()
-        
-        table.flush()
-
-
-    def store_information(self,hdf5file,hdf5group):
-        infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
-                   'Location': pt.StringCol(self._string_length_large(self._fullname)), 
-                   'Comment':pt.StringCol(self._string_length_large(self._comment)),
-                   'Type':pt.StringCol(self._string_length_large(str(type(self)))),
-                   'Class_Name': pt.StringCol(self._string_length_large(self.__class__.__name__))}
-        
-        infotable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
-        
-        newrow = infotable.row
-        newrow['Name'] = self._name
-        newrow['Location'] = self._fullname
-        newrow['Comment'] = self._comment
-        newrow['Type'] = str(type(self))
-        newrow['Class_Name'] = self.__class__.__name__
-        
-        newrow.append()
-        
-        infotable.flush()
-    
-  
-        
-    def load_from_hdf5(self, hdf5group):
-        ''' Loads a parameter from an hdf5 file.
-        
-        The file is not needed, the user has to supply only the corresponding hdf5 group and the 
-        file must have been opened somewhere else.
-        '''
-        
-        assert isinstance(hdf5group,pt.Group)
-        
-        infotable = hdf5group.Info
-        
-        assert isinstance(infotable,pt.Table)
-        
-        inforow = infotable[0]
-
-        self._comment = inforow['Comment']
-        
-        table = getattr(hdf5group,self._name)
-        assert isinstance(table,pt.Table)
-        
-        nrows = table.nrows
-      
-        datanames = table.colnames
-        #self.set(dataitem)
-        
-        dict_of_lists = {}
-        
-        for colname in datanames:
-            dict_of_lists[colname] = self._load_single_col(table,colname)
-            val = dict_of_lists[colname].pop(0)
-            self._set_single(colname, val)
-          
-        if nrows > 1:
-            self.become_array()  
-        
-        if self.is_array():
-            self.add_items_as_dict(**dict_of_lists)
-            
-    def _load_single_col(self,table,colname):
-        ''' Loads a single entry of a parameter (array) from a pytables column.
-        '''
-        assert isinstance(table, pt.Table)
-        
-        col_data = table.col(colname)
-        if len(col_data.shape)==1:
-            list_data = col_data.tolist()
-        else:
-            list_data  =[a for a in col_data]
-        return list_data
-
-        
-    
-    def _string_length_large(self,string):  
-        return  int(len(string)+1*1.5)
-                
-    
     def to_dict(self):
         ''' Returns the entries of the parameter as a dictionary.
         
         Only the first parameter is returned in case of a parameter array.
     '''
-        return self._data[0].__dict__.copy()
+        return self._data[0].copy()
         
     def get(self, name,n=0):
         
@@ -805,7 +636,7 @@ class Parameter(BaseParameter):
         
         if n >= len(self):
             raise ValueError('Cannot access %dth element, parameter has only %d elements.' % (n,len(self)))
-        return self._data[n].__dict__[name]
+        return self._data[n][name]
         
     
     def __getattr__(self,name):
@@ -823,6 +654,14 @@ class Parameter(BaseParameter):
     
      
 
+class IntParameter(SingleValueParameter, np.int):
+    def __init__(self,fullname, val):
+        assert isinstance(val,(int, np.int))
+        super(SingleValueParameter,self).__init__(fullname=fullname, val)
+        super(np.int,self).__init__(val)
+
+    def set(self,val):
+        assert isinstance(val,(int, np.int))
 
 
 
@@ -974,10 +813,11 @@ class BaseResult(object):
     autonomously write results to the hdf5 file.
     '''
             
-    def __init__(self, name, location, parent_trajectory_name, filename):
-        self._name=name
-        self._location = location
-        self._fullname = location+'.'+name
+    def __init__(self, fullname, parent_trajectory_name, filename):
+        self._fullname = fullname
+        split_name = fullname.split('.')
+        self._name=split_name.pop()
+        self._location('.'.join(split_name))
         self._parent_trajectory = parent_trajectory_name
         self._filename = filename
         
@@ -1013,9 +853,9 @@ class SimpleResult(BaseResult,SparseParameter):
     
     In fact this is a lazy implementation, its simply a sparse parameter^^
     '''        
-    def __init__(self, name, location, parent_trajectory_name, filename, *args,**kwargs):
-        super(SimpleResult,self).__init__(name, location, parent_trajectory_name, filename)
-        super(SparseParameter,self).__init__(name,location,*args,**kwargs)
+    def __init__(self, fullname, parent_trajectory_name, filename, *args,**kwargs):
+        super(SimpleResult,self).__init__(fullname, parent_trajectory_name, filename)
+        super(SparseParameter,self).__init__(fullname,*args,**kwargs)
 
     def store_to_hdf5(self,hdf5file,hdf5group):
         super(SparseParameter,self).store_to_hdf5(hdf5file,hdf5group)
