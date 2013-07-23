@@ -36,8 +36,11 @@ class BaseParameter(object):
         split_name = fullname.split('.')
         self._name=split_name.pop()
         self._location('.'.join(split_name))
+        self._comment = ''
 
-    
+    def get_comment(self):
+        return self._comment
+
     def get_location(self):
         return self._location
      
@@ -57,30 +60,16 @@ class BaseParameter(object):
         
         return getattr(self, key)
     
-    # def __call__(self,*args,**kwargs):
-    #     ''' param(name) -> Value stored at param.name
-    #
-    #     A call to the parameter with the given argument returns the value of the argument. If the parameter is an array only the first entry of the given name should be returned.
-    #     '''
-    #     raise NotImplementedError( "Should have implemented this." )
-    
+    def __store__(self):
+        raise NotImplementedError( "Should have implemented this." )
+
+    def __load__(self, load_dict):
+        raise NotImplementedError( "Should have implemented this." )
+
     def lock(self):
         ''' Locks the parameter and allows no further modification except exploration.'''
         raise NotImplementedError( "Should have implemented this." )
-        
-    def store_to_hdf5(self,hdf5file,hdf5group):
-        ''' Method to store a parameter to an hdf5file.
-        
-        :param hdf5group: is the group where the parameter is stored in the hdf5file. The name of the group is the name of the parameter.
-        '''
-        raise NotImplementedError( "Should have implemented this." )
-    
-    def load_from_hdf5(self,hdf5group):
-        ''' param.load_from_hdf5(hdf5group)-> Recovers parameter from the given group in a hdf5file.
-        
-            The name of the group is equal to the parameter name.
-        '''
-        raise NotImplementedError( "Should have implemented this." )
+
     
 
     def gfn(self,valuename=None):
@@ -592,9 +581,6 @@ class Parameter(BaseParameter):
             self._data.append(newdata)
      
 
-        
-
-
     def __store__(self):
         result_dict={}
         result_dict[self._name] = self._data
@@ -630,6 +616,9 @@ class Parameter(BaseParameter):
         
         if name == 'val':
             name = self._default
+
+        if name == 'comment' or 'Comment':
+            return self._comment
             
         if  not hasattr(self._data[0],name):
             raise AttributeError('Parameter ' + self._name + ' does not have attribute ' + name +'.')
