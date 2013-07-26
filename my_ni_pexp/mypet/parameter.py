@@ -140,11 +140,11 @@ class BaseParameter(object):
         '''
         raise NotImplementedError( "Should have implemented this." )
     
-    def access_parameter(self, n=0):
-        ''' Returns a shallow copy of the parameter for the nth run.
-        
-        If the parameter is an array only the nth element of the array is used to build a novel parameter.
-        If the parameter's length is only 1, the parameter itself is returned.
+    def set_parameter_access(self, n=0):
+        ''' Prepares the parameter for further usage, and tells it which point in the parameter space should be
+        accessed for future calls.
+        :param n: The index of the parameter space point
+        :return:
         '''
         raise NotImplementedError( "Should have implemented this." )
         
@@ -154,8 +154,11 @@ class BaseParameter(object):
     def get_name(self):
         ''' Returns the name of the parameter.'''
         return self._name
-    
 
+    def get_entry_names(self):
+        ''' Returns a list of all entry names with which the parameter can be accessed
+        '''
+        raise NotImplementedError( "Should have implemented this." )
 
       
 class Parameter(BaseParameter):
@@ -195,9 +198,8 @@ class Parameter(BaseParameter):
         
         self.set(*args,**kwargs)
 
-        ## Whether one wants a full copy of the parameter or not
         self._n = 0
-        self._access_full_copy = False
+        self._fullcopy = False
 
         
        
@@ -206,6 +208,18 @@ class Parameter(BaseParameter):
         '''
         result = self.__dict__.copy()
         result['_data'] = self._data.copy()
+
+        # If we don't need a full copy of the Parameter (because a single process needs only access to a single point
+        #  in the parameter space we can delete the rest
+        if not self._fullcopy:
+            for key in result['_data']:
+                old_list = result['_data'][key]
+                new_one_item_list = [old_list[self._n]]
+                result['_data'][key] = new_one_item_list
+
+            # Now we have shrunk the Parameter
+            result['_n'] = 0
+
         del result['_logger'] #pickling does not work with loggers
         return result
     
@@ -216,30 +230,11 @@ class Parameter(BaseParameter):
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
       
         
-    def access_parameter(self, n=0):
-        ''' Returns a shallow copy of the parameter for a single trajectory run.
-        
-        If the parameter is an array the copy contains only the nth data element as the first data 
-        element.
-        '''
-        if not self.is_array():
-            return self
-        elif self._access_full_copy:
+    def set_parameter_access(self, n=0):
+        if self.is_array():
             self._n = n
-            return self
         else:
-            if n >= len(self):
-                raise ValueError('n %i is larger than entries in parameter %s, only has %i entries.' % (n,self.gfn(),len(self)))
-            
-
-            newParam = copy.copy(self)
-
-            # Only copy the nth entry of the Parameter:
-            for key, val in self._data.items():
-                newParam._data[key] = [val[n]]
-            newParam._n = 0
-
-            return newParam
+            self._n = 0
 
 
     def has_value(self,valuename):
@@ -330,7 +325,7 @@ class Parameter(BaseParameter):
     def _test_default(self):
         old_locked = self._locked
         try:
-            eval(val)
+            eval(self._default_expression)
         except Exception,e:
             self._logger.warning('Your default expression >>%s<< failed to evaluate with error: %s' % (val,str(e)))
 
@@ -456,7 +451,8 @@ class Parameter(BaseParameter):
     def lock(self):
         self._locked = True
         
-    
+    def get_entry_names(self):
+        return self._data.keys()
         
     def change_values_in_array(self,name,values,positions):
         ''' Changes the values of entries for given positions if the parameter is an array.
@@ -693,7 +689,7 @@ class Parameter(BaseParameter):
 
     def set_copy_mode(self, val):
         assert isinstance(val, bool)
-        self._access_full_copy = val
+        self._fullcopy = val
 
 
     def get(self, name,n=None):
@@ -702,7 +698,7 @@ class Parameter(BaseParameter):
             n=self._n
 
         if name == 'FullCopy' or name =='fullcopy':
-            return self._access_full_copy
+            return self._fullcopy
 
         if name == 'Default' or name=='default':
             return self._default_expression
@@ -714,13 +710,13 @@ class Parameter(BaseParameter):
             return self._comment
             
         if not name in self._data:
-            raise AttributeError('Parameter ' + self._name + ' does not have attribute ' + name +'.')
+            raise AttributeError('Parameter %s does not have attribute or entry %s.' %(self._fullname,name))
         
         if n >= len(self):
             raise ValueError('Cannot access %dth element, parameter has only %d elements.' % (n,len(self)))
 
-        if name in self._data:
-            self.lock()
+
+        self.lock()
         return self._data[name][n]
 
     def return_default(self):
@@ -732,7 +728,10 @@ class Parameter(BaseParameter):
 
     
     def __getattr__(self,name):
-        if not '_data' in self.__dict__:
+        if (not '_data' in self.__dict__ or
+            not '_n' in self.__dict__ or
+            not '_fullname' in self.__dict__):
+
             raise AttributeError('This is to avoid pickling issues!')
         
         return self.get(name)

@@ -39,8 +39,8 @@ class NaturalNamingInterface(object):
         self._root._dict_list = [self._storage_dict]
 
 
-    def to_dict(self, evaluate = True):
-        return self._root.to_dict(evaluate)
+    def to_dict(self, evaluate = False, short_names=False):
+        return self._root.to_dict(evaluate, short_names)
 
 
 
@@ -288,27 +288,41 @@ class TreeNode(object):
 
         return self._nninterface._find(new_node, self._dict_list)
 
-    def to_dict(self, evaluate = True):
+    def to_dict(self, evaluate = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
         :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
          evaluation of the parameter.
+        :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
+        the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
+         is thrown.
         :return: A dictionary
         '''
         result_dict = {}
         for succesor_dict in self._dict_list:
-            result_dict.update(self._walk_dict(succesor_dict, evaluate))
+            result_dict.update(self._walk_dict(succesor_dict, evaluate, short_names))
+
+        return result_dict
 
 
-    def _walk_dict(self, dictionary, evaluate):
+    def _walk_dict(self, dictionary, evaluate, short_names):
         result_dict={}
         for val in dictionary.itervalues():
             if isinstance(val, dict):
-                result_dict.update(self._walk_dict(val,evaluate))
+                result_dict.update(self._walk_dict(val,evaluate, short_names))
             else:
-                key = val.get_fullname()
+                if short_names:
+                    key = val.get_name()
+                    if key in result_dict:
+                        val2 = result_dict[key]
+                        raise AttributeError('''Short name %s has been found twice, for %s as well as %s,
+                        I don not know which one to take.''' % (key, val2.get_fullname(),val.get_fullname() ))
+                else:
+                    key = val.get_fullname()
+
                 result_dict[key] = self._nninterface._get_result(val,evaluate)
+        return result_dict
 
 
     def get(self, name, evaluate=False):
@@ -320,7 +334,7 @@ class TreeNode(object):
         :param evaluate: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        old_fast_access = self._fast_access
+        old_fast_access = self._nninterface._fast_access
         try:
             self._nninterface._fast_access = evaluate
             result = eval('self.' + name)
@@ -476,7 +490,7 @@ class Trajectory(object):
         self._storageservice.store(self)
 
 
-    def to_dict(self, evaluate = True):
+    def to_dict(self, evaluate = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
@@ -484,7 +498,7 @@ class Trajectory(object):
          evaluation of the parameter.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(evaluate)
+        return self._nninterface.to_dict(evaluate, short_names)
 
 
     def __len__(self):
@@ -889,40 +903,14 @@ class Trajectory(object):
         return self._nninterface.get(name, evaluate)
 
 
-    def get_paramspacepoint(self,n):
-        ''' Returns the nth parameter space point of the trajectory.
-        
-        The returned instance is a a shallow copy of the trajectory without the parameter arrays
-        but only single parameters. From every array the nth parameter is used.
+    def prepare_paramspacepoint(self,n):
+        ''' Notifies the explored parameters what the current point in the parameter space it is,
+        i.e. which is the current run.
         '''
-
-        newtraj = copy.copy(self)
-
-        assert isinstance(newtraj, Trajectory) #Just for autocompletion
 
         # extract only one particular paramspacepoint
         for key,val in self._exploredparameters.items():
-            assert isinstance(val, BaseParameter)
-            newparam = val.access_parameter(n)
-            newtraj._exploredparameters[key] = newparam
-            if key in newtraj._parameters:
-                newtraj._parameters[key] = newparam
-            if key in newtraj._derivedparameters:
-                newtraj._derivedparameters[key] = newparam
-            
-            newtraj._nninterface._add_to_nninterface(newparam.get_fullname(), newparam)
-
-        ## Check if the last Parameter is actually and explored one, and if so change the last attribute of the
-        # new trajectory (so that it is not pointing to the explored parameter in the original trajectory):
-        lastname = self.last.get_fullname()
-        if lastname in self._exploredparameters:
-            newtraj.last = newtraj._exploredparameters[lastname]
-
-        return newtraj 
-    
-        
-        
-        
+            val.set_parameter_access(n)
 
 
      
@@ -983,20 +971,22 @@ class SingleRun(object):
         self._n = n
         
         name = 'Run_No_%08d' % n
-        self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
-        self._storageservice = self._small_parent_trajectory._storageservice
+        self._parent_trajectory = parent_trajectory
+        self._parent_trajectory.prepare_paramspacepoint(n)
+
+        self._storageservice = self._parent_trajectory._storageservice
 
         self._single_run = Trajectory(name, parent_trajectory._dynamic_imports)
         self._single_run.set_storage_service(self._storageservice)
         
-        self._nninterface = self._small_parent_trajectory._nninterface
-        self.last = self._small_parent_trajectory.last
+        self._nninterface = self._parent_trajectory._nninterface
+        self.last = self._parent_trajectory.last
 
         del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
-        self._single_run._standard_param_type = self._small_parent_trajectory._standard_param_type
+        self._single_run._standard_param_type = self._parent_trajectory._standard_param_type
         
-        self._nninterface._parent_trajectory_name = self._small_parent_trajectory.get_name()
+        self._nninterface._parent_trajectory_name = self._parent_trajectory.get_name()
         self._nninterface._working_trajectory_name = self._single_run.get_name()
 
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
@@ -1061,7 +1051,7 @@ class SingleRun(object):
         return self._nninterface.get(name)
 
     def get_parent_name(self):
-        return self._small_parent_trajectory.get_name()
+        return self._parent_trajectory.get_name()
     
     def get_name(self):
         return self._single_run.get_name()
@@ -1089,25 +1079,34 @@ class SingleRun(object):
         self._storageservice.store(self, lock=lock)
         
 
-    def to_dict(self, evaluate = True):
+    def to_dict(self, evaluate = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
         :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
          evaluation of the parameter.
+        :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
+        the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
+         is thrown.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(evaluate)
+        return self._nninterface.to_dict(evaluate, short_names)
 
     def _add_explored_params(self):
         ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
         '''
-        for fullname,param in self._small_parent_trajectory._exploredparameters.items():
+        for fullname,param in self._parent_trajectory._exploredparameters.items():
             splitname = fullname.split('.')
             
             #remove the Parameters tag
             splitname = ['ExploredParameters']+splitname[1:]
             newfullname = '.'.join(splitname)
 
-            self.add_result(full_result_name=newfullname, result_type=SimpleResult,  **param.to_dict())
+
+            param_dict = {}
+            keys = param.get_entry_names()
+            for key in keys:
+                param_dict[key] = param.get(key)
+
+            self.add_result(full_result_name=newfullname, result_type=SimpleResult, **param_dict)
             
