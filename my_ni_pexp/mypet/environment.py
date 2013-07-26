@@ -3,7 +3,8 @@ Created on 03.06.2013
 
 @author: robert
 '''
-from mypet.configuration import config
+from Cython.Runtime.refnanny import loglevel
+
 from mypet.mplogging import StreamToLogger
 from mypet.trajectory import Trajectory, SingleRun
 import os
@@ -13,6 +14,7 @@ import time
 import datetime
 import multiprocessing as multip
 import traceback
+from mypet.storageservice import HDF5StorageService
 
 
 def _single_run(args):
@@ -57,7 +59,7 @@ def _single_run(args):
         root.info('\n--------------------------------\n Starting single run #%d of %d \n--------------------------------' % (n,total_runs))
         result =runfunc(traj,*runparams,**kwrunparams)
         root.info('Storing Parameters')
-        traj.store_to_hdf5(lock)
+        traj.store(lock)
         root.info('Storing Parameters Finished')
         root.info('\n--------------------------------\n Finished single run #%d of %d \n--------------------------------' % (n,total_runs))
         return result
@@ -74,17 +76,14 @@ class Environment(object):
     ''' The environment to run a parameter exploration.
     '''
     
-    def __init__(self, trajectoryname, filename, filetitle='Experiment', dynamicly_imported_classes=[]):
+    def __init__(self, trajectoryname, filename, filetitle='Experiment', dynamicly_imported_classes=[], logfolder='../log/'):
         
         #Acquiring the current time
         init_time = time.time()
         thetime = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss');
         
-        #For logging:
-        logging.basicConfig(level=config['loglevel'])
-        logpath = config['logfolder']
-        
-        self._logpath = os.path.join(logpath,trajectoryname+'_'+thetime)
+        # Logging
+        self._logpath = os.path.join(logfolder,trajectoryname+'_'+thetime)
         
         if not os.path.isdir(self._logpath):
             os.makedirs(self._logpath)
@@ -96,55 +95,47 @@ class Environment(object):
         root = logging.getLogger()
         root.addHandler(h)
 
+
+
         for handler in root.handlers:
             handler.setFormatter(f)
-            
-        
-        
-        
+        self._logger = logging.getLogger('mypet.environment.Environment')
 
+        # Creating the Trajectory
 
-        self._traj = Trajectory(trajectoryname, filename, filetitle, dynamicly_imported_classes,init_time)
-        self._logger = logging.getLogger('Environment')
+        self._traj = Trajectory(trajectoryname, dynamicly_imported_classes,init_time)
+
+        storage_service = HDF5StorageService(filename, filetitle,self._traj.get_name() )
+        self._traj.set_storage_service(storage_service)
+
+        # Adding some default configuration
+        self._traj.ac('logpath', self._logpath).lock()
+        self._traj.ac('ncores',1)
+        self._traj.ac('multiproc',False)
+
 
         self._logger.debug('Environment initialized.')
-        
-    
-    def _add_config(self):
-        confparam=self._traj.add_parameter('Config')
-        
-        for key, val in config.items():
-            setattr(confparam, key, val)
-        
-        confparam.comment = 'This parameter contains all entries of the config.'
+
         
     def get_trajectory(self):
         return self._traj
     
-    
-#     def _single_run(self,traj,runfunc, **runparams):
-#         n = traj.get_n()
-#         self._logger.debug('Starting single run #%d' % n)
-#         result =runfunc(traj,**runparams)
-#         self._logger.debug('Finished single run #%d' % n)
-#         traj.store_to_hdf5()
-#         return result
+
 
     def run(self, runfunc, *runparams,**kwrunparams):
         
-        #Store the config file as parameters
-        self._add_config()
-        logpath = config['logfolder']
-        #Prepares the trajecotry for running
-        self._traj.prepare_experiment()
-        
-        multiproc = config['multiproc']
 
+        #Prepares the trajecotry for running
+
+        
+        multiproc = self._traj.get('Config.multiproc').return_default()
+
+        self._traj.prepare_experiment()
         if multiproc:
             
             lock = multip.Manager().Lock()
            
-            ncores = config['ncores']
+            ncores = multiproc = self._traj.get('Config.ncores').return_default()
             
             mpool = multip.Pool(ncores)
         

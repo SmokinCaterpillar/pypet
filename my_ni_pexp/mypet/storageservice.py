@@ -1,6 +1,3 @@
-from scipy.optimize.anneal import _state
-from numpy.lib._iotools import _is_bytes_like
-
 __author__ = 'robert'
 
 
@@ -14,15 +11,7 @@ from mypet.parameter import BaseParameter, BaseResult
 
 import collections
 
-def flatten(d, parent_key=''):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + '/' + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+
 
 class HDF5StorageService(object):
     ''' General Service to handle the storage of a Trajectory and Parameters
@@ -30,42 +19,96 @@ class HDF5StorageService(object):
 
     MAX_NAME_LENGTH = 1024
 
-    def __init__(self, filename, filetitle):
+    def __init__(self, filename, filetitle, trajectoryname):
         self._filename = filename
         self._filetitle = filetitle
+        self._trajectoryname = trajectoryname
         self._hdf5file = None
         self._trajectorygroup = None
-        self._logger = logging.getLogger('mypet.storageservice_HDF5StorageService=' + self.filename)
+        self._logger = logging.getLogger('mypet.storageservice_HDF5StorageService=' + self._filename)
 
 
     def load(self,*args,**kwargs):
-        stuff_to_load = args.pop(0)
 
-        if isinstance(stuff_to_load,Trajectory
-            self._load_trajectory(stuff_to_load,*args,**kwargs)
+        lock = None
+
+        try:
+            stuff_to_load = args.pop(0)
+
+
+            if 'lock' in kwargs:
+                lock = kwargs.pop('lock')
+                lock.acquire()
+
+            if isinstance(stuff_to_load,Trajectory):
+                return self._load_trajectory(stuff_to_load,*args,**kwargs)
+
+
+            if isinstance(stuff_to_load, (BaseParameter,BaseResult)):
+                return self._load_parameter_or_result(stuff_to_load,*args,**kwargs)
+
+
+            if lock:
+                lock.release()
+                lock = None
+
+        except Exception,e:
+            if isinstance(self._hdf5file,pt.File):
+                if self._hdf5file.isopen:
+                    self._hdf5file.close()
+                    self._hdf5file = None
+                    self._trajectorygroup = None
+
+            if lock:
+                lock.release()
+            raise
+
 
     def store(self,*args,**kwargs):
 
-        stuff_to_store = args.pop(0)
+        lock = None
+        args = list(args)
+
+        try:
+            if 'lock' in kwargs:
+                lock = kwargs.pop('lock')
+                lock.acquire()
 
 
-        if isinstance(stuff_to_store,Trajectory):
+            stuff_to_store = args.pop(0)
 
-            type = kwargs.pop('type')
+            if isinstance(stuff_to_store,Trajectory):
 
-            if type == 'Trajectory':
-                self._store_trajectory(stuff_to_store)
+                self._store_trajectory(stuff_to_store,*args,**kwargs)
+
+            elif isinstance(stuff_to_store,SingleRun):
+
+                self._store_single_run(stuff_to_store,*args,**kwargs)
+
+            elif isinstance(stuff_to_store,(BaseParameter,BaseResult)):
+                self._store_parameter_or_result(stuff_to_store,*args,**kwargs)
 
             else:
-                n = kwargs.pop('n')
-                self._store_single_run(stuff_to_store,n)
+                raise AttributeError('Your storage of >>%s<< (args[0]) did not work, type of >>%s<< not supported' % (str(stuff_to_store),str(type(stuff_to_store))))
 
-        elif isinstance(stuff_to_store,BaseParameter):
-            traj=kwargs.pop('traj')
-            self._store_parameter(stuff_to_store,traj)
+            if lock:
+                lock.release()
+                lock = None
 
-        else:
-            raise AttributeError('Your storage did not work, type of args[0] >>%s<< not supported' % str(type(stuff_to_store)))
+        except Exception,e:
+
+            if isinstance(self._hdf5file,pt.File):
+                if self._hdf5file.isopen:
+                    self._hdf5file.flush()
+                    self._hdf5file.close()
+                    self._hdf5file = None
+                    self._trajectorygroup = None
+
+            if lock:
+                lock.release()
+            raise
+
+
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -79,7 +122,7 @@ class HDF5StorageService(object):
 
     ######################## LOADING A TRAJECTORY #################################################
 
-    def _load_trajectory(self,traj, trajectoryname, filename = None, load_derived_params = False, load_results = False, replace = False):
+    def _load_trajectory(self,traj, trajectoryname, filename = None, load_skeleton = True, load_derived_params = False, load_results = False, replace = False):
         ''' Loads a single trajectory from a given file.
 
         Per default derived parameters and results are not loaded. If the filename is not specified
@@ -117,13 +160,17 @@ class HDF5StorageService(object):
 
         self._load_meta_data(traj, replace)
         self._load_params(traj)
-        if load_derived_params:
-            self._load_derived_params(traj)
-        if load_results:
-            self._load_results(traj,trajectoryname,filename)
+        if load_skeleton or load_derived_params:
+            self._load_derived_params(traj, load_derived_params)
 
+        if load_skeleton or load_results:
+            self._load_results(traj, load_results)
+
+        self._hdf5file.flush()
         self._hdf5file.close()
 
+        self._hdf5file = None
+        self._trajectorygroup = None
 
 
     def _load_meta_data(self,traj,  replace):
@@ -143,18 +190,18 @@ class HDF5StorageService(object):
 
     def _load_params(self,traj):
         paramtable = self._trajectorygroup.ParameterTable
-        self._load_any_param_or_result(traj,traj._parameters,paramtable)
+        self._load_any_param_or_result(traj,traj._parameters,paramtable, True)
 
-    def _load_derived_params(self,traj):
+    def _load_derived_params(self,traj, load_derived_params):
         paramtable = self._trajectorygroup.DerivedParameterTable
-        self._load_any_param_or_result(traj,traj._derivedparameters,paramtable)
+        self._load_any_param_or_result(traj,traj._derivedparameters,paramtable, load_derived_params)
 
-    def _load_results(self,traj,trajectoryname,filename):
+    def _load_results(self,traj,trajectoryname,filename, load_results):
         resulttable = self._trajectorygroup.ResultsTable
-        self._load_any_param_or_result(traj,traj._results,resulttable,True,trajectoryname,filename)
+        self._load_any_param_or_result(traj,traj._results,resulttable,True,trajectoryname,filename, load_results)
 
 
-    def _load_any_param_or_result(self,traj,wheredict,paramtable,creating_result_tree=False, trajectory_name = None, filename = None):
+    def _load_any_param_or_result(self,traj, wheredict, paramtable, load_data=True):
         ''' Loads a single parameter from a pytable.
 
         :param paramtable: The overiew pytable containing all parameters
@@ -166,34 +213,29 @@ class HDF5StorageService(object):
             name = row['Name']
             fullname = location+'.'+name
             class_name = row['Class_Name']
-            if location in wheredict:
+            if fullname in wheredict:
                 self._logger.warn('Paremeter ' + fullname + ' is already in your trajectory, I am overwriting it.')
-                del wheredict[fullname]
-                continue
 
             if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
                 #creator_name = row['Creator_Name']
                 creator_id = row['Creator_ID']
 
             new_class = traj._create_class(class_name)
+            paraminstance = new_class(fullname)
 
-            if not creating_result_tree:
-                paraminstance = new_class(name,location)
-            else:
-                paraminstance= new_class(name, location, trajectory_name, filename)
+            assert isinstance(paraminstance, (BaseParameter,BaseResult))
+
+            if isinstance(paraminstance,BaseResult):
                 if not creator_id in traj._result_ids:
                     traj._result_ids[creator_id]=[]
                 traj._result_ids[creator_id].append(paraminstance)
 
-            where = 'self._trajectorygroup.' + fullname
-            paramgroup = eval(where)
 
-            assert isinstance(paraminstance, (BaseParameter,BaseResult))
+            if load_data:
+                self.load(paraminstance,traj=traj.get_name())
 
-            if not creating_result_tree:
-                paraminstance.load_from_hdf5(paramgroup)
-
-                if len(paraminstance)>1:
+            if isinstance(paraminstance,BaseParameter):
+                if paraminstance.is_array():
                     traj._exploredparameters[fullname] = paraminstance
 
             wheredict[fullname]=paraminstance
@@ -203,27 +245,30 @@ class HDF5StorageService(object):
 
     ######################## Storing a Signle Run ##########################################
 
-    def _store_single_run(self,traj,trajectory_name,n):
+    def _store_single_run(self,single_run):
         ''' Stores the derived parameters and results of a single run.
         '''
+
+        assert isinstance(single_run,SingleRun)
+
+        traj = single_run._single_run
+        n = single_run.get_n()
+
+        self._logger.info('Start storing run %d with name %s.' % (n,single_run.get_name()))
         self._hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
 
         #print 'Storing %d' %n
-        self._trajectorygroup = self._hdf5file.getNode(where='/', name=trajectory_name)
+        self._trajectorygroup = self._hdf5file.getNode(where='/', name=self._trajectory_name)
 
 
 
         paramtable = getattr(self._trajectorygroup, 'DerivedParameterTable')
-        self._store_single_table(traj._derivedparameters, paramtable, traj.get_name(),n,trajectory_name)
-
-
+        self._store_single_table(traj._derivedparameters, paramtable, traj.get_name(),n)
         self._store_dict(traj._derivedparameters)
 
 
         paramtable = getattr(self._trajectorygroup, 'ResultsTable')
-        self._store_single_table(traj._results, paramtable, traj.get_name(),n,trajectory_name)
-
-
+        self._store_single_table(traj._results, paramtable, traj.get_name(),n)
         self._store_dict(traj._results)
 
         self._hdf5file.flush()
@@ -231,9 +276,11 @@ class HDF5StorageService(object):
         self._hdf5file = None
         self._trajectorygroup = None
 
+        self._logger.info('Finished storing run % n with name %s' % (n,single_run.get_name()))
+
 
     ######################################### Storing a Trajectory and a Single Run #####################
-    def _store_single_table(self,paramdict,paramtable, creator_name, creator_id, parent_trajectory):
+    def _store_single_table(self,paramdict,paramtable, creator_name, creator_id):
         ''' Stores a single overview table.
 
         Called from _store_meta_data and store_single_run
@@ -255,7 +302,7 @@ class HDF5StorageService(object):
                     continue;
 
 
-            newrow['Full_Name'] = key
+            newrow['Location'] = val.get_location()
             newrow['Name'] = val.get_name()
             newrow['Class_Name'] = val.get_class_name()
 
@@ -263,14 +310,13 @@ class HDF5StorageService(object):
             if paramtable._v_name in ['DerivedParameterTable', 'ResultsTable']:
                 newrow['Creator_Name'] = creator_name
                 newrow['Creator_ID'] = creator_id
-                newrow['Parent_Trajectory'] = parent_trajectory
+                newrow['Parent_Trajectory'] = self._trajectoryname
 
             newrow.append()
 
         paramtable.flush()
 
     def _store_dict(self, data_dict):
-
         for key,val in data_dict.items():
             self.store(val)
 
@@ -290,15 +336,13 @@ class HDF5StorageService(object):
         '''
 
 
-        loaddict = {'Trajectory' : pt.StringCol(self.MAX_NAME_LENGTH),
-                    'Filename' : pt.StringCol(self.MAX_NAME_LENGTH)}
-
         descriptiondict={'Name': pt.StringCol(len(traj._name)),
                          'Time': pt.StringCol(len(traj._formatted_time)),
                          'Timestamp' : pt.FloatCol(),
                          'Comment': pt.StringCol(len(traj._comment)),
                          'Length':pt.IntCol(),
-                         'Loaded_From': loaddict.copy()}
+                         'Loaded_From_Trajectory' : pt.StringCol(self.MAX_NAME_LENGTH),
+                         'Loaded_From_Filename' : pt.StringCol(self.MAX_NAME_LENGTH)}
 
         infotable = self._hdf5file.createTable(where=self._trajectorygroup, name='Info', description=descriptiondict, title='Info')
         newrow = infotable.row
@@ -307,38 +351,42 @@ class HDF5StorageService(object):
         newrow['Time']=traj._formatted_time
         newrow['Comment']=traj._comment
         newrow['Length'] = traj._length
-        newrow['Loaded_From/Trajectory']=traj._loadedfrom[0]
-        newrow['Loaded_From/Filename']=traj._loadedfrom[1]
+        newrow['Loaded_From_Trajectory']=traj._loadedfrom[0]
+        newrow['Loaded_From_Filename']=traj._loadedfrom[1]
 
         newrow.append()
         infotable.flush()
 
 
-        tostore_dict =  {'ParameterTable':traj._parameters, 'DerivedParameterTable':traj._derivedparameters, 'ExploredParameterTable' :traj._exploredparameters,'ResultsTable' : traj._results}
+        tostore_dict =  {'ConfigTable':traj._config,
+                         'ParameterTable':traj._parameters,
+                         'DerivedParameterTable':traj._derivedparameters,
+                         'ExploredParameterTable' :traj._exploredparameters,
+                         'ResultsTable' : traj._results}
 
         for key, dictionary in tostore_dict.items():
 
-            paramdescriptiondict={'Full_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(Trajectory.MAX_NAME_LENGTH)}
+            paramdescriptiondict={'Location': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
+                                  'Name': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
+                                  'Class_Name': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH)}
 
             if not key == 'ResultsTable':
-                paramdescriptiondict.update({'Size' : pt.IntCol()})
+                paramdescriptiondict.update({'Size' : pt.Int64Col()})
 
             if key in ['DerivedParameterTable', 'ResultsTable']:
-                paramdescriptiondict.update({'Creator_Name':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                             'Parent_Trajectory':pt.StringCol(Trajectory.MAX_NAME_LENGTH),
-                                             'Creator_ID':pt.IntCol()})
+                paramdescriptiondict.update({'Creator_Name':pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
+                                             'Parent_Trajectory':pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
+                                             'Creator_ID':pt.Int64Col()})
 
-            paramtable = self._hdf5file.createTable(where=trajectorygroup, name=key, description=paramdescriptiondict, title=key)
+            paramtable = self._hdf5file.createTable(where=self._trajectorygroup, name=key, description=paramdescriptiondict, title=key)
 
-            self._store_single_table(dictionary, paramtable, traj._name,-1,traj._name)
+            self._store_single_table(dictionary, paramtable, traj._name,-1)
 
 
     def _store_trajectory(self, traj):
         ''' Stores a trajectory to the in __init__ specified hdf5file.
         '''
-        self._logger.info('Start storing Parameters.')
+        self._logger.info('Start storing Trajectory %s.' % self._trajectoryname)
         (path, filename)=os.path.split(self._filename)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -353,9 +401,7 @@ class HDF5StorageService(object):
 
         self._store_meta_data(traj)
 
-
-
-
+        self._store_dict(traj._config)
         self._store_dict(traj._parameters)
         self._store_dict(traj._results)
         self._store_dict(traj._derivedparameters)
@@ -366,31 +412,39 @@ class HDF5StorageService(object):
         self._hdf5file.close()
         self._hdf5file = None
         self._trajectorygroup = None
-        self._logger.info('Finished storing Parameters.')
+        self._logger.info('Finished storing Trajectory.')
 
 
     ################# Storing and Loading Parameters ############################################
 
 
-    def _store_parameter(self, param, traj):
+    def _store_parameter_or_result(self, param):
+
         fullname = param.get_fullname()
-        self._logger.debug('Start Storing %s' % fullname)
+        self._logger.debug('Storing %s.' % fullname)
+        store_dict = param.__store__()
+
 
         newly_opened = False
         if self._hdf5file == None:
             self._hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
-            self._trajectorygroup = self._hdf5file.createGroup(where='/', name=traj._name, title=traj._name)
+            self._trajectorygroup = self._hdf5file.createGroup(where='/', name=self._trajectoryname, title=self._trajectoryname)
             newly_opened = True
 
-        store_dict = param.__store__()
+
         self._check_info_dict(param, store_dict)
 
-        group= self._create_groups(self._trajectorygroup, fullname)
+        group= self._create_groups(fullname)
 
 
 
-        for key, list_of_dicts in store_dict:
-            self._store_into_a_pytable(key, list_of_dicts, group, fullname)
+        for key, data_to_store in store_dict.items():
+            if isinstance(data_to_store, dict):
+                self._store_into_pytable(key, data_to_store, group, fullname)
+            elif isinstance(data_to_store, np.array):
+                self._store_into_array(key, data_to_store, group, fullname)
+            else:
+                raise AttributeError('I don not know how to store %s of %s. Cannot handle type %s.'%(key,fullname,str(type(data_to_store))))
 
 
         if newly_opened:
@@ -401,6 +455,12 @@ class HDF5StorageService(object):
             self._trajectorygroup = None
 
 
+    def _store_into_array(self, key, data, group, fullname):
+        atom = pt.Atom.from_dtype(data.dtype)
+        carray=self._hdf5file.createCArray(where=group, name=key,atom=atom,shape=data.shape)
+        carray[:]=data
+        self._hdf5file.flush()
+
     def _check_info_dict(self,param, store_dict):
         ''' Checks if the storage dictionary contains an appropriate description of the parameter.
         This entry is called Info, and should contain only a single
@@ -410,36 +470,37 @@ class HDF5StorageService(object):
         if not 'Info' in store_dict:
             store_dict['Info']=[{}]
 
-        if not len(store_dict['Info'])==1:
+        info_dict = store_dict['Info']
+
+        if not len(info_dict.itervalues().next())==1:
             raise AttributeError('Your description of the parameter %s, generated by __store__ and stored into >>Info<< has more than a single dictionary in the list.' % param.get_fullname())
 
-        info_dict = store_dict['Info'][0]
 
         if not 'Name' in info_dict:
-            info_dict['Name'] = param.get_name()
+            info_dict['Name'] = [param.get_name()]
         else:
-            assert info_dict['Name'] == param.get_name()
+            assert info_dict['Name'][0] == param.get_name()
 
         if not 'Location' in info_dict:
-            info_dict['Location'] = param.get_location()
+            info_dict['Location'] = [param.get_location()]
         else:
-            assert info_dict['Location'] == param.get_location()
+            assert info_dict['Location'][0] == param.get_location()
 
         if not 'Comment' in info_dict:
-            info_dict['Comment'] = param.get_comment()
+            info_dict['Comment'] = [param.get_comment()]
         else:
-            assert info_dict['Comment'] == param.get_comment()
+            assert info_dict['Comment'][0] == param.get_comment()
 
         if not 'Type' in info_dict:
-            info_dict['Type'] = str(type(param))
+            info_dict['Type'] = [str(type(param))]
         else:
-            assert info_dict['Type'] == str(type(param))
+            assert info_dict['Type'][0] == str(type(param))
 
 
         if not 'Class_Name' in info_dict:
-            info_dict['Class_Name'] = param.__class__.__name__
+            info_dict['Class_Name'] = [param.__class__.__name__]
         else:
-            assert info_dict['Class_Name'] == str(type(param))
+            assert info_dict['Class_Name'][0] == param.__class__.__name__
 
 
 
@@ -456,34 +517,52 @@ class HDF5StorageService(object):
 
     def _store_into_pytable(self,tablename,data,hdf5group,fullname):
 
-        description_dict = self._make_description(data,fullname)
+        if hasattr(hdf5group,tablename):
+            table = getattr(hdf5group,tablename)
+            self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' % (tablename,
+                                                                                                           self._filename,
+                                                                                                           fullname))
 
-        table = self._hdf5file.create_table(hdf5group,tablename,description_dict)
+            ## Check if the colnames and dtypes work together
+            # colnames = table.colnames
+            # for key, val_list in data.items():
+            #     if not key in colnames:
+            #         raise AttributeError('Failed storing %s. Cannot append new data to table, since entry %s is not a column of table %s.' % (fullname,key,tablename))
+        else:
+            description_dict = self._make_description(data,fullname)
+            table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
+                                               title=tablename)
 
-        row = table.row()
+        assert isinstance(table,pt.Table)
 
-        for data_dict in data:
-            flat_dict = flatten(data_dict)
+        nrows = table.nrows
+        row = table.row
 
-            for key,val in flat_dict.items():
-                row[key] = val
+        datasize = len(data.itervalues().next())
+
+
+        for n in range(nrows, datasize):
+
+            for key,val_list in data.items():
+                row[key] = val_list[n]
 
             row.append()
 
         table.flush()
+        self._hdf5file.flush()
 
 
 
-    def _make_description(self, data_list, fullname):
+    def _make_description(self, data, fullname):
         ''' Returns a dictionary that describes a pytbales row.
         '''
 
         descriptiondict={}
 
-        for key, val in data_list[0].items():
+        for key, val in data.items():
 
 
-            col = self._get_table_col( val, key, data_list)
+            col = self._get_table_col(key, val)
 
             if col is None:
                 raise TypeError('Entry %s of %s cannot be translated into pytables column' % (key,fullname))
@@ -493,48 +572,55 @@ class HDF5StorageService(object):
         return descriptiondict
 
 
-    def _get_table_col(self, val, key,  data_list):
+    def _get_table_col(self, key, val_list):
         ''' Creates a pytables column instance.
 
         The type of column depends on the type of parameter entry.
         '''
-        if isinstance(val, np.int):
-                return pt.IntCol()
+        val = val_list[0]
+        if isinstance(val, np.int64):
+            return pt.Int64Col()
         if isinstance(val, np.float):
-                return pt.Float64Col()
+            return pt.Float64Col()
         if isinstance(val, np.bool):
-                return pt.BoolCol()
+            return pt.BoolCol()
         if isinstance(val, np.str):
-                itemsize = int(self._get_longest_stringsize(key,data_list))
-                return pt.StringCol(itemsize=itemsize)
+            itemsize = int(self._get_longest_stringsize(key,val_list))
+            return pt.StringCol(itemsize=itemsize)
+        if isinstance(val,np.complex):
+            return pt.ComplexCol()
         if isinstance(val, np.ndarray):
             valdtype = val.dtype
             valshape = np.shape(val)
 
-            if np.issubdtype(valdtype, int):
-                    return pt.IntCol(shape=valshape)
-            if np.issubdtype(valdtype, float):
-                    return pt.Float64Col(shape=valshape)
-            if np.issubdtype(valdtype, bool):
-                    return pt.BoolCol(shape=valshape)
+            if np.issubdtype(valdtype, np.int64):
+                return pt.Int64Col(shape=valshape)
+            if np.issubdtype(valdtype, np.float):
+                return pt.Float64Col(shape=valshape)
+            if np.issubdtype(valdtype, np.bool):
+                return pt.BoolCol(shape=valshape)
+            if np.issubdtype(valdtype,np.complex):
+                return pt.ComplexCol(shape=valshape)
+            if np.issubdtype(valdtype,np.str):
+                return pt.StringCol(shape=valshape)
+
 
         return None
 
-    def _get_longest_stringsize(self,key, data_list):
+    def _get_longest_stringsize(self,key, string_list):
         ''' Returns the longest stringsize for a string entry across data.
         '''
         maxlength = 1
-        strings = []
 
-        for data_dict in data_list:
-            string = data_dict[key]
+        for string in string_list:
             maxlength = max(len(string),maxlength)
 
-        return maxlength
+        # Make the string Col longer than needed in order to allow later on slightly large strings
+        return maxlength*1.5
 
 
 
-    def _load_parameter(self, param, traj):
+    def _load_parameter_or_result(self, param):
 
         fullname = param.get_fullname()
         self._logger.debug('Start Loading %s' % fullname)
@@ -542,16 +628,19 @@ class HDF5StorageService(object):
         newly_opened = False
         if self._hdf5file == None:
             self._hdf5file = pt.openFile(filename=self._filename, mode='r', title=self._filetitle)
-            self._trajectorygroup = getattr(self._hdf5file,traj.get_name()))
+            self._trajectorygroup = getattr(self._hdf5file,self._trajectoryname)
 
         try:
             hdf5group = eval('self._trajectorygroup.'+fullname)
         except Exception, e:
-            raise AttributeError('Parameter %s cannot be found in the hdf5file %s and trajectory %s' % (fullname,self._filename,traj.get_name()))
+            raise AttributeError('Parameter %s cannot be found in the hdf5file %s and trajectory %s' % (fullname,self._filename,self._trajectoryname))
 
         load_dict = {}
-        for table in hdf5group:
-            self._read_param_table(table, load_dict)
+        for leaf in hdf5group:
+            if isinstance(leaf, pt.Table):
+                self._read_table(leaf, load_dict)
+            elif isinstance(leaf, pt.CArray):
+                self._read_carray(leaf, load_dict)
 
         if newly_opened:
             self._hdf5file.close()
@@ -559,17 +648,27 @@ class HDF5StorageService(object):
             self._trajectorygroup = None
 
 
-    def _read_param_table(table,load_dict)
-        '''
+        param.__load__(load_dict)
 
-        :param table:
+
+    def _read_table(self,table,load_dict):
+        ''' Reads a non-nested Pytables table column by column.
+
         :type table: pt.Table
-        :param load_dict:
+        :type load_dict:
+        :return:
         '''
 
         table_name = table._v_name
-        load_dict[table_name]=[]
-        for row in table:
-            for key,val in row.
+        load_dict[table_name]={}
+        for colname in table.colnames:
+            col = table.col(colname)
+            load_dict[table_name][colname]=list(col)
 
+    def _read_carray(self, carray, load_dict):
+
+        assert isinstance(carray,pt.CArray)
+        array_name = carray._v_name
+
+        load_dict[array_name] = carray[:]
 

@@ -5,101 +5,113 @@ Created on 10.06.2013
 '''
 
 
-from mypet.parameter import Parameter, BaseResult
+from mypet.parameter import Parameter, BaseResult, SparseParameter
 from brian.units import *
 from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, PopulationSpikeCounter, PopulationRateMonitor
-from inspect import getsource
+from mypet.utils.helpful_functions import nest_dictionary
 
 import tables as pt
 import numpy as np
 
-class BrianParameter(Parameter):
-    ''' The standard Brian Parameter that has a value and a unit
-    
-    The unit has to be set via param.unit = unit,
-    e.g.
-    >>> param.unit = mV
-    
-    the corresponding value is set as
-    >>> param.value = 10
-    
-    If both have been specified
-    a call to the param returns the corresponding brian quantity:
-    >>> print param()
-    >>> 10*mvolt
-    
-    The brian quantity can also be accessed via param.val
-    
-    '''
-    def __init__(self,name,location,*value_list,**value_dict):
-        value_list = list(value_list)
-        unit = None
-        
-        if value_list and isinstance(value_list[0],Quantity):
-            unit = value_list.pop(0)
-    
-        super(BrianParameter,self).__init__(name,location,*value_list,**value_dict)
-    
-        if unit:
-            self._add_brian_quantity(unit)
-            
-    
-    def _add_brian_quantity(self,unit):
-        assert isinstance(unit, Quantity)
-        unitstr = unit.in_best_unit(python_code=True)
-        
-        splitunit = unitstr.split('*')
-        value = splitunit.pop(0)
-        self.value=float(value)
-        unit = '*'.join(splitunit)
-        self.unit = unit
-        
-       
+class BrianParameter(SparseParameter):
 
-    def __call__(self,valuename=None):
-        if not valuename or valuename == 'val':
-            if not self.has_value('unit') or  not self.has_value('value'):
-                self._logger.info('Brian Parameter has no unit or value.')
-                return None
-            unit = eval(self.unit)
-            value = self.value
-            return value*unit   
-        else:
-            super(BrianParameter,self).__call__(valuename)
-            
-    def get(self, name):
-        
-        if name == 'val':
-            return self()
-            
-        return super(BrianParameter,self).get(name)
-    
-    def _set_single(self,name,val):
-        
-        if name == 'val' and isinstance(val, Quantity):
-            self._add_brian_quantity(val)
-            return 
-        
-        ## Check if unit exists
-        if name == 'unit':
-            unit = eval(val)
-            if not isinstance(unit, Unit):
-                raise ValueError('Not a unit!')
-        
-        super(BrianParameter,self)._set_single(name,val)
+    separator = '_brian_'
 
+    def _is_supported_data(self, data):
+        ''' Simply checks if data is supported '''
+        if isinstance(data, Quantity):
+            return True
+        if super(BrianParameter,self)._is_supported_data(data):
+            return True
+        return False
+
+    def _values_of_same_type(self,val1, val2):
+        if not super(BrianParameter,self)._values_of_same_type(val1, val2):
+            return False
+
+        if isinstance(val1,Quantity):
+            if not val1.has_same_dimensions(val2):
+                return False
+        elif isinstance(val2,Quantity):
+            if not val2.has_same_dimensions(val1):
+                return False
+
+        return True
+
+    def _convert_data(self, val):
+        if isinstance(val, Quantity):
+            return val
+
+        return super(BrianParameter,self)._convert_data(val)
+
+
+    def set_single(self,name,val,pos=0):
+        if BrianParameter.separator in name:
+            raise AttributeError('Sorry your entry cannot contain >>%s<< this is reserved for storing brian units and values.' % BrianParameter.separator)
+
+        super(BrianParameter,self).set_single(name,val,pos)
+
+    def _load_data(self, load_dict):
+
+        briandata = {}
+
+
+        for key, val in load_dict[self._name].items():
+            if BrianParameter.separator in key:
+                briandata[key] = val
+                del load_dict[self._name][key]
+
+        briandata = nest_dictionary(briandata, BrianParameter.separator)
+
+
+
+        for brianname, vd_dict in briandata.items():
+            arunit = vd_dict['unit']
+            arval = vd_dict['value']
+
+            brianlist = []
+            for idx in range(len(arunit)):
+                unit = arunit[idx]
+                value= arval[idx]
+                evalstr = 'value * ' + unit
+                brian_quantity = eval(evalstr)
+                brianlist.append(brian_quantity)
+
+            load_dict[self._name][brianname] = brianlist
+
+        super(BrianParameter,self)._load_data(load_dict)
+
+
+    def _store_data(self,store_dict):
+        super(SparseParameter,self)._store_data(store_dict)
+        data_dict = store_dict[self._name]
+
+        for key, val_list in data_dict.items():
+            if isinstance(val_list[0],Quantity):
+                del data_dict[key]
+                data_dict[key+BrianParameter.separator+'unit']=[]
+                data_dict[key+BrianParameter.separator+'value']=[]
+
+            for val in val_list:
+                assert isinstance(val, Quantity)
+                valstr = val.in_best_unit(python_code=True)
+                split_val = valstr.split('*')
+                value = split_val.pop(0)
+                unit = '*'.join(split_val)
+                data_dict[key+BrianParameter.separator+'unit'].append(unit)
+                data_dict[key+BrianParameter.separator+'value'].append(value)
 
 class BrianMonitorResult(BaseResult):  
     
-    def __init__(self, name, location, parent_trajectory_name, filename, monitor, comment =''): 
+    def __init__(self, fullname, monitor, comment ='No comment'):
 
-
+        super(BrianMonitorResult,self).__init__(fullname)
         self._comment = comment
         self._monitor = monitor
-        
-        super(BrianMonitorResult,self).__init__(name,location,parent_trajectory_name,filename)
+        self.val = None
+
     
     def __getattr__(self,name):
         if name =='Comment' or name == 'comment':

@@ -19,19 +19,11 @@ class ParameterNotArrayException(Exception):
     def __str__(self):
         return repr(self._msg)
     
-# class OperationNotSupportedException(Exception):
-#     '''Exception raised if someone tries to use a method that is only supported in the parents class'''
-#     def __init__(self,msg):
-#         self._msg=msg
-#          
-#     def __str__(self):
-#         return repr(self._msg)
-    
-# class ParameterModifyExcpetion(Exception):
-#     '''Exception raised if someone tries to modify a Parameter Array Value which is not existent or does not fit'''
-#     def __init__(self,msg):
-#         self._msg=msg
-#         
-#     def __str__(self):
-#         return repr(self._msg)
-    
+class DefaultReplacementError(Exception):
+    '''Exception raised if added parameters should actually replace default settings, but have not probably due to a type.'''
+    def __init__(self,msg):
+        self._msg=msg
+
+    def __str__(self):
+        return repr(self._msg)
+

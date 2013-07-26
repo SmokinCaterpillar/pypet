@@ -7,12 +7,12 @@ Created on 17.05.2013
 import logging
 import datetime
 import time
-import os
-from twisted.python.deprecate import _fullyQualifiedName
 from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 import copy
-from mypet.configuration import config
+import mypet.petexceptions as pex
+
+
 
 
 
@@ -23,7 +23,7 @@ class NaturalNamingInterface(object):
 
     
     def __init__(self, working_trajectory_name, parent_trajectory_name):   
-        self._quick_access = False
+        self._fast_access = False
         #self._double_checking = True
         self._working_trajectory_name=working_trajectory_name
         self._parent_trajectory_name=parent_trajectory_name
@@ -37,24 +37,45 @@ class NaturalNamingInterface(object):
         
         self._root = TreeNode(self,'_root')
         self._root._dict_list = [self._storage_dict]
-        
+
+
+    def to_dict(self, evaluate = True):
+        return self._root.to_dict(evaluate)
+
+
+
+
+
+
     def __getattr__(self,name):
          
-        if not hasattr(self, '_root') or \
-             not hasattr(self,'_shortcut') or \
-             not hasattr(self, '_find') or \
-             not hasattr(self, '_find_candidates') or \
-             not hasattr(self, '_find_recursively') or \
-             not hasattr(self, '_select') or \
-             not hasattr(self, '_sort_according_to_type') or \
-             not hasattr(self, '_get_result') or \
-             not hasattr(self, '_nodes_and_leaves') or \
-             not hasattr(self, '_storage_dict'):
+        if (not  '_root' in self.__dict__ or
+             not '_shortcut' in self.__class__.__dict__ or
+             not  '_find' in self.__class__.__dict__ or
+             not  '_find_candidates' in self.__class__.__dict__ or
+             not  '_find_recursively' in self.__class__.__dict__ or
+             not  '_select' in self.__class__.__dict__ or
+             not  '_sort_according_to_type' in self.__class__.__dict__ or
+             not  '_get_result' in self.__class__.__dict__ or
+             not  '_nodes_and_leaves' in self.__dict__ or
+             not  '_storage_dict' in self.__dict__):
 
             raise AttributeError('This is to avoid pickling issues and problems with internal variables!')
              
         return getattr(self._root, name)
-        
+
+    def get(self, name, evaluate = False):
+        ''' Same as traj.>>name<<
+        Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
+        default evaluation is returned depends on the value of >>evaluate<<.
+
+        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param evaluate: If the default evaluation of a parameter should be returned.
+        :return: The requested object or it's default evaluation. Returns None if object could not be found.
+        '''
+        return self._root.get(name, evaluate)
+
+
     def _shortcut(self, name):
         
         expanded = None
@@ -182,7 +203,7 @@ class NaturalNamingInterface(object):
                 return item_list
             
             elif item_list:
-                return self._get_result(item_list[0])
+                return self._get_result(item_list[0], self._fast_access)
             else:
                 return node
         else:
@@ -220,10 +241,10 @@ class NaturalNamingInterface(object):
         return dict_list, derived_run_list+derived_traj_list+parameter_list+result_list
      
        
-    def _get_result(self, data):
+    def _get_result(self, data, fast_access):
         
-        if self._quick_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
-            return data()
+        if fast_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
+            return data.return_default()
         else:
             return data
 
@@ -232,42 +253,85 @@ class NaturalNamingInterface(object):
         
 
 class TreeNode(object):
-        '''Object to construct the file tree.
-        
-        The recursive structure allows access to parameters via natural naming.
+    '''Object to construct the file tree.
+
+    The recursive structure allows access to parameters via natural naming.
+    '''
+    def __init__(self, nninterface, name, parents_fullname=''):
+
+        self._nninterface = nninterface
+        self._name = name
+
+        if parents_fullname == '':
+            self._fullname = self._name
+        else:
+            self._fullname = parents_fullname+'.'+self._name
+
+        self._dict_list =[]
+
+    def __getattr__(self,name):
+
+        if (not  '_nninterface' in self.__dict__ or
+            not  '_fullname' in self.__dict__ or
+            not  '_name' in self.__dict__ or
+            not '_dict_list' in self.__dict__):
+            raise AttributeError('This is to avoid pickling issues')
+
+        shortcut = self._nninterface._shortcut(name)
+        if shortcut:
+            name = shortcut
+
+        if not name in self._nninterface._nodes_and_leaves:
+            raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+
+        new_node = TreeNode(self._nninterface, name, self._fullname)
+
+        return self._nninterface._find(new_node, self._dict_list)
+
+    def to_dict(self, evaluate = True):
+        ''' This method returns all parameters reachable from this node as a dict.
+        The keys are the full names of the parameters and the values of the dict are the parameters
+        themselves or the default evaluation of the parameters.
+        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+         evaluation of the parameter.
+        :return: A dictionary
         '''
-        def __init__(self, nninterface, name, parents_fullname=''):
-            
-            self._nninterface = nninterface
-            self._name = name
-            
-            if parents_fullname == '':
-                self._fullname = self._name
+        result_dict = {}
+        for succesor_dict in self._dict_list:
+            result_dict.update(self._walk_dict(succesor_dict, evaluate))
+
+
+    def _walk_dict(self, dictionary, evaluate):
+        result_dict={}
+        for val in dictionary.itervalues():
+            if isinstance(val, dict):
+                result_dict.update(self._walk_dict(val,evaluate))
             else:
-                self._fullname = parents_fullname+'.'+self._name
-         
-            self._dict_list =[]
-      
-        def __getattr__(self,name):
-            
-            if not hasattr(self, '_nninterface') or not hasattr(self, '_fullname') or not hasattr(self, '_name') or not hasattr(self,'_dict_list'):
-                raise AttributeError('This is to avoid pickling issues')
-            
-            shortcut = self._nninterface._shortcut(name) 
-            if not shortcut == None:
-                name = shortcut 
-            
-            if not name in self._nninterface._nodes_and_leaves:
-                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
-        
-            
-                
-                
-            new_node = TreeNode(self._nninterface, name, self._fullname) 
+                key = val.get_fullname()
+                result_dict[key] = self._nninterface._get_result(val,evaluate)
 
-            return self._nninterface._find(new_node, self._dict_list)
 
- 
+    def get(self, name, evaluate=False):
+        ''' Same as traj.>>name<<
+        Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
+        default evaluation is returned depends on the value of >>evaluate<<.
+
+        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param evaluate: If the default evaluation of a parameter should be returned.
+        :return: The requested object or it's default evaluation. Returns None if object could not be found.
+        '''
+        old_fast_access = self._fast_access
+        try:
+            self._nninterface._fast_access = evaluate
+            result = eval('self.' + name)
+            self._nninterface._fast_access = old_fast_access
+            return result
+        except:
+            self._nninterface._fast_access = old_fast_access
+            self._nninterface._logger.warning('No parameter or result found in your trajectory with name %s.' %name)
+            return None
+
+
 
 class Trajectory(object):
     '''The trajectory manages the handling of simulation parameters and results.
@@ -317,38 +381,31 @@ class Trajectory(object):
     
     standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
 
-    def store(self):
-        self.lock_parameters()
-        self._storageservice.store(self,type='Trajectory')
-
-
-    def store_single_run(self,trajectory_name,n):
-        self._storageservice.store(self,type='SingleRun', n=n)
-   
-    def __len__(self): 
-        return self._length      
-    
-    def __init__(self, storageservice, dynamicly_imported_classes=[], init_time=None):
+    def __init__(self, name,  dynamicly_imported_classes=[], init_time=None):
     
         if init_time is None:
             init_time = time.time()
-        
+
+
         
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         
         self._time = init_time
         self._formatted_time = formatted_time
-        #self._givenname = name;
+
+
         self._name = name+'_'+str(formatted_time)
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
         
         self._parameters={}
         self._derivedparameters={}
         self._results={}
-        self._exploredparameters={}  
+        self._exploredparameters={}
+        self._config={}
         
         self._result_ids={} #the numbering of the results, only important if results have been
-    
+
+        self._changed_default_params={}
         
         #Even if there are no parameters yet length is 1 for convention
         self._length = 1
@@ -356,25 +413,87 @@ class Trajectory(object):
         self._nninterface = NaturalNamingInterface(working_trajectory_name=self._name, parent_trajectory_name = self._name)
         
         
-        self._storageservice = storageservice
+        self._storageservice = None
 
         self._comment= Trajectory.standard_comment
-        
-        self._quick_access = False
-        self._double_checking = True
+
         
         self.last = None
         self._standard_param_type = Parameter
         
         
-        self._dynamic_imports=['mypet.parameter.SparseParameter']
-        self._dynamic_imports.extend(dynamicly_imported_classes)
+        self._dynamic_imports=set(['mypet.parameter.SparseParameter'])
+        self._dynamic_imports.update(dynamicly_imported_classes)
         
         self._loadedfrom = ('None','None')
 
-    def set_quick_access(self, val):
+
+    def set_storage_service(self, service):
+        self._storageservice = service
+
+
+    def change_config(self, config_name,*args,**kwargs):
+        ''' Similar to change_parameter.
+        '''
+        config_name = 'Config'+'.'+config_name
+        if config_name in self._config:
+            self._configs[config_name].set(*args,**kwargs)
+        else:
+            self._changed_default_params[config_name] = (args,kwargs)
+
+    def change_parameter(self, param_name,*args,**kwargs ):
+        ''' Can be called before parameters are added to the Trajectory in order to change the values that are stored
+        into the parameter.
+
+        After creation of a Parameter, the instance of the parameter is called with param.set(*args,**kwargs).
+        The prefix 'Parameters.' is also automatically added to 'param_name'. If the parameter already exists,
+        when change_parameter is called, the parameter is changed directly.
+
+        Before experiment is carried out it is checked if all changes are actually carried out.
+
+        :param param_name: The name of the parameter that is to be changed after it's creation, the prefix 'Parameters.'
+                            is automatically added, i.e. param_name = 'Parameters.'+param_name
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        param_name = 'Parameters'+'.'+param_name
+        if param_name in self._parameters:
+            self._parameters[param_name].set(*args,**kwargs)
+        else:
+            self._changed_default_params[param_name] = (args,kwargs)
+
+    def prepare_experiment(self):
+
+        if len(self._changed_default_params):
+            raise pex.DefaultReplacementError('The following parameters were supposed to replace a default value, but it was never tried to add default values with these names: %s' % str(self._changed_default_params))
+
+        self.lock_parameters()
+        self.lock_derived_parameters()
+        self.store()
+
+    def store(self):
+        self._storageservice.store(self)
+
+
+    def to_dict(self, evaluate = True):
+        ''' This method returns all parameters reachable from this node as a dict.
+        The keys are the full names of the parameters and the values of the dict are the parameters
+        themselves or the default evaluation of the parameters.
+        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+         evaluation of the parameter.
+        :return: A dictionary
+        '''
+        return self._nninterface.to_dict(evaluate)
+
+
+    def __len__(self):
+        return self._length
+
+
+    def set_fast_access(self, val):
         assert isinstance(val,bool)
-        self._nninterface._quick_access = val
+        self._nninterface._fast_access = val
     
 #     def set_double_checking(self, val):
 #         assert isinstance(val,bool)
@@ -394,6 +513,8 @@ class Trajectory(object):
         result['_derivedparameters']=self._derivedparameters.copy()
         result['_parameters'] = self._parameters.copy()
         result['_results'] = self._results.copy()
+        result['_exploredparameters'] = self._exploredparameters.copy()
+        result['_config']=self._config.copy()
         return result
     
     def __setstate__(self, statedict):
@@ -419,9 +540,6 @@ class Trajectory(object):
         # Finally, we retrieve the Class
         return getattr(module, class_str)
 
-
-        
-            
        
     def add_comment(self,comment):
         ''' Extends the existing comment
@@ -430,7 +548,12 @@ class Trajectory(object):
             self._comment = comment
         else:
             self._comment = self._comment + '; ' + comment
-         
+
+    def ar(self,*args,**kwargs):
+        ''' Short for add_result.
+        '''
+        return self.add_result(*args, **kwargs)
+
     def add_result(self, *args,**kwargs):
         ''' Adds a result to the trajectory, 
         
@@ -438,29 +561,27 @@ class Trajectory(object):
         which will be fed to the init function of your result.
         
         If result_type is already the instance of a Result a new instance will not be created.
+        Adding of naming is similar to DerivedParameters.
         
         Does not update the 'last' shortcut of the trajectory.
         '''
-        
-        
-        if 'parent_trajectory' in kwargs.keys():
-            parent_trajectory = kwargs.pop('parent_trajectory')
-        else:
-            parent_trajectory = self._name
-        
+        prefix = 'Results.'+self._name+'.'
+
         if 'result' in kwargs or (args and isinstance(args[0], BaseResult)):
             if 'result' in kwargs:
                 instance = kwargs.pop('result')
             else:
                 instance = args.pop(0)
-            
+                instance._rename(prefix+instance.get_fullname())
+                full_result_name = instance.get_fullname()
 
-            
-        else:
-            if not 'result_name' in kwargs:
-                raise ValueError('Your new Parameter needs a name, please call the function with result_name=...')
+        elif 'result_name' in kwargs or (args and isinstance(args[0],str)):
 
-            full_result_name = kwargs.pop('result_name')
+            if 'result_name' in kwargs:
+                full_result_name = kwargs.pop('result_name')
+            else:
+                full_result_name = args.pop(0)
+                full_result_name = prefix+full_result_name
 
             if 'result_type' in kwargs or (args and isinstance(args[0], type) and issubclass(args[0], BaseResult)):
                 if 'result_type' in kwargs:
@@ -468,57 +589,57 @@ class Trajectory(object):
                 else:
                     args = list(args)
                     result_type = args.pop(0)
-                instance =  result_type(full_result_name,parent_trajectory,self._filename,*args,**kwargs)
+                instance =  result_type(full_result_name,*args,**kwargs)
             else:
                 raise AttributeError('No instance of a result or a result type is specified')
+        else:
+            raise AttributeError('You did not supply a new Result or a name for a new result')
 
+        faulty_names = self._check_name(full_result_name)
 
-        full_result_name = instance._fullname
-        split_name = full_result_name.split('.')
-        if not split_name[0] == 'Results':
-            instance._fullname = 'Results.'+instance._fullname
-            instance._location = 'Results.'+instance._location
-            self._logger.debug('I added %s to the result name it is now: %s.' % (where, instance._fullname))
+        if faulty_names:
+            raise AttributeError('Your Parameter %s contains the following not admittable names: %s please choose other names')
 
 
         if full_result_name in self._results:
             self._logger.warn(full_result_name + ' is already part of trajectory, I will replace it.')
-
 
         self._results[full_result_name] = instance
         
         self._nninterface._add_to_nninterface(full_result_name, instance)
         
         return instance
-        
+
+    def add_config(self, *args, **kwargs):
+        return self._add_any_param('Config.',self._config,*args,**kwargs)
+
+    def ac(self, *args, **kwargs):
+        return self.add_config(*args,**kwargs)
         
     def adp(self,  *args,**kwargs):
         ''' Short for add_derived_parameter
         '''
         return self.add_derived_parameter( *args, **kwargs)
-                  
+
+
+
     def add_derived_parameter(self, *args,**kwargs):
         ''' Adds a new derived parameter. Returns the added parameter.
         
-        :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
-                                    colons'.'. The trajectory will add 'DerivedParameters' and the 
-                                    name  of the current trajectory or run to the name.
-                                    For example, the parameter named paramgroup.param1 which is 
-                                    added in the current run Run_No_00000001_2013_06_03_17h40m24s 
-                                    becomes:
+        :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by colons'.'. The
+        trajectory will add 'DerivedParameters' and the  name  of the current trajectory or run to the name. For
+        example, the parameter named paramgroup.param1 which is  added in the current run
+        Run_No_00000001_2013_06_03_17h40m24s becomes:
                             DerivedParameters.Run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
                                     
-        :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first
-                            entry in *args.
-                            If not specified the standard parameter is chosen.
-                            Standard is the Parameter class, another example 
-                            would be the SparseParameter class.
+        :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
+        *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
+        another example would be the SparseParameter class.
                             
-         :param param (or args[0]):      If you already have an instance of the parameter (that takes care of
-                            proper naming and stuff) you can pass it here, then the instance
-                            will be added to the trajectory instead of creating a new
-                            instance via calling instance = param(name,full_parameter_name),
-                            i.e. instance = param
+        :param param (or args[0]):      If you already have an instance of the parameter you can pass it here,
+        then the instance will be added to the trajectory instead of creating a new instance via calling instance =
+        param(name,full_parameter_name), i.e. instance = param. Note that your added parameters will be renamed as
+        mentioned above.
                             
         :param *args: Any kinds of desired parameter entries.
         
@@ -532,16 +653,12 @@ class Trajectory(object):
         >>> 42
         '''
 
-        return self._add_any_param(where = 'DerivedParameters',where_dict=self._derivedparameters,*args,**kwargs)
-        
-    def _add_any_param(self, where, where_dict, *args,**kwargs):
+        return self._add_any_param('DerivedParameters.'+self._name+'.',self._derivedparameters,
+                                   *args,**kwargs)
 
-        
-        if 'param_replace' in kwargs:
-            param_replace = kwargs.pop('param_replace')
-        else:
-            param_replace = False
+    def _add_any_param(self, prefix, where_dict, *args,**kwargs):
 
+        args = list(args)
 
         if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
             if 'param' in kwargs:
@@ -549,13 +666,17 @@ class Trajectory(object):
             else:
                 args = list(args)
                 instance = args.pop(0)
+                instance._rename(prefix+instance._fullname)
+                full_parameter_name = instance.get_fullname()
 
-        else:
+        elif 'param_name' in kwargs or (args and isinstance(args[0],str)):
 
-            if not 'param_name' in kwargs:
-                raise ValueError('Your new Parameter needs a name, please call the function with param_name=...')
+            if  'param_name' in kwargs:
+                full_parameter_name = kwargs.pop('param_name')
+            else:
+                full_parameter_name = args.pop(0)
 
-            full_parameter_name = kwargs.pop('param_name')
+            full_parameter_name = prefix+full_parameter_name
 
             if not 'param_type' in kwargs:
                 if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
@@ -567,37 +688,46 @@ class Trajectory(object):
                 param_type = kwargs.pop('param_type')
 
 
-            instance =   param_type(full_parameter_name,*args, **kwargs)
+            instance = param_type(full_parameter_name,*args, **kwargs)
+        else:
+            raise ValueError('You did not supply a new Parameter or a name for a new Parameter.')
 
+        faulty_names = self._check_name(full_parameter_name)
 
-        full_parameter_name = instance._fullname
-        split_name = full_parameter_name.split('.')
-        if not where == split_name[0]:
-            instance._fullname = where+'.'+instance._fullname
-            instance._location = where+'.'+instance._location
-            self._logger.debug('I added %s to the parameter name it is now: %s.' % (where, instance._fullname))
-
+        if faulty_names:
+            raise AttributeError('Your Parameter %s contains the following not admittable names: %s please choose other names.'
+                                 % (full_parameter_name, faulty_names))
 
         if full_parameter_name in where_dict:
-            if param_replace:
-                self._logger.debug(full_parameter_name + ' is already part of trajectory, I will replace it since you called with param_replace=True!')
-            else:
-                self._logger.warn(full_parameter_name + ' is already part of trajectory, I will keep the old one. If you want to replace the parameter, call the adding with param_replace=True!')
-                return where_dict[full_parameter_name]
+            self._logger.warn(full_parameter_name + ' is already part of trajectory, I will replace the old one.')
 
+        if full_parameter_name in self._changed_default_params:
+            self._logger.info('You have marked parameter %s for change before, so here you go!' % full_parameter_name)
+            change_args, change_kwargs = self._changed_default_params.pop(full_parameter_name)
+            instance.set(*change_args,**change_kwargs)
 
         where_dict[full_parameter_name] = instance
-        
-        
-        #self._nninterface.peter ='Dubb'
+
         self._nninterface._add_to_nninterface(full_parameter_name, instance)
-        
-        
+
         self.last = instance
         
         return instance
     
-    
+    def _check_name(self, name):
+        split_names = name.split('.')
+        faulty_names = ''
+        not_admissable_names = set(dir(self) + dir(self._nninterface) + dir(self._nninterface._root))
+
+        for split_name in split_names:
+            if split_name in not_admissable_names:
+                faulty_names = '%s %s is a method/attribute of the trajectory/treenode/naminginterface,' \
+                                %(faulty_names, split_name)
+
+            if split_name[0] == '_':
+                faulty_names = '%s %s starts with a leading underscore,' %(faulty_names,split_name)
+
+        return faulty_names
 
     def ap(self, *args, **kwargs):
         ''' Short for add_parameter.
@@ -606,29 +736,26 @@ class Trajectory(object):
     
     def add_parameter(self,   *args, **kwargs):
         ''' Adds a new parameter. Returns the added parameter.
-        
-        :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by 
-                                    colons'.'. The trajectory will add 'Parameters'.
-                                    For example, the parameter named paramgroup1.param1 becomes:
-                                    Parameters.paramgroup1.param1
-                                    
-        :param param_type (or args[0]): The type of parameter, if not specified the standard parameter is chosen.
-                            Should be passed in **kwargs or as first entry in *args.
-                             The standard parameter is the Parameter, but get be change via
-                             the set_standard_param_type method.
-                            
-        :param param (or args[0]): If you already have an instance of the parameter (that takes care of
-                            proper naming and stuff) you can pass it here, than the instance
-                            will be added to the trajectory instead of creating a new
-                            instance via calling instance = param_type(name,full_parameter_name)
-                            i.e. instance = param_type
-        
-        :param*args: Any kinds of desired parameter entries
-        
+
+        :param full_parameter_name: The full name of the parameter. Grouping is achieved by colons'.'. The
+        trajectory will add 'Parameters' to the name. For example, the parameter named paramgroup.param1 which is becomes:
+                            Parameters.paramgroup.param1
+
+        :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
+        *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
+        another example would be the SparseParameter class.
+
+        :param param (or args[0]):      If you already have an instance of the parameter you can pass it here,
+        then the instance will be added to the trajectory instead of creating a new instance via calling instance =
+        param(name,full_parameter_name), i.e. instance = param. Note that your added parameters will be renamed as
+        mentioned above.
+
+        :param *args: Any kinds of desired parameter entries.
+
         :param **kwargs: Any kinds of desired parameter entries.
-        
+
         Example use:
-        >>> myparam=traj.add_parameter(self, paramgroup1.param1, param_type=Parameter, 
+        >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=Parameter,
                                                 entry1 = 42)
             
         >>> print myparam.entry1
@@ -636,7 +763,7 @@ class Trajectory(object):
         '''
 
         
-        return self._add_any_param('Parameters',self._parameters, *args,**kwargs)
+        return self._add_any_param('Parameters.',self._parameters, *args,**kwargs)
         
 
         
@@ -739,28 +866,27 @@ class Trajectory(object):
                         new_class = self._load_class(dynamic_class)
                         return new_class 
                 raise ImportError('Could not create the class named ' + class_name)
-    
-
-        
 
     
     def get_result_ids(self):
-        return self._result_ids
+        return self._result_ids.copy()
     
     def get_results(self):
-        return self._results
+        return self._results.copy()
     
     def get_explored_params(self):  
-        return self._exploredparameters
+        return self._exploredparameters.copy()
              
+    def get(self, name, evaluate=False):
+        ''' Same as traj.>>name<<
+        Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
+        default evaluation is returned depends on the value of >>evaluate<<.
 
-            
-    
-
-    
-                
-
-        
+        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param evaluate: If the default evaluation of a parameter should be returned.
+        :return: The requested object or it's default evaluation. Returns None if object could not be found.
+        '''
+        return self._nninterface.get(name, evaluate)
 
 
     def get_paramspacepoint(self,n):
@@ -769,29 +895,12 @@ class Trajectory(object):
         The returned instance is a a shallow copy of the trajectory without the parameter arrays
         but only single parameters. From every array the nth parameter is used.
         '''
-        #self._collector=PickleDummy
+
         newtraj = copy.copy(self)
-        #self._collector = NameCollector(self)
-        
-        #newtraj._derivedparameters = self._derivedparameters.copy()
-       #newtraj._parameters = self._parameters.copy()
-        #newtraj._exploredparameters = self._results.copy()
-        #newtraj._NNtree = self._tree._rebuild()
-        #newtraj.Parameters = TreeNode('Parameters',self._name)
-        #newtraj.DerivedParameters = TreeNode('DerivedParameters',self._name)
-        #newtraj.Results = TreeNode('Results',self._name)
-        
 
-        
         assert isinstance(newtraj, Trajectory) #Just for autocompletion
-        
-
-#         two_dicts = {}
-#         two_dicts.update(self._derivedparameters)
-#         two_dicts.update(self._parameters)
 
         # extract only one particular paramspacepoint
-
         for key,val in self._exploredparameters.items():
             assert isinstance(val, BaseParameter)
             newparam = val.access_parameter(n)
@@ -802,23 +911,19 @@ class Trajectory(object):
                 newtraj._derivedparameters[key] = newparam
             
             newtraj._nninterface._add_to_nninterface(newparam.get_fullname(), newparam)
-       
-    
-            
-        
+
+        ## Check if the last Parameter is actually and explored one, and if so change the last attribute of the
+        # new trajectory (so that it is not pointing to the explored parameter in the original trajectory):
+        lastname = self.last.get_fullname()
+        if lastname in self._exploredparameters:
+            newtraj.last = newtraj._exploredparameters[lastname]
+
         return newtraj 
     
         
         
         
-    def prepare_experiment(self):
-        ''' Prepares the trajectory for parameter exploration.
-        
-        Locks all derived and normal parameters and writes them to the hdf5file.
-        '''
-        self.lock_parameters()
-        self.lock_derived_parameters()
-        self.store_to_hdf5()
+
 
      
     def make_single_run(self,n):
@@ -828,20 +933,15 @@ class Trajectory(object):
         copy of the parent trajectory but wihtout parameter arrays. From every array only the 
         nth parameter is used.
         '''
-        return SingleRun(self._filename, self, n) 
+        return SingleRun(self, n)
 
     def __getattr__(self,name):
         
-        if not hasattr(self, '_nninterface'):
+        if not '_nninterface' in self.__dict__:
             raise AttributeError('This is to avoid pickling issues!')
    
         return getattr(self._nninterface, name)
-        
 
-
-
-    def multiproc(self):
-        return self._multiproc
 
 class SingleRun(object):
     ''' Constitutes one specific parameter combination in the whole trajectory.
@@ -872,28 +972,38 @@ class SingleRun(object):
     and the corresponding index n within the trajectory, i.e. the index of the parameter space point.
     '''
     
-    def __init__(self, filename, parent_trajectory,  n):
+    def __init__(self, parent_trajectory,  n):
         
         assert isinstance(parent_trajectory, Trajectory)
+
+
 
         self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
 
         self._n = n
-        self._filename = filename 
         
         name = 'Run_No_%08d' % n
         self._small_parent_trajectory = parent_trajectory.get_paramspacepoint(n)
-        self._single_run = Trajectory(name=name, filename=filename)
+        self._storageservice = self._small_parent_trajectory._storageservice
+
+        self._single_run = Trajectory(name, parent_trajectory._dynamic_imports)
+        self._single_run.set_storage_service(self._storageservice)
         
         self._nninterface = self._small_parent_trajectory._nninterface
+        self.last = self._small_parent_trajectory.last
+
         del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
+        self._single_run._standard_param_type = self._small_parent_trajectory._standard_param_type
         
         self._nninterface._parent_trajectory_name = self._small_parent_trajectory.get_name()
         self._nninterface._working_trajectory_name = self._single_run.get_name()
-        
+
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
-    
+        
+
+
+
     def get_n(self): 
         return self._n   
            
@@ -911,68 +1021,83 @@ class SingleRun(object):
     def adp(self, full_parameter_name, *args,**kwargs):
         ''' Short for add_derived_parameter
         '''
-        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
+        return self.add_derived_parameter( *args, **kwargs)
         
-    def add_derived_parameter(self, full_parameter_name,  *args, **kwargs):
-        return self._single_run.add_derived_parameter(full_parameter_name, *args, **kwargs)
+    def add_derived_parameter(self, *args, **kwargs):
+        self.last= self._single_run.add_derived_parameter(*args, **kwargs)
+        return self.last
 
     
-    def ap(self, full_parameter_name, *args, **kwargs):
+    def ap(self, *args, **kwargs):
         ''' Short for add_parameter.
         '''
-        return self.add_parameter( full_parameter_name,*args, **kwargs)
+        return self.add_parameter(*args, **kwargs)
     
     
-    def add_parameter(self, full_parameter_name, *args, **kwargs): 
+    def add_parameter(self, *args, **kwargs):
         ''' Adds a DERIVED Parameter to the trajectory and emits a warning.
         ''' 
         self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
-        return self.add_derived_parameter(full_parameter_name, *args, **kwargs)
-       
+        return self.add_derived_parameter( *args, **kwargs)
+
+    def get(self, name):
+        return self._nninterface.get(name)
+
     def __getattr__(self,name):
         
-        if not hasattr(self, '_nninterface'):
+        if not '_nninterface' in self.__dict__:
             raise AttributeError('This is to avoid pickling issues!')
         
         return getattr(self._nninterface, name)
         
-     
+    def get(self, name):
+        ''' Same as traj.>>name<<
+        Requesting parameters via get does not pay attention to fast access. Even if fast access is True,
+        get will return a parameter object and not the parameter's default evaluation.
+
+        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :return: The requested object. Returns None if object could not be found.
+        '''
+        return self._nninterface.get(name)
+
     def get_parent_name(self):
         return self._small_parent_trajectory.get_name()
     
     def get_name(self):
         return self._single_run.get_name()
+
+    def ar(self,*args,**kwargs):
+        return self.add_result(*args,**kwargs)
+
+    def add_result(self,  *args,**kwargs):
+        return self._single_run.add_result( *args,**kwargs)
     
-    def add_result(self, full_result_name, *args,**kwargs):
-        kwargs['parent_trajectory'] = self._small_parent_trajectory.get_name()
-        return self._single_run.add_result(full_result_name, *args,**kwargs)
-    
-    def set_quick_access(self,val):
+    def set_fast_access(self,val):
         assert isinstance(val, bool)
-        self._nninterface._quick_access=val
+        self._nninterface._fast_access=val
         
 #     def set_double_checking(self,val):
 #         assert isinstance(val, bool)
 #         self._nninterface._double_checking=val
         
-    def store_to_hdf5(self, lock=None):
+    def store(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
         
         In case of multiprocessing a lock needs to be provided to prevent hdf5file corruption!!!
         '''
-        
-        if lock:
-            lock.acquire()
-            #print 'Start storing run %d.' % self._n
-            self._logger.debug('Start storing run %d.' % self._n)
-            
         self._add_explored_params()
-        self._single_run.store_single_run(self._small_parent_trajectory.get_name(), self._n)
+        self._storageservice.store(self, lock=lock)
         
-        if lock:
-            #print 'Finished storing run %d,' % self._n
-            self._logger.debug('Finished storing run %d,' % self._n)
-            lock.release()
+
+    def to_dict(self, evaluate = True):
+        ''' This method returns all parameters reachable from this node as a dict.
+        The keys are the full names of the parameters and the values of the dict are the parameters
+        themselves or the default evaluation of the parameters.
+        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+         evaluation of the parameter.
+        :return: A dictionary
+        '''
+        return self._nninterface.to_dict(evaluate)
 
     def _add_explored_params(self):
         ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
@@ -983,8 +1108,6 @@ class SingleRun(object):
             #remove the Parameters tag
             splitname = ['ExploredParameters']+splitname[1:]
             newfullname = '.'.join(splitname)
-            
-            # adds the entry 'is_explored_param' to prevent the listing of the parameter again
-            # in the ResultsTable list
+
             self.add_result(full_result_name=newfullname, result_type=SimpleResult,  **param.to_dict())
             
