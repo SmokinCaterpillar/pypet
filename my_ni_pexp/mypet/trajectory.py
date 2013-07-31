@@ -32,18 +32,32 @@ class NaturalNamingInterface(object):
         
         #self._debug = {}
         self._storage_dict =  {} 
-        self._nodes_and_leaves = set()
+        self._nodes_and_leaves = {}
 
         
         self._root = TreeNode(self,'_root')
         self._root._dict_list = [self._storage_dict]
 
 
-    def to_dict(self, evaluate = False, short_names=False):
-        return self._root.to_dict(evaluate, short_names)
+    def to_dict(self, fast_access = False, short_names=False):
+        return self._root.to_dict(fast_access, short_names)
 
 
 
+    def _remove(self, fullname):
+        split_name = fullname.split('.')
+
+        act_dict = self._storage_dict
+        for name in split_name:
+            prev_dict = act_dict
+            act_dict = act_dict[name]
+            if not isinstance(act_dict, dict) or len(act_dict) == 0:
+                del act_dict
+                del prev_dict[name]
+
+                self._nodes_and_leaves[name] = self._nodes_and_leaves[name]-1
+                if self._nodes_and_leaves[name] == 0:
+                    del self._nodes_and_leaves[name]
 
 
 
@@ -64,16 +78,16 @@ class NaturalNamingInterface(object):
              
         return getattr(self._root, name)
 
-    def get(self, name, evaluate = False):
+    def get(self, name, fast_access = False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
-        default evaluation is returned depends on the value of >>evaluate<<.
+        default evaluation is returned depends on the value of >>fast_access<<.
 
         :param name: The Name of the Parameter,Result or TreeNode that is requested.
-        :param evaluate: If the default evaluation of a parameter should be returned.
+        :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        return self._root.get(name, evaluate)
+        return self._root.get(name, fast_access)
 
 
     def _shortcut(self, name):
@@ -109,7 +123,11 @@ class NaturalNamingInterface(object):
         split_name.append(leaf) 
         
         for name in split_name:
-            self._nodes_and_leaves.add(name)
+            if name in self._nodes_and_leaves:
+                self._nodes_and_leaves[name] = self._nodes_and_leaves[name] +1
+            else:
+                self._nodes_and_leaves[name] =0
+            #self._nodes_and_leaves.add(name)
         
     
     def _add_to_storage_dict(self, where_list, leaf, data):
@@ -288,11 +306,11 @@ class TreeNode(object):
 
         return self._nninterface._find(new_node, self._dict_list)
 
-    def to_dict(self, evaluate = False, short_names=False):
+    def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
-        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
          evaluation of the parameter.
         :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
         the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
@@ -301,42 +319,42 @@ class TreeNode(object):
         '''
         result_dict = {}
         for succesor_dict in self._dict_list:
-            result_dict.update(self._walk_dict(succesor_dict, evaluate, short_names))
+            result_dict.update(self._walk_dict(succesor_dict, fast_access, short_names))
 
         return result_dict
 
 
-    def _walk_dict(self, dictionary, evaluate, short_names):
+    def _walk_dict(self, dictionary, fast_access, short_names):
         result_dict={}
         for val in dictionary.itervalues():
             if isinstance(val, dict):
-                result_dict.update(self._walk_dict(val,evaluate, short_names))
+                result_dict.update(self._walk_dict(val,fast_access, short_names))
             else:
                 if short_names:
                     key = val.get_name()
                     if key in result_dict:
                         val2 = result_dict[key]
-                        raise AttributeError('''Short name %s has been found twice, for %s as well as %s,
+                        raise ValueError('''Short name %s has been found twice, for %s as well as %s,
                         I don not know which one to take.''' % (key, val2.get_fullname(),val.get_fullname() ))
                 else:
                     key = val.get_fullname()
 
-                result_dict[key] = self._nninterface._get_result(val,evaluate)
+                result_dict[key] = self._nninterface._get_result(val,fast_access)
         return result_dict
 
 
-    def get(self, name, evaluate=False):
+    def get(self, name, fast_access=False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
-        default evaluation is returned depends on the value of >>evaluate<<.
+        default evaluation is returned depends on the value of >>fast_access<<.
 
         :param name: The Name of the Parameter,Result or TreeNode that is requested.
-        :param evaluate: If the default evaluation of a parameter should be returned.
+        :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
         old_fast_access = self._nninterface._fast_access
         try:
-            self._nninterface._fast_access = evaluate
+            self._nninterface._fast_access = fast_access
             result = eval('self.' + name)
             self._nninterface._fast_access = old_fast_access
             return result
@@ -441,6 +459,40 @@ class Trajectory(object):
         
         self._loadedfrom = ('None','None')
 
+    def remove(self, removal_list):
+        for item in removal_list:
+            if isinstance(item, (BaseParameter,BaseResult)):
+                instance = item
+            elif isinstance(item, str):
+                instance = self.get(item,fast_access=False)
+                if isinstance(instance,list):
+                    ValueError('Your query to remove %s was not unique, found: %s' %(item,str(instance)))
+            else:
+                raise ValueError('This aint working bro, I do not know what %s is.' % str(item))
+
+            fullname = instance.get_fullname()
+            self._remove(fullname)
+            self._nninterface._remove(fullname)
+
+
+
+    def _remove(self,fullname):
+
+        split_name = fullname.split('.')
+        category = split_name[0]
+        if category == 'Results':
+            del self._results[fullname]
+        elif category == 'Parameters':
+            del self._parameters[fullname]
+        elif category == 'DerivedParameters':
+            del self._derivedparameters[fullname]
+        elif category == 'Config':
+            del self._config[fullname]
+        else:
+            raise RuntimeError('You should nover come here :eeek:')
+
+
+        self._logger.debug('Removed %s from trajectory.' %fullname)
 
     def set_storage_service(self, service):
         self._storageservice = service
@@ -490,15 +542,15 @@ class Trajectory(object):
         self._storageservice.store(self)
 
 
-    def to_dict(self, evaluate = False, short_names=False):
+    def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
-        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
          evaluation of the parameter.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(evaluate, short_names)
+        return self._nninterface.to_dict(fast_access, short_names)
 
 
     def __len__(self):
@@ -580,6 +632,7 @@ class Trajectory(object):
         Does not update the 'last' shortcut of the trajectory.
         '''
         prefix = 'Results.'+self._name+'.'
+        args = list(args)
 
         if 'result' in kwargs or (args and isinstance(args[0], BaseResult)):
             if 'result' in kwargs:
@@ -605,9 +658,9 @@ class Trajectory(object):
                     result_type = args.pop(0)
                 instance =  result_type(full_result_name,*args,**kwargs)
             else:
-                raise AttributeError('No instance of a result or a result type is specified')
+                raise RuntimeError('No instance of a result or a result type is specified')
         else:
-            raise AttributeError('You did not supply a new Result or a name for a new result')
+            raise RuntimeError('You did not supply a new Result or a name for a new result')
 
         faulty_names = self._check_name(full_result_name)
 
@@ -704,7 +757,7 @@ class Trajectory(object):
 
             instance = param_type(full_parameter_name,*args, **kwargs)
         else:
-            raise ValueError('You did not supply a new Parameter or a name for a new Parameter.')
+            raise RuntimeError('You did not supply a new Parameter or a name for a new Parameter.')
 
         faulty_names = self._check_name(full_parameter_name)
 
@@ -891,16 +944,16 @@ class Trajectory(object):
     def get_explored_params(self):  
         return self._exploredparameters.copy()
              
-    def get(self, name, evaluate=False):
+    def get(self, name, fast_access=False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
-        default evaluation is returned depends on the value of >>evaluate<<.
+        default evaluation is returned depends on the value of >>fast_access<<.
 
         :param name: The Name of the Parameter,Result or TreeNode that is requested.
-        :param evaluate: If the default evaluation of a parameter should be returned.
+        :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        return self._nninterface.get(name, evaluate)
+        return self._nninterface.get(name, fast_access)
 
 
     def prepare_paramspacepoint(self,n):
@@ -979,7 +1032,7 @@ class SingleRun(object):
         self._single_run = Trajectory(name, parent_trajectory._dynamic_imports)
         self._single_run.set_storage_service(self._storageservice)
         
-        self._nninterface = self._parent_trajectory._nninterface
+        self._nninterface = copy.copy(self._parent_trajectory._nninterface)
         self.last = self._parent_trajectory.last
 
         del self._single_run._nninterface
@@ -992,7 +1045,24 @@ class SingleRun(object):
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
         
 
+    def remove(self, removal_list):
+        for item in removal_list:
+            if isinstance(item, (BaseParameter,BaseResult)):
+                instance = item
+            elif isinstance(item, str):
+                instance = self.get(item,fast_access=False)
+                if isinstance(instance,list):
+                    ValueError('Your query to remove %s was not unique, found: %s' %(item,str(instance)))
+            else:
+                raise ValueError('This aint working bro, I do not know what %s is.' % str(item))
 
+            fullname = instance.get_fullname()
+            split_name = fullname.split['.']
+            if not split_name[1] == self.get_name():
+                raise ValueError('Cannot remove %s, can only remove stuff that was added to this single run %s.' %(
+                    fullname,self.get_name()))
+            self._single_run._remove(fullname)
+            self._nninterface._remove(fullname)
 
     def get_n(self): 
         return self._n   
@@ -1075,38 +1145,40 @@ class SingleRun(object):
         
         In case of multiprocessing a lock needs to be provided to prevent hdf5file corruption!!!
         '''
-        self._add_explored_params()
+        #self._add_explored_params()
         self._storageservice.store(self, lock=lock)
+
         
 
-    def to_dict(self, evaluate = False, short_names=False):
+    def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
         The keys are the full names of the parameters and the values of the dict are the parameters
         themselves or the default evaluation of the parameters.
-        :param evaluate: Boolean to determine whether the dictionary entries are parameter objects or the default
+        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
          evaluation of the parameter.
         :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
         the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
          is thrown.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(evaluate, short_names)
+        return self._nninterface.to_dict(fast_access, short_names)
 
-    def _add_explored_params(self):
-        ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
-        '''
-        for fullname,param in self._parent_trajectory._exploredparameters.items():
-            splitname = fullname.split('.')
-            
-            #remove the Parameters tag
-            splitname = ['ExploredParameters']+splitname[1:]
-            newfullname = '.'.join(splitname)
-
-
-            param_dict = {}
-            keys = param.get_entry_names()
-            for key in keys:
-                param_dict[key] = param.get(key)
-
-            self.add_result(full_result_name=newfullname, result_type=SimpleResult, **param_dict)
+    # def _add_explored_params(self):
+    #     ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
+    #     '''
+    #     result_list = []
+    #     for fullname,param in self._parent_trajectory._exploredparameters.items():
+    #         splitname = fullname.split('.')
+    #
+    #         #remove the Parameters tag
+    #         splitname = ['ExploredParameters']+splitname[1:]
+    #         newfullname = '.'.join(splitname)
+    #
+    #
+    #         param_dict = {}
+    #         keys = param.get_entry_names()
+    #         for key in keys:
+    #             param_dict[key] = param.get(key)
+    #
+    #         self.add_result(result_name=newfullname, result_type=SimpleResult, **param_dict)
             

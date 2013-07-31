@@ -6,8 +6,8 @@ import tables as pt
 import os
 import numpy as np
 from mypet.trajectory import Trajectory,SingleRun
-from mypet.parameter import BaseParameter, BaseResult
-
+from mypet.parameter import BaseParameter, BaseResult, SimpleResult
+from mypet import globals
 
 import collections
 
@@ -17,7 +17,9 @@ class HDF5StorageService(object):
     ''' General Service to handle the storage of a Trajectory and Parameters
     '''
 
-    MAX_NAME_LENGTH = 1024
+
+
+
 
     def __init__(self, filename, filetitle, trajectoryname):
         self._filename = filename
@@ -38,7 +40,8 @@ class HDF5StorageService(object):
 
             if 'lock' in kwargs:
                 lock = kwargs.pop('lock')
-                lock.acquire()
+                if not lock == None:
+                    lock.acquire()
 
             if isinstance(stuff_to_load,Trajectory):
                 return self._load_trajectory(stuff_to_load,*args,**kwargs)
@@ -48,7 +51,7 @@ class HDF5StorageService(object):
                 return self._load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
 
-            if lock:
+            if not lock == None:
                 lock.release()
                 lock = None
 
@@ -59,7 +62,7 @@ class HDF5StorageService(object):
                     self._hdf5file = None
                     self._trajectorygroup = None
 
-            if lock:
+            if not lock == None:
                 lock.release()
             raise
 
@@ -72,7 +75,8 @@ class HDF5StorageService(object):
         try:
             if 'lock' in kwargs:
                 lock = kwargs.pop('lock')
-                lock.acquire()
+                if not lock == None:
+                    lock.acquire()
 
 
             stuff_to_store = args.pop(0)
@@ -91,7 +95,7 @@ class HDF5StorageService(object):
             else:
                 raise AttributeError('Your storage of >>%s<< (args[0]) did not work, type of >>%s<< not supported' % (str(stuff_to_store),str(type(stuff_to_store))))
 
-            if lock:
+            if not lock == None:
                 lock.release()
                 lock = None
 
@@ -104,7 +108,7 @@ class HDF5StorageService(object):
                     self._hdf5file = None
                     self._trajectorygroup = None
 
-            if lock:
+            if not lock == None:
                 lock.release()
             raise
 
@@ -258,7 +262,7 @@ class HDF5StorageService(object):
         self._hdf5file = pt.openFile(filename=self._filename, mode='a', title=self._filetitle)
 
         #print 'Storing %d' %n
-        self._trajectorygroup = self._hdf5file.getNode(where='/', name=self._trajectory_name)
+        self._trajectorygroup = self._hdf5file.getNode(where='/', name=self._trajectoryname)
 
 
 
@@ -271,13 +275,41 @@ class HDF5StorageService(object):
         self._store_single_table(traj._results, paramtable, traj.get_name(),n)
         self._store_dict(traj._results)
 
+        # For better readability add the explored parameters to the Results
+        self._add_explored_params(single_run)
+
         self._hdf5file.flush()
         self._hdf5file.close()
         self._hdf5file = None
         self._trajectorygroup = None
 
-        self._logger.info('Finished storing run % n with name %s' % (n,single_run.get_name()))
+        self._logger.info('Finished storing run %d with name %s' % (n,single_run.get_name()))
 
+
+
+    def _add_explored_params(self, single_run):
+        ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
+        '''
+        explored_dict={}
+        prefix = 'Results.' + single_run._single_run.get_name()+'.'
+        for fullname,param in single_run._parent_trajectory._exploredparameters.items():
+            splitname = fullname.split('.')
+
+            #remove the Parameters tag
+            splitname = ['ExploredParameters']+splitname[1:]
+            newfullname = '.'.join(splitname)
+
+            newfullname = prefix+newfullname
+
+
+            param_dict = {}
+            keys = param.get_entry_names()
+            for key in keys:
+                param_dict[key] = param.get(key)
+
+            explored_dict[newfullname]= SimpleResult(newfullname,**param_dict)
+
+        self._store_dict(explored_dict)
 
     ######################################### Storing a Trajectory and a Single Run #####################
     def _store_single_table(self,paramdict,paramtable, creator_name, creator_id):
@@ -341,8 +373,8 @@ class HDF5StorageService(object):
                          'Timestamp' : pt.FloatCol(),
                          'Comment': pt.StringCol(len(traj._comment)),
                          'Length':pt.IntCol(),
-                         'Loaded_From_Trajectory' : pt.StringCol(self.MAX_NAME_LENGTH),
-                         'Loaded_From_Filename' : pt.StringCol(self.MAX_NAME_LENGTH)}
+                         'Loaded_From_Trajectory' : pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH),
+                         'Loaded_From_Filename' : pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH)}
 
         infotable = self._hdf5file.createTable(where=self._trajectorygroup, name='Info', description=descriptiondict, title='Info')
         newrow = infotable.row
@@ -366,16 +398,16 @@ class HDF5StorageService(object):
 
         for key, dictionary in tostore_dict.items():
 
-            paramdescriptiondict={'Location': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
-                                  'Name': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH)}
+            paramdescriptiondict={'Location': pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                  'Name': pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                  'Class_Name': pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH)}
 
             if not key == 'ResultsTable':
                 paramdescriptiondict.update({'Size' : pt.Int64Col()})
 
             if key in ['DerivedParameterTable', 'ResultsTable']:
-                paramdescriptiondict.update({'Creator_Name':pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
-                                             'Parent_Trajectory':pt.StringCol(HDF5StorageService.MAX_NAME_LENGTH),
+                paramdescriptiondict.update({'Creator_Name':pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                             'Parent_Trajectory':pt.StringCol(globals.HDF5_STRCOL_MAX_NAME_LENGTH),
                                              'Creator_ID':pt.Int64Col()})
 
             paramtable = self._hdf5file.createTable(where=self._trajectorygroup, name=key, description=paramdescriptiondict, title=key)
@@ -431,7 +463,7 @@ class HDF5StorageService(object):
             self._trajectorygroup = self._hdf5file.createGroup(where='/', name=self._trajectoryname, title=self._trajectoryname)
             newly_opened = True
 
-
+        self._check_and_convert_dictionary_structure(store_dict)
         self._check_info_dict(param, store_dict)
 
         group= self._create_groups(fullname)
@@ -441,7 +473,7 @@ class HDF5StorageService(object):
         for key, data_to_store in store_dict.items():
             if isinstance(data_to_store, dict):
                 self._store_into_pytable(key, data_to_store, group, fullname)
-            elif isinstance(data_to_store, np.array):
+            elif isinstance(data_to_store, np.ndarray):
                 self._store_into_array(key, data_to_store, group, fullname)
             else:
                 raise AttributeError('I don not know how to store %s of %s. Cannot handle type %s.'%(key,fullname,str(type(data_to_store))))
@@ -454,6 +486,19 @@ class HDF5StorageService(object):
             self._hdf5file = None
             self._trajectorygroup = None
 
+
+    def _check_and_convert_dictionary_structure(self,store_dict):
+        ''' Checks for all dictionaries in store_dict, whether they contain lists or only single items. If the latter
+         is true the single items are converted to lists
+        :param store_dict: The dictionary containing the data
+        :return:
+        '''
+        for datadict in store_dict.values():
+            if isinstance(datadict,dict):
+                for key, val in datadict.items():
+                    if not isinstance(val, list):
+                        val = [val]
+                        datadict[key] = val
 
     def _store_into_array(self, key, data, group, fullname):
         atom = pt.Atom.from_dtype(data.dtype)
@@ -468,11 +513,12 @@ class HDF5StorageService(object):
         :param store_dict: the dictionary that describes how to store the parameter
         '''
         if not 'Info' in store_dict:
-            store_dict['Info']=[{}]
+            store_dict['Info']={}
 
         info_dict = store_dict['Info']
 
-        if not len(info_dict.itervalues().next())==1:
+        test_item = info_dict.itervalues().next()
+        if len(test_item)>1:
             raise AttributeError('Your description of the parameter %s, generated by __store__ and stored into >>Info<< has more than a single dictionary in the list.' % param.get_fullname())
 
 
@@ -486,10 +532,10 @@ class HDF5StorageService(object):
         else:
             assert info_dict['Location'][0] == param.get_location()
 
-        if not 'Comment' in info_dict:
-            info_dict['Comment'] = [param.get_comment()]
-        else:
-            assert info_dict['Comment'][0] == param.get_comment()
+        # if not 'Comment' in info_dict:
+        #     info_dict['Comment'] = [param.get_comment()]
+        # else:
+        #     assert info_dict['Comment'][0] == param.get_comment()
 
         if not 'Type' in info_dict:
             info_dict['Type'] = [str(type(param))]
@@ -577,43 +623,50 @@ class HDF5StorageService(object):
 
         The type of column depends on the type of parameter entry.
         '''
+
+
         val = val_list[0]
-        if isinstance(val, np.int64):
-            return pt.Int64Col()
-        if isinstance(val, np.float):
-            return pt.Float64Col()
-        if isinstance(val, np.bool):
-            return pt.BoolCol()
-        if isinstance(val, np.str):
-            itemsize = int(self._get_longest_stringsize(key,val_list))
-            return pt.StringCol(itemsize=itemsize)
-        if isinstance(val,np.complex):
-            return pt.ComplexCol()
-        if isinstance(val, np.ndarray):
+
+        if isinstance(val,np.ndarray):
             valdtype = val.dtype
+        else:
+            valdtype = type(val)
+
+        # Check if we can translate the date into a Column
+        keys = globals.HDF5_TRANSLATIONDICT.keys()
+        try:
+            key = keys[keys.index(valdtype)]
+        except ValueError,e:
+            return None
+
+        Constructor = globals.HDF5_TRANSLATIONDICT[key]
+
+        if isinstance(val,np.ndarray):
             valshape = np.shape(val)
-
-            if np.issubdtype(valdtype, np.int64):
-                return pt.Int64Col(shape=valshape)
-            if np.issubdtype(valdtype, np.float):
-                return pt.Float64Col(shape=valshape)
-            if np.issubdtype(valdtype, np.bool):
-                return pt.BoolCol(shape=valshape)
-            if np.issubdtype(valdtype,np.complex):
-                return pt.ComplexCol(shape=valshape)
             if np.issubdtype(valdtype,np.str):
-                return pt.StringCol(shape=valshape)
+                itemsize = int(self._get_longest_stringsize(key,val_list))
+                return Constructor(shape=valshape,itemsize=itemsize)
+            else:
+                return Constructor(shape=valshape)
 
+        else:
+            if isinstance(val, np.str):
+                itemsize = int(self._get_longest_stringsize(key,val_list))
+                return Constructor(itemsize=itemsize)
+            else:
+                return Constructor()
 
-        return None
 
     def _get_longest_stringsize(self,key, string_list):
         ''' Returns the longest stringsize for a string entry across data.
         '''
         maxlength = 1
 
-        for string in string_list:
-            maxlength = max(len(string),maxlength)
+        for stringar in string_list:
+            if not isinstance(stringar,np.ndarray):
+                stringar = np.array([stringar])
+            for string in stringar:
+                maxlength = max(len(string),maxlength)
 
         # Make the string Col longer than needed in order to allow later on slightly large strings
         return maxlength*1.5

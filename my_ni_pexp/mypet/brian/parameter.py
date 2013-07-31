@@ -12,7 +12,7 @@ from brian.fundamentalunits import Unit, Quantity
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, PopulationSpikeCounter, PopulationRateMonitor
 from mypet.utils.helpful_functions import nest_dictionary
 
-import tables as pt
+from inspect import getsource
 import numpy as np
 
 class BrianParameter(SparseParameter):
@@ -40,11 +40,11 @@ class BrianParameter(SparseParameter):
 
         return True
 
-    def _convert_data(self, val):
-        if isinstance(val, Quantity):
-            return val
-
-        return super(BrianParameter,self)._convert_data(val)
+    # def _convert_data(self, val):
+    #     if isinstance(val, Quantity):
+    #         return val
+    #
+    #     return super(BrianParameter,self)._convert_data(val)
 
 
     def set_single(self,name,val,pos=0):
@@ -58,10 +58,10 @@ class BrianParameter(SparseParameter):
         briandata = {}
 
 
-        for key, val in load_dict[self._name].items():
+        for key, val in load_dict['Data'].items():
             if BrianParameter.separator in key:
                 briandata[key] = val
-                del load_dict[self._name][key]
+                del load_dict['Data'][key]
 
         briandata = nest_dictionary(briandata, BrianParameter.separator)
 
@@ -79,14 +79,14 @@ class BrianParameter(SparseParameter):
                 brian_quantity = eval(evalstr)
                 brianlist.append(brian_quantity)
 
-            load_dict[self._name][brianname] = brianlist
+            load_dict['Data'][brianname] = brianlist
 
         super(BrianParameter,self)._load_data(load_dict)
 
 
     def _store_data(self,store_dict):
         super(SparseParameter,self)._store_data(store_dict)
-        data_dict = store_dict[self._name]
+        data_dict = store_dict['Data']
 
         for key, val_list in data_dict.items():
             if isinstance(val_list[0],Quantity):
@@ -106,11 +106,9 @@ class BrianParameter(SparseParameter):
 class BrianMonitorResult(BaseResult):  
     
     def __init__(self, fullname, monitor, comment ='No comment'):
-
         super(BrianMonitorResult,self).__init__(fullname)
         self._comment = comment
         self._monitor = monitor
-        self.val = None
 
     
     def __getattr__(self,name):
@@ -126,163 +124,137 @@ class BrianMonitorResult(BaseResult):
         elif name == 'Comment' or 'comment':
             self._comment = value
         else:
-            raise AttributeError('You are not allowed to assign new attributes to %s.' % self._name)
+            raise TypeError('You are not allowed to assign new attributes to %s.' % self._name)
       
     def _string_length_large(self,string):  
         return  int(len(string)+1*1.5)
     
-    def _store_information(self,hdf5file,hdf5group):
-        infodict= {'Name':pt.StringCol(self._string_length_large(self._name)), 
-                   'Location': pt.StringCol(self._string_length_large(self._location)), 
-                   'Comment':pt.StringCol(self._string_length_large(self._comment)),
-                   'Type':pt.StringCol(self._string_length_large(str(type(self)))),
-                   'Class_Name': pt.StringCol(self._string_length_large(self.__class__.__name__)),
-                   'Monitor_Type':pt.StringCol(self._string_length_large(self._monitor.__class__.__name__))}
-        
-        infotable=hdf5file.createTable(where=hdf5group, name='Info', description=infodict, title='Info')
-        
-        newrow = infotable.row
-        newrow['Name'] = self._name
-        newrow['Location'] = self._location
-        newrow['Comment'] = self._comment
-        newrow['Type'] = str(type(self))
-        newrow['Class_Name'] = self.__class__.__name__
-        newrow['Monitor_Type'] = self._monitor.__class__.__name__
-        
-        newrow.append()
-        
-        infotable.flush()
+
+    def _store_meta_data(self,store_dict):
+
+        store_dict['Info'] = {'Name':[self._name],
+                   'Location':[self._location],
+                   'Comment':[self._comment],
+                   'Type':[str(type(self))],
+                   'Class_Name': [self.__class__.__name__]}
+
     
-    def store_to_hdf5(self, hdf5file, hdf5group):
+    def __store__(self):
         ## Check for each monitor separately:
+        store_dict ={}
+        self._store_meta_data(store_dict)
         if isinstance(self._monitor,SpikeMonitor):
-            self._store_spike_monitor(hdf5file,hdf5group)
+            self._store_spike_monitor(store_dict)
         
         elif isinstance(self._monitor, PopulationSpikeCounter):
-            self._store_population_spike_counter(hdf5file,hdf5group)
+            self._store_population_spike_counter(store_dict)
         
         elif  isinstance(self._monitor, PopulationRateMonitor):
-            self._store_population_rate_monitor(hdf5file,hdf5group)
+            self._store_population_rate_monitor(store_dict)
         
         elif isinstance(self._monitor,StateMonitor):
-            self._store_state_monitor(hdf5file,hdf5group)
+            self._store_state_monitor(store_dict)
             
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(self._monitor)))
         
-        self._store_information(hdf5file, hdf5group)
+        return store_dict
     
      
-    def _store_spike_monitor(self,hdf5file, hdf5group):
+    def _store_spike_monitor(self,store_dict):
         
         assert isinstance(self._monitor, SpikeMonitor)
-         
-        store_param = Parameter(name='monitor_data', location='')
-        store_param.source = str(self._monitor.source)
+
+        store_dict['Data'] = {}
+        data_dict=store_dict['Data']
         
         record =  self._monitor.record
         if isinstance(record, list):
             record = np.array(record)
-            
-        store_param.record = record
+
+        data_dict['record'] = record
         
         if hasattr(self._monitor, 'function'):
-            store_param.function = getsource(self._monitor.function)
+            data_dict['function'] = getsource(self._monitor.function)
         
-        store_param.nspikes = self._monitor.nspikes
-        store_param.store_data(hdf5file, hdf5group)
+        data_dict['nspikes'] = self._monitor.nspikes
+
+        store_dict['Info']['Time_Unit'] = 'second'
+
+        store_dict['spikes'] = {}
+        spike_dict=store_dict['spikes']
+
+        zip_lists = zip(*self._monitor.spikes)
+        time_list = zip_lists[1]
+
+        nounit_list = [np.float64(time) for time in time_list]
+
+        spike_dict['time'] = nounit_list
+        spike_dict['index'] = list(zip_lists[0])
+
         
-        neuron_param = Parameter(name='spike_data', location='')
-        neuron_param.time = self._monitor.spikes[0][1]
-        neuron_param.index = self._monitor.spikes[0][0]
-        
-        result_list = []
-        for neuron_spike in self._monitor.spikes[1:]:
-            temp_dict ={}
-            temp_dict['time'] = neuron_spike[1]
-            temp_dict['index'] = neuron_spike[0]
-            result_list.append(temp_dict)
-        
-        neuron_param.become_array()
-        neuron_param.add_items_as_list(result_list)
-        
-        neuron_param.store_data(hdf5file, hdf5group)
-        
-    def _store_population_rate_monitor(self,hdf5file,hdf5group):
+    def _store_population_rate_monitor(self,store_dict):
         assert isinstance(self._monitor, PopulationRateMonitor)
-        assert isinstance(hdf5file,pt.File)
         
-        store_param =  Parameter(name='monitor_data', location='')
-        store_param.bin = self._monitor.bin
+        store_dict['Data'] = {}
+        data_dict = store_dict['Data']
+        data_dict['bin'] = self._monitor.bin
         
         ### Store times ###
+
         times = np.expand_dims(self._monitor.times,axis=0)
-        atom = pt.Atom.from_dtype(times.dtype)
-        carray=hdf5file.createCArray(where=hdf5group, name='times',atom=atom,shape=times.shape)
-        carray[:]=times
-        hdf5file.flush()
+        store_dict['times'] = times
+
         
         ## Store Rate
         rate = np.expand_dims(self._monitor.rate,axis=0)
-        atom = pt.Atom.from_dtype(rate.dtype)
-        carray=hdf5file.createCArray(where=hdf5group, name='rate',atom=atom,shape=rate.shape)
-        carray[:]=rate
-        hdf5file.flush()
+        store_dict['rate'] = rate
         
         
-    def _store_population_spike_counter(self,hdf5file,hdf5group):
+    def _store_population_spike_counter(self,store_dict):
         
         assert isinstance(self._monitor, PopulationSpikeCounter)
  
-        store_param = Parameter(name='monitor_data', location='')
-        store_param.nspikes = self._monitor.nspikes
-        store_param.source = str(self._monitor.source)
+        store_dict['Data'] ={}
+        store_dict['Data']['nspikes'] = self._monitor.nspikes
+        store_dict['Data']['source'] = str(self._monitor.source)
+
         
-        store_param.store_to_hdf5(hdf5file, hdf5group)
+    def _store_state_monitor(self,store_dict):
+
+        store_dict['Data'] ={}
+        data_dict = store_dict['Data']
         
-    def _store_state_monitor(self,hdf5file, hdf5group):
-        
-        assert isinstance(self._monitor, StateMonitor)
-        assert isinstance(hdf5file,pt.File)
-        
-        store_param =  Parameter(name='monitor_data', location='')
-        store_param.varname = self._monitor.varname
+
+        data_dict['varname'] = self._monitor.varname
         
         record =  self._monitor.record
         if isinstance(record, list):
             record = np.array(record)
             
-        store_param.record = record
+        data_dict['record'] = record
         
-        store_param.when = self._monitor.when
+        data_dict['when'] = self._monitor.when
         
-        store_param.timestep = self._monitor.timestep
-        
-        store_param.store_data(hdf5file, hdf5group)
+        data_dict['timestep'] = self._monitor.timestep
+
         
         
         ### Store times ###
         times = np.expand_dims(self._monitor.times,axis=0)
-        atom = pt.Atom.from_dtype(times.dtype)
-        carray=hdf5file.createCArray(where=hdf5group, name='times',atom=atom,shape=times.shape)
-        carray[:]=times
-        hdf5file.flush()
+        store_dict['times'] = times
          
         ### Store mean and variance ###
         mean = np.expand_dims(self._monitor.mean,axis=1)
         variances = np.expand_dims(self._monitor.var,axis=1)
 
         combined = np.concatenate((mean,variances),axis=1)
-        carray=hdf5file.createCArray(where=hdf5group, name='mean_variance',atom=atom,shape=combined.shape)
-        carray[:]=combined
-        hdf5file.flush()
+        store_dict['mean_var'] = combined
         
         ### Store recorded values ###
         values = self._monitor.values
-        atom = pt.Atom.from_dtype(values.dtype)
-        carray=hdf5file.createCArray(where=hdf5group, name='values',atom=atom,shape=values.shape)
-        carray[:]=values
-        hdf5file.flush()
+        store_dict['values']=values
+
         
         
             

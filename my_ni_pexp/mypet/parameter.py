@@ -11,6 +11,7 @@ import numpy as np
 import scipy.sparse as spsp
 import copy
 from mypet.utils.helpful_functions import nest_dictionary
+from mypet import globals
 
 
 
@@ -254,17 +255,18 @@ class Parameter(BaseParameter):
     
     def _is_supported_data(self, data):
         ''' Checks if input data is supported by the parameter'''
-        result = isinstance(data, ( np.int, np.str, np.float, np.bool, np.complex))
+        #result = isinstance(data, ( np.int, np.str, np.float, np.bool, np.complex))
 
         if isinstance(data, np.ndarray):
             dtype = data.dtype
-            result = (np.issubdtype(dtype, np.int) or
-                np.issubdtype(dtype, np.str) or
-                np.issubdtype(dtype, np.float) or
-                np.issubdtype(dtype, np.bool) or
-                np.issubdtype(dtype, np.complex) )
+            if np.issubdtype(dtype,np.str):
+                dtype = np.str
+        else:
+            dtype=type(data)
 
-        return result
+
+        return dtype in globals.PARAMETER_SUPPORTED_DATA
+
 
 
     
@@ -327,7 +329,7 @@ class Parameter(BaseParameter):
         try:
             eval(self._default_expression)
         except Exception,e:
-            self._logger.warning('Your default expression >>%s<< failed to evaluate with error: %s' % (val,str(e)))
+            self._logger.warning('Your default expression >>%s<< failed to evaluate with error: %s' % (self._default_expression,str(e)))
 
         self._locked = old_locked
     
@@ -380,8 +382,10 @@ class Parameter(BaseParameter):
 
         if self.is_array():
             if not name in self._data:
-                self._logger.warning('Your Parameter is an array and does not contain %s, I will create a new entry called %s and use the supplied value as the default.' %(name,name))
-                length=len(self)
+                #I don't like this, but otherwise it is annoying:
+                if not isinstance(self,SimpleResult):
+                    self._logger.warning('Your Parameter is an array and does not contain %s, I will create a new entry called %s and use the supplied value as the default.' %(name,name))
+                length=max(len(self),1)
 
                 self._data[name] =[val for irun in range(length)]
             else:
@@ -403,48 +407,37 @@ class Parameter(BaseParameter):
 
 
     def _convert_data(self, val):
-        ''' Converts int,bool,str,float to the corresponing numpy types. Sets numpy arrays immutable.
+        ''' Converts data, i.e. sets numpy arrays immutable.
 
         :param val: the val to convert
         :return: the numpy type val
         '''
-        if isinstance(val,int):
-            val = np.int64(val)
-            return val
-
-        if isinstance(val,float):
-            val = np.float(val)
-            return val
-
-        if isinstance(val,str):
-            val = np.str(val)
-            return val
-
-        if isinstance(val,bool):
-            val = np.bool(val)
-            return val
-
-        if isinstance(val,complex):
-            val = np.complex(val)
-            return val
-
         if isinstance(val, np.ndarray):
-
-            dtype = val.dtype
-            if np.issubdtype(dtype,np.int):
-                val = val.astype(np.int64,copy=False)
-            elif np.issubdtype(dtype,np.float):
-                val = val.astype(np.float,copy=False)
-            elif np.issubdtype(dtype,np.bool):
-                val = val.astype(np.bool,copy=False)
-            elif np.issubdtape(dtype,np.complex):
-                val = val.astype(np.complex,copy=False)
-            elif np.issubdtype(dtype,np.str):
-                val = val.astype(dtype,np.str)
-            else:
-                raise AttributeError('You should never ever come here!')
-
             val.flags.writeable = False
+            return val
+
+        # if type(val) in HDF5StorageService.TRANSLATIONDICT:
+        #     return val
+        #
+        # if isinstance(val,int):
+        #     val = np.int(val)
+        #     return val
+        #
+        # if isinstance(val,float):
+        #     val = np.float(val)
+        #     return val
+        #
+        # if isinstance(val,str):
+        #     val = np.str(val)
+        #     return val
+        #
+        # if isinstance(val,bool):
+        #     val = np.bool(val)
+        #     return val
+        #
+        # if isinstance(val,complex):
+        #     val = np.complex(val)
+        #     return val
 
         return val
 
@@ -602,9 +595,9 @@ class Parameter(BaseParameter):
 
     def _store_data(self, store_dict):
 
-        store_dict[self._name] = {}
+        store_dict['Data'] = {}
         for key, val in self._data.items():
-            store_dict[self._name][key] = self._data[key][:]
+            store_dict['Data'][key] = self._data[key][:]
 
 
 
@@ -648,7 +641,7 @@ class Parameter(BaseParameter):
 
 
     def _load_data(self, load_dict):
-        self._data = load_dict[self._name]
+        self._data = load_dict['Data']
         return load_dict
 
 
@@ -785,10 +778,10 @@ class SparseParameter(Parameter):
 
     def _load_data(self, load_dict):
         sparse_matrices = {}
-        for key,val in self.load_dict[self._name].items():
+        for key,val in self.load_dict['Data'].items():
             if SparseParameter.separator in key:
                 sparse_matrices[key]=val
-                del load_dict[self._name][key]
+                del load_dict['Data'][key]
 
 
         sparse_matrices = nest_dictionary(sparse_matrices)
@@ -822,7 +815,7 @@ class SparseParameter(Parameter):
 
                 sparsematlist.append(sparsemat)
 
-            load_dict[self._name][name] = sparsematlist
+            load_dict['Data'][name] = sparsematlist
 
 
         super(SparseParameter,self)._load_data(load_dict)
@@ -832,7 +825,7 @@ class SparseParameter(Parameter):
 
     def _store_data(self,store_dict):
         super(SparseParameter,self)._store_data(store_dict)
-        data_dict = store_dict[self._name]
+        data_dict = store_dict['Data']
 
         for key, val_list in data_dict.items():
             if spsp.isspmatrix(val_list[0]):
@@ -874,13 +867,13 @@ class BaseResult(object):
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
-        self._location('.'.join(split_name))
+        self._location='.'.join(split_name)
 
     def _rename(self, fullname):
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
-        self._location('.'.join(split_name))
+        self._location='.'.join(split_name)
 
     def get_name(self):
         return self._name
@@ -897,13 +890,18 @@ class BaseResult(object):
     def get_class_name(self):  
         return self.__class__.__name__
 
-class SimpleResult(BaseResult,SparseParameter):  
+    def __store__(self):
+        pass
+
+    def __load__(self, load_dict):
+        pass
+
+class SimpleResult(SparseParameter,BaseResult):
     ''' Simple Container for results. 
     
     In fact this is a lazy implementation, its simply a sparse parameter^^
     For simplicity it cannot be locked and it is always an array.
-    '''        
-    pass
+    '''
 
     def is_locked(self):
         return False
