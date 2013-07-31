@@ -78,6 +78,19 @@ class NaturalNamingInterface(object):
              
         return getattr(self._root, name)
 
+    def _set(self,key, *args, **kwargs):
+
+        instance = self.get(key)
+
+        if not isinstance(instance, BaseParameter ):
+            raise AttributeError('You cannot assign values to a tree node or a list of nodes and leaves, it only works for parameters (excluding results).')
+
+
+        instance.set(*args,**kwargs)
+
+
+
+
     def get(self, name, fast_access = False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
@@ -268,8 +281,6 @@ class NaturalNamingInterface(object):
 
             
 
-        
-
 class TreeNode(object):
     '''Object to construct the file tree.
 
@@ -305,6 +316,15 @@ class TreeNode(object):
         new_node = TreeNode(self._nninterface, name, self._fullname)
 
         return self._nninterface._find(new_node, self._dict_list)
+
+    def __setattr__(self, key, value):
+        if key[0]=='_':
+            self.__dict__[key] = value
+        else:
+            return self.set(key, value)
+
+    def set(self,key,*args, **kwargs):
+        return self._nninterface._set(key, *args, **kwargs)
 
     def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
@@ -451,6 +471,8 @@ class Trajectory(object):
 
         
         self.last = None
+        self.Last = None
+
         self._standard_param_type = Parameter
         
         
@@ -778,6 +800,7 @@ class Trajectory(object):
         self._nninterface._add_to_nninterface(full_parameter_name, instance)
 
         self.last = instance
+        self.Last = instance
         
         return instance
     
@@ -983,6 +1006,13 @@ class Trajectory(object):
    
         return getattr(self._nninterface, name)
 
+    def __setattr__(self, key, value):
+        if key[0]=='_':
+            self.__dict__[key] = value
+        elif key == 'last' or key == 'Last':
+            self.__dict__[key]=value
+        else:
+            self._nninterface._set(key, value)
 
 class SingleRun(object):
     ''' Constitutes one specific parameter combination in the whole trajectory.
@@ -1034,6 +1064,7 @@ class SingleRun(object):
         
         self._nninterface = copy.copy(self._parent_trajectory._nninterface)
         self.last = self._parent_trajectory.last
+        self.Last = self._parent_trajectory.Last
 
         del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
@@ -1085,6 +1116,7 @@ class SingleRun(object):
         
     def add_derived_parameter(self, *args, **kwargs):
         self.last= self._single_run.add_derived_parameter(*args, **kwargs)
+        self.Last = self.last
         return self.last
 
     

@@ -121,7 +121,7 @@ class HDF5StorageService(object):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('mypet.storageservice_HDF5StorageService=' + self.filename)
+        self._logger = logging.getLogger('mypet.storageservice_HDF5StorageService=' + self._filename)
 
 
     ######################## LOADING A TRAJECTORY #################################################
