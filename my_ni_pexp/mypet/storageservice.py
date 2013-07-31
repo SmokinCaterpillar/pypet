@@ -608,17 +608,17 @@ class HDF5StorageService(object):
         for key, val in data.items():
 
 
-            col = self._get_table_col(key, val)
+            col = self._get_table_col(val)
 
-            if col is None:
-                raise TypeError('Entry %s of %s cannot be translated into pytables column' % (key,fullname))
+            # if col is None:
+            #     raise TypeError('Entry %s of %s cannot be translated into pytables column' % (key,fullname))
 
             descriptiondict[key]=col
 
         return descriptiondict
 
 
-    def _get_table_col(self, key, val_list):
+    def _get_table_col(self, val_list):
         ''' Creates a pytables column instance.
 
         The type of column depends on the type of parameter entry.
@@ -627,37 +627,27 @@ class HDF5StorageService(object):
 
         val = val_list[0]
 
-        if isinstance(val,np.ndarray):
-            valdtype = val.dtype
-        else:
-            valdtype = type(val)
 
-        # Check if we can translate the date into a Column
-        keys = globals.HDF5_TRANSLATIONDICT.keys()
-        try:
-            key = keys[keys.index(valdtype)]
-        except ValueError,e:
-            return None
+        if type(val) == int:
+            return pt.IntCol()
 
-        Constructor = globals.HDF5_TRANSLATIONDICT[key]
+        if type(val) == str:
+            itemsize = int(self._get_longest_stringsize(val_list))
+            return pt.StringCol(itemsize)
 
-        if isinstance(val,np.ndarray):
-            valshape = np.shape(val)
-            if np.issubdtype(valdtype,np.str):
-                itemsize = int(self._get_longest_stringsize(key,val_list))
-                return Constructor(shape=valshape,itemsize=itemsize)
+        if isinstance(val, np.ndarray):
+            if np.issubdtype(val.dtype,np.str):
+                itemsize = int(self._get_longest_stringsize(val_list))
+                return pt.StringCol(itemsize,shape=val.shape)
             else:
-                return Constructor(shape=valshape)
-
+                return pt.Col.from_dtype(np.dtype((val.dtype,val.shape)))
         else:
-            if isinstance(val, np.str):
-                itemsize = int(self._get_longest_stringsize(key,val_list))
-                return Constructor(itemsize=itemsize)
-            else:
-                return Constructor()
+            return pt.Col.from_dtype(np.dtype(type(val)))
 
 
-    def _get_longest_stringsize(self,key, string_list):
+
+
+    def _get_longest_stringsize(self, string_list):
         ''' Returns the longest stringsize for a string entry across data.
         '''
         maxlength = 1
