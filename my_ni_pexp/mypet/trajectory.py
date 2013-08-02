@@ -9,22 +9,124 @@ import datetime
 import time
 from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
-import copy
+
 import mypet.petexceptions as pex
+from mypet.utils.helpful_functions import flatten_dictionary
+
+
+class Traj(object):
+    #
+    # def store(self):
+    #     pass
+    #
+    # def remove(self, removal_list):
+    #     pass
+    #
+    # def get_name(self):
+    #     pass
+    #
+    # def add_result(self, *args,**kwargs):
+    #     pass
+    #
+    # def remove(self, removal_list):
+    #     pass
+    #
+    # def add_derived_parameter(self, *args,**kwargs):
+    #     pass
+
+    def set_search_strategy(self, string):
+        assert string == 'bfs' or string == 'dfs'
+        self._nninterface._search_strategy = string
+
+    def set_check_uniqueness(self, val):
+        assert isinstance(val,bool)
+        self._nninterface._check_uniqueness = val
+
+    def set_fast_access(self, val):
+        assert isinstance(val,bool)
+        self._nninterface._fast_access = val
+
+    def add_parameter(self,   *args, **kwargs):
+        pass
+
+    def adp(self,  *args,**kwargs):
+        ''' Short for add_derived_parameter
+        '''
+        return self.add_derived_parameter( *args, **kwargs)
+
+    def ar(self,*args,**kwargs):
+        ''' Short for add_result.
+        '''
+        return self.add_result(*args, **kwargs)
+
+    def ap(self, *args, **kwargs):
+        ''' Short for add_parameter.
+        '''
+        return self.add_parameter( *args, **kwargs)
+
+    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = 'bfs'):
+        ''' Same as traj.>>name<<
+        Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
+        default evaluation is returned depends on the value of >>fast_access<<.
+
+        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param fast_access: If the default evaluation of a parameter should be returned.
+        :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
+        whether it should be chekced if the path through the tree is not unique.
+        :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
+        seach ('dfs').
+        :return: The requested object or it's default evaluation. Raises an error if the object cannot be found.
+        '''
+        return self._nninterface._get(name, fast_access, check_uniqueness, search_strategy)
+
+
+    def set_standard_param_type(self,param_type):
+        ''' Sets the standard parameter type.
+
+        If param_type is not specified for add_parameter, than the standard parameter is used.
+        '''
+        self._standard_param_type = param_type
+
+
+    def to_dict(self, fast_access = False, short_names=False):
+        ''' This method returns all parameters reachable from this node as a dict.
+        The keys are the full names of the parameters and the values of the dict are the parameters
+        themselves or the default evaluation of the parameters.
+        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
+         evaluation of the parameter.
+        :return: A dictionary
+        '''
+        return self._nninterface._to_dict(fast_access, short_names)
 
 
 
+    def __getattr__(self,name):
 
+        #if not '_nninterface' in self.__dict__:
+        if not '_logger' in self.__dict__ or not '_nninterface' in self.__dict__:
+            raise AttributeError('This is to avoid pickling issues.')
 
+        return self.get(name, fast_access = self._nninterface._fast_access,
+                        check_uniqueness=self._nninterface._check_uniqueness,
+                        search_strategy=self._nninterface._search_strategy)
 
-#from multiprocessing.synchronize import Lock
+    def __setattr__(self, key, value):
+        if key[0]=='_':
+            self.__dict__[key] = value
+        elif key == 'last' or key == 'Last':
+            self.__dict__[key]=value
+        else:
+            self._nninterface._set(key, value)
 
 class NaturalNamingInterface(object):
 
     
-    def __init__(self, working_trajectory_name, parent_trajectory_name, fast_access = False, storage_dict = {},
+    def __init__(self, working_trajectory_name, parent_trajectory_name, fast_access = False,
+                 check_uniqueness=False,search_strategy = 'bfs', storage_dict = {},
                  flat_storage_dict={},nodes_and_leaves = {}):
         self._fast_access = fast_access
+        self._check_uniqueness = check_uniqueness
+        self._search_strategy = search_strategy
         self._working_trajectory_name=working_trajectory_name
         self._parent_trajectory_name=parent_trajectory_name
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
@@ -58,13 +160,7 @@ class NaturalNamingInterface(object):
 
 
 
-    def _set(self,key,val):
-
-        setattr(self._root,key,val)
-
-
-
-    def _get(self, name, fast_access = False):
+    def _get(self, name, fast_access = False, check_uniqueness = False, search_strategy = 'bfs'):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
@@ -73,7 +169,7 @@ class NaturalNamingInterface(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        return self._root.get(name, fast_access)
+        return self._root.get(name, fast_access, check_uniqueness, search_strategy)
 
 
     def _shortcut(self, name):
@@ -146,6 +242,8 @@ class NaturalNamingInterface(object):
         newNNinterface = NaturalNamingInterface(working_trajectory_name=self._working_trajectory_name,
                                                 parent_trajectory_name=self._parent_trajectory_name,
                                                 fast_access=self._fast_access,
+                                                check_uniqueness= self._check_uniqueness,
+                                                search_strategy= self._search_strategy,
                                                 storage_dict= self._recursive_shallow_copy(self._storage_dict),
                                                 flat_storage_dict=self._flat_storage_dict.copy(),
                                                 nodes_and_leaves= self._nodes_and_leaves.copy())
@@ -159,6 +257,10 @@ class NaturalNamingInterface(object):
         #result['_storage_dict'] = self._recursive_shallow_copy(self._storage_dict)
         #result['_nodes_and_leaves'] = self._nodes_and_leaves.copy()
         return result
+
+    def _set(self,key,val):
+
+        setattr(self._root,key,val)
     
     def _recursive_shallow_copy(self, dictionary):
         
@@ -174,107 +276,43 @@ class NaturalNamingInterface(object):
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' +  self._working_trajectory_name)
         self._root = TreeNode(nninterface=self)
 
-      
-    def _find(self,key, node, fast_access):
-        
-        assert isinstance(node, TreeNode)
 
 
-        candidate_list = self._find_candidates(key, node._dict_list)
-
-        new_node = TreeNode(node._nninterface, key, node._fullname)
-
-        return self._select(candidate_list, new_node, fast_access)
-
-                
-     
-    def _find_candidates(self,name, dict_list):
-        
-        result_list = []
-        for dictionary in dict_list:
-            result_list.extend(self._find_recursively(dictionary, name))    
-        
-        return result_list  
-    
-    def _find_recursively(self,dictionary, name): 
-        result_list = []
-        for key, val in dictionary.items():
-            if key == name:
-                result_list.append(val)
-            
-            if isinstance(val, dict):
-                result_list.extend(self._find_recursively(val, name))
-        
-        return result_list
-
-    def _select(self, candidate_list, node, fast_access):
-        
-        dict_list, item_list = self._sort_according_to_type(candidate_list)
-
-
-        items = len(item_list)
-        if dict_list:
-            node._dict_list = dict_list
-            items = items +1
-        
-        if items > 0:
-            
-            if items > 1:
-                name_list = [item.get_fullname() for item in item_list]
-                
-                if dict_list:
-                    name_list.append('Another TreeNode')
-                    item_list.append(node)
-
-                self._logger.warning('There are %d solutions for your query >>%s<<. The following list has been found: %s. You will get the full list!' %(items,node._fullname,str(name_list)))
-            
-                return item_list
-            
-            elif item_list:
-                return self._get_result(item_list[0], fast_access)
-            else:
-                return node
-        else:
-            raise AttributeError('Your query >>%s<< failed, it is not contained in the trajectory.' % node._fullname)
-        
-        
-    
-    
-    def _sort_according_to_type(self, candidate_list):
-        
-        dict_list = []
-        result_list = []
-        parameter_list=[]
-        derived_traj_list=[]
-        derived_run_list = []
-        
-        for candidate in candidate_list:
-            if isinstance(candidate, dict):
-                dict_list.append(candidate)
-            else:
-                fullname = candidate.get_fullname()
-                split_name = fullname.split('.')
-                first = split_name[0]
-                second = split_name[1]
-                if first == 'Results':
-                    result_list.append(candidate)
-                elif first == 'Parameters':
-                    parameter_list.append(candidate)
-                else:
-                    if second == self._parent_trajectory_name:
-                        derived_traj_list.append(candidate)
-                    else:
-                        derived_run_list.append(candidate)
-        
-        return dict_list, derived_run_list+derived_traj_list+parameter_list+result_list
-     
-       
     def _get_result(self, data, fast_access):
-        
+
         if fast_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
             return data.return_default()
         else:
             return data
+
+    def _search(self,fullname,key,dictionary, check_uniqueness, search_strategy):
+
+        assert (search_strategy == 'bfs' or search_strategy == 'dfs')
+        check_list = [dictionary]
+        result = None
+
+        while len(check_list) > 0:
+
+            if search_strategy == 'bfs':
+                new_dict = check_list.pop(0)
+            elif search_strategy == 'dfs':
+                new_dict = check_list.pop()
+            else:
+                raise RuntimeError('You should never come here!')
+
+            if key in new_dict:
+                if not result == None:
+                    raise AttributeError('The node or parameter/result %s is not uniqe.' % fullname)
+                else:
+                    result = new_dict[key]
+                    if not check_uniqueness :
+                        return result
+            else:
+                for val in new_dict.itervalues():
+                    if isinstance(val,dict):
+                        check_list.append(val)
+
+        return result
 
             
 
@@ -283,19 +321,15 @@ class TreeNode(object):
 
     The recursive structure allows access to parameters via natural naming.
     '''
-    def __init__(self, nninterface, name='', parents_fullname=''):
+    def __init__(self, nninterface, fullname='', dictionary = None):
 
+        self._fullname = fullname
         self._nninterface = nninterface
 
-        if name == '':
-            self._name = '_root'
-            self._fullname = self._name
-            self._dict_list =[self._nninterface._storage_dict]
+        if fullname == '':
+            self._dict =self._nninterface._storage_dict
         else:
-            self._name = name
-            self._fullname = parents_fullname+'.'+self._name
-            self._dict_list=[]
-
+            self._dict=dictionary
 
 
     def __getattr__(self,name):
@@ -303,11 +337,15 @@ class TreeNode(object):
         if (not  '_nninterface' in self.__dict__ or
             not  '_fullname' in self.__dict__ or
             not  '_name' in self.__dict__ or
-            not '_dict_list' in self.__dict__ or
+            not '_dict' in self.__dict__ or
+            not 'get' in self.__class__.__dict__ or
+            not '_search' in self.__class__.__dict__ or
+            not '_get_result' in self.__class__.__dict__ or
             name[0]=='_'):
             raise AttributeError('Wrong attribute %s. (And you this statement prevents pickling problems)' % name)
 
-        return self.get(name,self._nninterface._fast_access)
+        return self.get(name,self._nninterface._fast_access, self._nninterface._check_uniqueness,
+                        self._nninterface._search_strategy)
 
 
     def __setattr__(self, key, value):
@@ -323,79 +361,49 @@ class TreeNode(object):
             instance.set(value)
 
 
-
     def to_dict(self, fast_access = False, short_names=False):
-        ''' This method returns all parameters reachable from this node as a dict.
-        The keys are the full names of the parameters and the values of the dict are the parameters
-        themselves or the default evaluation of the parameters.
-        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
-         evaluation of the parameter.
-        :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
-        the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
-         is thrown.
-        :return: A dictionary
-        '''
-        result_dict = {}
-        for succesor_dict in self._dict_list:
-            result_dict.update(self._walk_dict(succesor_dict, fast_access, short_names))
-
-        return result_dict
-
-
-    def _walk_dict(self, dictionary, fast_access, short_names):
-        result_dict={}
-        for val in dictionary.itervalues():
-            if isinstance(val, dict):
-                result_dict.update(self._walk_dict(val,fast_access, short_names))
-            else:
+        if not fast_access and not short_names:
+            return flatten_dictionary(self._dict,'.')
+        else:
+            result_dict = {}
+            for key, val in self._dict.items():
                 if short_names:
-                    key = val.get_name()
-                    if key in result_dict:
-                        val2 = result_dict[key]
-                        raise ValueError('''Short name %s has been found twice, for %s as well as %s,
-                        I don not know which one to take.''' % (key, val2.get_fullname(),val.get_fullname() ))
+                    name = val.get_name()
                 else:
-                    key = val.get_fullname()
+                    name = key
 
-                result_dict[key] = self._nninterface._get_result(val,fast_access)
-        return result_dict
+                res = self._nninterface._get_result(val,fast_access)
+
+                result_dict[name] = res
 
 
-    def get(self, name, fast_access=False):
+            return result_dict
+
+
+    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = 'bfs'):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
 
         :param name: The Name of the Parameter,Result or TreeNode that is requested.
         :param fast_access: If the default evaluation of a parameter should be returned.
-        :return: The requested object or it's default evaluation. Returns None if object could not be found.
+        :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
+        whether it should be chekced if the path through the tree is not unique.
+        :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
+        seach ('dfs').
+        :return: The requested object or it's default evaluation. Raises an error if the object cannot be found.
         '''
 
 
         split_name = name.split('.')
-        result = self
 
 
-        ## Rename shortcuts:
+        ## Rename shortcuts and check keys:
         for idx,key in enumerate(split_name):
             shortcut = self._nninterface._shortcut(key)
             if shortcut:
-                split_name[idx] = shortcut
-
-        ## Check in O(1) first if a full parameter name is given
-        fullname = '.'.join(split_name)
-        if fullname in self._nninterface._flat_storage_dict:
-            return self._nninterface._get_result(self._nninterface._flat_storage_dict[fullname],
-                                                 fast_access=fast_access)
-
-
-
-        ## Check in O(N*log N), with N=nodes + leaves
-        for key in split_name:
-
-            shortcut = self._nninterface._shortcut(key)
-            if shortcut:
                 key = shortcut
+                split_name[idx] = key
 
             if key[0] == '_':
                 raise AttributeError('Leading underscores are not allowed for group or parameter names. Cannot return %s.' %key)
@@ -403,14 +411,38 @@ class TreeNode(object):
             if not key in self._nninterface._nodes_and_leaves:
                 raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
 
-            result =  self._nninterface._find(key, self, fast_access)
 
-        return result
+        ## Check in O(1) first if a full parameter/result name is given
+        fullname = '.'.join(split_name)
+        if self._fullname=='':
+            new_name = fullname
+        else:
+            new_name = self._fullname+'.'+fullname
+
+        if new_name in self._nninterface._flat_storage_dict:
+            return self._nninterface._get_result(self._nninterface._flat_storage_dict[new_name],
+                                                 fast_access=fast_access)
+
+        ## Check in O(N) [Worst Case, Average Case is better since looking into a single dict costs O(1)] BFS or DFS
+        ## If check Uniqueness == True, search is slower since the full dictionary is always searched
+        result = self._dict
+        for key in split_name:
+            result =  self._nninterface._search(new_name,key, result, check_uniqueness, search_strategy)
+
+        if isinstance(result,dict):
+            return TreeNode(self._nninterface,new_name,result)
+        elif not result == None:
+            return self._nninterface._get_result(result,fast_access)
+        else:
+            raise AttributeError('The node or param/result >>%s<<, cannot be found.' % new_name)
 
 
 
 
-class Trajectory(object):
+
+
+
+class Trajectory(Traj):
     '''The trajectory manages the handling of simulation parameters and results.
     
     :param name: Name of trajectory, the real name is a concatenation of the user specified name and
@@ -472,8 +504,7 @@ class Trajectory(object):
 
 
         self._name = name+'_'+str(formatted_time)
-        self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
-        
+
         self._parameters={}
         self._derivedparameters={}
         self._results={}
@@ -507,8 +538,11 @@ class Trajectory(object):
         self._loadedfrom = ('None','None')
 
         self._not_admissable_names = set(dir(self) + dir(self._nninterface) + dir(self._nninterface._root))
+        self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
 
 
+    def set_storage_service(self, service):
+        self._storageservice = service
 
 
     def remove(self, removal_list):
@@ -546,8 +580,6 @@ class Trajectory(object):
 
         self._logger.debug('Removed %s from trajectory.' %fullname)
 
-    def set_storage_service(self, service):
-        self._storageservice = service
 
 
     def change_config(self, config_name,*args,**kwargs):
@@ -594,35 +626,19 @@ class Trajectory(object):
         self._storageservice.store(self)
 
 
-    def to_dict(self, fast_access = False, short_names=False):
-        ''' This method returns all parameters reachable from this node as a dict.
-        The keys are the full names of the parameters and the values of the dict are the parameters
-        themselves or the default evaluation of the parameters.
-        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
-         evaluation of the parameter.
-        :return: A dictionary
-        '''
-        return self._nninterface._to_dict(fast_access, short_names)
 
 
     def __len__(self):
         return self._length
 
 
-    def set_fast_access(self, val):
-        assert isinstance(val,bool)
-        self._nninterface._fast_access = val
+
     
 #     def set_double_checking(self, val):
 #         assert isinstance(val,bool)
 #         self._nninterface._double_checking=val
     
-    def set_standard_param_type(self,param_type):   
-        ''' Sets the standard parameter type.
-        
-        If param_type is not specified for add_parameter, than the standard parameter is used.
-        '''
-        self._standard_param_type = param_type
+
     
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -668,10 +684,7 @@ class Trajectory(object):
         else:
             self._comment = self._comment + '; ' + comment
 
-    def ar(self,*args,**kwargs):
-        ''' Short for add_result.
-        '''
-        return self.add_result(*args, **kwargs)
+
 
     def add_result(self, *args,**kwargs):
         ''' Adds a result to the trajectory, 
@@ -736,10 +749,7 @@ class Trajectory(object):
     def ac(self, *args, **kwargs):
         return self.add_config(*args,**kwargs)
         
-    def adp(self,  *args,**kwargs):
-        ''' Short for add_derived_parameter
-        '''
-        return self.add_derived_parameter( *args, **kwargs)
+
 
 
 
@@ -850,10 +860,7 @@ class Trajectory(object):
 
         return faulty_names
 
-    def ap(self, *args, **kwargs):
-        ''' Short for add_parameter.
-        '''
-        return self.add_parameter( *args, **kwargs)
+
     
     def add_parameter(self,   *args, **kwargs):
         ''' Adds a new parameter. Returns the added parameter.
@@ -998,16 +1005,7 @@ class Trajectory(object):
     def get_explored_params(self):  
         return self._exploredparameters.copy()
              
-    def get(self, name, fast_access=False):
-        ''' Same as traj.>>name<<
-        Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
-        default evaluation is returned depends on the value of >>fast_access<<.
 
-        :param name: The Name of the Parameter,Result or TreeNode that is requested.
-        :param fast_access: If the default evaluation of a parameter should be returned.
-        :return: The requested object or it's default evaluation. Returns None if object could not be found.
-        '''
-        return self._nninterface._get(name, fast_access)
 
 
     def prepare_paramspacepoint(self,n):
@@ -1030,23 +1028,9 @@ class Trajectory(object):
         '''
         return SingleRun(self, n)
 
-    def __getattr__(self,name):
 
-        #if not '_nninterface' in self.__dict__:
-        if not '_logger' in self.__dict__ or not '_nninterface' in self.__dict__:
-            raise AttributeError('This is to avoid pickling issues.')
 
-        return self.get(name, fast_access = self._nninterface._fast_access)
-
-    # def __setattr__(self, key, value):
-    #     if key[0]=='_':
-    #         self.__dict__[key] = value
-    #     elif key == 'last' or key == 'Last':
-    #         self.__dict__[key]=value
-    #     else:
-    #         self._nninterface._set(key, value)
-
-class SingleRun(object):
+class SingleRun(Traj):
     ''' Constitutes one specific parameter combination in the whole trajectory.
     
     A SingleRun instance is accessed during the actual run phase of a trajectory. 
@@ -1143,22 +1127,13 @@ class SingleRun(object):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
 
-    
-    def adp(self, full_parameter_name, *args,**kwargs):
-        ''' Short for add_derived_parameter
-        '''
-        return self.add_derived_parameter( *args, **kwargs)
         
     def add_derived_parameter(self, *args, **kwargs):
         self.last= self._single_run.add_derived_parameter(*args, **kwargs)
         self.Last = self.last
         return self.last
 
-    
-    def ap(self, *args, **kwargs):
-        ''' Short for add_parameter.
-        '''
-        return self.add_parameter(*args, **kwargs)
+
     
     
     def add_parameter(self, *args, **kwargs):
@@ -1167,8 +1142,6 @@ class SingleRun(object):
         self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
         return self.add_derived_parameter( *args, **kwargs)
 
-    def get(self, name):
-        return self._nninterface.get(name)
 
     def __getattr__(self,name):
 
@@ -1179,31 +1152,15 @@ class SingleRun(object):
 
         return self.get(name, fast_access=self._nninterface._fast_access)
 
-    def get(self, name, fast_access = False):
-        ''' Same as traj.>>name<<
-        Requesting parameters via get does not pay attention to fast access. Even if fast access is True,
-        get will return a parameter object and not the parameter's default evaluation.
-
-        :param name: The Name of the Parameter,Result or TreeNode that is requested.
-        :return: The requested object. Returns None if object could not be found.
-        '''
-        return self._nninterface._get(name, fast_access)
-
     def get_parent_name(self):
         return self._parent_trajectory.get_name()
     
     def get_name(self):
         return self._single_run.get_name()
 
-    def ar(self,*args,**kwargs):
-        return self.add_result(*args,**kwargs)
-
     def add_result(self,  *args,**kwargs):
         return self._single_run.add_result( *args,**kwargs)
-    
-    def set_fast_access(self,val):
-        assert isinstance(val, bool)
-        self._nninterface._fast_access=val
+
 
         
     def store(self, lock=None):
@@ -1214,18 +1171,5 @@ class SingleRun(object):
         #self._add_explored_params()
         self._storageservice.store(self, lock=lock)
 
-        
 
-    def to_dict(self, fast_access = False, short_names=False):
-        ''' This method returns all parameters reachable from this node as a dict.
-        The keys are the full names of the parameters and the values of the dict are the parameters
-        themselves or the default evaluation of the parameters.
-        :param fast_access: Boolean to determine whether the dictionary entries are parameter objects or the default
-         evaluation of the parameter.
-        :param short_names: Determines the keys of the result dictionary, if short_names is True, the keys are only
-        the names of the Prameters (i.e. traj.group.param becomes only param). If there are dublicate entries, an Error
-         is thrown.
-        :return: A dictionary
-        '''
-        return self._nninterface._to_dict(fast_access, short_names)
 

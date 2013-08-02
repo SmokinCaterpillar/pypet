@@ -25,7 +25,7 @@ class SingleRunTest(unittest.TestCase):
         traj.set_storage_service(LazyStorageService())
 
 
-        large_amount = 11111
+        large_amount = 1111
 
         for irun in range(large_amount):
             name = 'L' + str(irun)
@@ -46,12 +46,17 @@ class SingleRunTest(unittest.TestCase):
 
         single_run = traj.make_single_run(3)
 
-        #dump = pickle.dumps(single_run)
+        dump = pickle.dumps(single_run)
 
-        #single_run = pickle.loads(dump)
+        single_run_rec = pickle.loads(dump)
 
         print single_run.get('Test').val
-        #print single_run.to_dict()
+
+        elements_dict = single_run.to_dict()
+        for key in elements_dict:
+            val = single_run.get(key,fast_access=True)
+            val_rec = single_run_rec.get(key).val
+            self.assertEqual(val,val_rec)
 
 
 

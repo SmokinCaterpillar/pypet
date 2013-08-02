@@ -18,7 +18,7 @@ def prepare():
     traj.set_storage_service(LazyStorageService())
 
 
-    large_amount = 1111
+    large_amount = 111111
 
     for irun in range(large_amount):
         name = 'Hurz.L' + str(irun)
@@ -40,7 +40,7 @@ def main():
     traj=prepare()
 
 
-    what = 'Par.Hurz.Test'
+    what = 'Test'
 
     cProfile.run('print_val()',sort=1)
 
