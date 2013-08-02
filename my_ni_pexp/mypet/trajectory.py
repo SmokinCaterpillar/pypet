@@ -22,24 +22,20 @@ import mypet.petexceptions as pex
 class NaturalNamingInterface(object):
 
     
-    def __init__(self, working_trajectory_name, parent_trajectory_name):   
-        self._fast_access = False
-        #self._double_checking = True
+    def __init__(self, working_trajectory_name, parent_trajectory_name, fast_access = False, storage_dict = {},
+                 flat_storage_dict={},nodes_and_leaves = {}):
+        self._fast_access = fast_access
         self._working_trajectory_name=working_trajectory_name
         self._parent_trajectory_name=parent_trajectory_name
-        
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
-        
-        #self._debug = {}
-        self._storage_dict =  {} 
-        self._nodes_and_leaves = {}
-
-        
-        self._root = TreeNode(self,'_root')
-        self._root._dict_list = [self._storage_dict]
+        self._storage_dict = storage_dict
+        self._flat_storage_dict = flat_storage_dict
+        self._nodes_and_leaves = nodes_and_leaves
+        self._root = TreeNode(self)
 
 
-    def to_dict(self, fast_access = False, short_names=False):
+
+    def _to_dict(self, fast_access = False, short_names=False):
         return self._root.to_dict(fast_access, short_names)
 
 
@@ -61,37 +57,14 @@ class NaturalNamingInterface(object):
 
 
 
-    def __getattr__(self,name):
-         
-        if (not  '_root' in self.__dict__ or
-             not '_shortcut' in self.__class__.__dict__ or
-             not  '_find' in self.__class__.__dict__ or
-             not  '_find_candidates' in self.__class__.__dict__ or
-             not  '_find_recursively' in self.__class__.__dict__ or
-             not  '_select' in self.__class__.__dict__ or
-             not  '_sort_according_to_type' in self.__class__.__dict__ or
-             not  '_get_result' in self.__class__.__dict__ or
-             not  '_nodes_and_leaves' in self.__dict__ or
-             not  '_storage_dict' in self.__dict__):
 
-            raise AttributeError('This is to avoid pickling issues and problems with internal variables!')
-             
-        return getattr(self._root, name)
+    def _set(self,key,val):
 
-    def _set(self,key, *args, **kwargs):
-
-        instance = self.get(key)
-
-        if not isinstance(instance, BaseParameter ):
-            raise AttributeError('You cannot assign values to a tree node or a list of nodes and leaves, it only works for parameters (excluding results).')
-
-
-        instance.set(*args,**kwargs)
+        setattr(self._root,key,val)
 
 
 
-
-    def get(self, name, fast_access = False):
+    def _get(self, name, fast_access = False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
@@ -107,9 +80,20 @@ class NaturalNamingInterface(object):
         
         expanded = None
         
-        if name in ['wt', 'WorkingTrajectory', 'workintrajectory', 'Working_Trajectory', 'working_trajectory']:
+        if name in ['cr', 'CurrentRun', 'currentrun', 'Current_Run', 'current_run']:
             expanded= self._working_trajectory_name
-            
+
+        if name in ['par', 'Par']:
+            expanded = 'Parameters'
+
+        if name in ['dpar', 'DPar']:
+            expanded = 'DerivedParameters'
+
+        if name in ['Res', 'res']:
+            expanded='Results'
+
+        if name in ['conf', 'Conf']:
+            expanded = 'Config'
         
         if name in ['pt', 'ParentTrajectory', 'parenttrajectory', 'Parent_Trajectory', 'parent_trajectory']:
             expanded = self._parent_trajectory_name
@@ -132,6 +116,7 @@ class NaturalNamingInterface(object):
         leaf = split_name.pop()
         
         self._add_to_storage_dict(split_name, leaf, data)
+        self._flat_storage_dict[fullname] = data
 
         split_name.append(leaf) 
         
@@ -139,7 +124,7 @@ class NaturalNamingInterface(object):
             if name in self._nodes_and_leaves:
                 self._nodes_and_leaves[name] = self._nodes_and_leaves[name] +1
             else:
-                self._nodes_and_leaves[name] =0
+                self._nodes_and_leaves[name] =1
             #self._nodes_and_leaves.add(name)
         
     
@@ -157,14 +142,22 @@ class NaturalNamingInterface(object):
         act_dict[leaf] = data
             
 
+    def _shallow_copy(self):
+        newNNinterface = NaturalNamingInterface(working_trajectory_name=self._working_trajectory_name,
+                                                parent_trajectory_name=self._parent_trajectory_name,
+                                                fast_access=self._fast_access,
+                                                storage_dict= self._recursive_shallow_copy(self._storage_dict),
+                                                flat_storage_dict=self._flat_storage_dict.copy(),
+                                                nodes_and_leaves= self._nodes_and_leaves.copy())
+        return newNNinterface
 
         
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
         del result['_root'] 
-        result['_storage_dict'] = self._recursive_shallow_copy(self._storage_dict)
-        result['_nodes_and_leaves'] = self._nodes_and_leaves.copy()
+        #result['_storage_dict'] = self._recursive_shallow_copy(self._storage_dict)
+        #result['_nodes_and_leaves'] = self._nodes_and_leaves.copy()
         return result
     
     def _recursive_shallow_copy(self, dictionary):
@@ -179,16 +172,19 @@ class NaturalNamingInterface(object):
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' +  self._working_trajectory_name)
-        self._root = TreeNode(nninterface=self, name='_root')
-        self._root._dict_list = [self._storage_dict]
+        self._root = TreeNode(nninterface=self)
+
       
-    def _find(self, node, dict_list): 
+    def _find(self,key, node, fast_access):
         
         assert isinstance(node, TreeNode)
-        
-        candidate_list = self._find_candidates(node._name, dict_list)
-        
-        return self._select(candidate_list, node)
+
+
+        candidate_list = self._find_candidates(key, node._dict_list)
+
+        new_node = TreeNode(node._nninterface, key, node._fullname)
+
+        return self._select(candidate_list, new_node, fast_access)
 
                 
      
@@ -211,10 +207,11 @@ class NaturalNamingInterface(object):
         
         return result_list
 
-    def _select(self, candidate_list, node):
+    def _select(self, candidate_list, node, fast_access):
         
         dict_list, item_list = self._sort_according_to_type(candidate_list)
-        
+
+
         items = len(item_list)
         if dict_list:
             node._dict_list = dict_list
@@ -234,7 +231,7 @@ class NaturalNamingInterface(object):
                 return item_list
             
             elif item_list:
-                return self._get_result(item_list[0], self._fast_access)
+                return self._get_result(item_list[0], fast_access)
             else:
                 return node
         else:
@@ -286,45 +283,46 @@ class TreeNode(object):
 
     The recursive structure allows access to parameters via natural naming.
     '''
-    def __init__(self, nninterface, name, parents_fullname=''):
+    def __init__(self, nninterface, name='', parents_fullname=''):
 
         self._nninterface = nninterface
-        self._name = name
 
-        if parents_fullname == '':
+        if name == '':
+            self._name = '_root'
             self._fullname = self._name
+            self._dict_list =[self._nninterface._storage_dict]
         else:
+            self._name = name
             self._fullname = parents_fullname+'.'+self._name
+            self._dict_list=[]
 
-        self._dict_list =[]
+
 
     def __getattr__(self,name):
 
         if (not  '_nninterface' in self.__dict__ or
             not  '_fullname' in self.__dict__ or
             not  '_name' in self.__dict__ or
-            not '_dict_list' in self.__dict__):
-            raise AttributeError('This is to avoid pickling issues')
+            not '_dict_list' in self.__dict__ or
+            name[0]=='_'):
+            raise AttributeError('Wrong attribute %s. (And you this statement prevents pickling problems)' % name)
 
-        shortcut = self._nninterface._shortcut(name)
-        if shortcut:
-            name = shortcut
+        return self.get(name,self._nninterface._fast_access)
 
-        if not name in self._nninterface._nodes_and_leaves:
-            raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
-
-        new_node = TreeNode(self._nninterface, name, self._fullname)
-
-        return self._nninterface._find(new_node, self._dict_list)
 
     def __setattr__(self, key, value):
         if key[0]=='_':
             self.__dict__[key] = value
         else:
-            return self.set(key, value)
+            instance = self.get(key)
 
-    def set(self,key,*args, **kwargs):
-        return self._nninterface._set(key, *args, **kwargs)
+            if not isinstance(instance, BaseParameter ):
+                raise AttributeError('You cannot assign values to a tree node or a list of nodes and leaves, it only works for parameters (excluding results).')
+
+
+            instance.set(value)
+
+
 
     def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
@@ -372,16 +370,43 @@ class TreeNode(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        old_fast_access = self._nninterface._fast_access
-        try:
-            self._nninterface._fast_access = fast_access
-            result = eval('self.' + name)
-            self._nninterface._fast_access = old_fast_access
-            return result
-        except:
-            self._nninterface._fast_access = old_fast_access
-            self._nninterface._logger.warning('No parameter or result found in your trajectory with name %s.' %name)
-            return None
+
+
+        split_name = name.split('.')
+        result = self
+
+
+        ## Rename shortcuts:
+        for idx,key in enumerate(split_name):
+            shortcut = self._nninterface._shortcut(key)
+            if shortcut:
+                split_name[idx] = shortcut
+
+        ## Check in O(1) first if a full parameter name is given
+        fullname = '.'.join(split_name)
+        if fullname in self._nninterface._flat_storage_dict:
+            return self._nninterface._get_result(self._nninterface._flat_storage_dict[fullname],
+                                                 fast_access=fast_access)
+
+
+
+        ## Check in O(N*log N), with N=nodes + leaves
+        for key in split_name:
+
+            shortcut = self._nninterface._shortcut(key)
+            if shortcut:
+                key = shortcut
+
+            if key[0] == '_':
+                raise AttributeError('Leading underscores are not allowed for group or parameter names. Cannot return %s.' %key)
+
+            if not key in self._nninterface._nodes_and_leaves:
+                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+
+            result =  self._nninterface._find(key, self, fast_access)
+
+        return result
+
 
 
 
@@ -481,6 +506,11 @@ class Trajectory(object):
         
         self._loadedfrom = ('None','None')
 
+        self._not_admissable_names = set(dir(self) + dir(self._nninterface) + dir(self._nninterface._root))
+
+
+
+
     def remove(self, removal_list):
         for item in removal_list:
             if isinstance(item, (BaseParameter,BaseResult)):
@@ -525,7 +555,7 @@ class Trajectory(object):
         '''
         config_name = 'Config'+'.'+config_name
         if config_name in self._config:
-            self._configs[config_name].set(*args,**kwargs)
+            self._config[config_name].set(*args,**kwargs)
         else:
             self._changed_default_params[config_name] = (args,kwargs)
 
@@ -572,7 +602,7 @@ class Trajectory(object):
          evaluation of the parameter.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(fast_access, short_names)
+        return self._nninterface._to_dict(fast_access, short_names)
 
 
     def __len__(self):
@@ -597,12 +627,12 @@ class Trajectory(object):
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
-        result['_nninterface'] =copy.copy(self._nninterface)
-        result['_derivedparameters']=self._derivedparameters.copy()
-        result['_parameters'] = self._parameters.copy()
-        result['_results'] = self._results.copy()
-        result['_exploredparameters'] = self._exploredparameters.copy()
-        result['_config']=self._config.copy()
+        #result['_nninterface'] =copy.copy(self._nninterface)
+        #result['_derivedparameters']=self._derivedparameters.copy()
+        #result['_parameters'] = self._parameters.copy()
+        #result['_results'] = self._results.copy()
+        #result['_exploredparameters'] = self._exploredparameters.copy()
+        #result['_config']=self._config.copy()
         return result
     
     def __setstate__(self, statedict):
@@ -610,6 +640,7 @@ class Trajectory(object):
 
         #self._tree= TreeNode(parent_trajectory=self, predecessors=[], depth=0, name='root')
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
+
         
         
         
@@ -801,16 +832,16 @@ class Trajectory(object):
 
         self.last = instance
         self.Last = instance
-        
+
+        self._logger.debug('Added >>%s<< to trajectory.' %full_parameter_name)
         return instance
     
     def _check_name(self, name):
         split_names = name.split('.')
         faulty_names = ''
-        not_admissable_names = set(dir(self) + dir(self._nninterface) + dir(self._nninterface._root))
 
         for split_name in split_names:
-            if split_name in not_admissable_names:
+            if split_name in self._not_admissable_names:
                 faulty_names = '%s %s is a method/attribute of the trajectory/treenode/naminginterface,' \
                                 %(faulty_names, split_name)
 
@@ -976,7 +1007,7 @@ class Trajectory(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
-        return self._nninterface.get(name, fast_access)
+        return self._nninterface._get(name, fast_access)
 
 
     def prepare_paramspacepoint(self,n):
@@ -1000,19 +1031,20 @@ class Trajectory(object):
         return SingleRun(self, n)
 
     def __getattr__(self,name):
-        
-        if not '_nninterface' in self.__dict__:
-            raise AttributeError('This is to avoid pickling issues!')
-   
-        return getattr(self._nninterface, name)
 
-    def __setattr__(self, key, value):
-        if key[0]=='_':
-            self.__dict__[key] = value
-        elif key == 'last' or key == 'Last':
-            self.__dict__[key]=value
-        else:
-            self._nninterface._set(key, value)
+        #if not '_nninterface' in self.__dict__:
+        if not '_logger' in self.__dict__ or not '_nninterface' in self.__dict__:
+            raise AttributeError('This is to avoid pickling issues.')
+
+        return self.get(name, fast_access = self._nninterface._fast_access)
+
+    # def __setattr__(self, key, value):
+    #     if key[0]=='_':
+    #         self.__dict__[key] = value
+    #     elif key == 'last' or key == 'Last':
+    #         self.__dict__[key]=value
+    #     else:
+    #         self._nninterface._set(key, value)
 
 class SingleRun(object):
     ''' Constitutes one specific parameter combination in the whole trajectory.
@@ -1062,7 +1094,7 @@ class SingleRun(object):
         self._single_run = Trajectory(name, parent_trajectory._dynamic_imports)
         self._single_run.set_storage_service(self._storageservice)
         
-        self._nninterface = copy.copy(self._parent_trajectory._nninterface)
+        self._nninterface = self._parent_trajectory._nninterface._shallow_copy()
         self.last = self._parent_trajectory.last
         self.Last = self._parent_trajectory.Last
 
@@ -1074,7 +1106,10 @@ class SingleRun(object):
         self._nninterface._working_trajectory_name = self._single_run.get_name()
 
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
-        
+
+
+
+
 
     def remove(self, removal_list):
         for item in removal_list:
@@ -1107,7 +1142,7 @@ class SingleRun(object):
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
-        #self._logger = multip.get_logger()
+
     
     def adp(self, full_parameter_name, *args,**kwargs):
         ''' Short for add_derived_parameter
@@ -1136,13 +1171,15 @@ class SingleRun(object):
         return self._nninterface.get(name)
 
     def __getattr__(self,name):
-        
-        if not '_nninterface' in self.__dict__:
-            raise AttributeError('This is to avoid pickling issues!')
-        
-        return getattr(self._nninterface, name)
-        
-    def get(self, name):
+
+        #if not '_nninterface' in self.__dict__:
+        if not '_logger' in self.__dict__ or not '_nninterface' in self.__dict__:
+            raise AttributeError('This is to avoid pickling issues.')
+
+
+        return self.get(name, fast_access=self._nninterface._fast_access)
+
+    def get(self, name, fast_access = False):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Even if fast access is True,
         get will return a parameter object and not the parameter's default evaluation.
@@ -1150,7 +1187,7 @@ class SingleRun(object):
         :param name: The Name of the Parameter,Result or TreeNode that is requested.
         :return: The requested object. Returns None if object could not be found.
         '''
-        return self._nninterface.get(name)
+        return self._nninterface._get(name, fast_access)
 
     def get_parent_name(self):
         return self._parent_trajectory.get_name()
@@ -1167,10 +1204,7 @@ class SingleRun(object):
     def set_fast_access(self,val):
         assert isinstance(val, bool)
         self._nninterface._fast_access=val
-        
-#     def set_double_checking(self,val):
-#         assert isinstance(val, bool)
-#         self._nninterface._double_checking=val
+
         
     def store(self, lock=None):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
@@ -1193,24 +1227,5 @@ class SingleRun(object):
          is thrown.
         :return: A dictionary
         '''
-        return self._nninterface.to_dict(fast_access, short_names)
+        return self._nninterface._to_dict(fast_access, short_names)
 
-    # def _add_explored_params(self):
-    #     ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
-    #     '''
-    #     result_list = []
-    #     for fullname,param in self._parent_trajectory._exploredparameters.items():
-    #         splitname = fullname.split('.')
-    #
-    #         #remove the Parameters tag
-    #         splitname = ['ExploredParameters']+splitname[1:]
-    #         newfullname = '.'.join(splitname)
-    #
-    #
-    #         param_dict = {}
-    #         keys = param.get_entry_names()
-    #         for key in keys:
-    #             param_dict[key] = param.get(key)
-    #
-    #         self.add_result(result_name=newfullname, result_type=SimpleResult, **param_dict)
-            

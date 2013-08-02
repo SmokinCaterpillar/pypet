@@ -11,9 +11,23 @@ from mypet import globals
 
 import collections
 
+class StorageService(object):
 
+    def store(self,*args,**kwargs):
+        raise NotImplementedError('Implement this!')
 
-class HDF5StorageService(object):
+    def load(self,*args,**kwargs):
+        raise NotImplementedError('Implement this!')
+
+class LazyStorageService(StorageService):
+
+    def load(self,*args,**kwargs):
+        pass
+
+    def store(self,*args,**kwargs):
+        pass
+
+class HDF5StorageService(StorageService):
     ''' General Service to handle the storage of a Trajectory and Parameters
     '''
 

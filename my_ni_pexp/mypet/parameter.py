@@ -212,7 +212,7 @@ class Parameter(BaseParameter):
 
         # If we don't need a full copy of the Parameter (because a single process needs only access to a single point
         #  in the parameter space we can delete the rest
-        if not self._fullcopy:
+        if not self._fullcopy and self.is_array():
             for key in result['_data']:
                 old_list = result['_data'][key]
                 new_one_item_list = [old_list[self._n]]
@@ -313,6 +313,19 @@ class Parameter(BaseParameter):
             self.set_single(name,value)
         
     def set(self,*args,**kwargs):
+
+        if len(args)==1:
+            if isinstance(args[0],list):
+                args = args[0]
+            elif isinstance(args[0],dict):
+                kwargs = args[0]
+                args=[]
+
+        if len(args) == 2:
+            if isinstance(args[0], list) and isinstance(args[1], dict):
+                kwargs = args[1]
+                args = args[0]
+
 
         for idx, arg in enumerate(args):
             # if idx == 0:
@@ -902,6 +915,10 @@ class SimpleResult(SparseParameter,BaseResult):
     In fact this is a lazy implementation, its simply a sparse parameter^^
     For simplicity it cannot be locked and it is always an array.
     '''
+
+    def __init__(self, fullname, *args, **kwargs):
+        super(SimpleResult,self).__init__(fullname, *args, **kwargs)
+        self._fullcopy = True
 
     def is_locked(self):
         return False

@@ -135,7 +135,7 @@ class Environment(object):
             
             lock = multip.Manager().Lock()
            
-            ncores = multiproc = self._traj.get('Config.ncores').return_default()
+            ncores =  self._traj.get('Config.ncores').return_default()
             
             mpool = multip.Pool(ncores)
         
