@@ -193,6 +193,7 @@ class Parameter(BaseParameter):
         self._comment= Parameter.standard_comment
         self._data={} #The Data
         self._default_expression = None
+        self._not_admissable_names = set(dir(self))
 
         
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
@@ -201,6 +202,7 @@ class Parameter(BaseParameter):
 
         self._n = 0
         self._fullcopy = False
+
 
         
        
@@ -356,9 +358,8 @@ class Parameter(BaseParameter):
         of the default entries of the parameter.
         '''
 
-        not_admissable_names= set(dir(self))
 
-        if name in not_admissable_names:
+        if name in self._not_admissable_names:
             raise AttributeError('Your parameter %s cannot have %s as an entry, the name is similar to one of it\'s methods'
             % (self._fullname,name))
 
@@ -527,13 +528,17 @@ class Parameter(BaseParameter):
             if kwexplore_dict:
                 self._logger.warning('The function has been called via explore(dict1,**dict2). I will only use dict1.')
 
-
+        new_explore_dict = {}
 
         for key,values in explore_dict.items():
             if not isinstance(values, list):
                 raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
 
-            val=values.pop(0)
+            ## Copy the list, because we do not want to change the explore dict per se
+            valuescopy = values[:]
+            val=valuescopy.pop(0)
+
+            new_explore_dict[key] = valuescopy
 
             if self.is_array():
                 self._logger.warning('You are exploring the parameter %s that is already an array, I will delete the current array.' % self._fullname)
@@ -546,7 +551,7 @@ class Parameter(BaseParameter):
 
 
         self.become_array()
-        self.add_items(explore_dict)
+        self.add_items(new_explore_dict)
 
 
     
@@ -642,13 +647,15 @@ class Parameter(BaseParameter):
 
 
     def _load_meta_data(self, load_dict):
-        info_dict = load_dict['Info'][0]
+        info_dict = load_dict['Info']
 
-        self._name = info_dict['Name']
-        self._location = info_dict['Location']
-        self._comment = info_dict['Comment']
-        assert str(type(self)) == info_dict['Type']
-        assert self.__class__.__name__ == info_dict['Class_Name']
+        self._name = info_dict['Name'][0]
+        self._location = info_dict['Location'][0]
+        self._comment = info_dict['Comment'][0]
+        self._fullname = self._location +'.' + self._name
+
+        assert str(type(self)) == info_dict['Type'][0]
+        assert self.__class__.__name__ == info_dict['Class_Name'][0]
 
         return load_dict
 
@@ -767,7 +774,7 @@ class SparseParameter(Parameter):
         ''' Simply checks if data is supported '''
         if super(SparseParameter,self)._is_supported_data(data):
             return True
-        if spsp.issparse(data):
+        if spsp.isspmatrix_lil(data) or spsp.isspmatrix_csc(data) or spsp.isspmatrix_csr(data):
             return True
         return False
 
@@ -791,13 +798,13 @@ class SparseParameter(Parameter):
 
     def _load_data(self, load_dict):
         sparse_matrices = {}
-        for key,val in self.load_dict['Data'].items():
+        for key,val in load_dict['Data'].items():
             if SparseParameter.separator in key:
                 sparse_matrices[key]=val
                 del load_dict['Data'][key]
 
 
-        sparse_matrices = nest_dictionary(sparse_matrices)
+        sparse_matrices = nest_dictionary(sparse_matrices, SparseParameter.separator)
 
         for name, mat_dict in sparse_matrices.items():
             arformat = mat_dict['format']
@@ -843,7 +850,7 @@ class SparseParameter(Parameter):
         for key, val_list in data_dict.items():
             if spsp.isspmatrix(val_list[0]):
                 del data_dict[key]
-                data_dict[key+'__format']=[]
+                data_dict[key+SparseParameter.separator+'format']=[]
                 data_dict[key+SparseParameter.separator+'data']=[]
                 data_dict[key+SparseParameter.separator+'indptr'] = []
                 data_dict[key+SparseParameter.separator+'indices'] = []

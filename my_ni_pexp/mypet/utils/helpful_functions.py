@@ -30,5 +30,6 @@ def nest_dictionary(flat_dict, separator):
             act_dict = act_dict[new_key]
 
         act_dict[final_key] = val
+    return nested_dict
 
 

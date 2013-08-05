@@ -75,6 +75,7 @@ class BrianParameter(SparseParameter):
             for idx in range(len(arunit)):
                 unit = arunit[idx]
                 value= arval[idx]
+                value = eval(value)
                 evalstr = 'value * ' + unit
                 brian_quantity = eval(evalstr)
                 brianlist.append(brian_quantity)
@@ -85,7 +86,7 @@ class BrianParameter(SparseParameter):
 
 
     def _store_data(self,store_dict):
-        super(SparseParameter,self)._store_data(store_dict)
+        super(BrianParameter,self)._store_data(store_dict)
         data_dict = store_dict['Data']
 
         for key, val_list in data_dict.items():
@@ -94,14 +95,14 @@ class BrianParameter(SparseParameter):
                 data_dict[key+BrianParameter.separator+'unit']=[]
                 data_dict[key+BrianParameter.separator+'value']=[]
 
-            for val in val_list:
-                assert isinstance(val, Quantity)
-                valstr = val.in_best_unit(python_code=True)
-                split_val = valstr.split('*')
-                value = split_val.pop(0)
-                unit = '*'.join(split_val)
-                data_dict[key+BrianParameter.separator+'unit'].append(unit)
-                data_dict[key+BrianParameter.separator+'value'].append(value)
+                for val in val_list:
+                    assert isinstance(val, Quantity)
+                    valstr = val.in_best_unit(python_code=True)
+                    split_val = valstr.split('*')
+                    value = split_val.pop(0)
+                    unit = '*'.join(split_val)
+                    data_dict[key+BrianParameter.separator+'unit'].append(unit)
+                    data_dict[key+BrianParameter.separator+'value'].append(value)
 
 class BrianMonitorResult(BaseResult):  
     
