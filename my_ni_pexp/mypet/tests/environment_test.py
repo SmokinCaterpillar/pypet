@@ -32,10 +32,10 @@ class EnvironmentTest(unittest.TestCase):
         traj.ap('Test', value=1)
 
 
-        large_amount = 11111
+        large_amount = 111
 
         for irun in range(large_amount):
-            name = 'L' + str(irun)
+            name = 'There.Are.Many.Of.m3' + str(irun)
 
             traj.ap(name,value = irun)
 

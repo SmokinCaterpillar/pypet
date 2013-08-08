@@ -11,7 +11,7 @@ import numpy as np
 import scipy.sparse as spsp
 import copy
 from mypet.utils.helpful_functions import nest_dictionary
-from mypet import globals
+from mypet import globally
 
 
 
@@ -45,7 +45,7 @@ class BaseParameter(object):
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
-        self._location('.'.join(split_name))
+        self._location='.'.join(split_name)
 
     def get_comment(self):
         return self._comment
@@ -83,6 +83,19 @@ class BaseParameter(object):
 
     def lock(self):
         ''' Locks the parameter and allows no further modification.'''
+        raise NotImplementedError( "Should have implemented this." )
+
+    def to_str(self):
+        ''' String representation of the value represented by the parameter. Note that representing
+        the parameter as a string accesses it's value and locks it!
+        '''
+        return str(self.return_default())
+
+    def __str__(self):
+        return '%s: %s' % (self._fullname, self.to_str())
+
+    def unlock(self):
+        ''' Unlocks the locked parameter.'''
         raise NotImplementedError( "Should have implemented this." )
 
     def return_default(self):
@@ -161,6 +174,8 @@ class BaseParameter(object):
         '''
         raise NotImplementedError( "Should have implemented this." )
 
+    def is_empty(self):
+        return len(self) == 0
       
 class Parameter(BaseParameter):
     ''' The standard parameter that handles creation and access to simulation parameters.
@@ -193,6 +208,7 @@ class Parameter(BaseParameter):
         self._comment= Parameter.standard_comment
         self._data={} #The Data
         self._default_expression = None
+        self._represent_expression = None
         self._not_admissable_names = set(dir(self))
 
         
@@ -225,7 +241,8 @@ class Parameter(BaseParameter):
 
         del result['_logger'] #pickling does not work with loggers
         return result
-    
+
+
     def __setstate__(self, statedict):
         ''' Sets the state for unpickling.
         '''
@@ -267,7 +284,7 @@ class Parameter(BaseParameter):
             dtype=type(data)
 
 
-        return dtype in globals.PARAMETER_SUPPORTED_DATA
+        return dtype in globally.PARAMETER_SUPPORTED_DATA
 
 
 
@@ -347,6 +364,7 @@ class Parameter(BaseParameter):
             self._logger.warning('Your default expression >>%s<< failed to evaluate with error: %s' % (self._default_expression,str(e)))
 
         self._locked = old_locked
+
     
     def set_single(self,name,val,pos=0):
         ''' Adds a single entry to the parameter.
@@ -399,6 +417,10 @@ class Parameter(BaseParameter):
                 #I don't like this, but otherwise it is annoying:
                 if not isinstance(self,SimpleResult):
                     self._logger.warning('Your Parameter is an array and does not contain %s, I will create a new entry called %s and use the supplied value as the default.' %(name,name))
+                else:
+                    if not self._default_expression:
+                        self._default_expression = 'self.'+name
+
                 length=max(len(self),1)
 
                 self._data[name] =[val for irun in range(length)]
@@ -457,6 +479,9 @@ class Parameter(BaseParameter):
 
     def lock(self):
         self._locked = True
+
+    def unlock(self):
+        self._locked = False
         
     def get_entry_names(self):
         return self._data.keys()
@@ -540,11 +565,11 @@ class Parameter(BaseParameter):
 
             new_explore_dict[key] = valuescopy
 
-            if self.is_array():
+            if self.is_array() and not isinstance(self,BaseResult):
                 self._logger.warning('You are exploring the parameter %s that is already an array, I will delete the current array.' % self._fullname)
                 self.shrink()
 
-            if not key in self._data:
+            if not key in self._data and not isinstance(self,BaseResult):
                 self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
 
             self.set_single(key, val)
@@ -552,6 +577,7 @@ class Parameter(BaseParameter):
 
         self.become_array()
         self.add_items(new_explore_dict)
+
 
 
     
@@ -632,7 +658,8 @@ class Parameter(BaseParameter):
     def _store_default_expression(self,store_dict):
 
         if self._default_expression:
-            store_dict['Default'] = {'Default_Expression':[self._default_expression]}
+            store_dict['Info']['Default'] = [self._default_expression]
+
 
 
 
@@ -662,18 +689,17 @@ class Parameter(BaseParameter):
 
     def _load_data(self, load_dict):
         self._data = load_dict['Data']
-        return load_dict
 
 
     def _load_default_expression(self,load_dict):
         self._default_expression=None
 
-        if 'Default' in load_dict:
-            if 'Default_Expression' in load_dict['Default']:
-                self._default_expression=load_dict['Default']['Default_Expression'][0]
-                self._test_default()
+        if 'Default' in load_dict['Info']:
+            self._default_expression=load_dict['Info']['Default'][0]
+            self._test_default()
+        else:
+            self._default_expression=None
 
-        return load_dict
 
     def _check_if_array(self):
         if len(self)>1:
@@ -755,7 +781,8 @@ class Parameter(BaseParameter):
         self._isarray = False
         for key, val_list in self._data.items():
             del val_list[1:]
- 
+
+
     
      
 

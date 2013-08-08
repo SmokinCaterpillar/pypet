@@ -7,14 +7,15 @@ Created on 17.05.2013
 import logging
 import datetime
 import time
+from lxml.etree import _Validator
 from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
 import importlib as imp
 
 import mypet.petexceptions as pex
 from mypet.utils.helpful_functions import flatten_dictionary
+from mypet import globally
 
-
-class Traj(object):
+class TrajOrRun(object):
     #
     # def store(self):
     #     pass
@@ -41,6 +42,9 @@ class Traj(object):
     def set_check_uniqueness(self, val):
         assert isinstance(val,bool)
         self._nninterface._check_uniqueness = val
+
+    def set_storage_service(self, service):
+        self._storageservice = service
 
     def set_fast_access(self, val):
         assert isinstance(val,bool)
@@ -79,14 +83,16 @@ class Traj(object):
         '''
         return self._nninterface._get(name, fast_access, check_uniqueness, search_strategy)
 
+    def store(self):
+        ''' Stores all obtained results a new derived parameters to the hdf5file.
 
-    def set_standard_param_type(self,param_type):
-        ''' Sets the standard parameter type.
-
-        If param_type is not specified for add_parameter, than the standard parameter is used.
+        In case of multiprocessing a lock needs to be provided to prevent hdf5file corruption!!!
         '''
-        self._standard_param_type = param_type
+        #self._add_explored_params()
+        self._storageservice.store(self)
 
+    def get_storage_service(self):
+        return self._storageservice
 
     def to_dict(self, fast_access = False, short_names=False):
         ''' This method returns all parameters reachable from this node as a dict.
@@ -118,21 +124,55 @@ class Traj(object):
         else:
             self._nninterface._set(key, value)
 
+    def get_full_param_name(self, param_name, entry_name=None):
+        param = self.get(param_name)
+        return param.gfn(entry_name)
+
+    def gfpn(self, param_name, entry_name=None):
+        return self.get_full_param_name(param_name,entry_name)
+
+    def remove(self, removal_list):
+
+        if not isinstance(removal_list,list):
+            removal_list = [removal_list]
+
+        for item in removal_list:
+            if isinstance(item, (BaseParameter,BaseResult)):
+                instance = item
+            elif isinstance(item, str):
+                instance = self.get(item,fast_access=False)
+            else:
+                raise ValueError('This aint working bro, I do not know what %s is.' % str(item))
+
+            fullname = instance.get_fullname()
+            self._remove(fullname)
+            self._nninterface._remove(fullname)
+
 class NaturalNamingInterface(object):
 
     
     def __init__(self, working_trajectory_name, parent_trajectory_name, fast_access = False,
-                 check_uniqueness=False,search_strategy = 'bfs', storage_dict = {},
-                 flat_storage_dict={},nodes_and_leaves = {}):
+                 check_uniqueness=False,search_strategy = 'bfs', storage_dict = None,
+                 flat_storage_dict=None,nodes_and_leaves = None):
         self._fast_access = fast_access
         self._check_uniqueness = check_uniqueness
         self._search_strategy = search_strategy
         self._working_trajectory_name=working_trajectory_name
         self._parent_trajectory_name=parent_trajectory_name
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._working_trajectory_name)
+
         self._storage_dict = storage_dict
+        if self._storage_dict == None:
+            self._storage_dict={}
+
         self._flat_storage_dict = flat_storage_dict
+        if self._flat_storage_dict == None:
+            self._flat_storage_dict = {}
+
         self._nodes_and_leaves = nodes_and_leaves
+        if self._nodes_and_leaves == None:
+            self._nodes_and_leaves = {}
+
         self._root = TreeNode(self)
 
 
@@ -144,18 +184,30 @@ class NaturalNamingInterface(object):
 
     def _remove(self, fullname):
         split_name = fullname.split('.')
+        self._remove_recursive(split_name,self._storage_dict)
+        del self._flat_storage_dict[fullname]
 
-        act_dict = self._storage_dict
-        for name in split_name:
-            prev_dict = act_dict
-            act_dict = act_dict[name]
-            if not isinstance(act_dict, dict) or len(act_dict) == 0:
-                del act_dict
-                del prev_dict[name]
+    def _remove_recursive(self,split_name, dictionary):
 
-                self._nodes_and_leaves[name] = self._nodes_and_leaves[name]-1
-                if self._nodes_and_leaves[name] == 0:
-                    del self._nodes_and_leaves[name]
+        key = split_name.pop(0)
+        new_item = dictionary[key]
+        delete = False
+
+        if isinstance(new_item,dict):
+            self._remove_recursive(split_name,new_item)
+            if len(new_item)==0:
+                delete = True
+        else:
+            delete = True
+
+        if delete:
+            del new_item
+            del dictionary[key]
+
+            self._nodes_and_leaves[key] = self._nodes_and_leaves[key]-1
+            if self._nodes_and_leaves[key] == 0:
+                del self._nodes_and_leaves[key]
+
 
 
 
@@ -336,11 +388,8 @@ class TreeNode(object):
 
         if (not  '_nninterface' in self.__dict__ or
             not  '_fullname' in self.__dict__ or
-            not  '_name' in self.__dict__ or
             not '_dict' in self.__dict__ or
             not 'get' in self.__class__.__dict__ or
-            not '_search' in self.__class__.__dict__ or
-            not '_get_result' in self.__class__.__dict__ or
             name[0]=='_'):
             raise AttributeError('Wrong attribute %s. (And you this statement prevents pickling problems)' % name)
 
@@ -362,22 +411,31 @@ class TreeNode(object):
 
 
     def to_dict(self, fast_access = False, short_names=False):
-        if not fast_access and not short_names:
-            return flatten_dictionary(self._dict,'.')
-        else:
-            result_dict = {}
-            for key, val in self._dict.items():
+
+        temp_dict = flatten_dictionary(self._dict,'.')
+
+        result_dict={}
+        if short_names or fast_access:
+            for key in temp_dict:
+                val = temp_dict[key]
+
                 if short_names:
-                    name = val.get_name()
+
+                    newkey = key.split('.')[-1]
+
+                    if newkey in result_dict:
+                        raise ValueError('Cannot make short names, the names are not unique!')
+
                 else:
-                    name = key
+                    newkey = key
 
-                res = self._nninterface._get_result(val,fast_access)
+                newval = self._nninterface._get_result(val,fast_access=fast_access)
+                result_dict[newkey]=newval
+        else:
+            result_dict = temp_dict
 
-                result_dict[name] = res
+        return result_dict
 
-
-            return result_dict
 
 
     def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = 'bfs'):
@@ -442,7 +500,7 @@ class TreeNode(object):
 
 
 
-class Trajectory(Traj):
+class Trajectory(TrajOrRun):
     '''The trajectory manages the handling of simulation parameters and results.
     
     :param name: Name of trajectory, the real name is a concatenation of the user specified name and
@@ -490,7 +548,7 @@ class Trajectory(Traj):
     
     standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
 
-    def __init__(self, name,  dynamicly_imported_classes=[], init_time=None):
+    def __init__(self, name='Traj',  dynamicly_imported_classes=None, init_time=None):
     
         if init_time is None:
             init_time = time.time()
@@ -510,13 +568,17 @@ class Trajectory(Traj):
         self._results={}
         self._exploredparameters={}
         self._config={}
-        
-        self._result_ids={} #the numbering of the results, only important if results have been
 
-        self._changed_default_params={}
+        self._changed_default_params = {}
         
-        #Even if there are no parameters yet length is 1 for convention
-        self._length = 1
+        self._id_to_dpar={} #the numbering of the results, only important if results have been
+        self._dpar_to_id={}
+        self._id_to_res={}
+        self._res_to_id={}
+        
+        #if there are no parameters in the trajectory the length is 0 otherwise the lenght of the trajectory
+        # is the size of the explored parameters
+        self._length = 0
         
         self._nninterface = NaturalNamingInterface(working_trajectory_name=self._name, parent_trajectory_name = self._name)
         
@@ -529,11 +591,14 @@ class Trajectory(Traj):
         self.last = None
         self.Last = None
 
+
         self._standard_param_type = Parameter
+        self._standard_result_type = SimpleResult
         
         
         self._dynamic_imports=set(['mypet.parameter.SparseParameter'])
-        self._dynamic_imports.update(dynamicly_imported_classes)
+        if not dynamicly_imported_classes == None:
+            self._dynamic_imports.update(dynamicly_imported_classes)
         
         self._loadedfrom = ('None','None')
 
@@ -541,24 +606,6 @@ class Trajectory(Traj):
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
 
 
-    def set_storage_service(self, service):
-        self._storageservice = service
-
-
-    def remove(self, removal_list):
-        for item in removal_list:
-            if isinstance(item, (BaseParameter,BaseResult)):
-                instance = item
-            elif isinstance(item, str):
-                instance = self.get(item,fast_access=False)
-                if isinstance(instance,list):
-                    ValueError('Your query to remove %s was not unique, found: %s' %(item,str(instance)))
-            else:
-                raise ValueError('This aint working bro, I do not know what %s is.' % str(item))
-
-            fullname = instance.get_fullname()
-            self._remove(fullname)
-            self._nninterface._remove(fullname)
 
 
 
@@ -577,6 +624,14 @@ class Trajectory(Traj):
         else:
             raise RuntimeError('You should nover come here :eeek:')
 
+        if fullname in self._exploredparameters:
+            del self._exploredparameters[fullname]
+
+        if len(self._parameters) == 0 and len(self._derivedparameters) == 0:
+            self._length = 0
+        else:
+            if len(self._exploredparameters)== 0:
+                self._length = 1
 
         self._logger.debug('Removed %s from trajectory.' %fullname)
 
@@ -622,8 +677,6 @@ class Trajectory(Traj):
         self.lock_derived_parameters()
         self.store()
 
-    def store(self):
-        self._storageservice.store(self)
 
 
 
@@ -643,12 +696,6 @@ class Trajectory(Traj):
     def __getstate__(self):
         result = self.__dict__.copy()
         del result['_logger']
-        #result['_nninterface'] =copy.copy(self._nninterface)
-        #result['_derivedparameters']=self._derivedparameters.copy()
-        #result['_parameters'] = self._parameters.copy()
-        #result['_results'] = self._results.copy()
-        #result['_exploredparameters'] = self._exploredparameters.copy()
-        #result['_config']=self._config.copy()
         return result
     
     def __setstate__(self, statedict):
@@ -685,6 +732,8 @@ class Trajectory(Traj):
             self._comment = self._comment + '; ' + comment
 
 
+    def get_comment(self):
+        return self._comment
 
     def add_result(self, *args,**kwargs):
         ''' Adds a result to the trajectory, 
@@ -699,6 +748,7 @@ class Trajectory(Traj):
         '''
         prefix = 'Results.'+self._name+'.'
         args = list(args)
+
 
         if 'result' in kwargs or (args and isinstance(args[0], BaseResult)):
             if 'result' in kwargs:
@@ -716,15 +766,16 @@ class Trajectory(Traj):
                 full_result_name = args.pop(0)
                 full_result_name = prefix+full_result_name
 
-            if 'result_type' in kwargs or (args and isinstance(args[0], type) and issubclass(args[0], BaseResult)):
-                if 'result_type' in kwargs:
-                    result_type = kwargs.pop('result_type')
+            if not 'result_type' in kwargs:
+                if args and isinstance(args[0], type) and issubclass(args[0] , BaseResult):
+                        args = list(args)
+                        result_type = args.pop(0)
                 else:
-                    args = list(args)
-                    result_type = args.pop(0)
-                instance =  result_type(full_result_name,*args,**kwargs)
+                    result_type = self._standard_result_type
             else:
-                raise RuntimeError('No instance of a result or a result type is specified')
+                result_type = kwargs.pop('result_type')
+
+            instance = result_type(full_result_name,*args, **kwargs)
         else:
             raise RuntimeError('You did not supply a new Result or a name for a new result')
 
@@ -740,6 +791,7 @@ class Trajectory(Traj):
         self._results[full_result_name] = instance
         
         self._nninterface._add_to_nninterface(full_result_name, instance)
+
         
         return instance
 
@@ -752,6 +804,22 @@ class Trajectory(Traj):
 
 
 
+    def set_standard_param_type(self,param_type):
+        ''' Sets the standard parameter type.
+
+        If param_type is not specified for add_parameter, than the standard parameter is used.
+        '''
+        assert issubclass(param_type,BaseParameter)
+        self._standard_param_type = param_type
+
+
+    def set_standard_result_type(self, result_type):
+        ''' Sets the standard parameter type.
+
+        If result_type is not specified for add_result, than the standard result is used.
+        '''
+        assert issubclass(result_type,BaseResult)
+        self._standard_result_type=result_type
 
     def add_derived_parameter(self, *args,**kwargs):
         ''' Adds a new derived parameter. Returns the added parameter.
@@ -794,7 +862,6 @@ class Trajectory(Traj):
             if 'param' in kwargs:
                 instance = kwargs.pop('param')
             else:
-                args = list(args)
                 instance = args.pop(0)
                 instance._rename(prefix+instance._fullname)
                 full_parameter_name = instance.get_fullname()
@@ -840,10 +907,16 @@ class Trajectory(Traj):
 
         self._nninterface._add_to_nninterface(full_parameter_name, instance)
 
+
         self.last = instance
         self.Last = instance
 
         self._logger.debug('Added >>%s<< to trajectory.' %full_parameter_name)
+
+        # If a parameter is added for the first time, the length is set to 1
+        if len(self) == 0:
+            self._length = 1
+
         return instance
     
     def _check_name(self, name):
@@ -857,6 +930,10 @@ class Trajectory(Traj):
 
             if split_name[0] == '_':
                 faulty_names = '%s %s starts with a leading underscore,' %(faulty_names,split_name)
+
+            if ' ' in split_name:
+                faulty_names = '%s %s contains white space(s),' %(faulty_names,split_name)
+
 
         return faulty_names
 
@@ -954,6 +1031,7 @@ class Trajectory(Traj):
                 act_param.explore(**builder)
             else: raise TypeError('Your parameter exploration function returns something weird.')
             self._exploredparameters[key] = self._parameters[key]
+            self._parameters[key].lock()
             
             if count == 0:
                 self._length = len(self._parameters[key])#Not so nice, but this should always be the same numbert
@@ -973,10 +1051,25 @@ class Trajectory(Traj):
             par.lock()
             
 
-    def load(self,trajectoryname, filename = None, load_derived_params = False, load_results = False, replace = False):
-        self._storageservice.load(self,trajectoryname, filename, load_derived_params, load_results, replace)
+    def load(self,
+             trajectoryname=None,
+             filename = None,
+             replace=False,
+             load_params = globally.LOAD_DATA,
+             load_derived_params = globally.LOAD_SKELETON,
+             load_results = globally.LOAD_SKELETON):
 
-   
+        if not trajectoryname:
+            trajectoryname = self.get_name()
+
+        self._storageservice.load(self,trajectoryname, filename, replace, load_params, load_derived_params, \
+                                                                         load_results)
+
+
+    def is_empty(self):
+        return (len(self._parameters) == 0 and
+                len(self._derivedparameters) == 0 and
+                len(self._results) == 0)
 
 
     def _create_class(self,class_name):
@@ -996,8 +1089,18 @@ class Trajectory(Traj):
                 raise ImportError('Could not create the class named ' + class_name)
 
     
-    def get_result_ids(self):
-        return self._result_ids.copy()
+    def get_id_dicts(self):
+
+        id_to_res = {}
+        for key, val in self._id_to_res.items():
+            self._id_to_res[key] = val.copy()
+
+        id_to_dpar = {}
+
+        for key, val in self._id_to_dpar.items():
+            self._id_to_dpar[key] = val.copy()
+
+        return id_to_dpar, self._dpar_to_id.copy(), id_to_res, self._res_to_id.copy()
     
     def get_results(self):
         return self._results.copy()
@@ -1030,7 +1133,9 @@ class Trajectory(Traj):
 
 
 
-class SingleRun(Traj):
+
+
+class SingleRun(TrajOrRun):
     ''' Constitutes one specific parameter combination in the whole trajectory.
     
     A SingleRun instance is accessed during the actual run phase of a trajectory. 
@@ -1085,6 +1190,7 @@ class SingleRun(Traj):
         del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
         self._single_run._standard_param_type = self._parent_trajectory._standard_param_type
+        self._single_run._standard_result_type = self._parent_trajectory._standard_result_type
         
         self._nninterface._parent_trajectory_name = self._parent_trajectory.get_name()
         self._nninterface._working_trajectory_name = self._single_run.get_name()
@@ -1092,27 +1198,12 @@ class SingleRun(Traj):
         self._logger = logging.getLogger('mypet.trajectory.SingleRun=' + self._single_run.get_name())
 
 
+    def __len__(self):
+        ''' Length of a single run can only be 1 and nothing else!
+        :return:
+        '''
+        return 1
 
-
-
-    def remove(self, removal_list):
-        for item in removal_list:
-            if isinstance(item, (BaseParameter,BaseResult)):
-                instance = item
-            elif isinstance(item, str):
-                instance = self.get(item,fast_access=False)
-                if isinstance(instance,list):
-                    ValueError('Your query to remove %s was not unique, found: %s' %(item,str(instance)))
-            else:
-                raise ValueError('This aint working bro, I do not know what %s is.' % str(item))
-
-            fullname = instance.get_fullname()
-            split_name = fullname.split['.']
-            if not split_name[1] == self.get_name():
-                raise ValueError('Cannot remove %s, can only remove stuff that was added to this single run %s.' %(
-                    fullname,self.get_name()))
-            self._single_run._remove(fullname)
-            self._nninterface._remove(fullname)
 
     def get_n(self): 
         return self._n   
@@ -1162,14 +1253,48 @@ class SingleRun(Traj):
         return self._single_run.add_result( *args,**kwargs)
 
 
-        
-    def store(self, lock=None):
-        ''' Stores all obtained results a new derived parameters to the hdf5file.
-        
-        In case of multiprocessing a lock needs to be provided to prevent hdf5file corruption!!!
+
+
+
+    def _remove(self,fullname):
+
+        split_name = fullname.split('.')
+        category = split_name[0]
+        traj_name = split_name[1]
+        if category == 'Results':
+            if traj_name == self.get_name():
+                del self._single_run._results[fullname]
+            else:
+                raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
+        elif category == 'Parameters':
+            raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
+        elif category == 'DerivedParameters':
+            if traj_name == self.get_name():
+                del self._single_run._derivedparameters[fullname]
+            else:
+                raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
+        elif category == 'Config':
+            raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
+        else:
+            raise RuntimeError('You should nover come here :eeek:')
+
+
+        self._logger.debug('Removed %s from trajectory.' %fullname)
+
+
+    def set_standard_param_type(self,param_type):
+        ''' Sets the standard parameter type.
+
+        If param_type is not specified for add_parameter, than the standard parameter is used.
         '''
-        #self._add_explored_params()
-        self._storageservice.store(self, lock=lock)
+        assert issubclass(param_type,BaseParameter)
+        self._single_run._standard_param_type = param_type
 
 
+    def set_standard_result_type(self, result_type):
+        ''' Sets the standard parameter type.
 
+        If result_type is not specified for add_result, than the standard result is used.
+        '''
+        assert issubclass(result_type,BaseResult)
+        self._single_run._standard_result_type=result_type

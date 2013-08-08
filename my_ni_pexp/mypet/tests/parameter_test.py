@@ -57,6 +57,13 @@ class ParameterTest(unittest.TestCase):
         self.param.explore(self.explore_dict)
 
 
+    def test_different_kind_of_default_evaluation(self):
+        self.assertTrue(self.param.val == self.param.return_default())
+
+        self.param.unlock()
+        self.param.Default = 'self.npfloat * 2.0'
+
+        self.assertTrue(np.all(self.param.val == self.npfloat*2.0))
 
     def test_the_insertion_made_implicetly_in_setUp(self):
         self.assertEqual(self.param.val,self.val0)
@@ -193,7 +200,7 @@ class SparseParameterTest(ParameterTest):
 
         self.param.set(spsparse_csc=self.spsparse_csc)
         self.param.set(spsparse_csr=self.spsparse_csr)
-        self.param.set(spsparse_lil=self.spsparse_lil)
+        self.param.set({'spsparse_lil':self.spsparse_lil})
 
         with self.assertRaises(AttributeError):
             self.param.set([[1,2,3],[1,2,3]])
