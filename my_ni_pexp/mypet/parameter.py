@@ -38,8 +38,11 @@ class BaseParameter(object):
         self._name=split_name.pop()
         self._location='.'.join(split_name)
         self._comment = ''
-        self._isarray = False
+        self._length = 0
         self._locked = False
+
+    def __len__(self):
+        return self._length
 
     def _rename(self, fullname):
         self._fullname = fullname
@@ -51,7 +54,8 @@ class BaseParameter(object):
         return self._comment
 
     def is_array(self):
-        return self._isarray
+        return len(self)>1
+
 
     def is_locked(self):
         return self._locked
@@ -65,7 +69,7 @@ class BaseParameter(object):
         Only parameters that will be explored have a length larger than 1.
         If no values have been added to the parameter it's length is 0.
         '''
-        raise NotImplementedError( "Should have implemented this." )
+        return self._length
     
     # def __getitem__(self,key):
     #     if not self.has_value(key):
@@ -81,24 +85,32 @@ class BaseParameter(object):
     def __load__(self, load_dict):
         raise NotImplementedError( "Should have implemented this." )
 
-    def lock(self):
-        ''' Locks the parameter and allows no further modification.'''
-        raise NotImplementedError( "Should have implemented this." )
 
     def to_str(self):
         ''' String representation of the value represented by the parameter. Note that representing
-        the parameter as a string accesses it's value and locks it!
+        the parameter as a string accesses it's value, but for simpler debugging, this does not
+        lock the parameter!
         '''
-        return str(self.return_default())
+        old_locked = self._locked
+        try :
+            return str(self.evaluate())
+        except Exception, e:
+            return 'No Evaluation possible (yet)!'
+        finally:
+            self._locked = old_locked
+
 
     def __str__(self):
         return '%s: %s' % (self._fullname, self.to_str())
 
     def unlock(self):
         ''' Unlocks the locked parameter.'''
-        raise NotImplementedError( "Should have implemented this." )
+        self._locked = False
 
-    def return_default(self):
+    def lock(self):
+        self._locked = True
+
+    def evaluate(self):
         raise NotImplementedError( "Should have implemented this." )
 
     def gfn(self,valuename=None):
@@ -126,7 +138,7 @@ class BaseParameter(object):
     def __contains__(self, item):
         return self.has_value(self, item)
 
-    def set(self, *ars,**kwargs):
+    def set(self, *args,**kwargs):
         ''' Sets specific values for a parameter.
         Has to raise ParameterLockedException if parameter is locked.
 
@@ -137,6 +149,8 @@ class BaseParameter(object):
         >>> 5
         '''
         raise NotImplementedError( "Should have implemented this." )
+
+
 
     def get(self,name):
         raise NotImplementedError( "Should have implemented this." )
@@ -176,6 +190,18 @@ class BaseParameter(object):
 
     def is_empty(self):
         return len(self) == 0
+
+    def shrink(self):
+        ''' If a parameter is explored, i.e. it is an array, the whole exploration is deleted,
+        and the parameter is no longer an array.
+        :return:
+        '''
+        raise NotImplementedError( "Should have implemented this." )
+
+    def empty(self):
+        '''Erases all data in the parameter. If the parameter was an explored array it is also shrunk.
+        '''
+        raise NotImplementedError( "Should have implemented this." )
       
 class Parameter(BaseParameter):
     ''' The standard parameter that handles creation and access to simulation parameters.
@@ -207,8 +233,8 @@ class Parameter(BaseParameter):
         super(Parameter,self).__init__(fullname)
         self._comment= Parameter.standard_comment
         self._data={} #The Data
-        self._default_expression = None
-        self._represent_expression = None
+        self._explored_data={} #The Explored Data
+        self._evaluate_string = None
         self._not_admissable_names = set(dir(self))
 
         
@@ -216,11 +242,9 @@ class Parameter(BaseParameter):
         
         self.set(*args,**kwargs)
 
-        self._n = 0
         self._fullcopy = False
 
 
-        
        
     def __getstate__(self):
         ''' Returns the actual state of the parameter for pickling. 
@@ -230,14 +254,8 @@ class Parameter(BaseParameter):
 
         # If we don't need a full copy of the Parameter (because a single process needs only access to a single point
         #  in the parameter space we can delete the rest
-        if not self._fullcopy and self.is_array():
-            for key in result['_data']:
-                old_list = result['_data'][key]
-                new_one_item_list = [old_list[self._n]]
-                result['_data'][key] = new_one_item_list
-
-            # Now we have shrunk the Parameter
-            result['_n'] = 0
+        if not self._fullcopy :
+            result['_explored_data'] = {}
 
         del result['_logger'] #pickling does not work with loggers
         return result
@@ -251,27 +269,15 @@ class Parameter(BaseParameter):
       
         
     def set_parameter_access(self, n=0):
-        if self.is_array():
-            self._n = n
+        if n >= len(self) and self.is_array():
+            raise ValueError('You try to access the %dth parameter in the array of parameters, yet there are only %d potential parameters.' %(n,len(self)))
         else:
-            self._n = 0
-
+            for key, vallist in self._explored_data.items():
+                self._data[key] = vallist[n]
 
     def has_value(self,valuename):
         return valuename in self._data
 
-    def __len__(self):
-
-        if len(self._data)==0:
-            return 0
-        else:
-            return len(self._data.itervalues().next())
-    
-    def become_array(self):
-        self._isarray = True
-    
-    
-    
     def _is_supported_data(self, data):
         ''' Checks if input data is supported by the parameter'''
         #result = isinstance(data, ( np.int, np.str, np.float, np.bool, np.complex))
@@ -287,10 +293,6 @@ class Parameter(BaseParameter):
         return dtype in globally.PARAMETER_SUPPORTED_DATA
 
 
-
-    
-
-      
     def _values_of_same_type(self,val1, val2):
         ''' Checks if two values are of the same type.
         
@@ -312,7 +314,8 @@ class Parameter(BaseParameter):
         
 
     def add_comment(self,comment):
-        ''' Adds a comment to the current comment
+        ''' Adds a comment to the current comment. The comment is separated from the previous comment by a semicolon and
+        a line break.
         
         :param comment: The comment as string which is added to the existing comment
         '''
@@ -320,7 +323,7 @@ class Parameter(BaseParameter):
         if self._comment == Parameter.standard_comment:
             self._comment = comment
         else:
-            self._comment = self._comment + '; ' + comment
+            self._comment = self._comment + ';\n ' + comment
             
             
        
@@ -347,26 +350,23 @@ class Parameter(BaseParameter):
 
 
         for idx, arg in enumerate(args):
-            # if idx == 0:
-            #     self.val = arg
-            # else:
             valname = 'val' + str(idx)
             setattr(self, valname, arg)
 
         for key, arg in kwargs.items():
             setattr(self, key, arg)
 
-    def _test_default(self):
+    def _test_evaluation(self):
         old_locked = self._locked
         try:
-            eval(self._default_expression)
+            eval(self._evaluate_string)
         except Exception,e:
-            self._logger.warning('Your default expression >>%s<< failed to evaluate with error: %s' % (self._default_expression,str(e)))
-
-        self._locked = old_locked
+            self._logger.warning('Your evaluate expression >>%s<< failed to evaluate with error: %s' % (self._evaluate_string,str(e)))
+        finally:
+            self._locked = old_locked
 
     
-    def set_single(self,name,val,pos=0):
+    def set_single(self,name,val):
         ''' Adds a single entry to the parameter.
         
         This method is called for statements like:
@@ -390,10 +390,10 @@ class Parameter(BaseParameter):
             self._comment = val
             return
 
-        if name =='Default' or name == 'default':
+        if name in ['EvalStr','evalstr','EvaluateString','evaluatestring']:
             assert isinstance(val,str)
-            self._default_expression=val
-            self._test_default()
+            self._evaluate_string=val
+            self._test_evaluation()
             return
 
         if name == 'FullCopy' or name =='fullcopy':
@@ -401,44 +401,23 @@ class Parameter(BaseParameter):
             return
 
         if name == 'val' or name == 'Val':
-            raise AttributeError('Sorry, cannot add entry >>val<< or >>Val<<. These names are reserved for for fast access to the default value.')
+            raise AttributeError('Sorry, cannot add entry >>val<< or >>Val<<. These names are reserved for for fast access to the evaluation of the parameter.')
+
+
+        if self.is_array():
+            raise AttributeError('Your Parameter is an explored array can no longer change values!')
+
 
         val = self._convert_data(val)
 
         if not self._is_supported_data(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
 
-        if pos >= len(self) and pos > 0:
-            raise AttributeError('Cannot manipulate the parameter at position %d, it contains only %d entries.'%(pos,len(self)))
+        self._data[name] = val
 
+        if not self._evaluate_string:
+            self._evaluate_string = 'self.'+name
 
-        if self.is_array():
-            if not name in self._data:
-                #I don't like this, but otherwise it is annoying:
-                if not isinstance(self,SimpleResult):
-                    self._logger.warning('Your Parameter is an array and does not contain %s, I will create a new entry called %s and use the supplied value as the default.' %(name,name))
-                else:
-                    if not self._default_expression:
-                        self._default_expression = 'self.'+name
-
-                length=max(len(self),1)
-
-                self._data[name] =[val for irun in range(length)]
-            else:
-                if not self._values_of_same_type(val,self._data[name][0]):
-                    raise AttributeError('You want to put %s in the entry %s, but the types do not match, default type is %s and your type is %s!' %(str(val),name,str(type(self._data[name][0])),type(val)))
-                self._data[name][pos]=val
-        else:
-
-            if name in self._data:
-                old_val = self._data[name][0]
-                self._logger.debug('Replacing entry %s in parameter %s, previous value was %s, new value is %s' % (name,self._fullname,str(old_val),str(val)))
-                if not type(old_val) == type(val):
-                    self._logger.warning('Type of entry %s in parameter %s has changed, previous type was %s, type now is %s.' % (name,self._fullname,str(type(old_val)),str(type(val))))
-
-            self._data[name] = [val]
-            if not self._default_expression:
-                self._default_expression = 'self.'+name
 
 
 
@@ -452,196 +431,117 @@ class Parameter(BaseParameter):
             val.flags.writeable = False
             return val
 
-        # if type(val) in HDF5StorageService.TRANSLATIONDICT:
-        #     return val
-        #
-        # if isinstance(val,int):
-        #     val = np.int(val)
-        #     return val
-        #
-        # if isinstance(val,float):
-        #     val = np.float(val)
-        #     return val
-        #
-        # if isinstance(val,str):
-        #     val = np.str(val)
-        #     return val
-        #
-        # if isinstance(val,bool):
-        #     val = np.bool(val)
-        #     return val
-        #
-        # if isinstance(val,complex):
-        #     val = np.complex(val)
-        #     return val
-
         return val
 
-    def lock(self):
-        self._locked = True
-
-    def unlock(self):
-        self._locked = False
-        
     def get_entry_names(self):
         return self._data.keys()
         
-    def change_values_in_array(self,name,values,positions):
-        ''' Changes the values of entries for given positions if the parameter is an array.
-        
-        For example:
-        
-        >>> param.change_values_in_array('entry',[18.0,3.0,4.0],[1,5,9])
-        
-        '''  
-
-        if self.is_locked():
-            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!')
-
-        if not self.is_array():
-            raise pex.ParameterNotArrayException('Parameter ' + self._name + ' is not an array!')
-        
-
-        if not isinstance(positions, list) and not isinstance(positions, tuple):
-            positions = [positions];
-            values = [values];
+    def get_array(self):
+        if not self._isarray():
+            raise TypeError('Your parameter is not array, so cannot return the explored values')
         else:
-            if not len(positions) == len(values):
-                raise AttributeError('Parameter ' + self._name + ': List are not of equal length, positions has ' +len(positions)  +' entries and values ' + len(values) +'.')
-        
-        for idx, pos in enumerate(positions) :      
-        
-            val = values[idx]
-            
-            self.set_single(self,name,val,pos)
-            
-    def to_dict_of_lists(self):
-        ''' Returns a list of dictionaries of the data items.
-        
-        Each data item is a separate dictionary
-        '''
-        return_dict = {}
-        for key, val_list in self._data.items():
-            return_dict[key] = val_list[:]
+            return_dict={}
+            for key, vallist in self._explored_data.items():
+                return_dict[key] = vallist[:]
+            return return_dict
 
 
-    def to_list_of_dicts(self):
-        ''' Returns a dictionary with all value names as keys and a list of values.
-        '''
-        
-        result_list = [{}]
+    def to_dict(self):
+        return self._data.copy()
 
-        for key,val_list in self._data.items():
-            for idx,val in enumerate(val_list):
-                if len(result_list) <= idx:
-                    result_list.append({})
-                result_list[idx][key] = val
-
-    def explore(self, explore_dict = None, **kwexplore_dict):
+    def explore(self, *args, **kwargs):
         ''' Changes a parameter to an array to allow exploration.
         
-        The input is a dictionary of lists.
-        can be called via explore(input_dict) or explore(**input_dict)
+        *args and **kwargs are treated as in >>set(*arg,**kwargs)<< yet they need to contain
+        lists of values of equal length that specify the exploration.
         '''
         if self.is_locked():
             raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
-        # Check whether a dictionary is provided...
-        if explore_dict == None:
-            explore_dict = kwexplore_dict
+        if self.is_array():
+            raise TypeError('Your Parameter %s is already explored, cannot explore it further!' % self._name)
+
+
+        combined_args = self._data_sanity_checks(args, kwargs)
+
+        self._length = self._length_check(combined_args)
+
+        self._explored_data = combined_args
+        self.lock()
+
+    def _length_check(self,combined_args):
+        actual_length = -1
+
+        for key, vallist in combined_args.items():
+            list_length = len(vallist)
+            if actual_length == -1:
+                actual_length = list_length
+            elif actual_length != list_length:
+                raise ValueError('The entries you want to explore are not of the same length!')
+            else:
+                pass # Everything's fine
+
+        if actual_length == -1:
+            raise ValueError('Something is wrong, your exploration of parameter >>%s<< did not contain a single entry to explore.' % self._name)
+        elif actual_length == 1:
+            raise ValueError('The length of your exploration is 1, why do you want to explore >>%s<< anyway, better change the values of the parameter instead directly.' % self._name)
         else:
-            if kwexplore_dict:
-                self._logger.warning('The function has been called via explore(dict1,**dict2). I will only use dict1.')
-
-        new_explore_dict = {}
-
-        for key,values in explore_dict.items():
-            if not isinstance(values, list):
-                raise AttributeError('Dictionary does not contain lists, thus no need for parameter exploration.')
-
-            ## Copy the list, because we do not want to change the explore dict per se
-            valuescopy = values[:]
-            val=valuescopy.pop(0)
-
-            new_explore_dict[key] = valuescopy
-
-            if self.is_array() and not isinstance(self,BaseResult):
-                self._logger.warning('You are exploring the parameter %s that is already an array, I will delete the current array.' % self._fullname)
-                self.shrink()
-
-            if not key in self._data and not isinstance(self,BaseResult):
-                self._logger.warning('Key ' + key + ' not found for parameter ' + self._name + ',\n I don not appreciate this but will add it to the parameter.')
-
-            self.set_single(key, val)
-
-
-        self.become_array()
-        self.add_items(new_explore_dict)
+            return actual_length
 
 
 
-    
-    
-    def add_items(self,itemdict=None,**kwitemdict):
-        ''' Adds entries for a given input dictionary containing lists.
-        
-        For example:
-        >>> param.add_items_as_dict({'entry1':[1,2,3],'entry2':[3.0,2.0,1.0]})
-        
-        or more simply:
-        >>> param.add_items_as_dict(entry1=[1,2,3],entry2=[3.0,2.0,1.0])
-        '''
-        
-        if self.is_locked():
-            raise pex.ParameterLockedException('Parameter ' + self._fullname + ' is locked!')
+    def _data_sanity_checks(self, args, kwargs):
+
+        combined_args = {}
+
+        temp_dict = kwargs.copy()
+
+        ## combine both args and kwargs, and add val'i' as the keyword:
+        for idx, arglist in enumerate(args):
+
+            entrystring = 'val'+str(idx)
+
+            if entrystring in kwargs:
+                raise ValueError('You have stuff to explore in args, as well as the corresponding keyword %s in kwargs.' % entrystring)
+
+            temp_dict[entrystring]=arglist
+
+        ## Now check and convert the data if necessary:
+        for key, vallist in temp_dict.items():
+            if not isinstance(vallist,list):
+                raise TypeError('If you want to explore a parameter you need to supply lists of values %s, is not a list but %s.' %(key,str(type(vallist))))
+            combined_args[key] =[]
+
+            if not key in self._data:
+                raise AttributeError('%s is not in your default entries of your parameter. You can only explore data that is part of your parameter.'%key)
+
+            default_val = self._data[key]
+
+            for val in vallist:
+                newval = self._convert_data(val)
+
+                if not self._is_supported_data(newval):
+                    raise TypeError('%s contains items of not supported type %s.' % (key,str(type(newval))))
+
+                if not self._values_of_same_type(newval,default_val):
+                    raise TypeError('%s is not of the same type as the original entry value, new type is %s vs old type %s.' % (key, str(type(newval)),str(type(default_val))))
 
 
-        if not self.is_array():
-            raise pex.ParameterNotArrayException('Your Parameter %s is not an array please use explore to turn it into an array.' % self.get_fullname())
+                combined_args[key].append(newval)
 
-        if itemdict == None:
-            itemdict = kwitemdict
-        else:
-            if kwitemdict:
-                self._logger.warning('The function has been called via explore(dict1,**dict2). I will only use dict1.')
+        return combined_args
 
-
-        #check if all the lists are equally long:
-        prev_length = -1
-        for key, val_list in itemdict.items():
-            if not isinstance(val_list, list):
-                val_list = [val_list]
-
-            if not prev_length == -1:
-                if not prev_length == len(val_list):
-                    raise AttributeError('The entry lists you want to add to the parameter are of unequal length!')
-
-            prev_length = len(val_list)
-
-
-        length_before_adding = len(self)
-        self._increase(prev_length)
-
-        for key, val_list in itemdict.items():
-            for idx,val in enumerate(val_list):
-                self.set_single(name=key,val=val,pos=idx+length_before_adding)
-
-          
-
-    def _increase(self, size):
-        ''' Increases a Parameter array by a given size and fills it with the value given at the first positions.
-        :param size: The size with which the Parameter array will be increased
-        '''
-        if not self.is_array():
-            raise pex.ParameterNotArrayException('Your Parameter %s is not an array cannot increase the size.' % self._fullname)
-        for key, val_list in self._data.items():
-            val_list.extend([val_list[0] for irun in range(size)])
 
     def _store_data(self, store_dict):
 
         store_dict['Data'] = {}
         for key, val in self._data.items():
-            store_dict['Data'][key] = self._data[key][:]
+            store_dict['Data'][key] = [self._data[key]]
+
+        if self.is_array():
+            store_dict['ExploredData'] = {}
+            for key, val in self._explored_data.items():
+                store_dict['ExploredData'][key] = self._explored_data[key][:]
 
 
 
@@ -651,24 +551,22 @@ class Parameter(BaseParameter):
                    'Location':[self._location],
                    'Comment':[self._comment],
                    'Type':[str(type(self))],
-                   'Class_Name': [self.__class__.__name__]}
+                   'Class_Name': [self.__class__.__name__],
+                   'Length' : [self._length]}
 
 
 
-    def _store_default_expression(self,store_dict):
+    def _store_eval_expression(self,store_dict):
 
-        if self._default_expression:
-            store_dict['Info']['Default'] = [self._default_expression]
-
-
-
+        if self._evaluate_string:
+            store_dict['Info']['EvalStr'] = [self._evaluate_string]
 
 
     def __store__(self):
         store_dict={}
         self._store_meta_data(store_dict)
         self._store_data(store_dict)
-        self._store_default_expression(store_dict)
+        self._store_eval_expression(store_dict)
 
         return store_dict
 
@@ -680,70 +578,56 @@ class Parameter(BaseParameter):
         self._location = info_dict['Location'][0]
         self._comment = info_dict['Comment'][0]
         self._fullname = self._location +'.' + self._name
+        self._length = info_dict['Length'][0]
 
         assert str(type(self)) == info_dict['Type'][0]
         assert self.__class__.__name__ == info_dict['Class_Name'][0]
 
-        return load_dict
 
 
     def _load_data(self, load_dict):
-        self._data = load_dict['Data']
+
+        for key, vallist in load_dict['Data'].items():
+            self._data[key] = vallist[0]
 
 
-    def _load_default_expression(self,load_dict):
-        self._default_expression=None
+        if 'ExploredData' in load_dict:
+            self._explored_data = load_dict['ExploredData']
 
-        if 'Default' in load_dict['Info']:
-            self._default_expression=load_dict['Info']['Default'][0]
-            self._test_default()
+
+    def _load_eval_expression(self,load_dict):
+
+        if 'EvalStr' in load_dict['Info']:
+            self._evaluate_string=load_dict['Info']['EvalStr'][0]
+            self._test_evaluation()
         else:
-            self._default_expression=None
+            self._evaluate_string=None
 
 
-    def _check_if_array(self):
-        if len(self)>1:
-            self._isarray=True
-        else:
-            self._isarray=False
 
 
     def __load__(self,load_dict):
         self._load_meta_data(load_dict)
         self._load_data(load_dict)
-        self._load_default_expression(load_dict)
-        self._check_if_array()
+        self._load_eval_expression(load_dict)
 
 
-
-
-    def to_dict(self):
-        ''' Returns the entries of the parameter as a dictionary.
-        
-        Only the first parameter is returned in case of a parameter array.
-        '''
-        result_dict={}
-        for key, val_list in self._data():
-            result_dict[key]=val_list[0]
 
     def set_copy_mode(self, val):
         assert isinstance(val, bool)
         self._fullcopy = val
 
 
-    def get(self, name,n=None):
-
-        if n == None:
-            n=self._n
+    def get(self, name):
 
         if name == 'FullCopy' or name =='fullcopy':
             return self._fullcopy
 
-        if name == 'Default' or name=='default':
-            return self._default_expression
+        if name in ['EvalStr','evalstr','EvaluateString','evaluatestring']:
+            return self._evaluate_string
 
         if name == 'val' or name == 'Val':
-            return self.return_default()
+            return self.evaluate()
 
         if name == 'comment' or name=='Comment':
             return self._comment
@@ -751,38 +635,55 @@ class Parameter(BaseParameter):
         if not name in self._data:
             raise AttributeError('Parameter %s does not have attribute or entry %s.' %(self._fullname,name))
         
-        if n >= len(self):
-            raise ValueError('Cannot access %dth element, parameter has only %d elements.' % (n,len(self)))
 
+        self.lock() # As soon as someone accesses an entry the parameter gets locked
+        return self._data[name]
 
-        self.lock()
-        return self._data[name][n]
-
-    def return_default(self):
-        if self._default_expression:
-            return eval(self._default_expression)
+    def evaluate(self):
+        if self._evaluate_string:
+            return eval(self._evaluate_string)
         else:
-            self._logger.debug('Parameter has no default value yet.')
             return None
 
     
     def __getattr__(self,name):
         if (not '_data' in self.__dict__ or
-            not '_n' in self.__dict__ or
             not '_fullname' in self.__dict__):
 
             raise AttributeError('This is to avoid pickling issues!')
         
         return self.get(name)
+
+    def __delattr__(self, item):
+        if  item[0] == '_':
+            del self.__dict__[item]
+        elif self.is_locked():
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
+        elif self.is_array():
+            raise TypeError('Your parameter %s is an explored array, cannot delete items, call >>shrink()<< before you delete entries.' % self.get_name())
+        elif self.has_value(item):
+            del self._data[item]
+        else:
+            raise AttributeError('%s is not an entry of you parameter %s, cannot delete it.' % (item,self.get_name()))
  
     def shrink(self):
         ''' Shrinks the parameter array to a single parameter.
         '''
-        self._isarray = False
-        for key, val_list in self._data.items():
-            del val_list[1:]
+        if self.is_locked():
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
+        self._explored_data={}
+        self._length = 1
 
+    def empty(self):
+        ''' Erases all data in the Parameter, if the parameter was explored, it is shrunk as well.
+        '''
+        if self.is_locked():
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
+
+        self.shrink()
+        self._data={}
+        self._length = 0
     
      
 
@@ -817,18 +718,31 @@ class SparseParameter(Parameter):
 
         return True
 
-    def set_single(self,name,val,pos=0):
+    def set_single(self,name,val):
         if SparseParameter.separator in name:
             raise AttributeError('Sorry your entry cannot contain >>%s<< this is reserved for storing sparse matrices.' % SparseParameter.separator)
 
-        super(SparseParameter,self).set_single(name,val,pos)
+        super(SparseParameter,self).set_single(name,val)
 
     def _load_data(self, load_dict):
+        data_dict = load_dict['Data']
+
+        self._load_sparse_data(data_dict)
+
+        if 'ExploredData' in load_dict:
+            explored_dict = load_dict['ExploredData']
+            self._load_sparse_data(explored_dict)
+
+        super(SparseParameter,self)._load_data(load_dict)
+
+    def _load_sparse_data(self, data_dict):
+
+
         sparse_matrices = {}
-        for key,val in load_dict['Data'].items():
+        for key,val in data_dict.items():
             if SparseParameter.separator in key:
                 sparse_matrices[key]=val
-                del load_dict['Data'][key]
+                del data_dict[key]
 
 
         sparse_matrices = nest_dictionary(sparse_matrices, SparseParameter.separator)
@@ -862,17 +776,24 @@ class SparseParameter(Parameter):
 
                 sparsematlist.append(sparsemat)
 
-            load_dict['Data'][name] = sparsematlist
+            data_dict[name] = sparsematlist
 
 
-        super(SparseParameter,self)._load_data(load_dict)
-
-
-
-
-    def _store_data(self,store_dict):
+    def _store_data(self, store_dict):
         super(SparseParameter,self)._store_data(store_dict)
+
         data_dict = store_dict['Data']
+
+        self._store_sparse_data(data_dict)
+
+        if 'ExploredData' in store_dict:
+            explored_dict = store_dict['ExploredData']
+            self._store_sparse_data(explored_dict)
+
+
+    def _store_sparse_data(self,data_dict):
+
+
 
         for key, val_list in data_dict.items():
             if spsp.isspmatrix(val_list[0]):
@@ -938,28 +859,136 @@ class BaseResult(object):
         return self.__class__.__name__
 
     def __store__(self):
-        pass
+        raise NotImplementedError('Implement this!')
 
     def __load__(self, load_dict):
-        pass
+        raise  NotImplementedError('Implement this!')
 
-class SimpleResult(SparseParameter,BaseResult):
-    ''' Simple Container for results. 
-    
-    In fact this is a lazy implementation, its simply a sparse parameter^^
-    For simplicity it cannot be locked and it is always an array.
+
+    def is_empty(self):
+        ''' Returns true if no data is stored into the result
+        :return:
+        '''
+        raise NotImplementedError('You should implement this!')
+
+    def empty(self):
+        ''' Erases all data in the result and afterwards >>is_empty()<< should evaluate true
+        :return:
+        '''
+        raise NotImplementedError('You should implement this!')
+
+class SimpleResult(BaseResult):
+    ''' Simple Container that stores tables and arrays. Note that no sanity checks on individual data is made
+    and you have to take care, that your data is understood by the Storage Service! It is assumed that
+    results tend to be large and therefore sanity checks would be too expensive!
     '''
 
     def __init__(self, fullname, *args, **kwargs):
-        super(SimpleResult,self).__init__(fullname, *args, **kwargs)
-        self._fullcopy = True
+        super(SimpleResult,self).__init__(fullname)
+        self._data = {}
+        self._comment = None
 
-    def is_locked(self):
-        return False
-
-    def is_array(self):
-        return True
+        self.set(*args,**kwargs)
 
 
-     
 
+    def is_empty(self):
+        return len(self._data)== 0
+
+    def empty(self):
+        self._data={}
+
+
+    def set(self,*args, **kwargs):
+
+        for idx,arg in enumerate(args):
+            valstr = 'res'+str(idx)
+            self.set_single(valstr,arg)
+
+        for key, arg in kwargs.items():
+            self.set_single(key,arg)
+
+    def set_single(self, name, item):
+
+        if name in ['comment', 'Comment']:
+            assert isinstance(item,str)
+            self._comment = item
+
+        if name == 'Info':
+            raise ValueError('>>Info<< is reserved for storing  information like name and location of the result etc.')
+
+        if isinstance(item, (np.ndarray,dict)):
+            self._data[name] = item
+        else:
+            raise TypeError('Your result >>%s<< of type >>%s<< is not supported.' % (name,str(type(item))))
+
+
+
+    def __store__(self):
+        store_dict ={}
+        self._store_meta_data(store_dict)
+        store_dict.update(self._data)
+        return store_dict
+
+
+    def _store_meta_data(self,store_dict):
+
+        store_dict['Info'] = {'Name':[self._name],
+                   'Location':[self._location],
+                   'Type':[str(type(self))],
+                   'Class_Name': [self.__class__.__name__]}
+
+        if self._comment:
+            store_dict['Comment'] = [self._comment]
+
+
+    def __load__(self, load_dict):
+        info_dict = load_dict.pop('Info')
+        self._load_meta_data(info_dict)
+
+        self._data = load_dict
+
+
+    def _load_meta_data(self, info_dict):
+
+        self._name = info_dict['Name'][0]
+        self._location = info_dict['Location'][0]
+        self._fullname = self._location +'.' + self._name
+
+
+        assert str(type(self)) == info_dict['Type'][0]
+        assert self.__class__.__name__ == info_dict['Class_Name'][0]
+
+        if 'Comment' in info_dict:
+            self._comment = info_dict['Comment'][0]
+        else:
+            self._comment = None
+
+    def __delattr__(self, item):
+        if item[0]=='_':
+            del self.__dict__[item]
+        elif item in self._data:
+            del self._data[item]
+        else:
+            raise AttributeError('Your result >>%s<< does not contain %s.' % (self.get_name(),item))
+
+    def __setattr__(self, key, value):
+        if key[0]=='_':
+            self.__dict__[key] = value
+        else:
+            self.set_single(key, value)
+
+    def __getattr__(self, name):
+
+        if (not '_data' in self.__dict__ or
+            not '_fullname' in self.__dict__):
+
+            raise AttributeError('This is to avoid pickling issues!')
+
+        if name in ['Comment', 'comment']:
+            return self._comment
+
+        if not name in self._data:
+            raise  AttributeError('>>%s<< is not part of your result >>%s<<.' % (name,self._fullname))
+
+        return self._data[name]

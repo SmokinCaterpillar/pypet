@@ -2,25 +2,31 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, SparseParameter
+from mypet.parameter import Parameter, SparseParameter, BaseResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
 from mypet.environment import Environment
+from mypet.storageservice import HDF5StorageService
 import pickle
 import logging
 import cProfile
 from mypet.utils.helpful_functions import flatten_dictionary
 import scipy.sparse as spsp
+import os
+import shutil
 
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
 
-        result_mat = traj.all_mat * traj.Normal.int * np.sum(traj.Numpy.double)*arg1*simple_kwarg
+        all_mat = traj.all_mat
+        Normal_int= traj.Normal.int
+        Sum= np.sum(traj.Numpy.double)
 
-        traj.add_result('ResMatrix',result_mat)
+        result_mat = all_mat * Normal_int * Sum * arg1 * simple_kwarg
+        traj.add_result('ResMatrix',result_mat.todense())
         traj.add_derived_parameter('All.To.String', str(traj.to_dict(fast_access=True,short_names=False)))
 
 
@@ -75,7 +81,7 @@ class EnvironmentTest(unittest.TestCase):
         for key, val in flat_dict.items():
             if key == 'Sparse.all_mat':
                 traj.ap(key,  mat0=val[0],mat1=val[1], mat2=val[2],
-                        param_type = SparseParameter, default = 'self.mat0+self.mat1+self.mat2')
+                        param_type = SparseParameter, evalstr = 'self.mat0+self.mat1+self.mat2')
             else:
                 traj.ap(key,val)
 
@@ -134,10 +140,32 @@ class EnvironmentTest(unittest.TestCase):
         self.env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
 
-        newtraj = Environment(self.trajname,self.filename,self.trajname,logfolder=self.logfolder).get_trajectory()
-        newtraj.set_storage_service(self.env.get_storage_service())
+        newtraj = Trajectory()
+        newtraj.set_storage_service(HDF5StorageService(filename=self.filename))
         newtraj.load(trajectoryname=-1,load_derived_params=2,load_results=2,replace=True)
 
+        ## Check if everything is fine:
+
+
+        self.traj.update_skeleton()
+        self.traj.load_stuff(self.traj.to_dict().keys(), only_empties=True)
+
+        traj = self.traj
+
+        old_items = traj.to_dict(fast_access=True)
+        new_items = newtraj.to_dict(fast_access=True)
+
+        self.assertEqual(len(old_items),len(new_items))
+        for key,item in new_items.items():
+            old_item = old_items[key]
+            if not isinstance(item, BaseResult) and not spsp.issparse(item) and not key in traj.get_explored_params():
+               self.assertTrue(np.all(old_item==item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+
+
+
+
+        #os.remove(self.filename)
+        #shutil.rmtree(self.logfolder,True)
 
 
 

@@ -8,6 +8,7 @@ import unittest
 from mypet.parameter import Parameter, SparseParameter
 import pickle
 import scipy.sparse as spsp
+import mypet.petexceptions as pex
 
 class ParameterTest(unittest.TestCase):
 
@@ -54,14 +55,14 @@ class ParameterTest(unittest.TestCase):
                             np.array(['Ocho', 'Nueve', 'Diez'])]}
 
         ## Explore the parameter:
-        self.param.explore(self.explore_dict)
+        self.param.explore(**self.explore_dict)
 
 
     def test_different_kind_of_default_evaluation(self):
-        self.assertTrue(self.param.val == self.param.return_default())
+        self.assertTrue(self.param.val == self.param.evaluate())
 
         self.param.unlock()
-        self.param.Default = 'self.npfloat * 2.0'
+        self.param.evalstr = 'self.npfloat * 2.0'
 
         self.assertTrue(np.all(self.param.val == self.npfloat*2.0))
 
@@ -81,11 +82,15 @@ class ParameterTest(unittest.TestCase):
 
     def test__getstate_and__setstate(self):
         state_dict = self.param.__getstate__()
-        data_dict = state_dict['_data']
-        for key, vallist in data_dict.items():
+        explored_dict = state_dict['_explored_data']
+        for key, vallist in explored_dict.items():
             self.assertIsInstance(vallist, list)
             for idx,val in enumerate(vallist):
-                self.assertTrue(np.all(val==self.param.get(key,idx)))
+                self.assertTrue(np.all(val==self.param.get_array(key)[idx]))
+
+        data_dict = state_dict['_data']
+        for key, val in data_dict.items():
+            self.assertTrue(np.all(val==self.param.get(key)))
 
 
         self.param.__setstate__(state_dict)
@@ -102,11 +107,13 @@ class ParameterTest(unittest.TestCase):
     def test_exploration(self):
         self.assertTrue(len(self.param) == 3)
 
-        self.param.set_parameter_access(n=1)
 
-        arstr = self.param.get('npstr')
-        cmparstr = self.explore_dict['npstr'][1]
-        self.assertTrue(np.all( arstr== cmparstr))
+        for n in range(len(self.param)):
+            self.param.set_parameter_access(n=n)
+
+            arstr = self.param.get('npstr')
+            cmparstr = self.explore_dict['npstr'][n]
+            self.assertTrue(np.all( arstr== cmparstr))
 
         #The other values should be changed:
         self.assertEqual(self.param.get('val0'),self.val0)
@@ -132,6 +139,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_pickling_without_multiprocessing(self):
+        self.param.unlock()
         self.param.set(FullCopy = True)
 
         dump = pickle.dumps(self.param)
@@ -148,19 +156,54 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_pickling_with_multiprocessing(self):
+        self.param.unlock()
         self.param.set(FullCopy = False)
 
         dump = pickle.dumps(self.param)
 
         newParam = pickle.loads(dump)
 
-        self.assertTrue(len(newParam) == 1)
+        self.assertTrue(len(newParam._explored_data) == 0)
 
         self.param = newParam
 
         self.test_the_insertion_made_implicetly_in_setUp()
 
         self.testMetaSettings()
+
+
+    def testresizinganddeletion(self):
+        with self.assertRaises(pex.ParameterLockedException):
+            del self.param.npfloat
+
+        with self.assertRaises(pex.ParameterLockedException):
+            self.param.shrink()
+
+        self.param.unlock()
+
+
+
+        self.assertTrue(self.param.is_array())
+        self.param.shrink()
+        self.assertTrue(len(self.param) == 1)
+
+        self.assertFalse(self.param.is_empty())
+        self.assertFalse(self.param.is_array())
+
+        with self.assertRaises(AttributeError):
+            del self.param.hokuspokus
+
+        #with self.assertRaises(TypeError):
+           # del self.param._length
+
+        del self.param.npfloat
+
+        self.param.empty()
+
+        self.assertTrue(self.param.is_empty())
+        self.assertFalse(self.param.is_array())
+
+        del self.param
 
 
 class SparseParameterTest(ParameterTest):
@@ -214,7 +257,7 @@ class SparseParameterTest(ParameterTest):
                             np.array(['Ocho', 'Nueve', 'Diez'])]}
 
         ## Explore the parameter:
-        self.param.explore(self.explore_dict)
+        self.param.explore(**self.explore_dict)
 
 
     def test_the_insertion_made_implicetly_in_setUp(self):

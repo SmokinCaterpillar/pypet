@@ -69,7 +69,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.set_fast_access(False)
 
-        self.traj.get('FloatParam').val == self.traj.Par.FloatParam.return_default()
+        self.traj.get('FloatParam').val == self.traj.Par.FloatParam.evaluate()
 
         self.traj.FortyTwo.val == 42
 

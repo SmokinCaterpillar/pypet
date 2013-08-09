@@ -47,21 +47,34 @@ class BrianParameter(SparseParameter):
     #     return super(BrianParameter,self)._convert_data(val)
 
 
-    def set_single(self,name,val,pos=0):
+    def set_single(self,name,val):
         if BrianParameter.separator in name:
             raise AttributeError('Sorry your entry cannot contain >>%s<< this is reserved for storing brian units and values.' % BrianParameter.separator)
 
-        super(BrianParameter,self).set_single(name,val,pos)
+        super(BrianParameter,self).set_single(name,val)
+
 
     def _load_data(self, load_dict):
+
+        data_dict =load_dict['Data']
+
+        self._load_brian_data(data_dict)
+
+        if 'ExploredData' in load_dict:
+            explored_dict = load_dict['ExploredData']
+            self._load_brian_data(explored_dict)
+
+        super(BrianParameter,self)._load_data(load_dict)
+
+    def _load_brian_data(self, data_dict):
 
         briandata = {}
 
 
-        for key, val in load_dict['Data'].items():
+        for key, val in data_dict.items():
             if BrianParameter.separator in key:
                 briandata[key] = val
-                del load_dict['Data'][key]
+                del data_dict[key]
 
         briandata = nest_dictionary(briandata, BrianParameter.separator)
 
@@ -80,14 +93,21 @@ class BrianParameter(SparseParameter):
                 brian_quantity = eval(evalstr)
                 brianlist.append(brian_quantity)
 
-            load_dict['Data'][brianname] = brianlist
-
-        super(BrianParameter,self)._load_data(load_dict)
+            data_dict[brianname] = brianlist
 
 
-    def _store_data(self,store_dict):
+    def _store_data(self, store_dict):
         super(BrianParameter,self)._store_data(store_dict)
         data_dict = store_dict['Data']
+        self._store_brian_data(data_dict)
+
+        if 'ExploredData' in store_dict:
+            explored_dict = store_dict['ExploredData']
+            self._load_brian_data(explored_dict)
+
+
+    def _store_brian_data(self,data_dict):
+
 
         for key, val_list in data_dict.items():
             if isinstance(val_list[0],Quantity):

@@ -35,6 +35,8 @@ class TrajOrRun(object):
     # def add_derived_parameter(self, *args,**kwargs):
     #     pass
 
+
+
     def set_search_strategy(self, string):
         assert string == 'bfs' or string == 'dfs'
         self._nninterface._search_strategy = string
@@ -83,14 +85,6 @@ class TrajOrRun(object):
         '''
         return self._nninterface._get(name, fast_access, check_uniqueness, search_strategy)
 
-    def store(self):
-        ''' Stores all obtained results a new derived parameters to the hdf5file.
-
-        In case of multiprocessing a lock needs to be provided to prevent hdf5file corruption!!!
-        '''
-        #self._add_explored_params()
-        self._storageservice.store(self)
-
     def get_storage_service(self):
         return self._storageservice
 
@@ -103,7 +97,6 @@ class TrajOrRun(object):
         :return: A dictionary
         '''
         return self._nninterface._to_dict(fast_access, short_names)
-
 
 
     def __getattr__(self,name):
@@ -123,6 +116,36 @@ class TrajOrRun(object):
             self.__dict__[key]=value
         else:
             self._nninterface._set(key, value)
+
+
+    def _fetch_items(self, stuff_list, kwargs):
+
+
+        only_empties = kwargs.pop('only_empties',False)
+
+        non_empties = kwargs.pop('non_empties',False)
+
+
+        if not isinstance(stuff_list,list):
+            stuff_list=[stuff_list]
+
+        item_list = []
+        for arg in stuff_list:
+            if isinstance(arg, str):
+                item = self.get(arg)
+            else:
+                item = arg
+
+            if isinstance(item,TreeNode):
+                raise ValueError('One of the items you want to store or loead is a Tree Node, but Tree Nodes cannot be stored or loaded!')
+
+            if only_empties and not item.is_empty():
+                continue
+            if non_empties and item.is_empty():
+                continue
+
+            item_list.append(item)
+        return item_list
 
     def get_full_param_name(self, param_name, entry_name=None):
         param = self.get(param_name)
@@ -333,7 +356,7 @@ class NaturalNamingInterface(object):
     def _get_result(self, data, fast_access):
 
         if fast_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
-            return data.return_default()
+            return data.evaluate()
         else:
             return data
 
@@ -600,7 +623,7 @@ class Trajectory(TrajOrRun):
         if not dynamicly_imported_classes == None:
             self._dynamic_imports.update(dynamicly_imported_classes)
         
-        self._loadedfrom = ('None','None')
+        self._loadedfrom = 'None'
 
         self._not_admissable_names = set(dir(self) + dir(self._nninterface) + dir(self._nninterface._root))
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
@@ -1050,21 +1073,63 @@ class Trajectory(TrajOrRun):
         for key, par in self._derivedparameters.items():
             par.lock()
             
+    def update_skeleton(self):
+        self.load(self.get_name(),False,globally.UPDATE_SKELETON,globally.UPDATE_SKELETON,
+                  globally.UPDATE_SKELETON)
+
+    def load_stuff(self, to_load_list, *args,**kwargs):
+        ''' Loads parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        names.
+        If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
+        If kwargs contains the keyword >>only_empties=True<<, only empty parameters or results are passed to the
+        storage service to get loaded.
+        :param to_load_list: A list with parameters or results to store.
+        :param args: Additional arguments directly passed to the storage service
+        :param kwargs: Additional keyword arguments directly passed to the storage service (except the kwarg
+        non_empties)
+        :return:
+        '''
+        item_list = self._fetch_items(to_load_list, kwargs)
+
+        self._storageservice.load(item_list,trajectoryname=self.get_name(),*args,**kwargs)
+
+    def store_stuff(self, to_store_list, *args, **kwargs):
+        ''' Stores parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        names.
+        If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
+        If kwargs contains the keyword >>non_empties=True<<, only non-empty parameters or results are passed to the
+        storage service to get stored.
+        :param to_load_list: A list with parameters or results to store.
+        :param args: Additional arguments directly passed to the storage service
+        :param kwargs: Additional keyword arguments directly passed to the storage service (except the kwarg
+        non_empties)
+        :return:
+        '''
+        item_list = self._fetch_items(to_store_list, kwargs)
+
+        self._storageservice.store(item_list,trajectoryname=self.get_name(),*args,**kwargs)
 
     def load(self,
              trajectoryname=None,
-             filename = None,
              replace=False,
              load_params = globally.LOAD_DATA,
              load_derived_params = globally.LOAD_SKELETON,
-             load_results = globally.LOAD_SKELETON):
+             load_results = globally.LOAD_SKELETON,
+             *args, **kwargs):
 
         if not trajectoryname:
             trajectoryname = self.get_name()
 
-        self._storageservice.load(self,trajectoryname, filename, replace, load_params, load_derived_params, \
-                                                                         load_results)
+        self._storageservice.load(self,trajectoryname=trajectoryname, replace=replace, load_params=load_params,
+                                  load_derived_params=load_derived_params,
+                                  load_results=load_results,
+                                  *args,**kwargs)
 
+    def store(self, *args, **kwargs):
+        ''' Stores all obtained results a new derived parameters to the hdf5file.
+        '''
+        #self._add_explored_params()
+        self._storageservice.store(self,trajectoryname=self.get_name(), *args, **kwargs)
 
     def is_empty(self):
         return (len(self._parameters) == 0 and
@@ -1187,7 +1252,7 @@ class SingleRun(TrajOrRun):
         self.last = self._parent_trajectory.last
         self.Last = self._parent_trajectory.Last
 
-        del self._single_run._nninterface
+        #del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
         self._single_run._standard_param_type = self._parent_trajectory._standard_param_type
         self._single_run._standard_result_type = self._parent_trajectory._standard_result_type
@@ -1204,6 +1269,8 @@ class SingleRun(TrajOrRun):
         '''
         return 1
 
+    def get_parent_name(self):
+        return self._parent_trajectory.get_name()
 
     def get_n(self): 
         return self._n   
@@ -1298,3 +1365,27 @@ class SingleRun(TrajOrRun):
         '''
         assert issubclass(result_type,BaseResult)
         self._single_run._standard_result_type=result_type
+
+
+    def store(self, *args, **kwargs):
+        ''' Stores all obtained results a new derived parameters to the hdf5file.
+        '''
+        #self._add_explored_params()
+        self._storageservice.store(self,trajectoryname=self.get_parent_name(), *args, **kwargs)
+
+    def store_stuff(self, to_store_list, *args, **kwargs):
+        ''' Stores parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        names.
+        If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
+        If kwargs contains the keyword >>non_empties=True<<, only non-empty parameters or results are passed to the
+        storage service to get stored.
+        :param to_load_list: A list with parameters or results to store.
+        :param args: Additional arguments directly passed to the storage service
+        :param kwargs: Additional keyword arguments directly passed to the storage service (except the kwarg
+        non_empties)
+        :return:
+        '''
+        item_list = self._fetch_items(to_store_list, kwargs)
+
+
+        self._storageservice.store(item_list,trajectoryname=self.get_parent_name(),*args,**kwargs)
