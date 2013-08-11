@@ -625,15 +625,18 @@ class HDF5StorageService(StorageService):
         :param store_dict: The dictionary containing the data
         :return:
         '''
-        for data in store_dict.values():
+        for data_key,data in store_dict.items():
             assert isinstance(data, (dict,np.ndarray))
             if isinstance(data,dict):
                 prev_length=0
                 for key, val in data.items():
-                    assert isinstance(val,list)
+                    if not isinstance(val,list):
+                        raise TypeError('The data you want to store as a talbe cannot be handled. >>%s<< in >>%s<< is of type %s but it must be a list.' %(key, data_key, str(type(val))))
+
                     act_lenght = len(val)
                     if prev_length:
-                        assert act_lenght==prev_length
+                        if not act_lenght==prev_length:
+                            raise TypeError('The data you want to store as a table cannot be handled. The lists defining the columns are of unequal length. Length of list >>%s<< in >>%s<< is %d, but other lists are %d.' %(key, data_key, act_lenght, prev_length))
                     else:
                         prev_length = act_lenght
 

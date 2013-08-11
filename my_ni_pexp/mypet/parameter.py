@@ -878,7 +878,7 @@ class BaseResult(object):
         raise NotImplementedError('You should implement this!')
 
 class SimpleResult(BaseResult):
-    ''' Simple Container that stores tables and arrays. Note that no sanity checks on individual data is made
+    ''' Light Container that stores tables and arrays. Note that no sanity checks on individual data is made
     and you have to take care, that your data is understood by the Storage Service! It is assumed that
     results tend to be large and therefore sanity checks would be too expensive!
     '''
@@ -939,7 +939,7 @@ class SimpleResult(BaseResult):
                    'Class_Name': [self.__class__.__name__]}
 
         if self._comment:
-            store_dict['Comment'] = [self._comment]
+            store_dict ['Info']['Comment'] = [self._comment]
 
 
     def __load__(self, load_dict):
@@ -992,3 +992,4 @@ class SimpleResult(BaseResult):
             raise  AttributeError('>>%s<< is not part of your result >>%s<<.' % (name,self._fullname))
 
         return self._data[name]
+

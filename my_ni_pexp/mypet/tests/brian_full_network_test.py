@@ -64,13 +64,21 @@ def run_net(traj):
     neuron.w=a*(neuron.vm-EL)
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,N) # bifurcation parameter
 
-    run(0.1*second,report='text') # we discard the first spikes
+    run(50*msecond,report='text') # we discard the first spikes
 
-    M=StateSpikeMonitor(neuron,("Vr","w")) # record Vr and w at spike times
-    run(0.1*second,report='text')
+    MSpike=SpikeMonitor(neuron) # record Vr and w at spike times
+    MPopSpike =PopulationSpikeCounter(neuron)
+    MPopRate = PopulationRateMonitor(neuron)
+    MStateV = StateMonitor(neuron,'vm')
 
 
-    traj.add_result('SSM',BrianMonitorResult,M)
+    run(50*msecond,report='text')
+
+
+    traj.add_result('SpikeMonitor',BrianMonitorResult,MSpike)
+    traj.add_result('PopulationSpikeCounter', BrianMonitorResult, MPopSpike)
+    traj.add_result('PopulationRateMonitor', BrianMonitorResult,MPopRate)
+    traj.add_result('StateMonitor', BrianMonitorResult, MStateV)
 
 
 class NetworkTest(unittest.TestCase):
@@ -80,7 +88,7 @@ class NetworkTest(unittest.TestCase):
         logging.basicConfig(level = logging.DEBUG)
 
 
-        env = Environment('Test','../../Test/test.hdf5','test',logfolder='../../log')
+        env = Environment('Test','../../Brian/HDF5/test.hdf5','test',logfolder='../../Brian/log')
 
         traj = env.get_trajectory()
         #traj.multiproc = True

@@ -5,7 +5,7 @@ Created on 10.06.2013
 '''
 
 
-from mypet.parameter import Parameter, BaseResult, SparseParameter
+from mypet.parameter import Parameter, BaseResult, SparseParameter, SimpleResult
 from brian.units import *
 from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity
@@ -124,157 +124,135 @@ class BrianParameter(SparseParameter):
                     data_dict[key+BrianParameter.separator+'unit'].append(unit)
                     data_dict[key+BrianParameter.separator+'value'].append(value)
 
-class BrianMonitorResult(BaseResult):  
+class BrianMonitorResult(SimpleResult):
     
-    def __init__(self, fullname, monitor, comment ='No comment'):
+    def __init__(self, fullname, monitor, *args, **kwargs):
         super(BrianMonitorResult,self).__init__(fullname)
-        self._comment = comment
-        self._monitor = monitor
+
+        self._extract_monitor_data(monitor)
+
+        self.set(*args,**kwargs)
+
 
     
-    def __getattr__(self,name):
-        if name =='Comment' or name == 'comment':
-            return self._comment
-        
-        raise AttributeError('Result ' + self._name + ' does not have attribute ' + name +'.')
-    
-    def __setattr__(self,name,value):
-        
-        if name[0]=='_':
-            self.__dict__[name] = value
-        elif name == 'Comment' or 'comment':
-            self._comment = value
-        else:
-            raise TypeError('You are not allowed to assign new attributes to %s.' % self._name)
-      
-    def _string_length_large(self,string):  
-        return  int(len(string)+1*1.5)
-    
-
-    def _store_meta_data(self,store_dict):
-
-        store_dict['Info'] = {'Name':[self._name],
-                   'Location':[self._location],
-                   'Comment':[self._comment],
-                   'Type':[str(type(self))],
-                   'Class_Name': [self.__class__.__name__]}
-
-    
-    def __store__(self):
+    def _extract_monitor_data(self,monitor):
         ## Check for each monitor separately:
-        store_dict ={}
-        self._store_meta_data(store_dict)
-        if isinstance(self._monitor,SpikeMonitor):
-            self._store_spike_monitor(store_dict)
+
+        if isinstance(monitor,SpikeMonitor):
+            self._extrac_spike_monitor(monitor)
         
-        elif isinstance(self._monitor, PopulationSpikeCounter):
-            self._store_population_spike_counter(store_dict)
+        elif isinstance(monitor, PopulationSpikeCounter):
+            self._extract_population_spike_counter(monitor)
         
-        elif  isinstance(self._monitor, PopulationRateMonitor):
-            self._store_population_rate_monitor(store_dict)
+        elif  isinstance(monitor, PopulationRateMonitor):
+            self._extract_population_rate_monitor(monitor)
         
-        elif isinstance(self._monitor,StateMonitor):
-            self._store_state_monitor(store_dict)
+        elif isinstance(monitor,StateMonitor):
+            self._extract_state_monitor(monitor)
             
         else:
-            raise ValueError('Monitor Type %s is not supported (yet)' % str(type(self._monitor)))
+            raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
         
-        return store_dict
-    
-     
-    def _store_spike_monitor(self,store_dict):
-        
-        assert isinstance(self._monitor, SpikeMonitor)
 
-        store_dict['Data'] = {}
-        data_dict=store_dict['Data']
+     
+    def _extrac_spike_monitor(self,monitor):
         
-        record =  self._monitor.record
+        #assert isinstance(monitor, SpikeMonitor)
+
+        data_dict = {}
+
+        record =  monitor.record
         if isinstance(record, list):
             record = np.array(record)
 
-        data_dict['record'] = record
+        data_dict['record'] = [record]
         
-        if hasattr(self._monitor, 'function'):
-            data_dict['function'] = getsource(self._monitor.function)
+        if hasattr(monitor, 'function'):
+            data_dict['function'] = [getsource(monitor.function)]
         
-        data_dict['nspikes'] = self._monitor.nspikes
+        data_dict['nspikes'] = [monitor.nspikes]
 
-        store_dict['Info']['Time_Unit'] = 'second'
+        data_dict['Time_Unit'] = ['second']
 
-        store_dict['spikes'] = {}
-        spike_dict=store_dict['spikes']
+        spike_dict={}
 
-        zip_lists = zip(*self._monitor.spikes)
-        time_list = zip_lists[1]
+        if len(monitor.spikes)>0:
+            zip_lists = zip(*monitor.spikes)
+            time_list = zip_lists[1]
 
-        nounit_list = [np.float64(time) for time in time_list]
+            nounit_list = [np.float64(time) for time in time_list]
 
-        spike_dict['time'] = nounit_list
-        spike_dict['index'] = list(zip_lists[0])
+            spike_dict['time'] = nounit_list
+            spike_dict['index'] = list(zip_lists[0])
+
+            self.set(Spikes=spike_dict)
+
+        self.set(Data=data_dict)
 
         
-    def _store_population_rate_monitor(self,store_dict):
-        assert isinstance(self._monitor, PopulationRateMonitor)
+    def _extract_population_rate_monitor(self,monitor):
+        assert isinstance(monitor, PopulationRateMonitor)
         
-        store_dict['Data'] = {}
-        data_dict = store_dict['Data']
-        data_dict['bin'] = self._monitor.bin
+
+        data_dict = {}
+        data_dict['bin'] = [monitor.bin]
         
         ### Store times ###
 
-        times = np.expand_dims(self._monitor.times,axis=0)
-        store_dict['times'] = times
+        times = np.expand_dims(monitor.times,axis=0)
 
         
         ## Store Rate
-        rate = np.expand_dims(self._monitor.rate,axis=0)
-        store_dict['rate'] = rate
+        rate = np.expand_dims(monitor.rate,axis=0)
+
+        self.set(Data = data_dict, Times= times, Rate=rate)
         
         
-    def _store_population_spike_counter(self,store_dict):
+    def _extract_population_spike_counter(self,monitor):
         
-        assert isinstance(self._monitor, PopulationSpikeCounter)
+        assert isinstance(monitor, PopulationSpikeCounter)
  
-        store_dict['Data'] ={}
-        store_dict['Data']['nspikes'] = self._monitor.nspikes
-        store_dict['Data']['source'] = str(self._monitor.source)
+        data_dict ={}
+        data_dict['nspikes'] = [monitor.nspikes]
+        data_dict['source'] = str(monitor.source)
+
+        self.set(Data=data_dict)
 
         
-    def _store_state_monitor(self,store_dict):
+    def _extract_state_monitor(self,monitor):
 
-        store_dict['Data'] ={}
-        data_dict = store_dict['Data']
+        data_dict = {}
         
 
-        data_dict['varname'] = self._monitor.varname
+        data_dict['varname'] = [monitor.varname]
         
-        record =  self._monitor.record
+        record =  monitor.record
         if isinstance(record, list):
             record = np.array(record)
             
         data_dict['record'] = record
         
-        data_dict['when'] = self._monitor.when
+        data_dict['when'] = monitor.when
         
-        data_dict['timestep'] = self._monitor.timestep
+        data_dict['timestep'] = monitor.timestep
 
         
         
         ### Store times ###
-        times = np.expand_dims(self._monitor.times,axis=0)
-        store_dict['times'] = times
+        times = np.expand_dims(monitor.times,axis=0)
+
          
         ### Store mean and variance ###
-        mean = np.expand_dims(self._monitor.mean,axis=1)
-        variances = np.expand_dims(self._monitor.var,axis=1)
+        mean = np.expand_dims(monitor.mean,axis=1)
+        variances = np.expand_dims(monitor.var,axis=1)
 
         combined = np.concatenate((mean,variances),axis=1)
-        store_dict['mean_var'] = combined
+
         
         ### Store recorded values ###
-        values = self._monitor.values
-        store_dict['values']=values
+        values = monitor.values
+
+        self.set(Data=data_dict, Times=times, Mean_Var=combined, Values = values)
 
         
         
