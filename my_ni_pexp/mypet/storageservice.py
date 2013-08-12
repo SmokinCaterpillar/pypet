@@ -6,12 +6,10 @@ import tables as pt
 import os
 import numpy as np
 from mypet.trajectory import Trajectory,SingleRun
-from mypet.parameter import BaseParameterSet, BaseResult, SimpleResult
+from mypet.parameter import BaseParameter, BaseResult, SimpleResult
 from mypet import globally
 
-
-
-
+from mypet.parameter import ObjectTable
 
 
 
@@ -126,7 +124,7 @@ class HDF5StorageService(StorageService):
                 self._load_trajectory(stuff_to_load,*args,**kwargs)
 
 
-            elif isinstance(stuff_to_load, (BaseParameterSet,BaseResult)):
+            elif isinstance(stuff_to_load, (BaseParameter,BaseResult)):
                 self._load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
             elif isinstance(stuff_to_load, list):
@@ -168,7 +166,7 @@ class HDF5StorageService(StorageService):
 
                 self._store_single_run(stuff_to_store,*args,**kwargs)
 
-            elif isinstance(stuff_to_store,(BaseParameterSet,BaseResult)):
+            elif isinstance(stuff_to_store,(BaseParameter,BaseResult)):
                 self._store_parameter_or_result(stuff_to_store,*args,**kwargs)
 
             elif isinstance(stuff_to_store, list):
@@ -374,7 +372,7 @@ class HDF5StorageService(StorageService):
 
                 new_class = traj._create_class(class_name)
                 paraminstance = new_class(fullname)
-                assert isinstance(paraminstance, (BaseParameterSet,BaseResult))
+                assert isinstance(paraminstance, (BaseParameter,BaseResult))
 
 
                 if 'Size' in colnames:
@@ -606,13 +604,13 @@ class HDF5StorageService(StorageService):
         store_dict = param.__store__()
 
 
-        self._check_dictionary_structure(store_dict)
-        self._check_info_dict(param, store_dict)
+        #self._check_dictionary_structure(store_dict)
+        #self._check_info_dict(param, store_dict)
 
         group= self._create_groups(fullname)
 
         for key, data_to_store in store_dict.items():
-            if isinstance(data_to_store, dict):
+            if isinstance(data_to_store, ObjectTable):
                 self._store_into_pytable(key, data_to_store, group, fullname)
             elif isinstance(data_to_store, np.ndarray):
                 self._store_into_array(key, data_to_store, group, fullname)
@@ -715,22 +713,24 @@ class HDF5StorageService(StorageService):
             #     if not key in colnames:
             #         raise AttributeError('Failed storing %s. Cannot append new data to table, since entry %s is not a column of table %s.' % (fullname,key,tablename))
         else:
-            description_dict = self._make_description(data,fullname)
+            description_dict = self._make_description(data)
             table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
                                                title=tablename)
 
         assert isinstance(table,pt.Table)
+        assert isinstance(data, ObjectTable)
 
         nrows = table.nrows
         row = table.row
 
-        datasize = len(data.itervalues().next())
+        datasize = data.shape[0]
 
 
+        cols = data.columns.tolist()
         for n in range(nrows, datasize):
 
-            for key,val_list in data.items():
-                row[key] = val_list[n]
+            for key in cols:
+                row[key] = data[key][n]
 
             row.append()
 
@@ -739,13 +739,13 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _make_description(self, data, fullname):
+    def _make_description(self, data):
         ''' Returns a dictionary that describes a pytbales row.
         '''
 
         descriptiondict={}
 
-        for key, val in data.items():
+        for key, val in data.iteritems():
 
 
             col = self._get_table_col(val)
@@ -758,26 +758,26 @@ class HDF5StorageService(StorageService):
         return descriptiondict
 
 
-    def _get_table_col(self, val_list):
+    def _get_table_col(self, column):
         ''' Creates a pytables column instance.
 
         The type of column depends on the type of parameter entry.
         '''
 
 
-        val = val_list[0]
+        val = column[0]
 
 
         if type(val) == int:
             return pt.IntCol()
 
         if type(val) == str:
-            itemsize = int(self._get_longest_stringsize(val_list))
+            itemsize = int(self._get_longest_stringsize(column))
             return pt.StringCol(itemsize)
 
         if isinstance(val, np.ndarray):
             if np.issubdtype(val.dtype,np.str):
-                itemsize = int(self._get_longest_stringsize(val_list))
+                itemsize = int(self._get_longest_stringsize(column))
                 return pt.StringCol(itemsize,shape=val.shape)
             else:
                 return pt.Col.from_dtype(np.dtype((val.dtype,val.shape)))
@@ -833,7 +833,7 @@ class HDF5StorageService(StorageService):
         '''
 
         table_name = table._v_name
-        load_dict[table_name]={}
+        load_dict[table_name]=ObjectTable(columns = table.colnames, index=range(table.nrows))
         for colname in table.colnames:
             col = table.col(colname)
             load_dict[table_name][colname]=list(col)

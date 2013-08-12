@@ -5,7 +5,7 @@ Created on 10.06.2013
 '''
 
 
-from mypet.parameter import ParameterSet, BaseResult, SparseParameter, SimpleResult
+from mypet.parameter import Parameter, BaseResult, SimpleResult,ObjectTable
 from brian.units import *
 from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity
@@ -15,9 +15,9 @@ from mypet.utils.helpful_functions import nest_dictionary
 from inspect import getsource
 import numpy as np
 
-class BrianParameter(SparseParameter):
+class BrianParameter(Parameter):
 
-    separator = '_brian_'
+    identifier = '__brn__'
 
     def _is_supported_data(self, data):
         ''' Simply checks if data is supported '''
@@ -40,89 +40,70 @@ class BrianParameter(SparseParameter):
 
         return True
 
-    # def _convert_data(self, val):
-    #     if isinstance(val, Quantity):
-    #         return val
-    #
-    #     return super(BrianParameter,self)._convert_data(val)
+    def __store__(self):
+
+        if isinstance(self._data,Quantity):
+            store_dict={}
+            value, unit = self._separate_value_and_unit(self._data)
+            store_dict['Data'] = ObjectTable(data={'data'+BrianParameter.identifier+'value':[value],
+                                                   'data'+BrianParameter.identifier+'unit':[unit]})
+            if self.is_array():
+                value_list = []
+                unit_list = []
+                for val in self._explored_data:
+                    unit, value = self._separate_value_and_unit(val)
+                    value_list.append(value)
+                    unit_list.append(unit)
+
+                store_dict['ExploredData'] = ObjectTable(data={'data'+BrianParameter.identifier+'value':value_list,
+                                                   'data'+BrianParameter.identifier+'unit':unit_list})
+
+            return store_dict
+        else:
+            return super(BrianParameter,self).__store__()
 
 
-    def set_single(self,name,val):
-        if BrianParameter.separator in name:
-            raise AttributeError('Sorry your entry cannot contain >>%s<< this is reserved for storing brian units and values.' % BrianParameter.separator)
+    def __load__(self,load_dict):
+        data_table = load_dict['Data']
+        data_name = data_table.columns.tolist()[0]
+        if BrianParameter.identifier in data_name:
+            value = data_table['data'+BrianParameter.identifier+'value'][0]
+            unit = data_table['data'+BrianParameter.identifier+'unit'][0]
 
-        super(BrianParameter,self).set_single(name,val)
-
-
-    def _load_data(self, load_dict):
-
-        data_dict =load_dict['Data']
-
-        self._load_brian_data(data_dict)
-
-        if 'ExploredData' in load_dict:
-            explored_dict = load_dict['ExploredData']
-            self._load_brian_data(explored_dict)
-
-        super(BrianParameter,self)._load_data(load_dict)
-
-    def _load_brian_data(self, data_dict):
-
-        briandata = {}
+            self._data = self._join_value_and_unit(value, unit)
 
 
-        for key, val in data_dict.items():
-            if BrianParameter.separator in key:
-                briandata[key] = val
-                del data_dict[key]
+            if 'ExploredData' in load_dict:
+                explore_table = load_dict['ExploredData']
 
-        briandata = nest_dictionary(briandata, BrianParameter.separator)
+                value_col = explore_table['data'+BrianParameter.identifier+'value']
+                unit_col = explore_table['data'+BrianParameter.identifier+'unit']
+                explore_list = []
+                for idx in range(len(value_col)):
+                    brian_quantity = self._join_value_and_unit(value_col[idx], unit_col[idx])
+                    explore_list.append(brian_quantity)
+
+                self._explored_data=tuple(explore_list)
+
+                self._length = len(self._explored_data)
+        else:
+            super(BrianParameter,self).__load__(load_dict)
 
 
 
-        for brianname, vd_dict in briandata.items():
-            arunit = vd_dict['unit']
-            arval = vd_dict['value']
-
-            brianlist = []
-            for idx in range(len(arunit)):
-                unit = arunit[idx]
-                value= arval[idx]
-                value = eval(value)
-                evalstr = 'value * ' + unit
-                brian_quantity = eval(evalstr)
-                brianlist.append(brian_quantity)
-
-            data_dict[brianname] = brianlist
-
-
-    def _store_data(self, store_dict):
-        super(BrianParameter,self)._store_data(store_dict)
-        data_dict = store_dict['Data']
-        self._store_brian_data(data_dict)
-
-        if 'ExploredData' in store_dict:
-            explored_dict = store_dict['ExploredData']
-            self._load_brian_data(explored_dict)
-
-
-    def _store_brian_data(self,data_dict):
-
-
-        for key, val_list in data_dict.items():
-            if isinstance(val_list[0],Quantity):
-                del data_dict[key]
-                data_dict[key+BrianParameter.separator+'unit']=[]
-                data_dict[key+BrianParameter.separator+'value']=[]
-
-                for val in val_list:
-                    assert isinstance(val, Quantity)
-                    valstr = val.in_best_unit(python_code=True)
+    def _separate_value_and_unit(self, data):
+                    assert isinstance(data, Quantity)
+                    valstr = data.in_best_unit(python_code=True)
                     split_val = valstr.split('*')
                     value = split_val.pop(0)
                     unit = '*'.join(split_val)
-                    data_dict[key+BrianParameter.separator+'unit'].append(unit)
-                    data_dict[key+BrianParameter.separator+'value'].append(value)
+                    return value, unit
+
+    def _join_value_and_unit(self,value,unit):
+        evalstr = value+' * '+ unit
+        brian_quantity = eval(evalstr)
+        return brian_quantity
+
 
 class BrianMonitorResult(SimpleResult):
     

@@ -9,24 +9,26 @@ import petexceptions as pex
 import tables as pt
 import numpy as np
 import scipy.sparse as spsp
-
-
+import copy
+from mypet.utils.helpful_functions import nest_dictionary
 from mypet import globally
 from pandas import DataFrame, Series
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 
 class ObjectTable(DataFrame):
-
-
-    def __init__(self, data=None, index = None, columns = None, copy=False):
-        super(DataFrame,self).__init__( data = data, index=index,columns=columns, dtype=object, copy=copy)
+     def __init__(self, data=None, index = None, columns = None, copy=False):
+        super(ObjectTable,self).__init__( data = data, index=index,columns=columns, dtype=object, copy=copy)
 
 
 
 
-class BaseParameterSet(object):
-    ''' Specifies the methods that need to be implemented for a Trajectory ParameterSet
+class BaseParameter(object):
+    ''' Specifies the methods that need to be implemented for a Trajectory Parameter
     
     It is initialized with a location that specifies its position within the Trajectory, e.g.:
     Parameters.group.paramname
@@ -41,16 +43,20 @@ class BaseParameterSet(object):
     Parameters can be locked to forbid further modification.
     If multiprocessing is desired the parameter must be pickable!
     ''' 
-    def __init__(self, name):
-        self._name = name
+    def __init__(self, fullname):
+        self._fullname = fullname
+        split_name = fullname.split('.')
+        self._name=split_name.pop()
+        self._location='.'.join(split_name)
         self._comment = ''
         self._length = 0
         self._locked = False
 
-
-    def _rename(self, name):
-        self._name = name
-
+    def _rename(self, fullname):
+        self._fullname = fullname
+        split_name = fullname.split('.')
+        self._name=split_name.pop()
+        self._location='.'.join(split_name)
 
     def get_comment(self):
         return self._comment
@@ -62,6 +68,8 @@ class BaseParameterSet(object):
     def is_locked(self):
         return self._locked
 
+    def get_location(self):
+        return self._location
      
     def __len__(self):
         ''' Returns the length of the parameter.
@@ -70,7 +78,6 @@ class BaseParameterSet(object):
         If no values have been added to the parameter it's length is 0.
         '''
         return self._length
-    
 
     
     def __store__(self):
@@ -81,15 +88,21 @@ class BaseParameterSet(object):
 
 
     def to_str(self):
-        ''' String representation of the parameters contained by the parameter. Note that representing
+        ''' String representation of the value represented by the parameter. Note that representing
         the parameter as a string accesses it's value, but for simpler debugging, this does not
         lock the parameter!
         '''
-        raise NotImplementedError( "Should have implemented this." )
+        old_locked = self._locked
+        try :
+            return str(self.get())
+        except Exception, e:
+            return 'No Evaluation possible (yet)!'
+        finally:
+            self._locked = old_locked
 
 
     def __str__(self):
-        return '%s: %s' % (self._name, self.to_str())
+        return '%s: %s' % (self._fullname, self.to_str())
 
     def unlock(self):
         ''' Unlocks the locked parameter.'''
@@ -99,40 +112,26 @@ class BaseParameterSet(object):
         self._locked = True
 
 
-    def gfn(self,parametername=None):
+    def gfn(self):
         ''' Short for get_fullname '''
-        return self.get_fullname(parametername)
+        return self.get_fullname()
     
-    def get_fullname(self,parametername=None):
-        ''' param.get_fullname(valuname) -> Returns the fullname of the parameter 
-        
-        For example:
-            param.gfn('myentry') could return ParameterSet.myparam.myentry
-        
-        Calling get_fullname() returns the full name of the parameter ignoring the entries.
+    def get_fullname(self):
+        ''' param.get_fullname() -> Returns the fullname of the parameter
         '''
-        if not parametername:
-            return self._fullname
-        if not self.has_value(parametername):
-            raise AttributeError('ParameterSet has not entry ' + parametername +'.')
-        return self._name +'.'+ parametername
-    
-    def has_value(self,valuename):
-        ''' Checks whether a parameter as a specific value entry.'''
-        raise NotImplementedError( "Should have implemented this." )
+        return self._fullname
 
-    def __contains__(self, item):
-        return self.has_value(self, item)
 
-    def set(self, **kwargs):
+
+    def set(self,data):
         ''' Sets specific values for a parameter.
         Has to raise ParameterLockedException if parameter is locked.
 
         For example:
-        >>> param1.set(val1=5, val2=6.0)
+        >>> param1.set(44.0)
         
-        >>> print parm1.val1 
-        >>> 5
+        >>> print parm1.get()
+        >>> 44.0
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -141,21 +140,15 @@ class BaseParameterSet(object):
     def get(self,name):
         raise NotImplementedError( "Should have implemented this." )
     
-    def explore(self, expdict,**kwexpdict):
+    def explore(self, explorelist):
         ''' The default method to create and explored parameter containing an array of entries.
-
-        **kwexpdict is a dictionary containing all entries as lists
         For example:
-        >>> param.explore(**{'entry1':[1,2,3],'entry2'=[3.0,2.0,1.0]})
-
-        You can also call it via
-        >>> param.explore({'entry1':[1,2,3],'entry2'=[3.0,2.0,1.0]})
-
+        >>> param.explore([3.0,2.0,1.0])
         '''
         raise NotImplementedError( "Should have implemented this." )
     
     def set_parameter_access(self, n=0):
-        ''' Prepares the parameter set for further usage, and tells it which point in the parameter space should be
+        ''' Prepares the parameter for further usage, and tells it which point in the parameter space should be
         accessed for future calls.
         :param n: The index of the parameter space point
         :return:
@@ -169,17 +162,12 @@ class BaseParameterSet(object):
         ''' Returns the name of the parameter.'''
         return self._name
 
-    def get_parameter_names(self):
-        ''' Returns a list of all entry names with which the parameter can be accessed
-        '''
-        raise NotImplementedError( "Should have implemented this." )
-
     def is_empty(self):
         return len(self) == 0
 
     def shrink(self):
-        ''' If a parameter set is explored, i.e. it is an array, the whole exploration is deleted,
-        and the parameter set is no longer an array.
+        ''' If a parameter is explored, i.e. it is an array, the whole exploration is deleted,
+        and the parameter is no longer an array.
         :return:
         '''
         raise NotImplementedError( "Should have implemented this." )
@@ -189,7 +177,7 @@ class BaseParameterSet(object):
         '''
         raise NotImplementedError( "Should have implemented this." )
       
-class ParameterSet(BaseParameterSet):
+class Parameter(BaseParameter):
     ''' The standard parameter that handles creation and access to simulation parameters.
     
     Supported Data types are int, string, bool, float and numpy arrays.
@@ -212,21 +200,18 @@ class ParameterSet(BaseParameterSet):
     like explore, for instance.
     '''
    
-    # The comment that is added if no comment is specified
-    standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
+    # # The comment that is added if no comment is specified
+    # standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
-    def __init__(self, fullname,*args,**kwargs):
-        super(ParameterSet,self).__init__(fullname)
-        self._comment= ParameterSet.standard_comment
-        self._data=ObjectTable() #The data in the Parameter Set
-        self._explored_data=None #The Explored Data
-        self._not_admissable_names = set(dir(self))
+    def __init__(self, fullname, data=None, comment=None):
+        super(Parameter,self).__init__(fullname)
+        self._comment= comment
+        self._data= None
+        self._explored_data=tuple()#The Explored Data
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
 
-        
-        self._logger = logging.getLogger('mypet.parameter.ParameterSet=' + self._fullname)
-        
-        self.set(**kwargs)
-
+        if not data == None:
+            self.set(data)
         self._fullcopy = False
 
 
@@ -235,12 +220,12 @@ class ParameterSet(BaseParameterSet):
         ''' Returns the actual state of the parameter for pickling. 
         '''
         result = self.__dict__.copy()
-        result['_data'] = self._data.copy()
 
-        # If we don't need a full copy of the ParameterSet (because a single process needs only access to a single point
+
+        # If we don't need a full copy of the Parameter (because a single process needs only access to a single point
         #  in the parameter space we can delete the rest
         if not self._fullcopy :
-            result['_explored_data'] = {}
+            result['_explored_data'] = tuple()
 
         del result['_logger'] #pickling does not work with loggers
         return result
@@ -250,18 +235,14 @@ class ParameterSet(BaseParameterSet):
         ''' Sets the state for unpickling.
         '''
         self.__dict__.update( statedict)
-        self._logger = logging.getLogger('mypet.parameter.ParameterSet=' + self._fullname)
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
       
         
     def set_parameter_access(self, n=0):
         if n >= len(self) and self.is_array():
             raise ValueError('You try to access the %dth parameter in the array of parameters, yet there are only %d potential parameters.' %(n,len(self)))
         else:
-            for key, vallist in self._explored_data.items():
-                self._data[key] = vallist[n]
-
-    def has_value(self,valuename):
-        return valuename in self._data
+            self._data = self._explored_data[n]
 
     def _is_supported_data(self, data):
         ''' Checks if input data is supported by the parameter'''
@@ -305,63 +286,34 @@ class ParameterSet(BaseParameterSet):
         :param comment: The comment as string which is added to the existing comment
         '''
         #Replace the standard comment:
-        if self._comment == ParameterSet.standard_comment:
+        if self._comment == None:
             self._comment = comment
         else:
             self._comment = self._comment + ';\n ' + comment
-            
-            
-       
-    def __setattr__(self,name,value):
-        
-        if name[0]=='_':
-            self.__dict__[name] = value
-        else:
-            self.set_single(name,value)
-        
-    def set(self,**kwargs):
 
-        for key, arg in kwargs.items():
-            setattr(self, key, arg)
+
+
 
     
-    def set_single(self,name,val):
-        ''' Adds a single entry to the parameter.
-        
-        This method is called for statements like:
-        >>> param.entry = 4
-        
-        If the parameter was originally an array, the array is deleted because a setting is change 
-        of the default entries of the parameter.
+    def set(self,data):
+        ''' Adds data to the Parameter
         '''
 
-
-        if name in self._not_admissable_names:
-            raise AttributeError('Your parameter %s cannot have %s as an entry, the name is similar to one of it\'s methods'
-            % (self._fullname,name))
-
         if self.is_locked():
-            raise pex.ParameterLockedException('ParameterSet ' + self._name + ' is locked!')
+            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!')
 
-
-        # The comment is not in the _data list:
-        if name == 'Comment' or name=='comment':
-            self._comment = val
-            return
-
-        if name == 'FullCopy' or name =='fullcopy':
-            self.set_copy_mode(val)
-            return
 
         if self.is_array():
-            raise AttributeError('Your ParameterSet is an explored array can no longer change values!')
+            raise AttributeError('Your Parameter is an explored array can no longer change values!')
 
-        val = self._convert_data(val)
+
+        val = self._convert_data(data)
 
         if not self._is_supported_data(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
 
-        self._data[name] = val
+        self._data= val
+        self._length = 1
 
 
 
@@ -378,378 +330,165 @@ class ParameterSet(BaseParameterSet):
 
         return val
 
-    def get_parameter_names(self):
-        return self._data.keys()
+
         
     def get_array(self):
         if not self._isarray():
             raise TypeError('Your parameter is not array, so cannot return the explored values')
         else:
-            return_dict={}
-            for key, vallist in self._explored_data.items():
-                return_dict[key] = vallist[:]
-            return return_dict
+            return self._explored_data[:]
 
 
-    def to_dict(self):
-        return self._data.copy()
-
-    def explore(self, **kwargs):
+    def explore(self, explore_list):
         ''' Changes a parameter to an array to allow exploration.
         
         *args and **kwargs are treated as in >>set(*arg,**kwargs)<< yet they need to contain
         lists of values of equal length that specify the exploration.
         '''
         if self.is_locked():
-            raise pex.ParameterLockedException('ParameterSet %s is locked!' % self._fullname)
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
         if self.is_array():
-            raise TypeError('Your ParameterSet %s is already explored, cannot explore it further!' % self._name)
+            raise TypeError('Your Parameter %s is already explored, cannot explore it further!' % self._name)
 
 
-        explored_data = self._data_sanity_checks(kwargs)
+        data_tuple = self._data_sanity_checks(explore_list)
 
-        self._length = self._length_check(explored_data)
+        self._length = len(data_tuple)
 
-        self._explored_data = ObjectTable(explored_data)
+        self._explored_data = data_tuple
         self.lock()
 
-    def _length_check(self,kwargs):
-        actual_length = -1
+    def _data_sanity_checks(self, data_list):
 
-        for key, vallist in kwargs.items():
-            list_length = len(vallist)
-            if actual_length == -1:
-                actual_length = list_length
-            elif actual_length != list_length:
-                raise ValueError('The entries you want to explore are not of the same length!')
-            else:
-                pass # Everything's fine
+        data_tuple = []
 
-        if actual_length == -1:
-            raise ValueError('Something is wrong, your exploration of parameter >>%s<< did not contain a single entry to explore.' % self._name)
-        elif actual_length == 1:
-            raise ValueError('The length of your exploration is 1, why do you want to explore >>%s<< anyway, better change the values of the parameter instead directly.' % self._name)
-        else:
-            return actual_length
+        default_val = self._data
+
+        for val in data_list:
+            newval = self._convert_data(val)
 
 
+            if not self._is_supported_data(newval):
+                raise TypeError('%s contains items of not supported type %s.' % (key,str(type(newval))))
 
-    def _data_sanity_checks(self, kwargs):
-
-        result_dict = {}
-
-
-        for key, vallist in kwargs.items():
-            if not isinstance(vallist,list):
-                raise TypeError('If you want to explore a parameter you need to supply lists of values %s, is not a list but %s.' %(key,str(type(vallist))))
-            result_dict[key] =[]
-
-            if not key in self._data:
-                raise AttributeError('%s is not in your default entries of your parameter. You can only explore data that is part of your parameter.'%key)
-
-            default_val = self._data[key]
-
-            for val in vallist:
-                newval = self._convert_data(val)
-
-                if not self._is_supported_data(newval):
-                    raise TypeError('%s contains items of not supported type %s.' % (key,str(type(newval))))
-
-                if not self._values_of_same_type(newval,default_val):
-                    raise TypeError('%s is not of the same type as the original entry value, new type is %s vs old type %s.' % (key, str(type(newval)),str(type(default_val))))
+            if not self._values_of_same_type(newval,default_val):
+                raise TypeError('Data is not of the same type as the original entry value, new type is %s vs old type %s.' % ( str(type(newval)),str(type(default_val))))
 
 
-                result_dict[key].append(newval)
+            data_tuple.append(newval)
 
-        return result_dict
-
-
-    def _store_data(self, store_dict):
-
-        store_dict['Data'] = self._data
-
-        if self.is_array():
-            store_dict['ExploredData'] = ObjectTable(data=self._explored_data)
-
-
-
-    def _store_meta_data(self,store_dict):
-
-        meta_info = dict(Name=self._name,
-                         Comment=self._comment,
-                         Type=str(type(self)),
-                         Class_Name = self.__class__.__name__,
-                         Length = self._length,
-                         Size = len(self._data))
-
-
-        store_dict['Info'] = ObjectTable(data=meta_info, index=[0])
-
-        length_list = []
-        type_list = []
-        short_representation_list = []
-        for key, val in self._data:
-            if key in self._explored_data:
-                length_list.append(len(self._explored_data[key]))
-            else:
-                length_list.append(1)
-
-            type_list.append(type(val))
-
-            short_string = str(val)
-            if len(short_string) >= globally.SHORT_REPRESENTATION:
-                short_string = short_string[0:globally.SHORT_REPRESENTATION]
-
-            short_representation_list.append(short_string)
-
-
-
-        param_dict = dict(Names=self._data.keys(),
-                          Length = length_list,
-                          Type = type_list,
-                          Repr = short_representation_list)
-        store_dict['Parameters'] = ObjectTable(data=param_dict)
-
-
-
+        return tuple(data_tuple)
 
 
     def __store__(self):
         store_dict={}
-        self._store_meta_data(store_dict)
-        self._store_data(store_dict)
+        store_dict['Data'] = ObjectTable(data={'data':[self._data]})
+        if self.is_array():
+            store_dict['ExploredData'] = ObjectTable(data={'data':self._explored_data})
 
         return store_dict
 
 
-    def _load_meta_data(self, load_dict):
-        info_table = load_dict['Info']
-
-        self._name = info_table['Name'][0]
-        self._location = info_table['Location'][0]
-        self._comment = info_table['Comment'][0]
-        self._length = info_table['Length'][0]
-
-        assert str(type(self)) == info_table['Type'][0]
-        assert self.__class__.__name__ == info_table['Class_Name'][0]
-
-
-
-    def _load_data(self, load_dict):
-
-        self._data= load_dict['Data']
-
-        if 'ExploredData' in load_dict:
-            self._explored_data = load_dict['ExploredData']
-
-
-
     def __load__(self,load_dict):
-        self._load_meta_data(load_dict)
-        self._load_data(load_dict)
-        self._load_eval_expression(load_dict)
+        self._data = load_dict['Data']['data'][0]
+        if 'ExploredData' in load_dict:
+            self._explored_data = tuple(load_dict['ExploredData']['data'].tolist())
+            self._length = len(self._explored_data)
+        else:
+            self._length = 1
 
 
-
-    def set_copy_mode(self, val):
+    def set_full_copy(self, val):
         assert isinstance(val, bool)
         self._fullcopy = val
 
 
-    def get(self, name):
-
-        if name == 'FullCopy' or name =='fullcopy':
-            return self._fullcopy
-
-
-        if name == 'val' or name == 'Val':
-            return self.evaluate()
-
-        if name == 'comment' or name=='Comment':
-            return self._comment
-            
-        if not name in self._data:
-            raise AttributeError('ParameterSet %s does not have attribute or entry %s.' %(self._fullname,name))
-        
-
+    def get(self):
         self.lock() # As soon as someone accesses an entry the parameter gets locked
-        return self._data[name][0]
+        return self._data
 
 
-    
-    def __getattr__(self,name):
-        if (not '_data' in self.__dict__ or
-            not '_fullname' in self.__dict__):
-
-            raise AttributeError('This is to avoid pickling issues!')
-        
-        return self.get(name)
-
-    def __delattr__(self, item):
-        if  item[0] == '_':
-            del self.__dict__[item]
-        elif self.is_locked():
-            raise pex.ParameterLockedException('ParameterSet %s is locked!' % self._fullname)
-        elif self.is_array():
-            raise TypeError('Your parameter %s is an explored array, cannot delete items, call >>shrink()<< before you delete entries.' % self.get_name())
-        elif self.has_value(item):
-            del self._data[item]
-        else:
-            raise AttributeError('%s is not an entry of you parameter %s, cannot delete it.' % (item,self.get_name()))
- 
     def shrink(self):
         ''' Shrinks the parameter array to a single parameter.
         '''
-        if self.is_locked():
-            raise pex.ParameterLockedException('ParameterSet %s is locked!' % self._fullname)
+        if self.is_empty():
+            raise TypeError('Cannot shrink empty Parameter.')
 
-        self._explored_data=None
+        if self.is_locked():
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
+
+        self._explored_data={}
         self._length = 1
 
     def empty(self):
-        ''' Erases all data in the ParameterSet, if the parameter was explored, it is shrunk as well.
+        ''' Erases all data in the Parameter, if the parameter was explored, it is shrunk as well.
         '''
         if self.is_locked():
-            raise pex.ParameterLockedException('ParameterSet %s is locked!' % self._fullname)
+            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
         self.shrink()
-        self._data={}
+        self._data=None
         self._length = 0
     
      
 
 
-class SparseParameter(ParameterSet):
-    ''' A parameter class that supports sparse scipy matrices.
-    
-    Supported formats are csc,csr and lil. Note that all sparce matrices are converted to
-    csr before storage.
-    In case of a parameter array the matrices need to be of the very same size, i.e. the amount
-    of nonzero entries must be the same.
+class PickleParameter(Parameter):
+    ''' A parameter class that supports all pickable objects, and simply writes the pickle dump into the table.
     '''
-    separator = '_spsp_'
+
+    identifier= '__pckl__'
+
+
+    # def __init__(self, fullname, data, comment):
+    #     if PickleParameter.identifier in fullname:
+    #         raise ValueError('>>%s<< is in the name of the parameter >>%s<<. This is a reserved keyword, I cannot create the parameter.' %(PickleParameter.identifier,fullname))
+    #
 
     def _is_supported_data(self, data):
-        ''' Simply checks if data is supported '''
-        if super(SparseParameter,self)._is_supported_data(data):
-            return True
-        if spsp.isspmatrix_lil(data) or spsp.isspmatrix_csc(data) or spsp.isspmatrix_csr(data):
-            return True
-        return False
-
-    def _values_of_same_type(self,val1, val2):
-        if not super(SparseParameter,self)._values_of_same_type(val1, val2):
-            return False
-        
-        if spsp.issparse(val1):
-            if not val1.dtype == val2.dtype:
-                return False
-            if not len(val1.nonzero()[0]) == len(val2.nonzero()[0]):
-                return False
-
+        ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
         return True
 
-    def set_single(self,name,val):
-        if SparseParameter.separator in name:
-            raise AttributeError('Sorry your entry cannot contain >>%s<< this is reserved for storing sparse matrices.' % SparseParameter.separator)
 
-        super(SparseParameter,self).set_single(name,val)
+    def __store__(self):
 
-    def _load_data(self, load_dict):
+        if not super(PickleParameter,self)._is_supported_data(self._data):
+            store_dict={}
+            dump = pickle.dumps(self._data)
+            store_dict['Data'] = ObjectTable(data={'data'+PickleParameter.identifier:[dump]})
+            if self.is_array():
+                explore_list = list(self._explored_data)
+                for idx, val in enumerate(explore_list):
+                    dump = pickle.dumps(val)
+                    explore_list[idx]=dump
+
+                store_dict['ExploredData'] = ObjectTable(data={'data'+PickleParameter.identifier:explore_list})
+
+            return store_dict
+        else:
+            return super(PickleParameter,self).__store__()
+
+
+    def __load__(self,load_dict):
         data_table = load_dict['Data']
+        data_name = data_table.columns.tolist()[0]
+        if PickleParameter.identifier in data_name:
+            dump = data_table['data'+PickleParameter.identifier][0]
+            self._data = pickle.loads(dump)
+            if 'ExploredData' in load_dict:
+                explore_table = load_dict['ExploredData']
 
-        self._load_sparse_data(data_table)
+                pickle_col = explore_table['data'+PickleParameter.identifier]
+                explore_list = []
+                for idx,dump in enumerate(pickle_col):
+                    explore_list.append(pickle.loads(dump))
 
-        if 'ExploredData' in load_dict:
-            explored_table = load_dict['ExploredData']
-            self._load_sparse_data(explored_table)
+                self._explored_data=tuple(explore_list)
 
-        super(SparseParameter,self)._load_data(load_dict)
-
-    def _load_sparse_data(self, data_table):
-
-
-
-        spsp_keys = set()
-
-        for key in data_table.columns:
-            val = data_table[key]
-            if SparseParameter.separator in key:
-                spsp_key = key.split(SparseParameter.separator)
-                spsp_keys.add(spsp_key)
-
-
-
-        for spsp_key in spsp_keys:
-            colformat = data_table.pop(spsp_key+SparseParameter.separator+'format')
-            coldata = data_table.pop(spsp_key+SparseParameter.separator+'data')
-            colindptr= data_table.pop(spsp_key+SparseParameter.separator+'indptr')
-            colindices = data_table.pop(spsp_key+SparseParameter.separator+'indices')
-            colshape = data_table.pop(spsp_key+SparseParameter.separator+'shape')
-            colstoredformat=data_table.pop(spsp_key+SparseParameter.separator+'storedformat')
-
-            sparsematlist = []
-            for idx in range(len(colformat)):
-                matformat = colformat[idx]
-                storedformat=colstoredformat[idx]
-                data = coldata[idx]
-                indptr = colindptr[idx]
-                indices = colindices[idx]
-                shape = colshape[idx]
-
-                if storedformat == 'csr':
-                    sparsemat = spsp.csr_matrix((data, indices, indptr),shape)
-                    if matformat == 'lil':
-                        sparsemat = sparsemat.tolil() #Ui Ui might be expensive
-                    if matformat == 'csc':
-                        sparsemat = sparsemat.tocsc()
-                else:
-                    self._logger.error('If the matrix was not stored in csr format, I am afraid I have to tell you that other formats are not supported yet.')
-
-
-                sparsematlist.append(sparsemat)
-
-            data_table[spsp_key] = sparsematlist
-
-
-    def _store_data(self, store_dict):
-        super(SparseParameter,self)._store_data(store_dict)
-
-        data_table = store_dict['Data']
-
-        self._store_sparse_data(data_table)
-
-        if 'ExploredData' in store_dict:
-            explored_data = store_dict['ExploredData']
-            self._store_sparse_data(explored_data)
-
-
-    def _store_sparse_data(self,data_table):
-
-
-
-        for key in data_table:
-            col = data_table[key][0]
-            if spsp.isspmatrix(col[0]):
-
-                data_table[key+SparseParameter.separator+'format']=Series(index=data_table.index,dtype=object)
-                data_table[key+SparseParameter.separator+'data']=datalist
-                data_table[key+SparseParameter.separator+'indptr'] =indptrlist
-                data_table[key+SparseParameter.separator+'indices'] = []
-                data_table[key+SparseParameter.separator+'shape']=[]
-                data_table[key+SparseParameter.separator+'storedformat'] = []
-
-                for val in col
-                    data_table[key+SparseParameter.separator+'format'].append(val.format)
-                    val = val.tocsr()
-                    data_table[key+SparseParameter.separator+'data'].append(val.data)
-                    data_table[key+SparseParameter.separator+'indptr'].append(val.indptr)
-                    data_table[key+SparseParameter.separator+'indices'].append(val.indices)
-                    data_table[key+SparseParameter.separator+'shape'].append(np.array(np.shape(val)))
-                    data_table[key+SparseParameter.separator+'storedformat'].append(val.format)
-
-                del data_table[key]
+                self._length = len(self._explored_data)
+        else:
+            super(PickleParameter,self).__load__(load_dict)
 
 
 
@@ -815,6 +554,8 @@ class BaseResult(object):
         '''
         raise NotImplementedError('You should implement this!')
 
+
+
 class SimpleResult(BaseResult):
     ''' Light Container that stores tables and arrays. Note that no sanity checks on individual data is made
     and you have to take care, that your data is understood by the Storage Service! It is assumed that
@@ -824,7 +565,8 @@ class SimpleResult(BaseResult):
     def __init__(self, fullname, *args, **kwargs):
         super(SimpleResult,self).__init__(fullname)
         self._data = {}
-        self._comment = None
+
+        self._comment = kwargs.pop('comment',None)
 
         self.set(*args,**kwargs)
 
@@ -855,7 +597,7 @@ class SimpleResult(BaseResult):
         if name == 'Info':
             raise ValueError('>>Info<< is reserved for storing  information like name and location of the result etc.')
 
-        if isinstance(item, (np.ndarray,dict)):
+        if isinstance(item, (np.ndarray,ObjectTable,DataFrame)):
             self._data[name] = item
         else:
             raise TypeError('Your result >>%s<< of type >>%s<< is not supported.' % (name,str(type(item))))
@@ -864,43 +606,16 @@ class SimpleResult(BaseResult):
 
     def __store__(self):
         store_dict ={}
-        self._store_meta_data(store_dict)
         store_dict.update(self._data)
         return store_dict
 
 
-    def _store_meta_data(self,store_dict):
-
-        store_dict['Info'] = {'Name':[self._name],
-                   'Location':[self._location],
-                   'Type':[str(type(self))],
-                   'Class_Name': [self.__class__.__name__]}
-
-        if self._comment:
-            store_dict ['Info']['Comment'] = [self._comment]
 
 
     def __load__(self, load_dict):
-        info_dict = load_dict.pop('Info')
-        self._load_meta_data(info_dict)
-
         self._data = load_dict
 
 
-    def _load_meta_data(self, info_dict):
-
-        self._name = info_dict['Name'][0]
-        self._location = info_dict['Location'][0]
-        self._fullname = self._location +'.' + self._name
-
-
-        assert str(type(self)) == info_dict['Type'][0]
-        assert self.__class__.__name__ == info_dict['Class_Name'][0]
-
-        if 'Comment' in info_dict:
-            self._comment = info_dict['Comment'][0]
-        else:
-            self._comment = None
 
     def __delattr__(self, item):
         if item[0]=='_':

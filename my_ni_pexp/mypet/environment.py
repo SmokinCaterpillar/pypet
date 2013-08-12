@@ -122,8 +122,8 @@ class Environment(object):
         self._traj.ac('mode',globally.MULTIPROC_MODE_NORMAL)
 
 
-        self._storage_service = HDF5StorageService(self._traj.get('Config.filename').evaluate(),
-                                                 self._traj.get('Config.filetitle').evaluate() )
+        self._storage_service = HDF5StorageService(self._traj.get('Config.filename').get(),
+                                                 self._traj.get('Config.filetitle').get() )
 
         self._logger.debug('Environment initialized.')
 
@@ -148,8 +148,8 @@ class Environment(object):
         self._traj.prepare_experiment()
 
 
-        multiproc = self._traj.get('Config.multiproc').evaluate()
-        mode = self._traj.get('Config.mode').evaluate()
+        multiproc = self._traj.get('Config.multiproc').get()
+        mode = self._traj.get('Config.mode').get()
         if multiproc:
             if mode == globally.MULTIPROC_MODE_QUEUE:
                 manager = multip.Manager()
@@ -178,7 +178,7 @@ class Environment(object):
                                     %(globally.MULTIPROC_MODE_QUEUE, globally.MULTIPROC_MODE_NORMAL))
 
 
-            ncores =  self._traj.get('Config.ncores').evaluate()
+            ncores =  self._traj.get('Config.ncores').get()
             
             mpool = multip.Pool(ncores)
 

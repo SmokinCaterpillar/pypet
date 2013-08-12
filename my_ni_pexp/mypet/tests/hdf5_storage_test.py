@@ -2,7 +2,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import ParameterSet, SparseParameter, BaseResult
+from mypet.parameter import Parameter, PickleParameter, BaseResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
@@ -21,7 +21,7 @@ import shutil
 def simple_calculations(traj, arg1, simple_kwarg):
 
 
-        all_mat = traj.all_mat
+        all_mat = traj.csc_mat + traj.lil_mat + traj.csr_mat
         Normal_int= traj.Normal.int
         Sum= np.sum(traj.Numpy.double)
 
@@ -71,7 +71,9 @@ class EnvironmentTest(unittest.TestCase):
         spsparse_lil = spsp.lil_matrix((2222,22))
         spsparse_lil[3,2] = 44.5
 
-        self.param_dict['Sparse']['all_mat'] = [spsparse_lil,spsparse_csc,spsparse_csr]
+        self.param_dict['Sparse']['lil_mat'] = spsparse_lil
+        self.param_dict['Sparse']['csc_mat'] = spsparse_csc
+        self.param_dict['Sparse']['csr_mat'] = spsparse_csr
 
 
     def add_params(self,traj):
@@ -79,11 +81,7 @@ class EnvironmentTest(unittest.TestCase):
         flat_dict = flatten_dictionary(self.param_dict,'.')
 
         for key, val in flat_dict.items():
-            if key == 'Sparse.all_mat':
-                traj.ap(key,  mat0=val[0],mat1=val[1], mat2=val[2],
-                        param_type = SparseParameter, evalstr = 'self.mat0+self.mat1+self.mat2')
-            else:
-                traj.ap(key,val)
+            traj.ap(key,val)
 
         traj.adp('Another.String', 'Hi, how are you?')
 
@@ -91,9 +89,9 @@ class EnvironmentTest(unittest.TestCase):
 
     def explore(self, traj):
         self.explored = {}
-        name1=traj.gfpn('Normal.int', 'val0')
+        name1=traj.gfpn('Normal.int')
         self.explored[name1] = [42,43,44]
-        name2=traj.gfpn('Numpy.double', 'val0')
+        name2=traj.gfpn('Numpy.double')
         self.explored[name2] = [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]
 
         traj.explore(cartesian_product,self.explored)
@@ -117,7 +115,7 @@ class EnvironmentTest(unittest.TestCase):
         traj.mode = self.mode
         traj.ncores = self.ncores
 
-        traj.set_fast_access(True)
+        traj.set_standard_param_type(PickleParameter)
 
         ## Create some parameters
         self._create_param_dict()

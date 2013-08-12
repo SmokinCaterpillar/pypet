@@ -2,7 +2,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import ParameterSet
+from mypet.parameter import Parameter
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -102,8 +102,8 @@ class NetworkTest(unittest.TestCase):
         #traj.mode='Parallel'
 
 
-        traj.explore(cartesian_product,{traj.get('N').gfn('val0'):[100,200],
-                               traj.get('tauw').gfn('val0'):[30*ms,40*ms]})
+        traj.explore(cartesian_product,{traj.get('N').gfn():[100,200],
+                               traj.get('tauw').gfn():[30*ms,40*ms]})
 
         self.traj = traj
 

@@ -2,8 +2,6 @@ __author__ = 'robert'
 
 
 
-
-
 def flatten_dictionary(nested_dict, separator):
     flat_dict = {}
     for key, val in nested_dict.items():
