@@ -48,7 +48,7 @@ def main():
     config['multiproc'] = True
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
-    traj.add_parameter('test.testparam', param_type=Parameter, **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
+    traj.add_parameter('test.testparam', param_type=ParameterSet, **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
 
     traj.last.foo = 'bar'
     

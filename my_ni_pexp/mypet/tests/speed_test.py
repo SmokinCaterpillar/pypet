@@ -1,7 +1,7 @@
 __author__ = 'robert'
 
 import numpy as np
-from mypet.parameter import Parameter
+from mypet.parameter import ParameterSet
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity

@@ -4,7 +4,7 @@ Created on 17.05.2013
 @author: robert
 '''
 class ParameterLockedException(Exception):
-    '''Exception raised if someone tries to modify a locked Parameter'''
+    '''Exception raised if someone tries to modify a locked ParameterSet'''
     def __init__(self,msg):
         self._msg=msg
         
@@ -12,7 +12,7 @@ class ParameterLockedException(Exception):
         return repr(self._msg)
     
 class ParameterNotArrayException(Exception):
-    '''Exception raised if someone tries to treat the Parameter as an Parameter Array if it is not'''
+    '''Exception raised if someone tries to treat the ParameterSet as an ParameterSet Array if it is not'''
     def __init__(self,msg):
         self._msg=msg
         

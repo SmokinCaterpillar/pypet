@@ -8,7 +8,7 @@ import logging
 import datetime
 import time
 from lxml.etree import _Validator
-from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
+from mypet.parameter import ParameterSet, BaseParameterSet, SimpleResult, BaseResult
 import importlib as imp
 
 import mypet.petexceptions as pex
@@ -75,9 +75,9 @@ class TrajOrRun(object):
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
 
-        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param name: The Name of the ParameterSet,Result or TreeNode that is requested.
         :param fast_access: If the default evaluation of a parameter should be returned.
-        :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
+        :param check_uniqueness: If search through the ParameterSet tree should be stopped after finding an entry or
         whether it should be chekced if the path through the tree is not unique.
         :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
         seach ('dfs').
@@ -160,7 +160,7 @@ class TrajOrRun(object):
             removal_list = [removal_list]
 
         for item in removal_list:
-            if isinstance(item, (BaseParameter,BaseResult)):
+            if isinstance(item, (BaseParameterSet,BaseResult)):
                 instance = item
             elif isinstance(item, str):
                 instance = self.get(item,fast_access=False)
@@ -240,7 +240,7 @@ class NaturalNamingInterface(object):
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
 
-        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param name: The Name of the ParameterSet,Result or TreeNode that is requested.
         :param fast_access: If the default evaluation of a parameter should be returned.
         :return: The requested object or it's default evaluation. Returns None if object could not be found.
         '''
@@ -355,7 +355,7 @@ class NaturalNamingInterface(object):
 
     def _get_result(self, data, fast_access):
 
-        if fast_access and isinstance(data, BaseParameter) and not isinstance(data, BaseResult):
+        if fast_access and isinstance(data, BaseParameterSet) and not isinstance(data, BaseResult):
             return data.evaluate()
         else:
             return data
@@ -426,7 +426,7 @@ class TreeNode(object):
         else:
             instance = self.get(key)
 
-            if not isinstance(instance, BaseParameter ):
+            if not isinstance(instance, BaseParameterSet ):
                 raise AttributeError('You cannot assign values to a tree node or a list of nodes and leaves, it only works for parameters (excluding results).')
 
 
@@ -466,9 +466,9 @@ class TreeNode(object):
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
 
-        :param name: The Name of the Parameter,Result or TreeNode that is requested.
+        :param name: The Name of the ParameterSet,Result or TreeNode that is requested.
         :param fast_access: If the default evaluation of a parameter should be returned.
-        :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
+        :param check_uniqueness: If search through the ParameterSet tree should be stopped after finding an entry or
         whether it should be chekced if the path through the tree is not unique.
         :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
         seach ('dfs').
@@ -615,7 +615,7 @@ class Trajectory(TrajOrRun):
         self.Last = None
 
 
-        self._standard_param_type = Parameter
+        self._standard_param_type = ParameterSet
         self._standard_result_type = SimpleResult
         
         
@@ -673,7 +673,7 @@ class Trajectory(TrajOrRun):
         ''' Can be called before parameters are added to the Trajectory in order to change the values that are stored
         into the parameter.
 
-        After creation of a Parameter, the instance of the parameter is called with param.set(*args,**kwargs).
+        After creation of a ParameterSet, the instance of the parameter is called with param.set(*args,**kwargs).
         The prefix 'Parameters.' is also automatically added to 'param_name'. If the parameter already exists,
         when change_parameter is called, the parameter is changed directly.
 
@@ -805,7 +805,7 @@ class Trajectory(TrajOrRun):
         faulty_names = self._check_name(full_result_name)
 
         if faulty_names:
-            raise AttributeError('Your Parameter %s contains the following not admittable names: %s please choose other names')
+            raise AttributeError('Your ParameterSet %s contains the following not admittable names: %s please choose other names')
 
 
         if full_result_name in self._results:
@@ -832,7 +832,7 @@ class Trajectory(TrajOrRun):
 
         If param_type is not specified for add_parameter, than the standard parameter is used.
         '''
-        assert issubclass(param_type,BaseParameter)
+        assert issubclass(param_type,BaseParameterSet)
         self._standard_param_type = param_type
 
 
@@ -854,7 +854,7 @@ class Trajectory(TrajOrRun):
                             DerivedParameters.Run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
                                     
         :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
-        *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
+        *args.n If not specified the standard parameter is chosen. Standard is the ParameterSet class,
         another example would be the SparseParameter class.
                             
         :param param (or args[0]):      If you already have an instance of the parameter you can pass it here,
@@ -867,7 +867,7 @@ class Trajectory(TrajOrRun):
         :param **kwargs: Any kinds of desired parameter entries.
         
         Example use:
-        >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=Parameter, 
+        >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=ParameterSetSet,
                                                 entry1 = 42)
             
         >>> print myparam.entry1
@@ -881,7 +881,7 @@ class Trajectory(TrajOrRun):
 
         args = list(args)
 
-        if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
+        if 'param' in kwargs or (args and isinstance( args[0],BaseParameterSet)):
             if 'param' in kwargs:
                 instance = kwargs.pop('param')
             else:
@@ -899,7 +899,7 @@ class Trajectory(TrajOrRun):
             full_parameter_name = prefix+full_parameter_name
 
             if not 'param_type' in kwargs:
-                if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
+                if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameterSet):
                         args = list(args)
                         param_type = args.pop(0)
                 else:
@@ -910,12 +910,12 @@ class Trajectory(TrajOrRun):
 
             instance = param_type(full_parameter_name,*args, **kwargs)
         else:
-            raise RuntimeError('You did not supply a new Parameter or a name for a new Parameter.')
+            raise RuntimeError('You did not supply a new ParameterSet or a name for a new ParameterSet.')
 
         faulty_names = self._check_name(full_parameter_name)
 
         if faulty_names:
-            raise AttributeError('Your Parameter %s contains the following not admittable names: %s please choose other names.'
+            raise AttributeError('Your ParameterSet %s contains the following not admittable names: %s please choose other names.'
                                  % (full_parameter_name, faulty_names))
 
         if full_parameter_name in where_dict:
@@ -970,7 +970,7 @@ class Trajectory(TrajOrRun):
                             Parameters.paramgroup.param1
 
         :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
-        *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
+        *args.n If not specified the standard parameter is chosen. Standard is the ParameterSet class,
         another example would be the SparseParameter class.
 
         :param param (or args[0]):      If you already have an instance of the parameter you can pass it here,
@@ -983,7 +983,7 @@ class Trajectory(TrajOrRun):
         :param **kwargs: Any kinds of desired parameter entries.
 
         Example use:
-        >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=Parameter,
+        >>> myparam=traj.add_derived_parameter(self, paramgroup.param1, param_type=ParameterSetSet,
                                                 entry1 = 42)
             
         >>> print myparam.entry1
@@ -1020,7 +1020,7 @@ class Trajectory(TrajOrRun):
         return result_dict     
     
     def explore(self,build_function,*args,**kwargs): 
-        ''' Creates Parameter Arrays for exploration.
+        ''' Creates ParameterSet Arrays for exploration.
         
         The user needs to supply a builder function 'build_function' and its necessary parameters 
         *args or **kwargs. The builder function is supposed to return a dictionary of parameter entries with
@@ -1078,7 +1078,7 @@ class Trajectory(TrajOrRun):
                   globally.UPDATE_SKELETON)
 
     def load_stuff(self, to_load_list, *args,**kwargs):
-        ''' Loads parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        ''' Loads parameters specified in >>to_load_list<<. You can directly list the ParameterSet objects or their
         names.
         If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
         If kwargs contains the keyword >>only_empties=True<<, only empty parameters or results are passed to the
@@ -1094,7 +1094,7 @@ class Trajectory(TrajOrRun):
         self._storageservice.load(item_list,trajectoryname=self.get_name(),*args,**kwargs)
 
     def store_stuff(self, to_store_list, *args, **kwargs):
-        ''' Stores parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        ''' Stores parameters specified in >>to_load_list<<. You can directly list the ParameterSet objects or their
         names.
         If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
         If kwargs contains the keyword >>non_empties=True<<, only non-empty parameters or results are passed to the
@@ -1295,9 +1295,9 @@ class SingleRun(TrajOrRun):
     
     
     def add_parameter(self, *args, **kwargs):
-        ''' Adds a DERIVED Parameter to the trajectory and emits a warning.
+        ''' Adds a DERIVED ParameterSet to the trajectory and emits a warning.
         ''' 
-        self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
+        self._logger.warn('Cannot add Parameters anymore, yet I will add a derived ParameterSet.')
         return self.add_derived_parameter( *args, **kwargs)
 
 
@@ -1354,7 +1354,7 @@ class SingleRun(TrajOrRun):
 
         If param_type is not specified for add_parameter, than the standard parameter is used.
         '''
-        assert issubclass(param_type,BaseParameter)
+        assert issubclass(param_type,BaseParameterSet)
         self._single_run._standard_param_type = param_type
 
 
@@ -1374,7 +1374,7 @@ class SingleRun(TrajOrRun):
         self._storageservice.store(self,trajectoryname=self.get_parent_name(), *args, **kwargs)
 
     def store_stuff(self, to_store_list, *args, **kwargs):
-        ''' Stores parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
+        ''' Stores parameters specified in >>to_load_list<<. You can directly list the ParameterSet objects or their
         names.
         If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
         If kwargs contains the keyword >>non_empties=True<<, only non-empty parameters or results are passed to the

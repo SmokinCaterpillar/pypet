@@ -6,7 +6,7 @@ import tables as pt
 import os
 import numpy as np
 from mypet.trajectory import Trajectory,SingleRun
-from mypet.parameter import BaseParameter, BaseResult, SimpleResult
+from mypet.parameter import BaseParameterSet, BaseResult, SimpleResult
 from mypet import globally
 
 
@@ -126,7 +126,7 @@ class HDF5StorageService(StorageService):
                 self._load_trajectory(stuff_to_load,*args,**kwargs)
 
 
-            elif isinstance(stuff_to_load, (BaseParameter,BaseResult)):
+            elif isinstance(stuff_to_load, (BaseParameterSet,BaseResult)):
                 self._load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
             elif isinstance(stuff_to_load, list):
@@ -168,7 +168,7 @@ class HDF5StorageService(StorageService):
 
                 self._store_single_run(stuff_to_store,*args,**kwargs)
 
-            elif isinstance(stuff_to_store,(BaseParameter,BaseResult)):
+            elif isinstance(stuff_to_store,(BaseParameterSet,BaseResult)):
                 self._store_parameter_or_result(stuff_to_store,*args,**kwargs)
 
             elif isinstance(stuff_to_store, list):
@@ -374,7 +374,7 @@ class HDF5StorageService(StorageService):
 
                 new_class = traj._create_class(class_name)
                 paraminstance = new_class(fullname)
-                assert isinstance(paraminstance, (BaseParameter,BaseResult))
+                assert isinstance(paraminstance, (BaseParameterSet,BaseResult))
 
 
                 if 'Size' in colnames:
@@ -811,7 +811,7 @@ class HDF5StorageService(StorageService):
         try:
             hdf5group = eval('self._trajectorygroup.'+fullname)
         except Exception, e:
-            raise AttributeError('Parameter %s cannot be found in the hdf5file %s and trajectory %s' % (fullname,self._filename,self._trajectoryname))
+            raise AttributeError('ParameterSet %s cannot be found in the hdf5file %s and trajectory %s' % (fullname,self._filename,self._trajectoryname))
 
         load_dict = {}
         for leaf in hdf5group:

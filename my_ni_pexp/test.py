@@ -23,14 +23,14 @@ def main():
 
     traj.add_parameter('test.testparam', **{'Fuechse':np.array([[1,2],[3.3,2]]),'Sapiens':1,'Comment':'ladida'})
 
-    traj.add_parameter(full_parameter_name='honky',param_type=Parameter, **{'mirta':np.array([[1,2,7],[3,2,17]])})
+    traj.add_parameter(full_parameter_name='honky',param_type=ParameterSet, **{'mirta':np.array([[1,2,7],[3,2,17]])})
 
     arr= traj.Parameters.test.testparam.Fuechse
     
     traj.Parameters.test.testparam.Peter = 4
     
     print arr
-    print type(Parameter)
+    print type(ParameterSet)
     print traj.Parameters.test.testparam.Peter
     
     traj.Parameters.test.testparam.become_array()

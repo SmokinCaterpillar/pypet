@@ -40,7 +40,7 @@ def main():
     
     print traj.last.herbert
 
-    traj.add_parameter(full_parameter_name='honky', param_type=Parameter, **{'mirta':np.array([[1,2,7],[3,2,17]])})
+    traj.add_parameter(full_parameter_name='honky', param_type=ParameterSet, **{'mirta':np.array([[1,2,7],[3,2,17]])})
 
     traj.add_parameter('flonky',**{'val' : 10})
     

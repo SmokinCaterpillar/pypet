@@ -6,7 +6,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, SparseParameter, SimpleResult
+from mypet.parameter import ParameterSet, SparseParameter, SimpleResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -19,7 +19,7 @@ import multiprocessing as multip
 
 import mypet.storageservice as stsv
 
-class ImAParameterInDisguise(Parameter):
+class ImAParameterInDisguise(ParameterSet):
     pass
 
 class ImAResultInDisguise(SimpleResult):
@@ -46,7 +46,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.add_parameter('FloatParam')
 
-        self.traj.adp(Parameter('FortyTwo', 42))
+        self.traj.adp(ParameterSet('FortyTwo', 42))
 
         self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
 

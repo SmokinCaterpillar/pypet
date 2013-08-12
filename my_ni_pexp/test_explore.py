@@ -19,7 +19,7 @@ def main():
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     traj.adp(full_parameter_name='foo', value_dict={'bar' : -1}).moo = 'zip'
     
-    traj.add_parameter('test.testparam', {'Fuechse':1,'Sapiens':1,'Comment':'ladida'}, param_type=Parameter)
+    traj.add_parameter('test.testparam', {'Fuechse':1,'Sapiens':1,'Comment':'ladida'}, param_type=ParameterSet)
 
     
     traj.last.foo = 'bar'
@@ -38,7 +38,7 @@ def main():
     
     print traj.last.herbert
 
-    traj.add_parameter(full_parameter_name='honky', value_dict={'mirta':np.array([[1,2,7],[3,2,17]])}, param_type=Parameter)
+    traj.add_parameter(full_parameter_name='honky', value_dict={'mirta':np.array([[1,2,7],[3,2,17]])}, param_type=ParameterSet)
 
     traj.add_parameter('flonky',{'val' : 10})
     

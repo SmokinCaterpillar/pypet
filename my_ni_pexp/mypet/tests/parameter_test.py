@@ -5,7 +5,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, SparseParameter
+from mypet.parameter import ParameterSet, SparseParameter
 import pickle
 import scipy.sparse as spsp
 import mypet.petexceptions as pex
@@ -37,7 +37,7 @@ class ParameterTest(unittest.TestCase):
         self.location = '.'.join(self.split_name)
 
 
-        self.param = Parameter(self.fullname, self.val0,self.val1,self.val2,self.val3,
+        self.param = ParameterSet(self.fullname, self.val0,self.val1,self.val2,self.val3,
                                npfloat=self.npfloat,
                                npfloat_2d=self.npfloat_2d,
                                npbool=self.npbool,

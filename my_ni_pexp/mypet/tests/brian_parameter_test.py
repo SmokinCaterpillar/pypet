@@ -3,7 +3,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, SparseParameter
+from mypet.parameter import ParameterSet, SparseParameter
 from mypet.brian.parameter import BrianParameter
 import pickle
 import scipy.sparse as spsp

@@ -5,7 +5,7 @@ Created on 10.06.2013
 '''
 
 
-from mypet.parameter import Parameter, BaseResult, SparseParameter, SimpleResult
+from mypet.parameter import ParameterSet, BaseResult, SparseParameter, SimpleResult
 from brian.units import *
 from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity
