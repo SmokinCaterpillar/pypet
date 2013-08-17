@@ -15,6 +15,8 @@ from mypet.utils.helpful_functions import nest_dictionary
 from inspect import getsource
 import numpy as np
 
+
+
 class BrianParameter(Parameter):
 
     identifier = '__brn__'
@@ -44,19 +46,18 @@ class BrianParameter(Parameter):
 
         if isinstance(self._data,Quantity):
             store_dict={}
-            value, unit = self._separate_value_and_unit(self._data)
-            store_dict['Data'] = ObjectTable(data={'data'+BrianParameter.identifier+'value':[value],
-                                                   'data'+BrianParameter.identifier+'unit':[unit]})
-            if self.is_array():
-                value_list = []
-                unit_list = []
-                for val in self._explored_data:
-                    unit, value = self._separate_value_and_unit(val)
-                    value_list.append(value)
-                    unit_list.append(unit)
+            valstr = self._data.in_best_unit(python_code=True)
+            store_dict['Data'] = ObjectTable(data={'data'+BrianParameter.identifier:[valstr]})
 
-                store_dict['ExploredData'] = ObjectTable(data={'data'+BrianParameter.identifier+'value':value_list,
-                                                   'data'+BrianParameter.identifier+'unit':unit_list})
+
+            if self.is_array():
+                valstr_list = []
+                for val in self._explored_data:
+                    valstr = val.in_best_unit(python_code=True)
+                    valstr_list.append(valstr)
+
+
+                store_dict['ExploredData'] = ObjectTable(data={'data'+BrianParameter.identifier:valstr_list})
 
             return store_dict
         else:
@@ -67,42 +68,23 @@ class BrianParameter(Parameter):
         data_table = load_dict['Data']
         data_name = data_table.columns.tolist()[0]
         if BrianParameter.identifier in data_name:
-            value = data_table['data'+BrianParameter.identifier+'value'][0]
-            unit = data_table['data'+BrianParameter.identifier+'unit'][0]
+            valstr = data_table['data'+BrianParameter.identifier][0]
 
-            self._data = self._join_value_and_unit(value, unit)
-
+            self._data = eval(valstr)
 
             if 'ExploredData' in load_dict:
                 explore_table = load_dict['ExploredData']
 
-                value_col = explore_table['data'+BrianParameter.identifier+'value']
-                unit_col = explore_table['data'+BrianParameter.identifier+'unit']
+                valstr_col = explore_table['data'+BrianParameter.identifier]
                 explore_list = []
-                for idx in range(len(value_col)):
-                    brian_quantity = self._join_value_and_unit(value_col[idx], unit_col[idx])
+                for valstr in valstr_col:
+                    brian_quantity = eval(valstr)
                     explore_list.append(brian_quantity)
 
                 self._explored_data=tuple(explore_list)
-
-                self._length = len(self._explored_data)
         else:
             super(BrianParameter,self).__load__(load_dict)
 
-
-
-    def _separate_value_and_unit(self, data):
-                    assert isinstance(data, Quantity)
-                    valstr = data.in_best_unit(python_code=True)
-                    split_val = valstr.split('*')
-                    value = split_val.pop(0)
-                    unit = '*'.join(split_val)
-                    return value, unit
-
-    def _join_value_and_unit(self,value,unit):
-        evalstr = value+' * '+ unit
-        brian_quantity = eval(evalstr)
-        return brian_quantity
 
 
 class BrianMonitorResult(SimpleResult):
@@ -140,6 +122,7 @@ class BrianMonitorResult(SimpleResult):
         
         #assert isinstance(monitor, SpikeMonitor)
 
+
         data_dict = {}
 
         record =  monitor.record
@@ -155,6 +138,8 @@ class BrianMonitorResult(SimpleResult):
 
         data_dict['Time_Unit'] = ['second']
 
+        data_table = ObjectTable(data=data_dict)
+
         spike_dict={}
 
         if len(monitor.spikes)>0:
@@ -166,9 +151,10 @@ class BrianMonitorResult(SimpleResult):
             spike_dict['time'] = nounit_list
             spike_dict['index'] = list(zip_lists[0])
 
-            self.set(Spikes=spike_dict)
+            spike_table = ObjectTable(data=spike_dict)
+            self.set(spikes=spike_dict)
 
-        self.set(Data=data_dict)
+        self.set(Data=data_table)
 
         
     def _extract_population_rate_monitor(self,monitor):
