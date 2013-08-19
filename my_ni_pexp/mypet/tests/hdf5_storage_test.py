@@ -2,7 +2,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, BaseResult
+from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
@@ -15,7 +15,10 @@ from mypet.utils.helpful_functions import flatten_dictionary
 import scipy.sparse as spsp
 import os
 import shutil
+import pandas as pd
 
+## Removes all the files again to clean up after the tests
+remove = False
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
@@ -26,10 +29,29 @@ def simple_calculations(traj, arg1, simple_kwarg):
         Sum= np.sum(traj.Numpy.double)
 
         result_mat = all_mat * Normal_int * Sum * arg1 * simple_kwarg
+
+
+
+        my_dict = {}
+
+        my_dict2={}
+        for key, val in traj.to_dict(fast_access=True,short_names=False).items():
+            newkey = key.replace('.','_')
+            my_dict[newkey] = str(val)
+            my_dict2[newkey] = [str(val)+' juhu!']
+
+        keys = traj.to_dict(short_names=False).keys()
+        for idx,key in enumerate(keys):
+            keys[idx] = key.replace('.','_')
+
+        traj.add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2)
+        traj.add_result('DictsNFrame', keys=keys)
         traj.add_result('ResMatrix',result_mat.todense())
         traj.add_derived_parameter('All.To.String', str(traj.to_dict(fast_access=True,short_names=False)))
 
+        myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
+        traj.DictsNFrame.set(myframe)
 
 
 class EnvironmentTest(unittest.TestCase):
@@ -47,6 +69,8 @@ class EnvironmentTest(unittest.TestCase):
         self.param_dict['Numpy'] = {}
         self.param_dict['Sparse'] ={}
         self.param_dict['Numpy_2D'] = {}
+        self.param_dict['Numpy_3D'] = {}
+        self.param_dict['Tuples'] ={}
 
         normal_dict = self.param_dict['Normal']
         normal_dict['string'] = 'Im a test string!'
@@ -61,6 +85,7 @@ class EnvironmentTest(unittest.TestCase):
         numpy_dict['bool'] = np.array([True,False, True])
 
         self.param_dict['Numpy_2D']['double'] = np.array([[1.0,2.0],[3.0,4.0]])
+        self.param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
 
         spsparse_csc = spsp.csc_matrix((2222,22))
         spsparse_csc[1,2] = 44.6
@@ -75,24 +100,33 @@ class EnvironmentTest(unittest.TestCase):
         self.param_dict['Sparse']['csc_mat'] = spsparse_csc
         self.param_dict['Sparse']['csr_mat'] = spsparse_csr
 
+        self.param_dict['Tuples']['int'] = (1,2,3)
+        self.param_dict['Tuples']['float'] = (44.4,42.1,3.)
+        self.param_dict['Tuples']['str'] = ('1','2wei','dr3i')
+
 
     def add_params(self,traj):
 
         flat_dict = flatten_dictionary(self.param_dict,'.')
 
         for key, val in flat_dict.items():
-            traj.ap(key,val)
+            if isinstance(val, (np.ndarray,list, tuple)):
+                traj.ap(key,val, param_type = ArrayParameter)
+            elif isinstance(val, (int,str,bool,float)):
+                traj.ap(key,val, param_type = Parameter, comment='Im a comment!')
+            elif spsp.isspmatrix(val):
+                traj.ap(key,val, param_type = PickleParameter)
+            else:
+                raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
         traj.adp('Another.String', 'Hi, how are you?')
 
 
 
     def explore(self, traj):
-        self.explored = {}
-        name1=traj.gfpn('Normal.int')
-        self.explored[name1] = [42,43,44]
-        name2=traj.gfpn('Numpy.double')
-        self.explored[name2] = [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]
+        self.explored ={'Normal.int': [42,43,44],
+        'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
+
 
         traj.explore(cartesian_product,self.explored)
 
@@ -115,7 +149,7 @@ class EnvironmentTest(unittest.TestCase):
         traj.mode = self.mode
         traj.ncores = self.ncores
 
-        traj.set_standard_param_type(PickleParameter)
+        traj.set_standard_param_type(Parameter)
 
         ## Create some parameters
         self._create_param_dict()
@@ -137,7 +171,7 @@ class EnvironmentTest(unittest.TestCase):
         simple_kwarg= 13.0
         self.env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
-
+        ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.set_storage_service(HDF5StorageService(filename=self.filename))
         newtraj.load(trajectoryname=-1,load_derived_params=2,load_results=2,replace=True)
@@ -156,14 +190,37 @@ class EnvironmentTest(unittest.TestCase):
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
             old_item = old_items[key]
-            if not isinstance(item, BaseResult) and not spsp.issparse(item) and not key in traj.get_explored_params():
-               self.assertTrue(np.all(old_item==item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+            if not isinstance(item, BaseResult):
+                self.assertTrue(str(old_item)==str(item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+            else:
+                inner_dict = old_item.to_dict()
+                for innerkey, val in item.to_dict().items():
+                     old_val = inner_dict[innerkey]
+                     self.assertTrue(str(old_val)==str(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
+
+            ### make sure that the names and comments are the same:
+            new_param = newtraj.get(key)
+            old_param = traj.get(key)
+
+            test_names = ['location',
+                         'name',
+                         'fullname' ,
+                         'comment']
+
+            for funcname in test_names:
+
+                new_func = 'new_param.get_' +funcname+'()'
+                old_func = 'old_param.get_' + funcname+'()'
+
+                newval = eval(new_func)
+                old_val = eval(old_func)
+
+                self.assertEqual(newval,old_val,'new and old parameters >>%s<< do not match. %s != %s' %(key,newval,old_val))
 
 
-
-
-        #os.remove(self.filename)
-        #shutil.rmtree(self.logfolder,True)
+        if remove:
+            os.remove(self.filename)
+            shutil.rmtree(self.logfolder,True)
 
 
 

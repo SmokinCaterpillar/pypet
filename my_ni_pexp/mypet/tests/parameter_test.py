@@ -5,7 +5,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, BaseParameter
+from mypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter
 import pickle
 import scipy.sparse as spsp
 import mypet.petexceptions as pex
@@ -216,6 +216,54 @@ class ParameterTest(unittest.TestCase):
             self.assertTrue(param.is_empty())
             self.assertFalse(param.is_array())
 
+class ArrayParameterTest(ParameterTest):
+
+    def setUp(self):
+
+
+        if not hasattr(self,'data'):
+            self.data=Dummy()
+
+        self.data.myintlist = [1,2,3]
+        self.data.mydoublelist = [42.0,43.7,33.3]
+        self.data.mystringlist = ['Eins','zwei','dr3i']
+        self.data.myinttuple = (1,2,3)
+        self.data.mydoubletuple = (42.0,43.7,33.3)
+        self.data.mystringtuple = ('Eins','zwei','dr3i')
+
+        super(ArrayParameterTest,self).setUp()
+
+        ## For the rest of the checkings, lists are converted to tuples:
+        for key, val in self.data.__dict__.items():
+            if isinstance(val, (list, tuple)):
+                self.data.__dict__[key] = np.array(val)
+
+
+    def make_params(self):
+        self.param = Dummy()
+        for key, val in self.data.__dict__.items():
+            self.param.__dict__[key] = ArrayParameter(self.location+'.'+key, val, comment=key)
+
+
+    def explore(self):
+
+        matrices = []
+
+
+        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+                               np.array(['Cinco', 'Seis', 'Siette']),
+                            np.array(['Ocho', 'Nueve', 'Diez'])],
+                           'val0':[1,2,3],
+                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]}
+
+        ## Convert the explored stuff into numpy arrays
+        for idx, val in enumerate(self.explore_dict['myinttuple']):
+            self.explore_dict['myinttuple'][idx] = np.array(val)
+
+
+        ## Explore the parameter:
+        for key, vallist in self.explore_dict.items():
+            self.param.__dict__[key].explore(vallist)
 
 
 class PickleParameterTest(ParameterTest):

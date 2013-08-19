@@ -30,7 +30,7 @@ def add_params(traj):
     traj.ap('Net.b',0.08*nA)
     traj.ap('Net.I',.8*nA)
     traj.ap('Net.Vcut',traj.VT+5*traj.DeltaT) # practical threshold condition
-    traj.ap('Net.N',500)
+    traj.ap('Net.N',100)
 
     eqs="""
     dvm/dt=(gL*(EL-vm)+gL*DeltaT*exp((vm-VT)/DeltaT)+I-w)/C : volt
@@ -64,22 +64,44 @@ def run_net(traj):
     neuron.w=a*(neuron.vm-EL)
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,N) # bifurcation parameter
 
-    run(50*msecond,report='text') # we discard the first spikes
+    run(25*msecond,report='text') # we discard the first spikes
 
     MSpike=SpikeMonitor(neuron) # record Vr and w at spike times
     MPopSpike =PopulationSpikeCounter(neuron)
     MPopRate = PopulationRateMonitor(neuron)
-    MStateV = StateMonitor(neuron,'vm')
+    MStateV = StateMonitor(neuron,'vm',record=[1,2,3])
+    MStatewMean = StateMonitor(neuron,'w')
 
+    MRecentStateV = RecentStateMonitor(neuron,'vm',record=[1,2,3],duration=10*ms)
+    MRecentStatewMean = RecentStateMonitor(neuron,'w',duration=10*ms)
+
+    MCounts = SpikeCounter(neuron)
+
+    MStateSpike = StateSpikeMonitor(neuron,('w','vm'))
+
+    MMultiState = MultiStateMonitor(neuron,['w','vm'],record=[6,7,8,9])
+
+    ISIHist = ISIHistogramMonitor(neuron,[0,0.0001,0.0002])
+
+    VanRossum = VanRossumMetric(neuron, tau=5*msecond)
 
     run(50*msecond,report='text')
 
 
     traj.add_result('SpikeMonitor',BrianMonitorResult,MSpike)
+    traj.add_result('SpikeMonitorAr',BrianMonitorResult,MSpike, storage_mode = BrianMonitorResult.array_mode)
     traj.add_result('PopulationSpikeCounter', BrianMonitorResult, MPopSpike)
     traj.add_result('PopulationRateMonitor', BrianMonitorResult,MPopRate)
-    traj.add_result('StateMonitor', BrianMonitorResult, MStateV)
-
+    traj.add_result('StateMonitorV', BrianMonitorResult, MStateV)
+    traj.add_result('StateMonitorwMean', BrianMonitorResult, MStatewMean)
+    traj.add_result('Counts', BrianMonitorResult,MCounts)
+    traj.add_result('StateSpikevmw', BrianMonitorResult, MStateSpike)
+    traj.add_result('StateSpikevmwAr', BrianMonitorResult, MStateSpike,storage_mode = BrianMonitorResult.array_mode)
+    traj.add_result('MultiState', BrianMonitorResult,MMultiState)
+    traj.add_result('ISIHistogrammMonitor', BrianMonitorResult,ISIHist)
+    traj.add_result('RecentStateMonitorV', BrianMonitorResult, MRecentStateV)
+    traj.add_result('RecentStateMonitorwMean', BrianMonitorResult, MRecentStatewMean)
+    traj.add_result('VanRossumMetric',BrianMonitorResult, VanRossum)
 
 class NetworkTest(unittest.TestCase):
 
@@ -102,7 +124,7 @@ class NetworkTest(unittest.TestCase):
         #traj.mode='Parallel'
 
 
-        traj.explore(cartesian_product,{traj.get('N').gfn():[100,200],
+        traj.explore(cartesian_product,{traj.get('N').gfn():[50,60],
                                traj.get('tauw').gfn():[30*ms,40*ms]})
 
         self.traj = traj

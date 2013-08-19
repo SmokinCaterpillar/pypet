@@ -4,7 +4,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import ParameterSet
+from mypet.parameter import Parameter
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -23,13 +23,18 @@ class EnvironmentTest(unittest.TestCase):
 
     def setUp(self):
 
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level = logging.DEBUG)
 
-        env = Environment('Test','test','test',logfolder='../../log')
+        self.filename = '../../Test/HDF5/test.hdf5'
+        self.logfolder = '../../Test/Log'
+        self.trajname = 'Test'
+
+        env = Environment(self.trajname,self.filename,self.trajname,logfolder=self.logfolder)
+
         traj = env.get_trajectory()
         traj.set_storage_service(LazyStorageService())
 
-        traj.ap('Test', value=1)
+        traj.ap('Test', 1)
 
 
         large_amount = 111
@@ -37,12 +42,12 @@ class EnvironmentTest(unittest.TestCase):
         for irun in range(large_amount):
             name = 'There.Are.Many.Of.m3' + str(irun)
 
-            traj.ap(name,value = irun)
+            traj.ap(name, irun)
 
         traj.change_config('ncores', 2)
         traj.change_config('multiproc', True)
 
-        traj.explore(identity,{traj.get('Par.Test').gfn('value'):[1,2,3,4,5]})
+        traj.explore(identity,{traj.get('Par.Test').gfn():[1,2,3,4,5]})
 
         self.traj = traj
 

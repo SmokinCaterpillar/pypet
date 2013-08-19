@@ -1,3 +1,5 @@
+from numpy.oldnumeric.ma import _ptp
+
 __author__ = 'robert'
 
 
@@ -10,6 +12,7 @@ from mypet.parameter import BaseParameter, BaseResult, SimpleResult
 from mypet import globally
 
 from mypet.parameter import ObjectTable
+from pandas import DataFrame
 
 
 
@@ -137,6 +140,7 @@ class HDF5StorageService(StorageService):
             self._closing_routine(opened)
         except Exception,e:
             self._closing_routine(True)
+            self._logger.error('Failed loading  >>%s<<' % str(stuff_to_load))
             raise
 
 
@@ -180,6 +184,7 @@ class HDF5StorageService(StorageService):
 
         except Exception,e:
             self._closing_routine(True)
+            self._logger.error('Failed storing >>%s<<' % str(stuff_to_store))
             raise
 
     def _load_several_items(self,items_list,*args,**kwargs):
@@ -312,33 +317,33 @@ class HDF5StorageService(StorageService):
 
 
     def _load_meta_data(self,traj,  replace):
-        metatable = self._trajectorygroup.Info
+        metatable = self._trajectorygroup.info
         metarow = metatable[0]
 
-        traj._length = metarow['Length']
+        traj._length = metarow['length']
 
         if replace:
-            traj._comment = metarow['Comment']
-            traj._time = metarow['Timestamp']
-            traj._formatted_time = metarow['Time']
-            traj._loadedfrom=(metarow['Loaded_From'])
+            traj._comment = metarow['comment']
+            traj._time = metarow['timestamp']
+            traj._formatted_time = metarow['time']
+            traj._loadedfrom=(metarow['loaded_from'])
 
 
 
     def _load_config(self,traj,load_params):
-        paramtable = self._trajectorygroup.ConfigTable
+        paramtable = self._trajectorygroup.config_table
         self._load_any_param_or_result_table(traj,traj._config,paramtable, load_params)
 
     def _load_params(self,traj, load_params):
-        paramtable = self._trajectorygroup.ParameterTable
+        paramtable = self._trajectorygroup.parameter_table
         self._load_any_param_or_result_table(traj,traj._parameters,paramtable, load_params)
 
     def _load_derived_params(self,traj, load_derived_params):
-        paramtable = self._trajectorygroup.DerivedParameterTable
+        paramtable = self._trajectorygroup.derived_parameter_table
         self._load_any_param_or_result_table(traj,traj._derivedparameters,paramtable, load_derived_params)
 
     def _load_results(self,traj, load_results):
-        resulttable = self._trajectorygroup.ResultTable
+        resulttable = self._trajectorygroup.result_table
         self._load_any_param_or_result_table(traj,traj._results, resulttable, load_results)
 
 
@@ -359,10 +364,15 @@ class HDF5StorageService(StorageService):
             colnames = paramtable.colnames
 
             for row in paramtable.iterrows():
-                location = row['Location']
-                name = row['Name']
+                location = row['location']
+                name = row['name']
                 fullname = location+'.'+name
-                class_name = row['Class_Name']
+                class_name = row['class_name']
+
+
+                comment = row['comment']
+
+
                 if fullname in wheredict:
                     if load_mode == globally.UPDATE_SKELETON:
                         continue
@@ -371,12 +381,12 @@ class HDF5StorageService(StorageService):
                                                                                  % fullname)
 
                 new_class = traj._create_class(class_name)
-                paraminstance = new_class(fullname)
+                paraminstance = new_class(fullname,comment=comment)
                 assert isinstance(paraminstance, (BaseParameter,BaseResult))
 
 
-                if 'Size' in colnames:
-                    size = row['Size']
+                if 'size' in colnames:
+                    size = row['size']
                     if size > 1 and size != len(traj):
                         raise RuntimeError('Your are loading a parameter >>%s<< with length %d, yet your trajectory has lenght %d, something is wrong!'
                                            % (fullname,size,len(traj)))
@@ -387,15 +397,15 @@ class HDF5StorageService(StorageService):
                     else:
                         RuntimeError('You shall not pass!')
 
-                if paramtable._v_name in ['DerivedParameterTable', 'ResultTable']:
-                    #creator_name = row['Creator_Name']
-                    creator_id = row['Creator_ID']
-                    if paramtable._v_name == 'DerivedParameterTable':
+                if paramtable._v_name in ['derived_parameter_table', 'result_table']:
+                    #creator_name = row['creator_name']
+                    creator_id = row['creator_id']
+                    if paramtable._v_name == 'derived_parameter_table':
                         if not creator_id in traj._id_to_dpar:
                             traj._id_to_dpar[creator_id] = []
                         traj._id_to_dpar[creator_id].append(paraminstance)
                         traj._dpar_to_id[fullname] = creator_id
-                    elif paramtable._v_name == 'ResultTable':
+                    elif paramtable._v_name == 'result_table':
                         if not creator_id in traj._id_to_res:
                             traj._id_to_res[creator_id] = []
                         traj._id_to_res[creator_id].append(paraminstance)
@@ -429,16 +439,16 @@ class HDF5StorageService(StorageService):
 
 
 
-        paramtable = getattr(self._trajectorygroup, 'DerivedParameterTable')
+        paramtable = getattr(self._trajectorygroup, 'derived_parameter_table')
         self._store_single_table(traj._derivedparameters, paramtable, traj.get_name(),n)
         self._store_dict(traj._derivedparameters)
 
 
-        paramtable = getattr(self._trajectorygroup, 'ResultTable')
+        paramtable = getattr(self._trajectorygroup, 'result_table')
         self._store_single_table(traj._results, paramtable, traj.get_name(),n)
         self._store_dict(traj._results)
 
-        # For better readability add the explored parameters to the Results
+        # For better readability add the explored parameters to the results
         self._add_explored_params(single_run)
 
         self._logger.info('Finished storing run %d with name %s' % (n,single_run.get_name()))
@@ -448,14 +458,16 @@ class HDF5StorageService(StorageService):
     def _add_explored_params(self, single_run):
         ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
         '''
-        paramdescriptiondict={'Location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'Name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'Class_Name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'Value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
+        paramdescriptiondict={'location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                'class_name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
 
-        where = '/'+self._trajectoryname+'/Results/'+single_run.get_name()
-        paramtable = self._hdf5file.createTable(where=where, name='ExploredParameterTable',
-                                                description=paramdescriptiondict, title='ExploredParameterTable')
+        where = 'results.'+single_run.get_name()
+        rungroup = self._create_groups(where)
+
+        paramtable = self._hdf5file.createTable(where=rungroup, name='explored_parameter_table',
+                                                description=paramdescriptiondict, title='explored_parameter_table')
 
         paramdict = single_run._parent_trajectory._exploredparameters
         self._store_single_table(paramdict, paramtable, None,-1)
@@ -477,30 +489,32 @@ class HDF5StorageService(StorageService):
         newrow = paramtable.row
         colnames = set(paramtable.colnames)
         for key, val in paramdict.items():
-            if 'Size' in colnames:
-                newrow['Size'] = len(val)
+            if 'size' in colnames:
+                newrow['size'] = len(val)
 
+            if 'comment' in colnames:
+                newrow['comment'] = val.get_comment()
 
-            if 'Location' in colnames:
-                newrow['Location'] = val.get_location()
+            if 'location' in colnames:
+                newrow['location'] = val.get_location()
 
-            if 'Name' in colnames:
-                newrow['Name'] = val.get_name()
+            if 'name' in colnames:
+                newrow['name'] = val.get_name()
 
-            if 'Class_Name' in colnames:
-                newrow['Class_Name'] = val.get_class_name()
+            if 'class_name' in colnames:
+                newrow['class_name'] = val.get_class_name()
 
-            if 'Value' in colnames:
+            if 'value' in colnames:
                 valstr = val.to_str()
                 if len(valstr) >= globally.HDF5_STRCOL_MAX_NAME_LENGTH:
                     valstr = valstr[0:globally.HDF5_STRCOL_MAX_NAME_LENGTH-1]
-                newrow['Value'] = valstr
+                newrow['value'] = valstr
 
-            if 'Creator_Name' in colnames:
-                newrow['Creator_Name'] = creator_name
+            if 'creator_name' in colnames:
+                newrow['creator_name'] = creator_name
 
-            if 'Creator_ID' in colnames:
-                newrow['Creator_ID'] = creator_id
+            if 'creator_id' in colnames:
+                newrow['creator_id'] = creator_id
 
             #if 'Parent_Trajectory' in colnames:
              #   newrow['Parent_Trajectory'] = self._trajectoryname
@@ -517,7 +531,7 @@ class HDF5StorageService(StorageService):
     def _store_meta_data(self,traj):
         ''' Stores general information about the trajectory in the hdf5file.
 
-        The 'Info' table will contain ththane name of the trajectory, it's timestamp, a comment,
+        The 'info' table will contain ththane name of the trajectory, it's timestamp, a comment,
         the length (aka the number of single runs), and if applicable a previous trajectory the
         current one was originally loaded from.
         The name of all derived and normal parameters as well as the results are stored in
@@ -529,48 +543,49 @@ class HDF5StorageService(StorageService):
         '''
 
 
-        descriptiondict={'Name': pt.StringCol(len(traj._name)),
-                         'Time': pt.StringCol(len(traj._formatted_time)),
-                         'Timestamp' : pt.FloatCol(),
-                         'Comment': pt.StringCol(len(traj._comment)),
-                         'Length':pt.IntCol(),
-                         'Loaded_From' : pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
+        descriptiondict={'name': pt.StringCol(len(traj._name)),
+                         'time': pt.StringCol(len(traj._formatted_time)),
+                         'timestamp' : pt.FloatCol(),
+                         'comment': pt.StringCol(len(traj._comment)),
+                         'length':pt.IntCol(),
+                         'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
 
-        infotable = self._hdf5file.createTable(where=self._trajectorygroup, name='Info', description=descriptiondict, title='Info')
+        infotable = self._hdf5file.createTable(where=self._trajectorygroup, name='info', description=descriptiondict, title='info')
         newrow = infotable.row
-        newrow['Name']=traj._name
-        newrow['Timestamp']=traj._time
-        newrow['Time']=traj._formatted_time
-        newrow['Comment']=traj._comment
-        newrow['Length'] = traj._length
-        newrow['Loaded_From']=traj._loadedfrom
+        newrow['name']=traj._name
+        newrow['timestamp']=traj._time
+        newrow['time']=traj._formatted_time
+        newrow['comment']=traj._comment
+        newrow['length'] = traj._length
+        newrow['loaded_from']=traj._loadedfrom
 
         newrow.append()
         infotable.flush()
 
 
-        tostore_dict =  {'ConfigTable':traj._config,
-                         'ParameterTable':traj._parameters,
-                         'DerivedParameterTable':traj._derivedparameters,
-                         'ExploredParameterTable' :traj._exploredparameters,
-                         'ResultTable' : traj._results}
+        tostore_dict =  {'config_table':traj._config,
+                         'parameter_table':traj._parameters,
+                         'derived_parameter_table':traj._derivedparameters,
+                         'explored_parameter_table' :traj._exploredparameters,
+                         'result_table' : traj._results}
 
         for key, dictionary in tostore_dict.items():
 
-            paramdescriptiondict={'Location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'Name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'Class_Name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
+            paramdescriptiondict={'location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                  'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                  'class_name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                  'comment': pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
 
 
-            if not key == 'ResultTable':
-                paramdescriptiondict.update({'Size' : pt.Int64Col()})
-                paramdescriptiondict.update({'Value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)})
+            if not key == 'result_table':
+                paramdescriptiondict.update({'size' : pt.Int64Col()})
+                paramdescriptiondict.update({'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)})
 
 
-            if key in ['DerivedParameterTable', 'ResultTable']:
-                paramdescriptiondict.update({'Creator_Name':pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+            if key in ['derived_parameter_table', 'result_table']:
+                paramdescriptiondict.update({'creator_name':pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
                                              #'Parent_Trajectory':pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                             'Creator_ID':pt.Int64Col()})
+                                             'creator_id':pt.Int64Col()})
 
             paramtable = self._hdf5file.createTable(where=self._trajectorygroup, name=key, description=paramdescriptiondict, title=key)
 
@@ -612,11 +627,24 @@ class HDF5StorageService(StorageService):
         for key, data_to_store in store_dict.items():
             if isinstance(data_to_store, ObjectTable):
                 self._store_into_pytable(key, data_to_store, group, fullname)
-            elif isinstance(data_to_store, np.ndarray):
+            elif isinstance(data_to_store, (np.ndarray,(list,tuple))):
                 self._store_into_array(key, data_to_store, group, fullname)
+            elif isinstance(data_to_store,DataFrame):
+                self._store_data_frame(key, data_to_store, group, fullname)
             else:
                 raise AttributeError('I don not know how to store %s of %s. Cannot handle type %s.'%(key,fullname,str(type(data_to_store))))
 
+
+    def _store_data_frame(self, key, data_to_store, group, fullname):
+        try:
+            assert isinstance(data_to_store,DataFrame)
+            assert isinstance(group, pt.Group)
+
+            name = group._v_pathname+'/' +key
+            data_to_store.to_hdf(self._filename, name, append=True)
+        except:
+            self._logger.error('Failed storing DataFrame >>%s<< of >>%s<<.' %(key,fullname))
+            raise
 
     def _check_dictionary_structure(self,store_dict):
         '''
@@ -634,57 +662,71 @@ class HDF5StorageService(StorageService):
                     act_lenght = len(val)
                     if prev_length:
                         if not act_lenght==prev_length:
-                            raise TypeError('The data you want to store as a table cannot be handled. The lists defining the columns are of unequal length. Length of list >>%s<< in >>%s<< is %d, but other lists are %d.' %(key, data_key, act_lenght, prev_length))
+                            raise TypeError('The data you want to store as a table cannot be handled. The lists defining the columns are of unequal length. length of list >>%s<< in >>%s<< is %d, but other lists are %d.' %(key, data_key, act_lenght, prev_length))
                     else:
                         prev_length = act_lenght
 
     def _store_into_array(self, key, data, group, fullname):
-        atom = pt.Atom.from_dtype(data.dtype)
-        carray=self._hdf5file.createCArray(where=group, name=key,atom=atom,shape=data.shape)
-        carray[:]=data
-        self._hdf5file.flush()
+        # if isinstance(data, np.ndarray):
+        #     dtype = data.dtype
+        #     shape = data.shape
+        # elif isinstance(data, (list, tuple)):
+        #     dtype = type(data[0])
+        #     shape = (len(data),)
+        # else:
+        #     raise RuntimeError('You shall not pass!')
+
+        #atom = pt.Atom.from_dtype(dtype)
+        try:
+            carray=self._hdf5file.create_carray(where=group, name=key,obj=data)
+        #carray[:]=data
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
+            raise
+
 
     def _check_info_dict(self,param, store_dict):
         ''' Checks if the storage dictionary contains an appropriate description of the parameter.
-        This entry is called Info, and should contain only a single
+        This entry is called info, and should contain only a single
         :param param: The parameter to store
         :param store_dict: the dictionary that describes how to store the parameter
         '''
-        if not 'Info' in store_dict:
-            store_dict['Info']={}
+        if not 'info' in store_dict:
+            store_dict['info']={}
 
-        info_dict = store_dict['Info']
+        info_dict = store_dict['info']
 
         test_item = info_dict.itervalues().next()
         if len(test_item)>1:
-            raise AttributeError('Your description of the parameter %s, generated by __store__ and stored into >>Info<< has more than a single dictionary in the list.' % param.get_fullname())
+            raise AttributeError('Your description of the parameter %s, generated by __store__ and stored into >>info<< has more than a single dictionary in the list.' % param.get_fullname())
 
 
-        if not 'Name' in info_dict:
-            info_dict['Name'] = [param.get_name()]
+        if not 'name' in info_dict:
+            info_dict['name'] = [param.get_name()]
         else:
-            assert info_dict['Name'][0] == param.get_name()
+            assert info_dict['name'][0] == param.get_name()
 
-        if not 'Location' in info_dict:
-            info_dict['Location'] = [param.get_location()]
+        if not 'location' in info_dict:
+            info_dict['location'] = [param.get_location()]
         else:
-            assert info_dict['Location'][0] == param.get_location()
+            assert info_dict['location'][0] == param.get_location()
 
-        # if not 'Comment' in info_dict:
-        #     info_dict['Comment'] = [param.get_comment()]
+        # if not 'comment' in info_dict:
+        #     info_dict['comment'] = [param.get_comment()]
         # else:
-        #     assert info_dict['Comment'][0] == param.get_comment()
+        #     assert info_dict['comment'][0] == param.get_comment()
 
-        if not 'Type' in info_dict:
-            info_dict['Type'] = [str(type(param))]
+        if not 'type' in info_dict:
+            info_dict['type'] = [str(type(param))]
         else:
-            assert info_dict['Type'][0] == str(type(param))
+            assert info_dict['type'][0] == str(type(param))
 
 
-        if not 'Class_Name' in info_dict:
-            info_dict['Class_Name'] = [param.__class__.__name__]
+        if not 'class_name' in info_dict:
+            info_dict['class_name'] = [param.__class__.__name__]
         else:
-            assert info_dict['Class_Name'][0] == param.__class__.__name__
+            assert info_dict['class_name'][0] == param.__class__.__name__
 
 
 
@@ -692,7 +734,7 @@ class HDF5StorageService(StorageService):
         newhdf5group = self._trajectorygroup
         split_key = key.split('.')
         for name in split_key:
-            if not newhdf5group.__contains__(name):
+            if not name in newhdf5group:
                 newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name, title=name)
             else:
                 newhdf5group = getattr(newhdf5group, name)
@@ -701,54 +743,59 @@ class HDF5StorageService(StorageService):
 
     def _store_into_pytable(self,tablename,data,hdf5group,fullname):
 
-        if hasattr(hdf5group,tablename):
-            table = getattr(hdf5group,tablename)
-            self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' % (tablename,
-                                                                                                           self._filename,
-                                                                                                           fullname))
+        try:
+            if hasattr(hdf5group,tablename):
+                table = getattr(hdf5group,tablename)
+                self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' % (tablename,
+                                                                                                               self._filename,
+                                                                                                               fullname))
 
-            ## Check if the colnames and dtypes work together
-            # colnames = table.colnames
-            # for key, val_list in data.items():
-            #     if not key in colnames:
-            #         raise AttributeError('Failed storing %s. Cannot append new data to table, since entry %s is not a column of table %s.' % (fullname,key,tablename))
-        else:
-            description_dict = self._make_description(data)
-            table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
-                                               title=tablename)
+                ## Check if the colnames and dtypes work together
+                # colnames = table.colnames
+                # for key, val_list in data.items():
+                #     if not key in colnames:
+                #         raise AttributeError('Failed storing %s. Cannot append new data to table, since entry %s is not a column of table %s.' % (fullname,key,tablename))
+            else:
+                description_dict = self._make_description(data,fullname)
+                table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
+                                                   title=tablename)
 
-        assert isinstance(table,pt.Table)
-        assert isinstance(data, ObjectTable)
+            assert isinstance(table,pt.Table)
+            assert isinstance(data, ObjectTable)
 
-        nrows = table.nrows
-        row = table.row
+            nrows = table.nrows
+            row = table.row
 
-        datasize = data.shape[0]
-
-
-        cols = data.columns.tolist()
-        for n in range(nrows, datasize):
-
-            for key in cols:
-                row[key] = data[key][n]
-
-            row.append()
-
-        table.flush()
-        self._hdf5file.flush()
+            datasize = data.shape[0]
 
 
+            cols = data.columns.tolist()
+            for n in range(nrows, datasize):
 
-    def _make_description(self, data):
+                for key in cols:
+                    row[key] = data[key][n]
+
+                row.append()
+
+            table.flush()
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing table >>%s<< of >>%s<<.' %(tablename,fullname))
+            raise
+
+
+
+    def _make_description(self, data, fullname):
         ''' Returns a dictionary that describes a pytbales row.
         '''
+
 
         descriptiondict={}
 
         for key, val in data.iteritems():
 
 
-            col = self._get_table_col(val)
+            col = self._get_table_col(key, val, fullname)
 
             # if col is None:
             #     raise TypeError('Entry %s of %s cannot be translated into pytables column' % (key,fullname))
@@ -758,31 +805,34 @@ class HDF5StorageService(StorageService):
         return descriptiondict
 
 
-    def _get_table_col(self, column):
+    def _get_table_col(self, key, column, fullname):
         ''' Creates a pytables column instance.
 
         The type of column depends on the type of parameter entry.
         '''
 
+        try:
+            val = column[0]
 
-        val = column[0]
 
+            if type(val) == int:
+                return pt.IntCol()
 
-        if type(val) == int:
-            return pt.IntCol()
-
-        if type(val) == str:
-            itemsize = int(self._get_longest_stringsize(column))
-            return pt.StringCol(itemsize)
-
-        if isinstance(val, np.ndarray):
-            if np.issubdtype(val.dtype,np.str):
+            if type(val) == str:
                 itemsize = int(self._get_longest_stringsize(column))
-                return pt.StringCol(itemsize,shape=val.shape)
+                return pt.StringCol(itemsize)
+
+            if isinstance(val, np.ndarray):
+                if np.issubdtype(val.dtype,np.str):
+                    itemsize = int(self._get_longest_stringsize(column))
+                    return pt.StringCol(itemsize,shape=val.shape)
+                else:
+                    return pt.Col.from_dtype(np.dtype((val.dtype,val.shape)))
             else:
-                return pt.Col.from_dtype(np.dtype((val.dtype,val.shape)))
-        else:
-            return pt.Col.from_dtype(np.dtype(type(val)))
+                return pt.Col.from_dtype(np.dtype(type(val)))
+        except Exception:
+            self._logger.error('Failure in storing >>%s<< of Parameter/Result >>%s<<. Its type was >>%s<<.' % (key,fullname,str(type(val))))
+            raise
 
 
 
@@ -840,8 +890,10 @@ class HDF5StorageService(StorageService):
 
     def _read_carray(self, carray, load_dict):
 
-        assert isinstance(carray,pt.CArray)
+        #assert isinstance(carray,pt.CArray)
         array_name = carray._v_name
 
-        load_dict[array_name] = carray[:]
+        load_dict[array_name] = carray.read()
+
+
 

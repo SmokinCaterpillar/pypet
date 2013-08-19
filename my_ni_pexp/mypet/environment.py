@@ -79,7 +79,7 @@ class Environment(object):
 
     
     def __init__(self, trajectoryname,
-                 filename='../Experiments',
+                 filename='../Experiments.h5',
                  filetitle='Experiment',
                  dynamicly_imported_classes=None,
                  logfolder='../log/'):
@@ -122,8 +122,8 @@ class Environment(object):
         self._traj.ac('mode',globally.MULTIPROC_MODE_NORMAL)
 
 
-        self._storage_service = HDF5StorageService(self._traj.get('Config.filename').get(),
-                                                 self._traj.get('Config.filetitle').get() )
+        self._storage_service = HDF5StorageService(self._traj.get('config.filename').get(),
+                                                 self._traj.get('config.filetitle').get() )
 
         self._logger.debug('Environment initialized.')
 
@@ -148,8 +148,8 @@ class Environment(object):
         self._traj.prepare_experiment()
 
 
-        multiproc = self._traj.get('Config.multiproc').get()
-        mode = self._traj.get('Config.mode').get()
+        multiproc = self._traj.get('config.multiproc').get()
+        mode = self._traj.get('config.mode').get()
         if multiproc:
             if mode == globally.MULTIPROC_MODE_QUEUE:
                 manager = multip.Manager()
@@ -188,6 +188,7 @@ class Environment(object):
                          kwrunparams) for n in xrange(len(self._traj)))
         
             results = mpool.imap(_single_run,iterator)
+            self._traj.finalize_experiment()
             
             mpool.close()
             mpool.join()
@@ -198,11 +199,14 @@ class Environment(object):
 
             self._logger.info('\n----------------------------------------\nFinished run in parallel with %d cores.\n----------------------------------------\n' % ncores)
 
+
             return results
         else:
             
             results = [_single_run((self._traj.make_single_run(n),self._logpath,None,runfunc,
                                     len(self._traj),runparams,kwrunparams)) for n in xrange(len(self._traj))]
+
+            self._traj.finalize_experiment()
             return results
                 
         

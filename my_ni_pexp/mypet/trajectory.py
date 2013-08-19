@@ -8,7 +8,7 @@ import logging
 import datetime
 import time
 from lxml.etree import _Validator
-from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult
+from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult, ArrayParameter
 import importlib as imp
 
 import mypet.petexceptions as pex
@@ -255,16 +255,16 @@ class NaturalNamingInterface(object):
             expanded= self._working_trajectory_name
 
         if name in ['par', 'Par']:
-            expanded = 'Parameters'
+            expanded = 'parameters'
 
         if name in ['dpar', 'DPar']:
-            expanded = 'DerivedParameters'
+            expanded = 'derived_parameters'
 
         if name in ['Res', 'res']:
-            expanded='Results'
+            expanded='results'
 
         if name in ['conf', 'Conf']:
-            expanded = 'Config'
+            expanded = 'config'
         
         if name in ['pt', 'ParentTrajectory', 'parenttrajectory', 'Parent_Trajectory', 'parent_trajectory']:
             expanded = self._parent_trajectory_name
@@ -539,8 +539,8 @@ class Trajectory(TrajOrRun):
                                       dynamically during runtime, the module containing the class 
                                       needs to be specified here.
                                       For example:
-                                      dynamicly_imported_classes=['mypet.parameter.SparseParameter']
-                                      (Note that in __init__ the SparseParameter is actually added
+                                      dynamicly_imported_classes=['mypet.parameter.PickleParameter']
+                                      (Note that in __init__ the PickleParameter is actually added
                                       to the potentially dynamically loaded classes.)
                                       
     :param init_time: The time exploration was started, float, in seconds from linux start, e.g. 
@@ -550,21 +550,21 @@ class Trajectory(TrajOrRun):
     As soon as a parameter is added to the trajectory it can be accessed via natural naming:
     >>> traj.add_parameter('paramgroup.param1')
     
-    >>> traj.Parameters.paramgroup.param1.entry1 = 42
+    >>> traj.parameters.paramgroup.param1.entry1 = 42
     
-    >>> print traj.Parameters.paramgroup.param1.entry1
+    >>> print traj.parameters.paramgroup.param1.entry1
     >>> 42
     
-    Derived Parameters are stored under the group DerivedParameters.Name_of_trajectory_or_run.
+    Derived parameters are stored under the group derived_parameters.Name_of_trajectory_or_run.
     
-    There are several shortcuts implemented. The expression traj.DerivedParameters.pwt
-    maps to DerivedParameters.Name_of_current_trajectory_or_run.
+    There are several shortcuts implemented. The expression traj.derived_parameters.pwt
+    maps to derived_parameters.Name_of_current_trajectory_or_run.
     
-    If no main group like 'Results','Parameters','DerivedParameters' is specified, 
+    If no main group like 'results','parameters','derived_parameters' is specified, 
     like accessing traj.paramgroup.param1
-    It is first checked if paramgroup.param1 can be found in the DerivedParameters, if not is looked 
-    for in the Parameters. 
-    For example, traj.paramgroup.param1 would map to print traj.Parameters.paramgroup.param1                     
+    It is first checked if paramgroup.param1 can be found in the derived_parameters, if not is looked 
+    for in the parameters. 
+    For example, traj.paramgroup.param1 would map to print traj.parameters.paramgroup.param1                     
     '''
     
 
@@ -636,13 +636,13 @@ class Trajectory(TrajOrRun):
 
         split_name = fullname.split('.')
         category = split_name[0]
-        if category == 'Results':
+        if category == 'results':
             del self._results[fullname]
-        elif category == 'Parameters':
+        elif category == 'parameters':
             del self._parameters[fullname]
-        elif category == 'DerivedParameters':
+        elif category == 'derived_parameters':
             del self._derivedparameters[fullname]
-        elif category == 'Config':
+        elif category == 'config':
             del self._config[fullname]
         else:
             raise RuntimeError('You should nover come here :eeek:')
@@ -663,7 +663,7 @@ class Trajectory(TrajOrRun):
     def change_config(self, config_name,*args,**kwargs):
         ''' Similar to change_parameter.
         '''
-        config_name = 'Config'+'.'+config_name
+        config_name = 'config'+'.'+config_name
         if config_name in self._config:
             self._config[config_name].set(*args,**kwargs)
         else:
@@ -674,18 +674,18 @@ class Trajectory(TrajOrRun):
         into the parameter.
 
         After creation of a Parameter, the instance of the parameter is called with param.set(*args,**kwargs).
-        The prefix 'Parameters.' is also automatically added to 'param_name'. If the parameter already exists,
+        The prefix 'parameters.' is also automatically added to 'param_name'. If the parameter already exists,
         when change_parameter is called, the parameter is changed directly.
 
         Before experiment is carried out it is checked if all changes are actually carried out.
 
-        :param param_name: The name of the parameter that is to be changed after it's creation, the prefix 'Parameters.'
-                            is automatically added, i.e. param_name = 'Parameters.'+param_name
+        :param param_name: The name of the parameter that is to be changed after it's creation, the prefix 'parameters.'
+                            is automatically added, i.e. param_name = 'parameters.'+param_name
         :param args:
         :param kwargs:
         :return:
         '''
-        param_name = 'Parameters'+'.'+param_name
+        param_name = 'parameters'+'.'+param_name
         if param_name in self._parameters:
             self._parameters[param_name].set(*args,**kwargs)
         else:
@@ -765,11 +765,11 @@ class Trajectory(TrajOrRun):
         which will be fed to the init function of your result.
         
         If result_type is already the instance of a Result a new instance will not be created.
-        Adding of naming is similar to DerivedParameters.
+        Adding of naming is similar to derived_parameters.
         
         Does not update the 'last' shortcut of the trajectory.
         '''
-        prefix = 'Results.'+self._name+'.'
+        prefix = 'results.'+self._name+'.'
         args = list(args)
 
 
@@ -819,7 +819,7 @@ class Trajectory(TrajOrRun):
         return instance
 
     def add_config(self, *args, **kwargs):
-        return self._add_any_param('Config.',self._config,*args,**kwargs)
+        return self._add_any_param('config.',self._config,*args,**kwargs)
 
     def ac(self, *args, **kwargs):
         return self.add_config(*args,**kwargs)
@@ -848,10 +848,10 @@ class Trajectory(TrajOrRun):
         ''' Adds a new derived parameter. Returns the added parameter.
         
         :param full_parameter_name: The full name of the derived parameter. Grouping is achieved by colons'.'. The
-        trajectory will add 'DerivedParameters' and the  name  of the current trajectory or run to the name. For
+        trajectory will add 'derived_parameters' and the  name  of the current trajectory or run to the name. For
         example, the parameter named paramgroup.param1 which is  added in the current run
-        Run_No_00000001_2013_06_03_17h40m24s becomes:
-                            DerivedParameters.Run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
+        run_No_00000001_2013_06_03_17h40m24s becomes:
+                            derived_parameters.run_No_00000001_2013_06_03_17h40m24s.paramgroup.param1
                                     
         :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
         *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
@@ -874,7 +874,7 @@ class Trajectory(TrajOrRun):
         >>> 42
         '''
 
-        return self._add_any_param('DerivedParameters.'+self._name+'.',self._derivedparameters,
+        return self._add_any_param('derived_parameters.'+self._name+'.',self._derivedparameters,
                                    *args,**kwargs)
 
     def _add_any_param(self, prefix, where_dict, *args,**kwargs):
@@ -966,8 +966,8 @@ class Trajectory(TrajOrRun):
         ''' Adds a new parameter. Returns the added parameter.
 
         :param full_parameter_name: The full name of the parameter. Grouping is achieved by colons'.'. The
-        trajectory will add 'Parameters' to the name. For example, the parameter named paramgroup.param1 which is becomes:
-                            Parameters.paramgroup.param1
+        trajectory will add 'parameters' to the name. For example, the parameter named paramgroup.param1 which is becomes:
+                            parameters.paramgroup.param1
 
         :param param_type (or args[0]): The type of parameter, should be passed in **kwargs or as first entry in
         *args.n If not specified the standard parameter is chosen. Standard is the Parameter class,
@@ -991,7 +991,7 @@ class Trajectory(TrajOrRun):
         '''
 
         
-        return self._add_any_param('Parameters.',self._parameters, *args,**kwargs)
+        return self._add_any_param('parameters.',self._parameters, *args,**kwargs)
         
 
         
@@ -999,12 +999,12 @@ class Trajectory(TrajOrRun):
     def _split_dictionary(self, tosplit_dict):
         ''' Converts a dictionary containing full parameter entry names into a nested dictionary.
         
-        The input dictionary {'Parameters.paramgroup1.param1.entry1':42 , 
-                              'Parameters.paramgroup1.param1.entry2':43,
-                              'Parameters.paramgroup1.param2.entry1':44} will produce the return of
+        The input dictionary {'parameters.paramgroup1.param1.entry1':42 , 
+                              'parameters.paramgroup1.param1.entry2':43,
+                              'parameters.paramgroup1.param2.entry1':44} will produce the return of
         
-        {'Parameters.paramgroup1':{'entry1':42,'entry2':43}, 
-         'Parameters.paramgroup1.param2' : {'entry1':44}}
+        {'parameters.paramgroup1':{'entry1':42,'entry2':43}, 
+         'parameters.paramgroup1.param2' : {'entry1':44}}
         '''
         result_dict={}
         for param,val in tosplit_dict.items():
@@ -1030,8 +1030,8 @@ class Trajectory(TrajOrRun):
         named entry list dictionary.
         
         For example the builder could return
-        {'Parameters.paramgroup1.param1.entry1':[21,21,21,42,42,42],
-         'Parameters.paramgroup1.param2.entry1' : [1.0, 2.0, 3.0, 1.0, 2.0, 3.0]}
+        {'parameters.paramgroup1.param1.entry1':[21,21,21,42,42,42],
+         'parameters.paramgroup1.param2.entry1' : [1.0, 2.0, 3.0, 1.0, 2.0, 3.0]}
          
          which would be the Cartesian product of [21,42] and [1.0,2.0,3.0].
 
@@ -1061,7 +1061,7 @@ class Trajectory(TrajOrRun):
                 self._length = len(self._parameters[name])#Not so nice, but this should always be the same numbert
             else:
                 if not self._length == len(self._parameters[name]):
-                    raise ValueError('The Parameters to explore have not the same size!')
+                    raise ValueError('The parameters to explore have not the same size!')
        
             
         
@@ -1073,6 +1073,10 @@ class Trajectory(TrajOrRun):
     def lock_derived_parameters(self):
         for key, par in self._derivedparameters.items():
             par.lock()
+
+    def finalize_experiment(self):
+        for key, param in self._exploredparameters.items():
+            param.restore_default()
             
     def update_skeleton(self):
         self.load(self.get_name(),False,globally.UPDATE_SKELETON,globally.UPDATE_SKELETON,
@@ -1209,13 +1213,13 @@ class SingleRun(TrajOrRun):
     The object contains a shallow and reduced copy of the trajectory. From each parameter array
     only the nth parameter can be accesses.
     
-    Parameters can no longer be added, the parameter set is supposed to be complete before
+    parameters can no longer be added, the parameter set is supposed to be complete before
     a the actual running of the experiment. However, derived parameters can still be added.
     This might be useful, for example, to store a connectivity matrix of neural network,
     that is built new for point in the trajectory.
     
     Natural Naming applies as before. For convenience a SingleRun object is still named traj:
-    >>> print traj.Parameters.paramgroup1.param1.entry1
+    >>> print traj.parameters.paramgroup1.param1.entry1
     >>> 42
     
     There are several shortcuts through the parameter tree.
@@ -1223,7 +1227,7 @@ class SingleRun(TrajOrRun):
     
     Would first look for a parameter paramgroup1.param1 in the derived parameters of the current
     run, next the derived parameters of the trajectory would be checked, if that was not 
-    successful either, the Parameters of the trajectory are searched.
+    successful either, the parameters of the trajectory are searched.
     
     The instance of a SingleRun is never instantiated by the user but by the parent trajectory.
     From the trajectory it gets assigned the current hdf5filename, a link to the parent trajectory,
@@ -1240,7 +1244,7 @@ class SingleRun(TrajOrRun):
 
         self._n = n
         
-        name = 'Run_No_%08d' % n
+        name = 'run_No_%08d' % n
         self._parent_trajectory = parent_trajectory
         self._parent_trajectory.prepare_paramspacepoint(n)
 
@@ -1298,7 +1302,7 @@ class SingleRun(TrajOrRun):
     def add_parameter(self, *args, **kwargs):
         ''' Adds a DERIVED Parameter to the trajectory and emits a warning.
         ''' 
-        self._logger.warn('Cannot add Parameters anymore, yet I will add a derived Parameter.')
+        self._logger.warn('Cannot add parameters anymore, yet I will add a derived Parameter.')
         return self.add_derived_parameter( *args, **kwargs)
 
 
@@ -1329,19 +1333,19 @@ class SingleRun(TrajOrRun):
         split_name = fullname.split('.')
         category = split_name[0]
         traj_name = split_name[1]
-        if category == 'Results':
+        if category == 'results':
             if traj_name == self.get_name():
                 del self._single_run._results[fullname]
             else:
                 raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
-        elif category == 'Parameters':
+        elif category == 'parameters':
             raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
-        elif category == 'DerivedParameters':
+        elif category == 'derived_parameters':
             if traj_name == self.get_name():
                 del self._single_run._derivedparameters[fullname]
             else:
                 raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
-        elif category == 'Config':
+        elif category == 'config':
             raise ValueError('You cannot remove >>%s<<. Only derived parameters and results of the current run can be removed.')
         else:
             raise RuntimeError('You should nover come here :eeek:')

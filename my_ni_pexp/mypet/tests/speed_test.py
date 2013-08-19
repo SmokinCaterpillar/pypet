@@ -1,7 +1,7 @@
 __author__ = 'robert'
 
 import numpy as np
-from mypet.parameter import ParameterSet
+from mypet.parameter import Parameter
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -23,7 +23,7 @@ def prepare():
     for irun in range(large_amount):
         name = 'Hurz.L' + str(irun)
 
-        traj.ap(name,value = irun)
+        traj.ap(name,irun)
 
 
     traj.ap('Hurz.Test', value=1)

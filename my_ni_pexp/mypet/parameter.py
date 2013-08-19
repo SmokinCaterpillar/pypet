@@ -43,13 +43,13 @@ class BaseParameter(object):
     Parameters can be locked to forbid further modification.
     If multiprocessing is desired the parameter must be pickable!
     ''' 
-    def __init__(self, fullname):
+    def __init__(self, fullname, comment=''):
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
         self._location='.'.join(split_name)
-        self._comment = ''
-        self._length = 0
+        self.set_comment(comment)
+
         self._locked = False
 
     def _rename(self, fullname):
@@ -58,11 +58,27 @@ class BaseParameter(object):
         self._name=split_name.pop()
         self._location='.'.join(split_name)
 
+    def set_comment(self, comment):
+        assert isinstance(comment,str)
+        if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            raise ValueError('Your comment is to long, maximum number of character is %d, you have %d.'
+                             % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
+        self._comment=comment
+
     def get_comment(self):
         return self._comment
 
     def is_array(self):
         return len(self)>1
+
+
+    def restore_default(self):
+        ''' If a Parameter is explored, the actual data is changed over the course of evaluation, in case of single
+        processing, the value of the parameter might be changed to the last one of the explored list. Accordingly this
+        restores the original data stored before exploration.
+        :return:
+        '''
+        raise NotImplementedError( "Should have implemented this." )
 
 
     def is_locked(self):
@@ -77,7 +93,7 @@ class BaseParameter(object):
         Only parameters that will be explored have a length larger than 1.
         If no values have been added to the parameter it's length is 0.
         '''
-        return self._length
+        raise NotImplementedError( "Should have implemented this." )
 
     
     def __store__(self):
@@ -203,18 +219,31 @@ class Parameter(BaseParameter):
     # # The comment that is added if no comment is specified
     # standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
-    def __init__(self, fullname, data=None, comment=None):
-        super(Parameter,self).__init__(fullname)
-        self._comment= comment
+    def __init__(self, fullname, data=None, comment=''):
+        super(Parameter,self).__init__(fullname,comment)
         self._data= None
+        self._default = None #The Default Value, which is the same as Data,
+        # but it is necessary to keep a reference to it to restore the original value after exploration
         self._explored_data=tuple()#The Explored Data
-        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
+        self._set_logger()
 
         if not data == None:
             self.set(data)
         self._fullcopy = False
 
+    def _set_logger(self):
+        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
 
+    def restore_default(self):
+        self._data = self._default
+
+    def __len__(self):
+        if self._data == None:
+            return 0
+        elif len(self._explored_data)>0:
+            return len(self._explored_data)
+        else:
+            return 1
        
     def __getstate__(self):
         ''' Returns the actual state of the parameter for pickling. 
@@ -235,7 +264,7 @@ class Parameter(BaseParameter):
         ''' Sets the state for unpickling.
         '''
         self.__dict__.update( statedict)
-        self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
+        self._set_logger()
       
         
     def set_parameter_access(self, n=0):
@@ -254,7 +283,6 @@ class Parameter(BaseParameter):
                 dtype = np.str
         else:
             dtype=type(data)
-
 
         return dtype in globally.PARAMETER_SUPPORTED_DATA
 
@@ -279,17 +307,17 @@ class Parameter(BaseParameter):
         return True
         
 
-    def add_comment(self,comment):
-        ''' Adds a comment to the current comment. The comment is separated from the previous comment by a semicolon and
-        a line break.
-        
-        :param comment: The comment as string which is added to the existing comment
-        '''
-        #Replace the standard comment:
-        if self._comment == None:
-            self._comment = comment
-        else:
-            self._comment = self._comment + ';\n ' + comment
+    # def add_comment(self,comment):
+    #     ''' Adds a comment to the current comment. The comment is separated from the previous comment by a semicolon and
+    #     a line break.
+    #
+    #     :param comment: The comment as string which is added to the existing comment
+    #     '''
+    #     #Replace the standard comment:
+    #     if self._comment == None:
+    #         self._comment = comment
+    #     else:
+    #         self._comment = self._comment + ';\n ' + comment
 
 
 
@@ -313,17 +341,20 @@ class Parameter(BaseParameter):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
 
         self._data= val
-        self._length = 1
+        self._default = self._data
 
 
 
 
     def _convert_data(self, val):
-        ''' Converts data, i.e. sets numpy arrays immutable.
+        ''' Converts data, i.e. sets numpy arrays immutable. And converts lists and tuples to numpy arrays
 
         :param val: the val to convert
         :return: the numpy type val
         '''
+        if isinstance(val,(list,tuple)):
+            val = np.array(val)
+
         if isinstance(val, np.ndarray):
             val.flags.writeable = False
             return val
@@ -354,7 +385,7 @@ class Parameter(BaseParameter):
 
         data_tuple = self._data_sanity_checks(explore_list)
 
-        self._length = len(data_tuple)
+
 
         self._explored_data = data_tuple
         self.lock()
@@ -383,20 +414,20 @@ class Parameter(BaseParameter):
 
     def __store__(self):
         store_dict={}
-        store_dict['Data'] = ObjectTable(data={'data':[self._data]})
+        store_dict['data'] = ObjectTable(data={'data':[self._data]})
         if self.is_array():
-            store_dict['ExploredData'] = ObjectTable(data={'data':self._explored_data})
+            store_dict['explored_data'] = ObjectTable(data={'data':self._explored_data})
+
 
         return store_dict
 
 
     def __load__(self,load_dict):
-        self._data = load_dict['Data']['data'][0]
-        if 'ExploredData' in load_dict:
-            self._explored_data = tuple(load_dict['ExploredData']['data'].tolist())
-            self._length = len(self._explored_data)
-        else:
-            self._length = 1
+        self._data = load_dict['data']['data'][0]
+        self._default=self._data
+        if 'explored_data' in load_dict:
+            self._explored_data = tuple(load_dict['explored_data']['data'].tolist())
+
 
 
     def set_full_copy(self, val):
@@ -419,7 +450,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
         self._explored_data={}
-        self._length = 1
+
 
     def empty(self):
         ''' Erases all data in the Parameter, if the parameter was explored, it is shrunk as well.
@@ -429,9 +460,67 @@ class Parameter(BaseParameter):
 
         self.shrink()
         self._data=None
-        self._length = 0
+
     
      
+
+class ArrayParameter(Parameter):
+
+    identifier = '__rr__'
+
+    def _set_logger(self):
+        self._logger = logging.getLogger('mypet.parameter.ArrayParameter=' + self._fullname)
+
+    def __store__(self):
+
+        if not isinstance(self._data,(np.ndarray,tuple)):
+            return super(ArrayParameter,self).__store__()
+        else:
+            store_dict = {}
+
+            store_dict['data'] = ObjectTable(columns=['data'+ArrayParameter.identifier],index=[0])
+
+            store_dict['data']['data'+ArrayParameter.identifier] = 'data_array'
+
+
+            store_dict['data_array'] = self._data
+
+            if self.is_array():
+                store_dict['explored_data']=ObjectTable(columns=['data'+ArrayParameter.identifier],index=range(len(self)))
+
+                for idx, ndarray in enumerate(self._explored_data):
+                    name = 'explored_array_%08d' % idx
+                    store_dict['explored_data']['data'+ArrayParameter.identifier][idx] = name
+
+
+                    store_dict[name] = ndarray
+
+            return store_dict
+
+    def __load__(self,load_dict):
+        data_table = load_dict['data']
+        data_name = data_table.columns.tolist()[0]
+        if ArrayParameter.identifier in data_name:
+            arrayname =  data_table['data'+ArrayParameter.identifier][0]
+            self._data = load_dict[arrayname]
+            self._default=self._data
+
+            if 'explored_data' in load_dict:
+                explore_table = load_dict['explored_data']
+
+                name_col = explore_table['data'+ArrayParameter.identifier]
+
+                explore_list = []
+                for arrayname in name_col:
+                    explore_list.append(load_dict[arrayname])
+
+                self._explored_data=tuple(explore_list)
+
+
+        else:
+            super(ArrayParameter,self).__load__(load_dict)
+
+
 
 
 class PickleParameter(Parameter):
@@ -446,6 +535,9 @@ class PickleParameter(Parameter):
     #         raise ValueError('>>%s<< is in the name of the parameter >>%s<<. This is a reserved keyword, I cannot create the parameter.' %(PickleParameter.identifier,fullname))
     #
 
+    def _set_logger(self):
+        self._logger = logging.getLogger('mypet.parameter.PickleParameter=' + self._fullname)
+
     def _is_supported_data(self, data):
         ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
         return True
@@ -456,14 +548,14 @@ class PickleParameter(Parameter):
         if not super(PickleParameter,self)._is_supported_data(self._data):
             store_dict={}
             dump = pickle.dumps(self._data)
-            store_dict['Data'] = ObjectTable(data={'data'+PickleParameter.identifier:[dump]})
+            store_dict['data'] = ObjectTable(data={'data'+PickleParameter.identifier:[dump]})
             if self.is_array():
                 explore_list = list(self._explored_data)
                 for idx, val in enumerate(explore_list):
                     dump = pickle.dumps(val)
                     explore_list[idx]=dump
 
-                store_dict['ExploredData'] = ObjectTable(data={'data'+PickleParameter.identifier:explore_list})
+                store_dict['explored_data'] = ObjectTable(data={'data'+PickleParameter.identifier:explore_list})
 
             return store_dict
         else:
@@ -471,13 +563,15 @@ class PickleParameter(Parameter):
 
 
     def __load__(self,load_dict):
-        data_table = load_dict['Data']
+        data_table = load_dict['data']
         data_name = data_table.columns.tolist()[0]
         if PickleParameter.identifier in data_name:
             dump = data_table['data'+PickleParameter.identifier][0]
             self._data = pickle.loads(dump)
-            if 'ExploredData' in load_dict:
-                explore_table = load_dict['ExploredData']
+            self._default=self._data
+
+            if 'explored_data' in load_dict:
+                explore_table = load_dict['explored_data']
 
                 pickle_col = explore_table['data'+PickleParameter.identifier]
                 explore_list = []
@@ -486,7 +580,6 @@ class PickleParameter(Parameter):
 
                 self._explored_data=tuple(explore_list)
 
-                self._length = len(self._explored_data)
         else:
             super(PickleParameter,self).__load__(load_dict)
 
@@ -508,11 +601,31 @@ class BaseResult(object):
     autonomously write results to the hdf5 file.
     '''
             
-    def __init__(self, fullname):
+    def __init__(self, fullname, comment=''):
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
+        self.set_comment(comment)
         self._location='.'.join(split_name)
+
+
+
+    def set_comment(self, comment):
+        assert isinstance(comment,str)
+        if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            raise ValueError('Your comment is to long, maximum number of character is %d, you have %d.'
+                             % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
+        self._comment=comment
+
+    def get_comment(self):
+        return self._comment
+
+    def set_comment(self, comment):
+        assert isinstance(comment, str)
+        if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            raise ValueError('Your comment is to long, maximum number of character is %d, you have %d.'
+                             % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
+        self._comment = comment
 
     def _rename(self, fullname):
         self._fullname = fullname
@@ -563,13 +676,35 @@ class SimpleResult(BaseResult):
     '''
 
     def __init__(self, fullname, *args, **kwargs):
-        super(SimpleResult,self).__init__(fullname)
+        comment = kwargs.pop('comment','')
+        super(SimpleResult,self).__init__(fullname,comment)
         self._data = {}
+        self._set_logger()
 
         self._comment = kwargs.pop('comment',None)
 
         self.set(*args,**kwargs)
 
+    def _set_logger(self):
+        self._logger = logging.getLogger('mypet.parameter.SimpleResult=' + self._fullname)
+
+
+    def __getstate__(self):
+        ''' Returns the actual state of the parameter for pickling.
+        '''
+        result = self.__dict__.copy()
+        del result['_logger'] #pickling does not work with loggers
+        return result
+
+
+    def __setstate__(self, statedict):
+        ''' Sets the state for unpickling.
+        '''
+        self.__dict__.update( statedict)
+        self._set_logger()
+
+    def to_dict(self):
+        return self._data.copy()
 
 
     def is_empty(self):
@@ -577,6 +712,10 @@ class SimpleResult(BaseResult):
 
     def empty(self):
         self._data={}
+
+    def get_comment(self):
+        return self._comment
+
 
 
     def set(self,*args, **kwargs):
@@ -588,20 +727,43 @@ class SimpleResult(BaseResult):
         for key, arg in kwargs.items():
             self.set_single(key,arg)
 
+
+    def get(self,name):
+        return self._data[name]
+
     def set_single(self, name, item):
 
         if name in ['comment', 'Comment']:
             assert isinstance(item,str)
             self._comment = item
-
-        if name == 'Info':
-            raise ValueError('>>Info<< is reserved for storing  information like name and location of the result etc.')
+        #if isinstance(item, (dict,list,tuple)):
+        item = self._convert_to_array_or_table(item)
 
         if isinstance(item, (np.ndarray,ObjectTable,DataFrame)):
+            if len(item) == 0:
+                self._logger.warning('The Item >>%s<< is empty.' % name)
+
             self._data[name] = item
         else:
             raise TypeError('Your result >>%s<< of type >>%s<< is not supported.' % (name,str(type(item))))
 
+    def _convert_to_array_or_table(self,item):
+
+        if isinstance(item, (str,bool,float,int)):
+            item = {'Value':[item]}
+
+        if isinstance(item, (tuple,list)):
+            return np.array(item)
+
+        if isinstance(item, dict):
+            testentry = item.itervalues().next()
+            if isinstance(testentry,list):
+                return ObjectTable(data=item)
+            else:
+                return ObjectTable(data=item, index=[0])
+
+
+        return item
 
 
     def __store__(self):

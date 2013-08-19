@@ -6,7 +6,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import ParameterSet, SparseParameter, SimpleResult
+from mypet.parameter import Parameter, PickleParameter, SimpleResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -19,7 +19,7 @@ import multiprocessing as multip
 
 import mypet.storageservice as stsv
 
-class ImAParameterInDisguise(ParameterSet):
+class ImAParameterInDisguise(Parameter):
     pass
 
 class ImAResultInDisguise(SimpleResult):
@@ -38,21 +38,21 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(comment == self.traj.get_comment())
 
-        self.traj.add_parameter('IntParam',0,1,2,3)
+        self.traj.add_parameter('IntParam',3)
         sparsemat = spsp.csr_matrix((1000,1000))
         sparsemat[1,2] = 17.777
 
-        self.traj.add_parameter('SparseParam', sparsemat, param_type=SparseParameter)
+        self.traj.add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
 
         self.traj.add_parameter('FloatParam')
 
-        self.traj.adp(ParameterSet('FortyTwo', 42))
+        self.traj.adp(Parameter('FortyTwo', 42))
 
         self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
 
-        self.traj.FloatParam=[1.0,2.0,3.0]
+        self.traj.FloatParam=444.444
 
-        self.traj.explore(identity,{self.traj.FloatParam.gfn('val0'):[1.0,1.1,1.2,1.3]})
+        self.traj.explore(identity,{'FloatParam':[1.0,1.1,1.2,1.3]})
 
         self.assertTrue(len(self.traj) == 4)
 
@@ -69,13 +69,13 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.set_fast_access(False)
 
-        self.traj.get('FloatParam').val == self.traj.Par.FloatParam.evaluate()
+        self.assertTrue(self.traj.get('FloatParam').get() == 444 , '%d != 42' %self.traj.get('FloatParam').get())
 
-        self.traj.FortyTwo.val == 42
+        self.assertTrue(self.traj.FortyTwo.get() == 42)
 
 
     def testremove(self):
-        self.traj.remove(self.traj.FloatParam)
+        self.traj.remove(self.traj.get('FloatParam'))
 
         with self.assertRaises(AttributeError):
             self.traj.FloatParam
@@ -113,7 +113,6 @@ class TrajectoryTest(unittest.TestCase):
     def test_if_pickable(self):
 
         self.traj.set_fast_access(True)
-        self.traj.set_storage_service(stsv.HDF5QueueStorageServiceSender())
 
         dump = pickle.dumps(self.traj)
 
@@ -122,9 +121,12 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(newtraj) == len(self.traj))
 
+        new_items = newtraj.to_dict(fast_access=True)
 
         for key, val in self.traj.to_dict(fast_access=True).items():
             val = newtraj.get(key)
+            nval = new_items[key]
+            self.assertTrue(str(val)==str(nval), '%s != %s' %(str(val),str(nval)))
 
     def test_dynamic_class_loading(self):
         self.traj.add_parameter('Rolf', 1.8,param_type = ImAParameterInDisguise, )
@@ -134,7 +136,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.ap('I.should_be_not.normal')
 
-        self.assertIsInstance(self.traj.normal, ImAParameterInDisguise)
+        self.assertIsInstance(self.traj.get('normal'), ImAParameterInDisguise,'Param is %s insted of ParamInDisguise.' %str(type(self.traj.normal)))
 
         self.traj.set_standard_result_type(ImAResultInDisguise)
 
@@ -157,12 +159,14 @@ class SingleRunTest(unittest.TestCase):
         for irun in range(large_amount):
             name = 'There.Are.Many.Parameters.Like.Me' + str(irun)
 
-            traj.ap(name,value = irun)
+            traj.ap(name, irun)
 
 
-        traj.ap('TestExplorer', value=1)
+        traj.ap('TestExplorer', 1)
 
-        traj.explore(identity,{traj.TestExplorer.gfn('value'):[1,2,3,4,5]})
+        traj.set_fast_access(False)
+        traj.explore(identity,{traj.TestExplorer.gfn():[1,2,3,4,5]})
+        traj.set_fast_access(True)
 
         self.traj = traj
         self.n = 1
@@ -191,10 +195,10 @@ class SingleRunTest(unittest.TestCase):
     def test_adding_derived_parameter_and_result(self):
         value = 44.444
         self.single_run.add_derived_parameter('Im.A.Nice.Guy.Yo', value)
-        self.assertTrue(self.single_run.Nice.Yo.val == value)
+        self.assertTrue(self.single_run.Nice.Yo == value)
 
-        self.single_run.add_result('Puberty.Hacks', value)
-        resval= self.single_run.Hacks.val
+        self.single_run.add_result('Puberty.Hacks', val=value)
+        resval= self.single_run.Hacks.get('val')
         self.assertTrue(resval == value)
 
 
@@ -203,7 +207,7 @@ class SingleRunTest(unittest.TestCase):
 
         self.single_run.ap('I.should_be_not.normal')
 
-        self.assertIsInstance(self.single_run.normal, ImAParameterInDisguise)
+        self.assertIsInstance(self.single_run.get('normal'), ImAParameterInDisguise)
 
         self.single_run.set_standard_result_type(ImAResultInDisguise)
 
@@ -226,12 +230,12 @@ class SingleRunQueueTest(unittest.TestCase):
         for irun in range(large_amount):
             name = 'There.Are.Many.Parameters.Like.Me' + str(irun)
 
-            traj.ap(name,value = irun)
+            traj.ap(name, irun)
 
 
-        traj.ap('TestExplorer', value=1)
+        traj.ap('TestExplorer', 1)
 
-        traj.explore(identity,{traj.TestExplorer.gfn('value'):[1,2,3,4,5]})
+        traj.explore(identity,{traj.get('TestExplorer').gfn():[1,2,3,4,5]})
 
         self.traj = traj
         self.n = 1
