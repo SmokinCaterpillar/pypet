@@ -235,8 +235,8 @@ class ArrayParameterTest(ParameterTest):
 
         ## For the rest of the checkings, lists are converted to tuples:
         for key, val in self.data.__dict__.items():
-            if isinstance(val, (list, tuple)):
-                self.data.__dict__[key] = np.array(val)
+            if isinstance(val, list):
+                self.data.__dict__[key] = tuple(val)
 
 
     def make_params(self):
@@ -256,9 +256,9 @@ class ArrayParameterTest(ParameterTest):
                            'val0':[1,2,3],
                            'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]}
 
-        ## Convert the explored stuff into numpy arrays
-        for idx, val in enumerate(self.explore_dict['myinttuple']):
-            self.explore_dict['myinttuple'][idx] = np.array(val)
+        ### Convert the explored stuff into numpy arrays
+        #for idx, val in enumerate(self.explore_dict['myinttuple']):
+         #   self.explore_dict['myinttuple'][idx] = np.array(val)
 
 
         ## Explore the parameter:

@@ -3,7 +3,7 @@ __author__ = 'robert'
 import tables as pt
 import numpy as np
 
-PARAMETER_SUPPORTED_DATA = [np.int8,
+PARAMETER_SUPPORTED_DATA = (np.int8,
                        np.int16,
                        np.int32,
                        np.int64,
@@ -19,7 +19,7 @@ PARAMETER_SUPPORTED_DATA = [np.int8,
                        np.complex64,
                        np.complex,
                        np.complex,
-                       np.str ]
+                       np.str )
 
 
 HDF5_STRCOL_MAX_NAME_LENGTH = 128

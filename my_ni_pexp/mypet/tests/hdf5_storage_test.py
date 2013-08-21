@@ -2,7 +2,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter
+from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
@@ -53,7 +53,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.DictsNFrame.set(myframe)
 
+        traj.add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
 
+        traj.add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
 class EnvironmentTest(unittest.TestCase):
 
 
@@ -124,8 +126,9 @@ class EnvironmentTest(unittest.TestCase):
 
 
     def explore(self, traj):
-        self.explored ={'Normal.int': [42,43,44],
-        'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
+        self.explored ={'Normal.int': [42,43],
+            'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
+            'lil_mat' :[spsp.lil_matrix((2222,22)), spsp.lil_matrix((2222,22))]}
 
 
         traj.explore(cartesian_product,self.explored)
@@ -192,11 +195,19 @@ class EnvironmentTest(unittest.TestCase):
             old_item = old_items[key]
             if not isinstance(item, BaseResult):
                 self.assertTrue(str(old_item)==str(item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-            else:
+                ## Check if it fits to the old parameter
+            elif not isinstance(item,PickleResult):
                 inner_dict = old_item.to_dict()
                 for innerkey, val in item.to_dict().items():
                      old_val = inner_dict[innerkey]
                      self.assertTrue(str(old_val)==str(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
+            else:
+                inner_dict = old_item.to_dict()
+                for innerkey, val in item.to_dict().items():
+                     old_val = inner_dict[innerkey]
+                     # This check needs to be better worked out, but not for now!
+                     self.assertTrue(type(old_val)==type(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
+
 
             ### make sure that the names and comments are the same:
             new_param = newtraj.get(key)

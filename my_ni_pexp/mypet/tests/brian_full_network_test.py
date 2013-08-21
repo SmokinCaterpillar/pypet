@@ -64,16 +64,16 @@ def run_net(traj):
     neuron.w=a*(neuron.vm-EL)
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,N) # bifurcation parameter
 
-    run(25*msecond,report='text') # we discard the first spikes
+    #run(25*msecond,report='text') # we discard the first spikes
 
-    MSpike=SpikeMonitor(neuron) # record Vr and w at spike times
-    MPopSpike =PopulationSpikeCounter(neuron)
-    MPopRate = PopulationRateMonitor(neuron)
+    MSpike=SpikeMonitor(neuron, delay = 1*ms) # record Vr and w at spike times
+    MPopSpike =PopulationSpikeCounter(neuron, delay = 1*ms)
+    MPopRate = PopulationRateMonitor(neuron,bin=5*ms)
     MStateV = StateMonitor(neuron,'vm',record=[1,2,3])
-    MStatewMean = StateMonitor(neuron,'w')
+    MStatewMean = StateMonitor(neuron,'w',record=False)
 
     MRecentStateV = RecentStateMonitor(neuron,'vm',record=[1,2,3],duration=10*ms)
-    MRecentStatewMean = RecentStateMonitor(neuron,'w',duration=10*ms)
+    MRecentStatewMean = RecentStateMonitor(neuron,'w',duration=10*ms,record=False)
 
     MCounts = SpikeCounter(neuron)
 
@@ -81,11 +81,11 @@ def run_net(traj):
 
     MMultiState = MultiStateMonitor(neuron,['w','vm'],record=[6,7,8,9])
 
-    ISIHist = ISIHistogramMonitor(neuron,[0,0.0001,0.0002])
+    ISIHist = ISIHistogramMonitor(neuron,[0,0.0001,0.0002], delay = 1*ms)
 
     VanRossum = VanRossumMetric(neuron, tau=5*msecond)
 
-    run(50*msecond,report='text')
+    run(25*msecond,report='text')
 
 
     traj.add_result('SpikeMonitor',BrianMonitorResult,MSpike)
@@ -131,6 +131,7 @@ class NetworkTest(unittest.TestCase):
 
         self.env = env
         self.traj = traj
+
 
     def test_multiprocessing(self):
 

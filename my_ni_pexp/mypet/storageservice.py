@@ -12,7 +12,7 @@ from mypet.parameter import BaseParameter, BaseResult, SimpleResult
 from mypet import globally
 
 from mypet.parameter import ObjectTable
-from pandas import DataFrame
+from pandas import DataFrame, read_hdf
 
 
 
@@ -219,7 +219,8 @@ class HDF5StorageService(StorageService):
                     self._trajectorygroup = self._hdf5file.getNode('/'+self._trajectoryname)
 
                 elif mode == 'r':
-
+                    ### Fuck Pandas, we have to wait until the next relaese until this is supported:
+                    mode = 'a'
                     if not os.path.isfile(self._filename):
                         raise ValueError('Filename ' + self._filename + ' does not exist.')
 
@@ -624,16 +625,30 @@ class HDF5StorageService(StorageService):
 
         group= self._create_groups(fullname)
 
+
+
         for key, data_to_store in store_dict.items():
             if isinstance(data_to_store, ObjectTable):
                 self._store_into_pytable(key, data_to_store, group, fullname)
-            elif isinstance(data_to_store, (np.ndarray,(list,tuple))):
+            elif isinstance(data_to_store, dict):
+                self._store_dict_as_table(key, data_to_store, group, fullname)
+            elif isinstance(data_to_store,(list,tuple)) or isinstance(data_to_store,globally.PARAMETER_SUPPORTED_DATA):
                 self._store_into_array(key, data_to_store, group, fullname)
+            elif isinstance(data_to_store, np.ndarray):
+                self._store_into_carray(key, data_to_store, group, fullname)
             elif isinstance(data_to_store,DataFrame):
                 self._store_data_frame(key, data_to_store, group, fullname)
             else:
                 raise AttributeError('I don not know how to store %s of %s. Cannot handle type %s.'%(key,fullname,str(type(data_to_store))))
 
+
+    def _store_dict_as_table(self, key, data_to_store, group, fullname):
+        assert isinstance(data_to_store,dict)
+
+        objtable = ObjectTable(data=data_to_store,index=[0])
+
+        self._store_into_pytable(key,objtable,group,fullname)
+        group._f_get_child(key).set_attr('DICT',1)
 
     def _store_data_frame(self, key, data_to_store, group, fullname):
         try:
@@ -641,7 +656,7 @@ class HDF5StorageService(StorageService):
             assert isinstance(group, pt.Group)
 
             name = group._v_pathname+'/' +key
-            data_to_store.to_hdf(self._filename, name, append=True)
+            data_to_store.to_hdf(self._filename, name, append=True,data_columns=True)
         except:
             self._logger.error('Failed storing DataFrame >>%s<< of >>%s<<.' %(key,fullname))
             raise
@@ -666,19 +681,46 @@ class HDF5StorageService(StorageService):
                     else:
                         prev_length = act_lenght
 
-    def _store_into_array(self, key, data, group, fullname):
-        # if isinstance(data, np.ndarray):
-        #     dtype = data.dtype
-        #     shape = data.shape
-        # elif isinstance(data, (list, tuple)):
-        #     dtype = type(data[0])
-        #     shape = (len(data),)
-        # else:
-        #     raise RuntimeError('You shall not pass!')
+    def _store_into_carray(self, key, data, group, fullname):
 
-        #atom = pt.Atom.from_dtype(dtype)
         try:
+            if isinstance(data, np.ndarray):
+                size = data.size
+            elif hasattr(data,'__len__'):
+                size = len(data)
+            else:
+                size = 1
+
+            if size == 0:
+                self._logger.warning('>>%s<< of >>%s<< is empty, I will skip storing.' %(key,fullname))
+                return
+
             carray=self._hdf5file.create_carray(where=group, name=key,obj=data)
+        #carray[:]=data
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
+            raise
+
+    def _store_into_array(self, key, data, group, fullname):
+
+        try:
+            if isinstance(data, np.ndarray):
+                size = data.size
+            elif hasattr(data,'__len__'):
+                size = len(data)
+            else:
+                size = 1
+
+            if size == 0:
+                self._logger.warning('>>%s<< of >>%s<< is empty, I will skip storing.' %(key,fullname))
+                return
+
+            array=self._hdf5file.create_array(where=group, name=key,obj=data)
+            if isinstance(data,tuple):
+                array.set_attr('TUPLE',1)
+            if isinstance(data, globally.PARAMETER_SUPPORTED_DATA):
+                array.set_attr('SCALAR',1)
         #carray[:]=data
             self._hdf5file.flush()
         except:
@@ -865,14 +907,39 @@ class HDF5StorageService(StorageService):
 
         load_dict = {}
         for leaf in hdf5group:
-            if isinstance(leaf, pt.Table):
+            if isinstance(leaf,pt.Table) and 'DICT' in leaf.attrs and leaf.attrs['DICT']:
+                self._read_dictionary(leaf, load_dict)
+            elif isinstance(leaf, pt.Table):
                 self._read_table(leaf, load_dict)
-            elif isinstance(leaf, pt.CArray):
-                self._read_carray(leaf, load_dict)
+            elif isinstance(leaf, (pt.CArray,pt.Array)):
+                self._read_array(leaf, load_dict)
+            elif isinstance(leaf, pt.Group):
+                self._read_frame(leaf, load_dict)
+            else:
+                raise TypeError('Cannot load %s, do not understand the hdf5 file structure of %s.' %(fullname,str(leaf)))
 
 
         param.__load__(load_dict)
 
+    def _read_dictionary(self, leaf, load_dict):
+        temp_dict={}
+
+
+        self._read_table(leaf,temp_dict)
+        key =leaf.name
+        temp_table = temp_dict[key]
+        temp_dict = temp_table.to_dict('list')
+
+        load_dict[key]={}
+        for innerkey, vallist in temp_dict.items():
+            load_dict[innerkey] = vallist[0]
+
+
+    def _read_frame(self,group,load_dict):
+        name = group._v_name
+        pathname = group._v_pathname
+        dataframe = read_hdf(self._filename,pathname,mode='r')
+        load_dict[name] = dataframe
 
     def _read_table(self,table,load_dict):
         ''' Reads a non-nested Pytables table column by column.
@@ -888,12 +955,25 @@ class HDF5StorageService(StorageService):
             col = table.col(colname)
             load_dict[table_name][colname]=list(col)
 
-    def _read_carray(self, carray, load_dict):
+    def _read_array(self, array, load_dict):
 
         #assert isinstance(carray,pt.CArray)
-        array_name = carray._v_name
+        array_name = array._v_name
 
-        load_dict[array_name] = carray.read()
+
+        if 'TUPLE' in array.attrs and array.attrs['TUPLE']:
+            load_dict[array_name] = tuple(array.read())
+        else:
+            result = array.read()
+
+            ## Numpy Scalars are converted to numpy arrays, but we want to retrieve tha numpy scalar
+            # as it was
+            if isinstance(result,np.ndarray) and 'SCALAR' in array.attrs and array.attrs['SCALAR']:
+                # this is the best way I know to actually restore the original data and not some strange
+                # rank 0 scalars
+                load_dict[array_name] = np.array([result])[0]
+            else:
+                load_dict[array_name] = result
 
 
 

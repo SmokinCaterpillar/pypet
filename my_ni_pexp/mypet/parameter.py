@@ -497,13 +497,36 @@ class ArrayParameter(Parameter):
 
             return store_dict
 
+    def _is_supported_data(self, data):
+
+        if isinstance(data, tuple):
+            for item in data:
+                old_type = None
+                if not type(item) in globally.PARAMETER_SUPPORTED_DATA:
+                    return False
+                if old_type != None and old_type != type(item):
+                    return False
+                old_type = type(item)
+            return True
+        else:
+            return super(ArrayParameter,self)._is_supported_data(data)
+
+    def _convert_data(self, val):
+
+         if isinstance(val, list):
+             return tuple(val)
+         elif isinstance(val, tuple):
+             return val
+         else:
+             return super(ArrayParameter,self)._convert_data(val)
+
     def __load__(self,load_dict):
         data_table = load_dict['data']
         data_name = data_table.columns.tolist()[0]
         if ArrayParameter.identifier in data_name:
             arrayname =  data_table['data'+ArrayParameter.identifier][0]
             self._data = load_dict[arrayname]
-            self._default=self._data
+
 
             if 'explored_data' in load_dict:
                 explore_table = load_dict['explored_data']
@@ -520,14 +543,14 @@ class ArrayParameter(Parameter):
         else:
             super(ArrayParameter,self).__load__(load_dict)
 
+        self._default=self._data
+
 
 
 
 class PickleParameter(Parameter):
-    ''' A parameter class that supports all pickable objects, and simply writes the pickle dump into the table.
+    ''' A parameter class that supports all pickable objects, and pickles everything!
     '''
-
-    identifier= '__pckl__'
 
 
     # def __init__(self, fullname, data, comment):
@@ -542,46 +565,38 @@ class PickleParameter(Parameter):
         ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
         return True
 
+    def _convert_data(self, val):
+        return val
 
     def __store__(self):
+        store_dict={}
+        dump = pickle.dumps(self._data)
+        store_dict['data'] = dump
+        if self.is_array():
+            for idx, val in enumerate(self._explored_data):
+                key = 'explored_data_%08d' % idx
+                dump = pickle.dumps(val)
+                store_dict[key]=dump
 
-        if not super(PickleParameter,self)._is_supported_data(self._data):
-            store_dict={}
-            dump = pickle.dumps(self._data)
-            store_dict['data'] = ObjectTable(data={'data'+PickleParameter.identifier:[dump]})
-            if self.is_array():
-                explore_list = list(self._explored_data)
-                for idx, val in enumerate(explore_list):
-                    dump = pickle.dumps(val)
-                    explore_list[idx]=dump
-
-                store_dict['explored_data'] = ObjectTable(data={'data'+PickleParameter.identifier:explore_list})
-
-            return store_dict
-        else:
-            return super(PickleParameter,self).__store__()
-
+        return store_dict
 
     def __load__(self,load_dict):
-        data_table = load_dict['data']
-        data_name = data_table.columns.tolist()[0]
-        if PickleParameter.identifier in data_name:
-            dump = data_table['data'+PickleParameter.identifier][0]
-            self._data = pickle.loads(dump)
-            self._default=self._data
 
-            if 'explored_data' in load_dict:
-                explore_table = load_dict['explored_data']
+        dump = load_dict['data']
+        self._data = pickle.loads(dump)
 
-                pickle_col = explore_table['data'+PickleParameter.identifier]
-                explore_list = []
-                for idx,dump in enumerate(pickle_col):
-                    explore_list.append(pickle.loads(dump))
+        length =len(load_dict)
+        if length>1:
+            explore_list = []
+            for idx in range(length-1):
+                key = 'explored_data_%08d' %idx
+                dump = load_dict[key]
+                explore_list.append(pickle.loads(dump))
 
-                self._explored_data=tuple(explore_list)
+            self._explored_data=tuple(explore_list)
 
-        else:
-            super(PickleParameter,self).__load__(load_dict)
+
+        self._default=self._data
 
 
 
@@ -685,6 +700,9 @@ class SimpleResult(BaseResult):
 
         self.set(*args,**kwargs)
 
+    def __contains__(self, item):
+        return item in self._data
+
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.SimpleResult=' + self._fullname)
 
@@ -737,33 +755,29 @@ class SimpleResult(BaseResult):
             assert isinstance(item,str)
             self._comment = item
         #if isinstance(item, (dict,list,tuple)):
-        item = self._convert_to_array_or_table(item)
+        if isinstance(item,dict):
+            item = self._convert_nested_dict_to_table(item)
 
-        if isinstance(item, (np.ndarray,ObjectTable,DataFrame)):
-            if len(item) == 0:
+        if isinstance(item, (np.ndarray,ObjectTable,DataFrame,dict,tuple,list,globally.PARAMETER_SUPPORTED_DATA)):
+            if not isinstance(item,globally.PARAMETER_SUPPORTED_DATA) and len(item) == 0:
                 self._logger.warning('The Item >>%s<< is empty.' % name)
 
             self._data[name] = item
         else:
             raise TypeError('Your result >>%s<< of type >>%s<< is not supported.' % (name,str(type(item))))
 
-    def _convert_to_array_or_table(self,item):
+    def _convert_nested_dict_to_table(self,item):
 
-        if isinstance(item, (str,bool,float,int)):
-            item = {'Value':[item]}
-
-        if isinstance(item, (tuple,list)):
-            return np.array(item)
-
-        if isinstance(item, dict):
+        if len(item)>0:
             testentry = item.itervalues().next()
-            if isinstance(testentry,list):
-                return ObjectTable(data=item)
-            else:
-                return ObjectTable(data=item, index=[0])
+        else:
+            testentry=None
 
+        if isinstance(testentry,(tuple,list,dict)):
+            return ObjectTable(data=item)
+        else:
+            return item
 
-        return item
 
 
     def __store__(self):
@@ -808,3 +822,28 @@ class SimpleResult(BaseResult):
 
         return self._data[name]
 
+
+
+class PickleResult(SimpleResult):
+    ''' Result that eats everything and simply pickles it!
+    '''
+
+    def set_single(self, name, item):
+        self._data[name] = item
+
+
+    def _set_logger(self):
+        self._logger = logging.getLogger('mypet.parameter.PickleResult=' + self._fullname)
+
+
+
+    def __store__(self):
+        store_dict ={}
+        for key, val in self._data.items():
+            store_dict[key] = pickle.dumps(val)
+        return store_dict
+
+
+    def __load__(self, load_dict):
+        for key, val in load_dict.items():
+            self._data[key] = pickle.loads(val)

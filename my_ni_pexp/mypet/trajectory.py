@@ -8,7 +8,7 @@ import logging
 import datetime
 import time
 from lxml.etree import _Validator
-from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult, ArrayParameter
+from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult, ArrayParameter, PickleResult
 import importlib as imp
 
 import mypet.petexceptions as pex
@@ -16,24 +16,6 @@ from mypet.utils.helpful_functions import flatten_dictionary
 from mypet import globally
 
 class TrajOrRun(object):
-    #
-    # def store(self):
-    #     pass
-    #
-    # def remove(self, removal_list):
-    #     pass
-    #
-    # def get_name(self):
-    #     pass
-    #
-    # def add_result(self, *args,**kwargs):
-    #     pass
-    #
-    # def remove(self, removal_list):
-    #     pass
-    #
-    # def add_derived_parameter(self, *args,**kwargs):
-    #     pass
 
 
 

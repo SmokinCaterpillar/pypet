@@ -17,6 +17,7 @@ from mypet.utils.helpful_functions import nest_dictionary
 from inspect import getsource
 import numpy as np
 import logging
+import pandas as pd
 
 
 class BrianParameter(Parameter):
@@ -124,6 +125,7 @@ class BrianParameter(Parameter):
 
                 self._data = eval(valstr)
 
+
                 if 'explored_data' in load_dict:
                     explore_table = load_dict['explored_data']
 
@@ -156,6 +158,8 @@ class BrianParameter(Parameter):
         else:
             super(BrianParameter,self).__load__(load_dict)
 
+        self._default = self._data
+
 
 
 class BrianMonitorResult(SimpleResult):
@@ -163,6 +167,8 @@ class BrianMonitorResult(SimpleResult):
 
     table_mode = 'table'
     array_mode = 'array'
+
+    keywords=set(['data','values','spikes','times','rate','count','mean_var',])
 
     def __init__(self, fullname, monitor, *args, **kwargs):
         super(BrianMonitorResult,self).__init__(fullname)
@@ -174,7 +180,7 @@ class BrianMonitorResult(SimpleResult):
 
         self._extract_monitor_data(monitor)
 
-        self.set(*args,**kwargs)
+        super(BrianMonitorResult,self).set(*args,**kwargs)
 
 
     
@@ -214,51 +220,57 @@ class BrianMonitorResult(SimpleResult):
             
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
-        
+
+    def _extract_spike_counter(self,monitor):
+        self.set(count=monitor.count)
+        self.set(source = str(monitor.source))
+        self.set(delay = monitor.delay)
+        self.set(nspikes = monitor.nspikes)
+
 
     def _extract_van_rossum_metric(self,monitor):
-        data_dict ={}
-        data_dict['source'] = [str(monitor.source)]
 
-        distance = monitor.distance
-        self.set(data=data_dict,distance=distance)
+        self.set(source = str(monitor.source))
+        self.set(N=monitor.N)
+        self.set(tau=float(monitor.tau))
+        self.set(tau_unit = 'second')
+        #self.set(timestep = monitor.timestep)
+
+        self.set(distance = monitor.distance)
+
 
 
     def _extract_isi_hist_monitor(self,monitor):
 
-        data_dict ={}
-        data_dict['source'] = [str(monitor.source)]
+        self.set(source = str(monitor.source))
+        self.set(count = monitor.count)
+        self.set(bins = monitor.bins)
+        self.set(delay = monitor.delay)
+        self.set(nspikes = monitor.nspikes)
 
-        bins = monitor.bins
-        count = monitor.count
 
-        self.set(data=data_dict,bins=bins,count=count)
 
     def _extract_state_spike_monitor(self,monitor):
-        data_dict = {}
-        data_dict['source'] = [str(monitor.source)]
+
+        self.set(source = str(monitor.source))
+
+
 
         varnames = monitor._varnames
-
         if not isinstance(varnames, tuple) :
             varnames = (varnames,)
 
-        data_dict['varnames'] = [np.array(varnames)]
+        self.set(varnames = varnames)
 
-        record =  monitor.record
-        if isinstance(record, list):
-            record = np.array(record)
+        #self.set(record = monitor.record)
+        self.set(delay=monitor.delay)
+        self.set(nspikes = monitor.nspikes)
 
-        data_dict['record'] = [record]
+        # if hasattr(monitor, 'function'):
+        #     data_dict['function'] = [getsource(monitor.function)]
 
-        if hasattr(monitor, 'function'):
-            data_dict['function'] = [getsource(monitor.function)]
-
-        data_dict['nspikes'] = [monitor.nspikes]
-
-        data_dict['time_unit'] = ['second']
-
-
+        self.set(nspikes = monitor.nspikes)
+        self.set(times_unit = 'second')
 
         if self._storage_mode==BrianMonitorResult.table_mode:
             spike_dict={}
@@ -269,33 +281,35 @@ class BrianMonitorResult(SimpleResult):
 
                 nounit_list = [np.float64(time) for time in time_list]
 
-                spike_dict['time'] = nounit_list
-                spike_dict['index'] = list(zip_lists[0])
+                spike_dict['times'] = nounit_list
+                spike_dict['neuron'] = list(zip_lists[0])
 
                 count = 2
                 for varname in varnames:
 
                     var_list = list(zip_lists[count])
-                    data_dict[varname+'_unit'] =  [repr(get_unit(var_list[0]))]
+                    self.set(**{varname+'_unit':  repr(get_unit(var_list[0]))})
                     nounit_list = [np.float64(var) for var in var_list]
                     spike_dict[varname] = nounit_list
                     count = count +1
 
-                self.set(values=spike_dict)
+                self.set(spikes=pd.DataFrame(data=spike_dict))
+
 
         elif self._storage_mode==BrianMonitorResult.array_mode:
                 for neuron in range(len(monitor.source)):
                     spikes = monitor.times(neuron)
                     if len(spikes)>0:
-                        key = 'spikes_n%08d' % neuron
+                        key = 'spiketimes_n%08d' % neuron
                         self.set(**{key:spikes})
 
                 for varname in varnames:
                      for neuron in range(len(monitor.source)):
                          values = monitor.values(varname,neuron)
                          if len(values)>0:
-                             if not varname+'_unit' in data_dict:
-                                 data_dict[varname+'_unit'] = [repr(get_unit(values[0]))]
+                             key = varname+'_unit'
+                             if not  key in self:
+                                 self.set(**{key:  repr(get_unit(values[0]))})
                              key = varname+'_n%08d' % neuron
                              self.set(**{key:values})
 
@@ -303,7 +317,6 @@ class BrianMonitorResult(SimpleResult):
         else:
                 raise RuntimeError('You shall not pass!')
 
-        self.set(data=data_dict)
 
      
     def _extrac_spike_monitor(self,monitor):
@@ -311,21 +324,16 @@ class BrianMonitorResult(SimpleResult):
         #assert isinstance(monitor, SpikeMonitor)
 
 
-        data_dict = {}
-        data_dict['source'] = [str(monitor.source)]
+        self.set(source = str(monitor.source))
 
-        record =  monitor.record
-        if isinstance(record, list):
-            record = np.array(record)
+        self.set(record = monitor.record)
 
-        data_dict['record'] = [record]
-        
-        if hasattr(monitor, 'function'):
-            data_dict['function'] = [getsource(monitor.function)]
-        
-        data_dict['nspikes'] = [monitor.nspikes]
+        self.set(nspikes = monitor.nspikes)
 
-        data_dict['time_unit'] = ['second']
+        self.set(times_unit='second')
+
+        self.set(delay=monitor.delay)
+
 
         if self._storage_mode==BrianMonitorResult.table_mode:
             spike_dict={}
@@ -336,146 +344,106 @@ class BrianMonitorResult(SimpleResult):
 
                 nounit_list = [np.float64(time) for time in time_list]
 
-                spike_dict['time'] = nounit_list
-                spike_dict['index'] = list(zip_lists[0])
+                spike_dict['times'] = nounit_list
+                spike_dict['neuron'] = list(zip_lists[0])
 
-                self.set(spikes=spike_dict)
+                spikeframe = pd.DataFrame(data=spike_dict)
+                self.set(spikes=spikeframe)
 
         elif self._storage_mode==BrianMonitorResult.array_mode:
                 for neuron, spikes in monitor.spiketimes.items():
                     if len(spikes)>0:
-                        key = 'spikes_n%08d' % neuron
+                        key = 'spiketimes_n%08d' % neuron
                         self.set(**{key:spikes})
 
         else:
                 raise RuntimeError('You shall not pass!')
 
-        self.set(data=data_dict)
 
 
     def _extract_population_rate_monitor(self,monitor):
         assert isinstance(monitor, PopulationRateMonitor)
         
 
-        data_dict = {}
-        data_dict['source'] = [str(monitor.source)]
-        data_dict['time_unit'] = ['second']
-        data_dict['rate_unit'] = ['Hz']
-        #data_dict['bin'] = [monitor.bin]
-        
-        ### Store times ###
-
-        times = np.expand_dims(monitor.times,axis=0)
-
-        
-        ## Store Rate
-        rate = np.expand_dims(monitor.rate,axis=0)
-
-        self.set( times= times, rate=rate)
-        self.set(data=data_dict)
+        self.set(source = str(monitor.source))
+        self.set(times_unit = 'second', rate_unit='Hz')
+        self.set(times = monitor.times)
+        self.set(rate = monitor.rate)
+        self.set(delay = monitor.delay)
+        self.set(bin=monitor._bin)
         
 
     def _extract_spike_counter(self,monitor):
-        data_dict ={}
-        data_dict['nspikes'] = [monitor.nspikes]
-        data_dict['source'] = str(monitor.source)
 
-        count_array = np.array(monitor.count)
-        self.set(data=data_dict, counts = count_array)
+        self.set(nspikes = monitor.nspikes)
+        self.set(source = str(monitor.source))
+        self.set(count=monitor.count)
+        self.set(delay=monitor.delay)
+
 
 
     def _extract_population_spike_counter(self,monitor):
         
         assert isinstance(monitor, PopulationSpikeCounter)
- 
-        data_dict ={}
-        data_dict['nspikes'] = [monitor.nspikes]
-        data_dict['source'] = [str(monitor.source)]
 
-        self.set(data=data_dict)
+        self.set(nspikes = monitor.nspikes)
+        self.set(source = str(monitor.source))
+        self.set(delay=monitor.delay)
+
+
+
 
     def _extract_multi_state_monitor(self,monitors):
-        data_dict = {}
+
+        self.set(vars = monitors.vars)
 
 
-        data_dict['varnames'] = [np.array(monitors.vars)]
-
-
-
-        ### Store times ###
-        times = np.expand_dims(monitors.times,axis=0)
-
+        if len(monitors.times)>0:
+            self.set(times = monitors.times)
+            self.set(times_unit = 'second')
 
         ### Store recorded values ###
         for idx,varname in enumerate(monitors.vars):
             monitor = monitors.monitors[varname]
             if idx == 0:
 
-                record =  monitor.record
-                if isinstance(record, list):
-                    record = [np.array(record)]
 
-                data_dict['record'] = record
-                data_dict['when'] = monitor.when
+                self.set(record = monitor.record)
 
-                data_dict['timestep'] = monitor.timestep
+                self.set(when = monitor.when)
 
-                data_dict['source'] = [str(monitor.P)]
+                self.set(timestep = monitor.timestep)
 
-            values = monitor.values
+                self.set(source = str(monitor.P))
 
-            if len(values) > 0:
-                self.set(**{varname+'_values':values})
-                if idx==0:
-                    self.set(times=times)
 
-            ### Store mean and variance ###
-            mean = np.expand_dims(monitor.mean,axis=1)
-            variances = np.expand_dims(monitor.var,axis=1)
+            self.set(**{varname+'_mean':monitor.mean})
+            self.set(**{varname+'_var' : monitor.var})
+            if len(monitors.times)>0:
+                self.set(**{varname+'_values' : monitor.values})
+            self.set (**{varname+'_unit' : repr(monitor.unit)})
 
-            combined = np.concatenate((mean,variances),axis=1)
-
-            self.set(**{varname+'_mean_var':combined})
-
-        self.set(data=data_dict)
 
     def _extract_state_monitor(self,monitor):
 
-        data_dict = {}
-        
+        self.set(varname = monitor.varname)
+        self.set(unit = repr(monitor.unit))
 
-        data_dict['varname'] = [monitor.varname]
-        
-        record =  monitor.record
-        if isinstance(record, list):
-            record = [np.array(record)]
             
-        data_dict['record'] = record
+        self.set(record = monitor.record)
         
-        data_dict['when'] = monitor.when
+        self.set(when = monitor.when)
         
-        data_dict['timestep'] = monitor.timestep
+        self.set(timestep = monitor.timestep)
 
-        data_dict['source'] = [str(monitor.P)]
+        self.set(source = str(monitor.P))
         
-        ### Store times ###
-        times = np.expand_dims(monitor.times,axis=0)
 
-         
-        ### Store mean and variance ###
-        mean = np.expand_dims(monitor.mean,axis=1)
-        variances = np.expand_dims(monitor.var,axis=1)
+        self.set(mean = monitor.mean)
+        self.set(var = monitor.var)
+        if len(monitor.times)>0:
+            self.set(times = monitor.times)
+            self.set(values = monitor.values)
+            self.set(times_unit = 'second')
 
-        combined = np.concatenate((mean,variances),axis=1)
-
-        
-        ### Store recorded values ###
-        values = monitor.values
-
-        if len(values) > 0:
-            self.set(times=times, values = values)
-
-        self.set(data=data_dict, mean_var=combined)
-        
-        
             
