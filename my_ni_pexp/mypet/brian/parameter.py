@@ -22,21 +22,21 @@ import pandas as pd
 
 class BrianParameter(Parameter):
 
-    identifier = '__brn__'
-    float_mode = 'float'
-    string_mode = 'string'
+    IDENTIFIER = '__brn__'
+    FLOAT_MODE = 'float'
+    STRING_MODE = 'string'
 
 
     def __init__(self, fullname, data=None, comment='',storage_mode=''):
         super(BrianParameter,self).__init__(fullname,data,comment)
 
         if not storage_mode:
-            self.set_storage_mode(BrianParameter.float_mode)
+            self.set_storage_mode(BrianParameter.FLOAT_MODE)
         else:
             self.set_storage_mode(storage_mode)
 
     def set_storage_mode(self, storage_mode):
-        assert (storage_mode == BrianParameter.string_mode or storage_mode == BrianParameter.float_mode)
+        assert (storage_mode == BrianParameter.STRING_MODE or storage_mode == BrianParameter.FLOAT_MODE)
         self._storage_mode = storage_mode
 
     def get_storage_mode(self):
@@ -46,11 +46,11 @@ class BrianParameter(Parameter):
         self._logger = logging.getLogger('mypet.brian.parameter.BrianParameter=' + self._fullname)
 
 
-    def _is_supported_data(self, data):
+    def _supports(self, data):
         ''' Simply checks if data is supported '''
         if isinstance(data, Quantity):
             return True
-        if super(BrianParameter,self)._is_supported_data(data):
+        if super(BrianParameter,self)._supports(data):
             return True
         return False
 
@@ -67,16 +67,16 @@ class BrianParameter(Parameter):
 
         return True
 
-    def __store__(self):
+    def _store(self):
 
         if isinstance(self._data,Quantity):
             store_dict={}
 
-            if self._storage_mode == BrianParameter.string_mode:
+            if self._storage_mode == BrianParameter.STRING_MODE:
 
                 valstr = self._data.in_best_unit(python_code=True)
-                store_dict['data'] = ObjectTable(data={'data'+BrianParameter.identifier:[valstr],
-                                                       'mode' +BrianParameter.identifier:[self._storage_mode] })
+                store_dict['data'] = ObjectTable(data={'data'+BrianParameter.IDENTIFIER:[valstr],
+                                                       'mode' +BrianParameter.IDENTIFIER:[self._storage_mode] })
 
 
                 if self.is_array():
@@ -86,14 +86,14 @@ class BrianParameter(Parameter):
                         valstr_list.append(valstr)
 
 
-                    store_dict['explored_data'] = ObjectTable(data={'data'+BrianParameter.identifier:valstr_list})
+                    store_dict['explored_data'] = ObjectTable(data={'data'+BrianParameter.IDENTIFIER:valstr_list})
 
-            elif self._storage_mode == BrianParameter.float_mode:
+            elif self._storage_mode == BrianParameter.FLOAT_MODE:
                 unitstr = repr(get_unit_fast(self._data))
                 value = float(self._data)
-                store_dict['data'] = ObjectTable(data={'value'+BrianParameter.identifier:[value],
-                                                       'unit'+BrianParameter.identifier:[unitstr],
-                                                       'mode' +BrianParameter.identifier:[self._storage_mode]})
+                store_dict['data'] = ObjectTable(data={'value'+BrianParameter.IDENTIFIER:[value],
+                                                       'unit'+BrianParameter.IDENTIFIER:[unitstr],
+                                                       'mode' +BrianParameter.IDENTIFIER:[self._storage_mode]})
 
                 if self.is_array():
                     value_list = []
@@ -102,7 +102,7 @@ class BrianParameter(Parameter):
                         value_list.append(value)
 
 
-                    store_dict['explored_data'] = ObjectTable(data={'value'+BrianParameter.identifier:value_list})
+                    store_dict['explored_data'] = ObjectTable(data={'value'+BrianParameter.IDENTIFIER:value_list})
 
             else:
                 raise RuntimeError('You shall not pass!')
@@ -112,16 +112,16 @@ class BrianParameter(Parameter):
 
             return store_dict
         else:
-            return super(BrianParameter,self).__store__()
+            return super(BrianParameter,self)._store()
 
 
-    def __load__(self,load_dict):
+    def _load(self,load_dict):
         data_table = load_dict['data']
         data_name = data_table.columns.tolist()[0]
-        if BrianParameter.identifier in data_name:
-            self._storage_mode = data_table['mode'+BrianParameter.identifier][0]
-            if self._storage_mode == BrianParameter.string_mode:
-                valstr = data_table['data'+BrianParameter.identifier][0]
+        if BrianParameter.IDENTIFIER in data_name:
+            self._storage_mode = data_table['mode'+BrianParameter.IDENTIFIER][0]
+            if self._storage_mode == BrianParameter.STRING_MODE:
+                valstr = data_table['data'+BrianParameter.IDENTIFIER][0]
 
                 self._data = eval(valstr)
 
@@ -129,24 +129,24 @@ class BrianParameter(Parameter):
                 if 'explored_data' in load_dict:
                     explore_table = load_dict['explored_data']
 
-                    valstr_col = explore_table['data'+BrianParameter.identifier]
+                    valstr_col = explore_table['data'+BrianParameter.IDENTIFIER]
                     explore_list = []
                     for valstr in valstr_col:
                         brian_quantity = eval(valstr)
                         explore_list.append(brian_quantity)
 
                     self._explored_data=tuple(explore_list)
-            elif self._storage_mode == BrianParameter.float_mode:
+            elif self._storage_mode == BrianParameter.FLOAT_MODE:
 
                 # Recreate the brain units from the vale as float and unit as string:
-                unit = eval(data_table['unit'+BrianParameter.identifier][0])
-                value = data_table['value'+BrianParameter.identifier][0]
+                unit = eval(data_table['unit'+BrianParameter.IDENTIFIER][0])
+                value = data_table['value'+BrianParameter.IDENTIFIER][0]
                 self._data = value*unit
 
                 if 'explored_data' in load_dict:
                     explore_table = load_dict['explored_data']
 
-                    value_col = explore_table['value'+BrianParameter.identifier]
+                    value_col = explore_table['value'+BrianParameter.IDENTIFIER]
                     explore_list = []
                     for value in value_col:
                         brian_quantity = value*unit
@@ -156,7 +156,7 @@ class BrianParameter(Parameter):
 
 
         else:
-            super(BrianParameter,self).__load__(load_dict)
+            super(BrianParameter,self)._load(load_dict)
 
         self._default = self._data
 

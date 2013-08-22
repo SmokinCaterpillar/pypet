@@ -121,7 +121,7 @@ class ParameterTest(unittest.TestCase):
     def test_storage_and_loading(self):
 
         for key, param in self.param.__dict__.items():
-            store_dict = param.__store__()
+            store_dict = param._store()
 
             constructor = param.__class__
 
@@ -130,7 +130,7 @@ class ParameterTest(unittest.TestCase):
 
             param = constructor('')
 
-            param.__load__(store_dict)
+            param._load(store_dict)
 
             param._rename(self.location+'.'+key)
 

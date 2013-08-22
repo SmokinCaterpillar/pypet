@@ -7,9 +7,11 @@ Created on 17.05.2013
 import logging
 import datetime
 import time
-from lxml.etree import _Validator
 from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult, ArrayParameter, PickleResult
 import importlib as imp
+import itertools as it
+import _collections as col
+import numpy as np
 
 import mypet.petexceptions as pex
 from mypet.utils.helpful_functions import flatten_dictionary
@@ -94,8 +96,8 @@ class TrajOrRun(object):
     def __setattr__(self, key, value):
         if key[0]=='_':
             self.__dict__[key] = value
-        elif key == 'last' or key == 'Last':
-            self.__dict__[key]=value
+        # elif key == 'last' or key == 'Last':
+        #     self.__dict__[key]=value
         else:
             self._nninterface._set(key, value)
 
@@ -593,8 +595,8 @@ class Trajectory(TrajOrRun):
         self._comment= Trajectory.standard_comment
 
         
-        self.last = None
-        self.Last = None
+        # self.last = None
+        # self.Last = None
 
 
         self._standard_param_type = Parameter
@@ -682,6 +684,27 @@ class Trajectory(TrajOrRun):
         self.lock_derived_parameters()
         self.store()
 
+
+    def find(self,name_list,predicate):
+        if not isinstance(name_list,list):
+            name_list=[name_list]
+
+        iter_list = []
+        for name in name_list:
+            param = self.get(name)
+            if not isinstance(param,BaseParameter):
+                raise TypeError('>>%s<< is not a parameter it is a %s, find is not applicable' %(name,str(type(param))))
+
+            if param.is_array():
+                iter_list.append(iter(param.get_array()))
+            else:
+                iter_list.append((param.get() for dummy in xrange(len(self))))
+
+        logic_iter = it.imap(predicate,*iter_list)
+
+        for idx,item in enumerate(logic_iter):
+            if item:
+                yield idx
 
 
 
@@ -913,8 +936,8 @@ class Trajectory(TrajOrRun):
         self._nninterface._add_to_nninterface(full_parameter_name, instance)
 
 
-        self.last = instance
-        self.Last = instance
+        # self.last = instance
+        # self.Last = instance
 
         self._logger.debug('Added >>%s<< to trajectory.' %full_parameter_name)
 
@@ -1028,19 +1051,22 @@ class Trajectory(TrajOrRun):
         #split_dict = self._split_dictionary(build_dict)
             
         count = 0#Don't like it but ok
-        for key, buildlist in build_dict.items():
+        for key, builditerable in build_dict.items():
             act_param = self.get(key,check_uniqueness=True)
             if isinstance(act_param,TreeNode):
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
-            act_param.explore(buildlist)
+            act_param.explore(builditerable)
 
             name = act_param.gfn()
-            self._exploredparameters[name] = self._parameters[name]
+            if name in self._parameters:
+                self._exploredparameters[name] = self._parameters[name]
+            else:
+                self._exploredparameters[name] = self._derivedparameters[name]
 
             
             if count == 0:
-                self._length = len(self._parameters[name])#Not so nice, but this should always be the same numbert
+                self._length = len(act_param)#Not so nice, but this should always be the same numbert
             else:
                 if not self._length == len(self._parameters[name]):
                     raise ValueError('The parameters to explore have not the same size!')
@@ -1111,6 +1137,147 @@ class Trajectory(TrajOrRun):
                                   load_derived_params=load_derived_params,
                                   load_results=load_results,
                                   *args,**kwargs)
+
+
+    def _merge_skeleton(self,other_trajectory,*args,**kwargs):
+
+        assert isinstance(other_trajectory,Trajectory)
+
+
+        force_merge = kwargs.pop('force_merge',False)
+        trial_parameter = kwargs.pop('trial_parameter',None)
+        remove_duplicates = kwargs.pop('remove_duplicates', False)
+
+        if trial_parameter:
+            my_trial_parameter = self.get(trial_parameter)
+            other_trial_parameter = other_trajectory.get(trial_parameter)
+            if not isinstance(my_trial_parameter,BaseParameter):
+                raise TypeError('Your trial_parameter >>%s<< does not evaluate to a real parameter in the trajectory' % trial_parameter)
+            
+            my_trial_list = my_trial_parameter.get_array()
+            other_trial_list = other_trial_parameter.get_array()
+
+            for idx, val in enumerate(my_trial_list):
+                if idx != val:
+                    raise TypeError('In order to specify a trial parameter, this parameter must contain a list from 0 to %d, but it infact it contains >>%s<<.' %(len(self)-1,str(my_trial_list)))
+
+            for idx, val in enumerate(other_trial_list):
+                if idx != val:
+                    raise TypeError('In order to specify a trial parameter, this parameter must contain a list from 0 to %d, but it infact it contains >>%s<< in the other trajectory.' %(len(self)-1,str(my_trial_list)))
+
+            trial_parameter = my_trial_parameter.get_fullname()
+
+        self.update_skeleton()
+        other_trajectory.update_skeleton()
+
+
+        ## Load all parameters of the current and the given Trajectory
+        self.load_stuff(self._parameters.values(),only_empties=True)
+        other_trajectory.load_stuff(other_trajectory._parameters.values(),only_empties=True)
+
+        #
+        # all_my_params = {}
+        # all_my_params.update(self._parameters)
+        # all_my_params.update(self._derivedparameters)
+        # all_other_params = {}
+        # all_other_params.update(other_trajectory._parameters)
+        # all_other_params.update(other_trajectory._derivedparameters)
+
+        my_keyset = set(self._parameters.keys())
+        other_keyset = set(other_trajectory._parameters.keys())
+
+        if not my_keyset== other_keyset and not force_merge:
+            diff = my_keyset - other_keyset
+            raise TypeError('Cannot merge trajectories, they do not live in the same space, parameters >>%s<< are not shared by both.' %str(diff))
+
+
+        ## Check which parameters differ:
+        params_to_change ={}
+
+        for key, other_param in other_trajectory._parameters.iteritems():
+            # We can only get here if we force the merge, and than we can safely ignore all not known parameters
+
+            if not key in self._parameters:
+                if other_param.is_array():
+                    raise TypeError('You have explored >>%s<< in the other trajectory, but it does not exist in this trajectory, I cannot force merge.' % key)
+                else:
+                    continue
+            my_param = self.get(key)
+            if not my_param._similar(other_param):
+                raise TypeError('The parameters with name %s are not of the same type, cannot merge trajectory.' %key)
+            if my_param.is_array() or my_param != other_param:
+                params_to_change[key]=(my_param,other_param)
+                if not my_param.is_array() and not other_param.is_array():
+                    remove_duplicates=False
+                
+                if not my_param.is_array():
+                    my_param.unlock()
+                    my_param.explore((my_param.get() for dummy in xrange(len(self))))
+                    self._exploredparameters[my_param.get_fullname()]=my_param
+
+        for key in self._exploredparameters:
+            if key not in params_to_change:
+                raise TypeError('You have explored >>%s<<, but this parameter does not exist in the other trajectory, I cannot force a merge.' % key)
+                    
+        ## Now first check if we use all runs ore remove duplicates:
+        use_runs = np.ones(len(other_trajectory))
+        if not trial_parameter and remove_duplicates:
+
+            for irun in xrange(len(other_trajectory)):
+                for jrun in xrange(len(self)):
+                    change = True
+                    for my_param, other_param in params_to_change.itervalues():
+                        if other_param.is_array():
+                            other_param.set_parameter_access(irun)
+
+                        if my_param.is_array():
+                            my_param.set_parameter_access(jrun)
+
+                        val1 = my_param.get()
+                        val2 = other_param.get()
+
+                        if not my_param._equal_values(val1,val2):
+                            change = False
+                            break
+                    if change:
+                        use_runs[irun] = 0.0
+                        break
+
+        ## Retore Changed default values
+        for my_param, other_param in params_to_change.itervalues():
+            other_param.restore_default()
+            my_param.restore_default()
+
+
+        ## Now merge into the new trajectory
+        adding_length = int(sum(use_runs))
+        for my_param, other_param in params_to_change.itervalues():
+            fullname =  my_param.get_fullname()
+
+
+            old_array = my_param.get_array()
+            if fullname == trial_parameter:
+                other_array = xrange(len(self),len(self)+adding_length)
+            elif other_param.is_array():
+                other_array = [x for run,x in it.izip(use_runs,other_param.get_array()) if run]
+            else:
+                other_array = [other_param.get() for dummy in xrange(adding_length)]
+
+            new_array = it.chain(old_array,other_array)
+
+            my_param.unlock()
+            my_param.shrink()
+            my_param.explore(new_array)
+
+            if not fullname in self._exploredparameters:
+                self._exploredparameters[fullname] = my_param
+
+        self._length = self._length + adding_length
+
+        return use_runs
+
+
+
 
     def store(self, *args, **kwargs):
         ''' Stores all obtained results a new derived parameters to the hdf5file.
@@ -1236,8 +1403,8 @@ class SingleRun(TrajOrRun):
         self._single_run.set_storage_service(self._storageservice)
         
         self._nninterface = self._parent_trajectory._nninterface._shallow_copy()
-        self.last = self._parent_trajectory.last
-        self.Last = self._parent_trajectory.Last
+        # self.last = self._parent_trajectory.last
+        # self.Last = self._parent_trajectory.Last
 
         #del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
@@ -1274,9 +1441,10 @@ class SingleRun(TrajOrRun):
 
         
     def add_derived_parameter(self, *args, **kwargs):
-        self.last= self._single_run.add_derived_parameter(*args, **kwargs)
-        self.Last = self.last
-        return self.last
+        # self.last= self._single_run.add_derived_parameter(*args, **kwargs)
+        # self.Last = self.last
+        # return self.last
+        return self._single_run.add_derived_parameter(*args, **kwargs)
 
 
     

@@ -6,7 +6,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, SimpleResult
+from mypet.parameter import Parameter, PickleParameter, SimpleResult, BaseResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -50,7 +50,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
 
-        self.traj.FloatParam=444.444
+        self.traj.FloatParam=4.0
 
         self.traj.explore(identity,{'FloatParam':[1.0,1.1,1.2,1.3]})
 
@@ -69,7 +69,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.set_fast_access(False)
 
-        self.assertTrue(self.traj.get('FloatParam').get() == 444 , '%d != 42' %self.traj.get('FloatParam').get())
+        self.assertTrue(self.traj.get('FloatParam').get() == 4.0 , '%d != 4.0' %self.traj.get('FloatParam').get())
 
         self.assertTrue(self.traj.FortyTwo.get() == 42)
 
@@ -124,9 +124,14 @@ class TrajectoryTest(unittest.TestCase):
         new_items = newtraj.to_dict(fast_access=True)
 
         for key, val in self.traj.to_dict(fast_access=True).items():
-            val = newtraj.get(key)
+            #val = newtraj.get(key)
             nval = new_items[key]
-            self.assertTrue(str(val)==str(nval), '%s != %s' %(str(val),str(nval)))
+            if isinstance(val, BaseResult):
+                for ikey in val._data:
+                    self.assertTrue(str(nval.get(ikey))==str(val.get(ikey)))
+            else:
+
+                self.assertTrue(str(val)==str(nval), '%s != %s' %(str(val),str(nval)))
 
     def test_dynamic_class_loading(self):
         self.traj.add_parameter('Rolf', 1.8,param_type = ImAParameterInDisguise, )
@@ -143,6 +148,79 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.add_result('Peter.Parker')
 
         self.assertIsInstance(self.traj.Parker, ImAResultInDisguise)
+
+class TrajectoryMergeTest(unittest.TestCase):
+
+    def setUp(self):
+        name = 'Moop'
+
+        self.traj = Trajectory(name,[ImAParameterInDisguise])
+
+        comment = 'This is a comment'
+        self.traj.add_comment(comment)
+
+        self.assertTrue(comment == self.traj.get_comment())
+
+        self.traj.add_parameter('IntParam',3)
+        sparsemat = spsp.csr_matrix((1000,1000))
+        sparsemat[1,2] = 17.777
+
+        #self.traj.add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
+
+        self.traj.add_parameter('FloatParam')
+
+        self.traj.adp(Parameter('FortyTwo', 42))
+        self.traj.ap('Trials',0)
+
+        self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
+
+        self.traj.FloatParam=4.0
+        self.traj.set_storage_service(LazyStorageService())
+
+
+        self.traj.explore(identity,{'FloatParam':[1.0,1.1,1.2,1.3],'Trials':[0,1,2,3]})
+
+
+        self.assertTrue(len(self.traj) == 4)
+
+
+        name2 = 'Moop2'
+        self.traj2 = Trajectory(name2,[ImAParameterInDisguise])
+
+        comment = 'This is a comment'
+        self.traj2.add_comment(comment)
+
+        self.assertTrue(comment == self.traj2.get_comment())
+
+        self.traj2.add_parameter('IntParam',3)
+        sparsemat = spsp.csr_matrix((1000,1000))
+        sparsemat[1,2] = 17.777
+
+        #self.traj2.add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
+        self.traj2.ap('Trials',0)
+
+        self.traj2.add_parameter('FloatParam')
+
+        self.traj2.adp(Parameter('FortyTwo', 42))
+
+        self.traj2.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
+
+        self.traj2.FloatParam=4.0
+
+        self.traj2.explore(identity,{'FloatParam':[42.0,43.0,1.2,1.3],'Trials':[0,1,2,3]})
+        self.traj2.set_storage_service(LazyStorageService())
+
+        self.assertTrue(len(self.traj2) == 4)
+
+
+
+    def test_merge_without_remove(self):
+        # remove_duplicates = True should be discarded by the trial parameter
+        self.traj._merge_skeleton(self.traj2,trial_parameter='Trials',remove_duplicates=True)
+
+    def test_merge_with_remove(self):
+        self.traj._merge_skeleton(self.traj2,remove_duplicates=True)
+
 
 class SingleRunTest(unittest.TestCase):
 
@@ -177,7 +255,7 @@ class SingleRunTest(unittest.TestCase):
 
     def test_if_single_run_can_be_pickled(self):
 
-        self.single_run._storageservice=stsv.HDF5QueueStorageServiceSender()
+        self.single_run._storageservice=stsv.QueueStorageServiceSender()
         dump = pickle.dumps(self.single_run)
 
         single_run_rec = pickle.loads(dump)
@@ -187,7 +265,7 @@ class SingleRunTest(unittest.TestCase):
         elements_dict = self.single_run.to_dict()
         for key in elements_dict:
             val = self.single_run.get(key,fast_access=True)
-            val_rec = single_run_rec.get(key).val
+            val_rec = single_run_rec.get(key).get()
             self.assertTrue(np.all(val==val_rec))
 
 

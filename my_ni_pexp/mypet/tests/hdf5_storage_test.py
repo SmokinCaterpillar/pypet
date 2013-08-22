@@ -1,3 +1,5 @@
+from traits.trait_types import self
+
 __author__ = 'robert'
 
 import numpy as np
@@ -173,6 +175,11 @@ class EnvironmentTest(unittest.TestCase):
         simple_arg = -13
         simple_kwarg= 13.0
         self.env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+
+        ###Test, that you cannot append to data
+        with self.assertRaises(ValueError):
+            self.traj.store_stuff('filename')
+
 
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()

@@ -7,13 +7,14 @@ import logging
 import tables as pt
 import os
 import numpy as np
+from functools import wraps
 from mypet.trajectory import Trajectory,SingleRun
 from mypet.parameter import BaseParameter, BaseResult, SimpleResult
 from mypet import globally
 
+
 from mypet.parameter import ObjectTable
 from pandas import DataFrame, read_hdf
-
 
 
 
@@ -97,9 +98,15 @@ class LazyStorageService(StorageService):
     def store(self,*args,**kwargs):
         pass
 
+    def merge(self,traj1,traj2,*args,**kwargs):
+        pass
+
 class HDF5StorageService(StorageService):
     ''' General Service to handle the storage of a Trajectory and Parameters
     '''
+
+    APPEND_PARTS = 'parts'
+    APPEND_FULL = 'full'
 
     def __init__(self, filename=None, filetitle='Experiment'):
         self._filename = filename
@@ -186,6 +193,8 @@ class HDF5StorageService(StorageService):
             self._closing_routine(True)
             self._logger.error('Failed storing >>%s<<' % str(stuff_to_store))
             raise
+
+
 
     def _load_several_items(self,items_list,*args,**kwargs):
         for item in items_list:
@@ -613,11 +622,11 @@ class HDF5StorageService(StorageService):
     ################# Storing and Loading Parameters ############################################
 
 
-    def _store_parameter_or_result(self, param):
+    def _store_parameter_or_result(self, param,*args,**kwargs):
 
         fullname = param.get_fullname()
         self._logger.debug('Storing %s.' % fullname)
-        store_dict = param.__store__()
+        store_dict = param._store()
 
 
         #self._check_dictionary_structure(store_dict)
@@ -629,29 +638,47 @@ class HDF5StorageService(StorageService):
 
         for key, data_to_store in store_dict.items():
             if isinstance(data_to_store, ObjectTable):
-                self._store_into_pytable(key, data_to_store, group, fullname)
+                self._store_into_pytable(key, data_to_store, group, fullname,*args,**kwargs)
             elif isinstance(data_to_store, dict):
-                self._store_dict_as_table(key, data_to_store, group, fullname)
+                self._store_dict_as_table(key, data_to_store, group, fullname,*args,**kwargs)
             elif isinstance(data_to_store,(list,tuple)) or isinstance(data_to_store,globally.PARAMETER_SUPPORTED_DATA):
-                self._store_into_array(key, data_to_store, group, fullname)
+                self._store_into_array(key, data_to_store, group, fullname,*args,**kwargs)
             elif isinstance(data_to_store, np.ndarray):
-                self._store_into_carray(key, data_to_store, group, fullname)
+                self._store_into_carray(key, data_to_store, group, fullname,*args,**kwargs)
             elif isinstance(data_to_store,DataFrame):
-                self._store_data_frame(key, data_to_store, group, fullname)
+                self._store_data_frame(key, data_to_store, group, fullname,*args,**kwargs)
             else:
                 raise AttributeError('I don not know how to store %s of %s. Cannot handle type %s.'%(key,fullname,str(type(data_to_store))))
 
 
-    def _store_dict_as_table(self, key, data_to_store, group, fullname):
+    def _store_dict_as_table(self, key, data_to_store, group, fullname,*args,**kwargs):
+
+        if key in group:
+            raise ValueError('Dictionary >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+
+
         assert isinstance(data_to_store,dict)
+
+        if key in group:
+            raise ValueError('Dict >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+
+
 
         objtable = ObjectTable(data=data_to_store,index=[0])
 
         self._store_into_pytable(key,objtable,group,fullname)
         group._f_get_child(key).set_attr('DICT',1)
 
-    def _store_data_frame(self, key, data_to_store, group, fullname):
+
+
+    def _store_data_frame(self, key, data_to_store, group, fullname,*args,**kwargs):
         try:
+
+            if key in group:
+                raise ValueError('DataFrame >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+
+
+
             assert isinstance(data_to_store,DataFrame)
             assert isinstance(group, pt.Group)
 
@@ -661,29 +688,19 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing DataFrame >>%s<< of >>%s<<.' %(key,fullname))
             raise
 
-    def _check_dictionary_structure(self,store_dict):
-        '''
-        :param store_dict: The dictionary containing the data
-        :return:
-        '''
-        for data_key,data in store_dict.items():
-            assert isinstance(data, (dict,np.ndarray))
-            if isinstance(data,dict):
-                prev_length=0
-                for key, val in data.items():
-                    if not isinstance(val,list):
-                        raise TypeError('The data you want to store as a talbe cannot be handled. >>%s<< in >>%s<< is of type %s but it must be a list.' %(key, data_key, str(type(val))))
 
-                    act_lenght = len(val)
-                    if prev_length:
-                        if not act_lenght==prev_length:
-                            raise TypeError('The data you want to store as a table cannot be handled. The lists defining the columns are of unequal length. length of list >>%s<< in >>%s<< is %d, but other lists are %d.' %(key, data_key, act_lenght, prev_length))
-                    else:
-                        prev_length = act_lenght
 
-    def _store_into_carray(self, key, data, group, fullname):
+
+    def _store_into_carray(self, key, data, group, fullname,*args,**kwargs):
+
 
         try:
+            if key in group:
+                raise ValueError('CArray >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+
+
+
+
             if isinstance(data, np.ndarray):
                 size = data.size
             elif hasattr(data,'__len__'):
@@ -702,9 +719,15 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
             raise
 
-    def _store_into_array(self, key, data, group, fullname):
+
+    def _store_into_array(self, key, data, group, fullname,*args,**kwargs):
+
 
         try:
+            if key in group:
+                raise ValueError('Array >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+
+
             if isinstance(data, np.ndarray):
                 size = data.size
             elif hasattr(data,'__len__'):
@@ -715,6 +738,7 @@ class HDF5StorageService(StorageService):
             if size == 0:
                 self._logger.warning('>>%s<< of >>%s<< is empty, I will skip storing.' %(key,fullname))
                 return
+
 
             array=self._hdf5file.create_array(where=group, name=key,obj=data)
             if isinstance(data,tuple):
@@ -741,7 +765,7 @@ class HDF5StorageService(StorageService):
 
         test_item = info_dict.itervalues().next()
         if len(test_item)>1:
-            raise AttributeError('Your description of the parameter %s, generated by __store__ and stored into >>info<< has more than a single dictionary in the list.' % param.get_fullname())
+            raise AttributeError('Your description of the parameter %s, generated by _store and stored into >>info<< has more than a single dictionary in the list.' % param.get_fullname())
 
 
         if not 'name' in info_dict:
@@ -783,36 +807,42 @@ class HDF5StorageService(StorageService):
 
         return newhdf5group
 
-    def _store_into_pytable(self,tablename,data,hdf5group,fullname):
+    def _store_into_pytable(self,tablename,data,hdf5group,fullname,*args,**kwargs):
 
         try:
             if hasattr(hdf5group,tablename):
                 table = getattr(hdf5group,tablename)
-                self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' % (tablename,
-                                                                                                               self._filename,
-                                                                                                               fullname))
 
-                ## Check if the colnames and dtypes work together
-                # colnames = table.colnames
-                # for key, val_list in data.items():
-                #     if not key in colnames:
-                #         raise AttributeError('Failed storing %s. Cannot append new data to table, since entry %s is not a column of table %s.' % (fullname,key,tablename))
+                append_mode = kwargs.pop('append_mode',None)
+
+                if append_mode == HDF5StorageService.APPEND_FULL:
+                    nstart = table.nrows
+                elif append_mode ==HDF5StorageService.APPEND_PARTS:
+                    nstart=0
+                else:
+                    raise ValueError('Table %s already exists, if you want to append to the table, please use >>append_mode= %s<< or >>append_mode=%s.<<.'
+                                     %(tablename,HDF5StorageService.APPEND_FULL,HDF5StorageService.APPEND_PARTS))
+
+                self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.'
+                                   % (tablename,self._filename, fullname))
+
             else:
                 description_dict = self._make_description(data,fullname)
                 table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
                                                    title=tablename)
+                nstart = 0
 
             assert isinstance(table,pt.Table)
             assert isinstance(data, ObjectTable)
 
-            nrows = table.nrows
+
             row = table.row
 
             datasize = data.shape[0]
 
 
             cols = data.columns.tolist()
-            for n in range(nrows, datasize):
+            for n in range(nstart, datasize):
 
                 for key in cols:
                     row[key] = data[key][n]
@@ -919,7 +949,7 @@ class HDF5StorageService(StorageService):
                 raise TypeError('Cannot load %s, do not understand the hdf5 file structure of %s.' %(fullname,str(leaf)))
 
 
-        param.__load__(load_dict)
+        param._load(load_dict)
 
     def _read_dictionary(self, leaf, load_dict):
         temp_dict={}

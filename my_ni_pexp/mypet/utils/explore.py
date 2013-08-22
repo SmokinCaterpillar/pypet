@@ -89,36 +89,3 @@ def cartesian_product(param_value_list_dict, combined_parameter_list=[]):
             
                 
         
-        
-    
-
-# def _do_cartesian_product( value_lists):
-# 
-#     assert isinstance(value_lists, list)
-#     
-#     tuple_list =  list(itools.product(*value_lists))
-#     
-#     
-#     zipped_list = zip(*tuple_list)
-#     
-#     result_lists = []
-#     for ptuple in zipped_list:
-#         result_lists.append(list(ptuple))
-#     
-#     return result_lists
-
-# def _to_dictionary(param_name_list, value_lists):
-#     
-#     result_dict={}
-#     for idx, param in enumerate(param_name_list):
-#     
-#         name_data = param.split(".")
-#         param_name = ".".join(name_data[:-1])
-#         value_str = name_data[-1]
-#         
-#         if not param_name in result_dict:
-#             result_dict[param_name] = {}
-#         
-#         result_dict[param_name][value_str]= value_lists[idx]
-#     
-#     return result_dict

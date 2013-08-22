@@ -13,6 +13,8 @@ import copy
 from mypet.utils.helpful_functions import nest_dictionary
 from mypet import globally
 from pandas import DataFrame, Series
+import itertools as it
+from mypet.utils.helpful_functions  import nested_equal
 
 try:
     import cPickle as pickle
@@ -96,10 +98,10 @@ class BaseParameter(object):
         raise NotImplementedError( "Should have implemented this." )
 
     
-    def __store__(self):
+    def _store(self):
         raise NotImplementedError( "Should have implemented this." )
 
-    def __load__(self, load_dict):
+    def _load(self, load_dict):
         raise NotImplementedError( "Should have implemented this." )
 
 
@@ -116,9 +118,59 @@ class BaseParameter(object):
         finally:
             self._locked = old_locked
 
+    def __eq__(self,other):
+        raise NotImplementedError('Impelement!')
+
+
+    def __ne__(self, other):
+        return not self == other
+
+    def _supports(self, data):
+        return data in globally.PARAMETER_SUPPORTED_DATA
+
+    def _equal_values(self,val1,val2):
+        return nested_equal(val1,val2)
+
+    def _values_of_same_type(self,val1,val2):
+        return type(val1) == type(val2)
+
+    def __eq__(self,other):
+        if isinstance(other,Parameter):
+            if not self.get_fullname() == other.get_fullname():
+                return False
+
+            if not len(self) == len(other):
+                return False
+
+            if not self._equal_values(self.get(),other.get()):
+                return False
+
+            if self.is_array()!=other.is_array():
+                return False
+
+            if self.is_array():
+                for val1, val2 in it.izip(self.get_array(),other.get_array()):
+                    if not self._equal_values(val1,val2):
+                        return False
+
+            return True
+
+        else:
+            return False
+
+    def _similar(self,other):
+        if isinstance(other,BaseParameter):
+            if not self.get_fullname() == other.get_fullname():
+                return False
+
+            return self._values_of_same_type(self.get(),other.get())
+        else:
+            False
+
+
 
     def __str__(self):
-        return '%s: %s' % (self._fullname, self.to_str())
+        return '%s: %s   (Length:%d)' % (self._fullname, self.to_str(), len(self))
 
     def unlock(self):
         ''' Unlocks the locked parameter.'''
@@ -155,13 +207,17 @@ class BaseParameter(object):
 
     def get(self,name):
         raise NotImplementedError( "Should have implemented this." )
+
+    def get_array(self):
+        raise NotImplementedError( "Should have implemented this." )
     
-    def explore(self, explorelist):
+    def explore(self, iterator):
         ''' The default method to create and explored parameter containing an array of entries.
         For example:
         >>> param.explore([3.0,2.0,1.0])
         '''
         raise NotImplementedError( "Should have implemented this." )
+
     
     def set_parameter_access(self, n=0):
         ''' Prepares the parameter for further usage, and tells it which point in the parameter space should be
@@ -187,6 +243,7 @@ class BaseParameter(object):
         :return:
         '''
         raise NotImplementedError( "Should have implemented this." )
+
 
     def empty(self):
         '''Erases all data in the parameter. If the parameter was an explored array it is also shrunk.
@@ -260,6 +317,8 @@ class Parameter(BaseParameter):
         return result
 
 
+
+
     def __setstate__(self, statedict):
         ''' Sets the state for unpickling.
         '''
@@ -273,7 +332,7 @@ class Parameter(BaseParameter):
         else:
             self._data = self._explored_data[n]
 
-    def _is_supported_data(self, data):
+    def _supports(self, data):
         ''' Checks if input data is supported by the parameter'''
         #result = isinstance(data, ( np.int, np.str, np.float, np.bool, np.complex))
 
@@ -305,19 +364,6 @@ class Parameter(BaseParameter):
                 return False
         
         return True
-        
-
-    # def add_comment(self,comment):
-    #     ''' Adds a comment to the current comment. The comment is separated from the previous comment by a semicolon and
-    #     a line break.
-    #
-    #     :param comment: The comment as string which is added to the existing comment
-    #     '''
-    #     #Replace the standard comment:
-    #     if self._comment == None:
-    #         self._comment = comment
-    #     else:
-    #         self._comment = self._comment + ';\n ' + comment
 
 
 
@@ -337,7 +383,7 @@ class Parameter(BaseParameter):
 
         val = self._convert_data(data)
 
-        if not self._is_supported_data(val):
+        if not self._supports(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
 
         self._data= val
@@ -364,13 +410,13 @@ class Parameter(BaseParameter):
 
         
     def get_array(self):
-        if not self._isarray():
-            raise TypeError('Your parameter is not array, so cannot return the explored values')
+        if not self.is_array():
+            raise TypeError('Your parameter is not array, so cannot return array')
         else:
-            return self._explored_data[:]
+            return self._explored_data
 
 
-    def explore(self, explore_list):
+    def explore(self, explore_iterable):
         ''' Changes a parameter to an array to allow exploration.
         
         *args and **kwargs are treated as in >>set(*arg,**kwargs)<< yet they need to contain
@@ -383,25 +429,26 @@ class Parameter(BaseParameter):
             raise TypeError('Your Parameter %s is already explored, cannot explore it further!' % self._name)
 
 
-        data_tuple = self._data_sanity_checks(explore_list)
+        data_tuple = self._data_sanity_checks(explore_iterable)
 
 
 
         self._explored_data = data_tuple
         self.lock()
 
-    def _data_sanity_checks(self, data_list):
+
+    def _data_sanity_checks(self, explore_iterable):
 
         data_tuple = []
 
         default_val = self._data
 
-        for val in data_list:
+        for val in explore_iterable:
             newval = self._convert_data(val)
 
 
-            if not self._is_supported_data(newval):
-                raise TypeError('%s contains items of not supported type %s.' % (key,str(type(newval))))
+            if not self._supports(newval):
+                raise TypeError('%s is of not supported type %s.' % (repr(val),str(type(newval))))
 
             if not self._values_of_same_type(newval,default_val):
                 raise TypeError('Data is not of the same type as the original entry value, new type is %s vs old type %s.' % ( str(type(newval)),str(type(default_val))))
@@ -412,7 +459,7 @@ class Parameter(BaseParameter):
         return tuple(data_tuple)
 
 
-    def __store__(self):
+    def _store(self):
         store_dict={}
         store_dict['data'] = ObjectTable(data={'data':[self._data]})
         if self.is_array():
@@ -422,12 +469,11 @@ class Parameter(BaseParameter):
         return store_dict
 
 
-    def __load__(self,load_dict):
+    def _load(self,load_dict):
         self._data = load_dict['data']['data'][0]
         self._default=self._data
         if 'explored_data' in load_dict:
             self._explored_data = tuple(load_dict['explored_data']['data'].tolist())
-
 
 
     def set_full_copy(self, val):
@@ -466,38 +512,60 @@ class Parameter(BaseParameter):
 
 class ArrayParameter(Parameter):
 
-    identifier = '__rr__'
+    IDENTIFIER = '__rr__'
 
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.ArrayParameter=' + self._fullname)
 
-    def __store__(self):
+    def _store(self):
 
         if not isinstance(self._data,(np.ndarray,tuple)):
-            return super(ArrayParameter,self).__store__()
+            return super(ArrayParameter,self)._store()
         else:
             store_dict = {}
 
-            store_dict['data'] = ObjectTable(columns=['data'+ArrayParameter.identifier],index=[0])
+            store_dict['data'] = ObjectTable(columns=['data'+ArrayParameter.IDENTIFIER],index=[0])
 
-            store_dict['data']['data'+ArrayParameter.identifier] = 'data_array'
+            store_dict['data']['data'+ArrayParameter.IDENTIFIER] = 'data_array'
 
 
             store_dict['data_array'] = self._data
 
             if self.is_array():
-                store_dict['explored_data']=ObjectTable(columns=['data'+ArrayParameter.identifier],index=range(len(self)))
+                ## Supports smart storage by hashing numpy arrays are hashed by their data attribute
+                smart_dict = {}
 
-                for idx, ndarray in enumerate(self._explored_data):
-                    name = 'explored_array_%08d' % idx
-                    store_dict['explored_data']['data'+ArrayParameter.identifier][idx] = name
+                store_dict['explored_data']=ObjectTable(columns=['data'+ArrayParameter.IDENTIFIER],index=range(len(self)))
 
+                count = 0
+                for idx,elem in enumerate(self._explored_data):
 
-                    store_dict[name] = ndarray
+                    if isinstance(elem, np.ndarray):
+                        hash_elem = elem.data
+                    else:
+                        hash_elem = elem
+
+                    if hash_elem in smart_dict:
+                        name_id = smart_dict[hash_elem]
+                        add = False
+                    else:
+                        name_id = count
+                        add = True
+
+                    name = self._build_name(name_id)
+                    store_dict['explored_data']['data'+ArrayParameter.IDENTIFIER][idx] = name_id
+
+                    if add:
+                        store_dict[name] = elem
+                        smart_dict[hash_elem] = name_id
+                        count +=1
 
             return store_dict
 
-    def _is_supported_data(self, data):
+    def _build_name(self,name_id):
+        return 'ea_%s_%08d' % (ArrayParameter.IDENTIFIER,name_id)
+
+    def _supports(self, data):
 
         if isinstance(data, tuple):
             for item in data:
@@ -509,7 +577,7 @@ class ArrayParameter(Parameter):
                 old_type = type(item)
             return True
         else:
-            return super(ArrayParameter,self)._is_supported_data(data)
+            return super(ArrayParameter,self)._supports(data)
 
     def _convert_data(self, val):
 
@@ -520,80 +588,104 @@ class ArrayParameter(Parameter):
          else:
              return super(ArrayParameter,self)._convert_data(val)
 
-    def __load__(self,load_dict):
+    def _load(self,load_dict):
         data_table = load_dict['data']
         data_name = data_table.columns.tolist()[0]
-        if ArrayParameter.identifier in data_name:
-            arrayname =  data_table['data'+ArrayParameter.identifier][0]
+        if ArrayParameter.IDENTIFIER in data_name:
+            arrayname =  data_table['data'+ArrayParameter.IDENTIFIER][0]
             self._data = load_dict[arrayname]
 
 
             if 'explored_data' in load_dict:
                 explore_table = load_dict['explored_data']
 
-                name_col = explore_table['data'+ArrayParameter.identifier]
+                name_col = explore_table['data'+ArrayParameter.IDENTIFIER]
 
                 explore_list = []
-                for arrayname in name_col:
+                for name_id in name_col:
+                    arrayname = self._build_name(name_id)
                     explore_list.append(load_dict[arrayname])
 
                 self._explored_data=tuple(explore_list)
 
 
         else:
-            super(ArrayParameter,self).__load__(load_dict)
+            super(ArrayParameter,self)._load(load_dict)
 
         self._default=self._data
-
-
 
 
 class PickleParameter(Parameter):
     ''' A parameter class that supports all pickable objects, and pickles everything!
     '''
-
-
-    # def __init__(self, fullname, data, comment):
-    #     if PickleParameter.identifier in fullname:
-    #         raise ValueError('>>%s<< is in the name of the parameter >>%s<<. This is a reserved keyword, I cannot create the parameter.' %(PickleParameter.identifier,fullname))
-    #
+    IDENTIFIER='__pckl__'
 
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.PickleParameter=' + self._fullname)
 
-    def _is_supported_data(self, data):
+    def _supports(self, data):
         ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
         return True
 
     def _convert_data(self, val):
         return val
 
-    def __store__(self):
+    def _build_name(self,name_id):
+        return 'ed_%s_%08d' % (PickleParameter.IDENTIFIER,name_id)
+
+    def _store(self):
         store_dict={}
         dump = pickle.dumps(self._data)
-        store_dict['data'] = dump
+        store_dict['data']=ObjectTable(data={'data'+PickleParameter.IDENTIFIER : ['data_dump']})
+
+        store_dict['data_dump'] = dump
         if self.is_array():
+
+            store_dict['explored_data']=ObjectTable(columns=['data'+PickleParameter.IDENTIFIER],index=range(len(self)))
+
+            smart_dict = {}
+            count = 0
+
+
             for idx, val in enumerate(self._explored_data):
-                key = 'explored_data_%08d' % idx
-                dump = pickle.dumps(val)
-                store_dict[key]=dump
+
+                obj_id = id(val)
+
+                if obj_id in smart_dict:
+                    name_id = smart_dict[obj_id]
+                    add = False
+                else:
+                    name_id = count
+                    add = True
+
+                name = self._build_name(name_id)
+                store_dict['explored_data']['data'+PickleParameter.IDENTIFIER][idx] = name_id
+
+                if add:
+                    store_dict[name] = pickle.dumps(val)
+                    smart_dict[obj_id] = name_id
+                    count +=1
 
         return store_dict
 
-    def __load__(self,load_dict):
+    def _load(self,load_dict):
 
-        dump = load_dict['data']
+        dump_name = load_dict['data']['data'+PickleParameter.IDENTIFIER][0]
+        dump = load_dict[dump_name]
         self._data = pickle.loads(dump)
 
-        length =len(load_dict)
-        if length>1:
-            explore_list = []
-            for idx in range(length-1):
-                key = 'explored_data_%08d' %idx
-                dump = load_dict[key]
-                explore_list.append(pickle.loads(dump))
+        if 'explored_data' in load_dict:
+                explore_table = load_dict['explored_data']
 
-            self._explored_data=tuple(explore_list)
+                name_col = explore_table['data'+PickleParameter.IDENTIFIER]
+
+                explore_list = []
+                for name_id in name_col:
+                    arrayname = self._build_name(name_id)
+                    loaded = pickle.loads(load_dict[arrayname])
+                    explore_list.append(loaded)
+
+                self._explored_data=tuple(explore_list)
 
 
         self._default=self._data
@@ -663,10 +755,10 @@ class BaseResult(object):
     def get_class_name(self):  
         return self.__class__.__name__
 
-    def __store__(self):
+    def _store(self):
         raise NotImplementedError('Implement this!')
 
-    def __load__(self, load_dict):
+    def _load(self, load_dict):
         raise  NotImplementedError('Implement this!')
 
 
@@ -780,7 +872,7 @@ class SimpleResult(BaseResult):
 
 
 
-    def __store__(self):
+    def _store(self):
         store_dict ={}
         store_dict.update(self._data)
         return store_dict
@@ -788,7 +880,7 @@ class SimpleResult(BaseResult):
 
 
 
-    def __load__(self, load_dict):
+    def _load(self, load_dict):
         self._data = load_dict
 
 
@@ -837,13 +929,13 @@ class PickleResult(SimpleResult):
 
 
 
-    def __store__(self):
+    def _store(self):
         store_dict ={}
         for key, val in self._data.items():
             store_dict[key] = pickle.dumps(val)
         return store_dict
 
 
-    def __load__(self, load_dict):
+    def _load(self, load_dict):
         for key, val in load_dict.items():
             self._data[key] = pickle.loads(val)

@@ -9,7 +9,7 @@ from hdf5_storage_test import *
 from parameter_test import *
 from speed_test import *
 from trajectory_test import *
-
+from brian_full_network_test import *
 
 
 if __name__ == '__main__':
