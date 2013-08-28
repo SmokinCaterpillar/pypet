@@ -56,14 +56,14 @@ def main():
     
     print traj.Parameters.test.testparam.to_list_of_dicts()
     
-    print traj.Parameters.test.testparam.get_class_name()
+    print traj.Parameters.test.testparam.get_classname()
     
     lilma = spsp.lil_matrix((10000,1000))
     lilma[0,100] = 555
     lilma[9999,999] = 11
     traj.add_parameter('test.sparseparam', Fuechse2=lilma, param_type=SparseParameter)
     
-    print traj.Parameters.test.sparseparam.get_class_name()
+    print traj.Parameters.test.sparseparam.get_classname()
     
     
     traj.add_derived_parameter('test.sparseparam', Fuechse2=lilma*2, param_type=SparseParameter)

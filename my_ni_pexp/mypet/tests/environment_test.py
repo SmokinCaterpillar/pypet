@@ -44,8 +44,8 @@ class EnvironmentTest(unittest.TestCase):
 
             traj.ap(name, irun)
 
-        traj.change_config('ncores', 2)
-        traj.change_config('multiproc', True)
+        traj.preset_config('ncores', 2)
+        traj.preset_config('multiproc', True)
 
         traj.explore(identity,{traj.get('Par.Test').gfn():[1,2,3,4,5]})
 

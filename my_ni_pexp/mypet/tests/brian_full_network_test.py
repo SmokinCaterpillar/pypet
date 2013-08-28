@@ -114,7 +114,7 @@ class NetworkTest(unittest.TestCase):
 
         traj = env.get_trajectory()
         #traj.multiproc = True
-        traj.change_config('ncores', 2)
+        traj.preset_config('ncores', 2)
         #env._set_standard_storage()
         #env._hdf5_queue_writer._hdf5storageservice = LazyStorageService()
         traj = env.get_trajectory()

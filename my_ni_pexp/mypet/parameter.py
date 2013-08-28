@@ -63,8 +63,9 @@ class BaseParameter(object):
     def set_comment(self, comment):
         assert isinstance(comment,str)
         if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-            raise ValueError('Your comment is to long, maximum number of character is %d, you have %d.'
+            self._logger.warning('Your comment is to long, maximum number of character is %d, you have %d. I will truncate it.'
                              % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
+            self._comment = comment[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
         self._comment=comment
 
     def get_comment(self):
@@ -118,8 +119,6 @@ class BaseParameter(object):
         finally:
             self._locked = old_locked
 
-    def __eq__(self,other):
-        raise NotImplementedError('Impelement!')
 
 
     def __ne__(self, other):
@@ -133,39 +132,6 @@ class BaseParameter(object):
 
     def _values_of_same_type(self,val1,val2):
         return type(val1) == type(val2)
-
-    def __eq__(self,other):
-        if isinstance(other,Parameter):
-            if not self.get_fullname() == other.get_fullname():
-                return False
-
-            if not len(self) == len(other):
-                return False
-
-            if not self._equal_values(self.get(),other.get()):
-                return False
-
-            if self.is_array()!=other.is_array():
-                return False
-
-            if self.is_array():
-                for val1, val2 in it.izip(self.get_array(),other.get_array()):
-                    if not self._equal_values(val1,val2):
-                        return False
-
-            return True
-
-        else:
-            return False
-
-    def _similar(self,other):
-        if isinstance(other,BaseParameter):
-            if not self.get_fullname() == other.get_fullname():
-                return False
-
-            return self._values_of_same_type(self.get(),other.get())
-        else:
-            False
 
 
 
@@ -227,7 +193,7 @@ class BaseParameter(object):
         '''
         raise NotImplementedError( "Should have implemented this." )
         
-    def get_class_name(self):  
+    def get_classname(self):
         return self.__class__.__name__
 
     def get_name(self):
@@ -507,7 +473,6 @@ class Parameter(BaseParameter):
         self.shrink()
         self._data=None
 
-    
      
 
 class ArrayParameter(Parameter):
@@ -615,6 +580,9 @@ class ArrayParameter(Parameter):
         self._default=self._data
 
 
+
+
+
 class PickleParameter(Parameter):
     ''' A parameter class that supports all pickable objects, and pickles everything!
     '''
@@ -720,8 +688,9 @@ class BaseResult(object):
     def set_comment(self, comment):
         assert isinstance(comment,str)
         if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-            raise ValueError('Your comment is to long, maximum number of character is %d, you have %d.'
+            self._logger.warning('Your comment is to long, maximum number of character is %d, you have %d. I will truncate it.'
                              % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
+            self._comment = comment[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
         self._comment=comment
 
     def get_comment(self):
@@ -752,7 +721,7 @@ class BaseResult(object):
     def gfn(self):
         return self.get_fullname()
     
-    def get_class_name(self):  
+    def get_classname(self):
         return self.__class__.__name__
 
     def _store(self):
@@ -776,6 +745,7 @@ class BaseResult(object):
 
 
 
+
 class SimpleResult(BaseResult):
     ''' Light Container that stores tables and arrays. Note that no sanity checks on individual data is made
     and you have to take care, that your data is understood by the Storage Service! It is assumed that
@@ -787,9 +757,6 @@ class SimpleResult(BaseResult):
         super(SimpleResult,self).__init__(fullname,comment)
         self._data = {}
         self._set_logger()
-
-        self._comment = kwargs.pop('comment',None)
-
         self.set(*args,**kwargs)
 
     def __contains__(self, item):

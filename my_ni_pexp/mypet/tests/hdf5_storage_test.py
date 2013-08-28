@@ -10,6 +10,7 @@ from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
 from mypet.environment import Environment
 from mypet.storageservice import HDF5StorageService
+from mypet import globally
 import pickle
 import logging
 import cProfile
@@ -20,7 +21,7 @@ import shutil
 import pandas as pd
 
 ## Removes all the files again to clean up after the tests
-remove = False
+REMOVE = True
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
@@ -58,6 +59,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
 
         traj.add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
+
 class EnvironmentTest(unittest.TestCase):
 
 
@@ -81,6 +83,7 @@ class EnvironmentTest(unittest.TestCase):
         normal_dict['int'] = 42
         normal_dict['double'] = 42.42
         normal_dict['bool'] =True
+        normal_dict['trial'] = 0
 
         numpy_dict=self.param_dict['Numpy']
         numpy_dict['string'] = np.array(['Uno', 'Dos', 'Tres'])
@@ -128,9 +131,12 @@ class EnvironmentTest(unittest.TestCase):
 
 
     def explore(self, traj):
-        self.explored ={'Normal.int': [42,43],
+        self.explored ={'Normal.trial': [0,1],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
             'lil_mat' :[spsp.lil_matrix((2222,22)), spsp.lil_matrix((2222,22))]}
+
+        self.explored['lil_mat'][0][1,2]=44.0
+        self.explored['lil_mat'][1][2,2]=33
 
 
         traj.explore(cartesian_product,self.explored)
@@ -161,41 +167,51 @@ class EnvironmentTest(unittest.TestCase):
         ### Add some parameter:
         self.add_params(traj)
 
-
-        ###Explore
-        self.explore(traj)
-
         #remember the trajectory and the environment
         self.traj = traj
         self.env = env
 
-    def test_run(self):
+
+
+    def make_run(self):
 
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
         self.env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
+
+    def test_run(self):
+
+        ###Explore
+        self.explore(self.traj)
+
         ###Test, that you cannot append to data
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             self.traj.store_stuff('filename')
 
+        self.make_run()
 
-        ### Load The Trajectory and check if the values are still the same
-        newtraj = Trajectory()
-        newtraj.set_storage_service(HDF5StorageService(filename=self.filename))
-        newtraj.load(trajectoryname=-1,load_derived_params=2,load_results=2,replace=True)
-
-        ## Check if everything is fine:
-
-
+        newtraj = self.load_trajectory(-1,True)
         self.traj.update_skeleton()
         self.traj.load_stuff(self.traj.to_dict().keys(), only_empties=True)
 
-        traj = self.traj
+        self.compare_trajectories(self.traj,newtraj)
 
-        old_items = traj.to_dict(fast_access=True)
-        new_items = newtraj.to_dict(fast_access=True)
+
+
+    def load_trajectory(self,trajectoryname,replace):
+        ### Load The Trajectory and check if the values are still the same
+        newtraj = Trajectory()
+        newtraj.set_storage_service(HDF5StorageService(filename=self.filename))
+        newtraj.load(trajectoryname,load_derived_params=2,load_results=2,replace=replace)
+        return newtraj
+
+
+    def compare_trajectories(self,traj1,traj2):
+
+        old_items = traj1.to_dict(fast_access=True)
+        new_items = traj2.to_dict(fast_access=True)
 
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
@@ -217,8 +233,8 @@ class EnvironmentTest(unittest.TestCase):
 
 
             ### make sure that the names and comments are the same:
-            new_param = newtraj.get(key)
-            old_param = traj.get(key)
+            new_param = traj2.get(key)
+            old_param = traj1.get(key)
 
             test_names = ['location',
                          'name',
@@ -236,13 +252,25 @@ class EnvironmentTest(unittest.TestCase):
                 self.assertEqual(newval,old_val,'new and old parameters >>%s<< do not match. %s != %s' %(key,newval,old_val))
 
 
-        if remove:
-            os.remove(self.filename)
-            shutil.rmtree(self.logfolder,True)
+class MultiprocQueueTest(EnvironmentTest):
 
+    def set_mode(self):
+        self.mode = globally.MULTIPROC_MODE_QUEUE
+        self.multiproc = True
+        self.ncores = 2
+
+
+class MultiprocLockTest(EnvironmentTest):
+
+     def set_mode(self):
+        self.mode = globally.MULTIPROC_MODE_NORMAL
+        self.multiproc = True
+        self.ncores = 2
 
 
 
 
 if __name__ == '__main__':
+    if REMOVE:
+        shutil.rmtree('../../Test',True)
     unittest.main()

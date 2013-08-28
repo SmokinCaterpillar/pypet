@@ -11,7 +11,7 @@ from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity, get_unit
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
-    MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric
+    MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
 from mypet.utils.helpful_functions import nest_dictionary
 
 from inspect import getsource
@@ -170,7 +170,7 @@ class BrianMonitorResult(SimpleResult):
 
     keywords=set(['data','values','spikes','times','rate','count','mean_var',])
 
-    def __init__(self, fullname, monitor, *args, **kwargs):
+    def __init__(self, fullname, *args, **kwargs):
         super(BrianMonitorResult,self).__init__(fullname)
 
         self._storage_mode = kwargs.pop('storage_mode',BrianMonitorResult.table_mode)
@@ -178,9 +178,20 @@ class BrianMonitorResult(SimpleResult):
         assert (self._storage_mode == BrianMonitorResult.table_mode or
                 self._storage_mode == BrianMonitorResult.array_mode)
 
-        self._extract_monitor_data(monitor)
 
-        super(BrianMonitorResult,self).set(*args,**kwargs)
+        self.set(*args,**kwargs)
+
+    def set_single(self, name, item):
+
+        if name == 'storage_mode':
+            self._storage_mode = item
+            assert (self._storage_mode == BrianMonitorResult.table_mode or
+                self._storage_mode == BrianMonitorResult.array_mode)
+
+        elif isinstance(item, Monitor):
+            self._extract_monitor_data(item)
+        else:
+            super(self,BrianMonitorResult).set_single(name,item)
 
 
     

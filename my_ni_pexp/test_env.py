@@ -37,7 +37,7 @@ def test_run(traj, to_print):
 config['multiproc']=False
 config['ncores']=2
 
-env = Environment(trajectoryname='MyExperiment', filename='../experiments/env.hdf5',dynamicly_imported_classes=[BrianParameter])
+env = Environment(trajectory='MyExperiment', filename='../experiments/env.hdf5',dynamicly_imported_classes=[BrianParameter])
 
 traj = env.get_trajectory()
 assert isinstance(traj, Trajectory)

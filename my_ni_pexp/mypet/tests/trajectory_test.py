@@ -93,9 +93,9 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_changing(self):
 
-        self.traj.change_config('testconf', 1)
-        self.traj.change_parameter('testparam', 1)
-        self.traj.change_parameter('I_do_not_exist', 2)
+        self.traj.preset_config('testconf', 1)
+        self.traj.preset_parameter('testparam', 1)
+        self.traj.preset_parameter('I_do_not_exist', 2)
 
         self.traj.ap('testparam', 0)
         self.traj.ac('testconf', 0)
@@ -184,7 +184,7 @@ class TrajectoryMergeTest(unittest.TestCase):
         self.assertTrue(len(self.traj) == 4)
 
 
-        name2 = 'Moop2'
+        name2 = 'aaaaah'
         self.traj2 = Trajectory(name2,[ImAParameterInDisguise])
 
         comment = 'This is a comment'
@@ -214,13 +214,18 @@ class TrajectoryMergeTest(unittest.TestCase):
 
 
 
-    def test_merge_without_remove(self):
+    def test_merge_parameters_without_remove(self):
         # remove_duplicates = True should be discarded by the trial parameter
-        self.traj._merge_skeleton(self.traj2,trial_parameter='Trials',remove_duplicates=True)
+        self.traj._merge_parameters(self.traj2,trial_parameter='Trials',remove_duplicates=True)
+
+    def test_merge_parameters_with_remove(self):
+        self.traj._merge_parameters(self.traj2,remove_duplicates=True)
+
+    def test_merge_without_remove(self):
+        self.traj.merge(self.traj2, remove_duplicates=True,trial_parameter='Trials')
 
     def test_merge_with_remove(self):
-        self.traj._merge_skeleton(self.traj2,remove_duplicates=True)
-
+        self.traj.merge(self.traj2, remove_duplicates=True)
 
 class SingleRunTest(unittest.TestCase):
 

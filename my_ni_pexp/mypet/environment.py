@@ -78,54 +78,63 @@ class Environment(object):
     '''
 
     
-    def __init__(self, trajectoryname,
-                 filename='../Experiments.h5',
-                 filetitle='Experiment',
-                 dynamicly_imported_classes=None,
-                 logfolder='../log/'):
+    def __init__(self, trajectory='trajectory',
+                 filename='../experiments.h5',
+                 filetitle='experiment',
+                 logfolder='../log/',
+                 dynamicly_imported_classes=None):
         
         #Acquiring the current time
-        init_time = time.time()
-        thetime = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss');
-        
-        # Logging
-        self._logpath = os.path.join(logfolder,trajectoryname+'_'+thetime)
+        if isinstance(trajectory,str):
+            self._traj = Trajectory(trajectory, dynamicly_imported_classes)
+        elif isinstance(trajectory,Trajectory):
+            self._traj = trajectory
+        else:
+            raise TypeError('Cannot identify your trajectory >>%s<<.' % str(trajectory))
 
-        self._storage_set = False
-        
+
+
+
+        # Adding some default configuration
+        if not self._traj.contains('config.logpath'):
+            self._logpath = os.path.join(logfolder,self._traj.get_name())
+            self._traj.ac('logpath', self._logpath).lock()
+        else:
+            self._logpath=self._traj.get('config.logpath').get()
+
+
         if not os.path.isdir(self._logpath):
             os.makedirs(self._logpath)
-        
-        
+
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h=logging.FileHandler(filename=self._logpath+'/main.txt')
         #sh = logging.StreamHandler(sys.stdout)
         root = logging.getLogger()
         root.addHandler(h)
 
-
-
         for handler in root.handlers:
             handler.setFormatter(f)
         self._logger = logging.getLogger('mypet.environment.Environment')
 
 
-        # Creating the Trajectory
-        self._traj = Trajectory(trajectoryname, dynamicly_imported_classes,init_time)
+        storage_service = self._traj.get_storage_service()
 
-        # Adding some default configuration
-        self._traj.ac('logpath', self._logpath).lock()
-        self._traj.ac('ncores',1)
-        self._traj.ac('multiproc',False)
-        self._traj.ac('filename',filename)
-        self._traj.ac('filetitle', filetitle)
-        self._traj.ac('mode',globally.MULTIPROC_MODE_NORMAL)
+        if not self._traj.contains('config.ncores'):
+            self._traj.ac('ncores',1)
+        if not self._traj.contains('config.multiproc'):
+            self._traj.ac('multiproc',False)
+
+        if not self._traj.contains('config.filename') and storage_service == None:
+            self._traj.ac('filename',filename)
+        if not self._traj.contains('config.filetitle') and  storage_service == None:
+            self._traj.ac('filetitle', filetitle)
+
+        if not self._traj.contains('config.mode'):
+            self._traj.ac('mode',globally.MULTIPROC_MODE_NORMAL)
 
 
-        self._storage_service = HDF5StorageService(self._traj.get('config.filename').get(),
-                                                 self._traj.get('config.filetitle').get() )
+        self._logger.info('Environment initialized.')
 
-        self._logger.debug('Environment initialized.')
 
 
 
@@ -133,18 +142,19 @@ class Environment(object):
     def get_trajectory(self):
         return self._traj
 
-    def change_storage_service(self,service):
-        self._storage_service = service
-
-    def get_storage_service(self):
-        return self._storage_service
 
     def run(self, runfunc, *runparams,**kwrunparams):
         
 
         #Prepares the trajecotry for running
+        self._storage_service = self._traj.get_storage_service()
 
-        self._traj.set_storage_service(self._storage_service)
+        if self._storage_service == None:
+            self._storage_service = HDF5StorageService(self._traj.get('config.filename').get(),
+                                                 self._traj.get('config.filetitle').get() )
+
+            self._traj.set_storage_service(self._storage_service)
+
         self._traj.prepare_experiment()
 
 
@@ -178,7 +188,7 @@ class Environment(object):
                                     %(globally.MULTIPROC_MODE_QUEUE, globally.MULTIPROC_MODE_NORMAL))
 
 
-            ncores =  self._traj.get('Config.ncores').get()
+            ncores =  self._traj.get('config.ncores').get()
             
             mpool = multip.Pool(ncores)
 
@@ -188,7 +198,7 @@ class Environment(object):
                          kwrunparams) for n in xrange(len(self._traj)))
         
             results = mpool.imap(_single_run,iterator)
-            self._traj.finalize_experiment()
+
             
             mpool.close()
             mpool.join()
@@ -199,6 +209,8 @@ class Environment(object):
 
             self._logger.info('\n----------------------------------------\nFinished run in parallel with %d cores.\n----------------------------------------\n' % ncores)
 
+            self._traj.finalize_experiment()
+            self._traj.set_storage_service(self._storage_service)
 
             return results
         else:
