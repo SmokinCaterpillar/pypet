@@ -13,6 +13,12 @@ import logging
 import cProfile
 from brian import *
 from mypet.utils.explore import identity, cartesian_product
+import shutil
+
+
+REMOVE = True
+
+
 
 def add_params(traj):
 
@@ -113,7 +119,7 @@ class NetworkTest(unittest.TestCase):
         env = Environment('Test','../../Brian/HDF5/test.hdf5','test',logfolder='../../Brian/log')
 
         traj = env.get_trajectory()
-        #traj.multiproc = True
+
         traj.preset_config('ncores', 2)
         #env._set_standard_storage()
         #env._hdf5_queue_writer._hdf5storageservice = LazyStorageService()
@@ -134,9 +140,11 @@ class NetworkTest(unittest.TestCase):
 
 
     def test_multiprocessing(self):
-
+        self.traj.multiproc = True
         self.env.run(run_net)
 
 
 if __name__ == '__main__':
+    if REMOVE:
+        shutil.rmtree('../../Test',True)
     unittest.main()

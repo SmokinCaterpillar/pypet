@@ -76,9 +76,9 @@ def main():
 
 def do_stuff(srun):
     assert isinstance(srun, SingleRun)
-    srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._n})
+    srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._id})
     srun.store_to_hdf5()
-    print srun._n
+    print srun._id
     print srun.honky.mirta
     print 'woop'
     print srun.DerivedParameters.pwt.foo.bar

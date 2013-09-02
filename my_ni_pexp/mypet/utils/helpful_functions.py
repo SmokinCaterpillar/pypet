@@ -3,6 +3,10 @@ __author__ = 'robert'
 
 from collections import Sequence, Mapping, Set
 import numpy as np
+import pandas as pd
+from mypet import globally
+
+
 
 def flatten_dictionary(nested_dict, separator):
     flat_dict = {}
@@ -41,43 +45,53 @@ def nested_equal(a, b):
 
     Assumes hashable items are not mutable in a way that affects equality.
     """
-    #
-    # # for types that implement their own custom strict equality checking
-    # __seq__ = getattr(a, "__seq__", None)
-    # if  __seq__!=None and callable(__seq__):
-    #     return a.__seq__(b)
-    try:
-        custom_eq= a == b
-        if isinstance(custom_eq,bool):
-            return custom_eq
-    except:
-        pass
 
-    # Use __class__ instead of type() to be compatible with instances of
-    # old-style classes.
-    if a.__class__ != b.__class__:
-        return False
+    # for types that implement their own custom strict equality checking
+
+    if hasattr(a,'__eq__'):
+        try:
+            custom_eq= a == b
+            if isinstance(custom_eq,bool):
+                return custom_eq
+        except ValueError:
+            pass
 
 
 
-    # # Check equality according to type type [sic].
-    # if isinstance(a, basestring):
-    #     return a == b
+    #Check equality according to type type [sic].
+    if a is None:
+        return b is None
+    if isinstance(a, basestring):
+         return a == b
+    if isinstance(a, globally.PARAMETER_SUPPORTED_DATA):
+        return a==b
     if isinstance(a, np.ndarray):
-        return np.all(custom_eq)
+        return np.all(a==b)
+    if isinstance(a, pd.DataFrame):
+        new_frame = a == b
+        new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
+        return np.all(new_frame)
     if isinstance(a, Sequence):
         return all(nested_equal(x, y) for x, y in zip(a, b))
     if isinstance(a, Mapping):
         if set(a.keys()) != set(b.keys()):
             return False
         return all(nested_equal(a[k], b[k]) for k in a.keys())
-    # if isinstance(a, Set):
-    #     return a == b
+    if isinstance(a, Set):
+         return a == b
 
-    if set(a.__dict__.keys() != set(b.__dict__.keys())):
-        return False
+    if hasattr(a,'__dict__'):
+        if not hasattr(b,'__dict__'):
+            return False
 
-    return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__keys())
+        if set(a.__dict__.keys()) != set(b.__dict__.keys()):
+            return False
+
+        return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__.keys())
+
+    return id(a) == id(b)
+
+
 
 
 

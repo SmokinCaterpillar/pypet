@@ -10,6 +10,8 @@ from parameter_test import *
 from speed_test import *
 from trajectory_test import *
 from brian_full_network_test import *
+from hdf5_merge_test import *
+from hdf5_removal_and_continue_tests import *
 
 
 if __name__ == '__main__':

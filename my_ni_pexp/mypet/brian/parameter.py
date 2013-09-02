@@ -46,24 +46,32 @@ class BrianParameter(Parameter):
         self._logger = logging.getLogger('mypet.brian.parameter.BrianParameter=' + self._fullname)
 
 
-    def _supports(self, data):
+    def supports(self, data):
         ''' Simply checks if data is supported '''
         if isinstance(data, Quantity):
             return True
-        if super(BrianParameter,self)._supports(data):
+        if super(BrianParameter,self).supports(data):
             return True
         return False
 
     def _values_of_same_type(self,val1, val2):
-        if not super(BrianParameter,self)._values_of_same_type(val1, val2):
-            return False
 
         if isinstance(val1,Quantity):
-            if not val1.has_same_dimensions(val2):
+            try:
+                if not val1.has_same_dimensions(val2):
+                    return False
+            except AttributeError:
                 return False
         elif isinstance(val2,Quantity):
-            if not val2.has_same_dimensions(val1):
+            try:
+                if not val2.has_same_dimensions(val1):
+                    return False
+            except AttributeError:
                 return False
+
+        elif not super(BrianParameter,self)._values_of_same_type(val1, val2):
+            return False
+
 
         return True
 
@@ -188,10 +196,10 @@ class BrianMonitorResult(SimpleResult):
             assert (self._storage_mode == BrianMonitorResult.table_mode or
                 self._storage_mode == BrianMonitorResult.array_mode)
 
-        elif isinstance(item, Monitor):
+        elif isinstance(item, (Monitor, MultiStateMonitor)):
             self._extract_monitor_data(item)
         else:
-            super(self,BrianMonitorResult).set_single(name,item)
+            super(BrianMonitorResult,self).set_single(name,item)
 
 
     
@@ -321,7 +329,7 @@ class BrianMonitorResult(SimpleResult):
                              key = varname+'_unit'
                              if not  key in self:
                                  self.set(**{key:  repr(get_unit(values[0]))})
-                             key = varname+'_n%08d' % neuron
+                             key = varname+'_id%08d' % neuron
                              self.set(**{key:values})
 
 

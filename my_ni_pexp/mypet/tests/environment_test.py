@@ -15,7 +15,7 @@ import cProfile
 
 def just_printing_bro(traj):
         key = traj.get('Test').gfn()
-        value = traj.get('Par.Test', fast_access=True)
+        value = traj.get('par.Test', fast_access=True)
         print 'Current value of %s is %d' %(key, value)
 
 class EnvironmentTest(unittest.TestCase):
@@ -47,7 +47,7 @@ class EnvironmentTest(unittest.TestCase):
         traj.preset_config('ncores', 2)
         traj.preset_config('multiproc', True)
 
-        traj.explore(identity,{traj.get('Par.Test').gfn():[1,2,3,4,5]})
+        traj.explore(identity,{traj.get('par.Test').gfn():[1,2,3,4,5]})
 
         self.traj = traj
 

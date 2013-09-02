@@ -4,7 +4,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
+from mypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
@@ -15,6 +15,7 @@ import pickle
 import logging
 import cProfile
 from mypet.utils.helpful_functions import flatten_dictionary
+from mypet.utils.comparisons import results_equal,parameters_equal
 import scipy.sparse as spsp
 import os
 import shutil
@@ -22,7 +23,7 @@ import pandas as pd
 
 
 REMOVE = True
-
+SINGLETEST=[0]
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
@@ -39,10 +40,19 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict = {}
 
         my_dict2={}
-        for key, val in traj.to_dict(fast_access=True,short_names=False).items():
+        for key, val in traj.parameters.to_dict(fast_access=True,short_names=False).items():
+            if 'trial' in key:
+                continue
             newkey = key.replace('.','_')
             my_dict[newkey] = str(val)
             my_dict2[newkey] = [str(val)+' juhu!']
+
+        my_dict['__FLOAT'] = 44.0
+        my_dict['__INT'] = 66
+        my_dict['__NPINT'] = np.int_(55)
+        my_dict['__INTaRRAy'] = np.array([1,2,3])
+        my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
+        my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
 
         keys = traj.to_dict(short_names=False).keys()
         for idx,key in enumerate(keys):
@@ -58,6 +68,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.DictsNFrame.set(myframe)
 
         traj.add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
+        traj.adp('mega',33)
 
         #traj.add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
 
@@ -68,49 +79,25 @@ class MergeTest(unittest.TestCase):
 
     def compare_trajectories(self,traj1,traj2):
 
-        old_items = traj1.to_dict(fast_access=True)
-        new_items = traj2.to_dict(fast_access=True)
+        old_items = traj1.to_dict(fast_access=False)
+        new_items = traj2.to_dict(fast_access=False)
 
 
 
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
             old_item = old_items[key]
-            if not isinstance(item, BaseResult):
-                self.assertTrue(str(old_item)==str(item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-                ## Check if it fits to the old parameter
-            elif not isinstance(item,PickleResult):
-                inner_dict = old_item.to_dict()
-                for innerkey, val in item.to_dict().items():
-                     old_val = inner_dict[innerkey]
-                     self.assertTrue(str(old_val)==str(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
+            if key.startswith('config'):
+                continue
+
+            if isinstance(item, BaseParameter):
+                self.assertTrue(parameters_equal(item,old_item),
+                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+            elif isinstance(item,BaseResult):
+                self.assertTrue(results_equal(item, old_item),
+                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
             else:
-                inner_dict = old_item.to_dict()
-                for innerkey, val in item.to_dict().items():
-                     old_val = inner_dict[innerkey]
-                     # This check needs to be better worked out, but not for now!
-                     self.assertTrue(type(old_val)==type(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
-
-
-            ### make sure that the names and comments are the same:
-            new_param = traj2.get(key)
-            old_param = traj1.get(key)
-
-            test_names = ['location',
-                         'name',
-                         'fullname' ,
-                         'comment']
-
-            for funcname in test_names:
-
-                new_func = 'new_param.get_' +funcname+'()'
-                old_func = 'old_param.get_' + funcname+'()'
-
-                newval = eval(new_func)
-                old_val = eval(old_func)
-
-                self.assertEqual(newval,old_val,'new and old parameters >>%s<< do not match. %s != %s' %(key,newval,old_val))
-
+                raise RuntimeError('You shall not pass')
 
     def make_run(self,env):
 
@@ -196,15 +183,40 @@ class MergeTest(unittest.TestCase):
 
 
 
-
-    #def setUp(self):
-
-
+    @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes(self):
-        self.merge_basic_within_same_file_only_adding_more_trials(True)
-
-    def merge_basic_within_same_file_only_adding_more_trials(self,copy_nodes):
         self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.merge_basic_only_adding_more_trials(True)
+
+    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_merge_basic_within_same_file_only_adding_more_trials_move_nodes(self):
+        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.merge_basic_only_adding_more_trials(False)
+
+    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_basic_within_same_file_and_skipping_duplicates_which_will_be_all(self):
+        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+        self.basic_and_skipping_duplicates_which_will_be_all()
+
+
+    @unittest.skipIf(SINGLETEST != [0] and 4 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_basic_within_same_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
+        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
+
+
+    @unittest.skipIf(SINGLETEST != [0] and 5 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_merge_basic_within_same_file_only_adding_more_trials(self):
+        self.filenames = ['../../Test/HDF5/merge2.hdf5', '../../Test/HDF5/merge3.hdf5', '../../Test/HDF5/merge4.hdf5']
+        self.merge_basic_only_adding_more_trials(True)
+
+    @unittest.skipIf(SINGLETEST != [0] and 6 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes_test_backup(self):
+        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.merge_basic_only_adding_more_trials_with_backup(True)
+
+    def merge_basic_only_adding_more_trials(self,copy_nodes):
+
 
         self.envs=[]
         self.trajs = []
@@ -246,6 +258,135 @@ class MergeTest(unittest.TestCase):
         self.compare_trajectories(merged_traj,self.trajs[2])
 
 
+    def merge_basic_only_adding_more_trials_with_backup(self,copy_nodes):
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self._create_param_dict()
+        for irun in [0,1,2]:
+            self.add_params(self.trajs[irun])
+
+
+        self.explore(self.trajs[0])
+        self.explore(self.trajs[1])
+        self.compare_explore_more_trials(self.trajs[2])
+
+        for irun in [0,1,2]:
+            self.make_run(self.envs[irun])
+
+        for irun in [0,1,2]:
+            self.trajs[irun].update_skeleton()
+            self.trajs[irun].load_stuff('ALL',only_empties=True)
+
+
+        self.trajs[1].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].store_stuff('rrororo33o333o3o3oo3')
+        self.trajs[2].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[2].store_stuff('rrororo33o333o3o3oo3')
+
+        ##merge without destroying the original trajectory
+        merged_traj = self.trajs[0]
+        merged_traj.merge(self.trajs[1],copy_nodes=copy_nodes,delete_trajectory=False, trial_parameter='trial',
+                          other_backup_filename='../../Test/HDF5/backup2.hdf5',backup_filename=1)
+        merged_traj.update_skeleton()
+        merged_traj.load_stuff('ALL', only_empties=True)
+
+        self.compare_trajectories(merged_traj,self.trajs[2])
+
+
+    def basic_and_skipping_duplicates_which_leads_to_one_remaining(self):
+
+        self.envs=[]
+        self.trajs = []
+
+        ntrajs = len(self.filenames)
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self._create_param_dict()
+        for irun in range(ntrajs):
+            self.add_params(self.trajs[irun])
+
+
+        self.explore(self.trajs[0])
+        self.explore_trials_differently(self.trajs[1])
+        self.compare_explore_more_trials_with_removing_duplicates(self.trajs[2])
+
+        for irun in range(ntrajs):
+            self.make_run(self.envs[irun])
+
+        for irun in range(ntrajs):
+            self.trajs[irun].update_skeleton()
+            self.trajs[irun].load_stuff('ALL',only_empties=True)
+
+
+        self.trajs[1].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].store_stuff('rrororo33o333o3o3oo3')
+        self.trajs[2].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[2].store_stuff('rrororo33o333o3o3oo3')
+
+        ##merge without destroying the original trajectory
+        merged_traj = self.trajs[0]
+        merged_traj.merge(self.trajs[1],copy_nodes=True,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.update_skeleton()
+        merged_traj.load_stuff('ALL', only_empties=True)
+
+        self.compare_trajectories(merged_traj,self.trajs[2])
+
+    def basic_and_skipping_duplicates_which_will_be_all(self):
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self._create_param_dict()
+        for irun in [0,1]:
+            self.add_params(self.trajs[irun])
+
+
+        self.explore(self.trajs[0])
+        self.explore(self.trajs[1])
+
+
+        for irun in [0,1]:
+            self.make_run(self.envs[irun])
+
+        for irun in [0,1]:
+            self.trajs[irun].update_skeleton()
+            self.trajs[irun].load_stuff('ALL',only_empties=True)
+
+
+        self.trajs[0].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[0].store_stuff('rrororo33o333o3o3oo3')
+        self.trajs[1].add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].store_stuff('rrororo33o333o3o3oo3')
+
+        ##merge without destroying the original trajectory
+        merged_traj = self.trajs[0]
+        merged_traj.merge(self.trajs[1],copy_nodes=True,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.update_skeleton()
+        merged_traj.load_stuff('ALL', only_empties=True)
+
+        self.compare_trajectories(merged_traj,self.trajs[1])
+
 
     def explore(self, traj):
         self.explored ={'Normal.trial': [0,1],
@@ -255,6 +396,27 @@ class MergeTest(unittest.TestCase):
 
 
         traj.explore(cartesian_product,self.explored)
+
+    def explore_trials_differently(self, traj):
+        self.explored ={'Normal.trial': [0,1],
+            'Numpy.double': [np.array([-1.0,2.0,3.0,5.0]), np.array([-1.0,3.0,5.0,7.0])]}
+
+
+
+
+        traj.explore(cartesian_product,self.explored)
+
+
+    def compare_explore_more_trials_with_removing_duplicates(self,traj):
+        self.explored ={'Normal.trial': [0,1,0,1,0,1],
+            'Numpy.double': [np.array([1.0,2.0,3.0,4.0]),
+                             np.array([1.0,2.0,3.0,4.0]),
+                             np.array([-1.0,3.0,5.0,7.0]),
+                             np.array([-1.0,3.0,5.0,7.0]),
+                             np.array([-1.0,2.0,3.0,5.0]),
+                             np.array([-1.0,2.0,3.0,5.0])]}
+
+        traj.explore(identity,self.explored)
 
     def compare_explore_more_trials(self,traj):
         self.explored ={'Normal.trial': [0,1,0,1,2,3,2,3],

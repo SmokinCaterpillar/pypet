@@ -6,15 +6,12 @@ Created on 17.05.2013
 
 import logging
 import petexceptions as pex
-import tables as pt
 import numpy as np
-import scipy.sparse as spsp
-import copy
-from mypet.utils.helpful_functions import nest_dictionary
+from mypet.utils.helpful_functions import nested_equal
 from mypet import globally
-from pandas import DataFrame, Series
-import itertools as it
-from mypet.utils.helpful_functions  import nested_equal
+from pandas import DataFrame
+
+
 
 try:
     import cPickle as pickle
@@ -30,14 +27,12 @@ class ObjectTable(DataFrame):
 
 
 class BaseParameter(object):
-    ''' Specifies the methods that need to be implemented for a Trajectory Parameter
+    '''Abstract class that pecifies the methods that need to be implemented for a trajectory parameter
     
     It is initialized with a location that specifies its position within the Trajectory, e.g.:
     Parameters.group.paramname
     The shorter name of the parameter is name=paramname, accordingly.
-        
-    For storing a parameter into hdf5 format the parameter implements a full node, how the storage 
-    in the node is handled is left to the user.
+
         
     The parameter class can instantiate a single parameter as well as an array with several 
     parameters (of the same type) for exploration.
@@ -66,14 +61,14 @@ class BaseParameter(object):
             self._logger.warning('Your comment is to long, maximum number of character is %d, you have %d. I will truncate it.'
                              % (globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, len(comment)))
             self._comment = comment[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
+
         self._comment=comment
 
     def get_comment(self):
         return self._comment
 
     def is_array(self):
-        return len(self)>1
-
+        raise NotImplementedError( "Should have implemented this." )
 
     def restore_default(self):
         ''' If a Parameter is explored, the actual data is changed over the course of evaluation, in case of single
@@ -93,7 +88,7 @@ class BaseParameter(object):
     def __len__(self):
         ''' Returns the length of the parameter.
         
-        Only parameters that will be explored have a length larger than 1.
+        Only parameters that will be explored can have a length larger than 1.
         If no values have been added to the parameter it's length is 0.
         '''
         raise NotImplementedError( "Should have implemented this." )
@@ -106,10 +101,10 @@ class BaseParameter(object):
         raise NotImplementedError( "Should have implemented this." )
 
 
-    def to_str(self):
+    def val2str(self):
         ''' String representation of the value represented by the parameter. Note that representing
         the parameter as a string accesses it's value, but for simpler debugging, this does not
-        lock the parameter!
+        lock the parameter or counts as usage!
         '''
         old_locked = self._locked
         try :
@@ -120,23 +115,44 @@ class BaseParameter(object):
             self._locked = old_locked
 
 
-
-    def __ne__(self, other):
-        return not self == other
-
-    def _supports(self, data):
-        return data in globally.PARAMETER_SUPPORTED_DATA
+    def supports(self, data):
+        return type(data) in globally.PARAMETER_SUPPORTED_DATA
 
     def _equal_values(self,val1,val2):
+        for val in [val1,val2]:
+            if not self.supports(val):
+                raise TypeError('I do not support the type of the first input >>%s<<,'
+                                ' therefore I cannot judge whether the two values are equal.' %
+                                str(type(val)))
+
         return nested_equal(val1,val2)
 
     def _values_of_same_type(self,val1,val2):
+
+        if self.supports(val1) != self.supports(val2):
+            return False
+
+        if not self.supports(val1) and not self.supports(val2):
+                raise TypeError('I do not support the types of both inputs (>>%s<< and >>%s<<),'
+                                ' therefore I cannot judge whether the two are of same type.' %
+                                str(type(val1)),str(type(val2)))
+
         return type(val1) == type(val2)
 
 
 
     def __str__(self):
-        return '%s: %s   (Length:%d)' % (self._fullname, self.to_str(), len(self))
+        if self.get_comment():
+
+            returnstr = '%s (Length:%d, Comment:%s): %s   ' % (self._fullname, len(self), self.get_comment(), self.val2str())
+        else:
+            returnstr = '%s (Length:%d): %s   ' % (self._fullname, len(self), self.val2str())
+
+        if self.is_array():
+            returnstr += ', Array: %s' %str(self.get_array())
+
+        return returnstr
+
 
     def unlock(self):
         ''' Unlocks the locked parameter.'''
@@ -170,7 +186,6 @@ class BaseParameter(object):
         raise NotImplementedError( "Should have implemented this." )
 
 
-
     def get(self,name):
         raise NotImplementedError( "Should have implemented this." )
 
@@ -184,7 +199,9 @@ class BaseParameter(object):
         '''
         raise NotImplementedError( "Should have implemented this." )
 
-    
+    def expand(self, iterator):
+        raise NotImplementedError("Should have implemented this.")
+
     def set_parameter_access(self, n=0):
         ''' Prepares the parameter for further usage, and tells it which point in the parameter space should be
         accessed for future calls.
@@ -242,6 +259,8 @@ class Parameter(BaseParameter):
     # # The comment that is added if no comment is specified
     # standard_comment = 'Dude, please explain a bit what your fancy parameter is good for!'
 
+
+
     def __init__(self, fullname, data=None, comment=''):
         super(Parameter,self).__init__(fullname,comment)
         self._data= None
@@ -261,12 +280,15 @@ class Parameter(BaseParameter):
         self._data = self._default
 
     def __len__(self):
-        if self._data == None:
+        if self._data is None:
             return 0
         elif len(self._explored_data)>0:
             return len(self._explored_data)
         else:
             return 1
+
+    def is_array(self):
+        return len(self._explored_data)>0
        
     def __getstate__(self):
         ''' Returns the actual state of the parameter for pickling. 
@@ -298,7 +320,7 @@ class Parameter(BaseParameter):
         else:
             self._data = self._explored_data[n]
 
-    def _supports(self, data):
+    def supports(self, data):
         ''' Checks if input data is supported by the parameter'''
         #result = isinstance(data, ( np.int, np.str, np.float, np.bool, np.complex))
 
@@ -318,6 +340,13 @@ class Parameter(BaseParameter):
         This is important for exploration and adding of elements to the parameter array.
         New added elements must agree with the type of previous elements.
         '''
+        if self.supports(val1) != self.supports(val2):
+            return False
+
+        if not self.supports(val1) and not self.supports(val2):
+                raise TypeError('I do not support the types of both inputs (>>%s<< and >>%s<<),'
+                                ' therefore I cannot judge whether the two are of same type.' %
+                                str(type(val1)),str(type(val2)))
         
         if not type(val1) == type(val2):
             return False
@@ -340,7 +369,7 @@ class Parameter(BaseParameter):
         '''
 
         if self.is_locked():
-            raise pex.ParameterLockedException('Parameter ' + self._name + ' is locked!')
+            raise pex.ParameterLockedException('Parameter >>' + self._name + '<< is locked!')
 
 
         if self.is_array():
@@ -349,7 +378,7 @@ class Parameter(BaseParameter):
 
         val = self._convert_data(data)
 
-        if not self._supports(val):
+        if not self.supports(val):
             raise AttributeError('Unsupported data type: ' +str(type(val)))
 
         self._data= val
@@ -366,6 +395,9 @@ class Parameter(BaseParameter):
         '''
         if isinstance(val,(list,tuple)):
             val = np.array(val)
+
+        # if isinstance(val,str):
+        #     val = np.str_(val)
 
         if isinstance(val, np.ndarray):
             val.flags.writeable = False
@@ -389,7 +421,7 @@ class Parameter(BaseParameter):
         lists of values of equal length that specify the exploration.
         '''
         if self.is_locked():
-            raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
+            raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self._fullname)
 
         if self.is_array():
             raise TypeError('Your Parameter %s is already explored, cannot explore it further!' % self._name)
@@ -400,6 +432,21 @@ class Parameter(BaseParameter):
 
 
         self._explored_data = data_tuple
+        self.lock()
+
+    def expand(self,explore_iterable):
+        if self.is_locked():
+            raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self._fullname)
+
+        if not self.is_array():
+            raise TypeError('Your Parameter is not an array and can therefore not be expanded.' % self._name)
+
+
+        data_tuple = self._data_sanity_checks(explore_iterable)
+
+
+
+        self._explored_data = self._explored_data + data_tuple
         self.lock()
 
 
@@ -413,7 +460,7 @@ class Parameter(BaseParameter):
             newval = self._convert_data(val)
 
 
-            if not self._supports(newval):
+            if not self.supports(newval):
                 raise TypeError('%s is of not supported type %s.' % (repr(val),str(type(newval))))
 
             if not self._values_of_same_type(newval,default_val):
@@ -421,6 +468,10 @@ class Parameter(BaseParameter):
 
 
             data_tuple.append(newval)
+
+
+        if len(data_tuple) == 0:
+            raise ValueError('Cannot explore an empty list!')
 
         return tuple(data_tuple)
 
@@ -530,7 +581,7 @@ class ArrayParameter(Parameter):
     def _build_name(self,name_id):
         return 'ea_%s_%08d' % (ArrayParameter.IDENTIFIER,name_id)
 
-    def _supports(self, data):
+    def supports(self, data):
 
         if isinstance(data, tuple):
             for item in data:
@@ -542,7 +593,7 @@ class ArrayParameter(Parameter):
                 old_type = type(item)
             return True
         else:
-            return super(ArrayParameter,self)._supports(data)
+            return super(ArrayParameter,self).supports(data)
 
     def _convert_data(self, val):
 
@@ -591,7 +642,7 @@ class PickleParameter(Parameter):
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.PickleParameter=' + self._fullname)
 
-    def _supports(self, data):
+    def supports(self, data):
         ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
         return True
 
@@ -759,8 +810,18 @@ class SimpleResult(BaseResult):
         self._set_logger()
         self.set(*args,**kwargs)
 
+
     def __contains__(self, item):
         return item in self._data
+
+
+    def __str__(self):
+        if self.get_comment():
+            return '%s (Comment:%s): %s' % (self.get_fullname(),self.get_comment(),str(self._data))
+        else:
+            return '%s: %s' % (self.get_fullname(),str(self._data))
+
+
 
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.SimpleResult=' + self._fullname)

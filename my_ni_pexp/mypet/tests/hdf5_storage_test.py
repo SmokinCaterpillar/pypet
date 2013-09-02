@@ -4,7 +4,7 @@ __author__ = 'robert'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
+from mypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity,cartesian_product
@@ -19,6 +19,7 @@ import scipy.sparse as spsp
 import os
 import shutil
 import pandas as pd
+from mypet.utils.comparisons import results_equal,parameters_equal
 
 ## Removes all the files again to clean up after the tests
 REMOVE = True
@@ -187,7 +188,7 @@ class EnvironmentTest(unittest.TestCase):
         self.explore(self.traj)
 
         ###Test, that you cannot append to data
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(TypeError):
             self.traj.store_stuff('filename')
 
         self.make_run()
@@ -207,49 +208,27 @@ class EnvironmentTest(unittest.TestCase):
         newtraj.load(trajectoryname,load_derived_params=2,load_results=2,replace=replace)
         return newtraj
 
-
     def compare_trajectories(self,traj1,traj2):
 
-        old_items = traj1.to_dict(fast_access=True)
-        new_items = traj2.to_dict(fast_access=True)
+        old_items = traj1.to_dict(fast_access=False)
+        new_items = traj2.to_dict(fast_access=False)
+
+
 
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
             old_item = old_items[key]
-            if not isinstance(item, BaseResult):
-                self.assertTrue(str(old_item)==str(item),'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-                ## Check if it fits to the old parameter
-            elif not isinstance(item,PickleResult):
-                inner_dict = old_item.to_dict()
-                for innerkey, val in item.to_dict().items():
-                     old_val = inner_dict[innerkey]
-                     self.assertTrue(str(old_val)==str(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
+            if key.startswith('config'):
+                continue
+
+            if isinstance(item, BaseParameter):
+                self.assertTrue(parameters_equal(item,old_item),
+                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+            elif isinstance(item,BaseResult):
+                self.assertTrue(results_equal(item, old_item),
+                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
             else:
-                inner_dict = old_item.to_dict()
-                for innerkey, val in item.to_dict().items():
-                     old_val = inner_dict[innerkey]
-                     # This check needs to be better worked out, but not for now!
-                     self.assertTrue(type(old_val)==type(val),'For key %s:%s: %s not equal to %s' %(key,innerkey,str(old_item),str(item)))
-
-
-            ### make sure that the names and comments are the same:
-            new_param = traj2.get(key)
-            old_param = traj1.get(key)
-
-            test_names = ['location',
-                         'name',
-                         'fullname' ,
-                         'comment']
-
-            for funcname in test_names:
-
-                new_func = 'new_param.get_' +funcname+'()'
-                old_func = 'old_param.get_' + funcname+'()'
-
-                newval = eval(new_func)
-                old_val = eval(old_func)
-
-                self.assertEqual(newval,old_val,'new and old parameters >>%s<< do not match. %s != %s' %(key,newval,old_val))
+                raise RuntimeError('You shall not pass')
 
 
 class MultiprocQueueTest(EnvironmentTest):

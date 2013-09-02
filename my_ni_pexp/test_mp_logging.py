@@ -24,7 +24,7 @@ def do_stuff(args):
     logging.getLogger().addHandler(h)
     print srun
     assert isinstance(srun, SingleRun)
-    srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._n})
+    srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._id})
     srun.store_to_hdf5(lock)
     #print srun.honky.mirta
     print srun.honky.mirta

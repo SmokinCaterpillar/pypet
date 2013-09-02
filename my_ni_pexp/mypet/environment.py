@@ -10,8 +10,7 @@ from mypet.trajectory import Trajectory, SingleRun
 import os
 import sys
 import logging
-import time
-import datetime
+import pickle
 import multiprocessing as multip
 import traceback
 from mypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
@@ -30,7 +29,7 @@ def _single_run(args):
     
         assert isinstance(traj, SingleRun)
         root = logging.getLogger()
-        n = traj.get_n()
+        n = traj.get_id()
         #If the logger has no handler, add one:
         #print root.handlers
         if len(root.handlers)<3:
@@ -83,7 +82,9 @@ class Environment(object):
                  filetitle='experiment',
                  logfolder='../log/',
                  dynamicly_imported_classes=None):
-        
+
+
+
         #Acquiring the current time
         if isinstance(trajectory,str):
             self._traj = Trajectory(trajectory, dynamicly_imported_classes)
@@ -94,27 +95,15 @@ class Environment(object):
 
 
 
-
         # Adding some default configuration
         if not self._traj.contains('config.logpath'):
-            self._logpath = os.path.join(logfolder,self._traj.get_name())
-            self._traj.ac('logpath', self._logpath).lock()
+            logpath = os.path.join(logfolder,self._traj.get_name())
+            self._traj.ac('logpath', logpath).lock()
         else:
-            self._logpath=self._traj.get('config.logpath').get()
+            logpath=self._traj.get('config.logpath').get()
 
 
-        if not os.path.isdir(self._logpath):
-            os.makedirs(self._logpath)
-
-        f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h=logging.FileHandler(filename=self._logpath+'/main.txt')
-        #sh = logging.StreamHandler(sys.stdout)
-        root = logging.getLogger()
-        root.addHandler(h)
-
-        for handler in root.handlers:
-            handler.setFormatter(f)
-        self._logger = logging.getLogger('mypet.environment.Environment')
+        self._make_logger(logpath)
 
 
         storage_service = self._traj.get_storage_service()
@@ -132,9 +121,47 @@ class Environment(object):
         if not self._traj.contains('config.mode'):
             self._traj.ac('mode',globally.MULTIPROC_MODE_NORMAL)
 
+        if not self._traj.contains('config.contiuable'):
+            self._traj.ac('continuable', 1)
+
 
         self._logger.info('Environment initialized.')
 
+
+    def _make_logger(self,logpath):
+        if not os.path.isdir(logpath):
+            os.makedirs(logpath)
+
+        f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+        h=logging.FileHandler(filename=logpath+'/main.txt')
+        #sh = logging.StreamHandler(sys.stdout)
+        root = logging.getLogger()
+        root.addHandler(h)
+
+        for handler in root.handlers:
+            handler.setFormatter(f)
+        self._logger = logging.getLogger('mypet.environment.Environment')
+
+
+
+    def continue_run(self, continuefile,*args,**kwargs):
+
+        continue_dict = pickle.load(open(continuefile,'rb'))
+        runfunc = continue_dict['runfunc']
+        runparams = continue_dict['runparams']
+        kwrunparams = continue_dict['kwrunparams']
+        self._traj = continue_dict['trajectory']
+        assert isinstance(self._traj,Trajectory)
+
+        self._traj.load(load_params = globally.LOAD_NOTHING,
+             load_derived_params = globally.LOAD_NOTHING,
+             load_results = globally.LOAD_NOTHING,
+             as_new = False)
+
+        self._traj.load_stuff(self._traj.get_explored_parameters().values())
+
+        self._traj.remove_incomplete_runs(*args,**kwargs)
+        self._do_run(runfunc,*runparams,**kwrunparams)
 
 
 
@@ -144,10 +171,20 @@ class Environment(object):
 
 
     def run(self, runfunc, *runparams,**kwrunparams):
-        
+
+
+
+
+        continuable = self._traj.get('config.continuable').get()
+        logpath = self._traj.get('config.logpath').get()
+
+
+        self._storage_service = self._traj.get_storage_service()
+
+
+
 
         #Prepares the trajecotry for running
-        self._storage_service = self._traj.get_storage_service()
 
         if self._storage_service == None:
             self._storage_service = HDF5StorageService(self._traj.get('config.filename').get(),
@@ -157,10 +194,36 @@ class Environment(object):
 
         self._traj.prepare_experiment()
 
+        if continuable:
+            #HERE!
+            dump_dict ={}
+            if 'config.filename' in self._traj:
+                filename = self._traj.get('config.filename').get()
+                dump_dict['filename'] = filename
+                dumpfolder= os.path.split(filename)[0]
+                dumpfilename=os.path.join(dumpfolder,self._traj.get_name()+'.cnt')
+            else:
+                dumpfilename = os.path.join(logpath,self._traj.get_name()+'.cnt')
 
+            dump_dict['dumpfilename'] = dumpfilename
+            dump_dict['storage_service'] = self._storage_service
+            dump_dict['runfunc'] = runfunc
+            dump_dict['runparams'] = runparams
+            dump_dict['kwrunparams'] = kwrunparams
+            dump_dict['filename'] = filename
+            dump_dict['trajectory'] = self._traj
+
+            pickle.dump(dump_dict,open(dumpfilename,'wb'))
+
+        self._do_run(runfunc,*runparams,**kwrunparams)
+
+
+    def _do_run(self, runfunc, *runparams, **kwrunparams):
+        logpath = self._traj.get('config.logpath').get()
         multiproc = self._traj.get('config.multiproc').get()
         mode = self._traj.get('config.mode').get()
         if multiproc:
+
             if mode == globally.MULTIPROC_MODE_QUEUE:
                 manager = multip.Manager()
                 queue = manager.Queue()
@@ -194,8 +257,8 @@ class Environment(object):
 
             self._logger.info('\n----------------------------------------\nStarting run in parallel with %d cores.----------------------------------------\n' %ncores)
             
-            iterator = ((self._traj.make_single_run(n),self._logpath,queue,runfunc,len(self._traj),runparams,
-                         kwrunparams) for n in xrange(len(self._traj)))
+            iterator = ((self._traj.make_single_run(n),logpath,queue,runfunc,len(self._traj),runparams,
+                         kwrunparams) for n in xrange(len(self._traj)) if not self._traj.is_completed(n))
         
             results = mpool.imap(_single_run,iterator)
 
@@ -215,8 +278,9 @@ class Environment(object):
             return results
         else:
             
-            results = [_single_run((self._traj.make_single_run(n),self._logpath,None,runfunc,
-                                    len(self._traj),runparams,kwrunparams)) for n in xrange(len(self._traj))]
+            results = [_single_run((self._traj.make_single_run(n),logpath,None,runfunc,
+                                    len(self._traj),runparams,kwrunparams)) for n in xrange(len(self._traj))
+                                    if not self._traj.is_completed(n)]
 
             self._traj.finalize_experiment()
             return results

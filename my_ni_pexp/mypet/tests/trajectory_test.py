@@ -75,7 +75,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
     def testremove(self):
-        self.traj.remove(self.traj.get('FloatParam'))
+        self.traj.remove_stuff(self.traj.get('FloatParam'))
 
         with self.assertRaises(AttributeError):
             self.traj.FloatParam
@@ -84,12 +84,12 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(self.traj)==1)
 
-        self.traj.remove('FortyTwo')
+        self.traj.remove_stuff('FortyTwo')
 
-        self.traj.remove('SparseParam')
-        self.traj.remove('IntParam')
+        self.traj.remove_stuff('SparseParam')
+        self.traj.remove_stuff('IntParam')
 
-        self.assertTrue(len(self.traj)==0)
+        self.assertTrue(len(self.traj)==1)
 
     def test_changing(self):
 
