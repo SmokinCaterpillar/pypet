@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 from collections import Sequence, Mapping, Set

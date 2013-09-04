@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 
@@ -45,14 +45,14 @@ def simple_calculations(traj, arg1, simple_kwarg):
                 continue
             newkey = key.replace('.','_')
             my_dict[newkey] = str(val)
-            my_dict2[newkey] = [str(val)+' juhu!']
+            my_dict2[newkey] = np.array([str(val)+' juhu!'])
 
         my_dict['__FLOAT'] = 44.0
         my_dict['__INT'] = 66
         my_dict['__NPINT'] = np.int_(55)
         my_dict['__INTaRRAy'] = np.array([1,2,3])
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
-        my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
+        my_dict['__STRaRRAy'] = ('sds','aea','sf')
 
         keys = traj.to_dict(short_names=False).keys()
         for idx,key in enumerate(keys):

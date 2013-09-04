@@ -17,6 +17,10 @@ import mypet.petexceptions as pex
 from mypet.utils.helpful_functions import flatten_dictionary
 from mypet import globally
 
+
+BFS = 'BFS'
+DFS = 'DFS'
+
 class TrajOrRun(object):
     ''' Abstract class for methods that are used by single runs as well as full trajectories.
 
@@ -100,12 +104,12 @@ class TrajOrRun(object):
         self.get('results', fast_access=False,check_uniqueness=False).to_dict()
 
     def __contains__(self, item):
-        ''' See contains(item)
+        ''' See :func:`contains`
         '''
         return self.contains(item)
 
     def set_search_strategy(self, string):
-        assert string == 'bfs' or string == 'dfs'
+        assert string == BFS or string == DFS
         self._nninterface._search_strategy = string
 
     def set_check_uniqueness(self, val):
@@ -137,7 +141,7 @@ class TrajOrRun(object):
         '''
         return self.add_parameter( *args, **kwargs)
 
-    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = 'bfs'):
+    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = BFS):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
@@ -146,8 +150,8 @@ class TrajOrRun(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
         whether it should be chekced if the path through the tree is not unique.
-        :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
-        seach ('dfs').
+        :param: search_strategy: The strategy to search the tree, either breadth first search (BFS) or depth first
+        seach (DFS).
         :return: The requested object or it's default evaluation. Raises an error if the object cannot be found.
         '''
         return self._nninterface._get(name, fast_access, check_uniqueness, search_strategy)
@@ -191,8 +195,8 @@ class TrajOrRun(object):
         '''
         return self._nninterface._to_dict(fast_access, short_names)
 
-    def __getitem__(self, item):
-        return getattr(self,item)
+    # def __getitem__(self, item):
+    #     return getattr(self,item)
 
     def __getattr__(self,name):
 
@@ -207,15 +211,11 @@ class TrajOrRun(object):
     def __setattr__(self, key, value):
         if key[0]=='_':
             self.__dict__[key] = value
-        # elif key == 'last' or key == 'Last':
-        #     self.__dict__[key]=value
         else:
             self._nninterface._set(key, value)
 
 
     def _fetch_items(self,store_load, iterable, *args, **kwargs):
-
-
         only_empties = kwargs.pop('only_empties',False)
 
         non_empties = kwargs.pop('non_empties',False)
@@ -357,7 +357,7 @@ class NaturalNamingInterface(object):
 
     
     def __init__(self, working_trajectory_name, fast_access = True,
-                 check_uniqueness=False,search_strategy = 'bfs', storage_dict = None,
+                 check_uniqueness=False,search_strategy = BFS, storage_dict = None,
                  flat_storage_dict=None,nodes_and_leaves = None):
         self._fast_access = fast_access
         self._check_uniqueness = check_uniqueness
@@ -417,7 +417,7 @@ class NaturalNamingInterface(object):
 
 
 
-    def _get(self, name, fast_access = False, check_uniqueness = False, search_strategy = 'bfs'):
+    def _get(self, name, fast_access = False, check_uniqueness = False, search_strategy = BFS):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
@@ -563,15 +563,15 @@ class NaturalNamingInterface(object):
 
     def _search(self,fullname,key,dictionary, check_uniqueness, search_strategy):
 
-        assert (search_strategy == 'bfs' or search_strategy == 'dfs')
+        assert (search_strategy == BFS or search_strategy == DFS)
         check_list = [dictionary]
         result = None
 
         while len(check_list) > 0:
 
-            if search_strategy == 'bfs':
+            if search_strategy == BFS:
                 new_dict = check_list.pop(0)
-            elif search_strategy == 'dfs':
+            elif search_strategy == DFS:
                 new_dict = check_list.pop()
             else:
                 raise RuntimeError('You should never come here!')
@@ -608,12 +608,12 @@ class NNTreeNode(object):
         else:
             self._dict=dictionary
 
-    def __getitem__(self, item):
-        return getattr(self,item)
-
-    def __iter__(self):
-        return self.to_dict(fast_access=self._nninterface._fast_access,
-                            short_names=False).iteritems()
+    # def __getitem__(self, item):
+    #     return getattr(self,item)
+    #
+    # def __iter__(self):
+    #     return self.to_dict(fast_access=self._nninterface._fast_access,
+    #                         short_names=False).iterkeys()
 
     def __getattr__(self,name):
 
@@ -628,6 +628,34 @@ class NNTreeNode(object):
         return self.get(name,self._nninterface._fast_access, self._nninterface._check_uniqueness,
                         self._nninterface._search_strategy)
 
+    def __contains__(self,item):
+        return self.contains(item)
+
+    def contains(self,item):
+        ''' Checks if the node contains a specific parameter or result.
+
+        It is checked if the item can be found via the trajectories "get" method.
+
+        :param item: Name of the parameter or result or an object which name is then taken.
+        :return: True or False
+        '''
+        if isinstance(item, (BaseParameter, BaseResult)):
+            search_string = item.get_fullname()
+        elif isinstance(item,str):
+            search_string = item
+        else:
+            return False
+
+
+        if not search_string.startswith(self._fullname) and self._fullname != '':
+            _,_,search_string = search_string.partition(self._fullname)
+
+
+        try:
+            self.get(search_string)
+            return True
+        except AttributeError:
+            return False
 
     def __setattr__(self, key, value):
         if key[0]=='_':
@@ -680,7 +708,7 @@ class NNTreeNode(object):
 
 
 
-    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = 'bfs'):
+    def get(self, name, fast_access=False, check_uniqueness = False, search_strategy = BFS):
         ''' Same as traj.>>name<<
         Requesting parameters via get does not pay attention to fast access. Whether the parameter object or it's
         default evaluation is returned depends on the value of >>fast_access<<.
@@ -689,8 +717,8 @@ class NNTreeNode(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
         whether it should be chekced if the path through the tree is not unique.
-        :param: search_strategy: The strategy to search the tree, either breadth first search ('bfs') or depth first
-        seach ('dfs').
+        :param: search_strategy: The strategy to search the tree, either breadth first search (BFS) or depth first
+        seach (DFS).
         :return: The requested object or it's default evaluation. Raises an error if the object cannot be found.
         '''
 
@@ -715,7 +743,8 @@ class NNTreeNode(object):
 
         ## Check in O(1) first if a full parameter/result name is given
         fullname = '.'.join(split_name)
-        if self._fullname=='':
+
+        if fullname.startswith(self._fullname):
             new_name = fullname
         else:
             new_name = self._fullname+'.'+fullname
@@ -795,7 +824,14 @@ class Trajectory(TrajOrRun):
 
 
     def __iter__(self):
-        return (self.make_single_run(id) for id in xrange(len(self)))
+        return self.iterruns(non_completed=False)
+
+    def iterruns(self, non_completed=False):
+        if non_completed:
+            return (self.make_single_run(idx) for idx in xrange(len(self))
+                    if self.get_run_information(idx)['completed'])
+        else:
+            return (self.make_single_run(idx) for idx in xrange(len(self)))
 
     def __init__(self, name='Traj',  dynamicly_imported_classes=None, add_time = True):
     

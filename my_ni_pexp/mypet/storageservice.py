@@ -1,8 +1,9 @@
 from numpy.oldnumeric.ma import _ptp
 from wx._windows_ import new_MDIParentFrame
 
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
+__version__ = "$Revision: 70b79ccd671a $"# $Source$
 
 import logging
 import tables as pt
@@ -132,7 +133,7 @@ class HDF5StorageService(StorageService):
     COLLDICT = 'COLLDICT'
 
 
-    TYPESTR = 'TYPESTR'
+    SCALARTYPE = 'SCALARTYPE'
 
 
 
@@ -531,7 +532,10 @@ class HDF5StorageService(StorageService):
             #     raise TypeError('You cannot load a trajectory from disk into a non-empty one.')
             traj._stored=True
 
-            self._trj_load_meta_data(traj)
+        self._trj_load_meta_data(traj,as_new)
+
+
+
 
         if (as_new and (load_derived_params != globally.LOAD_NOTHING or load_results !=
                         globally.LOAD_NOTHING)):
@@ -552,33 +556,41 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _trj_load_meta_data(self,traj):
+
+
+    def _trj_load_meta_data(self,traj, as_new):
+
+
         metatable = self._trajectorygroup.info_table
         metarow = metatable[0]
 
+        if as_new:
+            length = metarow['lenght']
+            for irun in range(length):
+                traj._add_run_info(irun)
+        else:
+            traj._comment = metarow['comment']
+            traj._time = metarow['timestamp']
+            traj._formatted_time = metarow['time']
+            traj._name = metarow['name']
 
-        traj._comment = metarow['comment']
-        traj._time = metarow['timestamp']
-        traj._formatted_time = metarow['time']
-        # traj._loadedfrom=(metarow['loaded_from'])
+            single_run_table = getattr(self._trajectorygroup,'run_table')
 
-        single_run_table = getattr(self._trajectorygroup,'run_table')
+            for row in single_run_table.iterrows():
+                name = row['name']
+                id = row['id']
+                timestamp = row['timestamp']
+                time = row['time']
+                completed = row['completed']
+                traj._single_run_ids[id] = name
+                traj._single_run_ids[name] = id
 
-        for row in single_run_table.iterrows():
-            name = row['name']
-            id = row['id']
-            timestamp = row['timestamp']
-            time = row['time']
-            completed = row['completed']
-            traj._single_run_ids[id] = name
-            traj._single_run_ids[name] = id
-
-            info_dict = {}
-            info_dict['id'] = id
-            info_dict['timestamp'] = timestamp
-            info_dict['time'] = time
-            info_dict['completed'] = completed
-            traj._run_information[name] = info_dict
+                info_dict = {}
+                info_dict['id'] = id
+                info_dict['timestamp'] = timestamp
+                info_dict['time'] = time
+                info_dict['completed'] = completed
+                traj._run_information[name] = info_dict
 
 
 
@@ -1226,38 +1238,57 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
             raise
 
-    def _prm_set_attributes_to_recall_natives(self, data, ptitem, prefix):
+
+
+    def _prm_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
+
+            def _set_attribute_to_item_or_dict(item_or_dict, name,val):
+                if isinstance(item_or_dict,dict):
+                    item_or_dict[name]=val
+                else:
+                    item_or_dict.set_attr(name,val)
+
             if isinstance(data,tuple):
-                ptitem.set_attr(prefix+HDF5StorageService.COLLTYPE,
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLLTYPE,
                                 HDF5StorageService.COLLTUPLE)
 
             elif isinstance(data,list):
-                ptitem.set_attr(prefix+HDF5StorageService.COLLTYPE,
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLLTYPE,
                                 HDF5StorageService.COLLLIST)
 
             elif isinstance(data,np.ndarray):
-                ptitem.set_attr(prefix+HDF5StorageService.COLLTYPE,
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLLTYPE,
                                 HDF5StorageService.COLLNDARRAY)
 
             elif isinstance(data, globally.PARAMETER_SUPPORTED_DATA):
-                ptitem.set_attr(prefix+HDF5StorageService.COLLTYPE,
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLLTYPE,
                                 HDF5StorageService.COLLSCALAR)
 
-                strtype = str(type(data))
-                ptitem.set_attr(prefix+HDF5StorageService.TYPESTR,strtype)
+                strtype = repr(type(data))
+
+                if not strtype in globally.PARAMETERTYPEDICT:
+                    raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
+                                   (str(data),str(type(data))))
+
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALARTYPE,strtype)
 
             elif isinstance(data, dict):
-                ptitem.set_attr(prefix+HDF5StorageService.COLLTYPE,
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLLTYPE,
                                 HDF5StorageService.COLLDICT)
 
             else:
-                raise RuntimeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
+                raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
                                    (str(data),str(type(data))))
 
             if isinstance(data, (list,tuple,np.ndarray)):
                 if len(data) > 0:
-                    strtype = str(type(data[0]))
-                    ptitem.set_attr(prefix+HDF5StorageService.TYPESTR,strtype)
+                    strtype = repr(type(data[0]))
+
+                    if not strtype in globally.PARAMETERTYPEDICT:
+                        raise TypeError('I do not know how to handel >>%s<< its type is '
+                                           '>>%s<<.' % (str(data),str(type(data))))
+
+                    _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALARTYPE,strtype)
 
 
     def _prm_remove_parameter_or_result(self, msg,param, *args,**kwargs):
@@ -1349,6 +1380,11 @@ class HDF5StorageService(StorageService):
 
                 if msg == globally.UPDATE_PARAMETER:
                     nstart= table.nrows
+                    datasize = data.shape[0]
+                    if nstart==datasize:
+                        self._logger.debug('There is no new data to the parameter >>%s<<. I will'
+                                           'skip storage of table >>%s<<' % (fullname,tablename))
+                        return
                 else:
                     raise ValueError('Table %s already exists, appending is only supported for '
                                      'parameter merging and appending, please use >>msg= %s<<.' %
@@ -1357,11 +1393,13 @@ class HDF5StorageService(StorageService):
                 self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' %
                                    (tablename,self._filename, fullname))
 
+                ## If the table exists, it already knows what the original data of the input was:
+                data_type_dict = {}
             else:
                 if msg == globally.UPDATE_PARAMETER:
                     self._logger.debug('Parameter table >>%s<< does not exist, I will create it!' % fullname)
 
-                description_dict = self._prm_make_description(data,fullname)
+                description_dict, data_type_dict = self._prm_make_description(data,fullname)
                 table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
                                                    title=tablename)
                 nstart = 0
@@ -1378,15 +1416,14 @@ class HDF5StorageService(StorageService):
             cols = data.columns.tolist()
             for n in range(nstart, datasize):
 
-
                 for key in cols:
-                    if n== nstart:
-                        self._prm_set_attributes_to_recall_natives(data[key][n],table,
-                                                                   HDF5StorageService.FORMATTEDCOLPREFIX % key)
 
                     row[key] = data[key][n]
 
                 row.append()
+
+            for field_name, type_description in data_type_dict.iteritems():
+                table.set_attr(field_name,type_description)
 
             table.flush()
             self._hdf5file.flush()
@@ -1399,12 +1436,23 @@ class HDF5StorageService(StorageService):
     def _prm_make_description(self, data, fullname):
         ''' Returns a dictionary that describes a pytbales row.
         '''
-
+        def _convert_lists_and_tuples(series_of_data):
+            ## If the first data item is a list, the rest must be as well, since
+            # data has to be homogeneous
+            if isinstance(series_of_data[0], (list,tuple)):
+                for idx,item in enumerate(series_of_data):
+                    series_of_data[idx] = np.array(item)
 
         descriptiondict={}
+        original_data_type_dict={}
 
         for key, val in data.iteritems():
 
+            self._prm_set_attributes_to_recall_natives(val[0],original_data_type_dict,
+                            HDF5StorageService.FORMATTEDCOLPREFIX % key)
+
+
+            _convert_lists_and_tuples(val)
 
             col = self._prm_get_table_col(key, val, fullname)
 
@@ -1413,7 +1461,7 @@ class HDF5StorageService(StorageService):
 
             descriptiondict[key]=col
 
-        return descriptiondict
+        return descriptiondict, original_data_type_dict
 
 
     def _prm_get_table_col(self, key, column, fullname):
@@ -1569,7 +1617,7 @@ class HDF5StorageService(StorageService):
     def _prm_recall_native_type(self,data,ptitem,prefix):
             ## Numpy Scalars are converted to numpy arrays, but we want to retrieve tha numpy scalar
             # as it was
-            typestr = _get_from_attrs(ptitem,prefix+HDF5StorageService.TYPESTR)
+            typestr = _get_from_attrs(ptitem,prefix+HDF5StorageService.SCALARTYPE)
             type_changed = False
 
             if _attr_equals(ptitem, prefix+HDF5StorageService.COLLTYPE, HDF5StorageService.COLLSCALAR):
@@ -1579,13 +1627,16 @@ class HDF5StorageService(StorageService):
 
 
                 if not typestr is None:
-                    if not typestr == str(type(data)):
+                    if not typestr == repr(type(data)):
                         data = globally.PARAMETERTYPEDICT[typestr](data)
                         type_changed = True
 
 
             elif (_attr_equals(ptitem, prefix+HDF5StorageService.COLLTYPE, HDF5StorageService.COLLTUPLE) or
                     _attr_equals(ptitem, prefix+HDF5StorageService.COLLTYPE, HDF5StorageService.COLLLIST)):
+
+                if isinstance(data,np.ndarray):
+                    type_changed=True
 
                 data = list(data)
 
@@ -1595,7 +1646,7 @@ class HDF5StorageService(StorageService):
                     first_item = None
 
                 if not first_item is None:
-                    if not typestr == str(type(data)):
+                    if not typestr == repr(type(data)):
                         for idx,item in enumerate(data):
                             data[idx] = globally.PARAMETERTYPEDICT[typestr](item)
                             type_changed = True

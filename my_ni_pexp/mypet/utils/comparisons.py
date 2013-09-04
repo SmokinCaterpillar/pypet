@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 
@@ -19,9 +19,6 @@ def results_equal(a,b):
     if not a.get_fullname() == b.get_fullname():
         return False
 
-    # I allow different comments for now
-    # if not a.get_comment() == b.get_comment():
-    #     return False
 
 
     akeyset = set(a._data.keys())

@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 
@@ -26,7 +26,7 @@ import tables as pt
 
 
 REMOVE = True
-SINGLETEST=[0]
+SINGLETEST=[3]
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
@@ -293,6 +293,51 @@ class ContinueTest(unittest.TestCase):
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
+    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, '
+                                                'single debug is not pointing to the function ')
+    def test_multiple_storage_and_loading(self):
+        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self._create_param_dict()
+
+        for irun in range(len(self.filenames)):
+            self.add_params(self.trajs[irun])
+
+
+        self.explore(self.trajs[0])
+        self.explore(self.trajs[1])
+
+
+
+
+
+        for irun in range(len(self.filenames)):
+            self.make_run(self.envs[irun])
+
+        self.trajs[0].store()
+
+        temp_sservice = self.trajs[0].get_storage_service()
+        temp_name = self.trajs[0].get_name()
+
+        self.trajs[0] = Trajectory()
+        self.trajs[0].set_storage_service(temp_sservice)
+        self.trajs[0].load(trajectoryname=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
+        self.trajs[0].load(trajectoryname=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
+
+        self.trajs[1].update_skeleton()
+        self.trajs[1].load_stuff(self.trajs[1].to_dict().itervalues(),only_empties=True)
+        self.compare_trajectories(self.trajs[0],self.trajs[1])
 
 
 if __name__ == '__main__':

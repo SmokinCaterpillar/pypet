@@ -1,6 +1,6 @@
 from traits.trait_types import self
 
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 import numpy as np
 import unittest
@@ -39,16 +39,20 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict = {}
 
         my_dict2={}
+        my_dict3={}
+        my_dict4={}
         for key, val in traj.to_dict(fast_access=True,short_names=False).items():
             newkey = key.replace('.','_')
             my_dict[newkey] = str(val)
-            my_dict2[newkey] = [str(val)+' juhu!']
+            my_dict2[newkey] =(str(val)+' juhu!')
+            my_dict3[newkey] =[str(val)+' juhuhu!']
+            my_dict4[newkey]= np.array([str(val)+' Woopieee!'])
 
         keys = traj.to_dict(short_names=False).keys()
         for idx,key in enumerate(keys):
             keys[idx] = key.replace('.','_')
 
-        traj.add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2)
+        traj.add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, dict3=my_dict3,dict4=my_dict4)
         traj.add_result('DictsNFrame', keys=keys)
         traj.add_result('ResMatrix',result_mat.todense())
         traj.add_derived_parameter('All.To.String', str(traj.to_dict(fast_access=True,short_names=False)))
@@ -205,7 +209,7 @@ class EnvironmentTest(unittest.TestCase):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.set_storage_service(HDF5StorageService(filename=self.filename))
-        newtraj.load(trajectoryname,load_derived_params=2,load_results=2,replace=replace)
+        newtraj.load(trajectoryname,load_derived_params=2,load_results=2)
         return newtraj
 
     def compare_trajectories(self,traj1,traj2):
