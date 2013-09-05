@@ -329,7 +329,7 @@ class BrianMonitorResult(Result):
                              key = varname+'_unit'
                              if not  key in self:
                                  self.set(**{key:  repr(get_unit(values[0]))})
-                             key = varname+'_id%08d' % neuron
+                             key = varname+'_idx%08d' % neuron
                              self.set(**{key:values})
 
 

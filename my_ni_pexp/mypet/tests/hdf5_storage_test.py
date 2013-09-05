@@ -20,6 +20,7 @@ import os
 import shutil
 import pandas as pd
 from mypet.utils.comparisons import results_equal,parameters_equal
+from mypet.utils.helpful_functions import nested_equal
 
 ## Removes all the files again to clean up after the tests
 REMOVE = True
@@ -63,7 +64,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
 
-        traj.add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
+        traj.add_result('PickleTerror', result=PickleResult, test=traj.SimpleThings,
+                        annotations={0:4,'peter':np.array([1,2,3,4]),'cat':'fish',
+                                     'kkk' : np.array(['1','2','sdfsf']), 1:33})
 
 class EnvironmentTest(unittest.TestCase):
 
@@ -123,11 +126,13 @@ class EnvironmentTest(unittest.TestCase):
 
         for key, val in flat_dict.items():
             if isinstance(val, (np.ndarray,list, tuple)):
-                traj.ap(key,val, param_type = ArrayParameter)
+                traj.ap(key,val, parameter = ArrayParameter)
             elif isinstance(val, (int,str,bool,float)):
-                traj.ap(key,val, param_type = Parameter, comment='Im a comment!')
+                traj.ap(key,val, parameter = Parameter, comment='Im a comment!')
             elif spsp.isspmatrix(val):
-                traj.ap(key,val, param_type = PickleParameter)
+                traj.ap(key,val, parameter = PickleParameter,
+                        annotations={'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
+                                     'Second_Fav':np.array([43.0,43.0])})
             else:
                 raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
@@ -165,7 +170,7 @@ class EnvironmentTest(unittest.TestCase):
         traj.mode = self.mode
         traj.ncores = self.ncores
 
-        traj.set_standard_param_type(Parameter)
+        traj.set_standard_parameter(Parameter)
 
         ## Create some parameters
         self._create_param_dict()
@@ -233,6 +238,8 @@ class EnvironmentTest(unittest.TestCase):
                                 'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
             else:
                 raise RuntimeError('You shall not pass')
+
+            self.assertTrue(nested_equal(item.annotations_,old_item.annotations_),'%s != %s' %(item.annotations_.ann2str(),item.annotations_.ann2str()))
 
 
 class MultiprocQueueTest(EnvironmentTest):

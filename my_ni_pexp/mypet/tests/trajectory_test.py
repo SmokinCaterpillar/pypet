@@ -137,13 +137,13 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.add_parameter('Rolf', 1.8,param_type = ImAParameterInDisguise, )
 
     def test_standard_change_param_change(self):
-        self.traj.set_standard_param_type(ImAParameterInDisguise)
+        self.traj.set_standard_parameter(ImAParameterInDisguise)
 
         self.traj.ap('I.should_be_not.normal')
 
         self.assertIsInstance(self.traj.get('normal'), ImAParameterInDisguise,'Param is %s insted of ParamInDisguise.' %str(type(self.traj.normal)))
 
-        self.traj.set_standard_result_type(ImAResultInDisguise)
+        self.traj.set_standard_result(ImAResultInDisguise)
 
         self.traj.add_result('Peter.Parker')
 
@@ -286,13 +286,13 @@ class SingleRunTest(unittest.TestCase):
 
 
     def test_standard_change_param_change(self):
-        self.single_run.set_standard_param_type(ImAParameterInDisguise)
+        self.single_run.set_standard_parameter(ImAParameterInDisguise)
 
         self.single_run.ap('I.should_be_not.normal')
 
         self.assertIsInstance(self.single_run.get('normal'), ImAParameterInDisguise)
 
-        self.single_run.set_standard_result_type(ImAResultInDisguise)
+        self.single_run.set_standard_result(ImAResultInDisguise)
 
         self.single_run.add_result('Peter.Parker')
 

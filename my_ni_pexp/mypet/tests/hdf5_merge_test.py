@@ -156,11 +156,11 @@ class MergeTest(unittest.TestCase):
 
         for key, val in flat_dict.items():
             if isinstance(val, (np.ndarray,list, tuple)):
-                traj.ap(key,val, param_type = ArrayParameter)
+                traj.ap(key,val, parameter = ArrayParameter)
             elif isinstance(val, (int,str,bool,float)):
-                traj.ap(key,val, param_type = Parameter, comment='Im a comment!')
+                traj.ap(key,val, parameter = Parameter, comment='Im a comment!')
             elif spsp.isspmatrix(val):
-                traj.ap(key,val, param_type = PickleParameter)
+                traj.ap(key,val, parameter = PickleParameter)
             else:
                 raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 

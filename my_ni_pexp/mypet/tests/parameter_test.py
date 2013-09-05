@@ -147,7 +147,7 @@ class ParameterTest(unittest.TestCase):
     def test_pickling_without_multiprocessing(self):
         for key, param in self.param.__dict__.items():
             param.unlock()
-            param.set_full_copy(True)
+            param.set_fullcopy(True)
 
             dump = pickle.dumps(param)
 
@@ -167,7 +167,7 @@ class ParameterTest(unittest.TestCase):
     def test_pickling_with_multiprocessing(self):
         for key, param in self.param.__dict__.items():
             param.unlock()
-            param.set_full_copy(False)
+            param.set_fullcopy(False)
 
             dump = pickle.dumps(param)
 

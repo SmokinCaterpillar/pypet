@@ -22,7 +22,7 @@ REMOVE = True
 
 def add_params(traj):
 
-    traj.set_standard_param_type(BrianParameter)
+    traj.set_standard_parameter(BrianParameter)
     traj.set_fast_access(True)
 
     traj.ap('Sim.defaultclock', 0.01*ms)

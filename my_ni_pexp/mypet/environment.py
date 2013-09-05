@@ -29,7 +29,7 @@ def _single_run(args):
     
         assert isinstance(traj, SingleRun)
         root = logging.getLogger()
-        n = traj.get_id()
+        n = traj.get_idx()
         #If the logger has no handler, add one:
         #print root.handlers
         if len(root.handlers)<3:

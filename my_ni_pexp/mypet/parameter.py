@@ -144,13 +144,16 @@ import numpy as np
 from mypet.utils.helpful_functions import nested_equal, copydoc
 from mypet import globally
 from pandas import DataFrame
-
+from mypet.annotations import WithAnnotations
 
 
 try:
     import cPickle as pickle
 except:
     import pickle
+
+
+
 
 
 class ObjectTable(DataFrame):
@@ -172,7 +175,7 @@ class ObjectTable(DataFrame):
 
 
 
-class BaseParameter(object):
+class BaseParameter(object,WithAnnotations):
     '''Abstract class that specifies the methods that need to be implemented for a trajectory
     parameter
 
@@ -210,6 +213,53 @@ class BaseParameter(object):
         self.set_comment(comment)
 
         self._locked = False
+        self._fullcopy = False
+
+
+    @property
+    def locked(self):
+        '''Whether or not the parameter is locked and prevents further modification'''
+        return self.is_locked()
+
+    @property
+    def name(self):
+        '''(Short) name'''
+        return self.get_name()
+
+    @property
+    def location(self):
+        '''Location in the trajectory tree'''
+        return self.get_name()
+
+    @property
+    def fullname(self):
+        '''Full name of the parameter, containing location and name'''
+        return self.get_fullname()
+
+    @property
+    def comment_(self):
+        ''' Should be a nice descriptive comment'''
+        return self.get_comment()
+
+    @comment_.setter
+    def comment(self,comment):
+        self.set_comment(comment)
+
+    @property
+    def val_(self):
+        '''The current value of the parameter'''
+        return self.get()
+
+    @property
+    def fullcopy_(self):
+        '''Whether or not the full parameter including the exploration array or only the current
+        data is copied.
+        '''
+        self.get_fullcopy()
+
+    @fullcopy_.setter
+    def fullcopy(self,val):
+        self.set_fullcopy(val)
 
     def _rename(self, fullname):
         ''' Renames the parameter.
@@ -468,7 +518,7 @@ class BaseParameter(object):
         raise NotImplementedError( "Should have implemented this." )
 
 
-    def get(self,name):
+    def get(self):
         ''' Returns the current data value of the parameter and locks the parameter.
 
         Example usage:
@@ -626,6 +676,48 @@ class BaseParameter(object):
         :raises: ParameterLockedException: If the parameter is locked.
         '''
         raise NotImplementedError( "Should have implemented this." )
+
+
+    def set_fullcopy(self, val):
+        ''' Sets the full copy mode.
+
+        If you run your simulations in multiprocessing mode, the whole trajectory and all
+        parameters need to be pickled and are sent to the individual processes.
+        Each process than runs an individual point in the parameter space trajectory.
+        As a consequence, you do not need the exploration array during these calculations.
+        Thus, if the full copy mode is set to False the parameter is pickled without
+        the exploration array and you can save memory.
+
+        If you want to access the full exploration array during individual runs, you need to set
+        fullcopy to True (:func:`set_fullcopy(True)`).
+
+        It is recommended NOT to do that in order to save memory and also do obey the
+        philosophy that individual simulations are independent.
+
+        :param val: True or False
+
+        Example usage:
+
+        >>> import pickle
+        >>> param = Parameter('examples.fullcopy', data=333, comment='I show you how the copy mode works!')
+        >>> param._explore([1,2,3,4])
+        >>> dump=pickle.dumps(param)
+        >>> newparam = pickle.loads(dump)
+        >>> print newparam.get_array()
+        >>> ()
+        >>> param.set_fullcopy(True)
+        >>> dump = pickle.dumps(param)
+        >>> newparam=pickle.loads(dump)
+        >>> print newparam.get_array()
+        >>> (1,2,3,4)
+
+        '''
+        assert isinstance(val, bool)
+        self._fullcopy = val
+
+    def get_fullcopy(self):
+        return self._fullcopy
+
       
 class Parameter(BaseParameter):
     ''' The standard parameter that handles access to simulation parameters.
@@ -690,8 +782,8 @@ class Parameter(BaseParameter):
     :raises: AttributeError: If `data` is not supported by the parameter.
 
     '''
-    def __init__(self, fullname, data=None, comment=''):
-        super(Parameter,self).__init__(fullname,comment)
+    def __init__(self, fullname, data=None, comment='', annotations=None):
+        super(Parameter,self).__init__(fullname,comment, annotations)
         self._data= None
         self._default = None #The default value, which is the same as Data,
         # but it is necessary to keep a reference to it to restore the original value
@@ -701,7 +793,7 @@ class Parameter(BaseParameter):
 
         if not data == None:
             self.set(data)
-        self._fullcopy = False
+
 
     def _set_logger(self):
         self._logger = logging.getLogger('mypet.parameter.Parameter=' + self._fullname)
@@ -1007,42 +1099,6 @@ class Parameter(BaseParameter):
             self._explored_data = tuple(load_dict['explored_data']['data'].tolist())
 
 
-    def set_full_copy(self, val):
-        ''' Sets the full copy mode.
-
-        If you run your simulations in multiprocessing mode, the whole trajectory and all
-        parameters need to be pickled and are sent to the individual processes.
-        Each process than runs an individual point in the parameter space trajectory.
-        As a consequence, you do not need the exploration array during these calculations.
-        Thus, if the full copy mode is set to False the parameter is pickled without
-        the exploration array and you can save memory.
-
-        If you want to access the full exploration array during individual runs, you need to set
-        fullcopy to True (:func:`set_full_copy(True)`).
-
-        It is recommended NOT to do that in order to save memory and also do obey the
-        philosophy that individual simulations are independent.
-
-        :param val: True or False
-
-        Example usage:
-
-        >>> import pickle
-        >>> param = Parameter('examples.fullcopy', data=333, comment='I show you how the copy mode works!')
-        >>> param._explore([1,2,3,4])
-        >>> dump=pickle.dumps(param)
-        >>> newparam = pickle.loads(dump)
-        >>> print newparam.get_array()
-        >>> ()
-        >>> param.set_full_copy(True)
-        >>> dump = pickle.dumps(param)
-        >>> newparam=pickle.loads(dump)
-        >>> print newparam.get_array()
-        >>> (1,2,3,4)
-
-        '''
-        assert isinstance(val, bool)
-        self._fullcopy = val
 
     @copydoc(BaseParameter.get)
     def get(self):
@@ -1263,7 +1319,7 @@ class PickleParameter(Parameter):
             
                             
 
-class BaseResult(object):
+class BaseResult(object,WithAnnotations):
     ''' The basic api to store results.
 
     Compared to parameters (see :class: BaseParameter) results are also initialised with a fullname
@@ -1272,15 +1328,44 @@ class BaseResult(object):
 
     Example usage:
 
-    >>> result = Result(fullname='very.important.result',comment='I am important but _empty :('
+    >>> result = Result(fullname='very.important.result',comment='I am important but empty :('
 
     '''
     def __init__(self, fullname, comment=''):
+
         self._fullname = fullname
         split_name = fullname.split('.')
         self._name=split_name.pop()
         self.set_comment(comment)
         self._location='.'.join(split_name)
+
+
+
+
+    @property
+    def name(self):
+        '''(Short) name'''
+        return self.get_name()
+
+    @property
+    def location(self):
+        '''Location in the trajectory tree'''
+        return self.get_name()
+
+    @property
+    def fullname(self):
+        '''Full name of the parameter, containing location and name'''
+        return self.get_fullname()
+
+    @property
+    def comment(self):
+        ''' Should be a nice descriptive comment'''
+        return self.get_comment()
+
+    @comment.setter
+    def comment(self,comment):
+        self.set_comment(comment)
+
 
 
     def val2str(self):
@@ -1475,13 +1560,13 @@ class Result(BaseResult):
         >>> print res.get(1)
         >>> {'a':'b','c':'d'}
 
-        >>> print res.get('res0')
+        >>> print res.get('res_0')
         >>> [1000,2000]
 
         >>> print res.get('hitchhiker')
         >>> 'ArthurDent'
 
-        >>> print res.get('res0','hitchhiker')
+        >>> print res.get('res_0','hitchhiker')
         >>> ([1000,2000], 'ArthurDent')
 
 
@@ -1512,6 +1597,18 @@ class Result(BaseResult):
         self.set(*args,**kwargs)
         self._short_summary = False
 
+
+    @property
+    def short_summary(self):
+        '''Whether or not to summarize the parameter shortly when calling :func:`val2str`'''
+        return self.get_short_summary()
+
+    @short_summary.setter
+    def short_summary(self,boolean):
+        self.set_short_summary(boolean)
+
+    def get_short_summary(self):
+        return self._short_summary
 
     def __contains__(self, item):
         return item in self._data
@@ -1607,7 +1704,7 @@ class Result(BaseResult):
         :return:
         '''
         for idx,arg in enumerate(args):
-            valstr = 'res'+str(idx)
+            valstr = 'res_'+str(idx)
             self.set_single(valstr,arg)
 
         for key, arg in kwargs.items():
@@ -1619,7 +1716,7 @@ class Result(BaseResult):
         result_list = []
         for name in args:
             if isinstance(name,int):
-                name = 'res%d' % name
+                name = 'res_%d' % name
 
             result_list.append(self._data[name])
 
@@ -1648,7 +1745,7 @@ class Result(BaseResult):
         '''
         if name in ['comment', 'Comment']:
             assert isinstance(item,str)
-            self._comment = item
+            self.set_comment(item)
 
         if isinstance(item, (np.ndarray,ObjectTable,DataFrame,dict,tuple,list,
                              globally.PARAMETER_SUPPORTED_DATA)):
@@ -1677,6 +1774,10 @@ class Result(BaseResult):
 
     def __delattr__(self, item):
         ''' Deletes an item from the result.
+
+        If the item has been stored to disk before with a storage service, this storage is not
+        deleted!
+
         :param item: The item to delete
 
         Example usage:
@@ -1722,7 +1823,13 @@ class PickleResult(Result):
     ''' Result that eats everything and simply pickles it!
     '''
 
+
     def set_single(self, name, item):
+        '''Adds a single data item to the pickle result.
+
+         Note that it is NOT checked if the item can be pickled!
+
+        '''
         self._data[name] = item
 
 

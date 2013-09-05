@@ -136,8 +136,6 @@ class HDF5StorageService(StorageService):
     SCALARTYPE = 'SCALARTYPE'
 
 
-
-
     TABLENAME_MAPPING = {
         'parameters' : 'parameter_table',
         'config' : 'config_table',
@@ -147,9 +145,15 @@ class HDF5StorageService(StorageService):
     }
 
 
-    ARRAYPREFIX = 'SRVCARRAY_'
-    FORMATTEDCOLPREFIX = 'SRVCCOL_%s_'
-    DICTPREFIC = 'SRVCDICT_'
+    ARRAYPREFIX = 'SRVC_ARRAY_'
+    FORMATTEDCOLPREFIX = 'SRVC_COL_%s_'
+    DICTPREFIC = 'SRVC_DICT_'
+
+    ANNOTATIONPREFIX = 'SRVC_ANNO_'
+    FORMATTEDANNOTATIONSPREFIX = ANNOTATIONPREFIX+'%s_'
+    ANNOTATIONDATA = 'DATA'
+
+    ANNOTATIONNAMES ='SRVC_ANNONAMES'
 
     def __init__(self, filename=None, filetitle='Experiment'):
         self._filename = filename
@@ -549,6 +553,8 @@ class HDF5StorageService(StorageService):
                                  'the parameters. I will load all parameter data.')
             load_params=globally.LOAD_DATA
 
+        self._ann_load_annotations(traj,self._trajectorygroup)
+
         self._trj_load_config(traj, load_params)
         self._trj_load_params(traj, load_params)
         self._trj_load_derived_params(traj, load_derived_params)
@@ -662,7 +668,7 @@ class HDF5StorageService(StorageService):
                     size = row['length']
                     if size > 1 and size != len(traj):
                         raise RuntimeError('Your are loading a parameter >>%s<< with length %d, '
-                                           'yet your trajectory has lenght %d, something is '
+                                           'yet your trajectory has length %d, something is '
                                            'wrong!' % (fullname,size,len(traj)))
                     elif size > 1:
                         traj._exploredparameters[fullname]=paraminstance
@@ -672,6 +678,10 @@ class HDF5StorageService(StorageService):
                         RuntimeError('You shall not pass!')
 
 
+                self._ann_load_annotations(paraminstance,
+                                           self._hdf5file.get_node( '/' +
+                                                self._trajectoryname + '/' +
+                                                paraminstance.get_fullname().replace('.','/')))
 
                 if load_mode == globally.LOAD_DATA:
                     self.load(msg, paraminstance)
@@ -728,6 +738,7 @@ class HDF5StorageService(StorageService):
 
         self._trj_fill_run_table_with_dummys(traj)
 
+        self._ann_store_annotations(traj,self._trajectorygroup)
 
 
         tostore_dict =  {'config_table':traj._config,
@@ -801,7 +812,7 @@ class HDF5StorageService(StorageService):
         assert isinstance(single_run,SingleRun)
 
         traj = single_run._single_run
-        n = single_run.get_id()
+        n = single_run.get_idx()
 
         self._logger.info('Start storing run %d with name %s.' % (n,single_run.get_name()))
 
@@ -1043,7 +1054,7 @@ class HDF5StorageService(StorageService):
             insert_dict['creator_name'] = item.get_location().split('.')[1]
 
         if 'idx' in colnames:
-            insert_dict['idx'] = item.get_id()
+            insert_dict['idx'] = item.get_idx()
 
         if 'time' in colnames:
             insert_dict['time'] = item.get_time()
@@ -1078,6 +1089,70 @@ class HDF5StorageService(StorageService):
 
         return newhdf5group
 
+    ################# Storing and loading Annotations ###########################################
+
+    def _ann_store_annotations(self,item_with_annotations,node):
+
+        anno_dict = item_with_annotations.get_annotations().to_dict()
+        insert_dict = {}
+
+        ## Convert all annotations
+        for key,val in anno_dict.items():
+            self._all_set_attributes_to_recall_natives(val,insert_dict,
+                            HDF5StorageService.FORMATTEDCOLPREFIX % key)
+
+            insert_key = HDF5StorageService.FORMATTEDANNOTATIONSPREFIX % key + HDF5StorageService.ANNOTATIONDATA
+
+
+            if isinstance(val,(list,tuple)):
+                val = np.array(val)
+
+            insert_dict[insert_key] = val
+
+        ### Delete all annotations that are no longer in use
+        current_attrs = node._v_attrs
+
+        anno_names = _get_from_attrs(node,HDF5StorageService.ANNOTATIONNAMES)
+        if anno_names is None:
+            anno_names = []
+
+        for key in anno_names:
+            if key.startswith(HDF5StorageService.ANNOTATIONPREFIX):
+                if not key in insert_dict:
+                    delattr(current_attrs,key)
+
+        for field_name, val in insert_dict.iteritems():
+            setattr(current_attrs,field_name,val)
+
+
+        if len(insert_dict)==0:
+            if HDF5StorageService.ANNOTATIONNAMES in current_attrs:
+                delattr(current_attrs,HDF5StorageService.ANNOTATIONNAMES)
+        else:
+            new_anno_names = np.array(insert_dict.keys())
+            setattr(current_attrs,HDF5StorageService.ANNOTATIONNAMES,new_anno_names)
+            self._hdf5file.flush()
+
+    def _ann_load_annotations(self,item_with_annotations,node):
+
+        anno_names = _get_from_attrs(node,HDF5StorageService.ANNOTATIONNAMES)
+        load_dict = {}
+
+        if not anno_names is None:
+
+            current_attrs=node._v_attrs
+
+            for attr_name in anno_names:
+                if attr_name.endswith(HDF5StorageService.ANNOTATIONDATA):
+                    key = attr_name
+                    key=key.replace(HDF5StorageService.ANNOTATIONPREFIX,'')
+                    key=key.replace('_'+HDF5StorageService.ANNOTATIONDATA,'')
+                    data = getattr(current_attrs,attr_name)
+                    data,dummy = self._all_recall_native_type(data,node,HDF5StorageService.FORMATTEDANNOTATIONSPREFIX % key)
+                    load_dict[key] = data
+
+
+        item_with_annotations.get_annotations()._set_dirty(load_dict)
 
 
     ################# Storing and Loading Parameters ############################################
@@ -1106,6 +1181,8 @@ class HDF5StorageService(StorageService):
         #self._prm_check_info_dict(param, store_dict)
 
         group= self._all_create_groups(fullname)
+
+        self._ann_store_annotations(param,group)
 
         for key, data_to_store in store_dict.items():
             if msg == globally.UPDATE_RESULT and  key in group:
@@ -1146,7 +1223,7 @@ class HDF5StorageService(StorageService):
         objtable = ObjectTable(data=temp_dict)
 
         self._prm_store_into_pytable(msg,key,objtable,group,fullname)
-        self._prm_set_attributes_to_recall_natives(temp_dict,group._f_get_child(key),HDF5StorageService.DICTPREFIC)
+        self._all_set_attributes_to_recall_natives(temp_dict,group._f_get_child(key),HDF5StorageService.DICTPREFIC)
 
 
 
@@ -1231,7 +1308,7 @@ class HDF5StorageService(StorageService):
 
 
             array=self._hdf5file.create_array(where=group, name=key,obj=data)
-            self._prm_set_attributes_to_recall_natives(data,array,HDF5StorageService.ARRAYPREFIX)
+            self._all_set_attributes_to_recall_natives(data,array,HDF5StorageService.ARRAYPREFIX)
 
 
             self._hdf5file.flush()
@@ -1241,7 +1318,7 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _prm_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
+    def _all_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
 
             def _set_attribute_to_item_or_dict(item_or_dict, name,val):
                 if isinstance(item_or_dict,dict):
@@ -1449,7 +1526,7 @@ class HDF5StorageService(StorageService):
 
         for key, val in data.iteritems():
 
-            self._prm_set_attributes_to_recall_natives(val[0],original_data_type_dict,
+            self._all_set_attributes_to_recall_natives(val[0],original_data_type_dict,
                             HDF5StorageService.FORMATTEDCOLPREFIX % key)
 
 
@@ -1591,7 +1668,7 @@ class HDF5StorageService(StorageService):
 
             prefix = HDF5StorageService.FORMATTEDCOLPREFIX % colname
             for idx,data in enumerate(data_list):
-                data,type_changed = self._prm_recall_native_type(data,table,prefix)
+                data,type_changed = self._all_recall_native_type(data,table,prefix)
                 if type_changed:
                     data_list[idx] = data
                 else:
@@ -1609,13 +1686,13 @@ class HDF5StorageService(StorageService):
         array_name = array._v_name
 
         result = array.read()
-        result, dummy = self._prm_recall_native_type(result,array,HDF5StorageService.ARRAYPREFIX)
+        result, dummy = self._all_recall_native_type(result,array,HDF5StorageService.ARRAYPREFIX)
 
         load_dict[array._v_name]=result
 
 
 
-    def _prm_recall_native_type(self,data,ptitem,prefix):
+    def _all_recall_native_type(self,data,ptitem,prefix):
             ## Numpy Scalars are converted to numpy arrays, but we want to retrieve tha numpy scalar
             # as it was
             typestr = _get_from_attrs(ptitem,prefix+HDF5StorageService.SCALARTYPE)

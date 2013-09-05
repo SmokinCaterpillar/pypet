@@ -16,6 +16,8 @@ import numpy as np
 import mypet.petexceptions as pex
 from mypet.utils.helpful_functions import flatten_dictionary
 from mypet import globally
+from mypet.annotations import WithAnnotations
+import copy
 
 
 BFS = 'BFS'
@@ -34,6 +36,72 @@ class TrajOrRun(object):
     #For fetching all items
     ALL = 'ALL'
 
+    @property
+    def name_(self):
+        '''Name of the trajectory'''
+        return self.get_name()
+
+    @property
+    def timestamp_(self):
+        '''Float timestamp of creation time'''
+        return self.get_timestamp()
+
+    @property
+    def time_(self):
+        '''Formatted time string of the time the trajectory was created.
+        '''
+        return self.get_time()
+
+    @property
+    def standard_parameter_(self):
+        ''' The standard parameter used for parameter creation'''
+        return self.get_standard_parameter()
+
+    @standard_parameter_.setter
+    def standard_parameter(self, parameter):
+        self.set_standard_parameter(parameter)
+
+    @property
+    def standard_result_(self):
+        ''' The standard result class used for result creation '''
+        return self.standard_result
+
+    @standard_result_.setter
+    def standard_result(self,result):
+        self.set_standard_result(result)
+
+    @property
+    def fast_access_(self):
+        '''Whether parameter instances (False) or their values (True) are returned via natural naming
+
+        Default is True.
+        '''
+
+    @fast_access_.setter
+    def fast_acces_(self,value):
+        self.set_fast_access(value)
+
+    @property
+    def check_uniqueness_(self):
+        '''Whether natural naming should check if naming is unambigous'''
+        return self.get_uniqueness()
+
+    @check_uniqueness_.setter
+    def check_uniqueness_(self,value):
+        return self.set_check_uniqueness(value)
+
+
+    def get_standard_parameter(self):
+        raise NotImplementedError('You should implement this!')
+
+    def set_standard_parameter(self,parameter):
+        raise NotImplementedError('You should implement this!')
+
+    def get_standard_result(self):
+        raise NotImplementedError('You should implement this!')
+
+    def set_standard_result(self,result):
+        raise NotImplementedError('You should implement this!')
 
 
     def get_config(self,fast_access=False):
@@ -108,9 +176,15 @@ class TrajOrRun(object):
         '''
         return self.contains(item)
 
+    def get_search_strategy(self):
+        return self._nninterface._search_strategy
+
     def set_search_strategy(self, string):
         assert string == BFS or string == DFS
         self._nninterface._search_strategy = string
+
+    def get_uniqueness(self):
+        return self._nninterface._check_uniqueness
 
     def set_check_uniqueness(self, val):
         assert isinstance(val,bool)
@@ -213,6 +287,8 @@ class TrajOrRun(object):
             self.__dict__[key] = value
         else:
             self._nninterface._set(key, value)
+
+
 
 
     def _fetch_items(self,store_load, iterable, *args, **kwargs):
@@ -665,8 +741,7 @@ class NNTreeNode(object):
 
             if not isinstance(instance, BaseParameter ):
                 raise AttributeError('You cannot assign values to a tree node or a list of nodes '
-                                     'and leaves, it only works for parameters '
-                                     '(excluding results).')
+                                     'and results, it only works for parameters ')
 
 
             instance.set(value)
@@ -768,12 +843,29 @@ class NNTreeNode(object):
             raise AttributeError('The node or param/result >>%s<<, cannot be found.' % new_name)
 
 
+        @property
+        def children_names_(self):
+            '''Names of immediate successor nodes in trajectory tree'''
+            return self.get_children_names()
+
+        def get_children_names(self,sort=False):
+            if sort:
+                return sorted(self._dict.keys())
+            else:
+                return self._dict.keys()
+
+        @property
+        def nchildren_(self):
+            '''Number of immediate successor node in trajectory tree'''
+            return self.get_nchildren()
+
+        def get_nchildren(self):
+            return len(self._dict)
 
 
 
 
-
-class Trajectory(TrajOrRun):
+class Trajectory(WithAnnotations,TrajOrRun):
     '''The trajectory manages results and parameters.
 
 
@@ -869,8 +961,8 @@ class Trajectory(TrajOrRun):
         
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         
-        self._time = init_time
-        self._formatted_time = formatted_time
+        self._timestamp = init_time
+        self._time = formatted_time
 
         if add_time:
             self._name = name+'_'+str(formatted_time)
@@ -881,7 +973,7 @@ class Trajectory(TrajOrRun):
         self._derivedparameters={}
         self._results={}
         self._exploredparameters={}
-        self._used_parameters={}
+
         self._config={}
 
         self._changed_default_params = {}
@@ -897,16 +989,17 @@ class Trajectory(TrajOrRun):
         
         self._storageservice = storage_service
 
-        self._comment= comment
+        self.set_comment(comment)
 
+        self._idx = -1
 
-
-        self._standard_param_type = Parameter
-        self._standard_result_type = Result
+        self._standard_parameter = Parameter
+        self._standard_result = Result
 
         self._stored = False
         
-        
+        self._fullcopy=False
+
         self._dynamic_imports=['mypet.parameter.PickleParameter']
 
         if not dynamically_imported_classes is None:
@@ -930,6 +1023,23 @@ class Trajectory(TrajOrRun):
                                  % (name, faulty_names))
 
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
+
+
+    def set_fullcopy(self,val):
+        assert isinstance(val,bool)
+        self._fullcopy=val
+
+    def get_fullcopy(self,val):
+        return self._fullcopy
+
+    @property
+    def full_copy_(self):
+        '''Whether trajectory is copied fully or only the current parameter space point'''
+        return self.get_fullcopy()
+
+    @full_copy_.setter
+    def full_copy_(self,val):
+        self.set_fullcopy(val)
 
 
     def add_to_dynamic_imports(self,dynamically_imported_classes):
@@ -994,23 +1104,38 @@ class Trajectory(TrajOrRun):
 
     def get_run_names(self):
         '''Returns a sorted list of the names of the single runs'''
-        return sorted(self._run_information.keys())
+        return  sorted(self._run_information.keys())
 
-    def get_run_information(self, name_or_id):
+    @property
+    def run_names_(self):
+        '''Sorted list of names of runs'''
+        return self.get_run_names()
+
+
+    def get_run_information(self, name_or_idx=None):
         ''' Returns a dictionary containing information about a single run.
 
-        :param name_or_id:
+        If no name or idx is given than a list of all dictionaries is returned. Note
+        that this requires a deepcopy of all the run information!
+
+        :param name_or_idx:
         :return:
         '''
-        if isinstance(name_or_id,int):
-            name_or_id = self.idx2run(name_or_id)
-        return self._run_information[name_or_id]
+        if name_or_idx is None:
+            return copy.deepcopy(self._run_information)
+        if isinstance(name_or_idx,int):
+            name_or_idx = self.idx2run(name_or_idx)
+        return self._run_information[name_or_idx].copy()
+
+
 
     def get_time(self):
-        return self._formatted_time
+        return self._time
+
+
 
     def get_timestamp(self):
-        return self._time
+        return self._timestamp
 
     def remove_stuff(self, iterable, *args, **kwargs):
 
@@ -1128,6 +1253,9 @@ class Trajectory(TrajOrRun):
 
         self.lock_parameters()
         self.lock_derived_parameters()
+        for param in self._exploredparameters.itervalues():
+            param.set_fullcopy=self._fullcopy
+
         self.store()
 
 
@@ -1165,6 +1293,12 @@ class Trajectory(TrajOrRun):
     
     def __getstate__(self):
         result = self.__dict__.copy()
+
+        if not self._fullcopy:
+            run_info = self.get_run_information(self._idx)
+            result['_run_information'] = {run_info['name']: run_info}
+            result['_single_run_ids'] = {run_info['name']:self._idx,self._idx:run_info['name']}
+
         del result['_logger']
         return result
     
@@ -1174,11 +1308,11 @@ class Trajectory(TrajOrRun):
         #self._tree= NNTreeNode(parent_trajectory=self, predecessors=[], depth=0, name='root')
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
 
-        
-        
-        
+
     def get_name(self):  
-        return self._name                 
+        return self._name
+
+
     
     def _load_class(self,full_class_string):
         """Dynamically load a class from a string.
@@ -1193,14 +1327,23 @@ class Trajectory(TrajOrRun):
         return getattr(module, class_str)
 
        
-    def add_comment(self,comment):
-        ''' Extends the existing comment
-        :param comment: The comment as string which is added to the existing comment'''
-        if self._comment == Trajectory.standard_comment:
-            self._comment = comment
-        else:
-            self._comment = self._comment + '; ' + comment
+    def set_comment(self,comment):
+        if len(comment) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            self._logger.warning('Comment is too long. It has %d characters. '
+                                 'I truncated it to %d characters.'
+                                 % (len(comment),globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+            comment=comment[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+        self._comment=comment
 
+
+    @property
+    def comment_(self):
+        '''A useful comment about the trajectory'''
+        return self.get_comment()
+
+    @comment_.setter
+    def comment(self, comment):
+        self.set_comment()
 
     def get_comment(self):
         return self._comment
@@ -1223,33 +1366,28 @@ class Trajectory(TrajOrRun):
         args = list(args)
 
 
-        if 'result' in kwargs or (args and isinstance(args[0], BaseResult)):
-            if 'result' in kwargs:
-                instance = kwargs.pop('result')
-            else:
-                instance = args.pop(0)
-                if not instance.get_fullname().startswith('results.'):
-                    instance._rename(prefix+instance.get_fullname())
-                full_result_name = instance.get_fullname()
+        if isinstance(args[0], BaseResult):
 
-        elif 'result_name' in kwargs or (args and isinstance(args[0],str)):
+            instance = args.pop(0)
+            if not instance.get_fullname().startswith('results.'):
+                instance._rename(prefix+instance.get_fullname())
+            full_result_name = instance.get_fullname()
 
-            if 'result_name' in kwargs:
-                full_result_name = kwargs.pop('result_name')
-            else:
-                full_result_name = args.pop(0)
+        elif isinstance(args[0],str):
 
-                if not full_result_name.startswith('results.'):
-                    full_result_name = prefix+full_result_name
+            full_result_name = args.pop(0)
 
-            if not 'result_type' in kwargs:
-                if args and isinstance(args[0], type) and issubclass(args[0] , BaseResult):
+            if not full_result_name.startswith('results.'):
+                full_result_name = prefix+full_result_name
+
+            if not 'result' in kwargs:
+                if args and inspect.isclass(args[0]) and issubclass(args[0] , BaseResult):
                         args = list(args)
                         result_type = args.pop(0)
                 else:
-                    result_type = self._standard_result_type
+                    result_type = self._standard_result
             else:
-                result_type = kwargs.pop('result_type')
+                result_type = kwargs.pop('result')
 
             if isinstance(result_type,str):
                 result_type = self._create_class(result_type)
@@ -1288,23 +1426,28 @@ class Trajectory(TrajOrRun):
         return self.get_run_information(name_or_id)['completed']
 
 
+    def get_standard_parameter(self):
+        return self._standard_parameter
 
-    def set_standard_param_type(self,param_type):
+    def get_standard_result(self):
+        return self._standard_result
+
+    def set_standard_parameter(self,param_type):
         ''' Sets the standard parameter type.
 
         If param_type is not specified for add_parameter, than the standard parameter is used.
         '''
         assert issubclass(param_type,BaseParameter)
-        self._standard_param_type = param_type
+        self._standard_parameter = param_type
 
 
-    def set_standard_result_type(self, result_type):
+    def set_standard_result(self, result_type):
         ''' Sets the standard parameter type.
 
         If result_type is not specified for add_result, than the standard result is used.
         '''
         assert issubclass(result_type,BaseResult)
-        self._standard_result_type=result_type
+        self._standard_result=result_type
 
     def add_derived_parameter(self, *args,**kwargs):
         ''' Adds a new derived parameter. Returns the added parameter.
@@ -1347,33 +1490,28 @@ class Trajectory(TrajOrRun):
         args = list(args)
         preprefix = prefix.split('.')[0]+'.'
 
-        if 'param' in kwargs or (args and isinstance( args[0],BaseParameter)):
-            if 'param' in kwargs:
-                instance = kwargs.pop('param')
-            else:
-                instance = args.pop(0)
-                if not instance.get_fullname().startswith(preprefix):
-                    instance._rename(prefix+instance.get_fullname())
-                full_parameter_name = instance.get_fullname()
+        if isinstance( args[0],BaseParameter):
 
-        elif 'param_name' in kwargs or (args and isinstance(args[0],str)):
+            instance = args.pop(0)
+            if not instance.get_fullname().startswith(preprefix):
+                instance._rename(prefix+instance.get_fullname())
+            full_parameter_name = instance.get_fullname()
 
-            if  'param_name' in kwargs:
-                full_parameter_name = kwargs.pop('param_name')
-            else:
-                full_parameter_name = args.pop(0)
+        elif isinstance(args[0],str):
+
+            full_parameter_name = args.pop(0)
 
             if not full_parameter_name.startswith(preprefix):
                 full_parameter_name = prefix+full_parameter_name
 
-            if not 'param_type' in kwargs:
-                if args and isinstance(args[0], type) and issubclass(args[0] , BaseParameter):
+            if not 'parameter' in kwargs:
+                if args and inspect.isclass(args[0]) and issubclass(args[0] , BaseParameter):
                         args = list(args)
                         param_type = args.pop(0)
                 else:
-                    param_type = self._standard_param_type
+                    param_type = self._standard_parameter
             else:
-                param_type = kwargs.pop('param_type')
+                param_type = kwargs.pop('parameter')
 
             if isinstance(param_type,str):
                 param_type = self._create_class(param_type)
@@ -1882,7 +2020,7 @@ class Trajectory(TrajOrRun):
                     rename_dict[result_name] = new_result_name
                     comment = result.get_comment()
                     result_type = result.get_classname()
-                    self.add_result(new_result_name,comment=comment,result_type=result_type)
+                    self.add_result(new_result_name,comment=comment,result=result_type)
 
 
 
@@ -1891,7 +2029,7 @@ class Trajectory(TrajOrRun):
                     rename_dict[dpar_name] = new_dpar_name
                     comment = dpar.get_comment()
                     param_type = dpar.get_classname()
-                    self.add_derived_parameter(new_dpar_name,comment=comment,param_type=param_type)
+                    self.add_derived_parameter(new_dpar_name,comment=comment,parameter=param_type)
 
 
             else:
@@ -2104,15 +2242,16 @@ class Trajectory(TrajOrRun):
 
 
      
-    def make_single_run(self,runid):
+    def make_single_run(self,idx):
         ''' Creates a SingleRun object for parameter exploration.
         
         The SingleRun object can used as the parent trajectory. The object contains a shallow
         copy of the parent trajectory but wihtout parameter arrays. From every array only the 
         nth parameter is used.
         '''
-        name = self.idx2run(runid)
-        return SingleRun( name, runid, self)
+        name = self.idx2run(idx)
+        self._idx=idx
+        return SingleRun( name, idx, self)
 
 
 
@@ -2156,9 +2295,9 @@ class SingleRun(TrajOrRun):
 
 
 
-        self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        #self._time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%Hh%Mm%Ss')
 
-        self._id = id
+        self._idx = id
 
         self._parent_trajectory = parent_trajectory
         self._parent_trajectory.prepare_paramspacepoint(id)
@@ -2174,8 +2313,8 @@ class SingleRun(TrajOrRun):
 
         #del self._single_run._nninterface
         self._single_run._nninterface = self._nninterface
-        self._single_run._standard_param_type = self._parent_trajectory._standard_param_type
-        self._single_run._standard_result_type = self._parent_trajectory._standard_result_type
+        self._single_run._standard_parameter = self._parent_trajectory._standard_parameter
+        self._single_run._standard_result = self._parent_trajectory._standard_result
         
         self._nninterface._parent_trajectory_name = self._parent_trajectory.get_name()
         self._nninterface._working_trajectory_name = self._single_run.get_name()
@@ -2189,12 +2328,26 @@ class SingleRun(TrajOrRun):
         '''
         return 1
 
-    def get_parent_name(self):
-        return self._parent_trajectory.get_name()
 
-    def get_id(self):
-        return self._id
-           
+    @property
+    def parent_name_(self):
+        '''Name of the parent trajectory'''
+        return self.get_parent_name()
+
+    def get_idx(self):
+        return self._idx
+
+    @property
+    def idx_(self):
+        '''Index of the single run'''
+        return self.get_idx()
+
+    def get_timestamp(self):
+        return self._single_run.get_timestamp()
+
+    def get_time(self):
+        return self._single_run.get_time()
+
         
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -2249,22 +2402,28 @@ class SingleRun(TrajOrRun):
 
 
 
-    def set_standard_param_type(self,param_type):
+    def set_standard_parameter(self,param_type):
         ''' Sets the standard parameter type.
 
         If param_type is not specified for add_parameter, than the standard parameter is used.
         '''
         assert issubclass(param_type,BaseParameter)
-        self._single_run._standard_param_type = param_type
+        self._single_run._standard_parameter = param_type
 
 
-    def set_standard_result_type(self, result_type):
+    def set_standard_result(self, result_type):
         ''' Sets the standard parameter type.
 
         If result_type is not specified for add_result, than the standard result is used.
         '''
         assert issubclass(result_type,BaseResult)
-        self._single_run._standard_result_type=result_type
+        self._single_run._standard_result=result_type
+
+    def get_standard_parameter(self):
+        return self._single_run._standard_parameter
+
+    def get_standard_result(self):
+        return self._single_run._standard_result
 
 
     def store(self, *args, **kwargs):
