@@ -8,7 +8,7 @@ from mypet.environment import Environment
 from mypet.trajectory import SingleRun, Trajectory
 from mypet.utils.explore import identity
 from mypet.configuration import config
-from mypet.parameter import SimpleResult
+from mypet.parameter import Result
 
 import multiprocessing as multip
 import logging
@@ -24,7 +24,7 @@ def test_run(traj, to_print):
     y = traj.add_derived_parameter('y')
     y.val = x**2
     
-    smurf = SimpleResult('','','','')
+    smurf = Result('','','','')
     z = traj.add_result('Nada.Moo',smurf)
     
     z.val = y()+1

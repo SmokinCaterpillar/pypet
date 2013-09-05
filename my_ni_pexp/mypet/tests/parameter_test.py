@@ -70,7 +70,7 @@ class ParameterTest(unittest.TestCase):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key].explore(vallist)
+            self.param.__dict__[key]._explore(vallist)
 
 
 
@@ -126,7 +126,7 @@ class ParameterTest(unittest.TestCase):
             constructor = param.__class__
 
             param.unlock()
-            param.empty()
+            param._empty()
 
             param = constructor('')
 
@@ -192,7 +192,7 @@ class ParameterTest(unittest.TestCase):
                  param.set(42)
 
             with self.assertRaises(pex.ParameterLockedException):
-                param.shrink()
+                param._shrink()
 
             param.unlock()
 
@@ -203,7 +203,7 @@ class ParameterTest(unittest.TestCase):
             if param.is_array():
                 self.assertTrue(len(param)>1)
 
-            param.shrink()
+            param._shrink()
             self.assertTrue(len(param) == 1)
 
             self.assertFalse(param.is_empty())
@@ -211,7 +211,7 @@ class ParameterTest(unittest.TestCase):
 
 
 
-            param.empty()
+            param._empty()
 
             self.assertTrue(param.is_empty())
             self.assertFalse(param.is_array())
@@ -263,7 +263,7 @@ class ArrayParameterTest(ParameterTest):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key].explore(vallist)
+            self.param.__dict__[key]._explore(vallist)
 
 
 class PickleParameterTest(ParameterTest):
@@ -318,7 +318,7 @@ class PickleParameterTest(ParameterTest):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key].explore(vallist)
+            self.param.__dict__[key]._explore(vallist)
 
 
 

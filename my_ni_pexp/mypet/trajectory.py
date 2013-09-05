@@ -7,10 +7,10 @@ Created on 17.05.2013
 import logging
 import datetime
 import time
-from mypet.parameter import Parameter, BaseParameter, SimpleResult, BaseResult, ArrayParameter, PickleResult
+from mypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayParameter, PickleResult
 import importlib as imp
 import itertools as it
-import _collections as col
+import inspect
 import numpy as np
 
 import mypet.petexceptions as pex
@@ -305,7 +305,7 @@ class TrajOrRun(object):
         ''' Loads parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
         names.
         If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
-        If kwargs contains the keyword >>only_empties=True<<, only empty parameters or results are passed to the
+        If kwargs contains the keyword >>only_empties=True<<, only _empty parameters or results are passed to the
         storage service to get loaded.
         :param to_load_list: A list with parameters or results to store.
         :param args: Additional arguments directly passed to the storage service
@@ -774,70 +774,97 @@ class NNTreeNode(object):
 
 
 class Trajectory(TrajOrRun):
-    '''The trajectory manages the handling of simulation parameters and results.
+    '''The trajectory manages results and parameters.
+
+
+    The trajectory is the common object to interact with before and during a simulation.
+    You can add four types of data to the trajectory:
+
+    * Config:   These are special parameters specifying modalities of how to run your simulations.
+                Changing a confing parameter should NOT have any influence on the results you
+                obtain from your simulations.
+
+                They specify runtime environment parameters like how many CPUs you use for
+                multiprocessing, where the storage file into on disk can be found, etc.
+
+                In fact, if you use the default runtime environment of this project, the environment
+                will add some config parameters to your trajectory.
+
+                The method to add these is :func:`add_config`
+
+    * Parameters:   These are your primary ammunition in numerical simulations. They specify
+                    how your simulation works. They can only be added before the actual
+                    running of the simulation exploring the parameter space. They can be
+                    added via :func:`add_parameter` and be explored using :func:`explore`.
+
+                    Your parameters should encompass all values that completly define your simulation,
+                    I recommend also storing random number generator seeds as parameters to
+                    guarantee that a simulation can be exactly repeated.
+
+
+    * Derived Parameters:   They are not much different from parameters except that they can be
+                            added anytime.
+
+                            Conceptually this encompasses stuff that is intermediately
+                            computed from the original parameters. For instance, as your original
+                            parameters you have a random number seed and some other parameters.
+                            From these you compute a connection matrix for a neural network.
+                            This connection matrix could be stored as a derived parameter.
+
+                            Derived parameters are added via :func:`add_derived_parameter`
+
+    * Results:  Result are added via the :func:`add_result`
+
+    There are several ways to access the parameters, to learn about these, fast access, and natural
+    naming see :ref:`more-on-access`
+
+
     
-    :param name: Name of trajectory, the real name is a concatenation of the user specified name and
-                the current or supplied time, e.g.
-                name = MyTrajectory is modified to MyTrajectory_xxY_xxm_xxd_xxh_xxm_xxs
-    
-    :param filename: The path and filename of the hdf5 file where everything will be stored.
-    
-    :param filetitle: If the file has to be created, this is added as the filetitle to the hdf5file
-                    meta information
+    :param name: Name of the trajectory, if `add_time=True` the current time is added as a string
+                to the parameter name.
+
                     
     :param dynamicly_imported_classes: If the user has a custom parameter that needs to be loaded
                                       dynamically during runtime, the module containing the class 
-                                      needs to be specified here.
+                                      needs to be specified here as a list of classes or strings
+                                      naming classes and there module paths.
                                       For example:
-                                      dynamicly_imported_classes=['mypet.parameter.PickleParameter']
-                                      (Note that in __init__ the PickleParameter is actually added
-                                      to the potentially dynamically loaded classes.)
+                                      `dynamically_imported_classes =
+                                      ['mypet.parameter.PickleParameter',MyCustomParameter]`
+
+                                      If you only have a single class to import, you do not need
+                                      the list brackets:
+                                      `dynamically_imported_classes
+                                      = 'mypet.parameter.PickleParameter'`
+
+
                                       
-    :param init_time: The time exploration was started, float, in seconds from linux start, e.g. 
-                     from time.time()
+    :param add_time: Boolean whether to add the current time to the parameter name.
+
+    :param comment: A useful comment describing the trajectory.
+
+    :param storage_service: A service to handle storage of the trajectory, parameters, and results.
+                            If you use the Trajectory in combination with an environment the
+                            environment will take care about this!
+
+    :raises: AttributeError: If the name of the trajectory contains invalid characters.
+
+             TypeError: If the dynamically imported classes are not classes or strings.
     
                                       
-    As soon as a parameter is added to the trajectory it can be accessed via natural naming:
-    >>> traj.add_parameter('paramgroup.param1')
-    
-    >>> traj.parameters.paramgroup.param1.entry1 = 42
-    
-    >>> print traj.parameters.paramgroup.param1.entry1
-    >>> 42
-    
-    Derived parameters are stored under the group derived_parameters.Name_of_trajectory_or_run.
-    
-    There are several shortcuts implemented. The expression traj.derived_parameters.pwt
-    maps to derived_parameters.Name_of_current_trajectory_or_run.
-    
-    If no main group like 'results','parameters','derived_parameters' is specified, 
-    like accessing traj.paramgroup.param1
-    It is first checked if paramgroup.param1 can be found in the derived_parameters, if not is looked 
-    for in the parameters. 
-    For example, traj.paramgroup.param1 would map to print traj.parameters.paramgroup.param1                     
+    Example usage:
+
+    >>> traj = Trajectory('ExampleTrajectory',dynamically_imported_classes=['Some.custom.class'],\
+    comment = 'I am a neat example!')
+
     '''
-    
-
-    
-    standard_comment = 'Dude, do you not want to tell us your amazing story about this trajectory?'
 
 
-
-    def __iter__(self):
-        return self.iterruns(non_completed=False)
-
-    def iterruns(self, non_completed=False):
-        if non_completed:
-            return (self.make_single_run(idx) for idx in xrange(len(self))
-                    if self.get_run_information(idx)['completed'])
-        else:
-            return (self.make_single_run(idx) for idx in xrange(len(self)))
-
-    def __init__(self, name='Traj',  dynamicly_imported_classes=None, add_time = True):
+    def __init__(self, name='Traj',  dynamically_imported_classes=None,
+                 add_time = True, storage_service=None, comment=''):
     
         #if init_time is None:
         init_time = time.time()
-
 
         
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
@@ -862,44 +889,121 @@ class Trajectory(TrajOrRun):
         self._single_run_ids ={}
         self._run_information = {}
         
-        # Per Definition the lenght is set to be 1, even with an empty trajectory in principle you could make a single run
+        # Per Definition the lenght is set to be 1, even with an _empty trajectory in principle you could make a single run
         self._add_run_info(0)
         
         self._nninterface = NaturalNamingInterface(working_trajectory_name=self._name)
         
         
-        self._storageservice = None
+        self._storageservice = storage_service
 
-        self._comment= Trajectory.standard_comment
+        self._comment= comment
 
 
 
         self._standard_param_type = Parameter
-        self._standard_result_type = SimpleResult
+        self._standard_result_type = Result
 
         self._stored = False
         
         
-        self._dynamic_imports=set(['mypet.parameter.PickleParameter'])
-        if not dynamicly_imported_classes == None:
-            self._dynamic_imports.update(dynamicly_imported_classes)
+        self._dynamic_imports=['mypet.parameter.PickleParameter']
+
+        if not dynamically_imported_classes is None:
+            self.add_to_dynamic_imports(dynamically_imported_classes)
+
         
         # self._loadedfrom = 'None'
 
         self._not_admissable_names = set(dir(self) + dir(self._nninterface) +
                                          dir(self._nninterface._root)) | set(['ALL'])
 
+
+        faulty_names = self._check_name(name)
+
+        if '.' in name:
+            faulty_names+=' colons >>.<< are  not allowed in trajectory names,'
+
+        if faulty_names:
+            raise AttributeError('Your Trajectory %s contains the following not admissible names: '
+                                 '%s please choose other names.'
+                                 % (name, faulty_names))
+
         self._logger = logging.getLogger('mypet.trajectory.Trajectory=' + self._name)
 
-    def id2run(self,name_or_id):
+
+    def add_to_dynamic_imports(self,dynamically_imported_classes):
+        ''' Adds classes or paths to classes to the trajectory to create custom parameters.
+
+        :param dynamically_imported_classes: If the user has a custom parameter that needs to be
+                                      loaded
+                                      dynamically during runtime, the module containing the class
+                                      needs to be specified here as a list of classes or strings
+                                      naming classes and there module paths.
+                                      For example:
+                                      `dynamically_imported_classes =
+                                      ['mypet.parameter.PickleParameter',MyCustomParameter]`
+
+                                      If you only have a single class to import, you do not need
+                                      the list brackets:
+                                      `dynamically_imported_classes
+                                      = 'mypet.parameter.PickleParameter'`
+
+        '''
+
+        if not isinstance(dynamically_imported_classes,(list,tuple)):
+            dynamically_imported_classes=[dynamically_imported_classes]
+
+        for item in dynamically_imported_classes:
+            if not (isinstance(item,str) or inspect.isclass(item)):
+                raise TypeError('Your dynamic import >>%s<< is neither a class nor a string.' %
+                                str(item))
+
+        self._dynamic_imports.extend(dynamically_imported_classes)
+
+
+    def __iter__(self):
+        ''' Iterator over all single runs.
+
+        equivalent to calling :func:`iterruns`
+        :
+            :code-block:: python
+
+            traj.iterruns(non_completed=False)
+
+        '''
+        return self.iterruns(non_completed=False)
+
+    def iterruns(self, non_completed=False):
+        ''' Returns an Iterator over all singe runs.
+
+        :param non_completed: Whether completed runs should be discarded or not.
+        '''
+        if non_completed:
+            return (self.make_single_run(idx) for idx in xrange(len(self))
+                    if self.get_run_information(idx)['completed'])
+        else:
+            return (self.make_single_run(idx) for idx in xrange(len(self)))
+
+    def idx2run(self,name_or_id):
+        ''' Converts an integer idx to the corresponding single run name and vice versa.
+
+        :param name_or_id: Name of a single run of an integer index
+        '''
         return self._single_run_ids[name_or_id]
 
     def get_run_names(self):
+        '''Returns a sorted list of the names of the single runs'''
         return sorted(self._run_information.keys())
 
     def get_run_information(self, name_or_id):
+        ''' Returns a dictionary containing information about a single run.
+
+        :param name_or_id:
+        :return:
+        '''
         if isinstance(name_or_id,int):
-            name_or_id = self.id2run(name_or_id)
+            name_or_id = self.idx2run(name_or_id)
         return self._run_information[name_or_id]
 
     def get_time(self):
@@ -974,7 +1078,7 @@ class Trajectory(TrajOrRun):
                             'not allowed.')
 
         for key, param in self._exploredparameters:
-            param.shrink()
+            param._shrink()
 
         self._run_information={}
         self._single_run_ids={}
@@ -1157,7 +1261,7 @@ class Trajectory(TrajOrRun):
         faulty_names = self._check_name(full_result_name)
 
         if faulty_names:
-            raise AttributeError('Your Result >>%s<< contains the following not admissable names: '
+            raise AttributeError('Your Result >>%s<< contains the following not admissible names: '
                                  '%s please choose other names' %
                                  (full_result_name,str(faulty_names)))
 
@@ -1409,7 +1513,7 @@ class Trajectory(TrajOrRun):
             if isinstance(act_param,NNTreeNode):
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
-            act_param.expand(builditerable)
+            act_param._expand(builditerable)
 
             name = act_param.gfn()
 
@@ -1421,38 +1525,16 @@ class Trajectory(TrajOrRun):
                 length = len(act_param)#Not so nice, but this should always be the same numbert
             else:
                 if not length == len(act_param):
-                    raise ValueError('The parameters to explore have not the same size!')
+                    raise ValueError('The parameters to _explore have not the same size!')
 
             for irun in range(length):
 
                 self._add_run_info(irun)
 
 
-    def explore(self,build_function,*args,**kwargs): 
+    def explore(self,build_dict):
         ''' Creates Parameter Arrays for exploration.
-        
-        The user needs to supply a builder function 'build_function' and its necessary parameters 
-        *args or **kwargs. The builder function is supposed to return a dictionary of parameter entries with
-        their fullname and lists of values which are explored.
-        
-        For fancy recursive builders that return tuples, the first tuple element must be the above 
-        named entry list dictionary.
-        
-        For example the builder could return
-        {'parameters.paramgroup1.param1.entry1':[21,21,21,42,42,42],
-         'parameters.paramgroup1.param2.entry1' : [1.0, 2.0, 3.0, 1.0, 2.0, 3.0]}
-         
-         which would be the Cartesian product of [21,42] and [1.0,2.0,3.0].
-
-        These values are added to the stored parameters and param1 and param2 would become arrays.
         '''
-        build_dict = build_function(*args,**kwargs) 
-        
-        # if the builder function returns tuples, the first element must be the build dictionary
-        if isinstance(build_dict, tuple):
-            build_dict, dummy = build_dict
-        
-        #split_dict = self._split_dictionary(build_dict)
             
         count = 0#Don't like it but ok
         for key, builditerable in build_dict.items():
@@ -1460,7 +1542,7 @@ class Trajectory(TrajOrRun):
             if isinstance(act_param,NNTreeNode):
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
-            act_param.explore(builditerable)
+            act_param._explore(builditerable)
 
             name = act_param.gfn()
 
@@ -1472,7 +1554,7 @@ class Trajectory(TrajOrRun):
                 length = len(act_param)#Not so nice, but this should always be the same numbert
             else:
                 if not length == len(act_param):
-                    raise ValueError('The parameters to explore have not the same size!')
+                    raise ValueError('The parameters to _explore have not the same size!')
        
             for irun in range(length):
 
@@ -1487,10 +1569,12 @@ class Trajectory(TrajOrRun):
         self._single_run_ids[runid] = runname
         info_dict = {}
 
-        info_dict['id'] = runid
+        info_dict['idx'] = runid
         info_dict['timestamp'] = 42.0
         info_dict['time'] = '~waste ur t1me with a phd'
         info_dict['completed'] = 0
+        info_dict['name'] = runname
+        info_dict['parameter_summary'] = 'Not yet my friend!'
 
         self._run_information[runname] = info_dict
         
@@ -1514,7 +1598,7 @@ class Trajectory(TrajOrRun):
         ''' Loads parameters specified in >>to_load_list<<. You can directly list the Parameter objects or their
         names.
         If names are given the >>get<< method is applied to find the parameter or result in the trajectory.
-        If kwargs contains the keyword >>only_empties=True<<, only empty parameters or results are passed to the
+        If kwargs contains the keyword >>only_empties=True<<, only _empty parameters or results are passed to the
         storage service to get loaded.
         :param to_load_list: A list with parameters or results to store.
         :param args: Additional arguments directly passed to the storage service
@@ -1721,7 +1805,7 @@ class Trajectory(TrajOrRun):
             my_instance = self.get(new_key)
             if not my_instance.is_empty():
                 raise RuntimeError('You want to slowly merge results, but your target result '
-                                   '>>%s<< is not empty, this should not happen.' %
+                                   '>>%s<< is not _empty, this should not happen.' %
                                    my_instance.get_fullname())
 
             load_dict = other_instance._store()
@@ -1732,8 +1816,8 @@ class Trajectory(TrajOrRun):
 
 
             if was_empty:
-                other_instance.empty()
-                my_instance.empty()
+                other_instance._empty()
+                my_instance._empty()
 
 
 
@@ -1762,7 +1846,7 @@ class Trajectory(TrajOrRun):
         count = len(self)
         runnames = other_trajectory.get_run_names()
         for  runname in runnames:
-            idx = other_trajectory.get_run_information(runname)['id']
+            idx = other_trajectory.get_run_information(runname)['idx']
             if used_runs[idx]:
                 try:
                     results = other_trajectory.get('results.' + runname).to_dict()
@@ -1778,11 +1862,12 @@ class Trajectory(TrajOrRun):
                 timestamp = other_trajectory.get_run_information(runname)['timestamp']
                 completed = other_trajectory.get_run_information(runname)['completed']
 
+
                 new_runname = SingleRun.FROMATTEDRUNNAME % count
 
 
 
-                self._run_information[new_runname] = dict(id = count,
+                self._run_information[new_runname] = dict(idx = count,
                                                           time = time, timestamp=timestamp,
                                                           completed = completed)
 
@@ -1947,13 +2032,13 @@ class Trajectory(TrajOrRun):
 
             if not my_param.is_array():
                     my_param.unlock()
-                    my_param.explore((my_param.get() for dummy in xrange(len(self))))
+                    my_param._explore((my_param.get() for dummy in xrange(len(self))))
 
                     #self._exploredparameters[my_param.get_fullname()]=my_param
 
             my_param.unlock()
 
-            my_param.expand(other_array)
+            my_param._expand(other_array)
 
             if not fullname in self._exploredparameters:
                 self._exploredparameters[fullname] = my_param
@@ -2026,7 +2111,7 @@ class Trajectory(TrajOrRun):
         copy of the parent trajectory but wihtout parameter arrays. From every array only the 
         nth parameter is used.
         '''
-        name = self.id2run(runid)
+        name = self.idx2run(runid)
         return SingleRun( name, runid, self)
 
 

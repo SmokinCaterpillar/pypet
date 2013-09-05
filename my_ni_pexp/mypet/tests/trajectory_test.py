@@ -6,7 +6,7 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import unittest
-from mypet.parameter import Parameter, PickleParameter, SimpleResult, BaseResult
+from mypet.parameter import Parameter, PickleParameter, Result, BaseResult
 from mypet.trajectory import Trajectory, SingleRun
 from mypet.storageservice import LazyStorageService
 from mypet.utils.explore import identity
@@ -22,7 +22,7 @@ import mypet.storageservice as stsv
 class ImAParameterInDisguise(Parameter):
     pass
 
-class ImAResultInDisguise(SimpleResult):
+class ImAResultInDisguise(Result):
     pass
 
 class TrajectoryTest(unittest.TestCase):
@@ -48,7 +48,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.adp(Parameter('FortyTwo', 42))
 
-        self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
+        self.traj.add_result('Im.A.Simple.Result',44444,result_type=Result)
 
         self.traj.FloatParam=4.0
 
@@ -172,7 +172,7 @@ class TrajectoryMergeTest(unittest.TestCase):
         self.traj.adp(Parameter('FortyTwo', 42))
         self.traj.ap('Trials',0)
 
-        self.traj.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
+        self.traj.add_result('Im.A.Simple.Result',44444,result_type=Result)
 
         self.traj.FloatParam=4.0
         self.traj.set_storage_service(LazyStorageService())
@@ -203,7 +203,7 @@ class TrajectoryMergeTest(unittest.TestCase):
 
         self.traj2.adp(Parameter('FortyTwo', 42))
 
-        self.traj2.add_result('Im.A.Simple.Result',44444,result_type=SimpleResult)
+        self.traj2.add_result('Im.A.Simple.Result',44444,result_type=Result)
 
         self.traj2.FloatParam=4.0
 
@@ -318,7 +318,7 @@ class SingleRunQueueTest(unittest.TestCase):
 
         traj.ap('TestExplorer', 1)
 
-        traj.explore(identity,{traj.get('TestExplorer').gfn():[1,2,3,4,5]})
+        traj.explore({traj.get('TestExplorer').gfn():[1,2,3,4,5]})
 
         self.traj = traj
         self.n = 1

@@ -130,8 +130,8 @@ class NetworkTest(unittest.TestCase):
         #traj.mode='Parallel'
 
 
-        traj.explore(cartesian_product,{traj.get('N').gfn():[50,60],
-                               traj.get('tauw').gfn():[30*ms,40*ms]})
+        traj.explore(cartesian_product({traj.get('N').gfn():[50,60],
+                               traj.get('tauw').gfn():[30*ms,40*ms]}))
 
         self.traj = traj
 

@@ -11,7 +11,7 @@ import os
 import numpy as np
 from functools import wraps
 from mypet.trajectory import Trajectory,SingleRun
-from mypet.parameter import BaseParameter, BaseResult, SimpleResult
+from mypet.parameter import BaseParameter, BaseResult, Result
 from mypet import globally
 from collections import Sequence
 import mypet.petexceptions as pex
@@ -461,16 +461,16 @@ class HDF5StorageService(StorageService):
         for runname in traj.get_run_names():
             run_info = traj.get_run_information(runname)
             run_info['name'] = runname
-            id = run_info['id']
+            idx = run_info['idx']
 
 
-            traj.prepare_paramspacepoint(id)
+            traj.prepare_paramspacepoint(idx)
             run_summary=self._srn_add_explored_params(runname,traj._exploredparameters.values())
 
 
-            run_info['explored_parameter_summary'] = run_summary
+            run_info['parameter_summary'] = run_summary
 
-            self._all_add_or_modify_row(runname,run_info,run_table,id,[],
+            self._all_add_or_modify_row(runname,run_info,run_table,idx,[],
                                         flags=(HDF5StorageService.MODIFYROW,))
 
         traj.restore_default()
@@ -529,7 +529,7 @@ class HDF5StorageService(StorageService):
 
         if not as_new:
             # if not traj.is_empty():
-            #     raise TypeError('You cannot load a trajectory from disk into a non-empty one.')
+            #     raise TypeError('You cannot load a trajectory from disk into a non-_empty one.')
             traj._stored=True
 
         self._trj_load_meta_data(traj,as_new)
@@ -578,18 +578,21 @@ class HDF5StorageService(StorageService):
 
             for row in single_run_table.iterrows():
                 name = row['name']
-                id = row['id']
+                id = row['idx']
                 timestamp = row['timestamp']
                 time = row['time']
                 completed = row['completed']
+                summary=row['parameter_summary']
                 traj._single_run_ids[id] = name
                 traj._single_run_ids[name] = id
 
                 info_dict = {}
-                info_dict['id'] = id
+                info_dict['idx'] = id
                 info_dict['timestamp'] = timestamp
                 info_dict['time'] = time
                 info_dict['completed'] = completed
+                info_dict['name'] = name
+                info_dict['parameter_summary'] = summary
                 traj._run_information[name] = info_dict
 
 
@@ -625,7 +628,7 @@ class HDF5StorageService(StorageService):
         assert isinstance(paramtable,pt.Table)
 
         # if len(wheredict) != 0:
-        #     raise ValueError('You cannot load instances from %s into your trajectory since your trajectory is not empty.'
+        #     raise ValueError('You cannot load instances from %s into your trajectory since your trajectory is not _empty.'
         #     % paramtable._v_name)
 
         if (load_mode == globally.LOAD_SKELETON or
@@ -698,7 +701,7 @@ class HDF5StorageService(StorageService):
         descriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
                          'time': pt.StringCol(len(traj.get_time())),
                          'timestamp' : pt.FloatCol(),
-                         'comment': pt.StringCol(len(traj.get_comment())),
+                         'comment':  pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH),
                          'length':pt.IntCol()}
                          # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
 
@@ -714,9 +717,9 @@ class HDF5StorageService(StorageService):
         rundescription_dict = {'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
                          'time': pt.StringCol(len(traj.get_time())),
                          'timestamp' : pt.FloatCol(),
-                         'id' : pt.IntCol(),
+                         'idx' : pt.IntCol(),
                          'completed' : pt.IntCol(),
-                         'explored_parameter_summary' : pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
+                         'parameter_summary' : pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
 
         runtable = self._all_get_or_create_table(where=self._trajectorygroup,
                                                  tablename='run_table',
@@ -738,12 +741,12 @@ class HDF5StorageService(StorageService):
             paramdescriptiondict={'location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
                                   'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
                                   'class_name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'comment': pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
+                                  'comment': pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH),
+                                  'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
 
 
             if not key == 'result_table':
                 paramdescriptiondict.update({'length' : pt.IntCol()})
-                paramdescriptiondict.update({'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)})
 
 
             if key == 'explored_parameter_table':
@@ -763,10 +766,8 @@ class HDF5StorageService(StorageService):
         assert isinstance(traj,Trajectory)
 
         for idx in range(start, len(traj)):
-            name = traj.id2run(idx)
+            name = traj.idx2run(idx)
             insert_dict = traj.get_run_information(name)
-            insert_dict['name']=name
-            insert_dict['explored_parameter_summary'] = 'Ich verdiene mir Respekt mit Schweiss und Traenen!'
 
             self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,[],[],flags=(HDF5StorageService.ADDROW,))
 
@@ -821,7 +822,7 @@ class HDF5StorageService(StorageService):
         table = getattr(self._trajectorygroup,'run_table')
 
         insert_dict = self._all_extract_insert_dict(single_run,table.colnames)
-        insert_dict['explored_parameter_summary'] = run_summary
+        insert_dict['parameter_summary'] = run_summary
         insert_dict['completed'] = 1
 
 
@@ -1034,15 +1035,15 @@ class HDF5StorageService(StorageService):
 
         if 'value' in colnames:
             valstr = item.val2str()
-            if len(valstr) >= globally.HDF5_STRCOL_MAX_NAME_LENGTH:
-                valstr = valstr[0:globally.HDF5_STRCOL_MAX_NAME_LENGTH-1]
+            if len(valstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                valstr = valstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
             insert_dict['value'] = valstr
 
         if 'creator_name' in colnames:
             insert_dict['creator_name'] = item.get_location().split('.')[1]
 
-        if 'id' in colnames:
-            insert_dict['id'] = item.get_id()
+        if 'idx' in colnames:
+            insert_dict['idx'] = item.get_id()
 
         if 'time' in colnames:
             insert_dict['time'] = item.get_time()
@@ -1194,7 +1195,7 @@ class HDF5StorageService(StorageService):
                 size = 1
 
             if size == 0:
-                self._logger.warning('>>%s<< of >>%s<< is empty, I will skip storing.' %(key,fullname))
+                self._logger.warning('>>%s<< of >>%s<< is _empty, I will skip storing.' %(key,fullname))
                 return
 
             carray=self._hdf5file.create_carray(where=group, name=key,obj=data)
@@ -1225,7 +1226,7 @@ class HDF5StorageService(StorageService):
                 size = 1
 
             if size == 0:
-                self._logger.warning('>>%s<< of >>%s<< is empty, I will skip storing.' %(key,fullname))
+                self._logger.warning('>>%s<< of >>%s<< is _empty, I will skip storing.' %(key,fullname))
                 return
 
 

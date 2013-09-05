@@ -144,7 +144,7 @@ class EnvironmentTest(unittest.TestCase):
         self.explored['lil_mat'][1][2,2]=33
 
 
-        traj.explore(cartesian_product,self.explored)
+        traj.explore(cartesian_product(self.explored))
 
 
 

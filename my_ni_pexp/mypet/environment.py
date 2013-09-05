@@ -81,13 +81,16 @@ class Environment(object):
                  filename='../experiments.h5',
                  filetitle='experiment',
                  logfolder='../log/',
-                 dynamicly_imported_classes=None):
+                 dynamically_imported_classes=None,
+                 comment=''):
 
 
 
         #Acquiring the current time
         if isinstance(trajectory,str):
-            self._traj = Trajectory(trajectory, dynamicly_imported_classes)
+            self._traj = Trajectory(trajectory,
+                                    dynamically_imported_classes=dynamically_imported_classes,
+                                    comment=comment)
         elif isinstance(trajectory,Trajectory):
             self._traj = trajectory
         else:

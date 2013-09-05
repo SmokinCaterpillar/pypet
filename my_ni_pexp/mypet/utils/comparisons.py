@@ -7,7 +7,7 @@ import itertools as it
 from mypet.utils.helpful_functions import nested_equal
 
 def results_equal(a,b):
-    if not isinstance(a, mypet.parameter.SimpleResult) or not isinstance(b, mypet.parameter.SimpleResult):
+    if not isinstance(a, mypet.parameter.Result) or not isinstance(b, mypet.parameter.Result):
         return False
 
     if not a.get_name()==b.get_name():

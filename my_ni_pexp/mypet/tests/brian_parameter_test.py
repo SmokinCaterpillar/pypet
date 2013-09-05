@@ -47,7 +47,7 @@ class BrianParameterTest(ParameterTest):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key].explore(vallist)
+            self.param.__dict__[key]._explore(vallist)
 
 
 if __name__ == '__main__':

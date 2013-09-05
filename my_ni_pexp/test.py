@@ -46,7 +46,7 @@ def main():
     
     traj.Parameters.test.testparam.set('Fuechse', np.array([1,2,3.6]))
 
-    traj.Parameters.test.testparam.explore({'Sapiens': [0,1,2,3],  'Finka' : ['1','3','fuenf','sieben']})
+    traj.Parameters.test.testparam._explore({'Sapiens': [0,1,2,3],  'Finka' : ['1','3','fuenf','sieben']})
 
     traj.Parameters.test.testparam.change_values_in_array('Finka' , ['2', '22'],[1,3])
 

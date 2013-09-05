@@ -190,9 +190,7 @@ class ContinueTest(unittest.TestCase):
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
 
-
-
-        traj.explore(cartesian_product,self.explored)
+        traj.explore(cartesian_product(self.explored))
 
     @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, '
                                                                'single debug is not pointing to the function ')

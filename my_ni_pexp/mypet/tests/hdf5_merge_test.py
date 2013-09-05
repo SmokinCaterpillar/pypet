@@ -23,7 +23,7 @@ import pandas as pd
 
 
 REMOVE = True
-SINGLETEST=[0]
+SINGLETEST=[6]
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
@@ -395,7 +395,7 @@ class MergeTest(unittest.TestCase):
 
 
 
-        traj.explore(cartesian_product,self.explored)
+        traj.explore(cartesian_product(self.explored))
 
     def explore_trials_differently(self, traj):
         self.explored ={'Normal.trial': [0,1],
@@ -404,7 +404,7 @@ class MergeTest(unittest.TestCase):
 
 
 
-        traj.explore(cartesian_product,self.explored)
+        traj.explore(cartesian_product(self.explored))
 
 
     def compare_explore_more_trials_with_removing_duplicates(self,traj):
@@ -416,7 +416,7 @@ class MergeTest(unittest.TestCase):
                              np.array([-1.0,2.0,3.0,5.0]),
                              np.array([-1.0,2.0,3.0,5.0])]}
 
-        traj.explore(identity,self.explored)
+        traj.explore(self.explored)
 
     def compare_explore_more_trials(self,traj):
         self.explored ={'Normal.trial': [0,1,0,1,2,3,2,3],
@@ -432,7 +432,7 @@ class MergeTest(unittest.TestCase):
 
 
 
-        traj.explore(identity,self.explored)
+        traj.explore(self.explored)
 
 
 

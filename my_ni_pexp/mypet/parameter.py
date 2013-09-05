@@ -114,14 +114,14 @@ Results
 ------------------------------------
 
 So far not many types of results (Base API found in BaseResult) exist
-(only the SimpleResult and the BrianMonitorResult).
+(only the Result and the BrianMonitorResult).
 They provide less functionality than parameters. They can simply hold some simulation results.
 For example, time course of traffic jam, voltage traces of neurons, etc.
 If results are handed to these containers and they are in the right format, they
 will in the end automatically be stored to disk.
 
 Types of results supported so far:
- *  SimpleResult
+ *  Result
     Container for basic data like native python types, numpy arrays and pandas tables (!).
 
  *  PickleResult
@@ -141,7 +141,7 @@ Finally the ObjectTable class is a wrapper for pandas_ data frames.
 import logging
 import petexceptions as pex
 import numpy as np
-from mypet.utils.helpful_functions import nested_equal
+from mypet.utils.helpful_functions import nested_equal, copydoc
 from mypet import globally
 from pandas import DataFrame
 
@@ -176,19 +176,31 @@ class BaseParameter(object):
     '''Abstract class that specifies the methods that need to be implemented for a trajectory
     parameter
 
-    The parameter class can hold a single value as well as an exploration array with several
-    values (of the same type) for exploration. If the parameter is an array due to exploration,
-    the original value is still kept as a default value.
-    
-    Parameters can be locked to forbid further modification.
+    Parameters are simple container objects for data values. They handle single values as well as
+    the so called exploration array. An array containing multiple values which are accessed
+    one after the other in individual simulation runs.
+
+    Parameter exploration is usually initiated through the trajectory, which calls the private
+    function :func:`_explore' and :func:`_expand`. See the corresponding public functions
+    in the trajectory.
+
+    To access the parameter's data value one can call the :func:`get` method. Granted the parameter
+    is explored via the trajectory, in order to
+    access values of the exploration array, one first has to call the :func:`set_parameter_access`
+    method with the index of the run and then use :func:`get`.
+
+    Parameters support the concept of locking. Once a value of the parameter has been accessed,
+    the parameter cannot be changed anymore unless it is explicitly unlocked using :func:`unlock`.
+    This prevents parameters from being changed during runtime of a simulation.
+
     If multiprocessing is desired the parameter must be pickable!
 
     :param fullname: The fullname of the parameter in the trajectory tree, groupings are
         separated by a colon:
-        fullname = supergroup.subgroup.paramname
+        `fullname = 'supergroup.subgroup.paramname'`
 
     :param comment: A useful comment describing the parameter:
-        comment = 'The number of cars for traffic jam simulations'
+        `comment = 'The number of cars for traffic jam simulations'`
     ''' 
     def __init__(self, fullname, comment=''):
         self._fullname = fullname
@@ -225,9 +237,11 @@ class BaseParameter(object):
         ''' Returns the comment.
 
         Example usage:
+
         >>> param = Parameter('supergroup.subgroup.paramname',data=42, comment='I am a neat example')
         >>> print param.get_comment()
         >>> 'I am a neat example'
+
         '''
         return self._comment
 
@@ -237,14 +251,18 @@ class BaseParameter(object):
         raise NotImplementedError( "Should have implemented this." )
 
     def restore_default(self):
-        ''' If a Parameter is explored, the actual data is changed over the course of different
-        simulations, This method restores the original data assigned before exploration.
+        ''' Restores original data if changed due to exploration.
+
+        If a Parameter is explored, the actual data is changed over the course of different
+        simulations. This method restores the original data assigned before exploration.
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
 
     def is_locked(self):
         ''' Returns whether the parameter is locked or not.
+
         '''
         return self._locked
 
@@ -252,6 +270,7 @@ class BaseParameter(object):
         ''' Returns the location of the parameter within the trajectory tree.
 
         Example usage:
+
         >>> param = Parameter('supergroup.subgroup.paramname',data=42, comment='I am a neat example')
         >>> print param.get_location()
         >>> 'supergroup.subgroup'
@@ -264,6 +283,7 @@ class BaseParameter(object):
         
         Only parameters that are explored can have a length larger than 1.
         If no values have been added to the parameter it's length is 0.
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -275,15 +295,22 @@ class BaseParameter(object):
         data structures that can be stored to disk.
         Returns a dictionary containing these simple structures.
         Understood structures are
+
         * python natives (int,str,bool,float,complex),
+
         * python lists and tuples
+
         * numpy natives and arrays of type np.int8-64, np.uint8-64, np.float32-64,
                                             np.complex, np.str
+
         * python dictionaries of the previous types (flat not nested!)
+
         * pandas data frames
+
         * object tables
 
         :return: A dictionary containing basic data structures.
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -294,18 +321,30 @@ class BaseParameter(object):
         when previously called with _store()
 
         :param load_dict: The dictionary containing basic data structures
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
 
     def val2str(self):
-        ''' String representation of the value handled by the parameter. Note that representing
+        ''' String summary of the value handled by the parameter.
+
+        Note that representing
         the parameter as a string accesses its value, but for simpler debugging, this does not
         lock the parameter or counts as usage!
+
+        String is truncated if it is longer or equal to the value specified in
+        globally.HDF5_STRCOL_MAX_COMMENT_LENGTH
+
         '''
         old_locked = self._locked
         try :
-            return str(self.get())
+            restr= str(self.get())
+
+            if len(restr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                restr=restr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+
+            return restr
         except Exception, e:
             return 'No Evaluation possible (yet)!'
         finally:
@@ -314,15 +353,17 @@ class BaseParameter(object):
 
     def supports(self, data):
         ''' Checks whether the data is supported by the parameter.
+
         '''
         return type(data) in globally.PARAMETER_SUPPORTED_DATA
 
     def _equal_values(self,val1,val2):
         ''' Checks if the parameter considers two values as equal.
 
-        If both values are not supported by the parameter, a TypeError is thrown.
-        :raises: TypeError
+
         :return: True or False
+        :raises: TypeError: If both values are not supported by the parameter.
+
         '''
         if self.supports(val1) != self.supports(val2):
             return False
@@ -340,13 +381,12 @@ class BaseParameter(object):
     def _values_of_same_type(self,val1,val2):
         ''' Checks if two values agree in type.
 
-        For example two 32 bit integers would be of same type, but not a string and an integer.
-
-        Throws a type error if both values are not supported by the parameter.
-
-        :raises: TypeError
+        For example, two 32 bit integers would be of same type, but not a string and an integer,
+        or not a 64 bit and a 32 bit integer.
 
         :return: True or False
+
+        :raises: TypeError: if both values are not supported by the parameter.
         '''
 
         if self.supports(val1) != self.supports(val2):
@@ -375,7 +415,9 @@ class BaseParameter(object):
 
 
     def unlock(self):
-        ''' Unlocks the locked parameter.'''
+        ''' Unlocks the locked parameter.
+
+        '''
         self._locked = False
 
     def lock(self):
@@ -388,13 +430,16 @@ class BaseParameter(object):
 
 
     def gfn(self):
-        ''' Short for get_fullname '''
+        ''' Short for :func:`get_fullname`.
+
+        '''
         return self.get_fullname()
     
     def get_fullname(self):
         ''' param.get_fullname() -> Returns the fullname of the parameter
 
         Example usage:
+
         >>> param = Parameter('supergroup.subgroup.paramname',data=42, comment='I am a neat example')
         >>> print param.get_fullname()
         >>> 'supergroup.subgroup.paramname'
@@ -406,17 +451,19 @@ class BaseParameter(object):
 
     def set(self,data):
         ''' Sets specific values for a parameter.
-        Has to raise ParameterLockedException if parameter is locked.
-        And has to raise an Attribute Error if the parameter is an array or if the type of the
-        data value is not supported by the parameter.
 
         Example usage:
+
         >>> param = Parameter('groupA.groupB.myparam', comment='I am a neat example')
         >>> param.set(44.0)
         >>> print parm.get()
         >>> 44.0
 
-        :raises: ParameterLockedException, AttributeError.
+        :raises: ParameterLockedException:  if parameter is locked.
+
+                 AttributeError: if the parameter is an array or if the type of the
+                                 data value is not supported by the parameter.
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -425,12 +472,14 @@ class BaseParameter(object):
         ''' Returns the current data value of the parameter and locks the parameter.
 
         Example usage:
+
         >>> param = Parameter('groupA.groupB.myparam', comment='I am a neat example')
         >>> param.set(44.0)
         >>> print parm.get()
         >>> 44.0:
 
         '''
+
         raise NotImplementedError( "Should have implemented this." )
 
     def get_array(self):
@@ -438,67 +487,79 @@ class BaseParameter(object):
 
         Note that the returned values should be either a copy of the exploration array
         or the array must be immutable, for example a python tuple.
+
         :return: immutable iterable
 
         Example usage:
+
         >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
-        >>> param.explore([42,43,43])
+        >>> param._explore([42,43,43])
         >>> print param.get_array()
         >>> (42,43,44)
         '''
+
         raise NotImplementedError( "Should have implemented this." )
     
-    def explore(self, iterable):
+    def _explore(self, iterable):
         ''' The default method to create and explored parameter containing an array of entries.
 
-        Raises ParameterLockedExcpetion if the parameter is locked.
-        Raises TypeError if the parameter is already an array.
-
-
         :param iterable: An iterable specifying the exploration array
-        For example:
-        >>> param = Parameter('groupA.groupB.myparam',data=22.33, comment='I am a neat example')
-        >>> param.explore([3.0,2.0,1.0])
 
-        :raises: ParameterLockedExcpetion, TypeError
+                         For example:
+
+                         >>> param = Parameter('groupA.groupB.myparam',data=22.33,\
+                          comment='I am a neat example')
+                         >>> param._explore([3.0,2.0,1.0])
+
+        :raises: ParameterLockedExcpetion: if the parameter is locked.
+
+                 TypeError: if the parameter is already an array.
+
         '''
+
         raise NotImplementedError( "Should have implemented this." )
 
-    def expand(self, iterable):
-        ''' Similar to :func:`explore` but appends to the exploration array.
+    def _expand(self, iterable):
+        ''' Similar to :func:`_explore` but appends to the exploration array.
 
-        Raises ParameterLockedExcpetion if the parameter is locked.
-        Raises TypeError if the parameter is not an array.
 
         :param iterable: An iterable specifying the exploration array.
+
+
+        :raises: ParameterLockedExcpetion: If the parameter is locked.
+
+                 TypeError: if the parameter is not an array.
+
         Example usage:
+
         >>> param = Parameter('groupA.groupB.myparam',data=3.13, comment='I am a neat example')
-        >>> param.explore([3.0,2.0,1.0])
-        >>> param.expand([42.0,43.0])
+        >>> param._explore([3.0,2.0,1.0])
+        >>> param._expand([42.0,43.0])
         >>> print param.get_array()
         >>> (3.0,2.0,1.0,42.0,43.0)
 
-        :raises: ParameterLockedExcpetion, TypeError
         '''
         raise NotImplementedError("Should have implemented this.")
 
     def set_parameter_access(self, idx=0):
-        ''' Sets the current value according to the `idx` item in the exploration array
+        ''' Sets the current value according to the `idx` item in the exploration array.
 
         Prepares the parameter for further usage, and tells it which point in the parameter
         space should be accessed by calls to :func:`get`.
 
         :param idx: The index within the exploration parameter
 
-        If the parameter is not an array, the single data value is considered regardles of the
-        value of idx.
-        Raises ValueError if the parameter is explored and idx>=len(param)
+                    If the parameter is not an array, the single data value is considered
+                    regardless of the value of `idx`.
+                    Raises ValueError if the parameter is explored and `idx>=len(param)`
 
-        :raises: ValueError
+        :raises: ValueError: if the parameter is an array and `idx` is larger or equal to the
+                             length of the parameter
 
         Example usage:
+
         >>> param = Parameter('groupA.groupB.myparam',data=22.33, comment='I am a neat example')
-        >>> param.explore([42.0,43.0,44.0])
+        >>> param._explore([42.0,43.0,44.0])
         >>> param.set_parameter_access(idx=1)
         >>> print param.get()
         >>> 43.0
@@ -516,90 +577,118 @@ class BaseParameter(object):
         ''' Returns the name of the parameter.
 
         Example usage:
+
         >>> param = Parameter('supergroup.subgroup.paramname',data=42, comment='I am a neat example')
         >>> print param.get_name()
         >>> 'paramname'
+
         '''
         return self._name
 
     def is_empty(self):
-        ''' True if no data has been assinged to the parameter.
+        ''' True if no data has been assigned to the parameter.
 
-        >>> param = Parameter('myname.is.example', comment='I am empty!')
+        >>> param = Parameter('myname.is.example', comment='I am _empty!')
         >>> param.is_empty()
         >>> True
         >>> param.set(444)
         >>> param.is_empty()
         >>> False
+
         '''
         return len(self) == 0
 
-    def shrink(self):
-        ''' If a parameter is explored, i.e. it is an array, the whole exploration is deleted,
-        and the parameter is no longer an array.
-        Raises ParameterLockedException if the parameter is locked.
-        Raises TypeError is the parameter is not an array.
+    def _shrink(self):
+        ''' If a parameter is explored, i.e. it is an array, the whole exploration is deleted.
+
+        Afterwards the parameter is no longer an array.
 
         Note that this function does not erase data from disk. So if the parameter has
         been stored with a service to disk and is shrunk, it can be restored by loading from
         disk.
 
-        :raises: ParameterLockedException, TypeError
+        :raises: ParameterLockedException: if the parameter is locked.
+
+                 TypeError: if  is the parameter is not an array.
         '''
         raise NotImplementedError( "Should have implemented this." )
 
 
-    def empty(self):
-        '''Erases all data in the parameter. If the parameter was an explored array it is
-        also shrunk (see :func:`shrink`).
-        Raises ParameterLockedException if the parameter is locked.
+    def _empty(self):
+        '''Erases all data in the parameter.
+
+        If the parameter was an explored array it is also shrunk (see :func:`_shrink`).
 
         Does not erase data from disk. So if the parameter has
         been stored with a service to disk and is emptied, it can be restored by loading from
         disk.
 
-        :raises: ParameterLockedException
+        :raises: ParameterLockedException: If the parameter is locked.
         '''
         raise NotImplementedError( "Should have implemented this." )
       
 class Parameter(BaseParameter):
     ''' The standard parameter that handles access to simulation parameters.
+
+    Parameters are simple container objects for data values. They handle single values as well as
+    the so called exploration array. An array containing multiple values which is accessed
+    one after the other in individual simulation runs.
+
+    Parameter exploration is usually initiated through the trajectory, which calls the private
+    function :func:`_explore` and :func:`_expand`. See the corresponding public functions
+    in the trajectory.
+
+    To access the parameter's data value one can call the :func:`get` method. Granted the parameter
+    is explored via the trajectory, in order to
+    access values of the exploration array, one first has to call the :func:`set_parameter_access`
+    method with the index of the run and then use :func:`get`.
+
+    Parameters support the concept of locking. Once a value of the parameter has been accessed,
+    the parameter cannot be changed anymore unless it is explicitly unlocked using :func:`unlock`.
+    This prevents parameters from being changed during runtime of a simulation.
     
-    Supported Data types are
+    Supported data values for the parameter are
+
     * python natives (int,str,bool,float,complex),
+
     * numpy natives and non nested arrays of type np.int8-64, np.uint8-64, np.float32-64,
                             np.complex, np.str
+
     * python homogeneous not nested lists and tuples, lists are automatically converted to tuples
     
     Note that for larger numpy arrays it is recommended to use the ArrayParameter.
 
-    For parameter exploration, see :func:`explore` and :func`expand`
 
      Example usage:
+
      >>> param = Parameter('traffic.mobiles.ncars',data=42, comment='I am a neat example')
 
     :param fullname: The fullname of the parameter. Grouping can be achieved by using colons.
 
     :param data: A data value that is handled by the parameter. It is checked whether the parameter
         supports the data. If not an AttributeError is thrown. If the parameter becomes
-        explored (see :py:func:`.explore`), the data value is kept as a default. After
+        explored (see func:`_explore`), the data value is kept as a default. After
         simulation the default value can be retained by calling :func:`restore_default`.
         The data can be accessed as follows:
+
         >>> param.get()
         >>> 42
 
         To change the data after parameter creation one can call :func:`set`:
+
         >>> param.set(43)
-        >>> param.get()
+        >>> print param.get()
         >>> 43
 
     :param comment: A useful comment describing the parameter.
-        The comment can be changed later on using :func:`set_comment' and retrieved using
-        :func:`get_comment'
-        >>> param.get_comment()
+        The comment can be changed later on using :func:`set_comment` and retrieved using
+        :func:`get_comment`
+
+        >>> print param.get_comment()
         >>> 'I am a neat example'
 
-    :raises: AttributeError
+    :raises: AttributeError: If `data` is not supported by the parameter.
+
     '''
     def __init__(self, fullname, data=None, comment=''):
         super(Parameter,self).__init__(fullname,comment)
@@ -622,11 +711,20 @@ class Parameter(BaseParameter):
 
         If the parameter is explored during the runtime of a simulation,
         the actual value of the parameter is changed and taken from the exploration array.
-        (See also :func:`explore`). Calling :func:`restore_default' sets the parameter's value
+        (See also :func:`_explore`). Calling :func:`restore_default` sets the parameter's value
         back to it's original value.
 
         Example usage:
-        >>> param = Parameter('supergroup1.subgroup2.')
+
+        >>> param = Parameter('supergroup1.subgroup2.', data=44, comment='Im a comment!')
+        >>> param._explore([1,2,3,4])
+        >>> param.set_parameter_access(2)
+        >>> print param.get()
+        >>> 3
+        >>> param.restore_default()
+        >>> print param.get()
+        >>> 44
+
         '''
         self._data = self._default
 
@@ -638,11 +736,13 @@ class Parameter(BaseParameter):
         else:
             return 1
 
+    @copydoc(BaseParameter.is_array)
     def is_array(self):
         return len(self._explored_data)>0
        
     def __getstate__(self):
-        ''' Returns the actual state of the parameter for pickling. 
+        ''' Returns the actual state of the parameter for pickling.
+
         '''
         result = self.__dict__.copy()
 
@@ -660,6 +760,7 @@ class Parameter(BaseParameter):
 
     def __setstate__(self, statedict):
         ''' Sets the state for unpickling.
+
         '''
         self.__dict__.update( statedict)
         self._set_logger()
@@ -701,6 +802,7 @@ class Parameter(BaseParameter):
         Returns False if only one of the two values is supported by the parameter.
 
         Example usage:
+
         >>>param._values_of_same_type(42,43)
         >>>True
 
@@ -734,25 +836,8 @@ class Parameter(BaseParameter):
 
 
 
-    
+    @copydoc(BaseParameter.set)
     def set(self,data):
-        ''' Adds data value to the Parameter.
-
-        The data becomes the parameters default value, which is restored by calling
-        :func:'restore_default'
-
-        Raises ParameterLockedException if the parameter is locked and AttributeError
-        if the parameter is an array (and not locked) or the type of the data is not supported.
-
-        :param data: the data value handled by the parameter.
-
-        :raises: ParameterLockedException, AttributeError
-
-        Example usage:
-        >>> param.set('Hello World!')
-        >>> param.get()
-        >>> 'Hello World!'
-        '''
 
         if self.is_locked():
             raise pex.ParameterLockedException('Parameter >>' + self._name + '<< is locked!')
@@ -777,6 +862,7 @@ class Parameter(BaseParameter):
         ''' Converts data to be handled by the parameter
 
         * sets numpy arrays immutable.
+
         * converts lists to tuples
 
         :param val: the data value to convert
@@ -792,7 +878,7 @@ class Parameter(BaseParameter):
         return val
 
 
-        
+    @copydoc(BaseParameter.get_array)
     def get_array(self):
         if not self.is_array():
             raise TypeError('Your parameter is not array, so cannot return array')
@@ -800,7 +886,7 @@ class Parameter(BaseParameter):
             return self._explored_data
 
 
-    def explore(self, explore_iterable):
+    def _explore(self, explore_iterable):
         ''' Explores the parameter according to the iterable.
 
         Raises ParameterLockedException if the parameter is locked.
@@ -813,10 +899,13 @@ class Parameter(BaseParameter):
         explicitly stored in memory.
 
         :param iterable: An iterable specifying the exploration array
+
         For example:
-        >>> param.explore([3.0,2.0,1.0])
+
+        >>> param._explore([3.0,2.0,1.0])
         >>> param.get_array()
         >>> (3.0,2.0,1.0)
+
 
         :raises TypeError,ParameterLockedExcpetion
         '''
@@ -824,17 +913,15 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self._fullname)
 
         if self.is_array():
-            raise TypeError('Your Parameter %s is already explored, cannot explore it further!' % self._name)
+            raise TypeError('Your Parameter %s is already explored, cannot _explore it further!' % self._name)
 
 
         data_tuple = self._data_sanity_checks(explore_iterable)
 
-
-
         self._explored_data = data_tuple
         self.lock()
 
-    def expand(self,explore_iterable):
+    def _expand(self,explore_iterable):
         ''' Explores the parameter according to the iterable and appends to the exploration array.
 
         Raises ParameterLockedException if the parameter is locked.
@@ -847,12 +934,16 @@ class Parameter(BaseParameter):
         explicitly stored in memory.
 
         :param iterable: An iterable specifying the exploration array
-        For example:
-        >>> param.explore([3.0,2.0,1.0])
-        >>> param.get_array()
-        >>> (3.0,2.0,1.0)
 
-        :raises TypeError,ParameterLockedExcpetion
+                         For example:
+
+                         >>> param = Parameter('Im.an.example', data=33.33, comment='Wooohoo!')
+                         >>> param._explore([3.0,2.0,1.0])
+                         >>> param.get_array()
+                         >>> (3.0,2.0,1.0)
+
+        :raises TypeError,ParameterLockedException
+
         '''
         if self.is_locked():
             raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self._fullname)
@@ -894,11 +985,11 @@ class Parameter(BaseParameter):
 
 
         if len(data_tuple) == 0:
-            raise ValueError('Cannot explore an empty list!')
+            raise ValueError('Cannot _explore an _empty list!')
 
         return tuple(data_tuple)
 
-
+    @copydoc(BaseParameter._store)
     def _store(self):
         store_dict={}
         store_dict['data'] = ObjectTable(data={'data':[self._data]})
@@ -908,7 +999,7 @@ class Parameter(BaseParameter):
 
         return store_dict
 
-
+    @copydoc(BaseParameter._load)
     def _load(self,load_dict):
         self._data = load_dict['data']['data'][0]
         self._default=self._data
@@ -924,10 +1015,10 @@ class Parameter(BaseParameter):
         Each process than runs an individual point in the parameter space trajectory.
         As a consequence, you do not need the exploration array during these calculations.
         Thus, if the full copy mode is set to False the parameter is pickled without
-         the exploration array and you can save memory.
+        the exploration array and you can save memory.
 
         If you want to access the full exploration array during individual runs, you need to set
-        fullcopy to True (:func:`set_full_copy(True)).
+        fullcopy to True (:func:`set_full_copy(True)`).
 
         It is recommended NOT to do that in order to save memory and also do obey the
         philosophy that individual simulations are independent.
@@ -935,44 +1026,45 @@ class Parameter(BaseParameter):
         :param val: True or False
 
         Example usage:
+
         >>> import pickle
         >>> param = Parameter('examples.fullcopy', data=333, comment='I show you how the copy mode works!')
-        >>> param.explore([1,2,3,4])
+        >>> param._explore([1,2,3,4])
         >>> dump=pickle.dumps(param)
         >>> newparam = pickle.loads(dump)
         >>> print newparam.get_array()
         >>> ()
-
         >>> param.set_full_copy(True)
         >>> dump = pickle.dumps(param)
         >>> newparam=pickle.loads(dump)
         >>> print newparam.get_array()
         >>> (1,2,3,4)
+
         '''
         assert isinstance(val, bool)
         self._fullcopy = val
 
-
+    @copydoc(BaseParameter.get)
     def get(self):
         self.lock() # As soon as someone accesses an entry the parameter gets locked
         return self._data
 
-
-    def shrink(self):
+    @copydoc(BaseParameter._shrink)
+    def _shrink(self):
         if self.is_empty():
-            raise TypeError('Cannot shrink empty Parameter.')
+            raise TypeError('Cannot _shrink _empty Parameter.')
 
         if self.is_locked():
             raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
         self._explored_data={}
 
-
-    def empty(self):
+    @copydoc(BaseParameter._empty)
+    def _empty(self):
         if self.is_locked():
             raise pex.ParameterLockedException('Parameter %s is locked!' % self._fullname)
 
-        self.shrink()
+        self._shrink()
         self._data=None
 
      
@@ -1179,7 +1271,9 @@ class BaseResult(object):
     As before grouping is achieved by colons in the name.
 
     Example usage:
-    >>> result = SimpleResult(fullname='very.important.result',comment='I am important but empty :('
+
+    >>> result = Result(fullname='very.important.result',comment='I am important but _empty :('
+
     '''
     def __init__(self, fullname, comment=''):
         self._fullname = fullname
@@ -1188,6 +1282,14 @@ class BaseResult(object):
         self.set_comment(comment)
         self._location='.'.join(split_name)
 
+
+    def val2str(self):
+        ''' Returns a string summarizing the results.
+
+        Note if using the default HDF5 storing service the maximum size stored to
+        disk is specified in globally.HDF5_STRCOL_MAX_COMMENT_LENGTH
+        '''
+        return ''
 
 
     def set_comment(self, comment):
@@ -1221,9 +1323,11 @@ class BaseResult(object):
         ''' Returns the name of the result.
 
         Example usage:
-        >>> res = SimpleResult('examples.about.results.result1', comment = 'I am a neat example!')
+
+        >>> res = Result('examples.about.results.result1', comment = 'I am a neat example!')
         >>> print res.get_name()
         >>> 'result1'
+
         '''
         return self._name
     
@@ -1231,9 +1335,11 @@ class BaseResult(object):
         ''' Returns the fullname of the result.
 
         Example usage:
-        >>> res = SimpleResult('examples.about.results.result1', comment = 'I am a neat example!')
+
+        >>> res = Result('examples.about.results.result1', comment = 'I am a neat example!')
         >>> print res.get_fullname()
         >>> 'examples.about.results.result1'
+
         '''
         return self._fullname
 
@@ -1241,14 +1347,16 @@ class BaseResult(object):
         ''' Returns the location of the result.
 
         Example usage:
-        >>> res = SimpleResult('examples.about.results.result1', comment = 'I am a neat example!')
+
+        >>> res = Result('examples.about.results.result1', comment = 'I am a neat example!')
         >>> print res.get_fullname()
         >>> 'examples.about.results'
+
         '''
         return self._location
     
     def gfn(self):
-        ''' Short for :func:`get_fullname'
+        ''' Short for :func:`get_fullname`
         '''
         return self.get_fullname()
     
@@ -1265,12 +1373,18 @@ class BaseResult(object):
         data structures that can be stored to disk.
         Returns a dictionary containing these simple structures.
         Understood basic strucutres are
-        * python natives (int,str,bool,float,complex),
+
+        * python natives (int,str,bool,float,complex)
+
         * python lists and tuples
+
         * numpy natives and arrays of type np.int8-64, np.uint8-64, np.float32-64,
                                             np.complex, np.str
+
         * python dictionaries of the previous types (flat not nested!)
+
         * pandas data frames
+
         * object tables
 
         :return: A dictionary containing basic data structures.
@@ -1295,51 +1409,66 @@ class BaseResult(object):
         raise NotImplementedError('You should implement this!')
 
     def empty(self):
-        ''' Erases all data in the result and afterwards >>is_empty()<< should evaluate True
+        ''' Removes all data from the result.
+
+        If the result has already been stored to disk via a trajectory and a storage service,
+        the data on disk is not affected by `empty`.
+
+        Yet, this function is particularly useful if you have stored very large data to disk
+        and you want to free some memory on RAM but still keep the skeleton of the result.
+
         '''
         raise NotImplementedError('You should implement this!')
 
 
 
 
-class SimpleResult(BaseResult):
+class Result(BaseResult):
     ''' Light Container that stores tables and arrays.
     Note that no sanity checks on individual data is made
     and you have to take care, that your data is understood by the storage service.
     It is assumed that results tend to be large and therefore sanity checks would be too expensive.
 
-    Data that can safely be stored into a SimpleResult are:
+    Data that can safely be stored into a Result are:
+
         * python natives (int,str,bool,float,complex),
+
         * numpy natives and arrays of type np.int8-64, np.uint8-64, np.float32-64,
                                             np.complex, np.str
-        * python dictionaries of the previous types (python natives + numpy natives and arrays
-                                                        flat not nested!)
+
+
         * python lists and tuples of the previous types (python natives + numpy natives and arrays)
+
+        * python dictionaries of the previous types (not nested!)
+
         * pandas data frames
+
         * object tables
 
-    Such values are either set on initialisation of with :func:'set'
+    Such values are either set on initialisation of with :func:`set`
 
     Example usage:
-    >>> res = SimpleResult('supergroup.subgroup.resultname', comment='I am a neat example!' \
+
+    >>> res = Result('supergroup.subgroup.resultname', comment='I am a neat example!' \
         [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
 
     :param fullanme: The fullname of the result, grouping can be achieved are separated by colons,
 
 
     :param comment: A useful comment describing the parameter.
-        The comment can later on be changed using :func:`set_comment' and retrieved using
-        :func:`get_comment'
+        The comment can later on be changed using :func:`set_comment` and retrieved using
+        :func:`get_comment`
         >>> param.get_comment()
         >>> 'I am a neat example!'
 
     :param args: data that is handled by the result, it is kept by the result under the names
         `run%d` with `%d` being the position in the argument list.
-        Can be changed or more can be added via :func:'set'
+        Can be changed or more can be added via :func:`set`
 
     :param kwargs: data that is handled by the result, it is kept by the result under the names
         specified by the keys of kwargs.
-        Can be changed or more can be added via :func:'set'
+        Can be changed or more can be added via :func:`set`
+
         >>> print res.get(0)
         >>> [1000,2000]
 
@@ -1355,12 +1484,12 @@ class SimpleResult(BaseResult):
         >>> print res.get('res0','hitchhiker')
         >>> ([1000,2000], 'ArthurDent')
 
-    Raises an AttributeError if the data in args or kwargs is not supported (but only checks type of
-    outer data structure, like dicts, list, but not individual values in dicts or lists.
 
-    :raises: AttributeError
+    :raises: AttributeError: If the data in args or kwargs is not supported. Checks type of
+                             outer data structure, i.e. checks if you have a list or dictionary.
+                             But it does not check on individual values within dicts or lists.
 
-    Alternatively one can also use :func:'set'
+    Alternatively one can also use :func:`set`
     >>> result.set('Uno',x='y')
     >>> print result.get(0)
     >>> 'Uno'
@@ -1368,7 +1497,7 @@ class SimpleResult(BaseResult):
 
 
     Alternative method to put and retrieve data from the result container is via `__getattr__` and
-    `__setattr__'
+    `__setattr__`
 
     >>> res.ford = 'prefect'
     >>> res.ford
@@ -1377,16 +1506,50 @@ class SimpleResult(BaseResult):
     '''
     def __init__(self, fullname, *args, **kwargs):
         comment = kwargs.pop('comment','')
-        super(SimpleResult,self).__init__(fullname,comment)
+        super(Result,self).__init__(fullname,comment)
         self._data = {}
         self._set_logger()
         self.set(*args,**kwargs)
+        self._short_summary = False
 
 
     def __contains__(self, item):
         return item in self._data
 
 
+    def val2str(self):
+        if not self._short_summary:
+            resstr=''
+            for key,val in iter(sorted(self._data.items())):
+                resstr+= '%s=%s, ' % (key, str(val))
+
+                if len(resstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+                    return resstr
+
+            resstr=resstr[0:-2]
+            return resstr
+        else:
+            resstr = ', '.join(self._data.keys())
+
+            if len(resstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+
+            return resstr
+
+    def set_short_summary(self,boolean):
+        ''' Sets length of summary returned by :func:`val2str`.
+
+        If short summary is `False` (default), :func:`val2str` returns the concatenation of
+        string representation of all contained data.
+        If short summary is 'True', :func:`val2str` returns only the list of names of the contained
+        data.
+
+        :param boolean: True or False
+
+        '''
+        assert isinstance(boolean,bool)
+        self._short_summary=bool
 
     def __str__(self):
         if self.get_comment():
@@ -1397,7 +1560,7 @@ class SimpleResult(BaseResult):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('mypet.parameter.SimpleResult=' + self._fullname)
+        self._logger = logging.getLogger('mypet.parameter.Result=' + self._fullname)
 
 
     def __getstate__(self):
@@ -1416,20 +1579,21 @@ class SimpleResult(BaseResult):
 
     def to_dict(self):
         ''' Returns all handled data as a dictionary (shallow copy)
+
         :return: Shallow copy of the data dictionary
+
         '''
         return self._data.copy()
 
 
     def is_empty(self):
         ''' Ture if no data has been put into the result.
-        Also True if all data has been erased via :func:'empty'
+        Also True if all data has been erased via :func:`_empty`
         '''
         return len(self._data)== 0
 
+    @copydoc(BaseResult.empty)
     def empty(self):
-        ''' Removes all data from the result.
-        '''
         self._data={}
 
     def get_comment(self):
@@ -1477,6 +1641,7 @@ class SimpleResult(BaseResult):
         :raises: AttributeError
 
         Example usage:
+
         >>> res.set_single('answer', 42)
         >>> res.get('answer')
         >>> 42
@@ -1488,7 +1653,7 @@ class SimpleResult(BaseResult):
         if isinstance(item, (np.ndarray,ObjectTable,DataFrame,dict,tuple,list,
                              globally.PARAMETER_SUPPORTED_DATA)):
             if not isinstance(item,globally.PARAMETER_SUPPORTED_DATA) and len(item) == 0:
-                self._logger.warning('The Item >>%s<< is empty.' % name)
+                self._logger.warning('The Item >>%s<< is _empty.' % name)
 
             self._data[name] = item
         else:
@@ -1515,7 +1680,8 @@ class SimpleResult(BaseResult):
         :param item: The item to delete
 
         Example usage:
-        >>> res = SimpleResult('Iam.an.example', comment = 'And a neat one, indeed!', fortytwo=42)
+
+        >>> res = Result('Iam.an.example', comment = 'And a neat one, indeed!', fortytwo=42)
         >>> print 'fortytwo' in res
         >>> True
         >>> del res.fortytwo
@@ -1552,7 +1718,7 @@ class SimpleResult(BaseResult):
 
 
 
-class PickleResult(SimpleResult):
+class PickleResult(Result):
     ''' Result that eats everything and simply pickles it!
     '''
 

@@ -62,7 +62,7 @@ def cartesian_product(param_value_list_dict, combined_parameter_list=[]):
         for idx, param in enumerate(paramtuple):
             value_list = param_value_list_dict[param]
             if not isinstance(value_list, list):
-                raise TypeError(param + ' is not a list, why should I explore it anyway?')
+                raise TypeError(param + ' is not a list, why should I _explore it anyway?')
             
             if idx == 0:
                 param_length = len(value_list)
@@ -85,7 +85,7 @@ def cartesian_product(param_value_list_dict, combined_parameter_list=[]):
                 result_dict[param].append(param_value_list_dict[param][tupidx])
     
     result_combined_list[0]=tuple(result_combined_list[0])
-    return result_dict, result_combined_list
+    return result_dict
             
                 
         

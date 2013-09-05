@@ -5,7 +5,7 @@ Created on 10.06.2013
 '''
 
 
-from mypet.parameter import Parameter, BaseResult, SimpleResult,ObjectTable
+from mypet.parameter import Parameter, BaseResult, Result,ObjectTable
 from brian.units import *
 from brian.stdunits import *
 from brian.fundamentalunits import Unit, Quantity, get_unit
@@ -170,7 +170,7 @@ class BrianParameter(Parameter):
 
 
 
-class BrianMonitorResult(SimpleResult):
+class BrianMonitorResult(Result):
 
 
     table_mode = 'table'
