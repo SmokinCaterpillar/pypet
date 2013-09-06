@@ -175,7 +175,7 @@ class ObjectTable(DataFrame):
 
 
 
-class BaseParameter(object,WithAnnotations):
+class BaseParameter(object):
     '''Abstract class that specifies the methods that need to be implemented for a trajectory
     parameter
 
@@ -1508,7 +1508,7 @@ class BaseResult(object,WithAnnotations):
 
 
 
-class Result(BaseResult):
+class Result(object):
     ''' Light Container that stores tables and arrays.
     Note that no sanity checks on individual data is made
     and you have to take care, that your data is understood by the storage service.

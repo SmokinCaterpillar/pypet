@@ -53,55 +53,44 @@ class TrajOrRun(object):
         return self.get_time()
 
     @property
-    def standard_parameter_(self):
+    def standard_parameter(self):
         ''' The standard parameter used for parameter creation'''
         return self.get_standard_parameter()
 
-    @standard_parameter_.setter
+    @standard_parameter.setter
     def standard_parameter(self, parameter):
         self.set_standard_parameter(parameter)
 
     @property
-    def standard_result_(self):
+    def standard_result(self):
         ''' The standard result class used for result creation '''
-        return self.standard_result
+        return self.get_standard_result()
 
-    @standard_result_.setter
+    @standard_result.setter
     def standard_result(self,result):
         self.set_standard_result(result)
 
     @property
-    def fast_access_(self):
+    def fast_access(self):
         '''Whether parameter instances (False) or their values (True) are returned via natural naming
 
         Default is True.
         '''
+        return self.get_fast_access
 
-    @fast_access_.setter
+    @fast_access.setter
     def fast_acces_(self,value):
         self.set_fast_access(value)
 
     @property
-    def check_uniqueness_(self):
+    def check_uniqueness(self):
         '''Whether natural naming should check if naming is unambigous'''
         return self.get_uniqueness()
 
-    @check_uniqueness_.setter
-    def check_uniqueness_(self,value):
+    @check_uniqueness.setter
+    def check_uniqueness(self,value):
         return self.set_check_uniqueness(value)
 
-
-    def get_standard_parameter(self):
-        raise NotImplementedError('You should implement this!')
-
-    def set_standard_parameter(self,parameter):
-        raise NotImplementedError('You should implement this!')
-
-    def get_standard_result(self):
-        raise NotImplementedError('You should implement this!')
-
-    def set_standard_result(self,result):
-        raise NotImplementedError('You should implement this!')
 
 
     def get_config(self,fast_access=False):
@@ -865,7 +854,7 @@ class NNTreeNode(object):
 
 
 
-class Trajectory(WithAnnotations,TrajOrRun):
+class Trajectory(TrajOrRun):
     '''The trajectory manages results and parameters.
 
 
