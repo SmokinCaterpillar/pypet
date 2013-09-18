@@ -1,14 +1,14 @@
 
 
-from mypet.parameter import *
-from mypet.trajectory import Trajectory, SingleRun
+from pypet.parameter import *
+from pypet.trajectory import Trajectory, SingleRun
 import numpy as np
 import scipy.sparse as spsp
-import mypet.utils.explore as ut
+import pypet.utils.explore as ut
 from multiprocessing import log_to_stderr, get_logger, Pool, freeze_support, Manager
 from multiprocessing.synchronize import Lock
-from mypet.configuration import config
-from mypet.mplogging import  listener_configurer,listener_process,worker_configurer
+from pypet.configuration import config
+from pypet.mplogging import  listener_configurer,listener_process,worker_configurer
 import multiprocessing
 
 
@@ -23,7 +23,7 @@ def do_stuff(args):
     configurer(queue)
     print srun
     assert isinstance(srun, SingleRun)
-    srun.add_parameter(full_parameter_name='foo', **{'bar' : srun._id})
+    srun.f_add_parameter(full_parameter_name='foo', **{'bar' : srun._idx})
     srun.store_to_hdf5(lock)
     #print srun.honky.mirta
     print srun.honky.mirta
@@ -48,11 +48,11 @@ def main():
     config['multiproc'] = True
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     
-    traj.add_parameter('test.testparam', param_type=ParameterSet, **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
+    traj.f_add_parameter('test.testparam', param_type=ParameterSet, **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
 
     traj.last.foo = 'bar'
     
-    traj.add_parameter('Network.Cm')
+    traj.f_add_parameter('Network.Cm')
     
     traj.Parameters.Network.Cm.value= 1.0
     traj.Parameters.Network.Cm.unit = 'pF'
@@ -65,9 +65,9 @@ def main():
     traj.Parameters.test.testparam.Konstantin = 'Konstantin'
     
 
-    traj.add_parameter(full_parameter_name='honky', **{'mirta':np.array([[1,2,7],[3,2,17]])})
+    traj.f_add_parameter(full_parameter_name='honky', **{'mirta':np.array([[1,2,7],[3,2,17]])})
 
-    traj.add_parameter('flonky',**{'val' : 10})
+    traj.f_add_parameter('flonky',**{'val' : 10})
     
     
     param1 = traj.Parameters.test.testparam
@@ -87,17 +87,17 @@ def main():
     
     cmb_list=[(param3.gfn('val'),param1.gfn('Sapiens'))]
     
-    traj.add_derived_parameter(full_parameter_name='foo', **{'bar' : -1}).moo = 'zip'
+    traj.f_add_derived_parameter(full_parameter_name='foo', **{'bar' : -1}).moo = 'zip'
     
     lilma = spsp.lil_matrix((10000,1000))
     lilma[0,100] = 555
     lilma[9999,999] = 11
-    traj.add_parameter('sparse', mat=lilma, param_type = SparseParameter)
+    traj.f_add_parameter('sparse', mat=lilma, param_type = SparseParameter)
     
-    traj.explore(ut.cartesian_product,explore_dict,cmb_list)
+    traj.f_explore(ut.cartesian_product,explore_dict,cmb_list)
     
-    traj.prepare_experiment()
-    it = ((traj.make_single_run(n),lock,queue,worker_configurer) for n in xrange(len(traj)))
+    traj._prepare_experiment()
+    it = ((traj._make_single_run(n),lock,queue,worker_configurer) for n in xrange(len(traj)))
     moo = pool.imap(do_stuff, it)
     
 

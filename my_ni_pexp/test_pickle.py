@@ -3,13 +3,13 @@ Created on 20.05.2013
 
 @author: robert
 '''
-from mypet.parameter import *
-from mypet.trajectory import *
+from pypet.parameter import *
+from pypet.trajectory import *
 import numpy as np
 import scipy.sparse as spsp
-import mypet.utils.explore as ut
+import pypet.utils.explore as ut
 import pickle
-from mypet.configuration import config
+from pypet.configuration import config
 
 
 
@@ -21,12 +21,12 @@ def main():
     #traj.load_trajectory(trajectoryname='MyTrajectory_2013_05_23_14h29m26s')
     traj.adp(full_parameter_name='foo', **{'bar' : -1}).moo = 'zip'
     
-    traj.add_parameter('test.testparam', **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
+    traj.f_add_parameter('test.testparam', **{'Fuechse':1,'Sapiens':1,'Comment':'ladida'})
 
 
     traj.last.foo = 'bar'
     
-    traj.add_parameter('Network.Cm')
+    traj.f_add_parameter('Network.Cm')
     
     traj.Network.Cm.value= 1.0
     traj.Network.Cm.unit = 'pF'
@@ -40,9 +40,9 @@ def main():
     
     print traj.last.herbert
 
-    traj.add_parameter(full_parameter_name='honky', param_type=ParameterSet, **{'mirta':np.array([[1,2,7],[3,2,17]])})
+    traj.f_add_parameter(full_parameter_name='honky', param_type=ParameterSet, **{'mirta':np.array([[1,2,7],[3,2,17]])})
 
-    traj.add_parameter('flonky',**{'val' : 10})
+    traj.f_add_parameter('flonky',**{'val' : 10})
     
     param1 = traj.Parameters.test.testparam
     param2 = traj.Parameters.honky
@@ -61,7 +61,7 @@ def main():
     
     cmb_list=[(param3.gfn('val'),param1.gfn('Sapiens'))]
     
-    traj.explore(ut.cartesian_product,explore_dict,cmb_list)
+    traj.f_explore(ut.cartesian_product,explore_dict,cmb_list)
 
     pfile = open('../experiments/pickle.txt','wb')
     
@@ -76,7 +76,7 @@ def main():
     pfile.close()
     
     
-    srun = traj2.make_single_run(2)
+    srun = traj2._make_single_run(2)
     
     pfile = open('../experiments/pickle2.txt','wb')
     

@@ -4,15 +4,15 @@ Created on 05.06.2013
 @author: robert
 '''
 
-from mypet.environment import Environment
-from mypet.trajectory import SingleRun, Trajectory
-from mypet.utils.explore import identity
-from mypet.configuration import config
-from mypet.parameter import Result
+from pypet.environment import Environment
+from pypet.trajectory import SingleRun, Trajectory
+from pypet.utils.explore import identity
+from pypet.configuration import config
+from pypet.parameter import Result
 
 import multiprocessing as multip
 import logging
-from mypet.brian.parameter import BrianParameter
+from pypet.brian.parameter import BrianParameter
 
 def test_run(traj, to_print):
     
@@ -21,11 +21,11 @@ def test_run(traj, to_print):
     print to_print
     
     x = traj.x.value
-    y = traj.add_derived_parameter('y')
+    y = traj.f_add_derived_parameter('y')
     y.val = x**2
     
     smurf = Result('','','','')
-    z = traj.add_result('Nada.Moo',smurf)
+    z = traj.f_add_result('Nada.Moo',smurf)
     
     z.val = y()+1
     
@@ -41,13 +41,13 @@ env = Environment(trajectory='MyExperiment', filename='../experiments/env.hdf5',
 
 traj = env.get_trajectory()
 assert isinstance(traj, Trajectory)
-par=traj.add_parameter('x',param_type=BrianParameter, value=3, unit = 'mV')
+par=traj.f_add_parameter('x',param_type=BrianParameter, value=3, unit = 'mV')
 par.hui='buh'
 print par()
 print par.val
 
 
-traj.explore(identity, {traj.x.gfn('value'):[1,2,3,4]})
+traj.f_explore(identity, {traj.x.gfn('value'):[1,2,3,4]})
 
 env.run(test_run,to_print='test')
 

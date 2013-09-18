@@ -50,7 +50,7 @@ def main():
     buggy_obj = BuggyObject()
     
     buggy_obj._add('I_am_so_short!', 42)
-    buggy_obj._add('_root.DerivedParameters.WeightDist_STDP_Trajectory_2013_07_12_14h09m54s.Sim.dummy2', 42)
+    buggy_obj._add('_root_instance.DerivedParameters.WeightDist_STDP_Trajectory_2013_07_12_14h09m54s.Sim.dummy2', 42)
    
     
 
