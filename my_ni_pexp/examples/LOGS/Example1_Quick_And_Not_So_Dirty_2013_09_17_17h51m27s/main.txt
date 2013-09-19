@@ -1,0 +1,147 @@
+2013-09-17 17:51:27,236 MainProcess mypet.environment.Environment INFO     Environment initialized.
+2013-09-17 17:51:27,244 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing Trajectory Example1_Quick_And_Not_So_Dirty_2013_09_17_17h51m27s.
+2013-09-17 17:51:27,371 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing Trajectory.
+2013-09-17 17:51:27,381 MainProcess root INFO     
+--------------------------------
+ Starting single run #0 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,381 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,383 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 0 with name run_00000000.
+2013-09-17 17:51:27,403 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 0 with name run_00000000
+2013-09-17 17:51:27,404 MainProcess root INFO     
+--------------------------------
+ Finished single run #0 of 12 
+--------------------------------
+2013-09-17 17:51:27,405 MainProcess root INFO     
+--------------------------------
+ Starting single run #1 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,405 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,407 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 1 with name run_00000001.
+2013-09-17 17:51:27,428 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 1 with name run_00000001
+2013-09-17 17:51:27,429 MainProcess root INFO     
+--------------------------------
+ Finished single run #1 of 12 
+--------------------------------
+2013-09-17 17:51:27,429 MainProcess root INFO     
+--------------------------------
+ Starting single run #2 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,430 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,431 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 2 with name run_00000002.
+2013-09-17 17:51:27,468 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 2 with name run_00000002
+2013-09-17 17:51:27,477 MainProcess root INFO     
+--------------------------------
+ Finished single run #2 of 12 
+--------------------------------
+2013-09-17 17:51:27,478 MainProcess root INFO     
+--------------------------------
+ Starting single run #3 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,478 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,487 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 3 with name run_00000003.
+2013-09-17 17:51:27,565 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 3 with name run_00000003
+2013-09-17 17:51:27,568 MainProcess root INFO     
+--------------------------------
+ Finished single run #3 of 12 
+--------------------------------
+2013-09-17 17:51:27,569 MainProcess root INFO     
+--------------------------------
+ Starting single run #4 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,569 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,572 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 4 with name run_00000004.
+2013-09-17 17:51:27,604 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 4 with name run_00000004
+2013-09-17 17:51:27,606 MainProcess root INFO     
+--------------------------------
+ Finished single run #4 of 12 
+--------------------------------
+2013-09-17 17:51:27,607 MainProcess root INFO     
+--------------------------------
+ Starting single run #5 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,607 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,609 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 5 with name run_00000005.
+2013-09-17 17:51:27,629 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 5 with name run_00000005
+2013-09-17 17:51:27,630 MainProcess root INFO     
+--------------------------------
+ Finished single run #5 of 12 
+--------------------------------
+2013-09-17 17:51:27,630 MainProcess root INFO     
+--------------------------------
+ Starting single run #6 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,631 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,633 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 6 with name run_00000006.
+2013-09-17 17:51:27,656 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 6 with name run_00000006
+2013-09-17 17:51:27,657 MainProcess root INFO     
+--------------------------------
+ Finished single run #6 of 12 
+--------------------------------
+2013-09-17 17:51:27,658 MainProcess root INFO     
+--------------------------------
+ Starting single run #7 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,658 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,660 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 7 with name run_00000007.
+2013-09-17 17:51:27,697 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 7 with name run_00000007
+2013-09-17 17:51:27,700 MainProcess root INFO     
+--------------------------------
+ Finished single run #7 of 12 
+--------------------------------
+2013-09-17 17:51:27,701 MainProcess root INFO     
+--------------------------------
+ Starting single run #8 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,702 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,705 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 8 with name run_00000008.
+2013-09-17 17:51:27,744 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 8 with name run_00000008
+2013-09-17 17:51:27,746 MainProcess root INFO     
+--------------------------------
+ Finished single run #8 of 12 
+--------------------------------
+2013-09-17 17:51:27,746 MainProcess root INFO     
+--------------------------------
+ Starting single run #9 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,747 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,749 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 9 with name run_00000009.
+2013-09-17 17:51:27,793 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 9 with name run_00000009
+2013-09-17 17:51:27,794 MainProcess root INFO     
+--------------------------------
+ Finished single run #9 of 12 
+--------------------------------
+2013-09-17 17:51:27,794 MainProcess root INFO     
+--------------------------------
+ Starting single run #10 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,795 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,797 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 10 with name run_00000010.
+2013-09-17 17:51:27,820 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 10 with name run_00000010
+2013-09-17 17:51:27,822 MainProcess root INFO     
+--------------------------------
+ Finished single run #10 of 12 
+--------------------------------
+2013-09-17 17:51:27,822 MainProcess root INFO     
+--------------------------------
+ Starting single run #11 of 12 
+--------------------------------
+
+2013-09-17 17:51:27,822 MainProcess root INFO     Evoke Storing (Either storing directly or sending trajectory to queue)
+2013-09-17 17:51:27,824 MainProcess mypet.storageservice_HDF5StorageService INFO     Start storing run 11 with name run_00000011.
+2013-09-17 17:51:27,845 MainProcess mypet.storageservice_HDF5StorageService INFO     Finished storing run 11 with name run_00000011
+2013-09-17 17:51:27,846 MainProcess root INFO     
+--------------------------------
+ Finished single run #11 of 12 
+--------------------------------
