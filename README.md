@@ -6,7 +6,7 @@ The new python parameter exploration toolbox. pyPET manages exploration of the p
 data storage for you. Currently supported storage is _HDF5!
 
 --------------------------------
-What is PET all about?
+What is pyPET all about?
 --------------------------------
 
 
@@ -33,7 +33,7 @@ you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your results together and store everything appropriately to disk.
-Currently the storage method of choice is _HDF5.
+Currently the storage method of choice is HDF5.
 
 
 ---------------------------
