@@ -121,6 +121,7 @@ store the trajectory into, the title of the file, a folder for the log files, an
 comment that is added to the trajectory.
 The environment will automatically generate a trajectory for us which we can access via:
 
+
 ..code-block::python
 
     # Get the trajectory from the environment
