@@ -123,6 +123,7 @@ class NNLeafNode(NNTreeNode):
     def __init__(self,full_name,comment,parameter):
         super(NNLeafNode,self).__init__(full_name=full_name,root=False,leaf=True)
         self._parameter=parameter
+        self._fast_accessible = parameter
 
         self._comment=''
         self.v_comment=comment
@@ -145,6 +146,10 @@ class NNLeafNode(NNTreeNode):
         self._comment=comment
 
 
+    @property
+    def v_fast_accessible(self):
+        '''Whether or not fast access can be supported by the Parameter or Result'''
+        return self._fast_accessible
 
     @property
     def v_parameter(self):
@@ -425,7 +430,20 @@ class NaturalNamingInterface(object):
             elif full_name in root._results:
                 del root._results[full_name]
 
+            if full_name in root._explored_parameters:
+                del root._explored_parameters[full_name]
+
+                if len(root._explored_parameters)==0:
+                    if root._stored:
+                       self._logger.warning('You removed an explored parameter, but your '
+                                            'trajectory was already stored to disk. So it is '
+                                            'not shrunk!')
+                    else:
+                        root.f_shrink()
+
             del self._flat_storage_dict[full_name]
+
+
 
         else:
             del root._groups[full_name]
@@ -856,7 +874,7 @@ class NaturalNamingInterface(object):
     @staticmethod
     def _get_result(data, fast_access):
 
-        if fast_access and data.v_parameter:
+        if fast_access and data.v_fast_accessible:
             return data.f_get()
         else:
             return data

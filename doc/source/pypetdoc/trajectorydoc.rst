@@ -5,7 +5,7 @@ The Trajectory, Single Runs and Group Nodes
 --------------------
 Trajectory
 --------------------
-.. autoclass:: mypet.trajectory.Trajectory
+.. autoclass:: pypet.trajectory.Trajectory
     :members:
 
 
@@ -13,7 +13,7 @@ Trajectory
 -------------------
 SingleRun
 -------------------
-.. autoclass:: mypet.trajectory.SingleRun
+.. autoclass:: pypet.trajectory.SingleRun
     :members:
 
 
@@ -21,7 +21,7 @@ SingleRun
 NNGroupNode
 -------------------
 
-.. autoclass:: mypet.naturalnaming.NNGroupNode
+.. autoclass:: pypet.naturalnaming.NNGroupNode
     :members:
     :inherited-members:
 
@@ -30,7 +30,7 @@ NNGroupNode
 ParameterGroup
 -------------------
 
-.. autoclass:: mypet.naturalnaming.ParameterGroup
+.. autoclass:: pypet.naturalnaming.ParameterGroup
     :members:
 
 
@@ -38,20 +38,20 @@ ParameterGroup
 ConfigGroup
 -------------------
 
-.. autoclass:: mypet.naturalnaming.ConfigGroup
+.. autoclass:: pypet.naturalnaming.ConfigGroup
     :members:
 
 -------------------
 DerivedParameterGroup
 -------------------
 
-.. autoclass:: mypet.naturalnaming.DerivedParameterGroup
+.. autoclass:: pypet.naturalnaming.DerivedParameterGroup
     :members:
 
 -------------------
 ResultGroup
 -------------------
 
-.. autoclass:: mypet.naturalnaming.ResultGroup
+.. autoclass:: pypet.naturalnaming.ResultGroup
     :members:
 

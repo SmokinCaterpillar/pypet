@@ -9,7 +9,7 @@ dirty way. Storing stuff into text files, as MATLAB m-files, or whatever comes i
 
 After a while and many simulations later, you want to look back at some of your very
 first results. But because of
-unforeseen circumstances you changed lots of your code. As a consequence, you can no longer
+unforeseen circumstances, you changed lots of your code. As a consequence, you can no longer
 use your old data, but you need to write a hacky converter to format your previous results
 to your new needs.
 The more complexity you add to your simulations, the worse it gets, and you spend way
@@ -33,20 +33,13 @@ Currently the storage method of choice is _HDF5.
 Getting Started
 ==============================
 
-This project encompasses four core modules:
 
- *  The :mod:`mypet.parameters` module including  containers for parameters and results,
+A *trajectory* is a the basic container for *parameters* and results of numerical simulations
+in python. In fact a *trajectory* instantiates a tree and the
+tree structure will be mapped one to one in the hdf5 file if you store data to disk.
+As said before a *trajectory* contains *parameters* the basic building blocks that
+entirely define
 
- *  The :mod:`mypet.trajectory` module for managing the parameters and results,
-    and providing a way to *_explore* your parameter space. Somewhat related is also the
-    `mypet.naturalnaming` module, that provides functionality to access and put data into
-    the *trajectory*.
-
- *  The :mod:`mypet.environment` module for handling the running of simulations.
-
- *  The :mod:`mypet.storageservice` for saving your data to disk. If you are satisfied with
-    the given service to store everything into HDF5 files, you do not need to worry about this
-    at all.
 
 --------------------------------
 Quick (and not so Dirty) Example
@@ -64,8 +57,8 @@ Let's take a look at the snippet at once:
 
 .. code-block:: python
 
-    from mypet.environment import Environment
-    from mypet.utils.explore import cartesian_product
+    from pypet.environment import Environment
+    from pypet.utils.explore import cartesian_product
 
 
     def multiply(traj):
@@ -101,7 +94,7 @@ values:
         z=traj.x * traj.y
         traj.f_add_result('z',z=z)
 
-This is our function multiply. The function gets a so called :class:`~mypet.trajectory.Trajectory`
+This is our function multiply. The function gets a so called :class:`~pypet.trajectory.Trajectory`
 container which manages our parameters. We can access the parameters simply by natural naming,
 as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result to the `traj` object.
 
@@ -138,8 +131,8 @@ of :math:`x=y=1.0`
 
 Well, calculating :math:`1.0*1.0` is quite boring, we want to figure out more products, that is
 the results of the cartesian product set :math:`\{1.0,2.0,3.0,4.0\} \times \{6.0,7.0,8.0\}`.
-Therefore we use :func:`~mypet.trajectory.Trajectory.explore` in combination with the builder function
-:func:`~mypet.utils.explore.cartesian_product`.
+Therefore we use :func:`~pypet.trajectory.Trajectory.explore` in combination with the builder function
+:func:`~pypet.utils.explore.cartesian_product`.
 
 Finally, we need to tell the environment to run our job `multiply`
 

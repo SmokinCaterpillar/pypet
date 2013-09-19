@@ -4,7 +4,7 @@ Parameters and Results
 --------------------
 Parameter
 --------------------
-.. autoclass:: mypet.parameter.Parameter
+.. autoclass:: pypet.parameter.Parameter
     :members:
     :inherited-members:
 
@@ -12,14 +12,14 @@ Parameter
 ArrayParameter
 ----------------------
 
-.. autoclass:: mypet.parameter.ArrayParameter
+.. autoclass:: pypet.parameter.ArrayParameter
     :members:
 
 ----------------------
 PickelParameter
 ----------------------
 
-.. autoclass:: mypet.parameter.PickleParameter
+.. autoclass:: pypet.parameter.PickleParameter
     :members:
 
 
@@ -27,7 +27,7 @@ PickelParameter
 Result
 -----------------------
 
-.. autoclass:: mypet.parameter.Result
+.. autoclass:: pypet.parameter.Result
     :members:
     :inherited-members:
 
@@ -35,6 +35,6 @@ Result
 PickleResult
 ----------------------------
 
-.. autoclass:: mypet.parameter.PickleResult
+.. autoclass:: pypet.parameter.PickleResult
     :members:
 

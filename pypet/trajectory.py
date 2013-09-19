@@ -1001,7 +1001,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def __len__(self):
-        if hasattr(self,'_run_information'):
+        if hasattr(self,'_run_information') and len(self._run_information)>0:
             return len(self._run_information)
         else:
             return self._length_during_run
