@@ -20,14 +20,14 @@ So this project was born. I wanted to tackle the IO problems more generally and 
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
-The python parameter exploration toolkit (*pyPET*) provides a framework to define *parameters* that
+The **python parameter exploration toolkit** (*pyPET*) provides a framework to define *parameters* that
 you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your results together and store everything appropriately to disk.
-Currently the storage method of choice is _HDF5.
+Currently the storage method of choice is HDF5_.
 
-.. HDF5: http://www.hdfgroup.org/HDF5/
+.. _HDF5: http://www.hdfgroup.org/HDF5/
 
 
 ==============================
@@ -65,19 +65,19 @@ And that's why the container is called *trajectory*.
 
 For each *run* of your simulation, with a particular combination of cars and pedestrians, you
 record time series data of traffic densities at major sites in Rome. This time series data
-(let's say they are _pandas data frames) can also be added to your *trajectory* container.
+(let's say they are pandas_ data frames) can also be added to your *trajectory* container.
 In the end everything will be stored to disk. The storage is handled by an
 extra service to store the *trajectory* into an
-_HDF5 file on your hard drive. Probably other formats like SQL will come soon (or maybe you
+HDF5_ file on your hard drive. Probably other formats like SQL will come soon (or maybe you
 want to contribute some code, and write an SQL storage service?).
 
 An example (way less sophisticated than traffic simulations)
 of a numerical simulation handled by *pyPET* is given below.
 
 
-.. HDF5: http://www.hdfgroup.org/HDF5/
+.. _HDF5: http://www.hdfgroup.org/HDF5/
 
-.. pandas: http://pandas.pydata.org/
+.. _pandas: http://pandas.pydata.org/
 
 
 
@@ -187,3 +187,51 @@ we will see that our results have been stored right in there, and, of course, th
 our parameters is included, too.
 
 .. image:: /figures/example_01.png
+
+
+
+------------------------------
+Main Features
+------------------------------
+
+* **Novel tree container** :class:`~pypet.trajectory.Trajectory`, for handling and managing of
+  parameters and results of numerical simulations
+
+* **Grouping** of parameters and results
+
+* Accessing handled items via **natural naming**: eg: `traj.parameters.traffic.ncars`
+
+* Support for many different **data formats**
+
+    * python native data types: bool, int, float, str, complex
+
+    * Numpy arrays and matrices
+
+    * list, tuple, dict
+
+    * pandas_ DataFrames
+
+    * Brian_ Qunatities
+
+    * Brian_ Monitors
+
+* Easily **extensible** to other data formats!
+
+* **Exploration** of the parameter space of your simulations
+
+* **Merging** of *trajectories* residing in the same space
+
+* Support for **multiprocessing**, distributing of individual simulation runs to several
+  processes.
+
+* **Storage** of simulation data, i.e. the *trajectory*, *parameters*, and *results* into
+  **HDF5** files
+
+* **Resuming** a crashed simulation (maybe due to power shut down) after the latest completed run
+
+* **Annotations** of parameters, results in groups, that are stored as _HDF5 node attributes
+
+
+.. _pandas: http://pandas.pydata.org/
+
+.. _Brian: http://briansimulator.org/
