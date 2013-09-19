@@ -3,8 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to P37's documentation!
+Welcome to pyPET's documentation!
 ===============================
+
+The new python parameter exploration toolbox. pyPET manages exploration of the parameter space and
+data storage for you. Currently supported storage is HDF5!
 
 Contents:
 
