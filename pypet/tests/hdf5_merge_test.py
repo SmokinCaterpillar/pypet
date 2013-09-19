@@ -171,8 +171,8 @@ class MergeTest(unittest.TestCase):
 
         logging.basicConfig(level = logging.DEBUG)
 
-        #self.filename = '../../Test/HDF5/test.hdf5'
-        logfolder = '../../Test/Log'
+        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        logfolder = '../../experiments/tests/Log'
         trajname = 'Test%d' % idx
 
         env = Environment(trajectory=trajname,filename=filename,file_title=trajname, log_folder=logfolder)
@@ -185,34 +185,34 @@ class MergeTest(unittest.TestCase):
 
     @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0, 0]
         self.merge_basic_only_adding_more_trials(True)
 
     @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_move_nodes(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0, 0]
         self.merge_basic_only_adding_more_trials(False)
 
     @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_basic_within_same_file_and_skipping_duplicates_which_will_be_all(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0]
         self.basic_and_skipping_duplicates_which_will_be_all()
 
 
     @unittest.skipIf(SINGLETEST != [0] and 4 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_basic_within_same_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0, 0]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
 
     @unittest.skipIf(SINGLETEST != [0] and 5 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials(self):
-        self.filenames = ['../../Test/HDF5/merge2.hdf5', '../../Test/HDF5/merge3.hdf5', '../../Test/HDF5/merge4.hdf5']
+        self.filenames = ['../../experiments/tests/HDF5/merge2.hdf5', '../../experiments/tests/HDF5/merge3.hdf5', '../../experiments/tests/HDF5/merge4.hdf5']
         self.merge_basic_only_adding_more_trials(True)
 
     @unittest.skipIf(SINGLETEST != [0] and 6 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes_test_backup(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0, 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0, 0]
         self.merge_basic_only_adding_more_trials_with_backup(True)
 
     def merge_basic_only_adding_more_trials(self,copy_nodes):

@@ -116,7 +116,7 @@ class NetworkTest(unittest.TestCase):
         logging.basicConfig(level = logging.DEBUG)
 
 
-        env = Environment(trajectory='Test',filename='../../Brian/HDF5/test.hdf5',file_title='test', log_folder='../../Brian/log')
+        env = Environment(trajectory='Test',filename='../../experiments/tests/brian/HDF5/test.hdf5',file_title='test', log_folder='../../experiments/tests/brian/log')
 
         traj = env.get_trajectory()
 

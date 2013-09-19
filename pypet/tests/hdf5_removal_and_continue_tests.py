@@ -174,8 +174,8 @@ class ContinueTest(unittest.TestCase):
 
         logging.basicConfig(level = logging.DEBUG)
 
-        #self.filename = '../../Test/HDF5/test.hdf5'
-        logfolder = '../../Test/Log'
+        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        logfolder = '../../experiments/tests/Log'
         trajname = 'Test%d' % idx
 
         env = Environment(trajectory=trajname,filename=filename,file_title=trajname, log_folder=logfolder)
@@ -195,7 +195,7 @@ class ContinueTest(unittest.TestCase):
     @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, '
                                                                'single debug is not pointing to the function ')
     def test_continueing(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0]
 
 
 
@@ -249,7 +249,7 @@ class ContinueTest(unittest.TestCase):
     @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, '
                                                                'single debug is not pointing to the function ')
     def test_removal(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0]
 
 
 
@@ -305,7 +305,7 @@ class ContinueTest(unittest.TestCase):
     @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, '
                                                 'single debug is not pointing to the function ')
     def test_multiple_storage_and_loading(self):
-        self.filenames = ['../../Test/HDF5/merge1.hdf5', 0]
+        self.filenames = ['../../experiments/tests/HDF5/merge1.hdf5', 0]
 
 
 

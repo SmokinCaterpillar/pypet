@@ -25,8 +25,8 @@ class EnvironmentTest(unittest.TestCase):
 
         logging.basicConfig(level = logging.DEBUG)
 
-        self.filename = '../../Test/HDF5/test.hdf5'
-        self.logfolder = '../../Test/Log'
+        self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        self.logfolder = '../../experiments/tests/Log'
         self.trajname = 'Test'
 
         env = Environment(self.trajname,self.filename,self.trajname, log_folder=self.logfolder)
