@@ -17,7 +17,7 @@ Parameters
 
 A specific container is the so called parameter container (Base API is found in BaseParameter
 class) it is used to keep data that is explicitly required as parameters for your simulations.
-For example, this could bethe numbers or cars for traffic jam simulations, or for
+For example, this could be the numbers or cars for traffic jam simulations, or for
 brain simulations the number of neurons, conductances of ion channels etc.
 
 Parameter containers fulfill four further important

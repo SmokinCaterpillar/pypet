@@ -1,5 +1,5 @@
 ================================
-What is P37 all about?
+What is pyPET all about?
 ================================
 
 Whenever you do numerical simulations in science, you come across two major problems.
@@ -20,7 +20,8 @@ So this project was born. I wanted to tackle the IO problems more generally and 
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
-This toolset provides a framework to define *parameters* that you need to run your simulations.
+The python parameter exploration toolkit (*pyPET*) provides a framework to define *parameters* that
+you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your results together and store everything appropriately to disk.
@@ -30,15 +31,54 @@ Currently the storage method of choice is _HDF5.
 
 
 ==============================
-Getting Started
+What to do with pyPET?
 ==============================
 
-
-A *trajectory* is a the basic container for *parameters* and results of numerical simulations
+The whole project evolves around a novel container object called *trajectory*.
+A *trajectory* is a container for *parameters* and *results* of numerical simulations
 in python. In fact a *trajectory* instantiates a tree and the
 tree structure will be mapped one to one in the hdf5 file if you store data to disk.
+But more on that later.
+
 As said before a *trajectory* contains *parameters* the basic building blocks that
-entirely define
+completely define the initial conditions of your numerical simulations. Usually these are
+very basic data types, like integers, floats or maybe a bit more complex numpy arrays.
+
+For example, you have written a set functions that simulate traffic
+jam on roads in Rome. Your simulation takes a lot of *parameters*, the amount of
+cars (integer), their potential destinations (numpy array of strings),
+number of pedestrians (integer),
+random number generator seeds (numpy integer array), open parking spots in Rome
+(Your *parameter* is probably None here), and all other sorts of things.
+These values are added to your *trajectory* container and can be retrieved from there
+during the runtime of your simulation.
+
+Doing numerical simulations usually means that you cannot find analytical solutions to your
+problems. Accordingly, you want to evaluate your simulations on very different *parameter* settings
+and investigate the effect of changing the *parameters*. To phrase that differently, you want to
+*explore* the parameter space. Coming back to the traffic jam simulations, you could tell your
+*trajectory* that you want to investigate how different amounts of cars and pedestrians
+influence traffic problems in Rome. So you define sets of combinations of cars and pedestrians
+and make individual simulation *runs* for these sets. To phrase that differently, you follow a predefined
+*trajectory* of points through your *parameter* space.
+And that's why the container is called *trajectory*.
+
+For each *run* of your simulation, with a particular combination of cars and pedestrians, you
+record time series data of traffic densities at major sites in Rome. This time series data
+(let's say they are _pandas data frames) can also be added to your *trajectory* container.
+In the end everything will be stored to disk. The storage is handled by an
+extra service to store the *trajectory* into an
+_HDF5 file on your hard drive. Probably other formats like SQL will come soon (or maybe you
+want to contribute some code, and write an SQL storage service?).
+
+An example (way less sophisticated than traffic simulations)
+of a numerical simulation handled by *pyPET* is given below.
+
+
+.. HDF5: http://www.hdfgroup.org/HDF5/
+
+.. pandas: http://pandas.pydata.org/
+
 
 
 --------------------------------
@@ -48,10 +88,10 @@ Quick (and not so Dirty) Example
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
 
-Well, what we have in mind is some sort of simulation. For now we will keep it simple,
+Well, what we have in mind is some sort of numerical simulation. For now we will keep it simple,
 let's say we need to simulate the multiplication of 2 values, i.e. :math:`z=x*y`
 We have two objectives, a) we want to store results of this simulation :math:`z` and
-b) we want to _explore the parameter space and try different values of :math:`x` and :math:`y`.
+b) we want to *explore* the parameter space and try different values of :math:`x` and :math:`y`.
 
 Let's take a look at the snippet at once:
 
@@ -67,7 +107,7 @@ Let's take a look at the snippet at once:
 
 
     # Create and environment that handles running
-    env = Environment(trajectory='Example1_No1',filename='./HDF/example1_quick_and_dirty.hdf5',
+    env = Environment(trajectory='Example1_No1',filename='./HDF/example_01.hdf5'',
                       file_title='ExampleNo1', log_folder='./LOGS/')
 
     # Get the trajectory from the environment
@@ -96,7 +136,8 @@ values:
 
 This is our function multiply. The function gets a so called :class:`~pypet.trajectory.Trajectory`
 container which manages our parameters. We can access the parameters simply by natural naming,
-as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result to the `traj` object.
+as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result object to the
+`traj` container.
 
 After the definition of the job that we want to simulate, we create an environment which
 will run the simulation.
@@ -132,7 +173,7 @@ of :math:`x=y=1.0`
 Well, calculating :math:`1.0*1.0` is quite boring, we want to figure out more products, that is
 the results of the cartesian product set :math:`\{1.0,2.0,3.0,4.0\} \times \{6.0,7.0,8.0\}`.
 Therefore we use :func:`~pypet.trajectory.Trajectory.explore` in combination with the builder function
-:func:`~pypet.utils.explore.cartesian_product`.
+:func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both parameters.
 
 Finally, we need to tell the environment to run our job `multiply`
 

@@ -12,8 +12,8 @@ def multiply(traj):
 
 
 # Create and environment that handles running
-env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='./HDF/example_01.hdf5',
-                  file_title='Example1_Quick_And_Not_So_Dirty', log_folder='./LOGS/')
+env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='../experiments/example_01/HDF5/example_01.hdf5',
+                  file_title='Example1_Quick_And_Not_So_Dirty', log_folder='../experiments/exampl_e01/LOGS/')
 
 # Get the trajectory from the environment
 traj = env.get_trajectory()

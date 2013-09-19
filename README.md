@@ -5,9 +5,10 @@ pyPET
 The new python parameter exploration toolbox. pyPET manages exploration of the parameter space and
 data storage for you. Currently supported storage is _HDF5!
 
-================================
-What is P37 all about?
-================================
+--------------------------------
+What is PET all about?
+--------------------------------
+
 
 Whenever you do numerical simulations in science, you come across two major problems.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
@@ -27,13 +28,13 @@ So this project was born. I wanted to tackle the IO problems more generally and 
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
-This toolset provides a framework to define *parameters* that you need to run your simulations.
+The python parameter exploration toolkit (*pyPET*) provides a framework to define *parameters* that
+you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your results together and store everything appropriately to disk.
 Currently the storage method of choice is _HDF5.
 
-.. HDF5: http://www.hdfgroup.org/HDF5/
 
 ---------------------------
 Organization
@@ -66,7 +67,7 @@ Quick Working Example
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
 
-Well, what we have in mind is some sort of simulation. For now we will keep it simple,
+Well, what we have in mind is some sort of numerical simulation. For now we will keep it simple,
 let's say we need to simulate the multiplication of 2 values, i.e. :math:`z=x*y`
 We have two objectives, a) we want to store results of this simulation :math:`z` and
 b) we want to _explore the parameter space and try different values of :math:`x` and :math:`y`.
@@ -132,8 +133,6 @@ store the trajectory into, the title of the file, a folder for the log files, an
 comment that is added to the trajectory.
 The environment will automatically generate a trajectory for us which we can access via:
 
-
-..code-block::python
 
     # Get the trajectory from the environment
     traj = env.get_trajectory()
