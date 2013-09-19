@@ -94,7 +94,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._dynamic_imports = parent_trajectory._dynamic_imports
 
-        self._logger = logging.getLogger('my_ni_pexp.trajectory.SingleRun=' + self.v_name)
+        self._logger = logging.getLogger('pypet.trajectory.SingleRun=' + self.v_name)
 
         self._is_run = True
 
@@ -107,7 +107,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger(
-            'my_ni_pexp.trajectory.SingleRun=' + self.v_name)
+            'pypet.trajectory.SingleRun=' + self.v_name)
 
 
     def __len__(self):
@@ -186,7 +186,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         '''Whether natural naming should check if naming is unambiguous
 
         Default is False. If True, searching a parameter or result via
-        :func'~my_ni_pexp.naturalnaming.NNGroupNode.f_get` will take O(N), because all nodes have
+        :func'~pypet.naturalnaming.NNGroupNode.f_get` will take O(N), because all nodes have
         to be visited!
 
         '''
@@ -380,7 +380,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._storage_service.store(globally.SINGLE_RUN, self, trajectory_name=self.v_trajectory_name)
 
     def f_store_item(self,item,*args,**kwargs):
-        ''' Stores a single item, see also :func:`~my_ni_pexp.trajectory.SingleRun.f_store_items`.
+        ''' Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`.
         '''
         self.f_store_items([item],*args,**kwargs)
 
@@ -402,7 +402,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         :param kwargs: additional keyword arguments passed to the storage service
 
         :raises: TypeError: If the (parent) trajectory has never been stored to disk. In this case
-                            use :func:'my_ni_pexp.trajectory.f_store` first.
+                            use :func:'pypet.trajectory.f_store` first.
 
                 ValueError: If no item could be found to be stored.
 
@@ -464,16 +464,16 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         In fact, if you use the default runtime environment of this project, the environment
         will add some config parameters to your trajectory.
 
-        The method to add these is :func:`~my_ni_pexp.naturalnaming.ConfigGroup.f_add_config`
+        The method to add these is :func:`~pypet.naturalnaming.ConfigGroup.f_add_config`
 
     * Parameters:
 
         These are your primary ammunition in numerical simulations. They specify
         how your simulation works. They can only be added before the actual
         running of the simulation exploring the parameter space. They can be
-        added via :func:`~my_ni_pexp.naturalnaming.ParameterGroup.f_add_parameter`
-        and be explored using :func:`~my_ni_pexp.trajectory.Trajectory.f_explore`.
-        Or to expand an existing trajectory use :func:`~my_ni_pexp.trajectory.Trajectory.f_expand`.
+        added via :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter`
+        and be explored using :func:`~pypet.trajectory.Trajectory.f_explore`.
+        Or to expand an existing trajectory use :func:`~pypet.trajectory.Trajectory.f_expand`.
 
         Your parameters should encompass all values that completely define your simulation,
         I recommend also storing random number generator seeds as parameters to
@@ -493,11 +493,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         This connection matrix could be stored as a derived parameter.
 
         Derived parameters are added via
-        :func:`~my_ni_pexp.naturalnaming.DerivedParameterGroup.f_add_derived_parameter`
+        :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter`
 
     * Results:
 
-        Result are added via the :func:`~my_ni_pexp.naturalnaming.ResultGroup.f_add_result`
+        Result are added via the :func:`~pypet.naturalnaming.ResultGroup.f_add_result`
 
     There are several ways to access the parameters, to learn about these, fast access, and natural
     naming see :ref:`more-on-access`
@@ -526,12 +526,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         naming classes and there module paths.
         For example:
         `dynamically_imported_classes =
-        ['my_ni_pexp.parameter.PickleParameter',MyCustomParameter]`
+        ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
         If you only have a single class to import, you do not need
         the list brackets:
         `dynamically_imported_classes
-        = 'my_ni_pexp.parameter.PickleParameter'`
+        = 'pypet.parameter.PickleParameter'`
 
 
 
@@ -624,7 +624,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self._stored = False
         self._full_copy = False
 
-        self._dynamic_imports = ['my_ni_pexp.parameter.PickleParameter']
+        self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
         self._is_run = False
 
@@ -647,7 +647,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                  '%s please choose other names.'
                                  % (name, faulty_names))
 
-        self._logger = logging.getLogger('my_ni_pexp.trajectory.Trajectory=' + self.v_name)
+        self._logger = logging.getLogger('pypet.trajectory.Trajectory=' + self.v_name)
 
         self._comment=''
         self.v_comment=comment
@@ -679,7 +679,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def v_storage_service(self):
         '''The service that can store the trajectory to disk or wherever.
 
-        Default is the :class:`~my_ni_pexp.storageservice.HDF5StorageService`.
+        Default is the :class:`~pypet.storageservice.HDF5StorageService`.
         '''
         return self._storage_service
 
@@ -717,12 +717,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             naming classes and there module paths.
             For example:
             `dynamically_imported_classes =
-            ['my_ni_pexp.parameter.PickleParameter',MyCustomParameter]`
+            ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
             If you only have a single class to import, you do not need
             the list brackets:
             dynamically_imported_classes
-            = 'my_ni_pexp.parameter.PickleParameter'`
+            = 'pypet.parameter.PickleParameter'`
 
         '''
 
@@ -740,7 +740,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def __iter__(self):
         ''' Iterator over all single runs.
 
-        equivalent to calling :func:`~my_ni_pexp.trajectory.Trajectory.f_iter_runs`:
+        equivalent to calling :func:`~pypet.trajectory.Trajectory.f_iter_runs`:
 
             >>> traj.f_iter_runs(non_completed=False)
 
@@ -916,7 +916,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             self._changed_default_parameters[name] = (args, kwargs)
 
     def f_preset_config(self, config_name, *args, **kwargs):
-        ''' Similar to func:`~my_ni_pexp.trajectory.Trajectory.f_preset_parameter`.'''
+        ''' Similar to func:`~pypet.trajectory.Trajectory.f_preset_parameter`.'''
         config_name = 'config' + '.' + config_name
         self._preset(config_name,args, kwargs)
 
@@ -1022,7 +1022,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self.__dict__.update(statedict)
 
         #self._tree= NNGroupNode(parent_trajectory=self, predecessors=[], depth=0, name='root')
-        self._logger = logging.getLogger('my_ni_pexp.trajectory.Trajectory=' + self.v_name)
+        self._logger = logging.getLogger('pypet.trajectory.Trajectory=' + self.v_name)
 
 
 
@@ -1063,7 +1063,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def f_expand(self, build_function, *args, **kwargs):
-        '''Similar to :func:`~my_ni_pexp.trajectory.Trajectory.f_explore`, but can be used to enlarge
+        '''Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
 
         '''
@@ -1179,20 +1179,20 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                   globally.UPDATE_SKELETON)
 
     def f_load_item(self,item,*args,**kwargs):
-        '''Loads a single item, see also :func:`~my_ni_pexp.trajectory.Trajectory.f_load_items`'''
+        '''Loads a single item, see also :func:`~pypet.trajectory.Trajectory.f_load_items`'''
         self.f_load_items([item],*args,**kwargs)
 
     def f_load_items(self, iterator, *args, **kwargs):
         ''' Loads parameters specified in `iterator`. You can directly list the Parameter objects or their
         names.
-        If names are given the `~my_ni_pexp.trajectory.Trajectory.f_get` method is applied to find the
+        If names are given the `~pypet.trajectory.Trajectory.f_get` method is applied to find the
         parameters or results in the
         trajectory.
         If kwargs f_contains the keyword >>only_empties=True<<, only empty parameters or
         results are passed to the
         storage service to get loaded.
 
-        This function is useful if you called :func:`~my_ni_pexp.trajectory.Trajectory.f_update_skeleton`
+        This function is useful if you called :func:`~pypet.trajectory.Trajectory.f_update_skeleton`
         before and now you want
         to load the data of individual results one by one.
 
@@ -1249,20 +1249,20 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         You can specify how to load the parameters and config/derived_parameters/results.
 
-            :const:`my_ni_pexp.globally.LOAD_NOATHING`: (0) Nothing is loaded
+            :const:`pypet.globally.LOAD_NOATHING`: (0) Nothing is loaded
 
-            :const:`my_ni_pexp.globally.LOAD_SKELETON`: (1) The skeleton is loaded, i.e. the items are empty.
+            :const:`pypet.globally.LOAD_SKELETON`: (1) The skeleton is loaded, i.e. the items are empty.
 
-            :const:`my_ni_pexp.globally.LOAD_DATA`: (2) the whole data is loaded.
+            :const:`pypet.globally.LOAD_DATA`: (2) the whole data is loaded.
 
-            :const:`my_ni_pexp.globally.LOAD_ANNOTATIONS`: (3) loads/reloads the annotations of all items that are
+            :const:`pypet.globally.LOAD_ANNOTATIONS`: (3) loads/reloads the annotations of all items that are
                                                 currently in your trajectory.
 
-            :const:`my_ni_pexp.globally.UPDATE_SKELETON`: (-1) The skeleton is updated, i.e. only items
+            :const:`pypet.globally.UPDATE_SKELETON`: (-1) The skeleton is updated, i.e. only items
                                               that are not currently part of your trajectory are
                                               loaded empty
 
-            :const:`my_ni_pexp.globally.UPDATE_DATA`: (-2) Like (2) but only items that are currently not in
+            :const:`pypet.globally.UPDATE_DATA`: (-2) Like (2) but only items that are currently not in
                                           your trajectory are loaded.
 
         '''
@@ -1777,7 +1777,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         i.e. which is the current run.
 
         The function calls
-        :func:`~my_ni_pexp.parameter.Parameter.set_parameter_access` in all its explored parameters.
+        :func:`~pypet.parameter.Parameter.set_parameter_access` in all its explored parameters.
 
         '''
 

@@ -249,7 +249,7 @@ class NaturalNamingInterface(object):
 
         self._run_or_traj_name= root_instance.v_name
 
-        self._logger = logging.getLogger('my_ni_pexp.trajectory.NNTree=' +
+        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
                                          self._root_instance.v_name)
 
         self._flat_storage_dict = {}
@@ -849,7 +849,7 @@ class NaturalNamingInterface(object):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('my_ni_pexp.trajectory.NNTree=' +
+        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
                                          self._run_or_traj_name)
 
 
@@ -1125,7 +1125,7 @@ class NNGroupNode(NNTreeNode):
         only to free RAM memory!
 
         If you want to free memory on disk via your storage service,
-        use :func:`~my_ni_pexp.trajectory.Trajectory.f_remove_item(s)` of your trajectory.
+        use :func:`~pypet.trajectory.Trajectory.f_remove_item(s)` of your trajectory.
 
         :param name: Name of child
 
@@ -1152,7 +1152,7 @@ class NNGroupNode(NNTreeNode):
     def f_contains(self, item, recursive = True):
         ''' Checks if the node contains a specific parameter or result.
 
-        It is checked if the item can be found via the "~my_ni_pexp.naturalnaming.NNGroupNode.f_get" method.
+        It is checked if the item can be found via the "~pypet.naturalnaming.NNGroupNode.f_get" method.
 
         :param item: Parameter/Result name or instance.
 
@@ -1453,10 +1453,10 @@ class DerivedParameterGroup(NNGroupNode):
         ''' Adds a derived parameter under the current group.
 
         Similar to
-        :func:`~my_ni_pexp.naturalnaming.ParameterGroup.f_add_parameter`.
+        :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter`.
 
         Naming prefixes are added as in
-        :func:`~my_ni_pexp.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
+        :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
         '''
         return self._nn_interface._add_generic(self,type_name = DERIVED_PARAMETER,
                                                group_type_name = DERIVED_PARAMETER_GROUP,
@@ -1490,7 +1490,7 @@ class ConfigGroup(NNGroupNode):
         ''' Adds config under the current group.
 
         Similar to
-        :func:`~my_ni_pexp.naturalnaming.ParameterGroup.f_add_parameter`.
+        :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter`.
 
         If current group is the trajectory the prefix `'config'` is added to the name.
 

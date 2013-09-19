@@ -25,20 +25,20 @@ class BrianParameter(Parameter):
 
     There are two storage modes:
 
-    * :const:`~my_ni_pexp.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
+    * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
 
         The value is stored as a float and the unit as a sting.
 
         i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
 
-    * :const:`~my_ni_pexp.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
+    * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
 
         The value and unit are stored combined together as a string.
 
         i.e. `12 mV` is stored as `'12.0 * mV'`
 
 
-    Supports data for the standard :class:`~my_ni_pexp.parameter.Parameter`, too.
+    Supports data for the standard :class:`~pypet.parameter.Parameter`, too.
 
     '''
 
@@ -59,13 +59,13 @@ class BrianParameter(Parameter):
         There are two storage modes:
 
 
-        * :const:`~my_ni_pexp.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
+        * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
 
             The value is stored as a float and the unit as a sting.
 
             i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
 
-        * :const:`~my_ni_pexp.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
+        * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
 
             The value and unit are stored combined together as a string.
 
@@ -81,7 +81,7 @@ class BrianParameter(Parameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.brian.parameter.BrianParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.brian.parameter.BrianParameter=' + self.v_full_name)
 
 
     def f_supports(self, data):
@@ -271,7 +271,7 @@ class BrianMonitorResult(Result):
     def f_set_single(self, name, item):
         ''' To add a monitor use `f_set_single('monitor',brian_monitor)`.
 
-        Otherwise `f_set_single` works similar to :func:`~my_ni_pexp.parameter.Result.f_set_single`.
+        Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         '''
 
         if name == 'storage_mode':

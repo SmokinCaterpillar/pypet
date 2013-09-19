@@ -105,7 +105,7 @@ Types of parameters supported so far:
     are kept only once and are refferred to in the exploration array
 
 
-There is also the BrianParameter in the my_ni_pexp.brian.parameter module.
+There is also the BrianParameter in the pypet.brian.parameter module.
 
 
 
@@ -184,7 +184,7 @@ class BaseParameter(NNLeafNode):
     one after the other in individual simulation runs.
 
     Parameter exploration is usually initiated through the trajectory see
-    `:func:~my_ni_pexp.trajectory.Trajectory.explore` and `:func:~my_ni_pexp.trajectory.Trajectory.expand`.
+    `:func:~pypet.trajectory.Trajectory.explore` and `:func:~pypet.trajectory.Trajectory.expand`.
 
     To access the parameter's data value one can call the :func:`f_get` method. Granted the parameter
     is explored via the trajectory, in order to
@@ -511,7 +511,7 @@ class BaseParameter(NNLeafNode):
         ''' Sets the current value according to the `idx` in the exploration array.
 
         Prepares the parameter for further usage, and tells it which point in the parameter
-        space should be accessed by calls to :func:`~my_ni_pexp.parameter.Parameter.f_get`.
+        space should be accessed by calls to :func:`~pypet.parameter.Parameter.f_get`.
 
         :param idx: The index within the exploration parameter
 
@@ -597,18 +597,18 @@ class Parameter(BaseParameter):
 
 
     Parameter exploration is usually initiated through the trajectory see
-    `:func:~my_ni_pexp.trajectory.Trajectory.explore` and `:func:~my_ni_pexp.trajectory.Trajectory.expand`.
+    `:func:~pypet.trajectory.Trajectory.explore` and `:func:~pypet.trajectory.Trajectory.expand`.
 
-    To access the parameter's data value one can call the :func:`~my_ni_pexp.parameter.Parameter.f_get`
+    To access the parameter's data value one can call the :func:`~pypet.parameter.Parameter.f_get`
     method. Granted the parameter
     is explored via the trajectory, in order to
     access values of the exploration array, one first has to call the
-    :func:`~my_ni_pexp.parameter.Parameter.f_set_parameter_access`
-    method with the index of the run and then use :func:`~my_ni_pexp.parameter.Parameter.f_get`.
+    :func:`~pypet.parameter.Parameter.f_set_parameter_access`
+    method with the index of the run and then use :func:`~pypet.parameter.Parameter.f_get`.
 
     Parameters support the concept of locking. Once a value of the parameter has been accessed,
     the parameter cannot be changed anymore unless it is explicitly unlocked using
-    :func:`~my_ni_pexp.parameter.Parameter.f_unlock`.
+    :func:`~pypet.parameter.Parameter.f_unlock`.
     Locking prevents parameters from being changed during runtime of a simulation.
     
     Supported data values for the parameter are
@@ -630,16 +630,16 @@ class Parameter(BaseParameter):
     :param full_name: The full name of the parameter. Grouping can be achieved by using colons.
 
     :param data: A data value that is handled by the parameter. It is checked whether the parameter
-        :func:`~my_ni_pexp.parameter.Parameter.f_supports` the data. If not an TypeError is thrown.
+        :func:`~pypet.parameter.Parameter.f_supports` the data. If not an TypeError is thrown.
         If the parameter becomes explored, the data value is kept as a default. After
         simulation the default value can be retained by calling
-        :func:`~my_ni_pexp.parameter.Parameter.f_restore_default`.
+        :func:`~pypet.parameter.Parameter.f_restore_default`.
         The data can be accessed as follows:
 
         >>> param.f_get()
         42
 
-        To change the data after parameter creation one can call :func:`~my_ni_pexp.parameter.Parameter.f_set`:
+        To change the data after parameter creation one can call :func:`~pypet.parameter.Parameter.f_set`:
 
         >>> param.f_set(43)
         >>> print param.f_get()
@@ -668,15 +668,15 @@ class Parameter(BaseParameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.parameter.Parameter=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.parameter.Parameter=' + self.v_full_name)
 
     def f_restore_default(self):
-        ''' Restores the default data, that was set with the `:func:`~my_ni_pexp.parameter.Parameter.f_set`
+        ''' Restores the default data, that was set with the `:func:`~pypet.parameter.Parameter.f_set`
         method (or at initialisation).
 
         If the parameter is explored during the runtime of a simulation,
         the actual value of the parameter is changed and taken from the exploration array.
-        Calling :func:`~my_ni_pexp.parameter.Parameter.f_restore_default` sets the parameter's value
+        Calling :func:`~pypet.parameter.Parameter.f_restore_default` sets the parameter's value
         back to it's original value.
 
         Example usage:
@@ -1016,7 +1016,7 @@ class Parameter(BaseParameter):
 
 class ArrayParameter(Parameter):
 
-    ''' Similar to the :class:`:func:`~my_ni_pexp.parameter.Parameter`, but recommended for
+    ''' Similar to the :class:`:func:`~pypet.parameter.Parameter`, but recommended for
     large numpy arrays and python tuples.
 
     The array parameter is a bit smarter in memory management than the parameter.
@@ -1029,7 +1029,7 @@ class ArrayParameter(Parameter):
     IDENTIFIER = '__rr__'
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.parameter.ArrayParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.parameter.ArrayParameter=' + self.v_full_name)
 
     def _store(self):
 
@@ -1123,7 +1123,7 @@ class PickleParameter(Parameter):
     IDENTIFIER='__pckl__'
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.parameter.PickleParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.parameter.PickleParameter=' + self.v_full_name)
 
     def f_supports(self, data):
         ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
@@ -1247,7 +1247,7 @@ class Result(BaseResult):
 
         * object tables
 
-    Such values are either set on initialisation of with :func:`~my_ni_pexp.parameter.Result.f_set`
+    Such values are either set on initialisation of with :func:`~pypet.parameter.Result.f_set`
 
     Example usage:
 
@@ -1265,11 +1265,11 @@ class Result(BaseResult):
 
     :param args: data that is handled by the result, it is kept by the result under the names
         `run%d` with `%d` being the position in the argument list.
-        Can be changed or more can be added via :func:`~my_ni_pexp.parameter.Result.f_set`
+        Can be changed or more can be added via :func:`~pypet.parameter.Result.f_set`
 
     :param kwargs: data that is handled by the result, it is kept by the result under the names
         specified by the keys of kwargs.
-        Can be changed or more can be added via :func:`~my_ni_pexp.parameter.Result.f_set`
+        Can be changed or more can be added via :func:`~pypet.parameter.Result.f_set`
 
         >>> print res.f_get(0)
         [1000,2000]
@@ -1287,7 +1287,7 @@ class Result(BaseResult):
                              outer data structure, i.e. checks if you have a list or dictionary.
                              But it does not check on individual values within dicts or lists.
 
-    Alternatively one can also use :func:`~my_ni_pexp.parameter.Result.f_set`
+    Alternatively one can also use :func:`~pypet.parameter.Result.f_set`
 
     >>> result.f_set('Uno',x='y')
     >>> print result.f_get(0)
@@ -1316,7 +1316,7 @@ class Result(BaseResult):
     @property
     def v_no_data_string(self):
         '''Whether or not to give a short summarizing string when calling
-         :func:`~my_ni_pexp.parameter.Result.f_val_to_str`.
+         :func:`~pypet.parameter.Result.f_val_to_str`.
 
         Can be set to False if the evaluation of stored data into string is too costly.
 
@@ -1372,7 +1372,7 @@ class Result(BaseResult):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.parameter.Result=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.parameter.Result=' + self.v_full_name)
 
 
     def __getstate__(self):
@@ -1407,7 +1407,7 @@ class Result(BaseResult):
     def f_is_empty(self):
         ''' True if no data has been put into the result.
 
-        Also True if all data has been erased via :func:`~my_ni_pexp.parameter.Result.f_empty`
+        Also True if all data has been erased via :func:`~pypet.parameter.Result.f_empty`
 
         '''
         return len(self._data)== 0
@@ -1594,7 +1594,7 @@ class PickleResult(Result):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('my_ni_pexp.parameter.PickleResult=' + self.v_full_name)
+        self._logger = logging.getLogger('pypet.parameter.PickleResult=' + self.v_full_name)
 
 
 

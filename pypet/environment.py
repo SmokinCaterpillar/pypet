@@ -109,11 +109,11 @@ class Environment(object):
                                       naming classes and there module paths.
                                       For example:
                                       `dynamically_imported_classes =
-                                      ['my_ni_pexp.parameter.PickleParameter',MyCustomParameter]`
+                                      ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
                                       If you only have a single class to import, you do not need
                                       the list brackets:
-                                      `dynamically_imported_classes = 'my_ni_pexp.parameter.PickleParameter'`
+                                      `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
 
 
     Note that the comment and the dynamically imported classes are only considered if a novel
@@ -124,7 +124,7 @@ class Environment(object):
     already present in your trajectory).
 
     These are the following (all are added directly under `traj.config` where traj is you trajectory
-    object, that you can get via :func:`~my_ni_pexp.environment.Environment.get_trajectory`).
+    object, that you can get via :func:`~pypet.environment.Environment.get_trajectory`).
 
     * multiproc: Whether or not to use multiprocessing. Default is 0 (False). If you use
                  multiprocessing, all your data and the tasks you compute
@@ -139,7 +139,7 @@ class Environment(object):
 
                      There are two options:
 
-                     :const:`my_ni_pexp.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+                     :const:`pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
                      Another process for storing the trajectory is spawned. The sub processes
                      running the individual single runs will add their results to a
@@ -148,7 +148,7 @@ class Environment(object):
                      will be pickled and send over the queue for storage!
 
 
-                     :const:`my_ni_pexp.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
+                     :const:`pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
 
                      Each individual process takes care about storage by itself. Before
                      carrying out the storage, a lock is placed to prevent the other processes
@@ -172,7 +172,7 @@ class Environment(object):
                     This will create a `.cnt` file in the same folder as your hdf5 file,
                     using this you can continue crashed trajectories.
                     In order to resume trajectories use
-                    :func:`~my_ni_pexp.environment.Environment.continue_run`
+                    :func:`~pypet.environment.Environment.continue_run`
 
 
     '''
@@ -250,7 +250,7 @@ class Environment(object):
 
         for handler in root.handlers:
             handler.setFormatter(f)
-        self._logger = logging.getLogger('my_ni_pexp.environment.Environment')
+        self._logger = logging.getLogger('pypet.environment.Environment')
 
 
 
@@ -296,7 +296,7 @@ class Environment(object):
 
                 (Not over results stored in the trajectory!
                 In order to do that simply interact with the trajectory object, potentially after
-                calling`~my_ni_pexp.trajectory.Trajectory.f_update_skeleton` and loading all results.)
+                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results.)
 
         '''
 

@@ -11,7 +11,7 @@ class Annotations(object):
         if copy:
             return self.__dict__.copy()
         else:
-            return seluf.__dict__
+            return self.__dict__
 
     def f_is_empty(self):
         return len(self.__dict__)==0

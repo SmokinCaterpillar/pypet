@@ -207,7 +207,7 @@ class HDF5StorageService(StorageService):
         self._trajectory_index = None
         self._hdf5file = None
         self._trajectory_group = None
-        self._logger = logging.getLogger('my_ni_pexp.storageservice_HDF5StorageService')
+        self._logger = logging.getLogger('pypet.storageservice_HDF5StorageService')
 
 
 
@@ -442,7 +442,7 @@ class HDF5StorageService(StorageService):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('my_ni_pexp.storageservice_HDF5StorageService=' +
+        self._logger = logging.getLogger('pypet.storageservice_HDF5StorageService=' +
                                          self._filename)
 
 
