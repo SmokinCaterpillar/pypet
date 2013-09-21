@@ -118,12 +118,12 @@ class NetworkTest(unittest.TestCase):
 
         env = Environment(trajectory='Test',filename='../../experiments/tests/brian/HDF5/test.hdf5',file_title='test', log_folder='../../experiments/tests/brian/log')
 
-        traj = env.get_trajectory()
+        traj = env.v_trajectory
 
         traj.ncores= 2
         #env._set_standard_storage()
         #env._hdf5_queue_writer._hdf5storageservice = LazyStorageService()
-        traj = env.get_trajectory()
+        traj = env.v_trajectory
         #traj.set_storage_service(LazyStorageService())
 
         add_params(traj)
@@ -142,7 +142,7 @@ class NetworkTest(unittest.TestCase):
     def test_multiprocessing(self):
         self.traj.multiproc = True
         self.traj.ncores = 3
-        self.env.run(run_net)
+        self.env.f_run(run_net)
 
 
 if __name__ == '__main__':

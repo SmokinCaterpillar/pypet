@@ -383,10 +383,13 @@ class BaseParameter(NNLeafNode):
     def __str__(self):
         if self.v_comment:
 
-            returnstr = '%s (Length:%d, Comment:%s): %s   ' % \
-                        (self.v_full_name, len(self), self.v_comment, self.f_val_to_str())
+            returnstr = '<%s>: %s (Length:%d, Comment:%s): %s' % \
+                        (self.f_get_class_name(), self.v_full_name, len(self),
+                         self.v_comment, self.f_val_to_str())
         else:
-            returnstr = '%s (Length:%d): %s   ' % (self.v_full_name, len(self), self.f_val_to_str())
+            returnstr = '<%s>: %s (Length:%d): %s' % (self.f_get_class_name(),
+                                                         self.v_full_name,
+                                                         len(self), self.f_val_to_str())
 
         # if self.f_is_array():
         #     returnstr += ', Array: %s' %str(self.f_get_array())
@@ -1365,9 +1368,10 @@ class Result(BaseResult):
 
         datastr = str([(key,str(type(val))) for key,val in self._data.iteritems()])
         if self.v_comment:
-            return '%s (Comment:%s): %s' % (self.v_full_name,self.v_comment,datastr)
+            return '<%s>: %s (Comment:%s): %s' % (self.f_get_class_name(),
+                                                  self.v_full_name,self.v_comment,datastr)
         else:
-            return '%s: %s' % (self.v_full_name,datastr)
+            return '<%s>: %s: %s' % (self.f_get_class_name(),self.v_full_name,datastr)
 
 
 

@@ -49,6 +49,6 @@ print par.val
 
 traj.f_explore(identity, {traj.x.gfn('value'):[1,2,3,4]})
 
-env.run(test_run,to_print='test')
+env.f_run(test_run,to_print='test')
 
 

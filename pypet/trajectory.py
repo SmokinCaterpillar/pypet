@@ -97,6 +97,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._logger = logging.getLogger('pypet.trajectory.SingleRun=' + self.v_name)
 
         self._is_run = True
+        self._annotations = None
 
 
     def __getstate__(self):
@@ -1318,7 +1319,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         allmyparams = self._parameters.copy()
         allotherparams = other_trajectory._parameters.copy()
 
-        if not ignore_trajectory_derived_parameters:
+        if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
             my_traj_dpars = self.f_get('derived_parameters.trajectory').f_to_dict()
             allmyparams.update(my_traj_dpars)
             other_traj_dpars = other_trajectory.f_get('derived_parameters.trajectory').f_to_dict()
@@ -1358,11 +1359,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 ignore_trajectory_derived_parameters = False,
                 ignore_trajectory_results= False,
                 backup_filename = None,
-                copy_nodes=True,
+                move_nodes=False,
                 delete_trajectory=False):
         ''' Merges another trajectory into the current trajectory.
 
-        Both parameters must live in the same space. That means both need to have the same
+        Both trajectories must live in the same space. That means both need to have the same
         parameters with similar types of values. Yet, if the other trajectory explores
         different parameters than the current one, merging will take care of that.
 
@@ -1376,7 +1377,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         :param remove_duplicates: Whether you want to remove duplicate parameter points.
                                   Requires N1 * N2 (quadratic complexity in single runs).
 
-        :param ignore_trajectory_derived_parameters: Whether you want to ignore or merge derived parameters
+        :param ignore_trajectory_derived_parameters: Whether you want to ignore or merge derived
+         parameters
                                                     kept under `.derived_parameters.trajectory`
 
         :param ignore_trajectory_results: As above but with results. If you have trajectory results
@@ -1389,7 +1391,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                 are backed up into a file in your data folder and a name is
                                 automatically chosen.
 
-        :param copy_nodes: If you use the HDF5 storage service and both trajectories are
+        :param move_nodes: If you use the HDF5 storage service and both trajectories are
                            stored in the same file merging is achieved fast directly within
                            the file. You can choose if you want to copy nodes from the other
                            trajectory to the current one, or if you want to move them. Accordingly
@@ -1451,18 +1453,21 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
         self._logger.info('Start copying results and single run derived parameters.')
+
+        self._logger.info('Updating Trajectory information and changed parameters in storage.')
+
+        self._storage_service.store(globally.UPDATE_TRAJECTORY, self,
+                                   trajectory_name=self.v_name,
+                                   changed_parameters=changed_parameters,
+                                   rename_dict=rename_dict)
+
         try:
             self._storage_service.store(globally.MERGE, None, trajectory_name=self.v_name,
                                        other_trajectory_name=other_trajectory.v_name,
-                                       rename_dict=rename_dict, copy_nodes=copy_nodes,
+                                       rename_dict=rename_dict, move_nodes=move_nodes,
                                        delete_trajectory=delete_trajectory)
 
-            self._logger.info('Updating Trajectory information and changed parameters in storage.')
 
-            self._storage_service.store(globally.UPDATE_TRAJECTORY, self,
-                                   trajectory_name=self.v_name,
-                                   changed_parameters=changed_parameters,
-                                   new_results=sorted(rename_dict.values()))
 
         except pex.NoSuchServiceError:
             self._logger.warning('My storage service does not support merging of trajectories, '
@@ -1471,24 +1476,14 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                  'trajectory will be altered.')
 
 
-            self._logger.info('Updating Trajectory information and changed parameters in storage.')
-
-            self._storage_service.store(globally.UPDATE_TRAJECTORY, self,
-                                   trajectory_name=self.v_name,
-                                   changed_parameters=changed_parameters,
-                                   new_results=sorted(rename_dict.values()))
-
             self._merge_slowly(other_trajectory, rename_dict)
+
         except ValueError, e:
             self._logger.warning(str(e))
 
-
-            self._logger.info('Updating Trajectory information and changed parameters in storage.')
-
-            self._storage_service.store(globally.UPDATE_TRAJECTORY, self,
-                                   trajectory_name=self.v_name,
-                                   changed_parameters=changed_parameters,
-                                   new_results=sorted(rename_dict.values()))
+            self._logger.warning('I will use the f_load mechanism of the other trajectory and copy '
+                                 'the results manually and slowly. Note that thereby the other '
+                                 'trajectory will be altered.')
 
             self._merge_slowly(other_trajectory, rename_dict)
 
@@ -1525,6 +1520,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def _merge_trajectory_results(self, other_trajectory, rename_dict):
+
 
         other_results = other_trajectory.f_get('results.trajectory').f_to_dict()
 
@@ -1655,7 +1651,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         params_to_merge = other_trajectory._parameters.copy()
 
-        if not ignore_trajectory_derived_parameters:
+        if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
             trajectory_derived_parameters = other_trajectory.f_get(
                 'derived_parameters.trajectory').f_to_dict()
             params_to_merge.update(trajectory_derived_parameters)

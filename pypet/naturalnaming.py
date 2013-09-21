@@ -115,6 +115,13 @@ class NNTreeNode(WithAnnotations):
         self._location='.'.join(split_name)
 
 
+    def f_get_class_name(self):
+        ''' Returns the class name of the parameter or result or group,
+        equivalent to `return self.__class__.__name__`
+        '''
+        return self.__class__.__name__
+
+
 
 class NNLeafNode(NNTreeNode):
     ''' Abstract class interface of result or parameter
@@ -170,11 +177,6 @@ class NNLeafNode(NNTreeNode):
 
 
 
-    def f_get_class_name(self):
-        ''' Returns the class name of the parameter or result,
-        equivalent to `return self.__class__.__name__`
-        '''
-        return self.__class__.__name__
 
 
     def _store_flags(self):
@@ -1003,7 +1005,7 @@ class NaturalNamingInterface(object):
 
                 if not result_node is None:
                     raise pex.NotUniqueNodeError('Node >>%s<< has been found more than once,'
-                                                 'full name of first found is >>%s<< and of'
+                                                 'full name of first found is >>%s<< and of '
                                                  'second >>%s<<'
                                                  % (key,child.v_full_name,result_node.v_full_name))
 
@@ -1108,7 +1110,9 @@ class NNGroupNode(NNTreeNode):
         else:
             name = self.v_name
 
-        return '%s: %s' % (name, str([(key,str(type(val))) for key,val in self._children.iteritems()]))
+        return '<%s>: %s: %s' % (self.f_get_class_name(),name,
+                                 str([(key,str(type(val)))
+                                      for key,val in self._children.iteritems()]))
 
     def f_children(self):
         '''Returns the number of children of the group.'''
@@ -1304,6 +1308,7 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_store_child(self,name,recursive=False):
+        '''Stores a child or recursively a subtree to disk'''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))
@@ -1317,6 +1322,7 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_load_child(self,name,recursive=False,load_data=globally.UPDATE_DATA):
+        '''Loads a child or recursively a subtree from disk'''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))

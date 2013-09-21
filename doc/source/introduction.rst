@@ -25,14 +25,16 @@ you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your results together and store everything appropriately to disk.
-Currently the storage method of choice is HDF5_.
+Currently the storage method of choice is HDF5_ via PyTables_.
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
+.. _PyTables: http://www.pytables.org/moin/PyTables
 
-==============================
+
+---------------------------------
 What to do with pyPET?
-==============================
+---------------------------------
 
 The whole project evolves around a novel container object called *trajectory*.
 A *trajectory* is a container for *parameters* and *results* of numerical simulations
@@ -211,9 +213,9 @@ Main Features
 
     * pandas_ DataFrames
 
-    * Brian_ Qunatities
+    * BRIAN_ Qunatities
 
-    * Brian_ Monitors
+    * BRIAN_ Monitors
 
 * Easily **extensible** to other data formats!
 
@@ -234,4 +236,4 @@ Main Features
 
 .. _pandas: http://pandas.pydata.org/
 
-.. _Brian: http://briansimulator.org/
+.. _BRIAN: http://briansimulator.org/

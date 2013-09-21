@@ -107,7 +107,7 @@ class ContinueTest(unittest.TestCase):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
     def _create_param_dict(self):
         self.param_dict = {}
@@ -182,7 +182,7 @@ class ContinueTest(unittest.TestCase):
 
 
         self.envs.append(env)
-        self.trajs.append( env.get_trajectory())
+        self.trajs.append( env.v_trajectory)
 
 
     def explore(self, traj):
@@ -236,7 +236,7 @@ class ContinueTest(unittest.TestCase):
 
 
         continue_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.cnt'
-        self.envs[0].continue_run(continue_file)
+        self.envs[0].f_continue_run(continue_file)
 
         for irun in range(len(self.filenames)):
             self.trajs[irun].f_update_skeleton()

@@ -455,7 +455,7 @@ class HDF5StorageService(StorageService):
         mypath, filename = os.path.split(self._filename)
 
         if backup_filename is None:
-            backup_filename ='%s/backup_%s_.hdf5' % (mypath,traj.v_name)
+            backup_filename ='%s/backup_%s.hdf5' % (mypath,traj.v_name)
 
         backup_hdf5file = pt.openFile(filename=backup_filename, mode='a', title=backup_filename)
         
@@ -470,13 +470,47 @@ class HDF5StorageService(StorageService):
 
         self._logger.info('Finished backup of %s.' % traj.v_name)
 
-    def _trj_merge_trajectories(self,other_trajectory_name,rename_dict,copy_nodes=True,
+    def _trj_copy_table_entries(self,rename_dict,other_trajectory_name):
+        self._trj_copy_table_entries_from_table_name('result_table',rename_dict,other_trajectory_name)
+        self._trj_copy_table_entries_from_table_name('derived_parameter_table',rename_dict,other_trajectory_name)
+
+
+    def _trj_copy_table_entries_from_table_name(self,tablename,rename_dict,other_trajectory_name):
+        other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/'+tablename)
+        new_value_dict={}
+
+        for row in  other_table:
+            location = row['location']
+            name = row['name']
+            full_name = location+'.'+name
+
+            if full_name in rename_dict:
+                new_value_dict[rename_dict[full_name]] = row['value']
+
+        table= self._hdf5file.get_node('/'+self._trajectory_name+'/'+tablename)
+        for row in table:
+            location = row['location']
+            name = row['name']
+            full_name = location+'.'+name
+
+            if full_name in new_value_dict:
+                row['value'] = new_value_dict[full_name]
+
+                row.update()
+
+        self._hdf5file.flush()
+
+
+
+
+
+    def _trj_merge_trajectories(self,other_trajectory_name,rename_dict,move_nodes=False,
                                 delete_trajectory=False):
 
 
-        if copy_nodes and delete_trajectory:
+        if not move_nodes and delete_trajectory:
             raise ValueError('You want to copy nodes, but delete the old trajectory, this is too '
-                             'much overhead, please use copy_nodes = False, '
+                             'much overhead, please use move_nodes = True, '
                              'delete_trajectory = True')
 
 
@@ -486,6 +520,7 @@ class HDF5StorageService(StorageService):
                              'be found in my file.')
 
         for old_name, new_name in rename_dict.iteritems():
+
             split_name = old_name.split('.')
             old_location = '/'+other_trajectory_name+'/'+'/'.join(split_name)
 
@@ -499,24 +534,25 @@ class HDF5StorageService(StorageService):
 
             for node in old_group:
 
-                if copy_nodes:
+                if move_nodes:
+                     self._hdf5file.move_node(where=old_location, newparent=new_location,
+                                             name=node._v_name,createparents=True )
+                else:
                      self._hdf5file.copy_node(where=old_location, newparent=new_location,
                                               name=node._v_name,createparents=True,
                                               recursive = True)
 
 
-                else:
-                    self._hdf5file.move_node(where=old_location, newparent=new_location,
-                                             name=node._v_name,createparents=True )
-
             old_group._v_attrs._f_copy(where = self._hdf5file.get_node(new_location))
 
+
+        self._trj_copy_table_entries(rename_dict, other_trajectory_name)
 
         if delete_trajectory:
              self._hdf5file.remove_node(where='/', name=other_trajectory_name, recursive = True)
 
 
-    def _trj_update_trajectory(self, traj,changed_parameters,new_results):
+    def _trj_update_trajectory(self, traj,changed_parameters,rename_dict):
 
         # changed_parameters = kwargs.pop('changed_parameters')
         # new_results = kwargs.pop('new_results')
@@ -528,9 +564,9 @@ class HDF5StorageService(StorageService):
                                     flags=(HDF5StorageService.MODIFY_ROW,))
 
 
+        new_results = sorted(rename_dict.itervalues())
 
-
-        ## We only add the table entries, since we can f_merge via the hdf5 storage service
+        ## We only add the table entries, since we can merge via the hdf5 storage service
         for result_name in new_results:
             result = traj.f_get(result_name)
             tablename='result_table'
@@ -538,6 +574,8 @@ class HDF5StorageService(StorageService):
             self._all_store_param_or_result_table_entry(result,table,
                                                         flags=(HDF5StorageService.ADD_ROW,
                                                                HDF5StorageService.MODIFY_ROW))
+
+
         ### Store the parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)

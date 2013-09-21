@@ -31,7 +31,7 @@ class EnvironmentTest(unittest.TestCase):
 
         env = Environment(self.trajname,self.filename,self.trajname, log_folder=self.logfolder)
 
-        traj = env.get_trajectory()
+        traj = env.v_trajectory
         traj.set_storage_service(LazyStorageService())
 
         traj.ap('Test', 1)
@@ -56,7 +56,7 @@ class EnvironmentTest(unittest.TestCase):
 
     def test_multiprocessing(self):
 
-        self.env.run(just_printing_bro)
+        self.env.f_run(just_printing_bro)
 
 
 if __name__ == '__main__':

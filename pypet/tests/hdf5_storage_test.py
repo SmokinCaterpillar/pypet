@@ -166,7 +166,7 @@ class EnvironmentTest(unittest.TestCase):
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder)
 
-        traj = env.get_trajectory()
+        traj = env.v_trajectory
 
         traj.multiproc = self.multiproc
         traj.multiproc_mode = self.mode
@@ -190,7 +190,7 @@ class EnvironmentTest(unittest.TestCase):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        self.env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
 
     def test_run(self):

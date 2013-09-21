@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# P37 documentation build configuration file, created by
+# pyPET documentation build configuration file, created by
 # sphinx-quickstart on Wed Sep  4 12:12:59 2013.
 #
 # This file is execfile()d with the current directory f_set to its containing dir.
@@ -165,7 +165,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'P37doc'
+htmlhelp_basename = 'pyPETdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -184,7 +184,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'P37.tex', u'P37 Documentation',
+  ('index', 'pyPET.tex', u'pyPET Documentation',
    u'Robert Meyer', 'manual'),
 ]
 
@@ -214,7 +214,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'p37', u'P37 Documentation',
+    ('index', 'p37', u'pyPET Documentation',
      [u'Robert Meyer'], 1)
 ]
 
@@ -228,8 +228,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'P37', u'P37 Documentation',
-   u'Robert Meyer', 'P37', 'One line description of project.',
+  ('index', 'pyPET', u'pyPET Documentation',
+   u'Robert Meyer', 'pyPET', 'One line description of project.',
    'Miscellaneous'),
 ]
 

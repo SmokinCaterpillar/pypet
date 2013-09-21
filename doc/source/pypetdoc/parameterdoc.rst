@@ -38,3 +38,15 @@ PickleResult
 .. autoclass:: pypet.parameter.PickleResult
     :members:
 
+
+------------------------------
+For Completeness: The Abstract Base Classes
+------------------------------
+
+.. autoclass:: pypet.parameter.BaseParameter
+    :members:
+    :inherited-members:
+
+.. autoclass:: pypet.parameter.BaseResult
+    :members:
+    :inherited-members:

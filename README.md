@@ -3,7 +3,7 @@ pyPET
 =========
 
 The new python parameter exploration toolbox. pyPET manages exploration of the parameter space and
-data storage for you. Currently supported storage is _HDF5!
+data storage for you. Currently supported storage is HDF5!
 
 --------------------------------
 What is pyPET all about?
@@ -85,12 +85,12 @@ Let's take a look at the snippet at once:
         traj.f_add_result('z',z=z, comment='Im the product of two reals!')
 
 
-    # Create and environment that handles running
+    # Create an environment that handles running
     env = Environment(trajectory='Example1_No1',filename='./HDF/example_01.hdf5',
                       file_title='ExampleNo1', log_folder='./LOGS/')
 
     # Get the trajectory from the environment
-    traj = env.get_trajectory()
+    traj = env.v_trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
@@ -122,7 +122,7 @@ will run the simulation.
 
 
 
-    # Create and environment that handles running
+    # Create an environment that handles running
     env = Environment(trajectory='Example1_01',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
                       comment = 'I am the first example!')
@@ -135,7 +135,7 @@ The environment will automatically generate a trajectory for us which we can acc
 
 
     # Get the trajectory from the environment
-    traj = env.get_trajectory()
+    traj = env.v_trajectory
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
 of :math:`x=y=1.0`

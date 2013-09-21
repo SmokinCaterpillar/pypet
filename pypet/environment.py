@@ -172,7 +172,7 @@ class Environment(object):
                     This will create a `.cnt` file in the same folder as your hdf5 file,
                     using this you can continue crashed trajectories.
                     In order to resume trajectories use
-                    :func:`~pypet.environment.Environment.continue_run`
+                    :func:`~pypet.environment.Environment.f_continue_run`
 
 
     '''
@@ -254,7 +254,7 @@ class Environment(object):
 
 
 
-    def continue_run(self, continuefile):
+    def f_continue_run(self, continuefile):
         ''' Resume crashed trajectories by supplying the '.cnt' file.
         '''
 
@@ -274,14 +274,14 @@ class Environment(object):
 
 
 
-        
-    def get_trajectory(self):
-        ''' Returns the trajectory instance.
+    @ property
+    def v_trajectory(self):
+        ''' The trajectory of the Environment
         '''
         return self._traj
 
 
-    def run(self, runfunc, *args,**kwargs):
+    def f_run(self, runfunc, *args,**kwargs):
         ''' Runs the experiments and explores the parameter space.
 
         :param runfunc: The task or job to do

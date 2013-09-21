@@ -104,7 +104,7 @@ class MergeTest(unittest.TestCase):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        env.run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
     def _create_param_dict(self):
         self.param_dict = {}
@@ -179,7 +179,7 @@ class MergeTest(unittest.TestCase):
 
 
         self.envs.append(env)
-        self.trajs.append( env.get_trajectory())
+        self.trajs.append( env.v_trajectory)
 
 
 
@@ -253,7 +253,7 @@ class MergeTest(unittest.TestCase):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1],copy_nodes=copy_nodes,delete_trajectory=False, trial_parameter='trial')
+        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial')
         merged_traj.f_load(load_parameters=globally.UPDATE_DATA,
                                     load_derived_parameters=globally.UPDATE_DATA,
                                     load_results=globally.UPDATE_DATA)
@@ -299,7 +299,7 @@ class MergeTest(unittest.TestCase):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1],copy_nodes=copy_nodes,delete_trajectory=False, trial_parameter='trial',
+        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial',
                             backup_filename=1)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_results=globally.UPDATE_DATA,load_derived_parameters=globally.UPDATE_DATA,
@@ -345,7 +345,7 @@ class MergeTest(unittest.TestCase):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1],copy_nodes=True,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
 
@@ -387,7 +387,7 @@ class MergeTest(unittest.TestCase):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1],copy_nodes=True,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
 
