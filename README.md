@@ -58,7 +58,7 @@ This project encompasses these core modules:
 Documentation
 ---------------------------
 
-Link to the Docs will come soon!
+Documentation can be found here: http://pypet.readthedocs.org/en/latest/index.html
 
 ---------------------------
 Quick Working Example
@@ -165,3 +165,7 @@ So have fun using this tool!
 
 Cheers,
 Robert
+
+
+pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
+supported by the Research Training Group GRK 1589/1.

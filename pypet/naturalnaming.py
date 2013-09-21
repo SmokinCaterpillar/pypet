@@ -754,6 +754,8 @@ class NaturalNamingInterface(object):
 
         faulty_names = ''
 
+
+
         for split_name in split_names:
             if split_name in self._not_admissible_names:
                 faulty_names = '%s %s is a method/attribute of the trajectory/treenode/naminginterface,' % \
@@ -767,9 +769,20 @@ class NaturalNamingInterface(object):
                 faulty_names = '%s %s f_contains white space(s),' % (faulty_names, split_name)
 
             if not self._shortcut(split_name) is None:
-                faulty_names = '%s %s is already an important shortcut,' %( faulty_names, split_name)
+                faulty_names = '%s %s is already an important shortcut,' % (faulty_names, split_name)
 
 
+        name = split_names.pop()
+        location = '.'.join(split_names)
+        if len(name)>= globally.HDF5_STRCOL_MAX_NAME_LENGTH:
+            faulty_names = '%s %s is too long the name can only have %d characters but it has %d,' % \
+                           (faulty_names,name,len(name),globally.HDF5_STRCOL_MAX_NAME_LENGTH)
+
+        if len(location) >= globally.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+            faulty_names = '%s %s is too long the location can only have %d characters but it has %d,' % \
+                           (faulty_names,name,len(location),globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)
+
+        split_names.append(name)
         return faulty_names
 
 

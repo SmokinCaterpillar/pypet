@@ -94,26 +94,35 @@ class Environment(object):
     :param trajectory: String or trajectory instance. If a string is supplied, a novel
                        trajectory is created with that name.
 
+
     :param comment: Comment added to the trajectory if a novel trajectory is created.
 
-    :param filename: The name of the hdf5 file (if you want to use the default HDF5 Storage Serive)
+    :param dynamically_imported_classes:
 
-    :param file_title: Title of the hdf5 file
+          If you wrote custom parameters or results
+          that need to be loaded
+          dynamically during runtime. The module containing the class
+          needs to be specified here as a list of classes or strings
+          naming classes and there module paths.
+          For example:
+          `dynamically_imported_classes =
+          ['pypet.parameter.PickleParameter',MyCustomParameter]`
+
+          If you only have a single class to import, you do not need
+          the list brackets:
+          `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+
 
     :param log_folder: Folder where all log files are stored
 
-    :param dynamically_imported_classes: If you wrote custom parameter or result
-                                      that needs to be loaded
-                                      dynamically during runtime, the module containing the class
-                                      needs to be specified here as a list of classes or strings
-                                      naming classes and there module paths.
-                                      For example:
-                                      `dynamically_imported_classes =
-                                      ['pypet.parameter.PickleParameter',MyCustomParameter]`
+    :param use_hdf5: Whether or not to use the standard hdf5 storage service, if False the following
+                    arguments below will be ignored.
 
-                                      If you only have a single class to import, you do not need
-                                      the list brackets:
-                                      `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+    :param filename: The name of the hdf5 file
+
+    :param file_title: Title of the hdf5 file (only important if file is created new)
+
+
 
 
     Note that the comment and the dynamically imported classes are only considered if a novel
@@ -123,65 +132,102 @@ class Environment(object):
     The Environment will automatically add some config settings to your trajectory (if they are not
     already present in your trajectory).
 
-    These are the following (all are added directly under `traj.config` where traj is you trajectory
-    object, that you can get via :func:`~pypet.environment.Environment.get_trajectory`).
+    These are the following (all are added under `traj.config` where traj is your trajectory
+    object, that you can get via :func:`~pypet.environment.Environment.v_trajectory`).
 
-    * multiproc: Whether or not to use multiprocessing. Default is 0 (False). If you use
-                 multiprocessing, all your data and the tasks you compute
-                 must be pickable!
+    * environment.multiproc:
 
-    * ncores: If multiproc is 1 (True), this specifies the number of processes that will be spawned
-              to run your experiment. Note if you use QUEUE mode (see below) the queue process
-              is not included in this number and will add another extra process for storing.
+        Whether or not to use multiprocessing. Default is 0 (False). If you use
+        multiprocessing, all your data and the tasks you compute
+        must be pickable!
 
-    * multiproc_mode: If multiproc is 1 (True), specifies how storage to disk is handled via
-                     the storage service.
+    * environment.ncores:
 
-                     There are two options:
+          If multiproc is 1 (True), this specifies the number of processes that will be spawned
+          to run your experiment. Note if you use QUEUE mode (see below) the queue process
+          is not included in this number and will add another extra process for storing.
 
-                     :const:`pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+    * environment.multiproc_mode:
 
-                     Another process for storing the trajectory is spawned. The sub processes
-                     running the individual single runs will add their results to a
-                     multiprocessing queue that is handled by an additional process.
-                     Note that this requires additional memory since single runs
-                     will be pickled and send over the queue for storage!
+         If multiproc is 1 (True), specifies how storage to disk is handled via
+         the storage service.
 
+         There are two options:
 
-                     :const:`pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
+         :const:`pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
-                     Each individual process takes care about storage by itself. Before
-                     carrying out the storage, a lock is placed to prevent the other processes
-                     to store data. Accordingly, sometimes this leads to a lot of processes
-                     waiting until the lock is released.
-                     Yet, single runs do not need to be pickled before storage!
-
-    * filename: The hdf5 filename
-
-    * file_tilte: The hdf5 file title
+         Another process for storing the trajectory is spawned. The sub processes
+         running the individual single runs will add their results to a
+         multiprocessing queue that is handled by an additional process.
+         Note that this requires additional memory since single runs
+         will be pickled and send over the queue for storage!
 
 
+         :const:`pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
 
-    * continuable: Whether the environment should take special care to allow to resume or continue
-                    crashed trajectories. Default is 1 (True).
-                    Everything must be pickable in order to allow
-                    continuing of trajectories. Assume you run experiments that take
-                    a lot of time. If during your experiments there is a power failure,
-                    you can resume your trajectory after the last single run that was still
-                    successfully stored via your storage service.
-                    This will create a `.cnt` file in the same folder as your hdf5 file,
-                    using this you can continue crashed trajectories.
-                    In order to resume trajectories use
-                    :func:`~pypet.environment.Environment.f_continue_run`
+         Each individual process takes care about storage by itself. Before
+         carrying out the storage, a lock is placed to prevent the other processes
+         to store data. Accordingly, sometimes this leads to a lot of processes
+         waiting until the lock is released.
+         Yet, single runs do not need to be pickled before storage!
+
+
+    * environment.continuable:
+
+        Whether the environment should take special care to allow to resume or continue
+        crashed trajectories. Default is 1 (True).
+        Everything must be pickable in order to allow
+        continuing of trajectories. Assume you run experiments that take
+        a lot of time. If during your experiments there is a power failure,
+        you can resume your trajectory after the last single run that was still
+        successfully stored via your storage service.
+        This will create a `.cnt` file in the same folder as your hdf5 file,
+        using this you can continue crashed trajectories.
+        In order to resume trajectories use
+        :func:`~pypet.environment.Environment.f_continue_run`
+
+    * hdf5.filename: The hdf5 filename
+
+    * hdf5.file_title: The hdf5 file title
+
+    * hdf5.XXXXX_overview
+
+            Whether the XXXXXX overview table should be created.
+            XXXXXX from ['config','parameter','derived_parameter','result','explored_parameter'].
+            Default is True/1
+
+            Note that these tables create a lot of overhead, if you want small hdf5 files set
+            these values to False (0). Most memory is taken by the result_overview and
+            derived_parameter_overview!
+
+    * hdf5.explored_parameter_overview_in_runs
+
+            Whether an overview table about the explored parameters is added in each
+            single run subgroup.
+            Default is True/1
+
+    * hdf5.results_per_run
+
+            Expected results you store per run. If you give a good/correct estimate
+            storage to hdf5 file is much faster if you want overview tables.
+
+            Default is 0, i.e. the number of results is not estimated!
+
+    * hdf5.derived_parameters_per_run
+
+          Analogous to the above.
+
+
 
 
     '''
     def __init__(self, trajectory='trajectory',
                  comment='',
-                 filename='../experiments.h5',
-                 file_title='experiment',
+                 dynamically_imported_classes=None,
                  log_folder='../log/',
-                 dynamically_imported_classes=None):
+                 use_hdf5=True,
+                 filename='../experiments.h5',
+                 file_title='experiment'):
 
 
 
@@ -197,11 +243,11 @@ class Environment(object):
 
 
         # Adding some default configuration
-        if not self._traj.f_contains('config.log_path'):
+        if not self._traj.f_contains('config.environment.log_path'):
             log_path = os.path.join(log_folder,self._traj.v_name)
-            self._traj.f_add_config('log_path', log_path).f_lock()
+            self._traj.f_add_config('environment.log_path', log_path).f_lock()
         else:
-            log_path=self._traj.f_get('config.log_path').f_get()
+            log_path=self._traj.f_get('config.environment.log_path').f_get()
 
 
         self._make_logger(log_path)
@@ -209,22 +255,69 @@ class Environment(object):
 
         storage_service = self._traj.v_storage_service
 
-        if not self._traj.f_contains('config.ncores'):
-            self._traj.f_add_config('ncores',1)
-        if not self._traj.f_contains('config.multiproc'):
-            self._traj.f_add_config('multiproc',0)
+        if not self._traj.f_contains('config.environment.ncores'):
+            self._traj.f_add_config('environment.ncores',1, comment='Number of processors in case of multiprocessing')
 
-        if not self._traj.f_contains('config.filename') and storage_service == None:
-            self._traj.f_add_config('filename',filename)
-        if not self._traj.f_contains('config.file_title') and  storage_service == None:
-            self._traj.f_add_config('file_title', file_title)
+        if not self._traj.f_contains('config.environment.multiproc'):
+            self._traj.f_add_config('environment.multiproc',0, comment= 'Whether or not to use multiprocessing. If yes'
+                                                            ' than everything must be pickable.')
 
-        if not self._traj.f_contains('config.multiproc_mode'):
-            self._traj.f_add_config('multiproc_mode',globally.MULTIPROC_MODE_LOCK)
 
-        if not self._traj.f_contains('config.contiuable'):
-            self._traj.f_add_config('continuable', 1)
+        if not self._traj.f_contains('config.environment.multiproc_mode'):
+            self._traj.f_add_config('environment.multiproc_mode',globally.MULTIPROC_MODE_LOCK,
+                                    comment ='Multiprocessing mode (if multiproc is True), i.e. whether to use QUEUE or LOCKS'
+                                             ' for thread/process safe storing.')
 
+        if not self._traj.f_contains('config.environment.contiuable'):
+            self._traj.f_add_config('environment.continuable', 1, comment='Whether or not a continue file should'
+                                                              ' be created. If yes, everything must be'
+                                                              ' pickable.')
+
+        self._use_hdf5 = use_hdf5
+        if self._use_hdf5:
+            if not self._traj.f_contains('config.hdf5.filename') :
+                self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
+            if not self._traj.f_contains('config.hdf5.file_title'):
+                self._traj.f_add_config('hdf5.file_title', file_title, comment='Title of hdf5 file')
+            if not self._traj.f_contains('config.hdf5.results_per_run'):
+                self._traj.f_add_config('hdf5.results_per_run', 0,
+                                        comment='Expected number of results per run,'
+                                            ' a good guess can increase storage performance.')
+            if not self._traj.f_contains('config.hdf5.derived_parameters_per_run'):
+                self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
+                                        comment='Expected number of derived parameters per run,'
+                                            ' a good guess can increase storage performance.')
+            if not self._traj.f_contains('config.hdf5.result_overview'):
+                self._traj.f_add_config('hdf5.result_overview', 1,
+                                        comment='Whether an overview table about the results should'
+                                                ' be stored in the hdf5 file. Setting it to False'
+                                                ' can decrease file size.')
+            if not self._traj.f_contains('config.hdf5.derived_parameter_overview'):
+                self._traj.f_add_config('hdf5.derived_parameter_overview', 1,
+                                        comment='Whether an overview table about the derived parameters should'
+                                                ' be stored in the hdf5 file. Setting it to False'
+                                                ' can decrease file size.')
+            if not self._traj.f_contains('config.hdf5.parameter_overview'):
+                self._traj.f_add_config('hdf5.parameter_overview', 1,
+                                        comment='Whether an overview table about the parameters should'
+                                                ' be stored in the hdf5 file. Setting it to False'
+                                                ' can decrease file size.')
+            if not self._traj.f_contains('config.hdf5.config_overview'):
+                self._traj.f_add_config('hdf5.config_overview', 1,
+                                        comment='Whether an overview table about the parameters should'
+                                                ' be stored in the hdf5 file. Setting it to False'
+                                                ' can decrease file size.')
+            if not self._traj.f_contains('config.hdf5.explored_parameter_overview'):
+                self._traj.f_add_config('hdf5.explored_parameter_overview', 1,
+                                        comment='Whether an overview table about the explored parameters should'
+                                                ' be stored in the hdf5 file. Setting it to False'
+                                                ' can decrease file size.')
+            if not self._traj.f_contains('config.hdf5.explored_parameter_overview_in_runs'):
+                self._traj.f_add_config('hdf5.explored_parameter_overview_in_runs', 1,
+                                        comment='Whether an overview table about the explored parameters should'
+                                                ' be stored in every single run group in the hdf5 file. '
+                                                'Setting it to False'
+                                                ' can decrease file size.')
 
         self._logger.info('Environment initialized.')
 
@@ -300,16 +393,16 @@ class Environment(object):
 
         '''
 
-        continuable = self._traj.f_get('config.continuable').f_get()
-        log_path = self._traj.f_get('config.log_path').f_get()
+        continuable = self._traj.f_get('config.environment.continuable').f_get()
+        log_path = self._traj.f_get('config.environment.log_path').f_get()
 
 
         self._storage_service = self._traj.v_storage_service
 
         #Prepares the trajecotry for running
-        if self._storage_service == None:
-            self._storage_service = HDF5StorageService(self._traj.f_get('config.filename').f_get(),
-                                                 self._traj.f_get('config.file_title').f_get() )
+        if self._storage_service == None and self._use_hdf5:
+            self._storage_service = HDF5StorageService(self._traj.f_get('config.hdf5.filename').f_get(),
+                                                 self._traj.f_get('config.hdf5.file_title').f_get() )
 
             self._traj.v_storage_service=self._storage_service
 
@@ -318,8 +411,8 @@ class Environment(object):
         if continuable:
             #HERE!
             dump_dict ={}
-            if 'config.filename' in self._traj:
-                filename = self._traj.f_get('config.filename').f_get()
+            if 'config.hdf5.filename' in self._traj:
+                filename = self._traj.f_get('config.hdf5.filename').f_get()
                 #dump_dict['filename'] = filename
                 dumpfolder= os.path.split(filename)[0]
                 dumpfilename=os.path.join(dumpfolder,self._traj.v_name+'.cnt')
@@ -346,9 +439,9 @@ class Environment(object):
 
 
     def _do_run(self, runfunc, *args, **kwargs):
-        log_path = self._traj.f_get('config.log_path').f_get()
-        multiproc = self._traj.f_get('config.multiproc').f_get()
-        mode = self._traj.f_get('config.multiproc_mode').f_get()
+        log_path = self._traj.f_get('config.environment.log_path').f_get()
+        multiproc = self._traj.f_get('config.environment.multiproc').f_get()
+        mode = self._traj.f_get('config.environment.multiproc_mode').f_get()
         if multiproc:
 
             if mode == globally.MULTIPROC_MODE_QUEUE:

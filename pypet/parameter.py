@@ -319,8 +319,8 @@ class BaseParameter(NNLeafNode):
         try :
             restr= str(self.f_get())
 
-            if len(restr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                restr=restr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+            if len(restr) >= globally.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                restr=restr[0:globally.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
 
             return restr
         except Exception, e:
@@ -1348,8 +1348,8 @@ class Result(BaseResult):
             for key,val in iter(sorted(self._data.items())):
                 resstr+= '%s=%s, ' % (key, str(val))
 
-                if len(resstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+                if len(resstr) >= globally.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
                     return resstr
 
             resstr=resstr[0:-2]
@@ -1584,7 +1584,9 @@ class Result(BaseResult):
 
 
 class PickleResult(Result):
-    ''' Result that eats everything and simply pickles it!
+    ''' Result that digest everything and simply pickles it!
+
+    Note that it is not checked whether data can be pickled, so take care that it works!
     '''
 
 

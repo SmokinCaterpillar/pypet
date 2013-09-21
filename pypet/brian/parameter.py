@@ -227,7 +227,7 @@ class BrianMonitorResult(Result):
 
     * PopulationRateMonitor
 
-    * ISIHistogramMonitor):
+    * ISIHistogramMonitor:
 
     * SpikeMonitor
 
@@ -242,12 +242,31 @@ class BrianMonitorResult(Result):
     >>> brian_result.nspikes
     1337
 
-    '''
 
-    TABLE_MODE = 'table'
-    ARRAY_MODE = 'array'
+    There are two storage modes in case you use the SpikeMonitor and StateSpikeMonitor:
 
-    keywords=set(['data','values','spikes','times','rate','count','mean_var',])
+    * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE': ('TABLE')
+
+        Default, information is stored into a single table where
+        the first column is the neuron index,
+        second column is the spike time
+        following columns contain variable values (in case of the StateSpikeMonitor)
+        This is a very compact storage form.
+
+    * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE': ('ARRAY')
+
+        For each neuron there will be a new hdf5 array,
+        i.e. if you have many neurons your result node will have many entries.
+        Note that this mode does sort everything according to the neurons but
+        reading and writing of data might take muuuuuch longer compared to
+        the other mode.
+
+        '''
+
+    TABLE_MODE = 'TABLE'
+    ARRAY_MODE = 'ARRAY'
+
+    #keywords=set(['data','values','spikes','times','rate','count','mean_var',])
 
     def __init__(self, full_name, *args, **kwargs):
         super(BrianMonitorResult,self).__init__(full_name)
@@ -261,6 +280,27 @@ class BrianMonitorResult(Result):
 
     @property
     def v_storage_mode(self):
+        '''The storage mode for SpikeMonitor and StateSpikeMonitor
+
+        There are two storage modes:
+
+        * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE': ('TABLE')
+
+            Default, information is stored into a single table where
+            the first column is the neuron index,
+            second column is the spike time
+            following columns contain variable values (in case of the StateSpikeMonitor)
+            This is a very compact storage form.
+
+        * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE': ('ARRAY')
+
+            For each neuron there will be a new hdf5 array,
+            i.e. if you have many neurons your result node will have many entries.
+            Note that this mode does sort everything according to the neurons but
+            reading and writing of data might take muuuuuch longer compared to
+            the other mode.
+
+        '''
         return self._storage_mode
 
     @v_storage_mode.setter

@@ -476,29 +476,33 @@ class HDF5StorageService(StorageService):
 
 
     def _trj_copy_table_entries_from_table_name(self,tablename,rename_dict,other_trajectory_name):
-        other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/'+tablename)
-        new_value_dict={}
+        try:
+            other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/'+tablename)
+            new_value_dict={}
 
-        for row in  other_table:
-            location = row['location']
-            name = row['name']
-            full_name = location+'.'+name
+            for row in  other_table:
+                location = row['location']
+                name = row['name']
+                full_name = location+'.'+name
 
-            if full_name in rename_dict:
-                new_value_dict[rename_dict[full_name]] = row['value']
+                if full_name in rename_dict:
+                    new_value_dict[rename_dict[full_name]] = row['value']
 
-        table= self._hdf5file.get_node('/'+self._trajectory_name+'/'+tablename)
-        for row in table:
-            location = row['location']
-            name = row['name']
-            full_name = location+'.'+name
+            table= self._hdf5file.get_node('/'+self._trajectory_name+'/'+tablename)
+            for row in table:
+                location = row['location']
+                name = row['name']
+                full_name = location+'.'+name
 
-            if full_name in new_value_dict:
-                row['value'] = new_value_dict[full_name]
+                if full_name in new_value_dict:
+                    row['value'] = new_value_dict[full_name]
 
-                row.update()
+                    row.update()
 
-        self._hdf5file.flush()
+            self._hdf5file.flush()
+        except pt.NoSuchNodeError:
+            self._logger.warning('Did not find table >>%s<< in one of the trajectories,'
+                              ' skipped copying.' % tablename)
 
 
 
@@ -569,11 +573,14 @@ class HDF5StorageService(StorageService):
         ## We only add the table entries, since we can merge via the hdf5 storage service
         for result_name in new_results:
             result = traj.f_get(result_name)
-            tablename='result_table'
-            table = getattr(self._trajectory_group,tablename)
-            self._all_store_param_or_result_table_entry(result,table,
-                                                        flags=(HDF5StorageService.ADD_ROW,
-                                                               HDF5StorageService.MODIFY_ROW))
+            try:
+                tablename='result_table'
+                table = getattr(self._trajectory_group,tablename)
+                self._all_store_param_or_result_table_entry(result,table,
+                                                            flags=(HDF5StorageService.ADD_ROW,
+                                                                   HDF5StorageService.MODIFY_ROW))
+            except pt.NoSuchNodeError:
+                pass
 
 
         ### Store the parameters
@@ -590,6 +597,7 @@ class HDF5StorageService(StorageService):
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
 
+        add_table = traj.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
         for run_name in traj.f_get_run_names():
             run_info = traj.f_get_run_information(run_name)
             run_info['name'] = run_name
@@ -597,7 +605,8 @@ class HDF5StorageService(StorageService):
 
 
             traj.f_prepare_parameter_space_point(idx)
-            run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values())
+            run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
+                                                      add_table)
 
 
             run_info['parameter_summary'] = run_summary
@@ -773,15 +782,15 @@ class HDF5StorageService(StorageService):
         '''
 
 
-        descriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+        descriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH),
                          'time': pt.StringCol(len(traj.v_time)),
                          'timestamp' : pt.FloatCol(),
                          'comment':  pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH),
                          'length':pt.IntCol()}
-                         # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
+                         # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
 
         infotable = self._all_get_or_create_table(where=self._trajectory_group, tablename='info_table',
-                                               description=descriptiondict)
+                                               description=descriptiondict, expectedrows=len(traj))
 
 
         insert_dict = self._all_extract_insert_dict(traj,infotable.colnames)
@@ -794,7 +803,7 @@ class HDF5StorageService(StorageService):
                          'timestamp' : pt.FloatCol(),
                          'idx' : pt.IntCol(),
                          'completed' : pt.IntCol(),
-                         'parameter_summary' : pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
+                         'parameter_summary' : pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH)}
 
         runtable = self._all_get_or_create_table(where=self._trajectory_group,
                                                  tablename='run_table',
@@ -806,30 +815,74 @@ class HDF5StorageService(StorageService):
         self._ann_store_annotations(traj,self._trajectory_group)
 
 
-        tostore_dict =  {'config_table':traj._config,
-                         'parameter_table':traj._parameters,
-                         'derived_parameter_table':traj._derived_parameters,
-                         'explored_parameter_table' :traj._explored_parameters,
-                         'result_table' : traj._results}
+        tostore_dict={}
+
+        if traj.f_get('config.hdf5.config_overview').f_get():
+            tostore_dict['config_table']=traj._config
+
+        if traj.f_get('config.hdf5.parameter_overview').f_get():
+            tostore_dict['parameter_table']=traj._parameters
+
+        if traj.f_get('config.hdf5.derived_parameter_overview').f_get():
+            tostore_dict['derived_parameter_table']=traj._derived_parameters
+
+        if traj.f_get('config.hdf5.result_overview').f_get():
+            tostore_dict['result_table'] = traj._results
+
+        if traj.f_get('config.hdf5.explored_parameter_overview').f_get():
+            tostore_dict['explored_parameter_table'] =traj._explored_parameters
+
 
         for key, dictionary in tostore_dict.items():
 
-            paramdescriptiondict={'location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'class_name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                  'comment': pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH),
-                                  'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)}
+            paramdescriptiondict ={}
 
 
-            if not key == 'result_table':
-                paramdescriptiondict.update({'length' : pt.IntCol()})
+            paramdescriptiondict['location']= pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)
+            paramdescriptiondict['name']= pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)
+            paramdescriptiondict['value']=pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH)
+
+            if key == 'config_table':
+                expectedrows= len(traj._config)
+
+            if key == 'parameter_table':
+                expectedrows= len(traj._parameters)
+
+            if not key == 'derived_parameter_table' and not key == 'result_table':
+                paramdescriptiondict['length']= pt.IntCol()
+                paramdescriptiondict['comment']= pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)
+
+            if key == 'derived_parameter_table':
+                expectedrows = None
+
+                expectedrows = traj.f_get('config.hdf5.derived_parameters_per_run').f_get()
+
+                if not expectedrows <= 0:
+                    expectedrows=expectedrows*len(traj)
+                    expectedrows+=len(traj._derived_parameters)
+
+            if key == 'result_table':
+                expectedrows = None
+
+                expectedrows = traj.f_get('config.hdf5.results_per_run').f_get()
+
+                if not expectedrows <=0:
+                    expectedrows=expectedrows*len(traj)
+                    expectedrows+=len(traj._results)
+
 
 
             if key == 'explored_parameter_table':
-                paramdescriptiondict.update({'array' : pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)})
+                paramdescriptiondict['array']= pt.StringCol(globally.HDF5_STRCOL_MAX_ARRAY_LENGTH)
+                expectedrows=len(traj._explored_parameters)
 
-            paramtable = self._all_get_or_create_table(where=self._trajectory_group, tablename=key,
+            if not expectedrows is None:
+                paramtable = self._all_get_or_create_table(where=self._trajectory_group, tablename=key,
+                                                       description=paramdescriptiondict, expectedrows=expectedrows)
+            else:
+                paramtable = self._all_get_or_create_table(where=self._trajectory_group, tablename=key,
                                                        description=paramdescriptiondict)
+
 
             paramtable.flush()
 
@@ -863,7 +916,12 @@ class HDF5StorageService(StorageService):
 
         self._tree_store_recursively(globally.LEAF,traj.config,self._trajectory_group)
         ## If we extended a trajectory we want to call update in any case
-        self._tree_store_recursively(globally.UPDATE_LEAF,traj.parameters,self._trajectory_group)
+        if traj._stored:
+            msg = globally.UPDATE_LEAF
+        else:
+            msg = globally.LEAF
+
+        self._tree_store_recursively(msg,traj.parameters,self._trajectory_group)
         self._tree_store_recursively(globally.LEAF,traj.derived_parameters,self._trajectory_group)
         self._tree_store_recursively(globally.LEAF,traj.results,self._trajectory_group)
 
@@ -1057,9 +1115,11 @@ class HDF5StorageService(StorageService):
                 self._trj_store_sub_branch(globally.LEAF,single_run,
                                            branch_name,self._trajectory_group)
 
+        add_table = single_run.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
         # For better readability add the explored parameters to the results
         run_summary = self._srn_add_explored_params(single_run.v_name,
-                                                    single_run._explored_parameters.values())
+                                                    single_run._explored_parameters.values(),
+                                                    add_table)
 
         table = getattr(self._trajectory_group,'run_table')
 
@@ -1080,20 +1140,19 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _srn_add_explored_params(self, name, paramlist):
+    def _srn_add_explored_params(self, name, paramlist, add_table):
         ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
         '''
 
-        paramdescriptiondict={'location': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'class_name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH)}
+        paramdescriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH)}
 
         where = 'results.'+name
 
 
         where = where.replace('.','/')
-        add_table =where in self._trajectory_group
+        add_table = add_table and where in self._trajectory_group
+
         if add_table:
             rungroup = getattr(self._trajectory_group,where)
 
@@ -1111,15 +1170,14 @@ class HDF5StorageService(StorageService):
                 runsummary = runsummary + ',   '
 
             valstr = expparam.f_val_to_str()
-            if len(valstr) >= globally.HDF5_STRCOL_MAX_NAME_LENGTH:
-                valstr = valstr[0:globally.HDF5_STRCOL_MAX_NAME_LENGTH-3]
+            if len(valstr) >= globally.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+                valstr = valstr[0:globally.HDF5_STRCOL_MAX_LOCATION_LENGTH-3]
                 valstr+='...'
             runsummary = runsummary + expparam.v_name + ': ' +valstr
 
             if add_table:
                 self._all_store_param_or_result_table_entry(expparam, paramtable,
-                                                        (HDF5StorageService.ADD_ROW,
-                                                         HDF5StorageService.MODIFY_ROW))
+                                                        (HDF5StorageService.ADD_ROW,))
 
         return runsummary
 
@@ -1137,11 +1195,15 @@ class HDF5StorageService(StorageService):
         location = param_or_result.v_location
         name = param_or_result.v_name
         fullname = param_or_result.v_full_name
+        # If we are sure we only want to add a row we do not need to search!
+        if flags==(HDF5StorageService.ADD_ROW,):
+            condvars = None
+            condition = None
+        else:
+            condvars = {'namecol' : table.cols.name, 'locationcol' : table.cols.location,
+                        'name' : name, 'location': location}
 
-        condvars = {'namecol' : table.cols.name, 'locationcol' : table.cols.location,
-                    'name' : name, 'location': location}
-
-        condition = """(namecol == name) & (locationcol == location)"""
+            condition = """(namecol == name) & (locationcol == location)"""
 
 
         colnames = set(table.colnames)
@@ -1155,12 +1217,17 @@ class HDF5StorageService(StorageService):
                                     condvars=condvars,flags=flags)
 
 
-    def _all_get_or_create_table(self,where,tablename,description):
+    def _all_get_or_create_table(self,where,tablename,description,expectedrows=None):
 
         where_node = self._hdf5file.get_node(where)
 
         if not tablename in where_node:
-            table = self._hdf5file.createTable(where=where_node, name=tablename,
+            if not expectedrows is None:
+                table = self._hdf5file.createTable(where=where_node, name=tablename,
+                                               description=description, title=tablename,
+                                               expectedrows=expectedrows)
+            else:
+                table = self._hdf5file.createTable(where=where_node, name=tablename,
                                                description=description, title=tablename)
         else:
             table = where_node._f_get_child(tablename)
@@ -1370,12 +1437,12 @@ class HDF5StorageService(StorageService):
 
         if 'array' in colnames:
             arraystr = str(item.f_get_array())
-            if len(arraystr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            if len(arraystr) >= globally.HDF5_STRCOL_MAX_ARRAY_LENGTH:
                 self._logger.warning('The array string >>%s<< was too long I truncated it to'
-                                     '%d characters' %
-                                     (arraystr,globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+                                     ' %d characters' %
+                                     (arraystr,globally.HDF5_STRCOL_MAX_ARRAY_LENGTH))
 
-                arraystr=arraystr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
+                arraystr=arraystr[0:globally.HDF5_STRCOL_MAX_ARRAY_LENGTH]
             insert_dict['array'] = arraystr
 
         return insert_dict
@@ -1487,7 +1554,13 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _prm_add_meta_info(self,instance,group):
+    def _prm_add_meta_info(self,instance,group,msg):
+
+        if msg == globally.UPDATE_LEAF:
+            flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW)
+        else:
+            flags=(HDF5StorageService.ADD_ROW,)
+
         setattr(group._v_attrs, HDF5StorageService.COMMENT, instance.v_comment)
         setattr(group._v_attrs, HDF5StorageService.CLASS_NAME, instance.f_get_class_name())
         setattr(group._v_attrs,HDF5StorageService.LEAF,1)
@@ -1496,19 +1569,24 @@ class HDF5StorageService(StorageService):
             setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
 
         where = instance.v_location.split('.')[0]
-        tablename = HDF5StorageService.TABLE_NAME_MAPPING[where]
-        table = getattr(self._trajectory_group,tablename)
+        try:
+            tablename = HDF5StorageService.TABLE_NAME_MAPPING[where]
+            table = getattr(self._trajectory_group,tablename)
 
-        self._all_store_param_or_result_table_entry(instance,table,
-                                                    flags=(HDF5StorageService.ADD_ROW,
-                                                           HDF5StorageService.MODIFY_ROW))
+
+            self._all_store_param_or_result_table_entry(instance,table,
+                                                        flags=flags)
+        except pt.NoSuchNodeError:
+                pass
 
         if instance.v_parameter and instance.f_is_array():
-            tablename = 'explored_parameter_table'
-            table = getattr(self._trajectory_group,tablename)
-            self._all_store_param_or_result_table_entry(instance,table,
-                                                        flags=(HDF5StorageService.ADD_ROW,
-                                                           HDF5StorageService.MODIFY_ROW))
+            try:
+                tablename = 'explored_parameter_table'
+                table = getattr(self._trajectory_group,tablename)
+                self._all_store_param_or_result_table_entry(instance,table,
+                                                        flags=flags)
+            except pt.NoSuchNodeError:
+                pass
 
     def _prm_store_parameter_or_result(self, msg, instance,*args,**kwargs):
 
@@ -1526,7 +1604,7 @@ class HDF5StorageService(StorageService):
             newly_created = False
 
         if msg == globally.UPDATE_LEAF or newly_created:
-            self._prm_add_meta_info(instance,_hdf5_group)
+            self._prm_add_meta_info(instance,_hdf5_group,msg)
 
         ## Store annotations
         self._ann_store_annotations(instance,_hdf5_group)

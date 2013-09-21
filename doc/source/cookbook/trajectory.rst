@@ -14,8 +14,6 @@ see the :doc:`examples/example_02_trajectory_access_and_storage.py` file in the 
 
 The :class:`~pypet.trajectory.Trajectory` is the standard container for all results and parameters
 (see :ref:`more-on-parameters`) of your numerical experiments.
-An experiment usually consists of 2 phases
-
 
 
 The trajectory container instantiates a tree with *groups* and *leaf* nodes.
@@ -31,7 +29,8 @@ A trajectory contains 4 major branches of its tree.
     Parameters stored under config, do not specify the outcome of your simulations but
     only the way how the simulation is carried out. For instance, this might encompass
     the number of cpu cores for multiprocessing. If you use and generate a trajectory
-    with an environment (:ref:`more-on-environment`). Any leaf added under *config*
+    with an environment (:ref:`more-on-environment`), the environment will add some
+    config data to your trajectory. Any leaf added under *config*
     is a :class:`~pypet.parameter.Parameter` object (or descendant of the corresponding
     base class :class:`~pypet.parameter.BaseParameter`).
 
@@ -52,18 +51,18 @@ A trajectory contains 4 major branches of its tree.
 
 * derived_parameters
 
-    Derived parameters are specification of your simulations that, as the name says, depend
-    on your original parameters, but are still used to carry out your simulation. They are
+    Derived parameters are specifications of your simulations that, as the name says, depend
+    on your original parameters but are still used to carry out your simulation. They are
     somewhat
-    too premature to be considered as final results. For example, assume a simulation of a neural network
+    too premature to be considered as final results. For example, assume a simulation of a neural network,
     a derived parameter could be the connection matrix specifying how the neurons are linked
     to each other. Of course, the matrix is completely determined
     by some parameters, one could think of some kernel parameters and a random seed, but still
     you actually need the connection matrix to build the final network.
 
     Derived parameters can be introduced at any time during your simulation. If you add
-    a derived parameter before starting individual runs, that explore the parameter space,
-    the will be sorted into the subbranches`derived_parameterstrajectory`. If you
+    a derived parameter before starting individual runs that explore the parameter space,
+    they will be sorted into the subbranches`derived_parameters.trajectory`. If you
     introduce a derived parameter within a single run, they are sorted into:
     `derived_parameters.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
     Any leaf added under *derived_parameters*
@@ -85,7 +84,7 @@ To avoid confusion with natural naming scheme (see below) and the functionality 
 by the trajectory and parameters, I followed the idea by pytables ot use the prefix
 `f_` for functions and `v_` for python variables/attributes/properties.
 
-So addition of *leaves* can be achieved via the functions with the corresponding names.
+So addition of *leaves* can be achieved via the functions:
 
     * :func:`~pypet.naturalnaming.ConfigGroup.f_add_config`
 
@@ -115,8 +114,9 @@ There exists a standard constructor that is called in case you let the trajector
 parameter. The standard constructor can be changed via the `v_standard_parameter` property.
 Default is the :class:`~pypet.parameter.Parameter` constructor.
 
-If you only want to add a different type of parameter once, you can add the constructor as
-the first positional argument:
+If you only want to add a different type of parameter once, but not change the standard
+constructor in general, you can add the constructor as
+the first positional argument followed by the name as the second argument:
 
     >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', data = 42, comment='I am an example')
 
@@ -124,26 +124,26 @@ the first positional argument:
 Derived parameters, config and results work analogously.
 
 
-You can sort *parameters/results* into groups, by colons in the names.
+You can sort *parameters/results* into groups by colons in the names.
 For instance, `traj.f_add_parameter('traffic.mobiles.ncars', data = 42)` would create a parameter
-that is added to the subbrunch `parameters`, of course, but there will be automatically
-be created the subgroups `traffic` and inside there the group `mobiles`.
+that is added to the subbrunch `parameters`, of course, and this will automatically create
+the subgroups `traffic` and inside there the group `mobiles`.
 If you would now add the parameter `traj.f_add_parameter('traffic.mobiles.ncycles', data = 11)`,
 you can find this also in the group `traj.parameters.traffic.ncycles`.
 
 
 
-Besides *leaves* you can also add empty groups to the trajectory (and all subgroups, of course) via:
+Besides *leaves* you can also add empty *groups* to the trajectory (and to all subgroups, of course) via:
 
-* :func:`pypet.naturalnaming.NNGroupNode.f_add_config_group`
+* :func:`~pypet.naturalnaming.NNGroupNode.f_add_config_group`
 
-* :func:`pypet.naturalnaming.NNGroupNode.f_add_parameter_group`
+* :func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter_group`
 
-* :func:`pypet.naturalnaming.NNGroupNode.f_add_derived_parameter_group`
+* :func:`~pypet.naturalnaming.NNGroupNode.f_add_derived_parameter_group`
 
-* :func:`pypet.naturalnaming.NNGroupNode.f_add_result_group`
+* :func:`~pypet.naturalnaming.NNGroupNode.f_add_result_group`
 
-As before grouping can be applied as well so if you create the group `groupA.groupB.groupC` and
+As before, if you create the group `groupA.groupB.groupC` and
 if group A and B were non existent before, they will be created on the way.
 
 Note that I distinguish between three different types of name, the *full name* which would be,
@@ -157,18 +157,19 @@ result/parameter via:
 
 * `v_name`
 
-Groups are also very helpful when it comes to accessing results or parameters in the trajectory,
-see below.
+*Location* and *full name* are relative to the root node, since a trajectory object (and single runs)
+is the root, it's *full_name* is `''` the empty string. Yet, the *name* property is not empty
+but contains the user chosen name of the trajectory.
 
-Note that if you add a parameter/result/group with `f_add_xxxxx` the (full name) you assigned
-to it will be extended by the *full name* of the group you added it to:
+Note that if you add a parameter/result/group with `f_add_xxxxx` the (full name)
+the full name will be extended by the *full name* of the group you added it to:
 
 >>> traj.parameters.traffic.f_add_parameter('street.nzebras')
 
 The *full name* of the new parameter is going to be `parameters.traffic.street.nzebras`.
 If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
 the group names `parameters`, `config`, `derived_parameters.trajectory`, `derived_parameters.run_XXXXXXX`,
-`results.trajectory`, or  `results.run_XXXXXXX` will automatically be added (of course,
+`results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
 
@@ -179,7 +180,7 @@ Natural Naming
 
 As said before *trajectories* instantiate trees and the tree can be browsed via natural naming.
 
-For instance if you add a parameter via `traj.f_add_parameter('traffic.street.nzebras', data=4)`,
+For instance, if you add a parameter via `traj.f_add_parameter('traffic.street.nzebras', data=4)`,
 you can access it via
 
     >>> traj.parameters.street.nzebras
@@ -194,8 +195,8 @@ Whether or not you want fast access is determined by the value of `v_fast_access
     >>> traj.parameters.street.nzebras
     <Parameter object>
 
-Note fast access only works for paramter objects (i.e. for everything you store under *parameters*,
-*derived_parameters*, and *conig*). If you access a result via natural naming, you will always
+Note that fast access only works for parameter objects (i.e. for everything you store under *parameters*,
+*derived_parameters*, and *config*). If you access a result via natural naming, you will always
 get in return the result object [#]_.
 
 
@@ -204,11 +205,11 @@ get in return the result object [#]_.
 Shortcuts
 ^^^^^^^^^^^^^^^^^
 
-As a user, you are encouraged, to nicely group and structure your results as fine grain as
-possible. However, if you do that, you might thank that you will inevitably have to type a
+As a user you are encouraged to nicely group and structure your results as fine grain as
+possible. Yet, you might think that you will inevitably have to type a
 lot to access your values and always state the *full name* of an item.
 This is, however, not true. There are two ways to work around that.
-First, you can reqeust the supergroup, and then access the variables one by one:
+First, you can request the group above the parameters, and then access the variables one by one:
 
     >>> mobiles = traj.parameters.traffic.mobiles
     >>> mobiles.ncars
@@ -230,12 +231,12 @@ Search is established with very fast look up and usually needs much less then :m
 [most often :math:`O(1)` or :math:`O(d)`, where :math:`d` is the depth of the tree
 and `n` the total number of nodes, i.e. *groups* + *leaves*)
 
-However, sometimes your short names are not unique and you might find several solutions for
+However, sometimes your shortcuts are not unique and you might find several solutions for
 your natural naming search in the tree. To speed up the lookup, the search is stopped after the
 first result. So you will not be notified whether your result is actually unique. Yet, you
 can set `v_check_uniqueness=True` at your trajectory object and it will be checked for these
-circumstances. Nonetheless, enabling `v_check_uniqueness=True` will require always O(n) for
-your lookups, so do that
+circumstances. Nonetheless, enabling `v_check_uniqueness=True` will require always :math:`O(n)` for
+your lookups. So do that
 for debugging purposes once and switch it off during your real simulation runs to save time!
 
 The method that performs the natural naming search in the tree can be called directly, it is
@@ -274,6 +275,27 @@ There exist also nice shortcuts for already present groups:
     `'r_X'` and `'run_X'` are mapped to the corresponding run name, e.g. `'r_3'` is
     mapped to `'run_00000003'`
 
+.. _parameter-exploration:
+
+----------------------------------
+Parameter Exploration
+----------------------------------
+
+Exploration can be prepared with the function :func:`~pypet.trajectory.Trajectory.f_explore`.
+This function takes a dictionary with parameter names
+ (not necessarily the full names, they are searched) as keys and iterables specifying
+how the parameter changes for each run as the argument. Note that all iterables
+need to be of the same length. For examples.
+
+>>> traj.f_explore({'ncars':[42,44,45,46], 'ncycles' :[1,4,6,6]})
+
+This would create a trajectory of length 4 and explore the four parameter space points
+:math:`(42,1),(44,4),(45,6),(46,6)`. If you want to explore the cartesian product of
+variables, you can take a look at the :func:`~pypet.utils.explore.cartesian_product` function.
+
+You can extend or expand an already explored trajectory to explore the parameter further with
+the function :func:`~pypet.trajectory.Trajectory.f_expand`.
+
 ---------------------------------
 Storing
 ---------------------------------
@@ -309,11 +331,11 @@ The most straightforward way to store everything is to say:
 
 and that's it. In fact if you use the trajectory in combination with the environment (see
 :ref:`more-on-environment`) you
-do not need to that call by yourself at all, this is done by the environment.
+do not need to do this call by yourself at all, this is done by the environment.
 
 More interesting is the approach to store individual items.
-Assume you computed a result that is extremely large, and you want to store it to disk,
-than you can free the result and forget about it for the rest of your simulation:
+Assume you computed a result that is extremely large. So you want to store it to disk,
+than free the result and forget about it for the rest of your simulation:
 
     >>> large_result = traj.results.large_result
     >>> traj.f_store_item(large_result)
@@ -323,7 +345,7 @@ Note that in order to allow storage of single items, you need to have stored the
 least once. If you operate during a single run, this has been done before, if not,
 simply call `traj.store()` once before.
 
-To avoid reopneing an closing of the hdf5 file over and over again there is also the
+To avoid re-opneing an closing of the hdf5 file over and over again there is also the
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
@@ -349,6 +371,9 @@ In addition, there will be some overview tables summarizing what you stored into
 * The `explored_parameter_table` overview over you parameters explored in the single runs
 
 * In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing the values in each run.
+
+Btw, you can switch the creation of these tables off (See ref:`more-on-envrionment`) to reduce the
+size of the final hdf5 file.
 
 ------------------------------------
 Loading
@@ -404,8 +429,8 @@ As for storage, you can load single items manually by
 :func:`~pypet.trajectory.Trajectory.f_load_item`. Note in order to do that the item
 mus exist in the current trajectory in RAM, if it does not
 you can always bring your skeleton of your trajectory tree up to date
-with :`func:`~pypet.trajectory.Trajectory.f_update_skeleton`. Which will load all items stored
-to disk and create empty instances. After a simulation is completed you need to call this function
+with :`func:`~pypet.trajectory.Trajectory.f_update_skeleton`. This will load all items stored
+to disk and create empty instances. After a simulation is completed, you need to call this function
 to get the whole trajectory tree containing all new results and derived parameters.
 
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.

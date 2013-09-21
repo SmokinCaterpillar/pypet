@@ -34,6 +34,7 @@ traj1.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 # Let's explore slightly differently for the second:
 traj2.f_explore(cartesian_product({'x':[3.0,4.0,5.0,6.0], 'y':[7.0,8.0,9.0]}))
 
+
 # Run the simulation
 env1.f_run(multiply)
 env2.f_run(multiply)

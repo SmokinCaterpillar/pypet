@@ -50,3 +50,12 @@ For Completeness: The Abstract Base Classes
 .. autoclass:: pypet.parameter.BaseResult
     :members:
     :inherited-members:
+
+
+-----------------------------
+Object Table
+-----------------------------
+
+.. autoclass:: pypet.parameter.ObjectTable
+    :members:
+

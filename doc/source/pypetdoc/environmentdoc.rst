@@ -1,16 +1,6 @@
-=======================
-Brian Parameters and Monitors
-=======================
---------------------
-BrianParameter
---------------------
+=================================
+Environment
+=================================
 
-.. autoclass:: pypet.brian.parameter.BrianParameter
-    :members:
-
-----------------------
-BrianMonitorResult
-----------------------
-
-.. autoclass:: pypet.brian.parameter.BrianMonitorResult
+.. autoclass:: pypet.environment.Environment
     :members:
