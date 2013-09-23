@@ -37,7 +37,7 @@ Currently the storage method of choice is HDF5.
 
 
 ---------------------------
-Organization
+Package Organization
 ---------------------------
 
 This project encompasses these core modules:
