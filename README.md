@@ -58,7 +58,7 @@ This project encompasses these core modules:
 Documentation
 ---------------------------
 
-Documentation can be found here: http://pypet.readthedocs.org/en/latest/index.html
+Documentation can be found here: http://pypet.readthedocs.org/en/latest
 
 ---------------------------
 Acknowledgements
