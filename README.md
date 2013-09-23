@@ -184,14 +184,17 @@ of our trajectory and the results we have computed.
 So have fun using this tool!
 
 Cheers,
-
     Robert
 
-
-pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
-supported by the Research Training Group GRK 1589/1.
 
 ------------------------------------
 License
 ------------------------------------
 Read LICENSE
+
+
+
+
+
+pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
+supported by the Research Training Group GRK 1589/1.
