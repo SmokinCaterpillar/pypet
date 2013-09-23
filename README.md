@@ -68,7 +68,7 @@ Acknowledgements
 *   Thanks to Robert Pröpper and Phillip Meyer for answering all my Python questions
 
     You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
-    tool for visualization of MEA recordings and NEO data (http://pythonhosted.org/neo/index.html)
+    tool for visualization of MEA recordings and NEO data (http://pythonhosted.org/neo)
 
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
@@ -190,3 +190,8 @@ Cheers,
 
 pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
+
+------------------------------------
+License
+------------------------------------
+Read LICENSE
