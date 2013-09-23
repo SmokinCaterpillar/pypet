@@ -60,23 +60,23 @@ Documentation
 
 Documentation can be found here: http://pypet.readthedocs.org/en/latest/index.html
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 Acknowledgements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 
 
-    * Thanks to Robert Pröpper and Phillip Meyer for answering all my Python Questions.
+    *   Thanks to Robert Pröpper and Phillip Meyer for answering all my Python Questions.
 
-    You might wanna check out their SpykeViewer_ tool for visualization of
-    MEA recordings and NEO_ data
-
-
-    * Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
-    for this project
+        You might wanna check out their SpykeViewer_ tool for visualization of
+        MEA recordings and NEO_ data
 
 
-    * Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
-    `Neural Information Processing Group`_ for support
+    *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
+        for this project
+
+
+    *   Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
+        `Neural Information Processing Group`_ for support
 
 .. _SpykeViewer: https://github.com/rproepp/spykeviewer
 
