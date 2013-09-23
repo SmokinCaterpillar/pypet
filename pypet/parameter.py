@@ -1242,13 +1242,25 @@ class Result(BaseResult):
           np.complex, np.str
 
 
-        * python lists and tuples of the previous types (python natives + numpy natives and arrays)
+        *
 
-        * python dictionaries of the previous types (not nested!)
+            python lists and tuples of the previous types
+            (python natives + numpy natives and arrays)
+            Lists and tuples are not allowed to be nested and must be
+            homogeneous, i.e. only contain data of one particular type.
+            Only integers, or only floats, etc.
 
-        * pandas data frames
+        *
+            python dictionaries of the previous types (not nested!), data can be
+            heterogeneous, keys must be strings. For example, one key-value pair
+            of string and int and one key-value pair of string and float, and so
+            on.
 
-        * object tables
+        * pandas DataFrames_
+
+        * :class:`pypet.parameter.ObjectTable`
+
+    .. _DataFrames: http://pandas.pydata.org/pandas-docs/dev/dsintro.html#dataframe
 
     Such values are either set on initialisation of with :func:`~pypet.parameter.Result.f_set`
 
@@ -1516,7 +1528,7 @@ class Result(BaseResult):
 
 
 
-
+    @copydoc(NNLeafNode._store)
     def _store(self):
         store_dict ={}
         store_dict.update(self._data)

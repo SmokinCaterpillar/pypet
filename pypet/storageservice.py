@@ -21,31 +21,45 @@ from pandas import DataFrame, read_hdf
 
 
 class MultiprocWrapper(object):
+    '''Abstract class definition of Wrapper
 
-
+    Note that only storing is required, loading is optional.
+    '''
     def store(self,*args,**kwargs):
         raise NotImplementedError('Implement this!')
 
 
 class QueueStorageServiceSender(MultiprocWrapper):
+    ''' For multiprocessing with :const:`pypet.globally.MULTIPROC_MODE_QUEUE`, replaces the
+        original storage service.
 
+        All storage requests are send over a queue to the process running the
+        :class:`pypet.storageservice.QueueStorageServiceWriter`.
+
+        Does not support loading of data!
+
+    '''
     def __init__(self):
-        self._queue = None
+        self.queue = None
+        '''The queue'''
 
-    def set_queue(self,queue):
-        self._queue = queue
+    # def set_queue(self,queue):
+    #     '''Sets access to the queue'''
+    #     self.queue = queue
 
     def __getstate__(self):
         result = self.__dict__.copy()
-        result['_queue'] = None
+        result['queue'] = None
         return result
 
     def store(self,*args,**kwargs):
-        self._queue.put(('STORE',args,kwargs))
+        '''Puts data to store on queue'''
+        self.queue.put(('STORE',args,kwargs))
 
 
     def send_done(self):
-        self._queue.put(('DONE',[],{}))
+        '''Signals the writer, that it can stop listening to the queue'''
+        self.queue.put(('DONE',[],{}))
 
 class QueueStorageServiceWriter(object):
     def __init__(self, storage_service, queue):
@@ -67,12 +81,18 @@ class QueueStorageServiceWriter(object):
             self._queue.task_done()
 
 class LockWrapper(MultiprocWrapper):
+    ''' For multiprocessing in LOCK mode, augments a storage service with a lock.
+
+    The lock is acquired before storage or loading and released afterwards.
+    '''
     def __init__(self,storage_service, lock):
         self._storage_service = storage_service
         self._lock = lock
 
 
     def store(self,*args,**kwargs):
+        '''Acquires a lock before storage and releases it afterwards.
+        '''
         try:
             self._lock.acquire()
             self._storage_service.store(*args,**kwargs)
@@ -84,6 +104,8 @@ class LockWrapper(MultiprocWrapper):
 
 
     def load(self,*args,**kwargs):
+        '''Acquires a lock before loading and releases it afterwards.
+        '''
         try:
             self._lock.acquire()
             self._storage_service.load(*args,**kwargs)
@@ -97,7 +119,7 @@ class LockWrapper(MultiprocWrapper):
 
 
 class StorageService(object):
-
+    '''Abstract base class defining the storage service interface.'''
     def store(self,msg,stuff_to_store,trajectoryname,*args,**kwargs):
         raise NotImplementedError('Implement this!')
 
@@ -106,33 +128,74 @@ class StorageService(object):
 
 
 class LazyStorageService(StorageService):
+    '''This lazy guy does nothing! Only for debugging purposes.
 
+    Ignores all storage and loading requests and simply executes `pass` instead.
+    '''
     def load(self,*args,**kwargs):
+        ''' Nope, I won't care, dude!
+        '''
         pass
 
     def store(self,*args,**kwargs):
+        '''Do whatever you want, I won't store anything!
+        '''
         pass
 
 class HDF5StorageService(StorageService):
-    ''' General Service to handle the storage of a Trajectory and Parameters
+    ''' Storage Service to handle the storage of a trajectory/parameters/results into hdf5 files.
+
+    Normally you will not interact with the storage service directly but via the trajectory,
+    see :func:`pypet.trajectory.SingleRun.f_store` and :func:`pypet.trajectory.Trajectory.f_load`.
+
+    The service is not thread safe. For multiprocessing the service needs to be wrapped either
+    by the :class:`~pypet.storageservice.LockWrapper` or with a combination of
+    :class:`~pypet.storageservice.QueueStorageServiceSender` and
+    :class:`~pypet.storageservice.QueueStorageServiceWriter`.
+
+    The storage service supports two operations *store* and *load*.
+
+    Requests for these two are always passed as
+    `msg, what_to_store_or_load, *args, **kwargs`
+
+    For example:
+
+    >>> HDF5StorageService.load(globally.LEAF, myresult, load_only=['spikestimes','nspikes'])
+
+    For a list of supported items see :func:`~pypet.storageservice.HDF5StorageService.store`
+    and :func:`~pypet.storageservice.HDF5StorageService.load`.
+
     '''
 
     ADD_ROW = 'ADD'
+    ''' Adds a row to an overview table'''
     REMOVE_ROW = 'REMOVE'
+    ''' Removes a row from an overview table'''
     MODIFY_ROW = 'MODIFY'
+    ''' Changes a row of an overview table'''
 
 
     COLL_TYPE ='COLL_TYPE'
+    '''Type of a container stored to hdf5, like list,tuple,dict,etc
+
+    Must be stored in order to allow perfect reconstructions.
+    '''
 
     COLL_LIST = 'COLL_LIST'
+    ''' Container was a list'''
     COLL_TUPLE = 'COLL_TUPLE'
+    ''' Container was a tuple'''
     COLL_NDARRAY = 'COLL_NDARRAY'
+    ''' Container was a numpy array'''
     COLL_MATRIX = 'COLL_MATRIX'
-    COLL_SCALAR = 'COLL_SCALAR'
+    ''' Container was a numpy matrix'''
     COLL_DICT = 'COLL_DICT'
-
+    ''' Container was a dictionary'''
+    COLL_SCALAR = 'COLL_SCALAR'
+    ''' No container, but the thing to store was a scalar'''
 
     SCALAR_TYPE = 'SCALAR_TYPE'
+    ''' Type of scalars stored into a container'''
 
     ### Overview Table constants
     CONFIG = 'config'
@@ -150,18 +213,58 @@ class HDF5StorageService(StorageService):
         EXPLORED_PARAMETERS : 'explored_parameter_table'
 
     }
+    '''Mapping of group names to the corresponding overview table names'''
 
 
     ### Storing Data Constants
     STORAGE_TYPE= 'SRVC_STORE'
+    '''Flag, how data was stored'''
 
     ARRAY = 'ARRAY'
+    '''Stored as array_
+
+    .. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
+
+    '''
     CARRAY = 'CARRAY'
+    '''Stored as carray_
+
+    .. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
+
+    '''
     EARRAY = 'EARRAY' # not supported yet
-    VLARRAY = 'VLARRAY' # not supported yet
+    ''' Stored as earray_
+
+    Not supported yet, maybe in near future.
+
+    .. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
+
+    '''
+    VLARRAY = 'VLARRAY'
+    '''Stored as vlarray_
+
+    Not supported yet, maybe in near future.
+
+    .. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
+
+    '''
     DICT = 'DICT'
+    ''' Stored as dict.
+
+    In fact, stored as pytable, but the dictionary wil be constructed.
+    '''
     TABLE = 'TABLE'
+    '''Stored as pytable_
+
+    .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
+
+    '''
     FRAME = 'FRAME'
+    ''' Stored as pandas DataFrame_
+
+    .. _DataFrame: http://pandas.pydata.org/pandas-docs/dev/io.html#hdf5-pytables
+
+    '''
 
     TYPE_FLAG_MAPPING = {
 
@@ -173,30 +276,43 @@ class HDF5StorageService(StorageService):
         np.matrix:CARRAY,
         DataFrame : FRAME
 
-
     }
+    ''' Mapping from object type to storage flag'''
 
     for item in globally.PARAMETER_SUPPORTED_DATA:
         TYPE_FLAG_MAPPING[item]=ARRAY
 
 
     FORMATTED_COLUMN_PREFIX = 'SRVC_COLUMN_%s_'
+    ''' Stores data type of a specific pytables column for perfect reconstruction'''
     DATA_PREFIX = 'SRVC_DATA_'
-
+    ''' Stores data type of a pytables carray or array for perfect reconstruction'''
 
     # ANNOTATION CONSTANTS
     ANNOTATION_PREFIX = 'SRVC_AN_'
+    ''' Prefix to store annotations as node attributes_
+
+    .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
+
+    '''
     ANNOTATED ='SRVC_ANNOTATED'
+    ''' Whether an item was annotated'''
 
 
     # Stuff necessary to construct parameters and result
-
     INIT_PREFIX = 'SRVC_INIT_'
+    ''' Hdf5 attribute prefix to store class name of parameter or result'''
     CLASS_NAME = INIT_PREFIX+'CLASS_NAME'
+    ''' Name of a parameter or result class, is converted to a constructor'''
     COMMENT = INIT_PREFIX+'COMMENT'
+    ''' Comment of parameter or result'''
     LENGTH = INIT_PREFIX+'LENGTH'
-    # DETERMINES WHETHER
+    ''' Lenght of a parameter'''
+
+
+
     LEAF = 'SRVC_LEAF'
+    ''' Whether an hdf5 node is a leaf node'''
 
 
 
@@ -213,6 +329,67 @@ class HDF5StorageService(StorageService):
 
 
     def load(self,msg,stuff_to_load,*args,**kwargs):
+        ''' Loads a particular item from disk.
+
+        The storage service always accepts these parameters:
+
+        :param trajectory_name: Name or current trajectory and name of top node in hdf5 file
+
+        :param filename: Name of the hdf5 file
+
+        The following messages (first argument msg) are understood:
+
+            * :const:`pypet.globally.TRAJECTORY` ('TRAJECTORY')
+
+                Loads a trajectory.
+
+                :param stuff_to_load: The trajectory
+
+                :param as_new: Whether to load trajectroy as new
+
+                :param load_params: How to load parameters and config, see also :ref:`loading`.
+
+                :param load_derived_params: How to load derived parameters
+
+                :param load_results: How to load results
+
+            * :const:`pypet.globally.LEAF` ('LEAF')
+
+                Loads a parameter or result.
+
+                :param stuff_to_load: The item to be loaded
+
+                :param load_only:
+
+                    If you load a result, you can partially load it and ignore the rest.
+                    Just specify the
+                    name of the data you want to load. You can also provide a list,
+                    for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
+
+                    Throws a ValueError if data cannot be found.
+
+
+            * :const:`pypet.globally.TREE` ('TREE')
+
+                Loads a whole sub tree
+
+                :param stuff_to_load: The parent node (!) not the one where loading starts!
+
+                :param child_name: Name of child node, that should be loaded
+
+                :param recursive: Whether to load recursively the sub tree below child
+
+                :param load_data: How to load stuff, see also :ref:`loading`.
+
+                :param trajectory: The trajectory object
+
+            * :const:`pypet.globally.LIST` ('LIST')
+
+                Analogous to :ref:`storing lists <store-lists>`
+
+        :raises: NoSuchServiceError if message or data is not understood
+
+        '''
         try:
 
             self._srvc_extract_file_information(kwargs)
@@ -230,14 +407,14 @@ class HDF5StorageService(StorageService):
             elif msg == globally.LEAF:
                 self._prm_load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
-            elif msg ==globally.LIST:
-                self._srvc_load_several_items(stuff_to_load,*args,**kwargs)
-
             elif (msg == globally.GROUP):
                 self._node_load_node(stuff_to_load,*args,**kwargs)
 
             elif msg == globally.TREE:
                 self._tree_load_tree(stuff_to_load,*args,**kwargs)
+
+            elif msg ==globally.LIST:
+                self._srvc_load_several_items(stuff_to_load,*args,**kwargs)
 
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle >>%s<<' % msg)
@@ -252,6 +429,218 @@ class HDF5StorageService(StorageService):
 
 
     def store(self,msg,stuff_to_store,*args,**kwargs):
+        ''' Stores a particular item to disk.
+
+        The storage service always accepts these parameters:
+
+        :param trajectory_name: Name or current trajectory and name of top node in hdf5 file
+
+        :param filename: Name of the hdf5 file
+
+        :param file_title: If file needs to be created, assigns a title to the file.
+
+        The following messages (first argument msg) are understood:
+
+            * :const:`pypet.globally.PREPARE_MERGE` ('PREPARE_MERGE'):
+
+                Called to prepare a trajectory for merging, see also 'MERGE' below.
+
+                Will also be called if merging cannot happen within the same hdf5 file.
+
+                :param stuff_to_store: Trajectory that is about to be extended by another one
+
+                :param changed_parameters:
+
+                    Dictionary containing all parameters that were enlarged due to merging.
+
+                :param rename_dict:
+
+                    Dictionary containing the old result and derived parameter names in the
+                    other trajectory and their new names in the current trajectory.
+
+
+            * :const:`pypet.globally.MERGE` ('MERGE')
+
+                Note that before merging within HDF5 file, the storage service will be called
+                with msg='PREPARE_MERGE' before, see above.
+
+                Raises a Value Error if the two trajectories are not stored within the very
+                same hdf5 file. Then the current trajectory needs to perform the merge slowly
+                item by item.
+
+                Merges two trajectories, parameters are:
+
+                :param stuff_to_store: The trajectory data is merged into
+
+                :param other_trajectory_name: Name of the other trajectory
+
+                :param rename_dict:
+
+                    Dictionary containing the old result and derived parameter names in the
+                    other trajectory and their new names in the current trajectory.
+
+                :param move_nodes:
+
+                    Whether to move the nodes from the other to the current trajectory
+
+                :param delete_trajectory:
+
+                    Whether to delete the other trajectory after merging.
+
+
+            * :const:`pypet.globally.BACKUP` ('BACKUP')
+
+
+                :param stuff_to_store: Trajectory to be backed up
+
+                :param backup_filename:
+
+                    Name of backup file. If None The backup filename will be the same folder
+                    as your hdf5 file adding `backup_XXXXX.hdf5` where *XXXXX* is the
+                    name of your current trajectory.
+
+            * :const:`pypet.globally.TRAJECTORY` ('TRAJECTORY')
+
+                Stores the whole trajectory
+
+                :param stuff_to_store: The trajectory to be stored
+
+
+            * :const:`pypet.gobally.SINGLE_RUN` ('SINGE_RUN')
+
+                :param stuff_to_store: The single run to be stored
+
+            * :const:`pypet.globally.LEAF` or :const:`globally.UPDATE_LEAF` ('LEAF' or 'UPDATE_LEAF')
+
+                Stores a parameter or result. Use msg = 'UPDATE_LEAF' if a paremeter was expanded
+                (due to merging or expanding the trajectory) to modify it's data.
+
+                Modification of results is not supported (yet). Everything stored to disk is
+                set in stone!
+
+                Note that anything that is supported by the storage service and that is
+                stored to disk will be perfectly recovered.
+                For instance, you store a tuple of numpy integers, you will get a tuple
+                of numpy integers after loading!
+
+                :param stuff_to_sore: Result or parameter to store
+
+                    In order to determine what to store, the function '_store' of the parameter or
+                    result is called. This function returns a dictionary with name keys and data to
+                    store. In order to determine how to store the data, the storage flags
+                    are considered, see below.
+
+                    The function '_store' has to return a dictionary containing values only from
+                    the following objects:
+
+                        * python natives (int,str,bool,float,complex),
+
+                        * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
+                          np.complex, np.str
+
+
+                        *
+
+                            python lists and tuples of the previous types
+                            (python natives + numpy natives and arrays)
+                            Lists and tuples are not allowed to be nested and must be
+                            homogeneous, i.e. only contain data of one particular type.
+                            Only integers, or only floats, etc.
+
+                        *
+
+                            python dictionaries of the previous types (not nested!), data can be
+                            heterogeneous, keys must be strings. For example, one key-value pair
+                            of string and int and one key-value pair of string and float, and so
+                            on.
+
+
+                        * pandas DataFrames_
+
+                        * :class:`pypet.parameter.ObjectTable`
+
+                    .. _DataFrames: http://pandas.pydata.org/pandas-docs/dev/dsintro.html#dataframe
+
+                    The keys from the '_store' dictionaries determine how the data will be named
+                    in the hdf5 file.
+
+                :param store_flags: Flags describing how to store data.
+
+                        :const:`~pypet.HDF5StorageService.ARRAY` ('ARRAY')
+
+                            Store stuff as array
+
+                        :const:`~pypet.HDF5StorageService.CARRAY` ('CARRAY')
+
+                            Store stuff as carray
+
+                        :const:`~pypet.HDF5StorageService.TABLE` ('TABLE')
+
+                            Store stuff as pytable
+
+                        :const:`~pypet.HDF5StorageService.DICT` ('DICT')
+
+                            Store stuff as pytable but reconstruct it later as dictionary
+                            on loading
+
+                        :const:`~pypet.HDF%StorageService.FRAME` ('FRAME')
+
+                            Store stuff as pandas data frame
+
+                    Storage flags can also be provided by the parameters and results themselves
+                    if they implement a function '_store_flags' that returns a dictionary
+                    with the names of the data to store as keys and the flags as values.
+
+                    If no storage flags are provided, they are automatically inferred from the
+                    data. See :const:`pypet.HDF5StorageSerive.TYPE_FLAG_MAPPING` for the mapping
+                    from type to flag.
+
+            * :const:`pypet.globally.REMOVE` ('REMOVE')
+
+
+                Removes an item from disk. Empty group nodes, results and non-explored
+                parameters can be removed
+
+                :param stuff_to_store: The item to be removed.
+
+                :param remove_empty_groups:
+
+                    Whether to also remove groups that become empty due to removal
+                    Default is False.
+
+            * :const:`pypet.globally.GROUP` ('GROUP')
+
+                :param stuff_to_store: The group to store
+
+            * :const:`pypet.globally.REMOVE_INCOMPLETE_RUNS` ('REMOVE_INCOMPLETE_RUNS')
+
+                Removes all data from hdf5 file that is from an incomplete run.
+
+                :param stuff_to_store: The trajectory
+
+            * :const:`pypet.globally.TREE`
+
+                Stores a single node or a full sub tree
+
+                :param stuff_to_store: Node to store
+
+                :param recursive: Whether to store recursively the whole sub-tree
+
+            * :const:`pypet.globally.LIST`
+
+                .. _store-lists:
+
+                Stores several items at once
+
+                :param stuff_to_store:
+
+                    Iterable whose items are to be stored. Iterable must contain tuples,
+                    for example `[(msg1,item1,arg1,kwargs1),(msg2,item2,arg2,kwargs2),...]`
+
+
+        :raises: NoSuchServiceError if message or data is not understood
+
+        '''
         try:
 
             self._srvc_extract_file_information(kwargs)
@@ -269,7 +658,7 @@ class HDF5StorageService(StorageService):
             elif msg == globally.BACKUP:
                 self._trj_backup_trajectory(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.UPDATE_TRAJECTORY:
+            elif msg == globally.PREPARE_MERGE:
                 self._trj_update_trajectory(stuff_to_store,*args,**kwargs)
 
             elif msg == globally.TRAJECTORY:
@@ -284,7 +673,7 @@ class HDF5StorageService(StorageService):
                 self._prm_store_parameter_or_result(msg,stuff_to_store,*args,**kwargs)
 
             elif msg == globally.REMOVE:
-                self._all_remove_parameter_or_result(stuff_to_store,*args,**kwargs)
+                self._all_remove_parameter_or_result_or_group(stuff_to_store,*args,**kwargs)
 
             elif msg == globally.GROUP:
                 self._node_store_node(stuff_to_store,*args,**kwargs)
@@ -556,7 +945,7 @@ class HDF5StorageService(StorageService):
              self._hdf5file.remove_node(where='/', name=other_trajectory_name, recursive = True)
 
 
-    def _trj_update_trajectory(self, traj,changed_parameters,rename_dict):
+    def _trj_update_trajectory(self, traj, changed_parameters,rename_dict):
 
         # changed_parameters = kwargs.pop('changed_parameters')
         # new_results = kwargs.pop('new_results')
@@ -617,7 +1006,7 @@ class HDF5StorageService(StorageService):
         traj.f_restore_default()
 
 
-    def _trj_remove_incomplete_runs(self,traj,*args,**kwargs):
+    def _trj_remove_incomplete_runs(self,traj):
 
         self._logger.info('Removing incomplete runs.')
         count = 0
@@ -964,8 +1353,8 @@ class HDF5StorageService(StorageService):
         path_name = parent_traj_node.v_full_name
         name = hdf5group._v_name
 
-        if not name in parent_traj_node._children and load_data==globally.LOAD_ANNOTATIONS:
-            return
+        # if not name in parent_traj_node._children and load_data==globally.LOAD_ANNOTATIONS:
+        #     return
 
         is_leaf = self._all_get_from_attrs(hdf5group,HDF5StorageService.LEAF)
 
@@ -1026,7 +1415,7 @@ class HDF5StorageService(StorageService):
                 new_traj_node = parent_traj_node._children[name]
                 newly_created=False
 
-            if (load_data in [globally.LOAD_DATA, globally.LOAD_SKELETON,globally.LOAD_ANNOTATIONS] or
+            if (load_data in [globally.LOAD_DATA, globally.LOAD_SKELETON] or
                                             newly_created):
 
                 self._ann_load_annotations(new_traj_node,node=hdf5group)
@@ -1505,6 +1894,9 @@ class HDF5StorageService(StorageService):
 
             annotations =item_with_annotations.v_annotations
 
+            if not annotations.f_is_empty():
+                raise AttributeError('Loading into non-empty annotations!')
+
             current_attrs = node._v_attrs
 
             for attr_name in current_attrs._v_attrnames:
@@ -1588,14 +1980,10 @@ class HDF5StorageService(StorageService):
             except pt.NoSuchNodeError:
                 pass
 
-    def _prm_store_parameter_or_result(self, msg, instance,*args,**kwargs):
+    def _prm_store_parameter_or_result(self, msg, instance,store_flags=None,_hdf5_group=None):
 
         fullname = instance.v_full_name
         self._logger.debug('Storing %s.' % fullname)
-
-
-        _hdf5_group = kwargs.pop('_hdf5_group', None)
-
 
 
         if _hdf5_group is None:
@@ -1611,8 +1999,6 @@ class HDF5StorageService(StorageService):
 
 
         store_dict = instance._store()
-
-        store_flags = kwargs.pop('store_flags',None)
 
 
         if store_flags is None:
@@ -1632,20 +2018,19 @@ class HDF5StorageService(StorageService):
 
                 continue
             if store_flags[key] == HDF5StorageService.TABLE:
-                self._prm_store_into_pytable(msg,key, data_to_store, _hdf5_group, fullname,
-                                             *args,**kwargs)
+                self._prm_store_into_pytable(msg,key, data_to_store, _hdf5_group, fullname)
             elif key in _hdf5_group:
                 self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
                                    (key, fullname))
                 continue
             elif store_flags[key] == HDF5StorageService.DICT:
-                self._prm_store_dict_as_table(msg,key, data_to_store, _hdf5_group, fullname,*args,**kwargs)
+                self._prm_store_dict_as_table(msg,key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.ARRAY:
-                self._prm_store_into_array(msg,key, data_to_store, _hdf5_group, fullname,*args,**kwargs)
+                self._prm_store_into_array(msg,key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.CARRAY:
-                self._prm_store_into_carray(msg,key, data_to_store, _hdf5_group, fullname,*args,**kwargs)
+                self._prm_store_into_carray(msg,key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.FRAME:
-                self._prm_store_data_frame(msg,key, data_to_store, _hdf5_group, fullname,*args,**kwargs)
+                self._prm_store_data_frame(msg,key, data_to_store, _hdf5_group, fullname)
             else:
                 raise RuntimeError('You shall not pass!')
 
@@ -1824,16 +2209,7 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _all_remove_parameter_or_result(self, instance, *args,**kwargs):
-
-
-
-        trajectory = kwargs.pop('trajectory')
-        remove_empty_groups = kwargs.pop('remove_empty_groups',False)
-
-        if instance.v_full_name in trajectory._explored_parameters:
-            raise TypeError('You cannot remove an explored parameter of a trajectory stored '
-                            'into an hdf5 file.')
+    def _all_remove_parameter_or_result_or_group(self, instance,remove_empty_groups=False):
 
 
         if instance.v_leaf:
@@ -2028,10 +2404,14 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _prm_load_parameter_or_result(self, param, *args,**kwargs):
+    def _prm_load_parameter_or_result(self, param, load_only=None,_hdf5_group=None):
 
-        load_only = kwargs.pop('load_only',None)
-        _hdf5_group = kwargs.pop('_hdf5_group', None)
+
+        if isinstance(load_only,basestring):
+            load_only=[load_only]
+
+        ## We do not want to manipulate the original list
+        load_only = load_only.copy()
 
         if _hdf5_group is None:
             _hdf5_group = self._all_get_node_by_name(param.v_full_name)
@@ -2061,13 +2441,13 @@ class HDF5StorageService(StorageService):
             load_type = self._all_get_from_attrs(node,HDF5StorageService.STORAGE_TYPE)
 
             if load_type == HDF5StorageService.DICT:
-                self._prm_read_dictionary(node, load_dict, full_name, *args,**kwargs)
+                self._prm_read_dictionary(node, load_dict, full_name)
             elif load_type == HDF5StorageService.TABLE:
-                self._prm_read_table(node, load_dict, full_name, *args,**kwargs)
+                self._prm_read_table(node, load_dict, full_name)
             elif load_type in [HDF5StorageService.ARRAY,HDF5StorageService.CARRAY]:
-                self._prm_read_array(node, load_dict, full_name, *args,**kwargs)
+                self._prm_read_array(node, load_dict, full_name)
             elif load_type == HDF5StorageService.FRAME:
-                self._prm_read_frame(node, load_dict,full_name, *args,**kwargs)
+                self._prm_read_frame(node, load_dict,full_name)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
                                              'structure of %s [%s].' %

@@ -25,13 +25,13 @@ class BrianParameter(Parameter):
 
     There are two storage modes:
 
-    * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
+    * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE`: ('FLOAT')
 
         The value is stored as a float and the unit as a sting.
 
         i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
 
-    * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
+    * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE`: ('STRING')
 
         The value and unit are stored combined together as a string.
 
@@ -43,8 +43,12 @@ class BrianParameter(Parameter):
     '''
 
     IDENTIFIER = '__brn__'
+    ''' Identification string stored into column title of hdf5 table'''
+
     FLOAT_MODE = 'FLOAT'
+    '''Float storage mode'''
     STRING_MODE = 'STRING'
+    '''String storage mode'''
 
 
     def __init__(self, full_name, data=None, comment='',storage_mode=FLOAT_MODE):
@@ -59,13 +63,13 @@ class BrianParameter(Parameter):
         There are two storage modes:
 
 
-        * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE': ('FLOAT')
+        * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE`: ('FLOAT')
 
             The value is stored as a float and the unit as a sting.
 
             i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
 
-        * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE': ('STRING')
+        * :const:`~pypet.brian.parameter.BrianParameter.STRING_MODE`: ('STRING')
 
             The value and unit are stored combined together as a string.
 
@@ -245,7 +249,7 @@ class BrianMonitorResult(Result):
 
     There are two storage modes in case you use the SpikeMonitor and StateSpikeMonitor:
 
-    * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE': ('TABLE')
+    * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
 
         Default, information is stored into a single table where
         the first column is the neuron index,
@@ -253,7 +257,7 @@ class BrianMonitorResult(Result):
         following columns contain variable values (in case of the StateSpikeMonitor)
         This is a very compact storage form.
 
-    * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE': ('ARRAY')
+    * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE`: ('ARRAY')
 
         For each neuron there will be a new hdf5 array,
         i.e. if you have many neurons your result node will have many entries.
@@ -261,10 +265,12 @@ class BrianMonitorResult(Result):
         reading and writing of data might take muuuuuch longer compared to
         the other mode.
 
-        '''
+    '''
 
     TABLE_MODE = 'TABLE'
+    '''Table storage mode for SpikeMonitor and StateSpikeMonitor'''
     ARRAY_MODE = 'ARRAY'
+    '''Array storage mode, not recommended if you have many neurons!'''
 
     #keywords=set(['data','values','spikes','times','rate','count','mean_var',])
 
@@ -284,7 +290,7 @@ class BrianMonitorResult(Result):
 
         There are two storage modes:
 
-        * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE': ('TABLE')
+        * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
 
             Default, information is stored into a single table where
             the first column is the neuron index,
@@ -292,7 +298,7 @@ class BrianMonitorResult(Result):
             following columns contain variable values (in case of the StateSpikeMonitor)
             This is a very compact storage form.
 
-        * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE': ('ARRAY')
+        * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE`: ('ARRAY')
 
             For each neuron there will be a new hdf5 array,
             i.e. if you have many neurons your result node will have many entries.
@@ -309,7 +315,7 @@ class BrianMonitorResult(Result):
         self._storage_mode = storage_mode
 
     def f_set_single(self, name, item):
-        ''' To add a monitor use `f_set_single('monitor',brian_monitor)`.
+        ''' To add a monitor use `f_set_single('monitor', brian_monitor)`.
 
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         '''

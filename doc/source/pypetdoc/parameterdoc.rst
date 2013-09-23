@@ -1,6 +1,6 @@
-=======================
+=========================
 Parameters and Results
-=======================
+=========================
 --------------------
 Parameter
 --------------------
@@ -16,7 +16,7 @@ ArrayParameter
     :members:
 
 ----------------------
-PickelParameter
+PickleParameter
 ----------------------
 
 .. autoclass:: pypet.parameter.PickleParameter
@@ -39,9 +39,9 @@ PickleResult
     :members:
 
 
-------------------------------
+---------------------------------------------
 For Completeness: The Abstract Base Classes
-------------------------------
+---------------------------------------------
 
 .. autoclass:: pypet.parameter.BaseParameter
     :members:
@@ -50,7 +50,6 @@ For Completeness: The Abstract Base Classes
 .. autoclass:: pypet.parameter.BaseResult
     :members:
     :inherited-members:
-
 
 -----------------------------
 Object Table

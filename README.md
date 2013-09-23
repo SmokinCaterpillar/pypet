@@ -60,6 +60,35 @@ Documentation
 
 Documentation can be found here: http://pypet.readthedocs.org/en/latest/index.html
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Acknowledgements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*
+
+    Thanks to Robert Pröpper and Phillip Meyer for answering all my Python Questions.
+
+    You might wanna check out their SpykeViewer_ tool for visualization of
+    MEA recordings and NEO_ data
+
+*
+
+    Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
+    for this project
+
+*
+
+    Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
+    `Neural Information Processing Group`_ for support
+
+.. _SpykeViewer: https://github.com/rproepp/spykeviewer
+
+.. _NEO: http://pythonhosted.org/neo/index.html
+
+.. _`BCCN Berlin`: http://www.bccn-berlin.de/Home
+
+.. _`Neural Information Processing Group`: http://www.ni.tu-berlin.de/
+
 ---------------------------
 Quick Working Example
 ---------------------------
@@ -82,7 +111,7 @@ Let's take a look at the snippet at once:
 
     def multiply(traj):
         z=traj.x*traj.y
-        traj.f_add_result('z',z=z, comment='Im the product of two reals!')
+        traj.f_add_result('z',z=z, comment='I am the product of two reals!')
 
 
     # Create an environment that handles running

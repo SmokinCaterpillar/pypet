@@ -9,7 +9,6 @@ import unittest
 from pypet.parameter import Parameter, PickleParameter, Result, BaseResult
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity
 import pickle
 import logging
 import cProfile

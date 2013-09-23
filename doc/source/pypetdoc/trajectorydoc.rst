@@ -1,6 +1,6 @@
-====================
+============================================
 The Trajectory, Single Runs and Group Nodes
-====================
+============================================
 
 --------------------
 Trajectory
@@ -41,9 +41,9 @@ ConfigGroup
 .. autoclass:: pypet.naturalnaming.ConfigGroup
     :members:
 
--------------------
+-----------------------
 DerivedParameterGroup
--------------------
+-----------------------
 
 .. autoclass:: pypet.naturalnaming.DerivedParameterGroup
     :members:

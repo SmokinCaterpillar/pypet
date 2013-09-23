@@ -1,6 +1,9 @@
-=============================
+
+.. _more-on-parameters:
+
+================================
 More on Parameters and Results
-=============================
+================================
 
 -----------------------------
 Parameters
@@ -38,9 +41,9 @@ Parameter containers fulfill further important jobs:
     of the parameter space (see :ref:`parameter-exploration`), but this
     requires to run a number of distinct simulations anyway.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Values supported by Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parameters are very restrictive in terms of the
 data the except. The :class:`~pypet.parameter.Parameter` excepts only:

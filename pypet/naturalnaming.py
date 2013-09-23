@@ -180,6 +180,13 @@ class NNLeafNode(NNTreeNode):
 
 
     def _store_flags(self):
+        ''' We do not return storage flags, we let the storage service infer how to store
+        stuff from the data itself.
+
+        If you write your own parameter you can make specifications on how to store data,
+        see also :func:`pypet.storageservice.HDF5StorageService.store`.
+
+        '''
         return {}
 
     def _store(self):
@@ -188,7 +195,7 @@ class NNLeafNode(NNTreeNode):
         The method converts the parameter's or result's value into  simple
         data structures that can be stored to disk.
         Returns a dictionary containing these simple structures.
-        Understood basic strucutres are
+        Understood basic structures are
 
         * python natives (int,str,bool,float,complex)
 
@@ -364,6 +371,7 @@ class NaturalNamingInterface(object):
                     item_tuple = self._fetch_from_tuple(store_load,iter_item,args,kwargs)
 
             item = item_tuple[1]
+            msg = item_tuple[0]
 
             if only_empties and not item.f_is_empty():
                 continue
@@ -373,9 +381,13 @@ class NaturalNamingInterface(object):
             if self._root_instance._is_run:
                 fullname = item.v_full_name
                 if not self.v_name in fullname:
-                    raise TypeError('You want to store/load/remove >>%s<< but this belongs to the '
+                    raise TypeError('You want to store/load >>%s<< but this belongs to the '
                                     'parent trajectory not to the current single run.' % fullname)
 
+            if (msg == globally.REMOVE and
+                        item.v_full_name in self._root_instance._explored_parameters):
+                raise TypeError('You cannot remove an explored parameter of a trajectory stored '
+                                'into an hdf5 file.')
 
 
             item_list.append(item_tuple)
@@ -1335,7 +1347,10 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_load_child(self,name,recursive=False,load_data=globally.UPDATE_DATA):
-        '''Loads a child or recursively a subtree from disk'''
+        '''Loads a child or recursively a subtree from disk.
+
+        For how to choose 'load_data' see :ref:'loading'.
+        '''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))

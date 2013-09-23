@@ -5,8 +5,11 @@ from distutils.core import setup
 
 setup(
     name='pyPET',
-    version='0.1.0',
-    packages=['pypet',],
+    version='0.1a.0',
+    packages=['pypet',
+              'pypet.brian',
+              'pypet.test',
+              'pypet.utils'],
     license='BSD',
     author='Robert Meyer',
     author_email='robert.meyer@ni.tu-berlin.de',

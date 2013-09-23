@@ -7,6 +7,8 @@ import itertools as it
 from pypet.utils.helpful_functions import nested_equal
 
 def results_equal(a,b):
+    ''' Compares two result objects
+    '''
     if not isinstance(a, pypet.parameter.Result) or not isinstance(b, pypet.parameter.Result):
         return False
 
@@ -37,6 +39,7 @@ def results_equal(a,b):
     return True
 
 def parameters_equal(a,b):
+    '''Compares two parameter objects'''
     if not isinstance(b, pypet.parameter.BaseParameter) or not isinstance(a, pypet.parameter.BaseParameter):
         return False
 

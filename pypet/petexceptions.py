@@ -1,8 +1,7 @@
 '''
 Created on 17.05.2013
-
-@author: robert
 '''
+
 class ParameterLockedException(TypeError):
     '''Exception raised if someone tries to modify a locked ParameterSet'''
     def __init__(self,msg):

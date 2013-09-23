@@ -62,7 +62,7 @@ def _single_run(args):
 
         ## Add the queue for storage
         if not queue == None:
-            traj.v_storage_service.set_queue(queue)
+            traj.v_storage_service.queue = queue
     
         root.info('\n--------------------------------\n '
                   'Starting single run #%d of %d '
@@ -147,14 +147,14 @@ class Environment(object):
           to run your experiment. Note if you use QUEUE mode (see below) the queue process
           is not included in this number and will add another extra process for storing.
 
-    * environment.multiproc_mode:
+    * environment.wrap_mode:
 
          If multiproc is 1 (True), specifies how storage to disk is handled via
          the storage service.
 
          There are two options:
 
-         :const:`pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+         :const:`~pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
          Another process for storing the trajectory is spawned. The sub processes
          running the individual single runs will add their results to a
@@ -163,13 +163,15 @@ class Environment(object):
          will be pickled and send over the queue for storage!
 
 
-         :const:`pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
+         :const:`~pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
 
          Each individual process takes care about storage by itself. Before
          carrying out the storage, a lock is placed to prevent the other processes
          to store data. Accordingly, sometimes this leads to a lot of processes
          waiting until the lock is released.
          Yet, single runs do not need to be pickled before storage!
+
+        If you don't want wrapping at all use :const:`~pypet.globally.MULTIPROC_MODE_NONE` ('NONE')
 
 
     * environment.continuable:
@@ -263,10 +265,16 @@ class Environment(object):
                                                             ' than everything must be pickable.')
 
 
-        if not self._traj.f_contains('config.environment.multiproc_mode'):
-            self._traj.f_add_config('environment.multiproc_mode',globally.MULTIPROC_MODE_LOCK,
-                                    comment ='Multiprocessing mode (if multiproc is True), i.e. whether to use QUEUE or LOCKS'
-                                             ' for thread/process safe storing.')
+        if not self._traj.f_contains('config.environment.wrap_mode'):
+            self._traj.f_add_config('environment.wrap_mode',globally.MULTIPROC_MODE_LOCK,
+                                    comment ='Multiprocessing mode (if multiproc), '
+                                             'i.e. whether to use QUEUE '
+                                             'or LOCK'
+                                             ' for thread/process safe storing.'
+                                             'If you do not want wrap the storage service'
+                                             ' use wrap_mode=NONE')
+
+
 
         if not self._traj.f_contains('config.environment.contiuable'):
             self._traj.f_add_config('environment.continuable', 1, comment='Whether or not a continue file should'
@@ -346,6 +354,26 @@ class Environment(object):
         self._logger = logging.getLogger('pypet.environment.Environment')
 
 
+    def f_switch_off_large_overview(self):
+        ''' Switches the tables comsuming the most memory off.
+
+            * Result Overview
+
+            * Derived Parameter Overview
+
+            * Explored Parameter Overview in each Single Run
+        '''
+        self._traj.config.hdf5.result_overview=0
+        self._traj.config.hdf5.derived_parameter_overview = 0
+        self._traj.config.hdf5.explored_parameter_overview_in_runs = 0
+
+
+    def f_switch_off_all_overview(self):
+        ''' Switches all overview tables off.
+        '''
+        self._traj.config.hdf5.parameter_overview = 0
+        self._traj.config.hdf5.config_overview=0
+        self.f_switch_off_large_overview()
 
     def f_continue_run(self, continuefile):
         ''' Resume crashed trajectories by supplying the '.cnt' file.
@@ -441,8 +469,8 @@ class Environment(object):
     def _do_run(self, runfunc, *args, **kwargs):
         log_path = self._traj.f_get('config.environment.log_path').f_get()
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
-        mode = self._traj.f_get('config.environment.multiproc_mode').f_get()
-        if multiproc:
+        mode = self._traj.f_get('config.environment.wrap_mode').f_get()
+        if multiproc and mode != globally.MULTIPROC_MODE_NONE:
 
             if mode == globally.MULTIPROC_MODE_QUEUE:
                 manager = multip.Manager()
@@ -455,7 +483,7 @@ class Environment(object):
                 queue_process.start()
 
                 queue_sender = QueueStorageServiceSender()
-                queue_sender.set_queue(queue)
+                queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
             elif mode == globally.MULTIPROC_MODE_LOCK:

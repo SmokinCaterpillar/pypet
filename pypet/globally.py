@@ -1,11 +1,16 @@
 __author__ = 'Robert Meyer'
 
+''' This module contains constants defined on a global scale,
+that might be interesting to the user.
+'''
+
+
 import numpy as np
 
 
 
 
-
+###################### Supported Data ########################
 
 
 PARAMETERTYPEDICT={"<type 'bool'>": bool,
@@ -27,8 +32,10 @@ PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'numpy.uint64'>": np.uint64,
  "<type 'numpy.uint8'>": np.uint8,
  "<type 'str'>": str}
+''' A Mapping (dict) from the the string represenation of a type and the type.
 
-
+These are the so far supported types of the storage service and the standard parameter!
+'''
 
 
 PARAMETER_SUPPORTED_DATA = (np.int8,
@@ -52,50 +59,79 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
                        np.complex_,
                        np.str,
                        np.str_)
+'''Set of supported scalar types by the storage and the standard parameter'''
+
+
+################### HDF5 Naming and Comments ##########################
 
 
 HDF5_STRCOL_MAX_NAME_LENGTH = 64
+'''Maximum length of a (short) name'''
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
+'''Maximum lenght of the location'''
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
+''' Maximum length of a value string'''
 HDF5_STRCOL_MAX_COMMENT_LENGTH = 256
+''' Maximum length of a comment '''
 HDF5_STRCOL_MAX_ARRAY_LENGTH = 2048
+''' Maximum length of a parameter array summary '''
 
-SHORT_REPRESENTATION = 32
+######## Multiprocessing Modes #############
 
 MULTIPROC_MODE_QUEUE = 'QUEUE'
+'''For multiprocesseing, queue multiprocessing mode '''
 MULTIPROC_MODE_LOCK = 'LOCK'
+''' Lock multiprocessing mode '''
+MULTIPROC_MODE_NONE = 'NONE'
+''' No multiprocessing wrapping for the storage service'''
 
 
+############ Loading Constants ###########################
 LOAD_SKELETON = 1
+'''For trajectory loading, loads only the skeleton '''
 LOAD_DATA = 2
+''' Loads skeleton and data '''
 LOAD_NOTHING = 0
+''' Loads nothing '''
 UPDATE_SKELETON = -1
+''' Updates skeleton, i.e. adds only items that are not part of your current trajectory '''
 UPDATE_DATA = -2
-LOAD_ANNOTATIONS = 3
+''' Updates skeleton and data, adds only items that are not part of your current trajectory'''
+# LOAD_ANNOTATIONS = 3
+# ''' Reloads all annotations! Be Aware this option overrides all given annotations!'''
 
 
 
 
-### STORING Constants
+##################### STORING Message Constants ################################
 LEAF ='LEAF'
+''' For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object'''
 UPDATE_LEAF = 'UPDATE_LEAF'
+''' Updates a *leaf* node, currently only parameters that are extended in length can be updated'''
 TRAJECTORY = 'TRAJECTORY'
+''' Stores the whole trajectory'''
 MERGE = 'MERGE'
+''' Merges two trajectories '''
 GROUP = 'GROUP'
+''' Stores a group node, can be recursive'''
 LIST = 'LIST'
+''' Stores a list of different things, in order to avoid reopening and closing of the hdf5 file'''
 SINGLE_RUN = 'SINGLE_RUN'
-UPDATE_TRAJECTORY = 'UPDATE_TRAJECTORY'
+''' Stores a single run'''
+PREPARE_MERGE = 'PREPARE_MERGE'
+''' Updates a trajectory before it is going to be merged'''
 BACKUP = 'BACKUP'
+''' Backs up a trajectory'''
 REMOVE='REMOVE'
+''' Removes an item from hdf5 file'''
 REMOVE_INCOMPLETE_RUNS = 'REMOVE_INCOMPLETE_RUNS'
+''' Removes incomplete runs to continue a crashed trajectory'''
 TREE = 'TREE'
+''' Stores a subtree of the trajectory'''
 
 
 # Search Strategies
-
 BFS = 'BFS'
+'''For search in trajectory tree, breadth first search, default strategy'''
 DFS = 'DFS'
-
-
-## Fetching of ALL items
-ALL = 'ALL'
+'''Depth first search in trajectory tree, not recommended'''

@@ -407,6 +407,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
                 ValueError: If no item could be found to be stored.
 
+        Note if you use the standard hdf5 storage service, there are no additional arguments
+        or keyword arguments to pass!
+
         '''
         if self._is_run:
             if not self._stored:
@@ -415,8 +418,8 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
                                 'actually cause the storage of all items in the trajectory.')
 
 
-        if iterator == globally.ALL:
-            iterator = self._all_current.itervalues()
+        # if iterator == globally.ALL:
+        #     iterator = self._all_current.itervalues()
 
         fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)
 
@@ -857,7 +860,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                     these will be deleted, too.
 
         :param args:    Additional arguments passed to the storage service
+
         :param kwargs:  Additional keyword arguments passed to the storage service
+
+        Note if you use the standard hdf5 storage service, there are no additional arguments
+        or keyword arguments to pass!
 
         '''
         kwargs['trajectory'] = self
@@ -904,6 +911,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         for key, param in self._explored_parameters:
             param._shrink()
+
+        self._explored_parameters={}
 
         self._run_information = {}
         self._single_run_ids = {}
@@ -1186,6 +1195,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def f_load_items(self, iterator, *args, **kwargs):
         ''' Loads parameters specified in `iterator`. You can directly list the Parameter objects or their
         names.
+
         If names are given the `~pypet.trajectory.Trajectory.f_get` method is applied to find the
         parameters or results in the
         trajectory.
@@ -1198,9 +1208,25 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         to load the data of individual results one by one.
 
         :param iterator: A list with parameters or results to be loaded.
+
         :param args: Additional arguments directly passed to the storage service
-        :param kwargs: Additional keyword arguments directly passed to the storage service (except the kwarg
-        only_empties)
+
+        :param kwargs:
+
+            Additional keyword arguments directly passed to the storage service (except the kwarg
+            only_empties)
+
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param load_only:
+
+                If you load a result, you can partially load it and ignore the rest.
+                Just specify the
+                name of the data you want to load. You can also provide a list,
+                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`
+
+                Throws a ValueError if data cannot be found.
 
         '''
 
@@ -1228,19 +1254,25 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
              load_results=None):
         ''' Loads a trajectory via the storage service.
 
-        :param trajectory_name: Name of the trajectory to be loaded. If no name or index is specified
-                                the current name of the trajectory is used.
+        :param trajectory_name:
 
-        :param trajectory_index: If you don't specify a name you can also specify an index.
-                                 The corresponding trajectory in the hdf5 file at the index
-                                 position is loaded.
+            Name of the trajectory to be loaded. If no name or index is specified
+            the current name of the trajectory is used.
 
-        :param as_new: Whether you want to rerun the experiments. So the trajectory is loaded only
-        with parameters, the current trajectory name is kept in this case, which should be different
-        from the trajectory name specified in the input parameter `trajectory_name`.
-        If you load `as_new=True` all parameters and derived parameters are unlocked.
-        If you load `as_new=False` the current trajectory is replaced by the one on disk,
-        i.e. name, timestamp, formatted time etc. are all taken from disk.
+        :param trajectory_index:
+
+            If you don't specify a name you can also specify an index.
+            The corresponding trajectory in the hdf5 file at the index
+            position is loaded.
+
+        :param as_new:
+
+            Whether you want to rerun the experiments. So the trajectory is loaded only
+            with parameters, the current trajectory name is kept in this case, which should be different
+            from the trajectory name specified in the input parameter `trajectory_name`.
+            If you load `as_new=True` all parameters and derived parameters are unlocked.
+            If you load `as_new=False` the current trajectory is replaced by the one on disk,
+            i.e. name, timestamp, formatted time etc. are all taken from disk.
 
         :param load_parameters: How parameters and config items are loaded
 
@@ -1248,23 +1280,44 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param load_results: How results are loaded
 
-        You can specify how to load the parameters and config/derived_parameters/results.
+            You can specify how to load the parameters and config/derived_parameters/results.
 
-            :const:`pypet.globally.LOAD_NOATHING`: (0) Nothing is loaded
+                :const:`pypet.globally.LOAD_NOTHING`: (0)
 
-            :const:`pypet.globally.LOAD_SKELETON`: (1) The skeleton is loaded, i.e. the items are empty.
+                    Nothing is loaded
 
-            :const:`pypet.globally.LOAD_DATA`: (2) the whole data is loaded.
+                :const:`pypet.globally.LOAD_SKELETON`: (1)
 
-            :const:`pypet.globally.LOAD_ANNOTATIONS`: (3) loads/reloads the annotations of all items that are
-                                                currently in your trajectory.
+                        The skeleton including annotations are loaded, i.e. the items are empty.
+                        Note that if the items already exist in your trajectory an Attribute
+                        Error is thrown. If this is the case use -1 instead.
 
-            :const:`pypet.globally.UPDATE_SKELETON`: (-1) The skeleton is updated, i.e. only items
-                                              that are not currently part of your trajectory are
-                                              loaded empty
+                :const:`pypet.globally.LOAD_DATA`: (2)
 
-            :const:`pypet.globally.UPDATE_DATA`: (-2) Like (2) but only items that are currently not in
-                                          your trajectory are loaded.
+                    The whole data is loaded.
+                    Note that if the items already exist in your trajectory an Attribute
+                    Error is thrown. If this is the case use -2 instead.
+
+
+                :const:`pypet.globally.UPDATE_SKELETON`: (-1)
+
+                    The skeleton and annotations are updated, i.e. only items that are not currently part
+                    of your trajectory are loaded empty
+
+                :const:`pypet.globally.UPDATE_DATA`: (-2) Like (2)
+
+                    Only items that are currently not in your trajectory are loaded with data.
+
+        :raises:
+
+            Attribute Error:
+
+                If options 1 and 2 (load skeleton and load data) are applied but the
+                objects already exist in your trajectory. This prevents implicitly overriding
+                data in RAM.
+                Use -1 and -2 instead to load
+                only items that are currently not in your trajectory in RAM.
+                Or remove the items you want to 'reload' first.
 
         '''
 
@@ -1369,33 +1422,44 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param other_trajectory: Other trajectory instance to merge into the current one.
 
-        :param trial_parameter: If you have a particular parameter that specifies only the trial
-                                number, i.e. an integer parameter running form 0 to N1 and
-                                0 to N2, the parameter is modified that after merging it will
-                                cover the range 0 to N1+N2.
+        :param trial_parameter:
 
-        :param remove_duplicates: Whether you want to remove duplicate parameter points.
-                                  Requires N1 * N2 (quadratic complexity in single runs).
+            If you have a particular parameter that specifies only the trial
+            number, i.e. an integer parameter running form 0 to N1 and
+            0 to N2, the parameter is modified that after merging it will
+            cover the range 0 to N1+N2.
 
-        :param ignore_trajectory_derived_parameters: Whether you want to ignore or merge derived
-         parameters
-                                                    kept under `.derived_parameters.trajectory`
+        :param remove_duplicates:
 
-        :param ignore_trajectory_results: As above but with results. If you have trajectory results
-                                         with the same name in both trajectories, the result
-                                         in the current trajectory is kept and the other one is
-                                         not merged into the current trajectory.
+            Whether you want to remove duplicate parameter points.
+            Requires N1 * N2 (quadratic complexity in single runs).
 
-        :param backup_filename: If specified, backs up both trajectories into the given filename.
-                                You could also say backup_filename = True, than the trajectories
-                                are backed up into a file in your data folder and a name is
-                                automatically chosen.
+        :param ignore_trajectory_derived_parameters:
 
-        :param move_nodes: If you use the HDF5 storage service and both trajectories are
-                           stored in the same file merging is achieved fast directly within
-                           the file. You can choose if you want to copy nodes from the other
-                           trajectory to the current one, or if you want to move them. Accordingly
-                           the stored data is no longer accessible in the other trajectory.
+                    Whether you want to ignore or merge derived parameters
+                    kept under `.derived_parameters.trajectory`
+
+        :param ignore_trajectory_results:
+
+             As above but with results. If you have trajectory results
+             with the same name in both trajectories, the result
+             in the current trajectory is kept and the other one is
+             not merged into the current trajectory.
+
+        :param backup_filename:
+
+            If specified, backs up both trajectories into the given filename.
+            You could also say backup_filename = True, than the trajectories
+            are backed up into a file in your data folder and a name is
+            automatically chosen.
+
+        :param move_nodes:
+
+           If you use the HDF5 storage service and both trajectories are
+           stored in the same file merging is achieved fast directly within
+           the file. You can choose if you want to copy nodes from the other
+           trajectory to the current one, or if you want to move them. Accordingly
+           the stored data is no longer accessible in the other trajectory.
 
         :param delete_trajectory: If you want to delete the other trajectory after merging
 
@@ -1456,7 +1520,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         self._logger.info('Updating Trajectory information and changed parameters in storage.')
 
-        self._storage_service.store(globally.UPDATE_TRAJECTORY, self,
+        self._storage_service.store(globally.PREPARE_MERGE, self,
                                    trajectory_name=self.v_name,
                                    changed_parameters=changed_parameters,
                                    rename_dict=rename_dict)
