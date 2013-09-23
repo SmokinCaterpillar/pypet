@@ -42,16 +42,16 @@ Organization
 
 This project encompasses these core modules:
 
- *  The :mod:`pypet.parameters` module including  containers for parameters and results,
+*  The :mod:`pypet.parameters` module including  containers for parameters and results,
 
- *  The :mod:`pypet.trajectory` module for managing the parameters and results,
-    and providing a way to *explore* your parameter space. Somewhat related is also the
-    `pypet.naturalnaming` module, that provides functionality to access and put data into
-    the *trajectory*.
+*  The :mod:`pypet.trajectory` module for managing the parameters and results,
+   and providing a way to *explore* your parameter space. Somewhat related is also the
+   `pypet.naturalnaming` module, that provides functionality to access and put data into
+   the *trajectory*.
 
- *  The :mod:`pypet.environment` module for handling the running of simulations.
+*  The :mod:`pypet.environment` module for handling the running of simulations.
 
- *  The :mod:`pypet.storageservice` for saving your data to disk.
+*  The :mod:`pypet.storageservice` for saving your data to disk.
 
 
 ---------------------------
@@ -65,26 +65,20 @@ Acknowledgements
 ---------------------------
 
 
-*   Thanks to Robert Pröpper and Phillip Meyer for answering all my Python Questions.
+*   Thanks to Robert Pröpper and Phillip Meyer for answering all my Python questions
 
-    You might wanna check out their SpykeViewer_ tool for visualization of
-    MEA recordings and NEO_ data
+    You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
+    tool for visualization of MEA recordings and NEO data (http://pythonhosted.org/neo/index.html)
 
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project
 
 
-*   Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
-    `Neural Information Processing Group`_ for support
+*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
+    the Research Training Group GRK 1589/1, and the
+    Neural Information Processing Group (http://www.ni.tu-berlin.de) for support
 
-.. _SpykeViewer: https://github.com/rproepp/spykeviewer
-
-.. _NEO: http://pythonhosted.org/neo/index.html
-
-.. _`BCCN Berlin`: http://www.bccn-berlin.de/Home
-
-.. _`Neural Information Processing Group`: http://www.ni.tu-berlin.de/
 
 ---------------------------
 Quick Working Example
@@ -190,7 +184,8 @@ of our trajectory and the results we have computed.
 So have fun using this tool!
 
 Cheers,
-Robert
+
+    Robert
 
 
 pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
