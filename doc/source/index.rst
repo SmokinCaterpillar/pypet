@@ -17,10 +17,17 @@ Contents:
 
    introduction
    cookbook
+   examples
    code
 
+------------------------------------
+Contact
+------------------------------------
 
-
+robert.meyer (at) ni.tu-berlin.de
+Marchstr. 23
+MAR 5.046
+D-10587 Berlin
 
 ===================
 Acknowledgments
@@ -50,6 +57,7 @@ Acknowledgments
 .. _`Neural Information Processing Group`: http://www.ni.tu-berlin.de/
 
 
+
 ===================
 Indices and tables
 ===================
@@ -62,3 +70,4 @@ License
 ===================
 
 .. literalinclude:: ../../LICENSE
+

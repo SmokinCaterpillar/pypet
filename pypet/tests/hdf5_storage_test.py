@@ -7,7 +7,7 @@ import unittest
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity,cartesian_product
+from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import globally
@@ -169,7 +169,7 @@ class EnvironmentTest(unittest.TestCase):
         traj = env.v_trajectory
 
         traj.multiproc = self.multiproc
-        traj.multiproc_mode = self.mode
+        traj.wrap_mode = self.mode
         traj.ncores = self.ncores
 
         traj.v_standard_parameter=Parameter
@@ -249,7 +249,7 @@ class EnvironmentTest(unittest.TestCase):
 class MultiprocQueueTest(EnvironmentTest):
 
     def set_mode(self):
-        self.mode = globally.MULTIPROC_MODE_QUEUE
+        self.mode = globally.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 2
 
@@ -257,7 +257,7 @@ class MultiprocQueueTest(EnvironmentTest):
 class MultiprocLockTest(EnvironmentTest):
 
      def set_mode(self):
-        self.mode = globally.MULTIPROC_MODE_LOCK
+        self.mode = globally.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 2
 

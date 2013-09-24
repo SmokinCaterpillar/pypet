@@ -8,7 +8,7 @@ setup(
     version='0.1a.0',
     packages=['pypet',
               'pypet.brian',
-              'pypet.test',
+              'pypet.tests',
               'pypet.utils'],
     license='BSD',
     author='Robert Meyer',

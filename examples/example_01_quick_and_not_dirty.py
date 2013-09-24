@@ -13,7 +13,8 @@ def multiply(traj):
 
 # Create an environment that handles running
 env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='experiments/example_01/HDF5/example_01.hdf5',
-                  file_title='Example1_Quick_And_Not_So_Dirty', log_folder='experiments/example_01/LOGS/')
+                  file_title='Example1_Quick_And_Not_So_Dirty', log_folder='experiments/example_01/LOGS/',
+                  comment='The first example!')
 
 # Get the trajectory from the environment
 traj = env.v_trajectory

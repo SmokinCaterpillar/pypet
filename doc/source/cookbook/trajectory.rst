@@ -10,7 +10,7 @@ Trajectory
 ------------------------------------
 
 For some example code on on topics dicussed here
-see the :doc:`examples/example_02_trajectory_access_and_storage.py` file in the examples directory.
+see the :ref:`example-02`.
 
 The :class:`~pypet.trajectory.Trajectory` is the standard container for all results and parameters
 (see :ref:`more-on-parameters`) of your numerical experiments.
@@ -300,7 +300,7 @@ Exploration can be prepared with the function :func:`~pypet.trajectory.Trajector
 This function takes a dictionary with parameter names
 (not necessarily the full names, they are searched) as keys and iterables specifying
 how the parameter changes for each run as the argument. Note that all iterables
-need to be of the same length. For examples.
+need to be of the same length. For example:
 
 >>> traj.f_explore({'ncars':[42,44,45,46], 'ncycles' :[1,4,6,6]})
 
@@ -494,7 +494,7 @@ if both contain a *trial parameter*, an integer parameter that simply runs from
 0 to N1-1 and 0 to N2-1, respectively. After merging your the trial parameter in your
 merged trajectory runs form 0 to N1+N2-1, and you added N2 trials.
 
-Also checkout the example in :doc:`examples/examples_02_trajectory_merging.py`.
+Also checkout the example in :ref:`example-03`.
 
 
 .. _more-on-single-runs:

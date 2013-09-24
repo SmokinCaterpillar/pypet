@@ -185,6 +185,8 @@ or :func:`~pypet.environment.Environment.f_switch_off_all_overview` to disable a
 Multiprocessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+For a full code example on multiprocessing see :ref:`example-04`
+
 The following code snippet shows how to enable multiprocessing with 4 cpus:
 
 .. code-block:: python

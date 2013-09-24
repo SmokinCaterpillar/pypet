@@ -78,11 +78,11 @@ HDF5_STRCOL_MAX_ARRAY_LENGTH = 2048
 
 ######## Multiprocessing Modes #############
 
-MULTIPROC_MODE_QUEUE = 'QUEUE'
+WRAP_MODE_QUEUE = 'QUEUE'
 '''For multiprocesseing, queue multiprocessing mode '''
-MULTIPROC_MODE_LOCK = 'LOCK'
+WRAP_MODE_LOCK = 'LOCK'
 ''' Lock multiprocessing mode '''
-MULTIPROC_MODE_NONE = 'NONE'
+WRAP_MODE_NONE = 'NONE'
 ''' No multiprocessing wrapping for the storage service'''
 
 

@@ -8,7 +8,7 @@ from pypet.petexceptions import NotUniqueNodeError
 
 # We first generate a new Trajectory
 traj = Trajectory('Example',filename='experiments/example_02/HDF5/example_02.hdf5',
-                  file_title='Example02')
+                  file_title='Example02', comment='Access and Storage!')
 
 
 # We add our first parameter with the data 'Harrison Ford'

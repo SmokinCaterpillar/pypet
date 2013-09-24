@@ -4,14 +4,10 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import unittest
-from pypet.parameter import Parameter
-from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity
 from pypet.environment import Environment
-import pickle
 import logging
-import cProfile
+
 
 def just_printing_bro(traj):
         key = traj.f_get('Test').gfn()

@@ -5,14 +5,14 @@ import unittest
 from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity
+
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 import pickle
 import logging
 import cProfile
 from brian import *
-from pypet.utils.explore import identity, cartesian_product
+from pypet.utils.explore import cartesian_product
 import shutil
 
 

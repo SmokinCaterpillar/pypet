@@ -4,7 +4,6 @@ import numpy as np
 from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity
 import pickle
 import logging
 import cProfile

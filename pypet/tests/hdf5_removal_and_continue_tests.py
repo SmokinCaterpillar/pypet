@@ -7,15 +7,11 @@ __author__ = 'Robert Meyer'
 import numpy as np
 import unittest
 from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
-from pypet.trajectory import Trajectory, SingleRun
-from pypet.storageservice import LazyStorageService
-from pypet.utils.explore import identity,cartesian_product
+from pypet.trajectory import Trajectory
+from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet.storageservice import HDF5StorageService
 from pypet import globally
-import pickle
 import logging
-import cProfile
 from pypet.utils.helpful_functions import flatten_dictionary
 from pypet.utils.comparisons import results_equal,parameters_equal
 import scipy.sparse as spsp

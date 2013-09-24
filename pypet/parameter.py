@@ -435,6 +435,18 @@ class BaseParameter(NNLeafNode):
         '''
         raise NotImplementedError( "Should have implemented this." )
 
+    # def __getitem__(self, idx):
+    #     '''  Equivalent to `f_get_idx(idx)`
+    #     '''
+    #     return self.f_get_idx()
+    #
+    # def f_get_idx(self,idx):
+    #     ''' If the parameter is explored you can directly access the value and index idx.
+    #
+    #     Raises TypeError if the parameter is not an array.
+    #
+    #     '''
+    #     raise NotImplementedError( "Should have implemented this." )
 
     def f_get(self):
         ''' Returns the current data value of the parameter and locks the parameter.
@@ -791,15 +803,18 @@ class Parameter(BaseParameter):
                                 ' therefore I cannot judge whether the two are of same type.' %
                                 str(type(val1)),str(type(val2)))
         
-        if not type(val1) == type(val2):
+        if not type(val1) is type(val2):
             return False
         
-        if type(val1) == np.array:
-            if not val1.dtype == val2.dtype:
+        if type(val1) is np.array:
+            if not val1.dtype is val2.dtype:
                 return False
             
             if not np.shape(val1)==np.shape(val2):
                 return False
+
+        if type(val1) is tuple:
+            return type(val1[0]) is type(val2[0])
         
         return True
 
@@ -1005,6 +1020,7 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
+        del self._explored_data
         self._explored_data={}
 
     @copydoc(BaseParameter.f_empty)
@@ -1013,6 +1029,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
         self._shrink()
+        del self._data
         self._data=None
 
      
@@ -1430,6 +1447,7 @@ class Result(BaseResult):
 
     @copydoc(BaseResult.f_empty)
     def f_empty(self):
+        del self._data
         self._data={}
 
     def f_set(self,*args, **kwargs):

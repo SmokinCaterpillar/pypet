@@ -60,6 +60,8 @@ Documentation
 
 Documentation can be found here: http://pypet.readthedocs.org/en/latest
 
+If you have questions feel free to contact me at robert.meyer (at) ni.tu-berlin.de
+
 ---------------------------
 Acknowledgements
 ---------------------------
@@ -193,8 +195,29 @@ License
 Read LICENSE
 
 
+------------------------------------
+Tests
+------------------------------------
 
+Where are the tests?
 
+Good that you ask! Find the tests in `pypet.tests`.
+You can run all tests at once simply executing `all_test.py`.
+This can take quite a while since it involves massive IO operations.
+Give it round about 3 to 5 minutes!
+
+------------------------------------
+Legal Notice
+------------------------------------
 
 pyPET was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
+
+------------------------------------
+Contact
+------------------------------------
+
+robert.meyer (at) ni.tu-berlin.de
+Marchstr. 23
+MAR 5.046
+D-10587 Berlin

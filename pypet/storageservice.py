@@ -30,7 +30,7 @@ class MultiprocWrapper(object):
 
 
 class QueueStorageServiceSender(MultiprocWrapper):
-    ''' For multiprocessing with :const:`pypet.globally.MULTIPROC_MODE_QUEUE`, replaces the
+    ''' For multiprocessing with :const:`pypet.globally.WRAP_MODE_QUEUE`, replaces the
         original storage service.
 
         All storage requests are send over a queue to the process running the
@@ -986,7 +986,11 @@ class HDF5StorageService(StorageService):
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
 
-        add_table = traj.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
+        try:
+            add_table = traj.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
+        except AttributeError:
+            add_table=True
+
         for run_name in traj.f_get_run_names():
             run_info = traj.f_get_run_information(run_name)
             run_info['name'] = run_name
@@ -1206,20 +1210,35 @@ class HDF5StorageService(StorageService):
 
         tostore_dict={}
 
-        if traj.f_get('config.hdf5.config_overview').f_get():
+        try:
+            if traj.f_get('config.hdf5.config_overview').f_get():
+                tostore_dict['config_table']=traj._config
+        except AttributeError:
             tostore_dict['config_table']=traj._config
 
-        if traj.f_get('config.hdf5.parameter_overview').f_get():
+        try:
+            if traj.f_get('config.hdf5.parameter_overview').f_get():
+                tostore_dict['parameter_table']=traj._parameters
+        except AttributeError:
             tostore_dict['parameter_table']=traj._parameters
 
-        if traj.f_get('config.hdf5.derived_parameter_overview').f_get():
+        try:
+            if traj.f_get('config.hdf5.derived_parameter_overview').f_get():
+                tostore_dict['derived_parameter_table']=traj._derived_parameters
+        except AttributeError:
             tostore_dict['derived_parameter_table']=traj._derived_parameters
 
-        if traj.f_get('config.hdf5.result_overview').f_get():
+        try:
+            if traj.f_get('config.hdf5.result_overview').f_get():
+                tostore_dict['result_table'] = traj._results
+        except AttributeError:
             tostore_dict['result_table'] = traj._results
 
-        if traj.f_get('config.hdf5.explored_parameter_overview').f_get():
-            tostore_dict['explored_parameter_table'] =traj._explored_parameters
+        try:
+            if traj.f_get('config.hdf5.explored_parameter_overview').f_get():
+                tostore_dict['explored_parameter_table'] =traj._explored_parameters
+        except AttributeError:
+             tostore_dict['explored_parameter_table'] =traj._explored_parameters
 
 
         for key, dictionary in tostore_dict.items():
@@ -1242,18 +1261,22 @@ class HDF5StorageService(StorageService):
                 paramdescriptiondict['comment']= pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)
 
             if key == 'derived_parameter_table':
-                expectedrows = None
 
-                expectedrows = traj.f_get('config.hdf5.derived_parameters_per_run').f_get()
+                try:
+                    expectedrows = traj.f_get('config.hdf5.derived_parameters_per_run').f_get()
+                except AttributeError:
+                    expectedrows = 0
 
                 if not expectedrows <= 0:
                     expectedrows=expectedrows*len(traj)
                     expectedrows+=len(traj._derived_parameters)
 
             if key == 'result_table':
-                expectedrows = None
 
-                expectedrows = traj.f_get('config.hdf5.results_per_run').f_get()
+                try:
+                    expectedrows = traj.f_get('config.hdf5.results_per_run').f_get()
+                except AttributeError:
+                    expectedrows = 0
 
                 if not expectedrows <=0:
                     expectedrows=expectedrows*len(traj)
@@ -1265,7 +1288,7 @@ class HDF5StorageService(StorageService):
                 paramdescriptiondict['array']= pt.StringCol(globally.HDF5_STRCOL_MAX_ARRAY_LENGTH)
                 expectedrows=len(traj._explored_parameters)
 
-            if not expectedrows is None:
+            if expectedrows>0:
                 paramtable = self._all_get_or_create_table(where=self._trajectory_group, tablename=key,
                                                        description=paramdescriptiondict, expectedrows=expectedrows)
             else:
@@ -1377,9 +1400,9 @@ class HDF5StorageService(StorageService):
                     and load_data == globally.UPDATE_DATA):
                     return
 
-                if load_data == globally.LOAD_ANNOTATIONS:
-                    self._ann_load_annotations(instance,node=hdf5group)
-                    return
+                # if load_data == globally.LOAD_ANNOTATIONS:
+                #     self._ann_load_annotations(instance,node=hdf5group)
+                #     return
 
 
             if not in_trajectory or load_data==globally.LOAD_DATA:
@@ -1504,7 +1527,10 @@ class HDF5StorageService(StorageService):
                 self._trj_store_sub_branch(globally.LEAF,single_run,
                                            branch_name,self._trajectory_group)
 
-        add_table = single_run.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
+        try:
+            add_table = single_run.f_get('config.hdf5.explored_parameter_overview_in_runs').f_get()
+        except:
+            add_table = True
         # For better readability add the explored parameters to the results
         run_summary = self._srn_add_explored_params(single_run.v_name,
                                                     single_run._explored_parameters.values(),
@@ -2411,7 +2437,8 @@ class HDF5StorageService(StorageService):
             load_only=[load_only]
 
         ## We do not want to manipulate the original list
-        load_only = load_only.copy()
+        if load_only is not None:
+            load_only = load_only.copy()
 
         if _hdf5_group is None:
             _hdf5_group = self._all_get_node_by_name(param.v_full_name)

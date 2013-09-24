@@ -443,10 +443,15 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
             return new_class
         except NameError:
             for dynamic_class in self._dynamic_imports:
-                if class_name in dynamic_class:
-                    new_class = self._load_class(dynamic_class)
-                    return new_class
-            raise ImportError('Could not create the class named ' + class_name)
+                if inspect.isclass(dynamic_class):
+                    if class_name == dynamic_class.__name__:
+                        return dynamic_class
+                else:
+                    class_name_to_test = dynamic_class.split('.')[-1]
+                    if class_name == class_name_to_test:
+                        new_class = self._load_class(dynamic_class)
+                        return new_class
+            raise ImportError('Could not create the class named >>%s<<.' % class_name)
 
 
 class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
@@ -734,39 +739,51 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             dynamically_imported_classes = [dynamically_imported_classes]
 
         for item in dynamically_imported_classes:
-            if not (isinstance(item, str) or inspect.isclass(item)):
+            if not (isinstance(item, basestring) or inspect.isclass(item)):
                 raise TypeError('Your dynamic import >>%s<< is neither a class nor a string.' %
                                 str(item))
 
         self._dynamic_imports.extend(dynamically_imported_classes)
 
 
-    def __iter__(self):
-        ''' Iterator over all single runs.
+    # def __iter__(self):
+    #     ''' Iterator over all single runs.
+    #
+    #     equivalent to calling :func:`~pypet.trajectory.Trajectory.f_iter_runs`:
+    #
+    #         >>> traj.f_iter_runs(non_completed=False)
+    #
+    #     '''
+    #     return self.f_iter_runs(non_completed=False)
 
-        equivalent to calling :func:`~pypet.trajectory.Trajectory.f_iter_runs`:
-
-            >>> traj.f_iter_runs(non_completed=False)
-
-        '''
-        return self.f_iter_runs(non_completed=False)
-
-    def f_iter_runs(self, non_completed=False):
-        ''' Returns an Iterator over all single runs.
-
-        Will also lock all parameters and reset them to the default values after
-        the iteration is completed
-
-        :param non_completed: Whether only not completed runs should be considered or not.
-
-        '''
-        self.f_lock_parameters()
-        self.f_lock_derived_parameters()
-        for idx in xrange(len(self)):
-            if (not non_completed) or self.f_get_run_information(idx)['completed'] == 0:
-                yield self._make_single_run(idx)
-
-        self._finalize()
+    # def f_finalize(self):
+    #     ''' If you called :func:` ~pypet.trajectory.Trajectory.f_iter_runs` without completing a full
+    #     iteration you are advised to call this function.
+    #
+    #     Resets all parameters to the default values and restores proper natural naming.
+    #     '''
+    #     self._finalize()
+    #
+    # def f_iter_runs(self, non_completed=False):
+    #     ''' Returns an Iterator over all single runs.
+    #
+    #     Will also lock all parameters and reset them to the default values after
+    #     the iteration is completed.
+    #
+    #     Note that this manipulates your original trajectory!
+    #     If you break the iteration and want to restore your original trajectory call
+    #     :func:`~pypet.trajectory.Trajectory.f_finalize()
+    #
+    #     :param non_completed: Whether only not completed runs should be considered or not.
+    #
+    #     '''
+    #     self.f_lock_parameters()
+    #     self.f_lock_derived_parameters()
+    #     for idx in xrange(len(self)):
+    #         if (not non_completed) or self.f_get_run_information(idx)['completed'] == 0:
+    #             yield self._make_single_run(idx)
+    #
+    #     self._finalize()
 
 
 
@@ -781,13 +798,21 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         return self._single_run_ids[name_or_idx]
 
 
-    def f_get_run_names(self):
-        '''Sorted list of names of runs
+    def f_get_run_names(self, sort=True):
+        '''Returns a list of run names.
 
-        Requires O(n log n)!
+        :param sort:
+
+            Whether to get them sorted, will only require O(N) [and not O(N*log N)] since we
+            use (sort of) bucket sort.
+            Yet, will still be slower than
+            `sort=False` because list comprehension is used
 
         '''
-        return sorted(self._run_information.keys())
+        if sort:
+            return [self.f_idx_to_run(idx) for idx in xrange(len(self))]
+        else:
+            return self._run_information.keys()
 
 
     def f_get_run_information(self, name_or_idx=None, copy=True):
@@ -867,7 +892,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         or keyword arguments to pass!
 
         '''
-        kwargs['trajectory'] = self
+        #kwargs['trajectory'] = self
 
         remove_from_storage = kwargs.pop('remove_from_storage',False)
         remove_empty_groups = kwargs.get('remove_empty_groups',False)

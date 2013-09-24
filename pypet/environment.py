@@ -154,7 +154,7 @@ class Environment(object):
 
          There are two options:
 
-         :const:`~pypet.globally.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+         :const:`~pypet.globally.WRAP_MODE_QUEUE`: ('QUEUE')
 
          Another process for storing the trajectory is spawned. The sub processes
          running the individual single runs will add their results to a
@@ -163,7 +163,7 @@ class Environment(object):
          will be pickled and send over the queue for storage!
 
 
-         :const:`~pypet.globally.MULTIPROC_MODE_LOCK`: ('LOCK')
+         :const:`~pypet.globally.WRAP_MODE_LOCK`: ('LOCK')
 
          Each individual process takes care about storage by itself. Before
          carrying out the storage, a lock is placed to prevent the other processes
@@ -171,7 +171,7 @@ class Environment(object):
          waiting until the lock is released.
          Yet, single runs do not need to be pickled before storage!
 
-        If you don't want wrapping at all use :const:`~pypet.globally.MULTIPROC_MODE_NONE` ('NONE')
+        If you don't want wrapping at all use :const:`~pypet.globally.WRAP_MODE_NONE` ('NONE')
 
 
     * environment.continuable:
@@ -266,7 +266,7 @@ class Environment(object):
 
 
         if not self._traj.f_contains('config.environment.wrap_mode'):
-            self._traj.f_add_config('environment.wrap_mode',globally.MULTIPROC_MODE_LOCK,
+            self._traj.f_add_config('environment.wrap_mode',globally.WRAP_MODE_LOCK,
                                     comment ='Multiprocessing mode (if multiproc), '
                                              'i.e. whether to use QUEUE '
                                              'or LOCK'
@@ -470,9 +470,9 @@ class Environment(object):
         log_path = self._traj.f_get('config.environment.log_path').f_get()
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
         mode = self._traj.f_get('config.environment.wrap_mode').f_get()
-        if multiproc and mode != globally.MULTIPROC_MODE_NONE:
+        if multiproc and mode != globally.WRAP_MODE_NONE:
 
-            if mode == globally.MULTIPROC_MODE_QUEUE:
+            if mode == globally.WRAP_MODE_QUEUE:
                 manager = multip.Manager()
                 queue = manager.Queue()
                 self._logger.info('Starting the Storage Queue!')
@@ -486,7 +486,7 @@ class Environment(object):
                 queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
-            elif mode == globally.MULTIPROC_MODE_LOCK:
+            elif mode == globally.WRAP_MODE_LOCK:
                 manager = multip.Manager()
                 lock = manager.RLock()
                 queue = None
@@ -496,7 +496,7 @@ class Environment(object):
 
             else:
                 raise RuntimeError('The mutliprocessing mode %s, you chose is not supported, use %s or %s.'
-                                    %(globally.MULTIPROC_MODE_QUEUE, globally.MULTIPROC_MODE_LOCK))
+                                    %(globally.WRAP_MODE_QUEUE, globally.WRAP_MODE_LOCK))
 
 
             ncores =  self._traj.f_get('config.ncores').f_get()
@@ -517,7 +517,7 @@ class Environment(object):
             mpool.close()
             mpool.join()
 
-            if mode == globally.MULTIPROC_MODE_QUEUE:
+            if mode == globally.WRAP_MODE_QUEUE:
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 

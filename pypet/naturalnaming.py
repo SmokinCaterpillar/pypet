@@ -270,7 +270,7 @@ class NaturalNamingInterface(object):
 
         self._nodes_and_leaves = {}
 
-        self._not_admissible_names = set(dir(self) + dir(self._root_instance) ) | set([globally.ALL])
+        self._not_admissible_names = set(dir(self)) | set( dir(self._root_instance) )
 
 
     def _map_type_to_dict(self,type_name):
@@ -292,6 +292,10 @@ class NaturalNamingInterface(object):
     def _change_root(self, new_root):
         new_root._children = self._root_instance._children
         self._root_instance = new_root
+        self._run_or_traj_name= self._root_instance.v_name
+
+        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
+                                         self._root_instance.v_name)
 
     def _get_fast_access(self):
         return self._root_instance.v_fast_access
@@ -378,11 +382,11 @@ class NaturalNamingInterface(object):
             if non_empties and item.f_is_empty():
                 continue
 
-            if self._root_instance._is_run:
-                fullname = item.v_full_name
-                if not self.v_name in fullname:
-                    raise TypeError('You want to store/load >>%s<< but this belongs to the '
-                                    'parent trajectory not to the current single run.' % fullname)
+            # if self._root_instance._is_run:
+            #     fullname = item.v_full_name
+            #     if not self._root_instance.v_name in fullname:
+            #         raise TypeError('You want to store/load >>%s<< but this belongs to the '
+            #                         'parent trajectory not to the current single run.' % fullname)
 
             if (msg == globally.REMOVE and
                         item.v_full_name in self._root_instance._explored_parameters):

@@ -88,7 +88,7 @@ Quick (and not so Dirty) Example
 --------------------------------
 
 The best way to show how stuff works is by giving examples. I will start right away with a
-very simple code snippet.
+very simple code snippet (it can also be found here: :ref:`example-01`).
 
 Well, what we have in mind is some sort of numerical simulation. For now we will keep it simple,
 let's say we need to simulate the multiplication of 2 values, i.e. :math:`z=x*y`
@@ -110,7 +110,8 @@ Let's take a look at the snippet at once:
 
     # Create and environment that handles running
     env = Environment(trajectory='Example1_No1',filename='./HDF/example_01.hdf5'',
-                      file_title='ExampleNo1', log_folder='./LOGS/')
+                      file_title='ExampleNo1', log_folder='./LOGS/',
+                      comment='I am a simple example!')
 
     # Get the trajectory from the environment
     traj = env.get_trajectory()
@@ -149,7 +150,7 @@ will run the simulation.
     # Create and environment that handles running
     env = Environment(trajectory='Example1_01',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
-                      comment = 'I am the first example!')
+                      comment = 'I am a simple example!')
 
 
 The environment uses some parameters, that is the name of the new trajectory, a filename to
@@ -237,3 +238,16 @@ Main Features
 .. _pandas: http://pandas.pydata.org/
 
 .. _BRIAN: http://briansimulator.org/
+
+
+------------------------------------
+Tests
+------------------------------------
+
+Where are the tests?
+
+Good that you ask! Find the tests in `pypet.tests`.
+You can run all tests at once simply executing `all_test.py`.
+This can take quite a while since it involves massive IO operations.
+Give it round about 3 to 5 minutes!
+

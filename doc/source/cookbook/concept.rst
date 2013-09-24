@@ -2,7 +2,7 @@
 .. _more-on-concept:
 
 =====================================
-How to structure your simulations
+How to Structure your Simulations
 =====================================
 
 This project was born out of the need for a tool to manage and store results of spiking neural

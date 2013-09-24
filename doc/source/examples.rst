@@ -1,0 +1,14 @@
+=====================
+Examples
+=====================
+
+Here you can find some example code how to use the *pyPET*.
+
+.. toctree::
+    examplesdoc/example_01
+    examplesdoc/example_02
+    examplesdoc/example_03
+    examplesdoc/example_04
+    examplesdoc/example_05
+    examplesdoc/example_06
+    examplesdoc/example_07
