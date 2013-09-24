@@ -251,14 +251,4 @@ Main Features
 .. _BRIAN: http://briansimulator.org/
 
 
-------------------------------------
-Tests
-------------------------------------
-
-Where are the tests?
-
-Good that you ask! Find the tests in `pypet.tests`.
-You can run all tests at once simply executing `run_all_tests` in `all_test.py`.
-This can take quite a while since it involves massive IO operations.
-Give it round about 3 to 5 minutes!
 

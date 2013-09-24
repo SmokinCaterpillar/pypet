@@ -20,8 +20,6 @@ try:
 except ImportError:
     pass
 
-def run_all_tests():
-    unittest.main()
 
 if __name__ == '__main__':
     unittest.main()
