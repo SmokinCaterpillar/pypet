@@ -1,7 +1,13 @@
 __author__ = 'Robert Meyer'
 
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+
+
 
 setup(
     name='pyPET',
@@ -14,9 +20,11 @@ setup(
     author='Robert Meyer',
     author_email='robert.meyer@ni.tu-berlin.de',
     description='A toolkit for numerical simulations to allow easy parameter exploration and storage of results.',
-    long_description=open('README.md').read(),
+    long_description=open('long_description.txt').read(),
+    url='http://pypi.python.org/pypi/pypet/',
     install_requires=[
-        "tables >= 3.0.0",
-        "pandas >= 0.12.0",
+        'tables >= 3.0.0',
+        'pandas >= 0.12.0',
+        'numpy >= 1.5.0'
     ],
 )
