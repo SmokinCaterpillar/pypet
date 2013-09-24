@@ -53,6 +53,17 @@ This project encompasses these core modules:
 
 *  The :mod:`pypet.storageservice` for saving your data to disk.
 
+---------------------------
+Install
+---------------------------
+
+Simply install via `pip install pyPET`
+
+Or
+
+Package release can also be found on https://pypi.python.org/pypi/pyPET
+
+    Download, unpack and `python setup.py install` it
 
 ---------------------------
 Documentation
@@ -195,6 +206,7 @@ License
 Read LICENSE
 
 
+
 ------------------------------------
 Tests
 ------------------------------------
@@ -202,7 +214,7 @@ Tests
 Where are the tests?
 
 Good that you ask! Find the tests in `pypet.tests`.
-You can run all tests at once simply executing `all_test.py`.
+You can run all tests at once simply executing `run_all_tests` in `all_test.py`.
 This can take quite a while since it involves massive IO operations.
 Give it round about 3 to 5 minutes!
 
