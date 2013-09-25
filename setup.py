@@ -10,7 +10,7 @@ except ImportError:
 
 
 setup(
-    name='pyPET',
+    name='pypet',
     version='0.1a.1',
     packages=['pypet',
               'pypet.brian',
