@@ -435,18 +435,13 @@ class BaseParameter(NNLeafNode):
         '''
         raise NotImplementedError( "Should have implemented this." )
 
-    # def __getitem__(self, idx):
-    #     '''  Equivalent to `f_get_idx(idx)`
-    #     '''
-    #     return self.f_get_idx()
-    #
-    # def f_get_idx(self,idx):
-    #     ''' If the parameter is explored you can directly access the value and index idx.
-    #
-    #     Raises TypeError if the parameter is not an array.
-    #
-    #     '''
-    #     raise NotImplementedError( "Should have implemented this." )
+    def __getitem__(self, idx):
+        '''  Equivalent to `f_get_array[idx]`
+
+        :raises: TypeError if parameter is not an array
+        '''
+        return self.f_get_array().__getitem__(idx)
+
 
     def f_get(self):
         ''' Returns the current data value of the parameter and locks the parameter.
