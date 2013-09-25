@@ -1,4 +1,4 @@
 
 pPET 0.1a.1
 
-* Paramter supports now __getitem__ if it is an array
+* BaseParameter supports now __getitem__ if it is an array
