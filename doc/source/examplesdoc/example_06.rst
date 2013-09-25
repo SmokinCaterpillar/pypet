@@ -5,6 +5,8 @@
 06 Parameter Presetting
 ===================================
 
+Download: :download:`example_06_parameter_presetting.py <../../../examples/example_06_parameter_presetting.py>`
+
 We will reuse some stuff from the previous example :ref:`example-05`:
 
 * Our main euler simulation job `euler_scheme`
