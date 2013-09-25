@@ -10,6 +10,7 @@ except ImportError:
 
 verstr = "unknown"
 
+# For versioning, Version found in pypet._version.py
 try:
     verstrline = open('pypet/_version.py', "rt").read()
 except EnvironmentError:
@@ -20,8 +21,7 @@ else:
     if mo:
         verstr = mo.group(1)
     else:
-        print "unable to find version in %s" % (VERSIONFILE,)
-        raise RuntimeError("if %s.py exists, it must be well-formed" % (VERSIONFILE,))
+        raise RuntimeError('Unable to find version in pypet/_version.py')
 
 
 setup(
@@ -36,10 +36,16 @@ setup(
     author_email='robert.meyer@ni.tu-berlin.de',
     description='A toolkit for numerical simulations to allow easy parameter exploration and storage of results.',
     long_description=open('long_description.txt').read(),
-    url='http://pypi.python.org/pypi/pypet/',
+    url='https://github.com/SmokinCaterpillar/pypet',
     install_requires=[
         'tables >= 3.0.0',
         'pandas >= 0.12.0',
-        'numpy >= 1.5.0'
-    ],
+        'numpy >= 1.5.0'],
+    classifiers=[
+        'Intended Audience :: Science/Research',
+        'License :: BSD License',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Scientific/Engineering :: Bio-Informatics']
 )
