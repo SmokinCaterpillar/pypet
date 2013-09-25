@@ -11,7 +11,7 @@ except ImportError:
 
 setup(
     name='pyPET',
-    version='0.1a.0',
+    version='0.1a.1',
     packages=['pypet',
               'pypet.brian',
               'pypet.tests',
