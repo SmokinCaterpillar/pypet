@@ -1,4 +1,9 @@
 
-pPET 0.1a.1
+pypet 0.1a.2
+
+* Added version management
+
+
+pypet 0.1a.1
 
 * BaseParameter supports now __getitem__ if it is an array

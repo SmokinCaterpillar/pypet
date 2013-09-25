@@ -7,16 +7,15 @@ try:
 except ImportError:
     from distutils.core import setup
 
-VERSIONFILE = 'pypet/_version.py'
 
 verstr = "unknown"
 
 try:
-    verstrline = open(VERSIONFILE, "rt").read()
+    verstrline = open('pypet/_version.py', "rt").read()
 except EnvironmentError:
     pass # Okay, there is no version file.
 else:
-    VSRE = r"^verstr = ['\"]([^'\"]*)['\"]"
+    VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     mo = re.search(VSRE, verstrline, re.M)
     if mo:
         verstr = mo.group(1)
