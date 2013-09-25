@@ -25,6 +25,7 @@ def euler_scheme(traj, diff_func):
     initial_conditions = traj.initial_conditions
     dimension = len(initial_conditions)
 
+    # This array will collect the results
     result_array = np.zeros((steps,dimension))
     # Get the function parameters stored into traj as dictionary
     # with the (short) names as keys :
@@ -43,18 +44,18 @@ def euler_scheme(traj, diff_func):
     traj.f_add_result('euler_evolution', data=result_array, comment='Our time series data!')
 
 
-# Ok now we want to make our own (derived) parameter that can store source code of python functions.
-# We do NOT want a parameter that stores an executable function, since this will complicate
-# the problem a lot, if you have something like that in mind, you might wanna take a look
+# Ok now we want to make our own (derived) parameter that stores source code of python functions.
+# We do NOT want a parameter that stores an executable function. This would complicate
+# the problem a lot. If you have something like that in mind, you might wanna take a look
 # at the marshal (http://docs.python.org/2/library/marshal) module.
-# Our intention here is to define a parameter, that we later on use as a derived parameter
+# Our intention here is to define a parameter that we later on use as a derived parameter
 # to simply keep track of the source code we use ('git' would be, of course, the better solution
 # but this is just an illustrative example)
 class FunctionParameter(Parameter):
-    # We can go the cheap way and make use of the function _convert_data of the parent.
+    # We can go for a a cheap solution and make use of the function _convert_data of the parent.
     # This gets called before adding data to the parameter to turn numpy arrays
     # into read-only numpy arrays. But we will use the function for our purpose to extract
-    # the source code
+    # the source code:
     def _convert_data(self, val):
         if callable(val):
             return inspect.getsource(val)
@@ -66,23 +67,24 @@ class FunctionParameter(Parameter):
     #    supports, and that is strings!)
     # and
     # the private functions
-    # _values_of_same_type (to tell whether data is similar, i.e. of same type)
+    # _values_of_same_type (to tell whether data is similar, i.e. of two data items agree in their
+    #   type, this is important to only allow exploration within the same dimension.
+    #   For instance, a parameter that stores integers, should only explore integers etc.)
     # and
-    # _equal_values (to tell if two data items are equal)
-    # and
-    # f_set (to set data how you wanna do it)
+    # _equal_values (to tell if two data items are equal. This is important for merging if you
+    #       want to erase duplicate parameter points. The trajectory needs to know when a
+    #       parameter space point was visited before.)
     # and
     # _store (to be able to turn complex data into basic types understood by the storage service)
     # and
     # _load (to be able to recover your complex data form the basic types understood by the storage
     # service
-    # but for now we will rely on the parent functions, and hope for the best!
+    # but for now we will rely on the parent functions and hope for the best!
 
 
 
 # Ok now let's follow the idea in the final section of the cookbook and let's have a part
 # that only defines the parameters
-
 def add_parameters(traj):
     traj.f_add_parameter('steps', 10000, comment='Number of time steps to simulate')
     traj.f_add_parameter('dt', 0.01, comment='Step size')
@@ -104,7 +106,7 @@ def add_parameters(traj):
 
 
 # We need to define the lorenz function, we will assume that the value array is 3 dimensional,
-# first dimension is x-component, second y-component, and third the z-component
+# First dimension is x-component, second y-component, and third the z-component
 def diff_lorenz(value_array, sigma, beta, rho):
     diff_array = np.zeros(3)
     diff_array[0] = sigma * (value_array[1]-value_array[0])
@@ -131,9 +133,9 @@ def main():
     add_parameters(traj)
 
     # 2nd phase preparation
-    # We will add the differential equation as a derived parameter
-    traj.f_add_derived_parameter(FunctionParameter,'diff_eq', diff_lorenz, comment='Source code of'
-                                                                        ' our equation!')
+    # We will add the differential equation (well, its source code only) as a derived parameter
+    traj.f_add_derived_parameter(FunctionParameter,'diff_eq', diff_lorenz,
+                                 comment='Source code of our equation!')
 
     # We want to explore some initial conditions
     traj.f_explore({'initial_conditions' : [
@@ -144,7 +146,7 @@ def main():
     # 3 different conditions are enough for now, I am tired of typing
 
     # 3rd phase let's run the experiment
-    # We pass 'euler_scheme' as our top-level simulation functions and
+    # We pass 'euler_scheme' as our top-level simulation function and
     # the lorenz equation 'diff_lorenz' as an additional argument
     env.f_run(euler_scheme,diff_lorenz)
 
@@ -170,6 +172,7 @@ def main():
         traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5',
                            dynamically_imported_classes=FunctionParameter)
 
+        # Now it works:
         traj.f_load(trajectory_name=trajectory_name,load_parameters=2,
                     load_derived_parameters=2,load_results=1)
 
