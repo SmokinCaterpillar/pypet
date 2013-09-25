@@ -58,8 +58,8 @@ traj1.f_merge(traj2,remove_duplicates=True,backup_filename=True,
 # But before that we need to load the data we computed during the runs from disk.
 traj1.f_load(load_parameters=-2,load_results=-2)
 for idx,run_name in enumerate(traj1.f_get_run_names()):
-    x=traj1.f_get('x').f_get_array()[idx]
-    y=traj1.f_get('y').f_get_array()[idx]
+    x=traj1.f_get('x')[idx]
+    y=traj1.f_get('y')[idx]
     z=traj1.f_get(run_name).z
     # Results don't have fast access so we need to get the z value from the result z
     z = z.z
