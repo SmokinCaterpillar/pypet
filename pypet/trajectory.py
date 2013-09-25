@@ -567,7 +567,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     Example usage:
 
     >>> traj = Trajectory('ExampleTrajectory',dynamically_imported_classes=['Some.custom.class'],\
-    comment = 'I am a neat example!', filename='../test/experiment.hdf5', file_title='Experiments')
+    comment = 'I am a neat example!', filename='experiment.hdf5', file_title='Experiments')
 
     '''
     def __init__(self, name='my_trajectory',add_time=True,comment='', dynamically_imported_classes=None,

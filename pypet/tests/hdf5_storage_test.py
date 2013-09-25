@@ -199,7 +199,7 @@ class EnvironmentTest(unittest.TestCase):
         self.explore(self.traj)
 
         ###Test, that you cannot append to data
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_store_item('filename')
 
         self.make_run()

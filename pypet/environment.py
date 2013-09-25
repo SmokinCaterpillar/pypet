@@ -226,10 +226,10 @@ class Environment(object):
     def __init__(self, trajectory='trajectory',
                  comment='',
                  dynamically_imported_classes=None,
-                 log_folder='../log/',
+                 log_folder=None,
                  use_hdf5=True,
-                 filename='../experiments.h5',
-                 file_title='experiment'):
+                 filename=None,
+                 file_title=None):
 
 
 
@@ -240,6 +240,17 @@ class Environment(object):
                                     comment=comment)
         else:
             self._traj = trajectory
+
+
+        # Prepare file names and log folder
+        if file_title  is None:
+            file_title = self._traj.v_name
+
+        if filename is None:
+            filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
+
+        if log_folder is None:
+            log_folder = os.path.join(os.getcwd(), 'logs')
 
 
 
@@ -282,6 +293,7 @@ class Environment(object):
                                                               ' pickable.')
 
         self._use_hdf5 = use_hdf5
+
         if self._use_hdf5:
             if not self._traj.f_contains('config.hdf5.filename') :
                 self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
@@ -326,6 +338,8 @@ class Environment(object):
                                                 ' be stored in every single run group in the hdf5 file. '
                                                 'Setting it to False'
                                                 ' can decrease file size.')
+
+            self._add_hdf5_storage_service()
 
         self._logger.info('Environment initialized.')
 
@@ -401,6 +415,15 @@ class Environment(object):
         '''
         return self._traj
 
+    def _add_hdf5_storage_service(self):
+        ''' Adds the standard HDF5 storage service to the trajectory.
+
+        See also :class:`pypet.storageservice.HDF5StorageService`
+        '''
+        self._storage_service = HDF5StorageService(self._traj.f_get('config.hdf5.filename').f_get(),
+                                                 self._traj.f_get('config.hdf5.file_title').f_get() )
+
+        self._traj.v_storage_service=self._storage_service
 
     def f_run(self, runfunc, *args,**kwargs):
         ''' Runs the experiments and explores the parameter space.
@@ -423,16 +446,6 @@ class Environment(object):
 
         continuable = self._traj.f_get('config.environment.continuable').f_get()
         log_path = self._traj.f_get('config.environment.log_path').f_get()
-
-
-        self._storage_service = self._traj.v_storage_service
-
-        #Prepares the trajecotry for running
-        if self._storage_service == None and self._use_hdf5:
-            self._storage_service = HDF5StorageService(self._traj.f_get('config.hdf5.filename').f_get(),
-                                                 self._traj.f_get('config.hdf5.file_title').f_get() )
-
-            self._traj.v_storage_service=self._storage_service
 
         self._traj._prepare_experiment()
 
@@ -467,9 +480,13 @@ class Environment(object):
 
 
     def _do_run(self, runfunc, *args, **kwargs):
+
         log_path = self._traj.f_get('config.environment.log_path').f_get()
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
         mode = self._traj.f_get('config.environment.wrap_mode').f_get()
+
+        self._storage_service = self._traj.v_storage_service
+
         if multiproc and mode != globally.WRAP_MODE_NONE:
 
             if mode == globally.WRAP_MODE_QUEUE:
@@ -521,12 +538,14 @@ class Environment(object):
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
-            self._logger.info('\n----------------------------------------\n'
-                              'Finished run in parallel with %d cores.'
-                              '\n----------------------------------------\n' % ncores)
+
 
             self._traj._finalize()
             self._traj.v_storage_service=self._storage_service
+
+            self._logger.info('\n----------------------------------------\n'
+                              'Finished all runs in parallel with %d cores.'
+                              '\n----------------------------------------\n' % ncores)
 
             return results
         else:
@@ -536,6 +555,11 @@ class Environment(object):
                                     if not self._traj.f_is_completed(n)]
 
             self._traj._finalize()
+
+            self._logger.info('\n----------------------------------------\n'
+                              'Finished all runs.'
+                              '\n----------------------------------------\n')
+
             return results
                 
         

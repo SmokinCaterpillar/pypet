@@ -43,7 +43,6 @@ setup(
         'numpy >= 1.5.0'],
     classifiers=[
         'Intended Audience :: Science/Research',
-        'License :: BSD License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
