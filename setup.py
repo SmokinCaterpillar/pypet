@@ -1,17 +1,33 @@
 __author__ = 'Robert Meyer'
 
+import re
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
+VERSIONFILE = 'pypet/_version.py'
 
+verstr = "unknown"
+
+try:
+    verstrline = open(VERSIONFILE, "rt").read()
+except EnvironmentError:
+    pass # Okay, there is no version file.
+else:
+    VSRE = r"^verstr = ['\"]([^'\"]*)['\"]"
+    mo = re.search(VSRE, verstrline, re.M)
+    if mo:
+        verstr = mo.group(1)
+    else:
+        print "unable to find version in %s" % (VERSIONFILE,)
+        raise RuntimeError("if %s.py exists, it must be well-formed" % (VERSIONFILE,))
 
 
 setup(
     name='pypet',
-    version='0.1a.1',
+    version=verstr,
     packages=['pypet',
               'pypet.brian',
               'pypet.tests',
