@@ -1278,7 +1278,7 @@ class Result(BaseResult):
 
     Example usage:
 
-    >>> res = Result('supergroup.subgroup.resultname', comment='I am a neat example!' \
+    >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
         [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
 
     :param fullanme: The fullname of the result, grouping can be achieved are separated by colons,
@@ -1302,11 +1302,11 @@ class Result(BaseResult):
         [1000,2000]
         >>> print res.f_get(1)
         {'a':'b','c':'d'}
-        >>> print res.f_get('res_0')
+        >>> print res.f_get('myresult')
         [1000,2000]
         >>> print res.f_get('hitchhiker')
         'ArthurDent'
-        >>> print res.f_get('res_0','hitchhiker')
+        >>> print res.f_get('myresult','hitchhiker')
         ([1000,2000], 'ArthurDent')
 
 
@@ -1448,21 +1448,29 @@ class Result(BaseResult):
     def f_set(self,*args, **kwargs):
         ''' Method to put data into the result.
 
-        :param args: Arguments listed here ar stored with name 'res%d' where %d is the position in
-                     the args tuple.
+        :param args: The first positional argument is stored with the name of the result.
+                    Following arguments are stored with `name_X' where 'X' is the position
+                    of the argument.
 
         :param kwargs: Arguments are stored with the key as name.
 
-        >>> res = Result('supergroup.subgroup.resultname', comment='I am a neat example!')
-        >>> res.f_set(333,mystring='String!')
-        >>> res.f_get('res0')
+        >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!')
+        >>> res.f_set(333,42.0mystring='String!')
+        >>> res.f_get('myresult')
         333
+        >>> res.f_get('myresult_1')
+        42.0
+        >>> res.f_get(1)
+        42.0
         >>> res.f_get('mystring')
         'String!'
 
         '''
         for idx,arg in enumerate(args):
-            valstr = 'res_'+str(idx)
+            if idx == 0:
+                valstr = self.v_name
+            else:
+                valstr = self.v_name+'_'+str(idx)
             self.f_set_single(valstr,arg)
 
         for key, arg in kwargs.items():
@@ -1474,8 +1482,12 @@ class Result(BaseResult):
     def f_get(self,*args):
         ''' Returns items handled by the result.
 
-         If only a single name is given a single data item returned, if several names are
-         given, a list is returned. For integer inputs the results returns 'res%d'.
+         If only a single name is given a single data item is returned, if several names are
+         given, a list is returned. For integer inputs the results returns `resultname_X`.
+
+         If the result contains only a single entry you can call `f_get()' without arguments.
+         If you call `f_get()' and the result contains more than one element a ValueError is
+         thrown.
 
         :param args: strings-names or integers
 
@@ -1483,23 +1495,41 @@ class Result(BaseResult):
 
         Example:
 
-        >>> res = Result('supergroup.subgroup.resultname', comment='I am a neat example!' \
+        >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
         [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
         >>> res.f_get('hitchhiker')
         'Arthur Dent'
         >>> res.f_get(0)
         [1000,2000]
-        >>> res.f_get('hitchhiker', 'res0')
+        >>> res.f_get('hitchhiker', 'myresult')
         ('Arthur Dent', [1000,2000])
 
         '''
 
+        if len(args) == 0:
+            if len(self._data) == 1:
+                return self._data[self._data.keys()[0]]
+            elif len(self._data) >1:
+                raise ValueError('Your result >>%s<< contains more than one entry: '
+                                 '>>%s<< Please use >>f_get<< with one of these.' %
+                                 (self.v_full_name, str(self._data.keys())))
+            else:
+                raise AttributeError('Your result >>%s<< is empty, cannot access data.' %
+                                     self.v_full_name)
+
         result_list = []
         for name in args:
-            try:
-                name = 'res_%d' % name
-            except TypeError:
-                pass
+            if name == 0:
+                name = self.v_name
+            else:
+                try:
+                    name = self.v_name+'_%d' % name
+                except TypeError:
+                    pass
+
+            if not name in self._data:
+                raise  AttributeError('>>%s<< is not part of your result >>%s<<.' %
+                                      (name,self.v_full_name))
 
             result_list.append(self._data[name])
 

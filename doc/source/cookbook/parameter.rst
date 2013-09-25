@@ -129,7 +129,7 @@ For people using BRIAN_ quantities, there also exists a
 Results
 ------------------------------------
 
-Results are less restrictive in their acceptance of values. And they can handled more than a
+Results are less restrictive in their acceptance of values. And they can handle more than a
 single data item.
 
 They support a constructor and a getter and setter that have positional and keyword arguments.
@@ -137,27 +137,33 @@ And, of course, results support natural naming as well.
 
 For example:
 
-    >>> res = Result('supergroup.subgroup.resultname', comment='I am a neat example!')
+    >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!')
     >>> res.f_set(333,mystring='String!')
-    >>> res.f_get('res0')
+    >>> res.f_get('myresult')
     333
     >>> res.f_get('mystring')
     'String!'
     >>> res.mystring
     'String!'
-    >>> res.res0
+    >>> res.myresult
     333
 
-If you use `f_set(*args)` all positional arguments are added to the parameter with the name
-`resX` where *X* is the index of the argument in the args list.
+If you use `f_set(*args)` the first positional argument is added to the result having the name
+of the result, here 'myresult'. Subsequent positional arguments are added with 'name_X' where *X*
+is the position of the argument. Positions are counted starting from zero so `f_set('a','b','c')`
+will add the entries `'myresult,myresult_1,myresult_2'` to your result.
 
 Using :func:`~pypet.parameter.Result.f_get` you can request several items at once.
 If you ask for `f_get(itemname)` you will get in return the item with that name. If you
 request `f_get(itemname1,itemname2,....)` you will get a list in return containing the items.
-To refer to items stored with 'resX' providing the index value is sufficient:
+To refer to items stored with 'name_X' providing the index value is sufficient:
 
     >>> res.f_get(0)
     333
+
+If your result contains only a single item you can simply call `f_get()` without any arguments.
+But if you call `f_get()` without any arguments and the result contains more than one item
+a ValueError is thrown.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Types of Results

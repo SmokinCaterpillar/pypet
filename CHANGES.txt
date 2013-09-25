@@ -1,4 +1,8 @@
 
+pypet 0.1a.4
+
+* adding positional results will add them with the result name
+
 pypet 0.1a.3
 
 * Better handling of filenames, now relative paths are considered

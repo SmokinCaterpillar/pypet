@@ -7,7 +7,7 @@ from pypet.utils.explore import cartesian_product
 
 def multiply(traj):
     z=traj.x*traj.y
-    traj.f_add_result('z',z=z, comment='Im the product of two reals!')
+    traj.f_add_result('z',z, comment='Im the product of two reals!')
 
 
 

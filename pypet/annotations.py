@@ -37,12 +37,30 @@ class Annotations(object):
 
         If len(args)>1, then returns a list of annotations.
 
-        `f_get(X)` with *X* integer will return the annotation with name `ann_X`.
+        `f_get(X)` with *X* integer will return the annotation with name `annotation_X`.
+
+        If the annotation contains only a single entry you can call `f_get()' without arguments.
+        If you call `f_get()' and the annotation contains more than one element a ValueError is
+        thrown.
         '''
+
+        if len(args) == 0:
+            if len(self.__dict__) == 1:
+                return self.__dict__[self.__dict__.keys()[0]]
+            elif len(self.__dict__) >1:
+                raise ValueError('Your annotation contains more than one entry: '
+                                 '>>%s<< Please use >>f_get<< with one of these.' %
+                                 (str(self.__dict__.keys())))
+            else:
+                raise AttributeError('Your annotation is empty, cannot access data.')
+
         result_list = []
         for name in args:
             if isinstance(name,int):
-                name = 'ann_%d' % name
+                if name ==  0:
+                    name = 'annotation'
+                else:
+                    name = 'annotation_%d' % name
 
             result_list.append(getattr(self,name))
 
@@ -54,10 +72,14 @@ class Annotations(object):
     def f_set(self,*args,**kwargs):
         ''' Sets annotations.
 
-        Items in args are added with the names `ann_X` where *X* is the index in the args list.
+        Items in args are added as `annotation` and `annotation_X` where
+        'X' is the position in args for following arguments.
         '''
         for idx,arg in enumerate(args):
-            valstr = 'ann_'+str(idx)
+            if idx == 0:
+                valstr = 'annotation'
+            else:
+                valstr = 'annotation_'+str(idx)
             self.f_set_single(valstr,arg)
 
         for key, arg in kwargs.items():
