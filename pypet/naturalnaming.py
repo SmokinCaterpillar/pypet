@@ -3,14 +3,9 @@ __author__ = 'robert'
 
 
 
-import importlib as imp
-import itertools as it
+
 import inspect
-import numpy as np
-
-
 import pypet.petexceptions as pex
-from pypet.utils.helpful_functions import flatten_dictionary
 from pypet import globally
 from pypet.annotations import WithAnnotations
 import logging

@@ -22,7 +22,7 @@ from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup,
 
 from pypet.storageservice import HDF5StorageService
 
-import copy
+
 
 
 

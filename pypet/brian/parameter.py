@@ -5,16 +5,19 @@ Created on 10.06.2013
 '''
 
 
-from pypet.parameter import Parameter, BaseResult, Result,ObjectTable
-from brian.units import *
-from brian.stdunits import *
+from pypet.parameter import Parameter,Result,ObjectTable
+## Unfortunatley I have to this for read the docs to be able to mock brian
+try:
+    from brian.units import *
+    from brian.stdunits import *
+except TypeError:
+    pass
+
 from brian.fundamentalunits import Unit, Quantity, get_unit
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
     MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
-from pypet.utils.helpful_functions import nest_dictionary
 
-from inspect import getsource
 import numpy as np
 import logging
 import pandas as pd

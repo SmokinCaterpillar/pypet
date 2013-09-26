@@ -3,13 +3,8 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import unittest
-from pypet.parameter import Parameter
 from pypet.brian.parameter import BrianParameter
-import pickle
-import scipy.sparse as spsp
 from pypet.tests.parameter_test import ParameterTest, Dummy
-import cProfile
-
 from brian.stdunits import mV, mA, kHz,ms
 
 

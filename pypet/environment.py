@@ -3,14 +3,16 @@ Created on 03.06.2013
 
 @author: robert
 '''
-from Cython.Runtime.refnanny import loglevel
 
 from pypet.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
 import os
 import sys
 import logging
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import multiprocessing as multip
 import traceback
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper

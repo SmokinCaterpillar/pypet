@@ -1,5 +1,4 @@
-from numpy.oldnumeric.ma import _ptp
-from wx._windows_ import new_MDIParentFrame
+
 
 __author__ = 'Robert Meyer'
 
