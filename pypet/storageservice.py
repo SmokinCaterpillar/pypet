@@ -1186,7 +1186,7 @@ class HDF5StorageService(StorageService):
 
 
         insert_dict = self._all_extract_insert_dict(traj,infotable.colnames)
-        self._all_add_or_modify_row(traj.v_name,insert_dict,infotable,
+        self._all_add_or_modify_row(traj.v_name,insert_dict,infotable,index=0,
                                     flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW))
 
 
@@ -1202,7 +1202,8 @@ class HDF5StorageService(StorageService):
                                                  description=rundescription_dict)
 
 
-        self._trj_fill_run_table_with_dummys(traj)
+        actual_rows = runtable.nrows
+        self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
         self._ann_store_annotations(traj,self._trajectory_group)
 
