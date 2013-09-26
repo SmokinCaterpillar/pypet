@@ -20,11 +20,11 @@ env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='experim
 traj = env.v_trajectory
 
 # Add both parameters
-traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+traj.f_add_parameter('x', 1, comment='Im the first dimension!')
+traj.f_add_parameter('y', 1, comment='Im the second dimension!')
 
 # Explore the parameters with a cartesian product:
-traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
+traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
 
 # Run the simulation
 env.f_run(multiply)

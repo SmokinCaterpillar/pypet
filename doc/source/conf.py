@@ -41,7 +41,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pyPET'
+project = u'pypet'
 copyright = u'2013, Robert Meyer'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -165,7 +165,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyPETdoc'
+htmlhelp_basename = 'pypetdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -184,7 +184,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'pyPET.tex', u'pyPET Documentation',
+  ('index', 'pypet.tex', u'pypet Documentation',
    u'Robert Meyer', 'manual'),
 ]
 
@@ -214,7 +214,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'p37', u'pyPET Documentation',
+    ('index', 'pypet', u'pypet Documentation',
      [u'Robert Meyer'], 1)
 ]
 
@@ -228,8 +228,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'pyPET', u'pyPET Documentation',
-   u'Robert Meyer', 'pyPET', 'One line description of project.',
+  ('index', 'pypet', u'pypet Documentation',
+   u'Robert Meyer', 'pypet', 'One line description of project.',
    'Miscellaneous'),
 ]
 

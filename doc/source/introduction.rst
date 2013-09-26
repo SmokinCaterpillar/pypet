@@ -219,9 +219,9 @@ Main Features
 
     * python native data types: bool, int, float, str, complex
 
-    * Numpy arrays and matrices
-
     * list, tuple, dict
+
+    * Numpy arrays and matrices
 
     * pandas_ DataFrames
 
@@ -229,7 +229,7 @@ Main Features
 
     * BRIAN_ Monitors
 
-* Easily **extensible** to other data formats!
+* Easily **extendible** to other data formats!
 
 * **Exploration** of the parameter space of your simulations
 
@@ -240,6 +240,8 @@ Main Features
 
 * **Storage** of simulation data, i.e. the *trajectory*, *parameters*, and *results* into
   **HDF5** files
+
+* **Dynamic Loading**, load only the data you need at the moment and free it afterwards
 
 * **Resuming** a crashed simulation (maybe due to power shut down) after the latest completed run
 
