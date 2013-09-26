@@ -39,7 +39,7 @@ class Annotations(object):
 
         `f_get(X)` with *X* integer will return the annotation with name `annotation_X`.
 
-        If the annotation contains only a single entry you can call `f_get()' without arguments.
+        If the annotation contains only a single entry you can call `f_get()` without arguments.
         If you call `f_get()' and the annotation contains more than one element a ValueError is
         thrown.
         '''

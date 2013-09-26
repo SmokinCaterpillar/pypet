@@ -1449,7 +1449,7 @@ class Result(BaseResult):
         ''' Method to put data into the result.
 
         :param args: The first positional argument is stored with the name of the result.
-                    Following arguments are stored with `name_X' where 'X' is the position
+                    Following arguments are stored with `name_X` where `X` is the position
                     of the argument.
 
         :param kwargs: Arguments are stored with the key as name.
@@ -1485,8 +1485,8 @@ class Result(BaseResult):
          If only a single name is given a single data item is returned, if several names are
          given, a list is returned. For integer inputs the results returns `resultname_X`.
 
-         If the result contains only a single entry you can call `f_get()' without arguments.
-         If you call `f_get()' and the result contains more than one element a ValueError is
+         If the result contains only a single entry you can call `f_get()` without arguments.
+         If you call `f_get()` and the result contains more than one element a ValueError is
          thrown.
 
         :param args: strings-names or integers
