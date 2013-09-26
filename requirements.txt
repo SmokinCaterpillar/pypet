@@ -2,3 +2,4 @@ pypet
 tables >= 3.0.0
 pandas >= 0.12.0
 numpy >= 1.5.0
+brian >= 1.4.0
