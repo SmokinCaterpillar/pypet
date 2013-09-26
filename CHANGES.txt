@@ -1,4 +1,9 @@
 
+pypet 0.1a.5
+
+* removed unnecessary imports
+* better documentation
+
 pypet 0.1a.4
 
 * adding positional results will add them with the result name
