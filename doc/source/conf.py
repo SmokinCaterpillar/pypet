@@ -262,6 +262,6 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['tables', 'numpy', 'brian']
+MOCK_MODULES = ['tables', 'numpy', 'brian' ,'pandas']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
