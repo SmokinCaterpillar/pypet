@@ -4,10 +4,10 @@
    contain the root `toctree` directive.
 
 ==================================
-Welcome to pyPET's documentation!
+Welcome to pypet's documentation!
 ==================================
 
-The new python parameter exploration toolbox. *pyPET* manages exploration of the parameter space and
+The new python parameter exploration toolbox. *pypet* manages exploration of the parameter space and
 data storage for you. Currently supported storage is HDF5!
 
 Contents:

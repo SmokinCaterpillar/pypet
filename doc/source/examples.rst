@@ -2,7 +2,7 @@
 Examples
 =====================
 
-Here you can find some example code how to use the *pyPET*.
+Here you can find some example code how to use the *pypet*.
 
 .. toctree::
     examplesdoc/example_01

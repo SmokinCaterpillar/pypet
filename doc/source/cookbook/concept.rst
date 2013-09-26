@@ -60,7 +60,7 @@ Yet, I would separate this phase entirely from the previous ones. You can do thi
 program that loads the trajectory.
 
 
-Well, that's it, so thanks for using *pyPET*,
+Well, that's it, so thanks for using *pypet*,
 
     Robert
 

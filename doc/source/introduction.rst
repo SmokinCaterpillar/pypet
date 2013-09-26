@@ -1,5 +1,5 @@
 ================================
-What is pyPET all about?
+What is pypet all about?
 ================================
 
 Whenever you do numerical simulations in science, you come across two major problems.
@@ -20,7 +20,7 @@ So this project was born. I wanted to tackle the IO problems more generally and 
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
-The **python parameter exploration toolkit** (*pyPET*) provides a framework to define *parameters* that
+The **python parameter exploration toolkit** (*pypet*) provides a framework to define *parameters* that
 you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
@@ -35,16 +35,16 @@ Currently the storage method of choice is HDF5_ via PyTables_.
 Install
 ---------------------------
 
-Simply install via `pip install pyPET`
+Simply install via `pip install pypet`
 
 Or
 
-Package release can also be found on https://pypi.python.org/pypi/pyPET
+Package release can also be found on https://pypi.python.org/pypi/pypet
 
     Download, unpack and `python setup.py install` it
 
 ---------------------------------
-What to do with pyPET?
+What to do with pypet?
 ---------------------------------
 
 The whole project evolves around a novel container object called *trajectory*.
@@ -85,7 +85,7 @@ HDF5_ file on your hard drive. Probably other formats like SQL will come soon (o
 want to contribute some code, and write an SQL storage service?).
 
 An example (way less sophisticated than traffic simulations)
-of a numerical simulation handled by *pyPET* is given below.
+of a numerical simulation handled by *pypet* is given below.
 
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pyPET documentation build configuration file, created by
+# pypet documentation build configuration file, created by
 # sphinx-quickstart on Wed Sep  4 12:12:59 2013.
 #
 # This file is execfile()d with the current directory f_set to its containing dir.
