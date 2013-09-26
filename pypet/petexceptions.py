@@ -2,7 +2,6 @@
 Created on 17.05.2013
 '''
 
-__version__
 
 class ParameterLockedException(TypeError):
     '''Exception raised if someone tries to modify a locked ParameterSet'''
