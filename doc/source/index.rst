@@ -24,9 +24,11 @@ Contents:
 Requirements
 ============================
 
-pandas >= 0.12.0
-numpy >= 1.5.0
-tables >= 3.0.0
+* pandas >= 0.12.0
+
+* numpy >= 1.5.0
+
+* tables >= 3.0.0
 
 Before the official release of version 0.1.0
 I will include support for PyTables 2.X.
