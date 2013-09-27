@@ -20,6 +20,9 @@ feel free to contact me (see below).
 
 Thanks!
 
+Release of the official 0.1.0 version at end of October,
+beginning of November :-)
+
 ==========================
 ToC
 ==========================
