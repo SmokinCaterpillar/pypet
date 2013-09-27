@@ -20,9 +20,34 @@ Contents:
    examples
    code
 
-------------------------------------
+============================
+Requirements
+============================
+
+pandas >= 0.12.0
+numpy >= 1.5.0
+tables >= 3.0.0
+
+Before the official release of version 0.1.0
+I will include support for PyTables 2.X.
+So you won't have the hassle with manually updating your
+tables package!
+
+--------------------------------
+Tests
+--------------------------------
+
+Test can be found in pypet.tests.
+Note that they involve heavy file IO and it might not be the case
+that you have privileges on your system to write files to the particular folder.
+So I would recommend either downloading pypet from github
+and run the tests in your IDE.
+Or you still might want to wait for some time for the official 0.1.0
+release because I am trying to work around that in the meantime.
+
+=====================
 Contact
-------------------------------------
+=====================
 
 Robert Meyer
 
@@ -64,7 +89,7 @@ Acknowledgments
 
 
 ===================
-Indices and tables
+Indices and Tables
 ===================
 
 * :ref:`genindex`
