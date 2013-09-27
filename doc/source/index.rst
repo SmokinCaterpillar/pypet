@@ -10,6 +10,20 @@ Welcome to pypet's documentation!
 The new python parameter exploration toolbox. *pypet* manages exploration of the parameter space and
 data storage for you. Currently supported storage is HDF5!
 
+===========================
+IMPORTANT!
+===========================
+The current program is a PRE-RELEASE ALPHA(!!!) version,
+please treat it as such and use very carefully.
+If you find some bugs or have some questions
+feel free to contact me (see below).
+
+Thanks!
+
+==========================
+ToC
+==========================
+
 Contents:
 
 .. toctree::
