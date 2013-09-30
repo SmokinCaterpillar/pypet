@@ -18,32 +18,32 @@ class ParameterTest(unittest.TestCase):
 
 
     def testMetaSettings(self):
-        for key, param in self.param.__dict__.items():
+        for key, param in self.param.items():
             self.assertEqual(param.v_full_name, self.location+'.'+key)
             self.assertEqual(param.v_name, key)
             self.assertEqual(param.v_location, self.location)
 
 
     def make_params(self):
-        self.param = Dummy()
-        for key, val in self.data.__dict__.items():
-            self.param.__dict__[key] = Parameter(self.location+'.'+key, val, comment=key)
+        self.param = {}
+        for key, val in self.data.items():
+            self.param[key] = Parameter(self.location+'.'+key, val, comment=key)
 
 
     def setUp(self):
 
         if not hasattr(self,'data'):
-            self.data=Dummy()
+            self.data={}
 
-        self.data.val0 = 1
-        self.data.val1 = 1.0
-        self.data.val2 = True
-        self.data.val3 = 'String'
-        self.data.npfloat = np.array([1.0,2.0,3.0])
-        self.data.npfloat_2d = np.array([[1.0,2.0],[3.0,4.0]])
-        self.data.npbool= np.array([True,False, True])
-        self.data.npstr = np.array(['Uno', 'Dos', 'Tres'])
-        self.data.npint = np.array([1,2,3])
+        self.data['val0']= 1
+        self.data['val1']= 1.0
+        self.data['val2']= True
+        self.data['val3'] = 'String'
+        self.data['npfloat'] = np.array([1.0,2.0,3.0])
+        self.data['npfloat_2d'] = np.array([[1.0,2.0],[3.0,4.0]])
+        self.data['npbool']= np.array([True,False, True])
+        self.data['npstr'] = np.array(['Uno', 'Dos', 'Tres'])
+        self.data['npint'] = np.array([1,2,3])
 
         self.location = 'MyName.Is.myParam'
 
@@ -70,16 +70,16 @@ class ParameterTest(unittest.TestCase):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key]._explore(vallist)
+            self.param[key]._explore(vallist)
 
 
 
 
     def test_the_insertion_made_implicetly_in_setUp(self):
-        for key, val in self.data.__dict__.items():
+        for key, val in self.data.items():
 
             if not key in self.explore_dict:
-                param_val = self.param.__dict__[key].f_get()
+                param_val = self.param[key].f_get()
                 self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
 
 
@@ -89,7 +89,7 @@ class ParameterTest(unittest.TestCase):
     def test_exploration(self):
         for key, vallist in self.explore_dict.items():
 
-            param = self.param.__dict__[key]
+            param = self.param[key]
 
             for idx, val in enumerate(vallist):
                 assert isinstance(param, BaseParameter)
@@ -100,7 +100,7 @@ class ParameterTest(unittest.TestCase):
 
     def test_storage_and_loading(self):
 
-        for key, param in self.param.__dict__.items():
+        for key, param in self.param.items():
             store_dict = param._store()
 
             constructor = param.__class__
@@ -114,7 +114,7 @@ class ParameterTest(unittest.TestCase):
 
             param._rename(self.location+'.'+key)
 
-            self.param.__dict__[key] = param
+            self.param[key] = param
 
 
         self.test_the_insertion_made_implicetly_in_setUp()
@@ -125,7 +125,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_pickling_without_multiprocessing(self):
-        for key, param in self.param.__dict__.items():
+        for key, param in self.param.items():
             param.f_unlock()
             param.v_full_copy=True
 
@@ -135,7 +135,7 @@ class ParameterTest(unittest.TestCase):
 
 
 
-            self.param.__dict__[key] = newParam
+            self.param[key] = newParam
 
         self.test_exploration()
 
@@ -145,7 +145,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_pickling_with_multiprocessing(self):
-        for key, param in self.param.__dict__.items():
+        for key, param in self.param.items():
             param.f_unlock()
             param.v_full_copy=False
 
@@ -155,7 +155,7 @@ class ParameterTest(unittest.TestCase):
 
 
 
-            self.param.__dict__[key] = newParam
+            self.param[key] = newParam
 
         #self.test_exploration()
 
@@ -166,7 +166,7 @@ class ParameterTest(unittest.TestCase):
 
     def testresizinganddeletion(self):
 
-        for key, param in self.param.__dict__.items():
+        for key, param in self.param.items():
             param.f_lock()
             with self.assertRaises(pex.ParameterLockedException):
                  param.f_set(42)
@@ -202,25 +202,25 @@ class ArrayParameterTest(ParameterTest):
 
 
         if not hasattr(self,'data'):
-            self.data=Dummy()
+            self.data= {}
 
 
-        self.data.myinttuple = (1,2,3)
-        self.data.mydoubletuple = (42.0,43.7,33.3)
-        self.data.mystringtuple = ('Eins','zwei','dr3i')
+        self.data['myinttuple'] = (1,2,3)
+        self.data['mydoubletuple'] = (42.0,43.7,33.3)
+        self.data['mystringtuple'] = ('Eins','zwei','dr3i')
 
         super(ArrayParameterTest,self).setUp()
 
         ## For the rest of the checkings, lists are converted to tuples:
-        for key, val in self.data.__dict__.items():
+        for key, val in self.data.items():
             if isinstance(val, list):
-                self.data.__dict__[key] = tuple(val)
+                self.data[key] = tuple(val)
 
 
     def make_params(self):
-        self.param = Dummy()
-        for key, val in self.data.__dict__.items():
-            self.param.__dict__[key] = ArrayParameter(self.location+'.'+key, val, comment=key)
+        self.param = {}
+        for key, val in self.data.items():
+            self.param[key] = ArrayParameter(self.location+'.'+key, val, comment=key)
 
 
     def explore(self):
@@ -241,7 +241,7 @@ class ArrayParameterTest(ParameterTest):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key]._explore(vallist)
+            self.param[key]._explore(vallist)
 
 
 class PickleParameterTest(ParameterTest):
@@ -250,24 +250,24 @@ class PickleParameterTest(ParameterTest):
 
 
         if not hasattr(self,'data'):
-            self.data=Dummy()
+            self.data={}
 
-        self.data.spsparse_csc = spsp.csc_matrix((1000,100))
-        self.data.spsparse_csc[1,2] = 44.5
+        self.data['spsparse_csc'] = spsp.csc_matrix((1000,100))
+        self.data['spsparse_csc'][1,2] = 44.5
 
-        self.data.spsparse_csr = spsp.csr_matrix((2222,22))
-        self.data.spsparse_csr[1,3] = 44.5
+        self.data['spsparse_csr'] = spsp.csr_matrix((2222,22))
+        self.data['spsparse_csr'][1,3] = 44.5
 
-        self.data.spsparse_lil = spsp.lil_matrix((111,111))
-        self.data.spsparse_lil[3,2] = 44.5
+        self.data['spsparse_lil'] = spsp.lil_matrix((111,111))
+        self.data['spsparse_lil'][3,2] = 44.5
 
         super(PickleParameterTest,self).setUp()
 
 
     def make_params(self):
-        self.param = Dummy()
-        for key, val in self.data.__dict__.items():
-            self.param.__dict__[key] = PickleParameter(self.location+'.'+key, val, comment=key)
+        self.param = {}
+        for key, val in self.data.items():
+            self.param[key] = PickleParameter(self.location+'.'+key, val, comment=key)
 
 
 
@@ -296,7 +296,7 @@ class PickleParameterTest(ParameterTest):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
-            self.param.__dict__[key]._explore(vallist)
+            self.param[key]._explore(vallist)
 
 
 
