@@ -85,7 +85,7 @@ def nested_equal(a, b):
     if isinstance(a, pd.DataFrame):
         new_frame = a == b
         new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
-        return np.all(new_frame)
+        return np.all(new_frame.as_matrix())
     if isinstance(a, Sequence):
         return all(nested_equal(x, y) for x, y in zip(a, b))
     if isinstance(a, Mapping):

@@ -57,13 +57,20 @@ traj1.f_merge(traj2,remove_duplicates=True,backup_filename=True,
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets:
 # But before that we need to load the data we computed during the runs from disk.
 traj1.f_load(load_parameters=-2,load_results=-2)
-for idx,run_name in enumerate(traj1.f_get_run_names()):
-    x=traj1.f_get('x')[idx]
-    y=traj1.f_get('y')[idx]
-    z=traj1.f_get(run_name).z
-    # Results don't have fast access so we need to get the z value from the result z
-    z = z.z
-    print 'run_%d: x=%f, y=%f, z=%f' % (idx,x,y,z)
+for run_name in traj1.f_get_run_names():
+    # We can make the trajectory belief it is a single run and it will blind out all other
+    # runs and will only look for results for the current index, also all parameters will
+    # be treated as they were in the specific run:
+    traj1.f_as_run(run_name)
+    x=traj1.x
+    y=traj1.y
+    # We can rely on fast access here, because the result only contains a single value with name 'z'
+    z=traj1.z
+    print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
+
+# Don't forget to reset you trajectory to the default settings, to release its belief to
+# be the last run:
+traj1.f_restore_default()
 
 # As you can see duplicate parameter space points have been removed.
 # If you wish you can take a look at the files and backup files in

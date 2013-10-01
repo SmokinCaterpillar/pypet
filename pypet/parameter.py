@@ -220,7 +220,10 @@ class BaseParameter(NNLeafNode):
         return self._locked
 
 
-
+    @property
+    def v_fast_accessible(self):
+        '''A parameter is fast accessible if it is NOT empty!'''
+        return not self.f_is_empty()
 
 
     # @property
@@ -675,6 +678,8 @@ class Parameter(BaseParameter):
 
         if not data == None:
             self.f_set(data)
+
+
 
 
     def _set_logger(self):
@@ -1477,7 +1482,10 @@ class Result(BaseResult):
             self.f_set_single(key,arg)
 
 
-
+    def __getitem__(self, name):
+        ''' Equivalent to calling `f_get(name)` (see :func:`~pypet.parameter.BaseResult.f_get`).
+        '''
+        return self.f_get(name)
 
     def f_get(self,*args):
         ''' Returns items handled by the result.
@@ -1570,6 +1578,10 @@ class Result(BaseResult):
                                  (name,str(type(item))))
 
 
+    @property
+    def v_fast_accessible(self):
+        '''A result is fast accessible if it contains exactly one item!'''
+        return len(self._data)==1 and self.v_name in self._data
 
     @copydoc(NNLeafNode._store)
     def _store(self):

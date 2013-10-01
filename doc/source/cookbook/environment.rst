@@ -179,6 +179,33 @@ and explored parameter overview in each single run. You don't have to do that by
 simply use :func:`~pypet.environment.Environment.f_switch_off_large_overview`
 or :func:`~pypet.environment.Environment.f_switch_off_all_overview` to disable all tables.
 
+_more-on-duplicate-comments
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Purging duplicate Comments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you add a result with the same name and same comment in every single run, this would create
+a lot of overhead. Since the very same comment would be stored in every node in the hdf5 file.
+For instance,
+during a single run you call `traj.f_add_result('my_result`,42, comment='Mostly harmless!')`
+and the result will be renamed to `results.run_00000000.my_result`. After storage
+in the node associated with this result in your hdf5 file you will find the comment
+`'Mostly harmless!'`.
+If you call `traj.f_add_result('my_result',-55, comment='Mostly harmless!')`
+in another run again, let's say run_00000001, the name will be mapped to
+`results.run_00000001.my_result`. But this time the comment will not be saved to disk,
+since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
+Note that comments will be compared and storage will only be discarded if the strings
+are exactly the same.
+
+Furthermore, consider if you reload your data, the result instance `results.run_00000001.my_result`
+won't have a comment only the instance `results.run_00000000.my_result`.
+
+If you do not want to purge duplicate comments, set the config parameter
+`'config.hdf5.purge_duplicate_comments'` to 0 or False.
+
+
 .. _more-on-multiprocessing:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

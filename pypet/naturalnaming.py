@@ -8,6 +8,7 @@ import inspect
 import pypet.petexceptions as pex
 from pypet import globally
 from pypet.annotations import WithAnnotations
+from pypet.utils.helpful_classes import ChainMap
 import logging
 
 
@@ -42,15 +43,8 @@ class NNTreeNode(WithAnnotations):
 
         super(NNTreeNode,self).__init__()
 
-        split_name = full_name.split('.')
+        self._rename(full_name)
 
-        if root:
-            self._depth=0
-        else:
-            self._depth = len(split_name)
-
-        self._name=split_name.pop()
-        self._location='.'.join(split_name)
         self._leaf=leaf
 
     @property
@@ -76,13 +70,7 @@ class NNTreeNode(WithAnnotations):
 
         The full name of a trajectory or single run is the empty string since it is root.
         '''
-        if self.f_is_root():
-            return ''
-        else:
-            if self._location=='':
-                return self._name
-            else:
-                return '.'.join([self._location,self._name])
+        return self._full_name
 
     @property
     def v_name(self):
@@ -96,18 +84,35 @@ class NNTreeNode(WithAnnotations):
 
         The location of a trajectory or single run is the empty string since it is root.
         '''
-        return self._location
+        return self._full_name[:-len(self._name)-1]
 
-    def _rename(self, fullname):
+    @property
+    def v_creator_name(self):
+        ''' The name of the creator of the node, either the name of a single run
+        (e.g. 'run_00000009') or 'trajectory'.
+
+        :return: String
+        '''
+        return self._creator_name
+
+    def _rename(self, full_name):
         ''' Renames the parameter or result.
         '''
         #self.v_full_name = fullname
-        split_name = fullname.split('.')
+        split_name = full_name.split('.')
 
-        self._depth = len(split_name)
+        if full_name != '':
+            self._depth = len(split_name)
+        else:
+            self._depth=0
 
-        self._name=split_name.pop()
-        self._location='.'.join(split_name)
+        self._full_name=full_name
+        self._name=split_name[-1]
+
+        if self._depth>1 and split_name[0] in ['results', 'derived_parameters']:
+            self._creator_name = split_name[1]
+        else:
+            self._creator_name = 'trajectory'
 
 
     def f_get_class_name(self):
@@ -125,7 +130,7 @@ class NNLeafNode(NNTreeNode):
     def __init__(self,full_name,comment,parameter):
         super(NNLeafNode,self).__init__(full_name=full_name,root=False,leaf=True)
         self._parameter=parameter
-        self._fast_accessible = parameter
+
 
         self._comment=''
         self.v_comment=comment
@@ -151,7 +156,7 @@ class NNLeafNode(NNTreeNode):
     @property
     def v_fast_accessible(self):
         '''Whether or not fast access can be supported by the Parameter or Result'''
-        return self._fast_accessible
+        raise NotImplementedError('You should implement this!')
 
     @property
     def v_parameter(self):
@@ -264,6 +269,8 @@ class NaturalNamingInterface(object):
         self._flat_storage_dict = {}
 
         self._nodes_and_leaves = {}
+        
+        self._nodes_and_leaves_runs_sorted={}
 
         self._not_admissible_names = set(dir(self)) | set( dir(self._root_instance) )
 
@@ -422,6 +429,7 @@ class NaturalNamingInterface(object):
 
         full_name = node.v_full_name
         name = node.v_name
+        run_name = node.v_creator_name
 
         root = self._root_instance
 
@@ -464,6 +472,12 @@ class NaturalNamingInterface(object):
         del self._nodes_and_leaves[name][full_name]
         if len(self._nodes_and_leaves[name]) == 0:
             del self._nodes_and_leaves[name]
+
+        del self._nodes_and_leaves_runs_sorted[name][run_name][full_name]
+        if len(self._nodes_and_leaves_runs_sorted[name][run_name]) == 0:
+            del self._nodes_and_leaves_runs_sorted[name][run_name]
+            if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
+                del self._nodes_and_leaves_runs_sorted[name]
 
 
     def _remove_node_or_leaf(self, instance,remove_empty_groups):
@@ -745,6 +759,18 @@ class NaturalNamingInterface(object):
                     else:
                         self._nodes_and_leaves[name][new_node.v_full_name]=new_node
 
+                    run_name = new_node._creator_name
+                    if not name in self._nodes_and_leaves_runs_sorted:
+                        self._nodes_and_leaves_runs_sorted[name]={run_name:
+                                                            {new_node.v_full_name:new_node}}
+                    else:
+                        if not run_name in self._nodes_and_leaves_runs_sorted[name]:
+                            self._nodes_and_leaves_runs_sorted[name][run_name] = \
+                                                            {new_node.v_full_name:new_node}
+                        else:
+                            self._nodes_and_leaves_runs_sorted[name][run_name]\
+                                [new_node.v_full_name] = new_node
+
                 else:
                     if idx == last_idx:
                         raise AttributeError('You already have a group/instance >>%s<< under '
@@ -906,13 +932,19 @@ class NaturalNamingInterface(object):
             return data
 
     @staticmethod
-    def _iter_nodes( node, recursive=False, search_strategy=globally.BFS):
+    def _iter_nodes( node, recursive=False, search_strategy=globally.BFS, as_run=None):
 
         if recursive:
             if search_strategy == globally.BFS:
-                return NaturalNamingInterface._recursive_traversal_bfs(node)
+                if as_run is None:
+                    return NaturalNamingInterface._recursive_traversal_bfs(node)
+                else:
+                    return NaturalNamingInterface._recursive_traversal_bfs_as_run(node, as_run)
             elif search_strategy == globally.DFS:
-                return NaturalNamingInterface._recursive_traversal_dfs(node)
+                if as_run is None:
+                    return NaturalNamingInterface._recursive_traversal_dfs(node)
+                else:
+                    return NaturalNamingInterface._recursive_traversal_dfs_as_run(node, as_run)
             else:
                 raise ValueError('Your search method is not understood!')
         else:
@@ -962,6 +994,32 @@ class NaturalNamingInterface(object):
 
         return result_dict
 
+
+    @staticmethod
+    def _make_child_iterator(node, run_name):
+        if node.v_depth == 1 and run_name in node._children:
+            return [node._children[run_name]]
+        else:
+            return node._children.itervalues()
+
+    @staticmethod
+    def _recursive_traversal_bfs_as_run(node, run_name):
+        if not node._leaf:
+            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
+                yield child
+
+            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
+                for new_node in NaturalNamingInterface._recursive_traversal_bfs_as_run(child,run_name):
+                    yield new_node
+
+    @staticmethod
+    def _recursive_traversal_dfs_as_run(node, run_name):
+        if not node._leaf:
+            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
+                yield child
+                for new_node in NaturalNamingInterface._recursive_traversal_dfs_as_run(child):
+                    yield new_node
+
     @staticmethod
     def _recursive_traversal_bfs(node):
         if not node._leaf:
@@ -982,12 +1040,27 @@ class NaturalNamingInterface(object):
                     yield new_node
 
 
-    def _very_fast_search(self, node, key, check_uniqueness):
+    def _very_fast_search(self, node, key, as_run):
         ''' Will always test if nodes are not unique'''
 
         parent_full_name = node.v_full_name
 
-        candidate_dict = self._nodes_and_leaves[key]
+        if as_run is None:
+            candidate_dict = self._nodes_and_leaves[key]
+        else:
+            temp_dict={}
+            if as_run in self._nodes_and_leaves_runs_sorted[key]:
+                temp_dict = self._nodes_and_leaves_runs_sorted[key][as_run]
+                if len(temp_dict) > FAST_UPPER_BOUND:
+                    raise pex.TooManyGroupsError('Too many nodes')
+
+            temp_dict2={}
+            if 'trajectory' in self._nodes_and_leaves_runs_sorted[key]:
+                temp_dict2 = self._nodes_and_leaves_runs_sorted[key]['trajectory']
+                if len(temp_dict2) > FAST_UPPER_BOUND:
+                    raise pex.TooManyGroupsError('Too many nodes')
+
+            candidate_dict = ChainMap(temp_dict,temp_dict2)
 
         if len(candidate_dict) > FAST_UPPER_BOUND:
             raise pex.TooManyGroupsError('Too many nodes')
@@ -1010,8 +1083,13 @@ class NaturalNamingInterface(object):
 
     def _search(self,node,  key, check_uniqueness, search_strategy):
 
+        if not self._root_instance._is_run:
+            as_run = self._root_instance.v_as_run
+        else:
+            as_run = None
+
         try:
-            return self._very_fast_search(node, key, check_uniqueness)
+            return self._very_fast_search(node, key, as_run)
         except pex.TooManyGroupsError:
             pass
         except pex.NotUniqueNodeError:
@@ -1021,7 +1099,8 @@ class NaturalNamingInterface(object):
                 pass
 
         nodes_iterator = NaturalNamingInterface._iter_nodes(node, recursive=True,
-                                                            search_strategy=search_strategy)
+                                                            search_strategy=search_strategy,
+                                                            as_run=as_run)
 
         result_node = None
         for child in nodes_iterator:
@@ -1202,9 +1281,15 @@ class NNGroupNode(NNTreeNode):
 
         :param item: Parameter/Result name or instance.
 
-        :param: recursive: Whether the whole sub tree under the group should be checked or only
-                          its immediate children. Default is the whole sub tree.
-                          If `recursive=False` you must only specify the name not the full name.
+            If a parameter or result instance is supplied it is also checked if
+            the provided item and the found item are exactly the same instance, i.e.
+            `id(item)==id(found_item)`
+
+        :param: recursive:
+
+            Whether the whole sub tree under the group should be checked or only
+            its immediate children. Default is the whole sub tree.
+            If `recursive=False` you must only specify the name not the full name.
 
         :return: True or False
         '''
@@ -1215,6 +1300,7 @@ class NNGroupNode(NNTreeNode):
         except AttributeError:
             search_string = item
             name = item
+            item = None
 
         try:
             if search_string.startswith(self.v_full_name) and self.v_full_name != '':
@@ -1224,14 +1310,19 @@ class NNGroupNode(NNTreeNode):
 
         if recursive:
             try:
-                self.f_get(search_string)
-
-                return True
+                result = self.f_get(search_string)
             except AttributeError:
-
                 return False
         else:
-            return name in self._children
+            if name in self._children:
+                result = self._children
+            else:
+                return False
+
+        if item is not None:
+            return id(item) == id(result)
+        else:
+            return True
 
     def __setattr__(self, key, value):
         if key.startswith('_'):

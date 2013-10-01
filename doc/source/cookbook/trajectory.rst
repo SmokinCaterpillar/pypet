@@ -211,8 +211,13 @@ Whether or not you want fast access is determined by the value of `v_fast_access
     <Parameter object>
 
 Note that fast access only works for parameter objects (i.e. for everything you store under *parameters*,
-*derived_parameters*, and *config*). If you access a result via natural naming, you will always
-get in return the result object [#]_.
+*derived_parameters*, and *config*) that are non empty. If you say for instance `traj.x` and `x`
+is an empty parameter, you will get in return the parameter object. Fast access works
+in one particular case also for results, and that is, if the result contains exactly one item
+with the name of the parameter.
+For isntance if you add the result `traj.f_add_result('z',10), you can fast access it, since
+the first positional argument is mapped to the name 'z'.
+If it is empty or contains more than 1 item you will always get in return the result object.
 
 
 
@@ -381,14 +386,50 @@ pickle_ module.
 If you store a trajectory to disk it's tree structure can be again found in the structure of
 the HDF5 file!
 In addition, there will be some overview tables summarizing what you stored into the hdf5 file.
+They can be found under the top-group `overview`.
 
-* An `info_table` listing general information about your trajectory
+* An `info` listing general information about your trajectory
 
-* A `run_table` summarizing the single runs
+* A `runs` summarizing the single runs
 
-* The `parameter_table`,`config_table`,`result_table`,`derived_parameter_table` summarizing guess what
+* The instance tables:
 
-* The `explored_parameter_table` overview over you parameters explored in the single runs
+    `parameters`
+
+        Containing all parameters, and some information about comments, length etc.
+
+    `config`,
+
+        As above, but config parameters
+
+    `results_runs`
+
+        All results of all individual runs, to reduce memory size only a short value
+        summary and the name is given.
+
+
+    `results_runs_summary`
+
+        Only the very first result with a particular name is listed. For instance
+        if you create the result 'my_result' in all runs only the result of run_00000000
+        is listed with detailed information.
+
+        If you use this table, you can purge duplicate comments, see :ref:`more-on-duplicate-comments`.
+
+
+    `results_trajectroy`
+
+        All results created directly with the trajectory and not within single runs are listed.
+
+    `derived_parameters_trajectory`
+
+    `derived_parameters_runs`
+
+    `derived_parameters_runs_summary`
+
+        All three are analogous to the result overviews above.
+
+* The `explored_parameters` overview over you parameters explored in the single runs
 
 * In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing the values in each run.
 
@@ -622,12 +663,6 @@ For storage of annotations holds the same as for items, whatever is stored to di
 .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
 
-
-.. [#]
-
-    Which is not entirely true, you could write your own result class that supports fast
-    access. Set in the result `v_fast_accessible=True` and hte result needs to return some value
-    when called via `f_get()` without any arguments.
 
 .. [#]
 

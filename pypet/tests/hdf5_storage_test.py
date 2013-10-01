@@ -1,75 +1,27 @@
-from traits.trait_types import self
+
 
 __author__ = 'Robert Meyer'
 
 import numpy as np
-import unittest
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
-from pypet.trajectory import Trajectory, SingleRun
-from pypet.storageservice import LazyStorageService
+from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import globally
-import pickle
 import logging
-import cProfile
-from pypet.utils.helpful_functions import flatten_dictionary
+import unittest
 import scipy.sparse as spsp
-import os
-import shutil
-import pandas as pd
-from pypet.utils.comparisons import results_equal,parameters_equal
-from pypet.utils.helpful_functions import nested_equal
+import random
 
-## Removes all the files again to clean up after the tests
-REMOVE = True
+import tables as pt
 
+from test_helpers import add_params, create_param_dict, simple_calculations, run_tests,\
+    make_temp_file, TrajectoryComparator
 
-def simple_calculations(traj, arg1, simple_kwarg):
+SINGLETEST=[0]
 
-
-        all_mat = traj.csc_mat + traj.lil_mat + traj.csr_mat
-        Normal_int= traj.Normal.int
-        Sum= np.sum(traj.Numpy.double)
-
-        result_mat = all_mat * Normal_int * Sum * arg1 * simple_kwarg
-
-
-
-        my_dict = {}
-
-        my_dict2={}
-        my_dict3={}
-        my_dict4={}
-        for key, val in traj.f_to_dict(fast_access=True,short_names=False).items():
-            newkey = key.replace('.','_')
-            my_dict[newkey] = str(val)
-            my_dict2[newkey] =(str(val)+' juhu!')
-            my_dict3[newkey] =[str(val)+' juhuhu!']
-            my_dict4[newkey]= np.array([str(val)+' Woopieee!'])
-
-        keys = traj.f_to_dict(short_names=False).keys()
-        for idx,key in enumerate(keys):
-            keys[idx] = key.replace('.','_')
-
-        traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, dict3=my_dict3,dict4=my_dict4)
-        traj.f_add_result('DictsNFrame', keys=keys)
-        traj.f_add_result('ResMatrix',result_mat.todense())
-        traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
-
-        myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
-
-        traj.DictsNFrame.f_set(myframe)
-
-        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
-
-        traj.f_add_result(PickleResult, 'PickleTerror',  test=traj.SimpleThings).f_set_annotations(
-            *[1,'hhhhh'],
-            **{'peter':np.array([1,2,3,4]),'cat':'fish',
-                                     'kkk' : np.array(['1','2','sdfsf'])})
-
-class EnvironmentTest(unittest.TestCase):
+class EnvironmentTest(TrajectoryComparator):
 
 
     def set_mode(self):
@@ -77,67 +29,6 @@ class EnvironmentTest(unittest.TestCase):
         self.multiproc = False
         self.ncores = 1
 
-    def _create_param_dict(self):
-        self.param_dict = {}
-
-        self.param_dict['Normal'] = {}
-        self.param_dict['Numpy'] = {}
-        self.param_dict['Sparse'] ={}
-        self.param_dict['Numpy_2D'] = {}
-        self.param_dict['Numpy_3D'] = {}
-        self.param_dict['Tuples'] ={}
-
-        normal_dict = self.param_dict['Normal']
-        normal_dict['string'] = 'Im a test string!'
-        normal_dict['int'] = 42
-        normal_dict['double'] = 42.42
-        normal_dict['bool'] =True
-        normal_dict['trial'] = 0
-
-        numpy_dict=self.param_dict['Numpy']
-        numpy_dict['string'] = np.array(['Uno', 'Dos', 'Tres'])
-        numpy_dict['int'] = np.array([1,2,3,4])
-        numpy_dict['double'] = np.array([1.0,2.0,3.0,4.0])
-        numpy_dict['bool'] = np.array([True,False, True])
-
-        self.param_dict['Numpy_2D']['double'] = np.array([[1.0,2.0],[3.0,4.0]])
-        self.param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
-
-        spsparse_csc = spsp.csc_matrix((2222,22))
-        spsparse_csc[1,2] = 44.6
-
-        spsparse_csr = spsp.csr_matrix((2222,22))
-        spsparse_csr[1,3] = 44.7
-
-        spsparse_lil = spsp.lil_matrix((2222,22))
-        spsparse_lil[3,2] = 44.5
-
-        self.param_dict['Sparse']['lil_mat'] = spsparse_lil
-        self.param_dict['Sparse']['csc_mat'] = spsparse_csc
-        self.param_dict['Sparse']['csr_mat'] = spsparse_csr
-
-        self.param_dict['Tuples']['int'] = (1,2,3)
-        self.param_dict['Tuples']['float'] = (44.4,42.1,3.)
-        self.param_dict['Tuples']['str'] = ('1','2wei','dr3i')
-
-
-    def add_params(self,traj):
-
-        flat_dict = flatten_dictionary(self.param_dict,'.')
-
-        for key, val in flat_dict.items():
-            if isinstance(val, (np.ndarray,list, tuple)):
-                traj.f_add_parameter(ArrayParameter,key,val, )
-            elif isinstance(val, (int,str,bool,float)):
-                traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
-            elif spsp.isspmatrix(val):
-                traj.f_add_parameter(PickleParameter,key,val).v_annotations.f_set(
-                    **{'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
-                                     'Second_Fav':np.array([43.0,43.0])})
-            else:
-                raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
-
-        traj.f_add_derived_parameter('Another.String', 'Hi, how are you?')
 
 
 
@@ -157,11 +48,11 @@ class EnvironmentTest(unittest.TestCase):
     def setUp(self):
         self.set_mode()
 
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
-        self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = '../../experiments/tests/Log'
-        self.trajname = 'Test'
+        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
+        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder)
@@ -175,9 +66,10 @@ class EnvironmentTest(unittest.TestCase):
         traj.v_standard_parameter=Parameter
 
         ## Create some parameters
-        self._create_param_dict()
+        self.param_dict={}
+        create_param_dict(self.param_dict)
         ### Add some parameter:
-        self.add_params(traj)
+        add_params(traj,self.param_dict)
 
         #remember the trajectory and the environment
         self.traj = traj
@@ -192,7 +84,7 @@ class EnvironmentTest(unittest.TestCase):
         simple_kwarg= 13.0
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
-
+    @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_run(self):
 
         ###Explore
@@ -204,11 +96,12 @@ class EnvironmentTest(unittest.TestCase):
 
         self.make_run()
 
-        newtraj = self.load_trajectory(trajectory_index=-1,as_new=True)
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=True)
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
+
 
 
 
@@ -220,30 +113,90 @@ class EnvironmentTest(unittest.TestCase):
                        trajectory_index=trajectory_index)
         return newtraj
 
-    def compare_trajectories(self,traj1,traj2):
+class ConfigTablesTest(EnvironmentTest):
 
-        old_items = traj1.f_to_dict(fast_access=False)
-        new_items = traj2.f_to_dict(fast_access=False)
+    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_switch_off_large_tables(self):
+        ###Explore
+        self.explore(self.traj)
+
+        self.env.f_switch_off_large_overview()
+        self.make_run()
+
+        hdf5file = pt.openFile(self.filename)
+        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        should_not = ['derived_parameters_runs', 'results_runs']
+        for name in should_not:
+            self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
+        hdf5file.close()
+
+    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_switch_off_all_tables(self):
+        ###Explore
+        self.explore(self.traj)
+
+        self.env.f_switch_off_all_overview()
+        self.make_run()
+
+        hdf5file = pt.openFile(self.filename)
+        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
+        for name in should_not:
+            self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
+
+        hdf5file.close()
 
 
+    @unittest.skipIf(SINGLETEST != [0] and 4 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_switch_on_all_comments(self):
+        self.explore(self.traj)
+        self.traj.purge_duplicate_comments=0
 
-        self.assertEqual(len(old_items),len(new_items))
-        for key,item in new_items.items():
-            old_item = old_items[key]
-            if key.startswith('config'):
-                continue
+        self.make_run()
 
-            if isinstance(item, BaseParameter):
-                self.assertTrue(parameters_equal(item,old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-            elif isinstance(item,BaseResult):
-                self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-            else:
-                raise RuntimeError('You shall not pass')
+        hdf5file = pt.openFile(self.filename)
+        traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
 
-            self.assertTrue(nested_equal(item.v_annotations,old_item.v_annotations),'%s != %s' %
-                        (item.v_annotations.f_ann_to_str(),old_item.v_annotations.f_ann_to_str()))
+        for node in traj_group._f_walkGroups():
+            if 'SRVC_LEAF' in node._v_attrs:
+                self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                    'There is no comment in node %s!' % node._v_name)
+
+        hdf5file.close()
+
+    @unittest.skipIf(SINGLETEST != [0] and 5 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_purge_duplicate_comments(self):
+        self.explore(self.traj)
+
+        with self.assertRaises(RuntimeError):
+            self.traj.purge_duplicate_comments=1
+            self.traj.overview.results_runs_summary=0
+            self.make_run()
+
+        self.traj.f_get('purge_duplicate_comments').f_unlock()
+        self.traj.purge_duplicate_comments=1
+        self.traj.f_get('results_runs_summary').f_unlock()
+        self.traj.overview.results_runs_summary=1
+        self.make_run()
+
+        hdf5file = pt.openFile(self.filename)
+        traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
+
+        for node in traj_group._f_walkGroups():
+            if 'SRVC_LEAF' in node._v_attrs:
+                if 'run_00000000' in node._v_pathname:
+                    self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                    'There is no comment in node %s!' % node._v_name)
+                elif 'run_' in node._v_pathname:
+                    self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
+                                    'There is a comment in node %s!' % node._v_name)
+                else:
+                    self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                    'There is no comment in node %s!' % node._v_name)
+
+        hdf5file.close()
+
+
 
 
 class MultiprocQueueTest(EnvironmentTest):
@@ -265,6 +218,4 @@ class MultiprocLockTest(EnvironmentTest):
 
 
 if __name__ == '__main__':
-    if REMOVE:
-        shutil.rmtree('../../Test',True)
-    unittest.main()
+    run_tests()

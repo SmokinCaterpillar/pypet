@@ -14,18 +14,18 @@ def prepare():
 
 
 
-    traj.set_storage_service(LazyStorageService())
+    traj.v_storage_service=LazyStorageService()
 
 
-    large_amount = 111111
+    large_amount = 11111
 
     for irun in range(large_amount):
         name = 'Hurz.L' + str(irun)
 
-        traj.ap(name,irun)
+        traj.f_add_parameter(name,irun)
 
 
-    traj.ap('Hurz.Test', value=1)
+    traj.f_add_parameter('Hurz.Test', data=1)
 
     return traj
 

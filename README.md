@@ -9,31 +9,10 @@ data storage for you. Currently supported storage is HDF5!
 Requirements
 ----------------------------
 
+tables >= 2.3.1
 pandas >= 0.12.0
-numpy >= 1.5.0
-tables >= 3.0.0
-
-Before the official release of version 0.1.0
-I will include support for PyTables 2.X.
-So you won't have the hassle with manually updating your
-tables package!
-
---------------------------------
-Tests
---------------------------------
-
-Test can be found in pypet.tests.
-Note that they involve heavy file IO and it might not be the case
-that you have privileges on your system to write files to the particular folder.
-So I would recommend either downloading pypet from github (See homepage)
-and run the tests in your IDE.
-
-    You can run all tests at once simply executing `all_test.py`.
-    This can take quite a while since it involves massive IO operations.
-    Give it round about 3 to 5 minutes!
-
-Or you still might want to wait for some time for the official 0.1.0 release
-because I am trying to work around that in the meantime.
+numpy >= 1.6.1
+scipy >= 0.10.0
 
 
 
@@ -230,6 +209,22 @@ So have fun using this tool!
 
 Cheers,
     Robert
+
+--------------------------------
+Tests
+--------------------------------
+
+Tests can be found in `pypet/tests`.
+Note that they involve heavy file IO and it might not be the case
+that you have privileges on your system to write files to a temporary folder.
+The tests suite will make use of the `tempfile.gettempdir()` function to
+access a temporary folder.
+You can run all tests with `$ python all_tests.py` which can also be found under
+`pypet/tests`.
+You can pass additional arguments as `$ python all_tests.py -k --folder='myfolder/'` with
+`-k` to keep the hdf5 files created by the tests (if you want to inspect them, otherwise
+they will be deleted after the completed tests)
+and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
 
 
 ------------------------------------

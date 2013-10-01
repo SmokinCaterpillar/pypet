@@ -18,6 +18,7 @@ import traceback
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
 from  pypet import globally
 
+
 def _single_run(args):
 
     try:
@@ -81,9 +82,25 @@ def _single_run(args):
     except:
         errstr = "\n\n########## ERROR ##########\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
         logging.getLogger('STDERR').error(errstr)
-        raise Exception("".join(traceback.format_exception(*sys.exc_info())))
+        raise #Exception("".join(traceback.format_exception(*sys.exc_info())))
 
-def _queue_handling(handler):
+def _queue_handling(handler,log_path):
+
+    filename = 'queue_process.txt'
+    filename=log_path+'/'+filename
+    root = logging.getLogger()
+
+    h=logging.FileHandler(filename=filename)
+    f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+    h.setFormatter(f)
+    root.addHandler(h)
+
+    #Redirect standard out and error to the file
+    outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+    sys.stdout = outstl
+
+    errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+    sys.stderr = errstl
     handler.run()
 
 class Environment(object):
@@ -194,17 +211,51 @@ class Environment(object):
 
     * hdf5.file_title: The hdf5 file title
 
-    * hdf5.XXXXX_overview
+    * hdf5.overview.XXXXX
 
-            Whether the XXXXXX overview table should be created.
-            XXXXXX from ['config','parameter','derived_parameter','result','explored_parameter'].
-            Default is True/1
+        Whether the XXXXXX overview table should be created.
+        XXXXXX from ['config','parameters','derived_parameters_trajectory',
+        'derived_parameters_runs','derived_parameters_runs_summary',
+        'results_trajectory', 'results_runs', 'results_runs_summary',
+        'result','explored_parameters'].
+        Default is True/1
 
-            Note that these tables create a lot of overhead, if you want small hdf5 files set
-            these values to False (0). Most memory is taken by the result_overview and
-            derived_parameter_overview!
+        Note that these tables create a lot of overhead, if you want small hdf5 files set
+        these values to False (0). Most memory is taken by the `results_runs`,
+        `derived_parameters_runs` and `explored_parameters_runs` tables.
 
-    * hdf5.explored_parameter_overview_in_runs
+        the 'XXXXXX_summary' tables give a summary about all results or derived parameters.
+        It is assumed that results and derived parameters with equal names in individual runs
+        are similar and only the first result or derived parameter that was created
+        is shown as an example.
+
+        The summary table can be used in combination with `hdf5.purge_duplicate_comments` to only store
+        a single comment for every result with the same name in each run, see below.
+
+    * hdf5.purge_duplicate_comments
+
+        If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
+        parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
+        you set a comment, normally that comment would be attached to each and every instance.
+        This can produce a lot of unnecessary overhead if the comment is the same for every
+        result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
+        first result or derived parameter instance created in a run is stored or comments
+        that differ from this first comment.
+
+        For instance,
+        during a single run you call `traj.f_add_result('my_result`,42, comment='Mostly harmless!')`
+        and the result will be renamed to `results.run_00000000.my_result`. After storage
+        in the node associated with this result in your hdf5 file you will find the comment
+        `'Mostly harmless!'`. If you call `traj.f_add_result('my_result',-43, comment='Mostly harmless!')`
+        in another run again, let's say run 00000001, the name will be mapped to
+        `results.run_00000001.my_result`. But this time the comment will not be saved to disk,
+        since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
+        Note that the comments will be compared and storage will only be discarded if the strings
+        are exactly the same.
+
+        Default is True/1
+
+    * hdf5.overview.explored_parameters
 
             Whether an overview table about the explored parameters is added in each
             single run subgroup.
@@ -297,49 +348,36 @@ class Environment(object):
         self._use_hdf5 = use_hdf5
 
         if self._use_hdf5:
+            for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+
+                if not self._traj.f_contains(config_name):
+                    self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
+                                                                  'table with that name.')
+
+            if not self._traj.f_contains('config.hdf5.overview.explored_parameters_runs'):
+                self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
+                                        comment='If there are overview tables about the '
+                                                'explored parameters in each run.')
+
+            if not self._traj.f_contains('config.hdf5.purge_duplicate_comments'):
+                self._traj.f_add_config('hdf5.purge_duplicate_comments',1,'Whether comments of results and'
+                                                            ' derived parameters should only'
+                                                            'be stored for the very first instance.'
+                                                            ' Works only if the summary tables are'
+                                                            ' active.')
+
             if not self._traj.f_contains('config.hdf5.filename') :
                 self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
+
             if not self._traj.f_contains('config.hdf5.file_title'):
                 self._traj.f_add_config('hdf5.file_title', file_title, comment='Title of hdf5 file')
+
             if not self._traj.f_contains('config.hdf5.results_per_run'):
                 self._traj.f_add_config('hdf5.results_per_run', 0,
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance.')
-            if not self._traj.f_contains('config.hdf5.derived_parameters_per_run'):
-                self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
-                                        comment='Expected number of derived parameters per run,'
-                                            ' a good guess can increase storage performance.')
-            if not self._traj.f_contains('config.hdf5.result_overview'):
-                self._traj.f_add_config('hdf5.result_overview', 1,
-                                        comment='Whether an overview table about the results should'
-                                                ' be stored in the hdf5 file. Setting it to False'
-                                                ' can decrease file size.')
-            if not self._traj.f_contains('config.hdf5.derived_parameter_overview'):
-                self._traj.f_add_config('hdf5.derived_parameter_overview', 1,
-                                        comment='Whether an overview table about the derived parameters should'
-                                                ' be stored in the hdf5 file. Setting it to False'
-                                                ' can decrease file size.')
-            if not self._traj.f_contains('config.hdf5.parameter_overview'):
-                self._traj.f_add_config('hdf5.parameter_overview', 1,
-                                        comment='Whether an overview table about the parameters should'
-                                                ' be stored in the hdf5 file. Setting it to False'
-                                                ' can decrease file size.')
-            if not self._traj.f_contains('config.hdf5.config_overview'):
-                self._traj.f_add_config('hdf5.config_overview', 1,
-                                        comment='Whether an overview table about the parameters should'
-                                                ' be stored in the hdf5 file. Setting it to False'
-                                                ' can decrease file size.')
-            if not self._traj.f_contains('config.hdf5.explored_parameter_overview'):
-                self._traj.f_add_config('hdf5.explored_parameter_overview', 1,
-                                        comment='Whether an overview table about the explored parameters should'
-                                                ' be stored in the hdf5 file. Setting it to False'
-                                                ' can decrease file size.')
-            if not self._traj.f_contains('config.hdf5.explored_parameter_overview_in_runs'):
-                self._traj.f_add_config('hdf5.explored_parameter_overview_in_runs', 1,
-                                        comment='Whether an overview table about the explored parameters should'
-                                                ' be stored in every single run group in the hdf5 file. '
-                                                'Setting it to False'
-                                                ' can decrease file size.')
+
+
 
             self._add_hdf5_storage_service()
 
@@ -379,16 +417,22 @@ class Environment(object):
 
             * Explored Parameter Overview in each Single Run
         '''
-        self._traj.config.hdf5.result_overview=0
-        self._traj.config.hdf5.derived_parameter_overview = 0
-        self._traj.config.hdf5.explored_parameter_overview_in_runs = 0
+        self._traj.config.hdf5.overview.results_runs=0
+        self._traj.config.hdf5.overview.derived_parameters_runs = 0
+        self._traj.config.hdf5.overview.explored_parameters_runs = 0
 
 
     def f_switch_off_all_overview(self):
-        ''' Switches all overview tables off.
+        ''' Switches all overview tables off and switches off `purge_duplicate_comments`.
         '''
-        self._traj.config.hdf5.parameter_overview = 0
-        self._traj.config.hdf5.config_overview=0
+        self._traj.config.hdf5.overview.parameters = 0
+        self._traj.config.hdf5.overview.config=0
+        self._traj.config.hdf5.overview.explored_parameters=0
+        self._traj.config.hdf5.overview.derived_parameters_trajectory=0
+        self._traj.config.hdf5.overview.derived_parameters_runs_summary=0
+        self._traj.config.hdf5.overview.results_trajectory=0
+        self._traj.config.hdf5.overview.results_runs_summary=0
+        self._traj.config.hdf5.purge_duplicate_comments=0
         self.f_switch_off_large_overview()
 
     def f_continue_run(self, continuefile):
@@ -449,6 +493,13 @@ class Environment(object):
         continuable = self._traj.f_get('config.environment.continuable').f_get()
         log_path = self._traj.f_get('config.environment.log_path').f_get()
 
+        if self._use_hdf5:
+            if ( (not self._traj.f_get('results_runs_summary').f_get() or
+                        not self._traj.f_get('results_runs_summary').f_get()) and
+                    self._traj.f_get('purge_duplicate_comments').f_get()):
+                    raise RuntimeError('You can only use the reduce comments if you enable '
+                                       'the summary tables.')
+
         self._traj._prepare_experiment()
 
         if continuable:
@@ -458,6 +509,11 @@ class Environment(object):
                 filename = self._traj.f_get('config.hdf5.filename').f_get()
                 #dump_dict['filename'] = filename
                 dumpfolder= os.path.split(filename)[0]
+
+                # Make folder if not existing, can happen if Non standard service is used
+                if not os.path.isdir(dumpfolder):
+                    os.mkdir(dumpfolder)
+
                 dumpfilename=os.path.join(dumpfolder,self._traj.v_name+'.cnt')
             else:
                 dumpfilename = os.path.join(log_path,self._traj.v_name+'.cnt')
@@ -483,6 +539,8 @@ class Environment(object):
 
     def _do_run(self, runfunc, *args, **kwargs):
 
+
+
         log_path = self._traj.f_get('config.environment.log_path').f_get()
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
         mode = self._traj.f_get('config.environment.wrap_mode').f_get()
@@ -497,8 +555,8 @@ class Environment(object):
                 self._logger.info('Starting the Storage Queue!')
                 queue_writer = QueueStorageServiceWriter(self._storage_service,queue)
 
-                queue_process = multip.Process(name='QueueProcess',target=_queue_handling, args=(queue_writer,))
-                queue_process.daemon=True
+                queue_process = multip.Process(name='QueueProcess',target=_queue_handling, args=(queue_writer,log_path))
+                #queue_process.daemon=True
                 queue_process.start()
 
                 queue_sender = QueueStorageServiceSender()
@@ -507,7 +565,7 @@ class Environment(object):
 
             elif mode == globally.WRAP_MODE_LOCK:
                 manager = multip.Manager()
-                lock = manager.RLock()
+                lock = manager.Lock()
                 queue = None
 
                 lock_wrapper = LockWrapper(self._storage_service,lock)

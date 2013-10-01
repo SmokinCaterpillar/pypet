@@ -1,3 +1,31 @@
+pypet 0.1b.0
+
+*
+
+    More fine graine overview tables
+
+*
+
+    comments for runs are only added once and not every run
+
+*
+
+    The overview tables are now found in the group `overview`
+
+*
+    Test are operating in a temp directory
+
+
+*
+
+    Now you can have fast access with result if they contain only a single entry with the name of
+    the result
+
+*
+
+    New trajectory function `f_as_run` that makes the trajectory belief it is a particular
+    single run and results and derived parameters of other runs are blinded out.
+
 pypet 0.1a.6
 
 * BUGFIX (HDF5StorageService): storing a trajectory several times increased run and info table

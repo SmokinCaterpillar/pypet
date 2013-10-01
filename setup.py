@@ -38,9 +38,10 @@ setup(
     long_description=open('long_description.txt').read(),
     url='https://github.com/SmokinCaterpillar/pypet',
     install_requires=[
-        'tables >= 3.0.0',
+        'tables >= 2.3.1',
         'pandas >= 0.12.0',
-        'numpy >= 1.5.0'],
+        'numpy >= 1.6.1',
+        'scipy' >= '0.10.0'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'Natural Language :: English',

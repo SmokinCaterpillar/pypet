@@ -133,7 +133,7 @@ class TrajectoryTest(unittest.TestCase):
         new_items = newtraj.f_to_dict(fast_access=True)
 
         for key, val in self.traj.f_to_dict(fast_access=True).items():
-            #val = newtraj.f_get(key)
+            #val = newtraj.f_get(table_name)
             nval = new_items[key]
             if isinstance(val, BaseResult):
                 for ikey in val._data:
@@ -290,7 +290,7 @@ class SingleRunTest(unittest.TestCase):
         self.assertTrue(self.single_run.Nice.Yo == value)
 
         self.single_run.f_add_result('Puberty.Hacks', val=value)
-        resval= self.single_run.Hacks.f_get('val')
+        resval= self.single_run.f_get('Hacks').f_get('val')
         self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
 
 

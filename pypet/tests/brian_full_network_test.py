@@ -14,6 +14,7 @@ import cProfile
 from brian import *
 from pypet.utils.explore import cartesian_product
 import shutil
+from test_helpers import run_tests, make_temp_file
 
 
 REMOVE = True
@@ -116,7 +117,10 @@ class NetworkTest(unittest.TestCase):
         logging.basicConfig(level = logging.DEBUG)
 
 
-        env = Environment(trajectory='Test',filename='../../experiments/tests/brian/HDF5/test.hdf5',file_title='test', log_folder='../../experiments/tests/brian/log')
+        env = Environment(trajectory='Test',
+                          filename=make_temp_file('experiments/tests/brian/HDF5/test.hdf5'),
+                          file_title='test',
+                          log_folder=make_temp_file('experiments/tests/brian/log'))
 
         traj = env.v_trajectory
 
@@ -146,6 +150,4 @@ class NetworkTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    if REMOVE:
-        shutil.rmtree('../../Test',True)
-    unittest.main()
+    run_tests()

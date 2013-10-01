@@ -508,8 +508,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         Result are added via the :func:`~pypet.naturalnaming.ResultGroup.f_add_result`
 
-    There are several ways to access the parameters, to learn about these, fast access, and natural
-    naming see :ref:`more-on-access`
+    There are several ways to access the parameters and results, to learn about these, fast access,
+    and natural naming see :ref:`more-on-access`
 
 
     
@@ -626,6 +626,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
         self._idx = -1
+        self._as_run = None
 
         self._standard_parameter = Parameter
         self._standard_result = Result
@@ -697,8 +698,47 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self._storage_service = service
 
 
+    @property
+    def v_idx(self):
+        '''Index if you want to access the trajectory as a single run.
 
+        You can turn the trajectory to behave like a single run object if you set
+        v_idx to a particular index. Note that only integer values are appropriate here,
+        not names of runs.
 
+        Alternatively instead of directly setting v_idx you can call
+        :func:`pypet.trajectory.Trajectory.f_as_run:`. See it's documentation for a description
+        of making the trajectory behave like a single run.
+
+        Set to -1 to make the trajectory to turn everything back to default
+
+        '''
+        return self._idx
+
+    @v_idx.setter
+    def v_idx(self,idx):
+        self.f_as_run(idx)
+
+    @property
+    def v_as_run(self):
+        '''Run name if you want to access the trajectory as a single run.
+
+        You can turn the trajectory to behave like a single run object if you set
+        v_as_run to a particular run name. Note that only string values are appropriate here,
+        not indices. Check the `v_idx` property if you want to provide an index.
+
+        Alternatively instead of directly setting v_idx you can call
+        :func:`pypet.trajectory.Trajectory.f_as_run:`. See it's documentation for a description
+        of making the trajectory behave like a single run.
+
+        Set to `None` to make the trajectory to turn everything back to default.
+
+        '''
+        return self._as_run
+
+    @v_as_run.setter
+    def v_as_run(self,idx):
+        return self.f_as_run(idx)
 
     @property
     def v_full_copy(self):
@@ -744,6 +784,53 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                 str(item))
 
         self._dynamic_imports.extend(dynamically_imported_classes)
+
+
+    def f_as_run(self, name_or_idx):
+        ''' Can make the trajectory behave like a single run, for easy data analysis.
+
+         Has tthe following effects
+
+        *
+            `v_idx` and `v_as_run` are set to the approriate index and run name
+
+        *
+            All explored parameters are set to the corresponding value in the exploration
+            array, i.e. when you call :func:`~pypet.parameter.Parameter.f_get` (or fast access)
+            on them you will get in return the value at the corresponding `v_idx` position
+            in the exploration array.
+
+        *
+            If you perform a search (via Natural Naming) in the trajectory tree it will
+            only search the run subtree under *results* and *derived_parameters* with the
+            corresponding index.
+            For instance, if you use `f_as_run('run_00000007')` or `f_as_run(7)`
+            and search for `traj.results.z` this will search for `z` only in the subtree
+            `traj.results.run_00000007`. Yet, you can still explicitly name other subtrees,
+            i.e. `traj.results.run_00000004.z` will still work.
+
+            Note that this functionality also applays to the iterator functions
+            :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` and
+            :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves`
+
+            Also the shortcuts `cr`, `current_run` and, `currentrun` will map to the selected
+            runname, i.e. `traj.derived_parameters.cr` with the settings from above mapped to
+            `traj.derived_parameters.run_00000007`.
+        '''
+        if name_or_idx is None or name_or_idx==-1:
+            self.f_restore_default()
+        else:
+            if isinstance(name_or_idx,basestring):
+                self._idx = self.f_idx_to_run(name_or_idx)
+                self._as_run = name_or_idx
+            else:
+                self._as_run = self.f_idx_to_run(name_or_idx)
+                self._idx=name_or_idx
+
+            self._set_explored_parameters_to_idx(self.v_idx)
+
+
+
 
 
     # def __iter__(self):
@@ -1852,7 +1939,10 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def f_restore_default(self):
-        '''Restores the default value in all explored parameters'''
+        '''Restores the default value in all explored parameters and sets the
+        v_idx property back to -1 and v_as_run to None'''
+        self._idx=-1
+        self._as_run = None
         for param in self._explored_parameters.itervalues():
             param.f_restore_default()
 
@@ -1870,13 +1960,14 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         for key, val in self._explored_parameters.items():
             val.f_set_parameter_access(n)
 
+    def _set_explored_parameters_to_idx(self, idx):
+        for param in self._explored_parameters.itervalues():
+            param.f_set_parameter_access(idx)
 
     def _make_single_run(self, idx):
         ''' Creates a SingleRun object for parameter exploration.
         '''
-
-        for param in self._explored_parameters.itervalues():
-            param.f_set_parameter_access(idx)
+        self._set_explored_parameters_to_idx(idx)
 
         name = self.f_idx_to_run(idx)
         return SingleRun(name, idx, self)

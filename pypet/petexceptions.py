@@ -55,3 +55,12 @@ class TooManyGroupsError(TypeError):
 
     def __str__(self):
         return repr(self._msg)
+
+class RowNotFoundError(ValueError):
+    '''Exception raised by storage service if 'FIND' in flags and row cannot be found
+    '''
+    def __init__(self,msg):
+        self._msg=msg
+
+    def __str__(self):
+        return repr(self._msg)
