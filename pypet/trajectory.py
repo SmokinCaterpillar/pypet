@@ -8,7 +8,7 @@ import logging
 import datetime
 import time
 from pypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayParameter, \
-    PickleResult
+    PickleResult, SparseParameter
 
 import importlib as imp
 import itertools as it
@@ -18,7 +18,7 @@ import numpy as np
 import pypet.petexceptions as pex
 from pypet import globally
 from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup, ParameterGroup, \
-    DerivedParameterGroup, ConfigGroup, FORMATTED_RUN_NAME,STORE,LOAD,REMOVE
+    DerivedParameterGroup, ConfigGroup, STORE,LOAD,REMOVE
 
 from pypet.storageservice import HDF5StorageService
 
@@ -541,10 +541,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         the list brackets:
         `dynamically_imported_classes
         = 'pypet.parameter.PickleParameter'`
-
-
-
-
 
 
     :param filename:
@@ -1079,7 +1075,17 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self.f_lock_parameters()
         self.f_lock_derived_parameters()
         for param in self._explored_parameters.itervalues():
-            param.set_fullcopy = self._full_copy
+            param.v_full_copy = self._full_copy
+
+        ## If the trajectory is ought to be expanded we remove the subtrees of previous results
+        ## first since they won't be used during an experiment
+        for node_name in self.results._children.keys():
+            if node_name.startswith(globally.RUN_NAME):
+                self.results.f_remove_child(node_name,recursive=True)
+
+        for node_name in self.derived_parameters._children.keys():
+            if node_name.startswith(globally.RUN_NAME):
+                self.derived_parameters.f_remove_child(node_name,recursive=True)
 
         self.f_store()
 
@@ -1184,17 +1190,18 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
 
-    def f_expand(self, build_function, *args, **kwargs):
+    def f_expand(self, build_dict):
         '''Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
 
         '''
-        build_dict = build_function(*args, **kwargs)
 
-        if isinstance(build_dict, tuple):
-            build_dict, dummy = build_dict
+        enlarge_set = [self.f_get(key, check_uniqueness=True).v_full_name
+                       for key in build_dict.keys()]
 
-        if not set(self._explored_parameters.keys()) == set(build_dict.keys()):
+
+
+        if not set(self._explored_parameters.keys()) == set(enlarge_set):
             raise TypeError('You have to enlarge dimensions you have explored before! Currently'
                             ' explored parameters are not the ones you specified in your building'
                             ' dictionary, i.e. %s != %s' %
@@ -1208,6 +1215,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
 
+            act_param.f_unlock()
             act_param._expand(builditerable)
 
             name = act_param.v_full_name
@@ -1218,10 +1226,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 length = len(act_param)#Not so nice, but this should always be the same numbert
             else:
                 if not length == len(act_param):
-                    raise ValueError('The parameters to _explore have not the same size!')
+                    raise ValueError('The parameters to explore have not the same size!')
 
-            for irun in range(length):
-                self._add_run_info(irun)
+            count+=1
+
+        original_length = len(self)
+        for irun in range(original_length,length):
+            self._add_run_info(irun)
 
 
     def f_explore(self, build_dict):
@@ -1252,15 +1263,16 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 length = len(act_param)#Not so nice, but this should always be the same numbert
             else:
                 if not length == len(act_param):
-                    raise ValueError('The parameters to _explore have not the same size!')
+                    raise ValueError('The parameters to explore have not the same size!')
+            count+=1
 
-            for irun in range(length):
-                self._add_run_info(irun)
+        for irun in range(length):
+            self._add_run_info(irun)
 
 
     def _add_run_info(self, idx):
 
-        runname = FORMATTED_RUN_NAME % idx
+        runname = globally.FORMATTED_RUN_NAME % idx
         self._single_run_ids[runname] = idx
         self._single_run_ids[idx] = runname
         info_dict = {}
@@ -1288,6 +1300,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def _finalize(self):
         self.f_restore_default()
         self._nn_interface._change_root(self)
+        self.f_load(self.v_name,None, False, globally.LOAD_NOTHING, globally.LOAD_NOTHING,
+                  globally.LOAD_NOTHING)
 
     def f_update_skeleton(self):
         '''Loads the full skeleton from the storage service.
@@ -1525,7 +1539,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 ignore_trajectory_results= False,
                 backup_filename = None,
                 move_nodes=False,
-                delete_trajectory=False):
+                delete_trajectory=False,
+                merge_git_commits=True):
         ''' Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. That means both need to have the same
@@ -1574,6 +1589,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
            the stored data is no longer accessible in the other trajectory.
 
         :param delete_trajectory: If you want to delete the other trajectory after merging
+
+        :param merge_git_commits:
+
+            Whether or not to merge all config parameters under `config.git` of the
+            other trajectory in the current one.
 
         If you cannot directly merge trajectories within one HDF5 file a slow merging process
         is used. Results are loaded, stored and emptied again one after the other. Might take
@@ -1663,7 +1683,28 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             self._merge_slowly(other_trajectory, rename_dict)
 
+
+        # Finally we will meget the git commits
+        if merge_git_commits:
+            self._merge_git_commits(other_trajectory)
+
         self._logger.info('Finished Merging!')
+
+    def _merge_git_commits(self,other_trajectory):
+
+        if not 'config.git' in other_trajectory:
+            self._logger.debug('No git commits found in other trajectory.')
+        else:
+            self._logger.info('Merging git commits!')
+            git_node = other_trajectory.f_get('config.git')
+            param_list = []
+            for param in git_node.f_iter_leaves():
+                param_list.append(self.f_add_config(param))
+
+            self.f_store_items(param_list)
+
+
+            self._logger.info('Merging git commits successfull!')
 
 
     def _merge_slowly(self, other_trajectory, rename_dict):
@@ -1736,7 +1777,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 timestamp = other_trajectory.f_get_run_information(runname)['timestamp']
                 completed = other_trajectory.f_get_run_information(runname)['completed']
 
-                new_runname = FORMATTED_RUN_NAME % count
+                new_runname = globally.FORMATTED_RUN_NAME % count
 
                 self._run_information[new_runname] = dict(idx=count,
                                                           time=time, timestamp=timestamp,
@@ -1860,10 +1901,10 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                     change = True
                     for my_param, other_param in params_to_change.itervalues():
                         if other_param.f_is_array():
-                            other_param.f_set_parameter_access(irun)
+                            other_param._set_parameter_access(irun)
 
                         if my_param.f_is_array():
-                            my_param.f_set_parameter_access(jrun)
+                            my_param._set_parameter_access(jrun)
 
                         val1 = my_param.f_get()
                         val2 = other_param.f_get()
@@ -1958,11 +1999,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         # extract only one particular paramspacepoint
         for key, val in self._explored_parameters.items():
-            val.f_set_parameter_access(n)
+            val._set_parameter_access(n)
 
     def _set_explored_parameters_to_idx(self, idx):
         for param in self._explored_parameters.itervalues():
-            param.f_set_parameter_access(idx)
+            param._set_parameter_access(idx)
 
     def _make_single_run(self, idx):
         ''' Creates a SingleRun object for parameter exploration.

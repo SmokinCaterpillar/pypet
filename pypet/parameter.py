@@ -145,6 +145,7 @@ from pypet.utils.helpful_functions import nested_equal, copydoc
 from pypet import globally
 from pandas import DataFrame
 from pypet.naturalnaming import NNLeafNode
+import scipy.sparse as spsp
 
 try:
     import cPickle as pickle
@@ -188,7 +189,7 @@ class BaseParameter(NNLeafNode):
 
     To access the parameter's data value one can call the :func:`f_get` method. Granted the parameter
     is explored via the trajectory, in order to
-    access values of the exploration array, one first has to call the :func:`f_set_parameter_access`
+    access values of the exploration array, one first has to call the :func:`_set_parameter_access`
     method with the index of the run and then use :func:`f_get`.
 
     Parameters support the concept of locking. Once a value of the parameter has been accessed,
@@ -394,7 +395,7 @@ class BaseParameter(NNLeafNode):
                                                          self.v_full_name,
                                                          len(self), self.f_val_to_str())
 
-        # if self.f_is_array():
+        # if self.():
         #     returnstr += ', Array: %s' %str(self.f_get_array())
 
         return returnstr
@@ -520,7 +521,7 @@ class BaseParameter(NNLeafNode):
         '''
         raise NotImplementedError("Should have implemented this.")
 
-    def f_set_parameter_access(self, idx=0):
+    def _set_parameter_access(self, idx=0):
         ''' Sets the current value according to the `idx` in the exploration array.
 
         Prepares the parameter for further usage, and tells it which point in the parameter
@@ -539,7 +540,7 @@ class BaseParameter(NNLeafNode):
 
         >>> param = Parameter('groupA.groupB.myparam',data=22.33, comment='I am a neat example')
         >>> param._explore([42.0,43.0,44.0])
-        >>> param.f_set_parameter_access(idx=1)
+        >>> param._set_parameter_access(idx=1)
         >>> print param.f_get()
         >>> 43.0
 
@@ -616,7 +617,7 @@ class Parameter(BaseParameter):
     method. Granted the parameter
     is explored via the trajectory, in order to
     access values of the exploration array, one first has to call the
-    :func:`~pypet.parameter.Parameter.f_set_parameter_access`
+    :func:`~pypet.parameter.Parameter._set_parameter_access`
     method with the index of the run and then use :func:`~pypet.parameter.Parameter.f_get`.
 
     Parameters support the concept of locking. Once a value of the parameter has been accessed,
@@ -698,7 +699,7 @@ class Parameter(BaseParameter):
 
         >>> param = Parameter('supergroup1.subgroup2.', data=44, comment='Im a comment!')
         >>> param._explore([1,2,3,4])
-        >>> param.f_set_parameter_access(2)
+        >>> param._set_parameter_access(2)
         >>> print param.f_get()
         >>> 3
         >>> param.f_restore_default()
@@ -745,8 +746,8 @@ class Parameter(BaseParameter):
         self.__dict__.update( statedict)
         self._set_logger()
       
-    @copydoc(BaseParameter.f_set_parameter_access)
-    def f_set_parameter_access(self, idx=0):
+    @copydoc(BaseParameter._set_parameter_access)
+    def _set_parameter_access(self, idx=0):
         if idx >= len(self) and self.f_is_array():
             raise ValueError('You try to access the %dth parameter in the array of parameters, '
                              'yet there are only %d potential parameters.' % (idx, len(self)))
@@ -757,6 +758,10 @@ class Parameter(BaseParameter):
         ''' Checks if input data is supported by the parameter.'''
 
         if type(data) is tuple:
+
+            if len(data)==0:
+                return False
+
             for item in data:
                 old_type = None
                 if not type(item) in globally.PARAMETER_SUPPORTED_DATA:
@@ -767,6 +772,10 @@ class Parameter(BaseParameter):
             return True
 
         if type(data) in [np.ndarray, np.matrix]:
+
+            if len(data)==0:
+                return False
+
             dtype = data.dtype
             if np.issubdtype(dtype,np.str):
                 dtype = np.str
@@ -835,7 +844,7 @@ class Parameter(BaseParameter):
         val = self._convert_data(data)
 
         if not self.f_supports(val):
-            raise TypeError('Unsupported data type: ' +str(type(val)))
+            raise TypeError('Unsupported data >>%s<<' % str(val))
 
         self._data= val
         self._default = self._data
@@ -1062,7 +1071,6 @@ class ArrayParameter(Parameter):
 
             store_dict['data']['data'+ArrayParameter.IDENTIFIER] = 'data_array'
 
-
             store_dict['data_array'] = self._data
 
             if self.f_is_array():
@@ -1098,7 +1106,7 @@ class ArrayParameter(Parameter):
             return store_dict
 
     def _build_name(self,name_id):
-        return 'ea_%s_%08d' % (ArrayParameter.IDENTIFIER,name_id)
+        return 'ea_%08d' % name_id
 
 
 
@@ -1106,7 +1114,7 @@ class ArrayParameter(Parameter):
     def _load(self,load_dict):
         data_table = load_dict['data']
         data_name = data_table.columns.tolist()[0]
-        if ArrayParameter.IDENTIFIER in data_name:
+        if data_name.endswith(ArrayParameter.IDENTIFIER):
             arrayname =  data_table['data'+ArrayParameter.IDENTIFIER][0]
             self._data = self._convert_data(load_dict[arrayname])
 
@@ -1130,7 +1138,219 @@ class ArrayParameter(Parameter):
         self._default=self._data
 
 
+    def _values_of_same_type(self,val1, val2):
+        ''' The array parameter is less restrictive than the parameter. If both values
+        are arrays, matrices or tuples, they are considered to be of same type
+        regardless of their size and values they contain.
+        '''
+        if (type(val1) in [np.ndarray, tuple, np.matrix]) and (type(val2) is type(val1)):
+            return True
+        else:
+            return super(ArrayParameter,self)._values_of_same_type(val1,val2)
 
+
+
+class SparseParameter(ArrayParameter):
+
+    IDENTIFIER = '__spsp__'
+
+    DIA_NAME_LIST = ['format', 'data', 'offsets', 'shape']
+    OTHER_NAME_LIST = ['format', 'data', 'indices', 'indptr', 'shape']
+
+    def _values_of_same_type(self,val1, val2):
+        ''' The sparse parameter is less restrictive than the parameter. If both values
+        are sparse matrices they are considered to be of same type
+        regardless of their size and values they contain.
+        '''
+        if self._is_supported_matrix(val1) and self._is_supported_matrix(val2):
+            return True
+        else:
+            return super(SparseParameter,self)._values_of_same_type(val1,val2)
+
+    def _equal_values(self,val1,val2):
+        '''Matrices are equal if they hash to the same value'''
+        if self._is_supported_matrix(val1):
+            if self._is_supported_matrix(val2):
+
+                _,_,hash_tuple_1 = self._serialize_matrix(val1)
+                _,_,hash_tuple_2 = self._serialize_matrix(val2)
+
+                return hash(hash_tuple_1)==hash(hash_tuple_2)
+            else:
+                return False
+        else:
+            return super(SparseParameter,self)._equal_values(val1,val2)
+
+    @staticmethod
+    def _is_supported_matrix(data):
+        return (spsp.isspmatrix_csc(data) or
+                spsp.isspmatrix_csr(data) or
+                spsp.isspmatrix_bsr(data) or
+                spsp.isspmatrix_dia(data) )
+
+    def f_supports(self, data):
+        if self._is_supported_matrix(data):
+            return True
+        else:
+            return super(SparseParameter,self).f_supports(data)
+
+    @staticmethod
+    def _serialize_matrix(matrix):
+        if (spsp.isspmatrix_csc(matrix) or
+            spsp.isspmatrix_csr(matrix) or
+            spsp.isspmatrix_bsr(matrix)):
+            return_list= [matrix.data, matrix.indices, matrix.indptr, matrix.shape]
+
+            return_names=SparseParameter.OTHER_NAME_LIST
+
+            if spsp.isspmatrix_csc(matrix):
+                return_list= ['csc'] + return_list
+            elif spsp.isspmatrix_csr(matrix):
+                return_list= ['csr'] + return_list
+            elif spsp.isspmatrix_bsr(matrix):
+                return_list= ['bsr'] + return_list
+            else:
+                raise RuntimeError('You shall not pass!')
+
+        elif spsp.isspmatrix_dia(matrix):
+            return_list=['dia', matrix.data, matrix.offsets, matrix.shape]
+
+            return_names=SparseParameter.DIA_NAME_LIST
+
+        hash_list = []
+        for item in return_list:
+            if type(item) is np.ndarray:
+                item.flags.writeable = False
+                hash_list.append(item.data)
+            else:
+                hash_list.append(item)
+
+        return return_list, return_names, tuple(hash_list)
+
+
+    def _set_logger(self):
+        self._logger = logging.getLogger('pypet.parameter.SparseParameter=' + self.v_full_name)
+
+    def _get_name_list(self,is_dia):
+        if is_dia:
+            return SparseParameter.DIA_NAME_LIST
+        else:
+            return SparseParameter.OTHER_NAME_LIST
+
+    def _store(self):
+
+        if not self._is_supported_matrix(self._data):
+            return super(SparseParameter,self)._store()
+        else:
+            store_dict = {}
+
+            store_dict['data'] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
+
+            data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
+            rename_list = ['data_%s' % name
+                                 for name in name_list]
+
+            is_dia = int(len(rename_list)==4)
+            store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
+
+            for idx,name in enumerate(rename_list):
+                store_dict[name] = data_list[idx]
+
+            if self.f_is_array():
+                ## Supports smart storage by hashing
+                smart_dict = {}
+
+                store_dict['explored_data']=ObjectTable(columns=['data_idx'+SparseParameter.IDENTIFIER,
+                                                                 'data_is_dia' + SparseParameter.IDENTIFIER],
+                                                        index=range(len(self)))
+
+                count = 0
+                for idx,elem in enumerate(self._explored_data):
+
+                    data_list, name_list, hash_tuple = self._serialize_matrix(elem)
+
+                    if hash_tuple in smart_dict:
+                        name_id = smart_dict[hash_tuple]
+                        add = False
+                    else:
+                        name_id = count
+                        add = True
+
+                    is_dia=int(len(name_list)==4)
+                    rename_list = self._build_names(name_id,is_dia)
+                    store_dict['explored_data']['data_idx'+SparseParameter.IDENTIFIER][idx] = name_id
+                    store_dict['explored_data']['data_is_dia'+SparseParameter.IDENTIFIER][idx] = is_dia
+
+
+                    if add:
+
+                        for irun,name in enumerate(rename_list):
+                            store_dict[name] = data_list[irun]
+
+                        smart_dict[hash_tuple] = name_id
+                        count +=1
+
+            return store_dict
+
+    def _build_names(self, name_id, is_dia):
+        name_list = self._get_name_list(is_dia)
+        return tuple(['espm_%s_%08d' % (name,name_id)
+                                    for name in name_list])
+
+
+    @staticmethod
+    def _reconstruct_matrix(data_list):
+
+        format = data_list[0]
+
+        if format == 'csc':
+            return spsp.csc_matrix(tuple(data_list[1:4]),shape=data_list[4])
+        elif format == 'csr':
+            return spsp.csr_matrix(tuple(data_list[1:4]),shape=data_list[4])
+        elif format == 'bsr':
+            return spsp.bsr_matrix(tuple(data_list[1:4]),shape=data_list[4])
+        elif format == 'dia':
+            return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
+        else:
+            raise RuntimeError('You shall not pass!')
+
+
+
+    def _load(self,load_dict):
+        data_table = load_dict['data']
+        data_name = data_table.columns.tolist()[0]
+        if data_name.endswith(SparseParameter.IDENTIFIER):
+            is_dia =  data_table['data_is_dia'+SparseParameter.IDENTIFIER][0]
+
+            name_list = self._get_name_list(is_dia)
+            rename_list = ['data_%s' % name
+                                 for name in name_list]
+
+            data_list = [load_dict[name] for name in rename_list]
+            self._data = self._reconstruct_matrix(data_list)
+
+
+            if 'explored_data' in load_dict:
+                explore_table = load_dict['explored_data']
+
+                idx_col = explore_table['data_idx'+SparseParameter.IDENTIFIER]
+                dia_col = explore_table['data_is_dia'+SparseParameter.IDENTIFIER]
+
+                explore_list = []
+                for irun, name_id in enumerate(idx_col):
+                    is_dia = dia_col[irun]
+                    name_list = self._build_names(name_id,is_dia)
+                    data_list = [load_dict[name] for name in name_list]
+                    matrix = self._reconstruct_matrix(data_list)
+                    explore_list.append(matrix)
+
+                self._explored_data=tuple(explore_list)
+
+
+        else:
+            super(SparseParameter,self)._load(load_dict)
+
+        self._default=self._data
 
 
 class PickleParameter(Parameter):
@@ -1153,7 +1373,7 @@ class PickleParameter(Parameter):
         return val
 
     def _build_name(self,name_id):
-        return 'ed_%s_%08d' % (PickleParameter.IDENTIFIER,name_id)
+        return 'epd_%08d' % name_id
 
     def _store(self):
         store_dict={}

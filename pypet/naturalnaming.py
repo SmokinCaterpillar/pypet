@@ -32,10 +32,7 @@ CONFIG_GROUP = 'CONFIG_GROUP'
 FAST_UPPER_BOUND = 2
 
 
-#### Naming
-FORMAT_ZEROS=8
-RUN_NAME = 'run_'
-FORMATTED_RUN_NAME=RUN_NAME+'%0'+str(FORMAT_ZEROS)+'d'
+
 
 class NNTreeNode(WithAnnotations):
     def __init__(self,full_name,root,leaf):
@@ -521,8 +518,8 @@ class NaturalNamingInterface(object):
             if len(split_name) == 2:
                 index = split_name[1]
                 if index.isdigit():
-                    if len(index) < FORMAT_ZEROS:
-                        expanded = FORMATTED_RUN_NAME % int(index)
+                    if len(index) < globally.FORMAT_ZEROS:
+                        expanded = globally.FORMATTED_RUN_NAME % int(index)
 
         if name in ['cr', 'currentrun', 'current_run']:
             expanded = self._root_instance.v_name
@@ -560,8 +557,9 @@ class NaturalNamingInterface(object):
 
                 add=''
 
-                if not ((name.startswith('run_') and len(name) ==len(RUN_NAME)+FORMAT_ZEROS) or
-                    name.startswith('trajectory')):
+                if (not ((name.startswith(globally.RUN_NAME) and
+                                  len(name) ==len(globally.RUN_NAME)+globally.FORMAT_ZEROS) or
+                                  name == 'trajectory') ):
 
                     if root._is_run:
                         add= start_node.v_name + '.'
@@ -578,8 +576,9 @@ class NaturalNamingInterface(object):
 
                 add = ''
 
-                if not ((name.startswith('run_') and len(name) ==len(RUN_NAME)+FORMAT_ZEROS) or
-                    name == 'trajectory'):
+                if (not ((name.startswith(globally.RUN_NAME) and
+                                  len(name) ==len(globally.RUN_NAME)+globally.FORMAT_ZEROS) or
+                                  name == 'trajectory') ):
 
                     if root._is_run:
                         add= start_node.v_name + '.'

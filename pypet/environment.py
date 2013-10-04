@@ -17,7 +17,7 @@ import multiprocessing as multip
 import traceback
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
 from  pypet import globally
-
+from pypet.gitintegration import make_git_commit
 
 def _single_run(args):
 
@@ -82,7 +82,7 @@ def _single_run(args):
     except:
         errstr = "\n\n########## ERROR ##########\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
         logging.getLogger('STDERR').error(errstr)
-        raise #Exception("".join(traceback.format_exception(*sys.exc_info())))
+        raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 def _queue_handling(handler,log_path):
 
@@ -141,8 +141,28 @@ class Environment(object):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
+    :param git_repository:
+
+        If your code base is under git version control you can specify where the path
+        (relative or absolute) to
+        the folder containing the `.git` directory.
+        Note in order to use this tool you need GitPython_.
+        If you set this path the environment
+        will trigger a commit of your code base adding all files that are currently under
+        version control.
+        Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
+        The user can specify the commit message, see below. Note that the message
+        will be augmented by the name of the trajectory, the comment of the trajectory
+        and the explored parameters.
+
+        This will add information about the revision to the trajectory, see below.
+
+    :param git_message:
+
+        Message passed onto git command.
 
 
+    .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
     Note that the comment and the dynamically imported classes are only considered if a novel
     trajectory is created. If you supply a trajectory instance, these fields can be ignored.
@@ -272,6 +292,32 @@ class Environment(object):
 
           Analogous to the above.
 
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.hexsha
+
+        The SHA-1 hash of the commit.
+        `commit_XXXXXXX_XXXX_XX_XX_XXhXXmXXs` is mapped to the first seven items of the sha hash
+        and the formatted data of the commit, e.g. `commit_7ef7hd4_2015_10_21_16h29m00s`
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.name_rev
+
+        String describing the commits hex sha based on the closest Reference
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.repository
+
+        Path to git repository
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
+
+        Commit date as Unix Epoch data
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.time
+
+        Formatted time string of commit
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
+
+        The commit message
+
 
 
 
@@ -282,7 +328,9 @@ class Environment(object):
                  log_folder=None,
                  use_hdf5=True,
                  filename=None,
-                 file_title=None):
+                 file_title=None,
+                 git_repository = None,
+                 git_message=''):
 
 
 
@@ -340,7 +388,7 @@ class Environment(object):
 
 
 
-        if not self._traj.f_contains('config.environment.contiuable'):
+        if not self._traj.f_contains('config.environment.continuable'):
             self._traj.f_add_config('environment.continuable', 1, comment='Whether or not a continue file should'
                                                               ' be created. If yes, everything must be'
                                                               ' pickable.')
@@ -377,9 +425,18 @@ class Environment(object):
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance.')
 
+            if not self._traj.f_contains('config.hdf5.derived_parameters_per_run'):
+                self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
+                                        comment='Expected number of derived parameters per run,'
+                                            ' a good guess can increase storage performance.')
+
 
 
             self._add_hdf5_storage_service()
+
+        self._git_repository = git_repository
+        self._git_message=git_message
+
 
         self._logger.info('Environment initialized.')
 
@@ -539,7 +596,8 @@ class Environment(object):
 
     def _do_run(self, runfunc, *args, **kwargs):
 
-
+        if self._git_repository is not None:
+            make_git_commit(self,self._git_repository, self._git_message)
 
         log_path = self._traj.f_get('config.environment.log_path').f_get()
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
@@ -580,14 +638,20 @@ class Environment(object):
             
             mpool = multip.Pool(ncores)
 
-            self._logger.info('\n----------------------------------------\n'
-                              'Starting run in parallel with %d cores.'
-                              '\n----------------------------------------\n' %ncores)
+            self._logger.info('\n*****************************************************************'
+                              '************************************\n'
+                              'STARTING runs of trajectory >>%s<< in parallel with %d cores.'
+                              '\n*****************************************************************'
+                              '************************************\n' %
+                              (self._traj.v_name, ncores))
             
-            iterator = ((self._traj._make_single_run(n),log_path,queue,runfunc,len(self._traj),
+            iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
                          multiproc, args, kwargs) for n in xrange(len(self._traj))
                                                             if not self._traj.f_is_completed(n))
-        
+
+
+            # iterator = self.task_iterator( log_path, queue, runfunc, multiproc, args, kwargs)
+
             results = mpool.imap(_single_run,iterator)
 
             
@@ -598,17 +662,28 @@ class Environment(object):
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
+            mpool.terminate()
 
 
-            self._traj._finalize()
             self._traj.v_storage_service=self._storage_service
+            self._traj._finalize()
 
-            self._logger.info('\n----------------------------------------\n'
-                              'Finished all runs in parallel with %d cores.'
-                              '\n----------------------------------------\n' % ncores)
+            self._logger.info('\n*****************************************************************'
+                              '***************************************************\n'
+                              'FINISHED all runs of trajectory >>%s<< in parallel with %d cores.'
+                              '\n*****************************************************************'
+                              '***************************************************\n' %
+                              (self._traj.v_name, ncores))
 
             return results
         else:
+
+            self._logger.info('\n*****************************************************************'
+                              '*********************************************\n'
+                              'STARTING runs of trajectory >>%s<<.'
+                              '\n*****************************************************************'
+                              '*********************************************\n' %
+                              self._traj.v_name)
             
             results = [_single_run((self._traj._make_single_run(n),log_path,None,runfunc,
                                     len(self._traj),multiproc,args,kwargs)) for n in xrange(len(self._traj))
@@ -616,12 +691,23 @@ class Environment(object):
 
             self._traj._finalize()
 
-            self._logger.info('\n----------------------------------------\n'
-                              'Finished all runs.'
-                              '\n----------------------------------------\n')
+            self._logger.info('\n*****************************************************************'
+                              '*********************************************\n'
+                              'FINISHED all runs of trajectory >>%s<<.'
+                              '\n*****************************************************************'
+                              '*********************************************\n' %
+                              self._traj.v_name)
 
             return results
                 
         
         
-        
+
+    # def task_iterator(self,log_path,queue,runfunc,multiproc,args,kwargs):
+    #
+    #     for n in xrange(len(self._traj)):
+    #         if not self._traj.f_is_completed(n):
+    #             res_tuple=(self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
+    #                 multiproc, args, kwargs)
+    #             print res_tuple
+    #             yield res_tuple

@@ -22,7 +22,7 @@ Parameter containers fulfill further important jobs:
     To avoid confusion with numpy arrays, I will explicitly always state exploration array.
     Exploration is initiated via the trajectory, see :ref:`parameter-exploration`.
     The individual values in the exploration array can be accessed one after the other
-    for distinct simulations (see :func:`~pypet.parameter.Parameter.f_set_parameter_access`).
+    for distinct simulations (see :func:`~pypet.parameter.Parameter._set_parameter_access`).
     How the exploration array is implemented depends on the parameter.
 
  *  The parameter can be **locked**, meaning as soon as the parameter is assigned to hold a specific

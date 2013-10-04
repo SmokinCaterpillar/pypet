@@ -247,10 +247,15 @@ Main Features
 
 * **Annotations** of parameters, results in groups, that are stored as _HDF5 node attributes
 
+* **Git Integration**, make automatic commits of your source code every time you run an experiment.
+  In order to use the git integration you also need GitPython_.
+
 
 .. _pandas: http://pandas.pydata.org/
 
 .. _BRIAN: http://briansimulator.org/
+
+.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 
 

@@ -267,6 +267,40 @@ But don't worry, most of the python stuff you use is automatically picklable.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
 
+.. _more-on-git:
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Git Integration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The environment can make use of version control. If you manage your code with
+git_ you can trigger automatic commits with the environment to get a proper snapshot
+of the code you actually use. This ensures that your experiments are repeatable!
+In order to use the feature of git integration you additionally need GitPython_.
+
+To trigger an automatic commit simply pass the arguments `git_repository` and `git_message`
+to the :class:`~pypet.environment.Environment` constructor. `git_repository`
+specifies the path to the folder containing the `.git` directory. `git_message` is optionally
+and adds the corresponding message to the commit. Note that the message will always be
+augmented with some short information about the trajectory you are running.
+
+The commit SHA-1 hash and some other information about the commit will be added to the
+config subtree of your trajectory, so you can easily recall that commit from git later on.
+
+The automatic commit will only commit changes in files that are currently tracked by
+your git repository, it will NOT add new files.
+So make sure that if you create new files you put them into your repository before running
+and experiment.
+
+The autocommit function is similar to calling `$ git add -u` and `$ git commit -m 'Some Message``
+in your linux console!
+
+
+
+.. _git: http://git-scm.com/
+
+.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
 .. _more-on-running:
 
 ---------------------------------

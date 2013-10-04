@@ -1,5 +1,18 @@
 pypet 0.1b.0
 
+*   BUG FIX:
+
+    Recall of trajectory comments from diks yielded numpy strings instead of python strings
+    This could cause trouble if the comment is empty!
+
+*   Git Integration, you can now make autocommits for every experiment
+
+*   New Sparse Parameter, for scipy sparse matrices
+
+*   BUG FIX: Loading of Trajectory metadata, now v_time is loaded correctly
+
+*   BUG FIX: Expand no longer repeats already run experiments
+
 *
 
     More fine graine overview tables
@@ -28,7 +41,7 @@ pypet 0.1b.0
 
 pypet 0.1a.6
 
-* BUGFIX (HDF5StorageService): storing a trajectory several times increased run and info table
+* BUG FIX: (HDF5StorageService): storing a trajectory several times increased run and info table
 
 pypet 0.1a.5
 

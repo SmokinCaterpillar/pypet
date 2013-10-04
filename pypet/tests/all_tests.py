@@ -6,7 +6,7 @@ import unittest
 import getopt
 import sys
 from environment_test import *
-from hdf5_storage_test import *
+from hdf5_multiproc_test import *
 from parameter_test import *
 from speed_test import *
 from trajectory_test import *

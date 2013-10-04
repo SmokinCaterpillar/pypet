@@ -135,3 +135,13 @@ BFS = 'BFS'
 '''For search in trajectory tree, breadth first search, default strategy'''
 DFS = 'DFS'
 '''Depth first search in trajectory tree, not recommended'''
+
+
+########## Names of Runs
+#### Naming
+FORMAT_ZEROS=8
+''' Number of leading zeros'''
+RUN_NAME = 'run_'
+'''Name of a single run'''
+FORMATTED_RUN_NAME=RUN_NAME+'%0'+str(FORMAT_ZEROS)+'d'
+'''Name formatted with leading zeros'''

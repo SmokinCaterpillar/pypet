@@ -93,7 +93,7 @@ class ParameterTest(unittest.TestCase):
 
             for idx, val in enumerate(vallist):
                 assert isinstance(param, BaseParameter)
-                param.f_set_parameter_access(idx)
+                param._set_parameter_access(idx)
 
                 self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
 

@@ -10,7 +10,7 @@ import os
 import numpy as np
 from pypet import globally
 import pypet.petexceptions as pex
-from pypet.naturalnaming import RUN_NAME,FORMAT_ZEROS
+
 
 
 from pypet.parameter import ObjectTable
@@ -85,18 +85,20 @@ class QueueStorageServiceWriter(object):
 
     def run(self):
         while True:
-            msg,args,kwargs = self._queue.get()
+            try:
+                msg,args,kwargs = self._queue.get()
 
-            if msg == 'DONE':
+                if msg == 'DONE':
+                    # self._queue.close()
+                    #self._queue.join_thread()
+                    break
+                elif msg == 'STORE':
+                    self._storage_service.store(*args,**kwargs)
+                else:
+                    pass
+                    #raise RuntimeError('You queued something that was not intended to be queued!')
+            finally:
                 self._queue.task_done()
-                break
-            elif msg == 'STORE':
-                self._storage_service.store(*args,**kwargs)
-            else:
-                pass
-                #raise RuntimeError('You queued something that was not intended to be queued!')
-
-            self._queue.task_done()
 
 class LockWrapper(MultiprocWrapper):
     ''' For multiprocessing in LOCK mode, augments a storage service with a lock.
@@ -344,7 +346,7 @@ class HDF5StorageService(StorageService):
     COMMENT = INIT_PREFIX+'COMMENT'
     ''' Comment of parameter or result'''
     LENGTH = INIT_PREFIX+'LENGTH'
-    ''' Lenght of a parameter'''
+    ''' Lenght of a parameter if it is an array'''
 
 
 
@@ -1125,7 +1127,7 @@ class HDF5StorageService(StorageService):
                                  'the parameters.')
 
 
-        self._ann_load_annotations(traj,self._trajectory_group)
+
 
         for what,loading in ( ('config',load_params),('parameters',load_params),
                              ('derived_parameters',load_derived_params),
@@ -1144,24 +1146,24 @@ class HDF5StorageService(StorageService):
         metarow = metatable[0]
 
         if as_new:
-            length = metarow['lenght']
+            length = int(metarow['lenght'])
             for irun in range(length):
                 traj._add_run_info(irun)
         else:
-            traj._comment = metarow['comment']
-            traj._time = metarow['timestamp']
-            traj._formatted_time = metarow['time']
-            traj._name = metarow['name']
+            traj._comment = str(metarow['comment'])
+            traj._timestamp = float(metarow['timestamp'])
+            traj._time = str(metarow['time'])
+            traj._name = str(metarow['name'])
 
             single_run_table = self._overview_group.runs
 
             for row in single_run_table.iterrows():
-                name = row['name']
-                id = row['idx']
-                timestamp = row['timestamp']
-                time = row['time']
-                completed = row['completed']
-                summary=row['parameter_summary']
+                name = str(row['name'])
+                id = int(row['idx'])
+                timestamp = float(row['timestamp'])
+                time = str(row['time'])
+                completed = int(row['completed'])
+                summary=str(row['parameter_summary'])
                 traj._single_run_ids[id] = name
                 traj._single_run_ids[name] = id
 
@@ -1463,18 +1465,23 @@ class HDF5StorageService(StorageService):
                 comment = self._all_get_from_attrs(hdf5group,HDF5StorageService.COMMENT)
 
 
-                length = self._all_get_from_attrs(hdf5group,HDF5StorageService.LENGTH)
+                array_length = self._all_get_from_attrs(hdf5group,HDF5StorageService.LENGTH)
 
-                if not length is None and length >1 and length != len(traj):
+
+                if not array_length is None and array_length >1 and array_length != len(traj):
                         raise RuntimeError('Something is completely odd. Yo load parameter'
                                                ' >>%s<< of length %d into a trajectory of length'
                                                ' %d. They should be equally long!'  %
-                                               (full_name,length,len(traj)))
+                                               (full_name,array_length,len(traj)))
 
                 class_constructor = traj._create_class(class_name)
                 instance = class_constructor(name,comment=comment)
 
                 parent_traj_node._nn_interface._add_from_leaf_instance(parent_traj_node,instance)
+
+                if array_length:
+                    traj._explored_parameters[instance.v_full_name]=instance
+
                 self._ann_load_annotations(instance,node=hdf5group)
 
 
@@ -1923,13 +1930,8 @@ class HDF5StorageService(StorageService):
             insert_dict['class_name'] = item.f_get_class_name()
 
         if 'value' in colnames:
-            valstr = item.f_val_to_str()
-            if len(valstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                self._logger.info('The value string >>%s<< was too long I truncated it to'
-                                     ' %d characters' %
-                                     (valstr,globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-                valstr = valstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
-            insert_dict['value'] = valstr
+
+            insert_dict['value'] = self._all_get_value_string(item, self._logger)
 
         if 'creator_name' in colnames:
             insert_dict['creator_name'] = item.v_location.split('.')[1]
@@ -1944,17 +1946,33 @@ class HDF5StorageService(StorageService):
             insert_dict['timestamp'] = item.v_timestamp
 
         if 'array' in colnames:
-            arraystr = str(item.f_get_array())
-            if len(arraystr) >= globally.HDF5_STRCOL_MAX_ARRAY_LENGTH:
-                self._logger.warning('The array string >>%s<< was too long I truncated it to'
-                                     ' %d characters' %
-                                     (arraystr,globally.HDF5_STRCOL_MAX_ARRAY_LENGTH))
 
-                arraystr=arraystr[0:globally.HDF5_STRCOL_MAX_ARRAY_LENGTH]
-            insert_dict['array'] = arraystr
+            insert_dict['array'] = self._all_get_array_str(item,self._logger)
 
         return insert_dict
 
+    @staticmethod
+    def _all_get_value_string(item, logger):
+        valstr = item.f_val_to_str()
+        if len(valstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+            logger.debug('The value string >>%s<< was too long I truncated it to'
+                                 ' %d characters' %
+                                 (valstr,globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+            valstr = valstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
+
+        return valstr
+
+    @staticmethod
+    def _all_get_array_str(item, logger):
+        arraystr = str(item.f_get_array())
+        if len(arraystr) >= globally.HDF5_STRCOL_MAX_ARRAY_LENGTH:
+            logger.debug('The array string >>%s<< was too long I truncated it to'
+                                 ' %d characters' %
+                                 (arraystr,globally.HDF5_STRCOL_MAX_ARRAY_LENGTH))
+
+            arraystr=arraystr[0:globally.HDF5_STRCOL_MAX_ARRAY_LENGTH]
+
+        return arraystr
 
     def _all_get_groups(self,key):
         newhdf5group = self._trajectory_group
@@ -2073,8 +2091,8 @@ class HDF5StorageService(StorageService):
 
         if where in['derived_parameters','results']:
             creator_name = instance.v_creator_name
-            if creator_name.startswith(RUN_NAME):
-                run_mask = RUN_NAME+'X'*FORMAT_ZEROS
+            if creator_name.startswith(globally.RUN_NAME):
+                run_mask = globally.RUN_NAME+'X'*globally.FORMAT_ZEROS
                 split_name[1]=run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
@@ -2130,10 +2148,9 @@ class HDF5StorageService(StorageService):
         setattr(group._v_attrs, HDF5StorageService.CLASS_NAME, instance.f_get_class_name())
         setattr(group._v_attrs,HDF5StorageService.LEAF,1)
 
-        if instance.v_parameter and len(instance)>1:
-            setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
 
         if instance.v_parameter and instance.f_is_array():
+            setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group,tablename)

@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 from pypet.utils.comparisons import results_equal,parameters_equal
 from pypet.utils.helpful_functions import nested_equal, nest_dictionary, flatten_dictionary
-from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
+from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter, SparseParameter
 import scipy.sparse as spsp
 import os
 import logging
@@ -15,6 +15,7 @@ import tempfile
 
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
+
 REMOVE=True
 ''' Whether or not to remove the temporary directory after the tests'''
 
@@ -40,7 +41,7 @@ def make_temp_file(filename):
 
         return os.path.join(actual_tempdir,filename)
     except OSError:
-        logging.getLogger('').error('Cannot create a temp file in the specified folder will'
+        logging.getLogger('').warning('Cannot create a temp file in the specified folder will'
                                     ' use pythons gettempdir method!')
         actual_tempdir = os.path.join(tempfile.gettempdir(),TEMPDIR)
         return os.path.join(actual_tempdir,filename)
@@ -72,6 +73,7 @@ def create_param_dict(param_dict):
     param_dict['Numpy_2D'] = {}
     param_dict['Numpy_3D'] = {}
     param_dict['Tuples'] ={}
+    param_dict['Pickle']={}
 
     normal_dict = param_dict['Normal']
     normal_dict['string'] = 'Im a test string!'
@@ -91,20 +93,35 @@ def create_param_dict(param_dict):
 
     spsparse_csc = spsp.csc_matrix((2222,22))
     spsparse_csc[1,2] = 44.6
+    spsparse_csc[1,9] = 44.5
 
     spsparse_csr = spsp.csr_matrix((2222,22))
     spsparse_csr[1,3] = 44.7
+    spsparse_csr[17,17] = 44.755555
 
-    spsparse_lil = spsp.lil_matrix((2222,22))
-    spsparse_lil[3,2] = 44.5
+    spsparse_bsr = spsp.bsr_matrix(np.matrix([[1, 1, 0, 0, 2, 2],
+        [1, 1, 0, 0, 2, 2],
+        [0, 0, 0, 0, 3, 3],
+        [0, 0, 0, 0, 3, 3],
+        [4, 4, 5, 5, 6, 6],
+        [4, 4, 5, 5, 6, 6]]))
 
-    param_dict['Sparse']['lil_mat'] = spsparse_lil
+    spsparse_dia = spsp.dia_matrix(np.matrix([[1, 0, 3, 0],
+        [1, 2, 0, 4],
+        [0, 2, 3, 0],
+        [0, 0, 3, 4]]))
+
+
+    param_dict['Sparse']['bsr_mat'] = spsparse_bsr
     param_dict['Sparse']['csc_mat'] = spsparse_csc
     param_dict['Sparse']['csr_mat'] = spsparse_csr
+    param_dict['Sparse']['dia_mat'] = spsparse_dia
 
     param_dict['Tuples']['int'] = (1,2,3)
     param_dict['Tuples']['float'] = (44.4,42.1,3.)
     param_dict['Tuples']['str'] = ('1','2wei','dr3i')
+
+    param_dict['Pickle']['list']= ['b','h', 42, ()]
 
 
 def add_params(traj,param_dict):
@@ -113,14 +130,16 @@ def add_params(traj,param_dict):
     flat_dict = flatten_dictionary(param_dict,'.')
 
     for key, val in flat_dict.items():
-        if isinstance(val, (np.ndarray,list, tuple)):
-            traj.f_add_parameter(ArrayParameter,key,val, )
+        if isinstance(val, (np.ndarray,tuple)):
+            traj.f_add_parameter(ArrayParameter,key,val )
         elif isinstance(val, (int,str,bool,float)):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
-            traj.f_add_parameter(PickleParameter,key,val).v_annotations.f_set(
+            traj.f_add_parameter(SparseParameter,key,val).v_annotations.f_set(
                 **{'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
                                  'Second_Fav':np.array([43.0,43.0])})
+        elif isinstance(val,list):
+            traj.f_add_parameter(PickleParameter,key,val, comment='Im a comment!')
         else:
             raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
@@ -128,19 +147,13 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?')
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
 
-
+def multipy(traj):
+    z=traj.x*traj.y
+    traj.f_add_result('z',z)
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
-
-        # all_mat = traj.csc_mat + traj.lil_mat + traj.csr_mat
-        Normal_int= traj.Normal.int
-        Sum= np.sum(traj.Numpy.double)
-
-        # result_mat = all_mat * Normal_int * Sum * arg1 * simple_kwarg
-
-
-
+        print '>>>>>Starting Simple Calculations'
         my_dict = {}
 
         my_dict2={}
@@ -174,7 +187,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
         traj.f_add_derived_parameter('mega',33, comment='It is huuuuge!')
 
+        traj.f_add_result(PickleResult,'pickling.result', my_dict)
+
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
+        print '<<<<<<Finished Simple Calculations'
 
 class TrajectoryComparator(unittest.TestCase):
 

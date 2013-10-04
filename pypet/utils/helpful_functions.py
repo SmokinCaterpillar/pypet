@@ -61,8 +61,7 @@ def nested_equal(a, b):
     Assumes hashable items are not mutable in a way that affects equality.
     """
 
-    # for types that implement their own custom strict equality checking
-
+    # for types that support __eq__
     if hasattr(a,'__eq__'):
         try:
             custom_eq= a == b
