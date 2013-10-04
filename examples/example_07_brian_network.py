@@ -33,6 +33,7 @@ def add_params(traj):
     Vr:volt
     """
 
+
     traj.f_add_parameter('Net.eqs', eqs)
     traj.f_add_parameter('reset', 'vm=Vr;w+=b')
 
