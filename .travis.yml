@@ -5,9 +5,9 @@ python:
 # Install dependencies for PyTables
 # command to install dependencies
 install:
-  - "chmod +X ./travis/install_minimum_prerequisites.sh"
+  - "chmod +x ./travis/install_minimum_prerequisites.sh"
   - ./travis/install_minimum_prerequisites.sh
-  - "chmod +X./travis/install_minimum_requirements.sh"
+  - "chmod +x ./travis/install_minimum_requirements.sh"
   - ./travis/install_minimum_requirements.sh
 # Script command for all tests
 script: python tests/all_tests.py

@@ -3,7 +3,7 @@ pypet
 =========
 
 The new python parameter exploration toolbox. pypet manages exploration of the parameter space and
-data storage for you. Currently supported storage is HDF5!
+data storage into HDF5 files for you.
 
 ----------------------------
 Requirements
