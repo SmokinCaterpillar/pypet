@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #Install requirements for scipy
 sudo apt-get install gfortran libopenblas-dev liblapack-dev
 

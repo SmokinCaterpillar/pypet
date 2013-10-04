@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #Install Numpy and scipy
 echo "+++++++++++++++++++ Installing NumPy 1.6.1 and Scipy 0.10.0 +++++++++++++++++++++"
 pip install numpy==1.6.1
