@@ -1,11 +1,14 @@
 language: python
 python:
-  - "2.6"
   - "2.7"
-  - "3.2"
-  - "3.3"
+
+# Install dependencies for PyTables
 # command to install dependencies
-install: "pip install -r requirements.txt --use-mirrors"
+install:
+  - "chmod +X ./travis/install_minimum_prerequisites.sh"
+  - ./travis/install_minimum_prerequisites.sh
+  - "chmod +X./travis/install_minimum_requirements.sh"
+  - ./travis/install_minimum_requirements.sh
 # Script command for all tests
 script: python tests/all_tests.py
 branches:
