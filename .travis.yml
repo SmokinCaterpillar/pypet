@@ -32,7 +32,7 @@ install:
   - pip install GitPython
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: python ./tests/all_tests.py
+script: python ./pypet/tests/all_tests.py
 branches:
   only:
     - develop
