@@ -1,16 +1,33 @@
 language: python
 python:
   - "2.7"
+env:
+  global:
+    PANDAS_VERSION=0.12.0
 
+  matrix:
+    - TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.10.0
 # Install dependencies for PyTables
 # command to install dependencies
 install:
-  - "chmod +x ./travis/install_minimum_prerequisites.sh"
-  - ./travis/install_minimum_prerequisites.sh
-  - "chmod +x ./travis/install_minimum_requirements.sh"
-  - ./travis/install_minimum_requirements.sh
+  - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
+  - pip install numpy==$NUMPY_VERSION
+  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
+  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
+  - echo "+++++++++++ Installing SciPy $SCIPY_VERSION +++++++++++++"
+  - pip install scipy==$SCIPY_VERSION
+  - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
+  - pip install numexpr==$NUMEXPR_VERSION
+  - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
+  - pip install tables==$TABLES_VERSION
+  - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
+  - pip install pandas==$PANDAS_VERSION
+  - echo "+++++++++++ Installing Brian +++++++++++"
+  - pip install brian
+  - echo "+++++++++++ Installing GitPython +++++++++++"
+  - pip install GitPython
 # Script command for all tests
-script: python tests/all_tests.py
+script: python ./tests/all_tests.py
 branches:
   only:
     - develop
