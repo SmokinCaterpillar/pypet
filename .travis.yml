@@ -30,6 +30,9 @@ install:
   - pip install brian
   - echo "+++++++++++ Installing GitPython +++++++++++"
   - pip install GitPython
+  #Temporal solution to travis issue #155
+  - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
+  - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
