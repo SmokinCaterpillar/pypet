@@ -41,7 +41,7 @@ setup(
         'tables >= 2.3.1',
         'pandas >= 0.12.0',
         'numpy >= 1.6.1',
-        'scipy' >= '0.10.0'],
+        'scipy >= 0.10.0'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
