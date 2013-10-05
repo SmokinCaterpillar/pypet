@@ -30,6 +30,8 @@ install:
   - pip install brian
   - echo "+++++++++++ Installing GitPython +++++++++++"
   - pip install GitPython
+  - echo "+++++++++++ Installing PYPET +++++++++++"
+  - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
 script: python ./pypet/tests/all_tests.py
