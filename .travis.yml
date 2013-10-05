@@ -10,6 +10,8 @@ env:
 # Install dependencies for PyTables
 # command to install dependencies
 install:
+  - echo "+++++++++++ Installing HDF5 +++++++++++++"
+  - sudo apt-get install libhdf5-serial-dev
   - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
   - pip install numpy==$NUMPY_VERSION
   - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
@@ -28,6 +30,7 @@ install:
   - pip install brian
   - echo "+++++++++++ Installing GitPython +++++++++++"
   - pip install GitPython
+  - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
 script: python ./tests/all_tests.py
 branches:
