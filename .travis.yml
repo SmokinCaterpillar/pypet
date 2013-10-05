@@ -19,7 +19,7 @@ install:
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
   - pip install numexpr==$NUMEXPR_VERSION
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - pip install cython==$CYTHON_VERION
+  - pip install cython==$CYTHON_VERSION
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
   - pip install tables==$TABLES_VERSION
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
