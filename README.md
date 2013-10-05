@@ -74,7 +74,7 @@ Or
 
 Package release can also be found on https://pypi.python.org/pypi/pypet
 
-    Download, unpack and `python setup.py install` it
+Download, unpack and `python setup.py install` it
 
 ---------------------------
 Documentation
@@ -112,9 +112,9 @@ The best way to show how stuff works is by giving examples. I will start right a
 very simple code snippet.
 
 Well, what we have in mind is some sort of numerical simulation. For now we will keep it simple,
-let's say we need to simulate the multiplication of 2 values, i.e. :math:`z=x*y`
-We have two objectives, a) we want to store results of this simulation :math:`z` and
-b) we want to _explore the parameter space and try different values of :math:`x` and :math:`y`.
+let's say we need to simulate the multiplication of 2 values, i.e. `z=x*y`
+We have two objectives, a) we want to store results of this simulation `z` and
+b) we want to _explore the parameter space and try different values of `x` and `y`.
 
 Let's take a look at the snippet at once:
 
@@ -182,7 +182,7 @@ The environment will automatically generate a trajectory for us which we can acc
     traj = env.v_trajectory
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
-of :math:`x=y=1.0`
+of `x=y=1.0`
 
 
 
@@ -190,14 +190,12 @@ of :math:`x=y=1.0`
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
     traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
-Well, calculating :math:`1.0*1.0` is quite boring, we want to figure out more products, that is
-the results of the cartesian product set :math:`\{1.0,2.0,3.0,4.0\} \times \{6.0,7.0,8.0\}`.
-Therefore we use :func:`~pypet.trajectory.Trajectory.explore` in combination with the builder function
-:func:`~pypet.utils.explore.cartesian_product`.
+Well, calculating `1.0*1.0` is quite boring, we want to figure out more products, that is
+the results of the cartesian product set `{1.0,2.0,3.0,4.0} x {6.0,7.0,8.0}`.
+Therefore we use `explore` in combination with the builder function
+`cartesian_product`.
 
 Finally, we need to tell the environment to run our job `multiply`
-
-
 
     # Run the simulation
     env.run(multiply)
