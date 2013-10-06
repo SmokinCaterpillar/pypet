@@ -2,7 +2,13 @@ __author__ = 'Robert Meyer'
 
 
 import numpy as np
-import unittest
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 from pypet.brian.parameter import BrianParameter
 from pypet.tests.parameter_test import ParameterTest, Dummy
 from brian.stdunits import mV, mA, kHz,ms

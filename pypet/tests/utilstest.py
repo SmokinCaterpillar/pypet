@@ -1,7 +1,12 @@
 __author__ = 'robert'
 
 
-import unittest
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 from pypet.utils.explore import cartesian_product
 from pypet.utils.helpful_functions import nested_equal
 

@@ -10,7 +10,13 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import globally
 import logging
-import unittest
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 import scipy.sparse as spsp
 import random
 

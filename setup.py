@@ -36,6 +36,12 @@ try:
 except ImportError:
     install_requires.append('importlib')
 
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    install_requires.append(['unittest2'])
+
+
 setup(
     name='pypet',
     version=verstr,

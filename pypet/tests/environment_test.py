@@ -3,7 +3,13 @@ __author__ = 'Robert Meyer'
 
 
 import numpy as np
-import unittest
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging

@@ -6,7 +6,13 @@ from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParamet
 import scipy.sparse as spsp
 import os
 import logging
-import unittest
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 import shutil
 import numpy as np
 import pandas as pd

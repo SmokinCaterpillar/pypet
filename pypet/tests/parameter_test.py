@@ -4,7 +4,13 @@ __author__ = 'Robert Meyer'
 
 
 import numpy as np
-import unittest
+
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter
 import pickle
 import scipy.sparse as spsp
