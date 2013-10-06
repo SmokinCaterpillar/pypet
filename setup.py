@@ -11,17 +11,15 @@ except ImportError:
 verstr = "unknown"
 
 # For versioning, Version found in pypet._version.py
-try:
-    verstrline = open('pypet/_version.py', "rt").read()
-except EnvironmentError:
-    pass # Okay, there is no version file.
+
+verstrline = open('pypet/_version.py', "rt").read()
+
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
 else:
-    VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
-    mo = re.search(VSRE, verstrline, re.M)
-    if mo:
-        verstr = mo.group(1)
-    else:
-        raise RuntimeError('Unable to find version in pypet/_version.py')
+    raise RuntimeError('Unable to find version in pypet/_version.py')
 
 
 install_requires=[
