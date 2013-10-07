@@ -128,9 +128,6 @@ The following config parameters are added:
     In order to resume trajectories use
     :func:`~pypet.environment.Environment.f_continue_run`
 
-* hdf5.filename: The hdf5 filename
-
-* hdf5.file_title: The hdf5 file title
 
 * hdf5.XXXXX_overview
 

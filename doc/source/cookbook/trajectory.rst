@@ -501,12 +501,6 @@ to get the whole trajectory tree containing all new results and derived paramete
 
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
--------------------------------------
-Iterating over Loaded Data
--------------------------------------
-
-The trajectory offers a way to iteratively look into the data you have obtained from several runs.
-
 
 
 -------------------------------------
@@ -585,6 +579,62 @@ Yet, they lack some functionality compared to trajectories:
 
     You can usually not access the full exploration array of parameters but only the current
     value that corresponds to the idx of the run.
+
+-------------------------------------------
+Iterating over Loaded Data in a Trajectory
+-------------------------------------------
+
+The trajectory offers a way to iteratively look into the data you have obtained from several runs.
+Assume you have computed the value `z` with `z=traj.x*traj.x` and added `z` to the trajectory
+in each run `traj.f_add_result('z',z)`. Accordingly, you can find a couple of
+`traj.results.run_XXXXXXXX.z` in your trajectory (where `XXXXXXXX` is the index
+of a particular run like `00000003`). To access these one after the other it
+is quite tedious to write `run_XXXXXXXX` each time.
+
+There is a way to tell the trajectory
+to only consider the subbranches that are associated with a single run and blind out everything else.
+You can use the function `~pypet.trajectory.Trajectory.f_as_run` to make the
+trajectory only consider a particular run (it accepts run indices as well as names).
+Alternatively you can set the run idx via changing
+`v_idx` of your trajectory object. In addition to blinding out all branches that are
+not part of this run, all explored parameters within the trajectory are also set to the
+value associated with the corresponding index. Note that blinding out will also affect
+the functions `~pypet.naturalnaming.NNGroupNode.f_iter_leaves` and
+`~pypet.naturalnaming.NNGroupNode.f_iter_nodes`.
+
+In order to set everything back to normal call `~pypet.trajectory.Trajectory.f_restore_default` or
+set `v_idx` to `-1`.
+
+For example, consider your trajectory contains the parameters `x` and `y` and both have been
+explored with :math:`x \in \{1.0,2.0,3.0,4.0\}` and :math:`y \in \{3.0,3.0,4.0,4.0\}` and
+their product is stored as `z`. The following
+code snippet will iterate over all four runs and print the result of each run:
+
+.. code-block:: python
+
+    for run_name in traj.f_get_run_names():
+        traj.f_as_run(run_name)
+        x=traj.x
+        y=traj.y
+        z=traj.z
+        print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
+
+    # Don't forget to reset you trajectory to the default settings, to release its belief to
+    # be the last run:
+    traj.f_restore_default()
+
+
+This will print the following statement:
+
+    run_00000000: x=1.000000, y=3.000000, z=3.000000
+
+    run_00000001: x=2.000000, y=3.000000, z=6.000000
+
+    run_00000002: x=3.000000, y=4.000000, z=12.000000
+
+    run_00000003: x=4.000000, y=4.000000, z=16.000000
+
+To see this in action you might want to check out :ref:`example-03`.
 
 .. _more-on-presetting:
 

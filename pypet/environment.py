@@ -132,7 +132,6 @@ class Environment(object):
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
 
 
-    :param log_folder: Folder where all log files are stored
 
     :param use_hdf5: Whether or not to use the standard hdf5 storage service, if False the following
                     arguments below will be ignored.
@@ -227,9 +226,6 @@ class Environment(object):
         In order to resume trajectories use
         :func:`~pypet.environment.Environment.f_continue_run`
 
-    * hdf5.filename: The hdf5 filename
-
-    * hdf5.file_title: The hdf5 file title
 
     * hdf5.overview.XXXXX
 
@@ -343,12 +339,23 @@ class Environment(object):
             self._traj = trajectory
 
 
-        # Prepare file names and log folder
-        if file_title  is None:
-            file_title = self._traj.v_name
+        if self._traj.v_storage_service is not None and filename is None:
+            self._file_title=self._traj.v_storage_service._file_title
+            self._filename=self._traj.v_storage_service._filename
+        else:
+            # Prepare file names and log folder
+            if file_title is None:
+                self._file_title = self._traj.v_name
+            else:
+                self._file_title = file_title
 
-        if filename is None:
-            filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
+            if filename is None:
+                self._filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
+            else:
+                self._filename=filename
+
+
+
 
         if log_folder is None:
             log_folder = os.path.join(os.getcwd(), 'logs')
@@ -356,16 +363,16 @@ class Environment(object):
 
 
 
-        # Adding some default configuration
-        if not self._traj.f_contains('config.environment.log_path'):
-            log_path = os.path.join(log_folder,self._traj.v_name)
-            self._traj.f_add_config('environment.log_path', log_path).f_lock()
-        else:
-            log_path=self._traj.f_get('config.environment.log_path').f_get()
+        # # Adding some default configuration
+        # if not self._traj.f_contains('config.environment.log_path'):
+        log_path = os.path.join(log_folder,self._traj.v_name)
+        #     self._traj.f_add_config('environment.log_path', log_path).f_lock()
+        # else:
+        #     log_path=self._traj.f_get('config.environment.log_path').f_get()
 
 
         self._make_logger(log_path)
-
+        self._log_path = log_path
 
         storage_service = self._traj.v_storage_service
 
@@ -414,11 +421,11 @@ class Environment(object):
                                                             ' Works only if the summary tables are'
                                                             ' active.')
 
-            if not self._traj.f_contains('config.hdf5.filename') :
-                self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
-
-            if not self._traj.f_contains('config.hdf5.file_title'):
-                self._traj.f_add_config('hdf5.file_title', file_title, comment='Title of hdf5 file')
+            # if not self._traj.f_contains('config.hdf5.filename') :
+            #     self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
+            #
+            # if not self._traj.f_contains('config.hdf5.file_title'):
+            #     self._traj.f_add_config('hdf5.file_title', file_title, comment='Title of hdf5 file')
 
             if not self._traj.f_contains('config.hdf5.results_per_run'):
                 self._traj.f_add_config('hdf5.results_per_run', 0,
@@ -523,8 +530,8 @@ class Environment(object):
 
         See also :class:`pypet.storageservice.HDF5StorageService`
         '''
-        self._storage_service = HDF5StorageService(self._traj.f_get('config.hdf5.filename').f_get(),
-                                                 self._traj.f_get('config.hdf5.file_title').f_get() )
+        self._storage_service = HDF5StorageService(self._filename,
+                                                 self._file_title )
 
         self._traj.v_storage_service=self._storage_service
 
@@ -548,7 +555,7 @@ class Environment(object):
         '''
 
         continuable = self._traj.f_get('config.environment.continuable').f_get()
-        log_path = self._traj.f_get('config.environment.log_path').f_get()
+
 
         if self._use_hdf5:
             if ( (not self._traj.f_get('results_runs_summary').f_get() or
@@ -562,18 +569,18 @@ class Environment(object):
         if continuable:
             #HERE!
             dump_dict ={}
-            if 'config.hdf5.filename' in self._traj:
-                filename = self._traj.f_get('config.hdf5.filename').f_get()
+            if self._use_hdf5:
+                filename = self._filename
                 #dump_dict['filename'] = filename
                 dumpfolder= os.path.split(filename)[0]
 
-                # Make folder if not existing, can happen if Non standard service is used
-                if not os.path.isdir(dumpfolder):
-                    os.mkdir(dumpfolder)
+                # # Make folder if not existing, can happen if Non standard service is used
+                # if not os.path.isdir(dumpfolder):
+                #     os.mkdir(dumpfolder)
 
                 dumpfilename=os.path.join(dumpfolder,self._traj.v_name+'.cnt')
             else:
-                dumpfilename = os.path.join(log_path,self._traj.v_name+'.cnt')
+                dumpfilename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
 
             prev_full_copy = self._traj.v_full_copy
             dump_dict['full_copy'] = prev_full_copy
@@ -599,7 +606,7 @@ class Environment(object):
         if self._git_repository is not None:
             make_git_commit(self,self._git_repository, self._git_message)
 
-        log_path = self._traj.f_get('config.environment.log_path').f_get()
+        log_path = self._log_path
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
         mode = self._traj.f_get('config.environment.wrap_mode').f_get()
 

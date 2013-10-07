@@ -8,6 +8,7 @@ from pypet import globally
 
 
 
+
 def copydoc(fromfunc, sep="\n"):
     """
     Decorator: Copy the docstring of `fromfunc`

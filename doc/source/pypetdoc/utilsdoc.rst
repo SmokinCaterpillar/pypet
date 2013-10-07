@@ -26,3 +26,10 @@ Based on the suggestion from HERE_, thanks again Lauritz V. Thaulow :-)
 
 .. automodule:: pypet.utils.helpful_functions
     :members: nested_equal
+
+--------------------------------------
+Migrating from alpha to beta
+--------------------------------------
+
+.. automodule:: pypet.utils.alpha2beta
+    :members:

@@ -1,143 +1,6 @@
 __author__ = 'Robert Meyer'
 
 
-
-
-''' Module for data containers, these are containers for parameters and results.
-==========================================
-General idea behind parameters and results
-==========================================
-
-The classes in this module are general containers for data that you acquire or need
-to run any sort of scientific simulation in Python.
-
------------------------------------------
-Parameters
------------------------------------------
-
-A specific container is the so called parameter container (Base API is found in BaseParameter
-class) it is used to keep data that is explicitly required as parameters for your simulations.
-For example, this could be the numbers or cars for traffic jam simulations, or for
-brain simulations the number of neurons, conductances of ion channels etc.
-
-Parameter containers fulfill four further important
-jobs:
-
- *  A key concept in numerical simulations is exploration of the parameter space. Therefore,
-    the parameter containers not only keep a single value but can hold an exploration array
-    of values.
-    To avoid confusion with numpy arrays, I will explicitly always say exploration array.
-    The individual values in the exploration array can be accessed one after the other
-    for distinct simulations.
-
- *  It can be locked, meaning as soon as the parameter is assigned to hold a specific
-    value and the value has already been used somewhere (for instance, creating X neurons),
-    it cannot be changed any longer (except after being explicitly unlocked).
-    This prevents the nasty error of having a particular parameter value
-    at the beginning of a simulation but changing it during runtime for whatever reason. This
-    can make your simulations impossible to understand by other people running them.
-    Or even you running it again with different parameter settings but observing the
-    very same results, since your parameter is changed later on in your simulations!
-    In fact I ran into this problem during my PhD using someone else's simulations.
-    Thus, debugging took ages. As a consequence this project was born.
-
-    By definition parameters are fixed values, that once used never change.
-    An exception to this rule is solely the exploration of the parameter space, but this
-    requires to run a number of distinct simulations anyway.
-
- *  It provides a method to compare values in a strict boolean sense. For instance, this is
-    important given you want to merge trajectories and delete simulations that have been done
-    twice. The problem with most objects using them as parameters is that they have custom
-    equality functions. Comparing two numpy arrays with '==' will returned a third array
-    of truth values, for instance. But in order to identify equal parameter values,
-    we need a single boolean value. Here the paramter container for numpy arrays could define
-    the equality of two numpy arrays (with numpy as np) as
-    >>> np.all(numpyarray1 == numpyarray2)
-    which returns a single boolean value.
-
- *  It has a rough idea of how to serialize and store parameter values.
-    If you intend to use basic parameter values like python int,str,bool or numpy arrays and
-    data, you can ignore this part, otherwise go on:
-
-    Conceptually it is always a good idea to have the storage of stuff and its use distinct. This
-    allows you to change the storage method or service later on, to migrate from hdf5 to SQL,
-    for example. This is also the case in this project. Yet, parameters know how to preprocess their
-    values in order to serialize them. More precisley, they know how to turn their values
-    into very basic data structures.
-    They can convert values and their exploration arrays of values into stuff like
-    numpy data types and numpy arrays, python native data types (int,str, etc) or pandas tables.
-    These structures are then used by the independent storage service to actually put the data
-    to disk (whatever that is).
-    If a parameter is loaded from disk, these sort of basic data formats are given back
-    to the parameter container which reconstructs the original value.
-
-    Why is this important anyway?
-    This becomes important as soon as you want to implement your own special parameter, that can
-    use more complex objects as parameters. For instance, you have not only the number of cars
-    as a parameter but a specific car object, that is principally complex in itself.
-    This example is kind of far fetched, because the best idea would be to have the indivdual
-    cars attributes as basic parameters (like number of doors, number of wheels etc.) and
-    having the car construction as part of your simulation. But in pricniple this is possible.
-    More realistic examples are BRIAN parameters, for the BRIAN neuron simulation package.
-    A BRIAN value f_contains a number as well as a unit, so in order to store it to disk,
-    both need to be separated.
-
-Types of parameters supported so far:
-
- *  Parameter:
-    Container for native python data: int,float,str,bool,complex
-    Numpy data and arrays: np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
-        Numpy arrays are allowed as well, however for larger numpy arrays, the ArrayParameter
-        is recommended because it will keep a large array only once, even if it is used several
-        times during exploration in the exploration array.
-
- *  ArrayParameter:
-    Container for native python data as well as tuples and numpy arrays.
-    The array parameter is the method of choice for large numpy arrays or python tuples.
-    These are kept only once (and by the hdf5 storage service stored only once to disk)
-    and in the exploration array you can find references to these arrays. This is particularly
-    usefule if you reuse an array many times in distinct simulation, for example by exploring
-    the parameter space in form of a cartesian product.
-
-
- *  PickleParameter:
-    Container for all the data that can be pickled. Like the array parameter, distinct objects
-    are kept only once and are refferred to in the exploration array
-
-
-There is also the BrianParameter in the pypet.brian.parameter module.
-
-
-
-------------------------------------
-Results
-------------------------------------
-
-So far not many types of results (Base API found in BaseResult) exist
-(only the Result and the BrianMonitorResult).
-They provide less functionality than parameters. They can simply hold some simulation results.
-For example, time course of traffic jam, voltage traces of neurons, etc.
-If results are handed to these containers and they are in the right format, they
-will in the end automatically be stored to disk.
-
-Types of results supported so far:
- *  Result
-    Container for basic data like native python types, numpy arrays and pandas tables (!).
-
- *  PickleResult
-    Container for everything that can be pickled
-
-
-There is also the BrianMonitorResult in the myper.brian.parameter module.
-
------------------------------------
-Object Table
------------------------------------
-
-Finally the ObjectTable class is a wrapper for pandas_ data frames.
-
-.. _pandas: http://pandas.pydata.org/
-'''
 import logging
 import petexceptions as pex
 import numpy as np
@@ -1867,36 +1730,36 @@ class Result(BaseResult):
 
         return self._data[name]
 
-class SparseResult(Result):
-    ''' Adds the support of scipy sparse matrices to the result.
-
-    Supported Formats are csr, csc, bsr, and dia.
-    '''
-
-    def f_set_single(self, name, item):
-        if SparseParameter.IDENTIFIER in name:
-            raise AttributeError('Your result name contains the identifier for sparse matrices,'
-                                 ' please do not use %s in your result names.' %
-                                 SparseParameter.IDENTIFIER)
-        else:
-            super(SparseResult,self).f_set_single(name,item)
-
-    def _store(self):
-        store_dict = {}
-        for key, val in self._data:
-            if SparseParameter._is_supported_matrix(val):
-                store_dict[key+SparseParameter.IDENTIFIER] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
-
-                data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
-                rename_list = ['dsp_%s%s' % (name, SparseParameter.IDENTIFIER)
-                                     for name in name_list]
-
-                is_dia = int(len(rename_list)==4)
-                store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
-            else:
-                store_dict[key]=val
-
-        return  store_dict
+# class SparseResult(Result):
+#     ''' Adds the support of scipy sparse matrices to the result.
+#
+#     Supported Formats are csr, csc, bsr, and dia.
+#     '''
+#
+#     def f_set_single(self, name, item):
+#         if SparseParameter.IDENTIFIER in name:
+#             raise AttributeError('Your result name contains the identifier for sparse matrices,'
+#                                  ' please do not use %s in your result names.' %
+#                                  SparseParameter.IDENTIFIER)
+#         else:
+#             super(SparseResult,self).f_set_single(name,item)
+#
+#     def _store(self):
+#         store_dict = {}
+#         for key, val in self._data:
+#             if SparseParameter._is_supported_matrix(val):
+#                 store_dict[key+SparseParameter.IDENTIFIER] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
+#
+#                 data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
+#                 rename_list = ['dsp_%s%s' % (name, SparseParameter.IDENTIFIER)
+#                                      for name in name_list]
+#
+#                 is_dia = int(len(rename_list)==4)
+#                 store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
+#             else:
+#                 store_dict[key]=val
+#
+#         return  store_dict
 
 
 
