@@ -780,18 +780,29 @@ class HDF5StorageService(StorageService):
                     if not os.path.exists(path):
                         os.makedirs(path)
 
-
-                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
+                    try:
+                        self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
                                                  title=self._file_title)
+                    except AttributeError:
+                        self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
+                                                 title=self._file_title)
+
                     if not ('/'+self._trajectory_name) in self._hdf5file:
                         if not msg == globally.TRAJECTORY:
                             raise ValueError('Your trajectory cannot be found in the hdf5file, '
                                              'please use >>traj.store()<< before storing anyhting else.')
-                        self._hdf5file.createGroup(where='/', name= self._trajectory_name,
+
+                        try:
+                            self._hdf5file.create_group(where='/', name= self._trajectory_name,
+                                                   title=self._trajectory_name)
+                        except AttributeError:
+                            self._hdf5file.createGroup(where='/', name= self._trajectory_name,
                                                    title=self._trajectory_name)
 
-
-                    self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
+                    try:
+                        self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
+                    except AttributeError:
+                        self._trajectory_group = self._hdf5file.get_node('/'+self._trajectory_name)
 
                 elif mode == 'r':
                     
@@ -805,7 +816,11 @@ class HDF5StorageService(StorageService):
                     if not os.path.isfile(self._filename):
                         raise ValueError('Filename ' + self._filename + ' does not exist.')
 
-                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
+                    try:
+                        self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
+                                                 title=self._file_title)
+                    except AttributeError:
+                        self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
                                                  title=self._file_title)
 
                     if not self._trajectory_index is None:
@@ -826,7 +841,13 @@ class HDF5StorageService(StorageService):
                         if not ('/'+self._trajectory_name) in self._hdf5file:
                             raise ValueError('File %s does not contain trajectory %s.'
                                              % (self._filename, self._trajectory_name))
-                        self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
+
+                        try:
+                            self._trajectory_group = self._hdf5file.get_node('/'+
+                                                                            self._trajectory_name)
+                        except AttributeError:
+                            self._trajectory_group = self._hdf5file.getNode('/'+
+                                                                            self._trajectory_name)
                     else:
                         raise ValueError('Please specify a name of a trajectory to load or its'
                                          'index, otherwise I cannot open one.')
@@ -889,7 +910,10 @@ class HDF5StorageService(StorageService):
         if backup_filename is None:
             backup_filename ='%s/backup_%s.hdf5' % (mypath,traj.v_name)
 
-        backup_hdf5file = pt.openFile(filename=backup_filename, mode='a', title=backup_filename)
+        try:
+            backup_hdf5file = pt.open_file(filename=backup_filename, mode='a', title=backup_filename)
+        except AttributeError:
+            backup_hdf5file = pt.openFile(filename=backup_filename, mode='a', title=backup_filename)
 
         if ('/'+self._trajectory_name) in backup_hdf5file:
 
@@ -920,7 +944,11 @@ class HDF5StorageService(StorageService):
                 if full_name in rename_dict:
                     new_value_dict[rename_dict[full_name]] = row['value']
 
-            table= self._hdf5file.getNode('/'+self._trajectory_name+'/'+tablename)
+            try:
+                table= self._hdf5file.get_node('/'+self._trajectory_name+'/'+tablename)
+            except AttributeError:
+                table= self._hdf5file.getNode('/'+self._trajectory_name+'/'+tablename)
+
             for row in table:
                 location = row['location']
                 name = row['name']
@@ -964,28 +992,46 @@ class HDF5StorageService(StorageService):
             split_name = new_name.split('.')
             new_location = '/'+self._trajectory_name+'/'+'/'.join(split_name)
 
-            old_group = self._hdf5file.getNode(old_location)
+            try:
+                old_group = self._hdf5file.get_node(old_location)
+            except AttributeError:
+                old_group = self._hdf5file.getNode(old_location)
 
 
 
             for node in old_group:
 
                 if move_nodes:
-                     self._hdf5file.moveNode(where=old_location, newparent=new_location,
+                    try:
+                        self._hdf5file.move_node(where=old_location, newparent=new_location,
+                                             name=node._v_name,createparents=True )
+                    except AttributeError:
+                        self._hdf5file.moveNode(where=old_location, newparent=new_location,
                                              name=node._v_name,createparents=True )
                 else:
-                     self._hdf5file.copyNode(where=old_location, newparent=new_location,
+                    try:
+                        self._hdf5file.copyNode(where=old_location, newparent=new_location,
+                                              name=node._v_name,createparents=True,
+                                              recursive = True)
+                    except AttributeError:
+                        self._hdf5file.copy_node(where=old_location, newparent=new_location,
                                               name=node._v_name,createparents=True,
                                               recursive = True)
 
 
-            old_group._v_attrs._f_copy(where = self._hdf5file.getNode(new_location))
+            try:
+                old_group._v_attrs._f_copy(where = self._hdf5file.get_node(new_location))
+            except AttributeError:
+                old_group._v_attrs._f_copy(where = self._hdf5file.getNode(new_location))
 
 
         self._trj_copy_table_entries(rename_dict, other_trajectory_name)
 
         if delete_trajectory:
-             self._hdf5file.removeNode(where='/', name=other_trajectory_name, recursive = True)
+            try:
+                 self._hdf5file.remove_node(where='/', name=other_trajectory_name, recursive = True)
+            except AttributeError:
+                self._hdf5file.removeNode(where='/', name=other_trajectory_name, recursive = True)
 
 
     def _trj_update_trajectory(self, traj, changed_parameters,rename_dict):
@@ -1070,10 +1116,16 @@ class HDF5StorageService(StorageService):
                     count +=1
 
                 if run_name in dparams_group:
-                    dparams_group._f_getChild(run_name)._f_remove(recursive=True)
+                    try:
+                        dparams_group._f_get_child(run_name)._f_remove(recursive=True)
+                    except AttributeError:
+                        dparams_group._f_getChild(run_name)._f_remove(recursive=True)
 
                 if run_name in result_group:
-                    result_group._f_getChild(run_name)._f_remove(recursive=True)
+                    try:
+                        result_group._f_get_child(run_name)._f_remove(recursive=True)
+                    except AttributeError:
+                        result_group._f_getChild(run_name)._f_remove(recursive=True)
 
         self._logger.info('Finished removal of incomplete runs, removed %d runs.' % count)
 
@@ -1339,8 +1391,13 @@ class HDF5StorageService(StorageService):
             if table_name.endswith('summary'):
                 paramtable.autoIndex=True
                 if not paramtable.indexed:
-                    paramtable.cols.location.createIndex()
-                    paramtable.cols.name.createIndex()
+                    try:
+                        paramtable.cols.location.create_index()
+                        paramtable.cols.name.create_index()
+                    except AttributeError:
+                        paramtable.cols.location.createIndex()
+                        paramtable.cols.name.createIndex()
+
 
             paramtable.flush()
 
@@ -1356,7 +1413,8 @@ class HDF5StorageService(StorageService):
             name = traj.f_idx_to_run(idx)
             insert_dict = traj.f_get_run_information(name)
 
-            self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,flags=(HDF5StorageService.ADD_ROW,))
+            self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,
+                                        flags=(HDF5StorageService.ADD_ROW,))
 
         runtable.flush()
 
@@ -1413,7 +1471,10 @@ class HDF5StorageService(StorageService):
             traj_node = traj_node._children[name]
 
             if not hasattr(hdf5_group,name):
-                hdf5_group=self._hdf5file.createGroup(where=hdf5_group,name=name)
+                try:
+                    hdf5_group=self._hdf5file.create_group(where=hdf5_group,name=name)
+                except AttributeError:
+                    hdf5_group=self._hdf5file.createGroup(where=hdf5_group,name=name)
             else:
                 hdf5_group=getattr(hdf5_group,name)
 
@@ -1504,8 +1565,12 @@ class HDF5StorageService(StorageService):
                 self._ann_load_annotations(new_traj_node,node=hdf5group)
 
             if recursive:
-                for new_hdf5group in hdf5group._f_iterNodes(classname='Group'):
-                    self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
+                try:
+                    for new_hdf5group in hdf5group._f_iter_nodes(classname='Group'):
+                        self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
+                except AttributeError:
+                    for new_hdf5group in hdf5group._f_iterNodes(classname='Group'):
+                        self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
 
 
     def _tree_store_recursively(self,msg, traj_node, parent_hdf5_group, recursive = True):
@@ -1514,7 +1579,11 @@ class HDF5StorageService(StorageService):
         name = traj_node.v_name
 
         if not hasattr(parent_hdf5_group,name):
-            new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
+            try:
+                new_hdf5_group = self._hdf5file.create_group(where=parent_hdf5_group,name=name)
+            except AttributeError:
+                new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
+
             msg = globally.UPDATE_LEAF
         else:
             new_hdf5_group = getattr(parent_hdf5_group,name)
@@ -1538,7 +1607,12 @@ class HDF5StorageService(StorageService):
         hdf5_location = location.replace('.','/')
 
         try:
-            parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name=hdf5_location)
+            try:
+                parent_hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,
+                                                          name=hdf5_location)
+            except AttributeError:
+                parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,
+                                                          name=hdf5_location)
         except pt.NoSuchNodeError:
             self._logger.error('Cannot store >>%s<< the parental hdf5 node with path >>%s<< does '
                                'not exist! Store the parental node first!' %
@@ -1557,7 +1631,10 @@ class HDF5StorageService(StorageService):
         hdf5_node_name =full_child_name.replace('.','/')
 
         try:
-            hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
+            try:
+                 hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,name = hdf5_node_name)
+            except AttributeError:
+                hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
         except pt.NoSuchNodeError:
             self._logger.error('Cannot load >>%s<< the hdf5 node >>%s<< does not exist!'
                                 % (child_name,hdf5_node_name))
@@ -1633,8 +1710,16 @@ class HDF5StorageService(StorageService):
 
 
             if not 'explored_parameters' in rungroup:
-                paramtable = self._hdf5file.createTable(where=rungroup, name='explored_parameters',
-                                                    description=paramdescriptiondict, title='explored_parameters')
+                try:
+                    paramtable = self._hdf5file.create_table(where=rungroup,
+                                                            name='explored_parameters',
+                                                            description=paramdescriptiondict,
+                                                            title='explored_parameters')
+                except AttributeError:
+                    paramtable = self._hdf5file.createTable(where=rungroup,
+                                                            name='explored_parameters',
+                                                            description=paramdescriptiondict,
+                                                            title='explored_parameters')
             else:
                 paramtable = getattr(rungroup,'explored_parameters')
 
@@ -1738,21 +1823,37 @@ class HDF5StorageService(StorageService):
 
         if not tablename in where_node:
             if not expectedrows is None:
-                table = self._hdf5file.createTable(where=where_node, name=tablename,
-                                               description=description, title=tablename,
-                                               expectedrows=expectedrows)
+                try:
+                    table = self._hdf5file.create_table(where=where_node, name=tablename,
+                                                   description=description, title=tablename,
+                                                   expectedrows=expectedrows)
+                except AttributeError:
+                    table = self._hdf5file.createTable(where=where_node, name=tablename,
+                                                   description=description, title=tablename,
+                                                   expectedrows=expectedrows)
             else:
-                table = self._hdf5file.createTable(where=where_node, name=tablename,
-                                               description=description, title=tablename)
+                try:
+                    table = self._hdf5file.create_table(where=where_node, name=tablename,
+                                                   description=description, title=tablename)
+                except AttributeError:
+                    table = self._hdf5file.createTable(where=where_node, name=tablename,
+                                                   description=description, title=tablename)
         else:
-            table = where_node._f_getChild(tablename)
+            try:
+                table = where_node._f_get_child(tablename)
+            except AttributeError:
+                table = where_node._f_getChild(tablename)
 
         return table
 
     def _all_get_node_by_name(self,name):
         path_name = name.replace('.','/')
         where = '/%s/%s' %(self._trajectory_name,path_name)
-        return self._hdf5file.getNode(where=where)
+
+        try:
+            return self._hdf5file.get_node(where=where)
+        except AttributeError:
+            return self._hdf5file.getNode(where=where)
 
     @staticmethod
     def _all_attr_equals(ptitem,name,value):
@@ -1878,7 +1979,10 @@ class HDF5StorageService(StorageService):
                                     'appears more than once in table %s.'
                                     %(item_name,table._v_name))
 
-            table.removeRows(rownumber)
+            try:
+                table.remove_rows(rownumber)
+            except AttributeError:
+                table.removeRows(rownumber)
         else:
             raise ValueError('Something is wrong, you might not have found '
                                'a row, or your flags are not set approprialty')
@@ -1978,7 +2082,10 @@ class HDF5StorageService(StorageService):
         newhdf5group = self._trajectory_group
         split_key = key.split('.')
         for name in split_key:
-            newhdf5group = newhdf5group._f_getChild(name)
+            try:
+                newhdf5group = newhdf5group._f_get_child(name)
+            except AttributeError:
+                newhdf5group = newhdf5group._f_getChild(name)
         return newhdf5group
 
     def _all_create_or_get_groups(self, key):
@@ -1987,10 +2094,16 @@ class HDF5StorageService(StorageService):
         created = False
         for name in split_key:
             if not name in newhdf5group:
-                newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name, title=name)
+                try:
+                    newhdf5group=self._hdf5file.create_group(where=newhdf5group, name=name, title=name)
+                except AttributeError:
+                    newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name, title=name)
                 created = True
             else:
-                newhdf5group=newhdf5group._f_getChild(name)
+                try:
+                    newhdf5group=newhdf5group._f_get_child(name)
+                except AttributeError:
+                    newhdf5group=newhdf5group._f_getChild(name)
 
 
         return newhdf5group, created
@@ -2231,7 +2344,12 @@ class HDF5StorageService(StorageService):
         objtable = ObjectTable(data=temp_dict)
 
         self._prm_store_into_pytable(msg,key,objtable,group,fullname)
-        new_table = group._f_getChild(key)
+
+        try:
+            new_table = group._f_get_child(key)
+        except AttributeError:
+            new_table = group._f_getChild(key)
+
         self._all_set_attributes_to_recall_natives(temp_dict,new_table,
                                                    HDF5StorageService.DATA_PREFIX)
 
@@ -2259,7 +2377,12 @@ class HDF5StorageService(StorageService):
 
             name = group._v_pathname+'/' +key
             data_to_store.to_hdf(self._filename, name, append=True,data_columns=True)
-            frame_group = group._f_getChild(key)
+
+            try:
+                frame_group = group._f_get_child(key)
+            except AttributeError:
+                frame_group = group._f_getChild(key)
+
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
         except:
@@ -2290,9 +2413,8 @@ class HDF5StorageService(StorageService):
 
             #try using pytables 3.0.0 API
             try:
-                carray=self._hdf5file.createCArray(where=group, name=key,object=data)
-
-            except TypeError:
+                carray=self._hdf5file.create_carray(where=group, name=key,obj=data)
+            except AttributeError:
                 #if it does not work, create carray with old api
                 atom = pt.Atom.from_dtype(data.dtype)
                 carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
@@ -2330,8 +2452,11 @@ class HDF5StorageService(StorageService):
                 self._logger.warning('>>%s<< of >>%s<< is _empty, I will skip storing.' %(key,fullname))
                 return
 
+            try:
+                array=self._hdf5file.create_array(where=group, name=key,obj=data)
+            except AttributeError:
+                array=self._hdf5file.createArray(where=group, name=key,object=data)
 
-            array=self._hdf5file.createArray(where=group, name=key,object=data)
             self._all_set_attributes_to_recall_natives(data,array,HDF5StorageService.DATA_PREFIX)
             setattr(array._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.ARRAY)
             self._hdf5file.flush()
@@ -2345,7 +2470,10 @@ class HDF5StorageService(StorageService):
 
             def _set_attribute_to_item_or_dict(item_or_dict, name,val):
                 try:
-                    item_or_dict._f_setAttr(name,val)
+                    try:
+                        item_or_dict._f_setattr(name,val)
+                    except AttributeError:
+                        item_or_dict._f_setAttr(name,val)
                 except AttributeError:
                     item_or_dict[name]=val
 
@@ -2393,7 +2521,8 @@ class HDF5StorageService(StorageService):
                         raise TypeError('I do not know how to handel >>%s<< its type is '
                                            '>>%s<<.' % (str(data),strtype))
 
-                    _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
+                    _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
+                                                        HDF5StorageService.SCALAR_TYPE,strtype)
 
 
 
@@ -2415,8 +2544,10 @@ class HDF5StorageService(StorageService):
 
         where = '/'+self._trajectory_name+'/' + '/'.join(split_name)
 
-
-        the_node = self._hdf5file.getNode(where=where,name=node_name)
+        try:
+            the_node = self._hdf5file.get_node(where=where, name=node_name)
+        except AttributeError:
+            the_node = self._hdf5file.getNode(where=where, name=node_name)
 
         if not instance.v_leaf:
             if len(the_node._v_groups) != 0:
@@ -2433,9 +2564,15 @@ class HDF5StorageService(StorageService):
             for irun in reversed(range(len(split_name))):
                 where = '/'+self._trajectory_name+'/' + '/'.join(split_name[0:irun])
                 node_name = split_name[irun]
-                act_group = self._hdf5file.getNode(where=where,name=node_name)
+                try:
+                    act_group = self._hdf5file.get_node(where=where,name=node_name)
+                except AttributeError:
+                    act_group = self._hdf5file.getNode(where=where,name=node_name)
                 if len(act_group._v_groups) == 0:
-                    self._hdf5file.removeNode(where=where,name=node_name,recursive=True)
+                    try:
+                        self._hdf5file.remove_node(where=where,name=node_name,recursive=True)
+                    except AttributeError:
+                        self._hdf5file.removeNode(where=where,name=node_name,recursive=True)
                 else:
                     break
 
@@ -2475,8 +2612,15 @@ class HDF5StorageService(StorageService):
                     #                    'I will create it!' % (tablename,fullname))
 
                 description_dict, data_type_dict = self._prm_make_description(data,fullname)
-                table = self._hdf5file.createTable(where=hdf5group,name=tablename,description=description_dict,
-                                                   title=tablename)
+
+                try:
+                    table = self._hdf5file.create_table(where=hdf5group, name=tablename,
+                                                       description=description_dict,
+                                                       title=tablename)
+                except AttributeError:
+                    table = self._hdf5file.createTable(where=hdf5group, name=tablename,
+                                                       description=description_dict,
+                                                       title=tablename)
                 nstart = 0
 
             #assert isinstance(table,pt.Table)

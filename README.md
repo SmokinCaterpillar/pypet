@@ -10,8 +10,11 @@ Requirements
 ----------------------------
 
 tables >= 2.3.1
+
 pandas >= 0.12.0
+
 numpy >= 1.6.1
+
 scipy >= 0.10.0
 
 
@@ -73,7 +76,6 @@ Simply install via `pip install pypet`
 Or
 
 Package release can also be found on https://pypi.python.org/pypi/pypet
-
 Download, unpack and `python setup.py install` it
 
 ---------------------------

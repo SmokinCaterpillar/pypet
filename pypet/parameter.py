@@ -1151,6 +1151,8 @@ class ArrayParameter(Parameter):
 
 
 class SparseParameter(ArrayParameter):
+    ''' Parameter that handles scipy csr, csc, bsr and dia matrices.
+    '''
 
     IDENTIFIER = '__spsp__'
 
