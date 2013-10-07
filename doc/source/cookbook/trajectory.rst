@@ -501,6 +501,13 @@ to get the whole trajectory tree containing all new results and derived paramete
 
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
+-------------------------------------
+Iterating over Loaded Data
+-------------------------------------
+
+The trajectory offers a way to iteratively look into the data you have obtained from several runs.
+
+
 
 -------------------------------------
 Removal of items

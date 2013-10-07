@@ -2,7 +2,6 @@ __author__ = 'Robert Meyer'
 
 
 
-import numpy as np
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -10,6 +9,8 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
+
+import numpy as np
 from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
@@ -22,8 +23,8 @@ import scipy.sparse as spsp
 import shutil
 import pandas as pd
 from test_helpers import add_params, create_param_dict, run_tests, simple_calculations, \
-    make_temp_file, TrajectoryComparator
-
+    make_temp_file, TrajectoryComparator, multipy
+from hdf5_storage_test import ResultSortTest
 
 REMOVE = True
 SINGLETEST=[0]
@@ -327,6 +328,79 @@ class MergeTest(TrajectoryComparator):
         traj.f_explore(self.explored)
 
 
+class TestMergeResultsSort(ResultSortTest):
+
+    def setUp(self):
+        super(TestMergeResultsSort,self).setUp()
+
+        env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder)
+
+        traj2 = env2.v_trajectory
+
+        traj2.multiproc = self.multiproc
+        traj2.wrap_mode = self.mode
+        traj2.ncores = self.ncores
+
+        traj2.v_standard_parameter=Parameter
+
+        traj2.f_add_parameter('x',0)
+        traj2.f_add_parameter('y',0)
+
+        self.env2=env2
+        self.traj2=traj2
+
+    @unittest.skipIf(SINGLETEST != [0] and 7 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_merge_normally(self):
+
+        self.explore(self.traj)
+        self.explore2(self.traj2)
+
+        len1 = len(self.traj)
+        len2 = len(self.traj2)
+
+        self.assertTrue(len1==5)
+        self.assertTrue(len2==5)
+
+        self.env.f_run(multipy)
+        self.env2.f_run(multipy)
+
+        self.traj.f_merge(self.env2.v_trajectory)
+
+        self.assertTrue(len(self.traj)==len1+len2)
+
+        self.traj.f_load(load_results=globally.UPDATE_DATA)
+        self.check_if_z_is_correct(self.traj)
+
+    @unittest.skipIf(SINGLETEST != [0] and 8 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_merge_remove_duplicates(self):
+
+        self.explore(self.traj)
+        self.explore2(self.traj2)
+
+        len1 = len(self.traj)
+        len2 = len(self.traj2)
+
+        self.assertTrue(len1==5)
+        self.assertTrue(len2==5)
+
+        self.env.f_run(multipy)
+        self.env2.f_run(multipy)
+
+        self.traj.f_merge(self.env2.v_trajectory,remove_duplicates=True)
+
+        self.assertTrue(len(self.traj)==6)
+
+        self.traj.f_load(load_results=globally.UPDATE_DATA)
+        self.check_if_z_is_correct(self.traj)
+
+    def explore(self,traj):
+        self.explore_dict={'x':[0,1,2,3,4],'y':[1,1,2,2,3]}
+        traj.f_explore(self.explore_dict)
+
+    def explore2(self,traj):
+        self.explore_dict={'x':[0,1,2,3,4],'y':[1,1,2,2,42]}
+        traj.f_explore(self.explore_dict)
 
 
 

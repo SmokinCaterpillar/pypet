@@ -11,7 +11,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter
+from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter, SparseParameter
 import pickle
 import scipy.sparse as spsp
 import pypet.petexceptions as pex
@@ -54,12 +54,7 @@ class ParameterTest(unittest.TestCase):
         self.location = 'MyName.Is.myParam'
 
 
-
-
-
         self.make_params()
-
-
 
 
         # with self.assertRaises(AttributeError):
@@ -85,12 +80,9 @@ class ParameterTest(unittest.TestCase):
         for key, val in self.data.items():
 
             if not key in self.explore_dict:
+                self.param[key]._restore_default()
                 param_val = self.param[key].f_get()
                 self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
-
-
-
-
 
     def test_exploration(self):
         for key, vallist in self.explore_dict.items():
@@ -102,6 +94,13 @@ class ParameterTest(unittest.TestCase):
                 param._set_parameter_access(idx)
 
                 self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
+
+                param_val = self.param[key].f_get_array()[idx]
+                self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
+
+            param._restore_default()
+            val = self.data[key]
+            self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
 
 
     def test_storage_and_loading(self):
@@ -170,7 +169,7 @@ class ParameterTest(unittest.TestCase):
         self.testMetaSettings()
 
 
-    def testresizinganddeletion(self):
+    def test_resizing_and_deletion(self):
 
         for key, param in self.param.items():
             param.f_lock()
@@ -279,9 +278,6 @@ class PickleParameterTest(ParameterTest):
 
     def explore(self):
 
-
-
-
         matrices = []
         for irun in range(3):
 
@@ -305,6 +301,87 @@ class PickleParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
+class SparseParameterTest(ParameterTest):
+    def setUp(self):
+
+
+        if not hasattr(self,'data'):
+            self.data={}
+
+        self.data['spsparse_csc'] = spsp.csc_matrix((1000,100))
+        self.data['spsparse_csc'][1,2] = 44.5
+
+        self.data['spsparse_csr'] = spsp.csr_matrix((2222,22))
+        self.data['spsparse_csr'][1,3] = 44.5
+
+        self.data['spsparse_bsr'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_bsr'][3,2] = 44.5
+        self.data['spsparse_bsr'] = self.data['spsparse_bsr'].tobsr()
+
+        self.data['spsparse_dia'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_dia'][3,2] = 44.5
+        self.data['spsparse_dia'] = self.data['spsparse_dia'].todia()
+
+        super(SparseParameterTest,self).setUp()
+
+
+    def make_params(self):
+        self.param = {}
+        for key, val in self.data.items():
+            self.param[key] = SparseParameter(self.location+'.'+key, val, comment=key)
+
+
+
+    def explore(self):
+
+        matrices_csr = []
+        for irun in range(3):
+
+            spsparse_csr = spsp.csr_matrix((111,111))
+            spsparse_csr[3,2+irun] = 44.5*irun
+
+            matrices_csr.append(spsparse_csr)
+
+        matrices_csc = []
+        for irun in range(3):
+
+            spsparse_csc = spsp.csc_matrix((111,111))
+            spsparse_csc[3,2+irun] = 44.5*irun
+
+            matrices_csc.append(spsparse_csc)
+
+        matrices_bsr = []
+        for irun in range(3):
+
+            spsparse_bsr = spsp.csr_matrix((111,111))
+            spsparse_bsr[3,2+irun] = 44.5*irun
+
+            matrices_bsr.append(spsparse_bsr.tobsr())
+
+        matrices_dia = []
+        for irun in range(3):
+
+            spsparse_dia = spsp.csr_matrix((111,111))
+            spsparse_dia[3,2+irun] = 44.5*irun
+
+            matrices_dia.append(spsparse_dia.todia())
+
+
+        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+                               np.array(['Cinco', 'Seis', 'Siette']),
+                            np.array(['Ocho', 'Nueve', 'Diez'])],
+                           'val0':[1,2,3],
+                           'spsparse_csr' : matrices_csr,
+                           'spsparse_csc' : matrices_csc,
+                           'spsparse_bsr' : matrices_bsr,
+                           'spsparse_dia' : matrices_dia}
+
+
+
+
+        ## Explore the parameter:
+        for key, vallist in self.explore_dict.items():
+            self.param[key]._explore(vallist)
 
 
 if __name__ == '__main__':

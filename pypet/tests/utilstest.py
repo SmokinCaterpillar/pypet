@@ -21,6 +21,7 @@ class CartesianTest(unittest.TestCase):
         self.assertTrue(nested_equal(cartesian_dict,result_dict), '%s != %s' %
                                                         (str(cartesian_dict),str(result_dict)))
 
+    def test_cartesian_product_combined_params(self):
         cartesian_dict=cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'],\
             'param3' : [1,2,3]}, (('param3',),('param1', 'param2')))
 
@@ -29,7 +30,6 @@ class CartesianTest(unittest.TestCase):
 
         self.assertTrue(nested_equal(cartesian_dict,result_dict), '%s != %s' %
                                                     (str(cartesian_dict),str(result_dict)))
-
 
 
 

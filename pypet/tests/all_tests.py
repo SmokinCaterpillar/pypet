@@ -1,7 +1,6 @@
 __author__ = 'Robert Meyer'
 
 
-import unittest
 
 import getopt
 import sys
@@ -16,10 +15,12 @@ from utilstest import *
 from environment_test import *
 from test_helpers import run_tests
 
+import os
 # Works only if someone has installed Brian
 try:
     from brian_parameter_test import *
-    from brian_full_network_test import *
+    if not os.getenv('TRAVIS',False):
+        from brian_full_network_test import *
 except ImportError:
     pass
 

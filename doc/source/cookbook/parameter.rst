@@ -113,6 +113,12 @@ So far, the following parameters exist:
     `[ref_to_array_1,ref_to_array_2,ref_to_array_1,ref_to_array_2]`
 
 
+ * :class:`~pypet.parameter.SparseParameter`:
+
+    Container for SciPy_ sparse matrices. Supported formats are csr, csc, bsr, and dia.
+
+    .. _SciPy: http://docs.scipy.org/doc/scipy/reference/sparse.html
+
  *  :class:`~pypet.parameter.PickleParameter`:
 
     Container for all the data that can be pickled. Like the array parameter, distinct objects

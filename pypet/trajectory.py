@@ -1918,8 +1918,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             ## Restore changed default values
             for my_param, other_param in params_to_change.itervalues():
-                other_param.f_restore_default()
-                my_param.f_restore_default()
+                other_param._restore_default()
+                my_param._restore_default()
 
 
         ## Now f_merge into the new trajectory
@@ -1985,7 +1985,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self._idx=-1
         self._as_run = None
         for param in self._explored_parameters.itervalues():
-            param.f_restore_default()
+            param._restore_default()
 
 
     def f_prepare_parameter_space_point(self, n):

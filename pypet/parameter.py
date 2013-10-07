@@ -284,7 +284,7 @@ class BaseParameter(NNLeafNode):
         '''
         raise NotImplementedError( "Should have implemented this." )
 
-    def f_restore_default(self):
+    def _restore_default(self):
         ''' Restores original data if changed due to exploration.
 
         If a Parameter is explored, the actual data is changed over the course of different
@@ -647,7 +647,7 @@ class Parameter(BaseParameter):
         :func:`~pypet.parameter.Parameter.f_supports` the data. If not an TypeError is thrown.
         If the parameter becomes explored, the data value is kept as a default. After
         simulation the default value can be retained by calling
-        :func:`~pypet.parameter.Parameter.f_restore_default`.
+        :func:`~pypet.parameter.Parameter._restore_default`.
         The data can be accessed as follows:
 
         >>> param.f_get()
@@ -686,13 +686,13 @@ class Parameter(BaseParameter):
     def _set_logger(self):
         self._logger = logging.getLogger('pypet.parameter.Parameter=' + self.v_full_name)
 
-    def f_restore_default(self):
+    def _restore_default(self):
         ''' Restores the default data, that was set with the `:func:`~pypet.parameter.Parameter.f_set`
         method (or at initialisation).
 
         If the parameter is explored during the runtime of a simulation,
         the actual value of the parameter is changed and taken from the exploration array.
-        Calling :func:`~pypet.parameter.Parameter.f_restore_default` sets the parameter's value
+        Calling :func:`~pypet.parameter.Parameter._restore_default` sets the parameter's value
         back to it's original value.
 
         Example usage:
@@ -702,7 +702,7 @@ class Parameter(BaseParameter):
         >>> param._set_parameter_access(2)
         >>> print param.f_get()
         >>> 3
-        >>> param.f_restore_default()
+        >>> param._restore_default()
         >>> print param.f_get()
         >>> 44
 
@@ -887,7 +887,8 @@ class Parameter(BaseParameter):
 
         '''
         if not self.f_is_array():
-            raise TypeError('Your parameter is not array, so cannot return array')
+            raise TypeError('Your parameter >>%s<< is not array, so cannot return array.' %
+                                    self.v_full_name)
         else:
             return self._explored_data
 
@@ -1053,6 +1054,9 @@ class ArrayParameter(Parameter):
     the default HDF5 storage service. For each individual run references to the corresponding
     numpy array are stored.
 
+    Since the ArrayParameter inherits from :class:`~pypet.parameter.Parameter` it also
+    supports all other native python types.
+
     '''
 
     IDENTIFIER = '__rr__'
@@ -1067,17 +1071,14 @@ class ArrayParameter(Parameter):
         else:
             store_dict = {}
 
-            store_dict['data'] = ObjectTable(columns=['data'+ArrayParameter.IDENTIFIER],index=[0])
-
-            store_dict['data']['data'+ArrayParameter.IDENTIFIER] = 'data_array'
-
-            store_dict['data_array'] = self._data
+            store_dict['data'+ArrayParameter.IDENTIFIER] = self._data
 
             if self.f_is_array():
                 ## Supports smart storage by hashing numpy arrays are hashed by their data attribute
                 smart_dict = {}
 
-                store_dict['explored_data']=ObjectTable(columns=['data'+ArrayParameter.IDENTIFIER],index=range(len(self)))
+                store_dict['explored_data'+ArrayParameter.IDENTIFIER] = \
+                    ObjectTable(columns=['idx'],index=range(len(self)))
 
                 count = 0
                 for idx,elem in enumerate(self._explored_data):
@@ -1089,40 +1090,37 @@ class ArrayParameter(Parameter):
                         hash_elem = elem.data
 
                     if hash_elem in smart_dict:
-                        name_id = smart_dict[hash_elem]
+                        name_idx = smart_dict[hash_elem]
                         add = False
                     else:
-                        name_id = count
+                        name_idx = count
                         add = True
 
-                    name = self._build_name(name_id)
-                    store_dict['explored_data']['data'+ArrayParameter.IDENTIFIER][idx] = name_id
+                    name = self._build_name(name_idx)
+                    store_dict['explored_data'+ArrayParameter.IDENTIFIER]['idx'][idx] = \
+                        name_idx
 
                     if add:
                         store_dict[name] = elem
-                        smart_dict[hash_elem] = name_id
+                        smart_dict[hash_elem] = name_idx
                         count +=1
 
             return store_dict
 
     def _build_name(self,name_id):
-        return 'ea_%08d' % name_id
+        return 'xa%s%08d' % (ArrayParameter.IDENTIFIER, name_id)
 
 
 
 
     def _load(self,load_dict):
-        data_table = load_dict['data']
-        data_name = data_table.columns.tolist()[0]
-        if data_name.endswith(ArrayParameter.IDENTIFIER):
-            arrayname =  data_table['data'+ArrayParameter.IDENTIFIER][0]
-            self._data = self._convert_data(load_dict[arrayname])
+        try:
+            self._data = load_dict['data'+ArrayParameter.IDENTIFIER]
 
+            if 'explored_data'+ArrayParameter.IDENTIFIER in load_dict:
+                explore_table = load_dict['explored_data'+ArrayParameter.IDENTIFIER]
 
-            if 'explored_data' in load_dict:
-                explore_table = load_dict['explored_data']
-
-                name_col = explore_table['data'+ArrayParameter.IDENTIFIER]
+                name_col = explore_table['idx']
 
                 explore_list = []
                 for name_id in name_col:
@@ -1131,8 +1129,7 @@ class ArrayParameter(Parameter):
 
                 self._explored_data=tuple([self._convert_data(x) for x in explore_list])
 
-
-        else:
+        except KeyError:
             super(ArrayParameter,self)._load(load_dict)
 
         self._default=self._data
@@ -1152,6 +1149,9 @@ class ArrayParameter(Parameter):
 
 class SparseParameter(ArrayParameter):
     ''' Parameter that handles scipy csr, csc, bsr and dia matrices.
+
+    Sparse Parameter inherits from :class:`pypet.parameter.ArrayParameter` and supports
+    arrays and native python data as well.
     '''
 
     IDENTIFIER = '__spsp__'
@@ -1190,7 +1190,14 @@ class SparseParameter(ArrayParameter):
                 spsp.isspmatrix_bsr(data) or
                 spsp.isspmatrix_dia(data) )
 
+
     def f_supports(self, data):
+        '''Sparse matrices support scipy csr, csc, bsr and dia matrices and everything their parent
+        class the :calls:`~pypet.parameter.ArrayParameter` supports.
+
+        :return: True of False if data is supported.
+
+        '''
         if self._is_supported_matrix(data):
             return True
         else:
@@ -1245,15 +1252,12 @@ class SparseParameter(ArrayParameter):
             return super(SparseParameter,self)._store()
         else:
             store_dict = {}
-
-            store_dict['data'] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
-
             data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
-            rename_list = ['data_%s' % name
+            rename_list = ['data_%s%s' % (name, SparseParameter.IDENTIFIER)
                                  for name in name_list]
 
             is_dia = int(len(rename_list)==4)
-            store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
+            store_dict['data_is_dia'+SparseParameter.IDENTIFIER]= is_dia
 
             for idx,name in enumerate(rename_list):
                 store_dict[name] = data_list[idx]
@@ -1262,9 +1266,9 @@ class SparseParameter(ArrayParameter):
                 ## Supports smart storage by hashing
                 smart_dict = {}
 
-                store_dict['explored_data']=ObjectTable(columns=['data_idx'+SparseParameter.IDENTIFIER,
-                                                                 'data_is_dia' + SparseParameter.IDENTIFIER],
-                                                        index=range(len(self)))
+                store_dict['explored_data'+SparseParameter.IDENTIFIER] = \
+                    ObjectTable(columns=['idx','is_dia'],
+                                index=range(len(self)))
 
                 count = 0
                 for idx,elem in enumerate(self._explored_data):
@@ -1280,8 +1284,10 @@ class SparseParameter(ArrayParameter):
 
                     is_dia=int(len(name_list)==4)
                     rename_list = self._build_names(name_id,is_dia)
-                    store_dict['explored_data']['data_idx'+SparseParameter.IDENTIFIER][idx] = name_id
-                    store_dict['explored_data']['data_is_dia'+SparseParameter.IDENTIFIER][idx] = is_dia
+
+                    store_dict['explored_data'+SparseParameter.IDENTIFIER]['idx'][idx] = name_id
+
+                    store_dict['explored_data'+SparseParameter.IDENTIFIER]['is_dia'][idx] = is_dia
 
 
                     if add:
@@ -1296,7 +1302,7 @@ class SparseParameter(ArrayParameter):
 
     def _build_names(self, name_id, is_dia):
         name_list = self._get_name_list(is_dia)
-        return tuple(['espm_%s_%08d' % (name,name_id)
+        return tuple(['xspm_%s%s%08d' % (name, SparseParameter.IDENTIFIER,name_id)
                                     for name in name_list])
 
 
@@ -1319,24 +1325,22 @@ class SparseParameter(ArrayParameter):
 
 
     def _load(self,load_dict):
-        data_table = load_dict['data']
-        data_name = data_table.columns.tolist()[0]
-        if data_name.endswith(SparseParameter.IDENTIFIER):
-            is_dia =  data_table['data_is_dia'+SparseParameter.IDENTIFIER][0]
+        try:
+            is_dia =  load_dict['data_is_dia'+SparseParameter.IDENTIFIER]
 
             name_list = self._get_name_list(is_dia)
-            rename_list = ['data_%s' % name
+            rename_list = ['data_%s%s' % (name, SparseParameter.IDENTIFIER)
                                  for name in name_list]
 
             data_list = [load_dict[name] for name in rename_list]
             self._data = self._reconstruct_matrix(data_list)
 
 
-            if 'explored_data' in load_dict:
-                explore_table = load_dict['explored_data']
+            if 'explored_data'+SparseParameter.IDENTIFIER in load_dict:
+                explore_table = load_dict['explored_data'+SparseParameter.IDENTIFIER]
 
-                idx_col = explore_table['data_idx'+SparseParameter.IDENTIFIER]
-                dia_col = explore_table['data_is_dia'+SparseParameter.IDENTIFIER]
+                idx_col = explore_table['idx']
+                dia_col = explore_table['is_dia']
 
                 explore_list = []
                 for irun, name_id in enumerate(idx_col):
@@ -1349,7 +1353,7 @@ class SparseParameter(ArrayParameter):
                 self._explored_data=tuple(explore_list)
 
 
-        else:
+        except KeyError:
             super(SparseParameter,self)._load(load_dict)
 
         self._default=self._data
@@ -1375,17 +1379,17 @@ class PickleParameter(Parameter):
         return val
 
     def _build_name(self,name_id):
-        return 'epd_%08d' % name_id
+        return 'xp%s%08d' % (PickleParameter.IDENTIFIER,name_id)
 
     def _store(self):
         store_dict={}
         dump = pickle.dumps(self._data)
-        store_dict['data']=ObjectTable(data={'data'+PickleParameter.IDENTIFIER : ['data_dump']})
+        store_dict['data'+PickleParameter.IDENTIFIER] = dump
 
-        store_dict['data_dump'] = dump
         if self.f_is_array():
 
-            store_dict['explored_data']=ObjectTable(columns=['data'+PickleParameter.IDENTIFIER],index=range(len(self)))
+            store_dict['explored_data'+PickleParameter.IDENTIFIER] = \
+                ObjectTable(columns=['idx'],index=range(len(self)))
 
             smart_dict = {}
             count = 0
@@ -1403,7 +1407,7 @@ class PickleParameter(Parameter):
                     add = True
 
                 name = self._build_name(name_id)
-                store_dict['explored_data']['data'+PickleParameter.IDENTIFIER][idx] = name_id
+                store_dict['explored_data'+PickleParameter.IDENTIFIER]['idx'][idx] = name_id
 
                 if add:
                     store_dict[name] = pickle.dumps(val)
@@ -1414,14 +1418,13 @@ class PickleParameter(Parameter):
 
     def _load(self,load_dict):
 
-        dump_name = load_dict['data']['data'+PickleParameter.IDENTIFIER][0]
-        dump = load_dict[dump_name]
+        dump = load_dict['data'+PickleParameter.IDENTIFIER]
         self._data = pickle.loads(dump)
 
-        if 'explored_data' in load_dict:
-                explore_table = load_dict['explored_data']
+        if 'explored_data'+PickleParameter.IDENTIFIER in load_dict:
+                explore_table = load_dict['explored_data'+PickleParameter.IDENTIFIER]
 
-                name_col = explore_table['data'+PickleParameter.IDENTIFIER]
+                name_col = explore_table['idx']
 
                 explore_list = []
                 for name_id in name_col:
@@ -1457,12 +1460,6 @@ class BaseResult(NNLeafNode):
     '''
     def __init__(self, full_name, comment=''):
         super(BaseResult,self).__init__(full_name,comment, parameter=False)
-
-
-
-
-
-
 
 
 
@@ -1869,6 +1866,39 @@ class Result(BaseResult):
             raise  AttributeError('>>%s<< is not part of your result >>%s<<.' % (name,self.v_full_name))
 
         return self._data[name]
+
+class SparseResult(Result):
+    ''' Adds the support of scipy sparse matrices to the result.
+
+    Supported Formats are csr, csc, bsr, and dia.
+    '''
+
+    def f_set_single(self, name, item):
+        if SparseParameter.IDENTIFIER in name:
+            raise AttributeError('Your result name contains the identifier for sparse matrices,'
+                                 ' please do not use %s in your result names.' %
+                                 SparseParameter.IDENTIFIER)
+        else:
+            super(SparseResult,self).f_set_single(name,item)
+
+    def _store(self):
+        store_dict = {}
+        for key, val in self._data:
+            if SparseParameter._is_supported_matrix(val):
+                store_dict[key+SparseParameter.IDENTIFIER] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
+
+                data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
+                rename_list = ['dsp_%s%s' % (name, SparseParameter.IDENTIFIER)
+                                     for name in name_list]
+
+                is_dia = int(len(rename_list)==4)
+                store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
+            else:
+                store_dict[key]=val
+
+        return  store_dict
+
+
 
 
 

@@ -10,6 +10,7 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import globally
 import logging
+import pypet.petexceptions as pex
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -34,6 +35,65 @@ class EnvironmentTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
 
+
+    def explore_complex_params(self, traj):
+        matrices_csr = []
+        for irun in range(3):
+
+            spsparse_csr = spsp.csr_matrix((111,111))
+            spsparse_csr[3,2+irun] = 44.5*irun
+
+            matrices_csr.append(spsparse_csr)
+
+        matrices_csc = []
+        for irun in range(3):
+
+            spsparse_csc = spsp.csc_matrix((111,111))
+            spsparse_csc[3,2+irun] = 44.5*irun
+
+            matrices_csc.append(spsparse_csc)
+
+        matrices_bsr = []
+        for irun in range(3):
+
+            spsparse_bsr = spsp.csr_matrix((111,111))
+            spsparse_bsr[3,2+irun] = 44.5*irun
+
+            matrices_bsr.append(spsparse_bsr.tobsr())
+
+        matrices_dia = []
+        for irun in range(3):
+
+            spsparse_dia = spsp.csr_matrix((111,111))
+            spsparse_dia[3,2+irun] = 44.5*irun
+
+            matrices_dia.append(spsparse_dia.todia())
+
+
+        self.explore_dict={'string':[np.array(['Uno', 'Dos', 'Tres']),
+                               np.array(['Cinco', 'Seis', 'Siette']),
+                            np.array(['Ocho', 'Nueve', 'Diez'])],
+                           'int':[1,2,3],
+                           'csr_mat' : matrices_csr,
+                           'csc_mat' : matrices_csc,
+                           'bsr_mat' : matrices_bsr,
+                           'dia_mat' : matrices_dia,
+                           'list' : [['fff'],[444444,444,44,4,4,4],[1,2,3,42]]}
+
+        with self.assertRaises(pex.NotUniqueNodeError):
+            traj.f_explore(self.explore_dict)
+
+        self.explore_dict={'Numpy.string':[np.array(['Uno', 'Dos', 'Tres']),
+                               np.array(['Cinco', 'Seis', 'Siette']),
+                            np.array(['Ocho', 'Nueve', 'Diez'])],
+                           'Normal.int':[1,2,3],
+                           'csr_mat' : matrices_csr,
+                           'csc_mat' : matrices_csc,
+                           'bsr_mat' : matrices_bsr,
+                           'dia_mat' : matrices_dia,
+                           'list' : [['fff'],[444444,444,44,4,4,4],[1,2,3,42]]}
+
+        traj.f_explore(self.explore_dict)
 
 
 
@@ -108,7 +168,24 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    @unittest.skipIf(SINGLETEST != [0] and 11 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
+    def test_run_complex(self):
 
+        ###Explore
+        self.explore_complex_params(self.traj)
+
+        ###Test, that you cannot append to data
+        with self.assertRaises(ValueError):
+            self.traj.f_store_item('filename')
+
+        self.make_run()
+
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
 
     def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False):
         ### Load The Trajectory and check if the values are still the same

@@ -26,7 +26,7 @@ traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
 traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
 # Explore the parameters with a cartesian product, but we want to think big this time:
-traj.f_explore(cartesian_product({'x':[float(x) for x in range(25)], 'y':[float(y) for y in range(25)]}))
+traj.f_explore(cartesian_product({'x':[float(x) for x in range(10)], 'y':[float(y) for y in range(10)]}))
 
 #Let's switch off the large overview tables to decrease the file size
 env.f_switch_off_large_overview()

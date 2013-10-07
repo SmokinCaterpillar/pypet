@@ -52,6 +52,15 @@ class BrianParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
+class BrianParameterStringMode(BrianParameterTest):
+
+    def make_params(self):
+        self.param = {}
+        for key, val in self.data.items():
+            self.param[key] = BrianParameter(self.location+'.'+key, val, comment=key)
+            self.param[key].v_storage_mode = BrianParameter.STRING_MODE
+
+
 if __name__ == '__main__':
     unittest.main()
      #cProfile.run('unittest.main()',sort=0)
