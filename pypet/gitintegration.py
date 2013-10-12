@@ -12,10 +12,13 @@ def add_commit_variables(traj, new_commit, repo_folder, message):
     git_time = 'time'
     git_message = 'message'
 
-    git_time_value = time.strftime('%Y_%m_%d_%Hh%Mm%Ss', time.gmtime(new_commit.committed_date))
+    git_time_value = time.strftime('%Y_%m_%d_%Hh%Mm%Ss', time.localtime(new_commit.committed_date))
 
-    git_commit_name = 'commit_%s_' % str( new_commit.hexsha[0:7])
+    git_short_name = str( new_commit.hexsha[0:7])
+    git_commit_name = 'commit_%s_' % git_short_name
     git_commit_name = 'git.' + git_commit_name + git_time_value +'.'
+
+
 
 
 
@@ -40,10 +43,10 @@ def add_commit_variables(traj, new_commit, repo_folder, message):
                             comment='The commit message')
 
 
-    traj.f_store_items([hex,rev,repo,date,formatted_time,msg])
+    #traj.f_store_items([hex,rev,repo,date,formatted_time,msg])
 
 def make_git_commit(environment, git_repository, user_message):
-    ''' Makes a commit returns True in case of Success otherwise False.
+    ''' Makes a commit returns the sha1 code of the commit otherwise False
     '''
 
     import git
@@ -80,4 +83,4 @@ def make_git_commit(environment, git_repository, user_message):
 
 
 
-    return True
+    return new_commit.hexsha

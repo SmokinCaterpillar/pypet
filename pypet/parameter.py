@@ -5,7 +5,7 @@ import logging
 import petexceptions as pex
 import numpy as np
 from pypet.utils.helpful_functions import nested_equal, copydoc
-from pypet import globally
+from pypet import pypetconstants
 from pandas import DataFrame
 from pypet.naturalnaming import NNLeafNode
 import scipy.sparse as spsp
@@ -186,8 +186,8 @@ class BaseParameter(NNLeafNode):
         try :
             restr= str(self.f_get())
 
-            if len(restr) >= globally.HDF5_STRCOL_MAX_VALUE_LENGTH:
-                restr=restr[0:globally.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
+            if len(restr) >= pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                restr=restr[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
 
             return restr
         except Exception, e:
@@ -200,7 +200,7 @@ class BaseParameter(NNLeafNode):
         ''' Checks whether the data is supported by the parameter.
 
         '''
-        return type(data) in globally.PARAMETER_SUPPORTED_DATA
+        return type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA
 
     def _equal_values(self,val1,val2):
         ''' Checks if the parameter considers two values as equal.
@@ -627,7 +627,7 @@ class Parameter(BaseParameter):
 
             for item in data:
                 old_type = None
-                if not type(item) in globally.PARAMETER_SUPPORTED_DATA:
+                if not type(item) in pypetconstants.PARAMETER_SUPPORTED_DATA:
                     return False
                 if not old_type is None and old_type != type(item):
                     return False
@@ -645,7 +645,7 @@ class Parameter(BaseParameter):
         else:
             dtype=type(data)
 
-        return dtype in globally.PARAMETER_SUPPORTED_DATA
+        return dtype in pypetconstants.PARAMETER_SUPPORTED_DATA
 
 
     def _values_of_same_type(self,val1, val2):
@@ -1459,8 +1459,8 @@ class Result(BaseResult):
             for key,val in iter(sorted(self._data.items())):
                 resstr+= '%s=%s, ' % (key, str(val))
 
-                if len(resstr) >= globally.HDF5_STRCOL_MAX_VALUE_LENGTH:
-                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
+                if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                    resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
                     return resstr
 
             resstr=resstr[0:-2]
@@ -1468,8 +1468,8 @@ class Result(BaseResult):
         else:
             resstr = ', '.join(self._data.keys())
 
-            if len(resstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                    resstr = resstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+            if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                    resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
 
             return resstr
 
@@ -1650,8 +1650,8 @@ class Result(BaseResult):
             self.v_comment= item
 
         if type(item) in ((np.ndarray,ObjectTable,DataFrame,dict,tuple,list,np.matrix)+
-                             globally.PARAMETER_SUPPORTED_DATA):
-            if (not type(item) in globally.PARAMETER_SUPPORTED_DATA) and len(item) == 0:
+                             pypetconstants.PARAMETER_SUPPORTED_DATA):
+            if (not type(item) in pypetconstants.PARAMETER_SUPPORTED_DATA) and len(item) == 0:
                 self._logger.warning('The Item >>%s<< is _empty.' % name)
 
             self._data[name] = item

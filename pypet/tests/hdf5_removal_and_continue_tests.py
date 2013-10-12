@@ -16,7 +16,7 @@ from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import globally
+from pypet import pypetconstants
 import logging
 from pypet.utils.helpful_functions import flatten_dictionary
 from pypet.utils.comparisons import results_equal,parameters_equal
@@ -117,9 +117,9 @@ class ContinueTest(TrajectoryComparator):
 
         for irun in range(len(self.filenames)):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=globally.UPDATE_DATA,
-                                    load_derived_parameters=globally.UPDATE_DATA,
-                                    load_results=globally.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
@@ -175,8 +175,8 @@ class ContinueTest(TrajectoryComparator):
 
         for irun in range(len(self.filenames)):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load_child('results',recursive=True,load_data=globally.UPDATE_DATA)
-            self.trajs[irun].f_load_child('derived_parameters',recursive=True,load_data=globally.UPDATE_DATA)
+            self.trajs[irun].f_load_child('results',recursive=True,load_data=pypetconstants.UPDATE_DATA)
+            self.trajs[irun].f_load_child('derived_parameters',recursive=True,load_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 

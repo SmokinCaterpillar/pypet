@@ -14,7 +14,7 @@ import numpy as np
 from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import globally
+from pypet import pypetconstants
 import logging
 import cProfile
 from pypet.utils.helpful_functions import flatten_dictionary
@@ -122,9 +122,9 @@ class MergeTest(TrajectoryComparator):
 
         for irun in [0,1,2]:
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=globally.UPDATE_DATA,
-                                    load_derived_parameters=globally.UPDATE_DATA,
-                                    load_results=globally.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
 
 
         self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
@@ -135,9 +135,9 @@ class MergeTest(TrajectoryComparator):
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial')
-        merged_traj.f_load(load_parameters=globally.UPDATE_DATA,
-                                    load_derived_parameters=globally.UPDATE_DATA,
-                                    load_results=globally.UPDATE_DATA)
+        merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
@@ -170,9 +170,9 @@ class MergeTest(TrajectoryComparator):
 
         for irun in [0,1,2]:
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=globally.UPDATE_DATA,
-                                    load_derived_parameters=globally.UPDATE_DATA,
-                                    load_results=globally.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
 
 
         self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
@@ -185,8 +185,8 @@ class MergeTest(TrajectoryComparator):
         merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial',
                             backup_filename=1)
         merged_traj.f_update_skeleton()
-        merged_traj.f_load(load_results=globally.UPDATE_DATA,load_derived_parameters=globally.UPDATE_DATA,
-                           load_parameters=globally.UPDATE_DATA)
+        merged_traj.f_load(load_results=pypetconstants.UPDATE_DATA,load_derived_parameters=pypetconstants.UPDATE_DATA,
+                           load_parameters=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
@@ -220,7 +220,7 @@ class MergeTest(TrajectoryComparator):
 
         for irun in range(ntrajs):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 
 
         self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
@@ -232,7 +232,7 @@ class MergeTest(TrajectoryComparator):
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
-        merged_traj.f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
+        merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
@@ -264,7 +264,7 @@ class MergeTest(TrajectoryComparator):
 
         for irun in [0,1]:
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 
 
         self.trajs[0].f_add_result('rrororo33o333o3o3oo3',1234567890)
@@ -276,7 +276,7 @@ class MergeTest(TrajectoryComparator):
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
-        merged_traj.f_load(load_parameters=globally.UPDATE_DATA, load_derived_parameters=globally.UPDATE_DATA, load_results=globally.UPDATE_DATA)
+        merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[1])
 
@@ -369,7 +369,7 @@ class TestMergeResultsSort(ResultSortTest):
 
         self.assertTrue(len(self.traj)==len1+len2)
 
-        self.traj.f_load(load_results=globally.UPDATE_DATA)
+        self.traj.f_load(load_results=pypetconstants.UPDATE_DATA)
         self.check_if_z_is_correct(self.traj)
 
     @unittest.skipIf(SINGLETEST != [0] and 8 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
@@ -391,7 +391,7 @@ class TestMergeResultsSort(ResultSortTest):
 
         self.assertTrue(len(self.traj)==6)
 
-        self.traj.f_load(load_results=globally.UPDATE_DATA)
+        self.traj.f_load(load_results=pypetconstants.UPDATE_DATA)
         self.check_if_z_is_correct(self.traj)
 
     def explore(self,traj):

@@ -15,8 +15,12 @@ except:
     import pickle
 import multiprocessing as multip
 import traceback
+import hashlib
+import time
+import datetime
+import pypet
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
-from  pypet import globally
+from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
 
 def _single_run(args):
@@ -322,6 +326,10 @@ class Environment(object):
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
+                 multiproc=0,
+                 ncores=1,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 continuable=1,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
@@ -330,16 +338,34 @@ class Environment(object):
 
 
 
+
+        name = 'environment'
+
+        self._git_repository = git_repository
+        self._git_message=git_message
+
         #Acquiring the current time
         if isinstance(trajectory,basestring):
             self._traj = Trajectory(trajectory,
                                     dynamically_imported_classes=dynamically_imported_classes,
                                     comment=comment)
+
+            self._timestamp = self.v_trajectory.v_timestamp
+            self._time = self.v_trajectory.v_time
+
         else:
             self._traj = trajectory
 
+            init_time = time.time()
 
-        if self._traj.v_storage_service is not None and filename is None:
+            formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+
+            self._timestamp = init_time
+
+            self._time = formatted_time
+
+
+        if self.v_trajectory.v_storage_service is not None and filename is None:
             self._file_title=self._traj.v_storage_service._file_title
             self._filename=self._traj.v_storage_service._filename
         else:
@@ -353,6 +379,19 @@ class Environment(object):
                 self._filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
             else:
                 self._filename=filename
+
+        self._use_hdf5 = use_hdf5
+        if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
+            self._add_hdf5_storage_service()
+
+        if self._git_repository is not None:
+            self._hexsha=make_git_commit(self,self._git_repository, self._git_message)
+        else:
+            self._hexsha=hashlib.sha1(self.v_trajectory.v_name+str(self.v_timestamp)).hexdigest()
+
+        short_hexsha= self._hexsha[0:7]
+
+        self._name = name+'_'+str(short_hexsha)+'_'+self._time
 
 
 
@@ -376,16 +415,16 @@ class Environment(object):
 
         storage_service = self._traj.v_storage_service
 
-        if not self._traj.f_contains('config.environment.ncores'):
-            self._traj.f_add_config('environment.ncores',1, comment='Number of processors in case of multiprocessing')
+        config_name='environment.%s.ncores' % self.v_name
+        self._traj.f_add_config(config_name,ncores, comment='Number of processors in case of multiprocessing')
 
-        if not self._traj.f_contains('config.environment.multiproc'):
-            self._traj.f_add_config('environment.multiproc',0, comment= 'Whether or not to use multiprocessing. If yes'
+        config_name='environment.%s.multiproc' % self.v_name
+        self._traj.f_add_config(config_name, multiproc, comment= 'Whether or not to use multiprocessing. If yes'
                                                             ' than everything must be pickable.')
 
 
-        if not self._traj.f_contains('config.environment.wrap_mode'):
-            self._traj.f_add_config('environment.wrap_mode',globally.WRAP_MODE_LOCK,
+        config_name='environment.%s.wrap_mode' % self.v_name
+        self._traj.f_add_config(config_name,wrap_mode,
                                     comment ='Multiprocessing mode (if multiproc), '
                                              'i.e. whether to use QUEUE '
                                              'or LOCK'
@@ -393,56 +432,61 @@ class Environment(object):
                                              'If you do not want wrap the storage service'
                                              ' use wrap_mode=NONE')
 
+        config_name='environment.%s.timestamp' % self.v_name
+        self._traj.f_add_config(config_name,self.v_timestamp,
+                                    comment ='Timesamp of environment creation.')
+
+        config_name='environment.%s.time' % self.v_name
+        self._traj.f_add_config(config_name,self.v_time,
+                                    comment ='Human readable time string of environment creation.')
+
+        config_name='environment.%s.hexsha' % self.v_name
+        self._traj.f_add_config(config_name,self.v_hexsha,
+                                    comment ='SHA-1 identifier of the environment')
+
+        config_name='environment.%s.version' % self.v_name
+        self._traj.f_add_config(config_name,pypet.__version__,
+                                    comment ='The version of pypet you used to manage your data.')
 
 
-        if not self._traj.f_contains('config.environment.continuable'):
-            self._traj.f_add_config('environment.continuable', 1, comment='Whether or not a continue file should'
+
+        config_name='environment.%s.continuable' % self._name
+        self._traj.f_add_config(config_name, continuable, comment='Whether or not a continue file should'
                                                               ' be created. If yes, everything must be'
                                                               ' pickable.')
 
-        self._use_hdf5 = use_hdf5
 
-        if self._use_hdf5:
+        if self._use_hdf5 and not self.v_trajectory.v_stored:
             for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
 
-                if not self._traj.f_contains(config_name):
-                    self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
+                self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
                                                                   'table with that name.')
 
-            if not self._traj.f_contains('config.hdf5.overview.explored_parameters_runs'):
-                self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
+
+            self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
                                         comment='If there are overview tables about the '
                                                 'explored parameters in each run.')
 
-            if not self._traj.f_contains('config.hdf5.purge_duplicate_comments'):
-                self._traj.f_add_config('hdf5.purge_duplicate_comments',1,'Whether comments of results and'
+
+            self._traj.f_add_config('hdf5.purge_duplicate_comments',1,'Whether comments of results and'
                                                             ' derived parameters should only'
                                                             'be stored for the very first instance.'
                                                             ' Works only if the summary tables are'
                                                             ' active.')
 
-            # if not self._traj.f_contains('config.hdf5.filename') :
-            #     self._traj.f_add_config('hdf5.filename',filename, comment='Name of hdf5 file')
-            #
-            # if not self._traj.f_contains('config.hdf5.file_title'):
-            #     self._traj.f_add_config('hdf5.file_title', file_title, comment='Title of hdf5 file')
 
-            if not self._traj.f_contains('config.hdf5.results_per_run'):
-                self._traj.f_add_config('hdf5.results_per_run', 0,
+
+            self._traj.f_add_config('hdf5.results_per_run', 0,
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance.')
 
-            if not self._traj.f_contains('config.hdf5.derived_parameters_per_run'):
-                self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
+
+            self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance.')
 
 
 
-            self._add_hdf5_storage_service()
-
-        self._git_repository = git_repository
-        self._git_message=git_message
 
 
         self._logger.info('Environment initialized.')
@@ -509,21 +553,61 @@ class Environment(object):
         kwargs = continue_dict['kwargs']
         self._traj = continue_dict['trajectory']
         self._traj.v_full_copy = continue_dict['full_copy']
-        self._traj.f_load(load_parameters=globally.LOAD_NOTHING,
-             load_derived_parameters=globally.LOAD_NOTHING,
-             load_results=globally.LOAD_NOTHING)
+        self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
+             load_derived_parameters=pypetconstants.LOAD_NOTHING,
+             load_results=pypetconstants.LOAD_NOTHING)
+
 
 
         self._traj._remove_incomplete_runs()
+
+        self._add_numer_of_runs('runs_continued','The number of runs that will be executed'
+                                                   ' for this continued run')
         self._do_run(runfunc,*args,**kwargs)
 
 
+    def _add_numer_of_runs(self, name, comment):
+        count = 0
+        for run_name, run_dict in self._traj.f_get_run_information(copy=False).iteritems():
+            if not run_dict['completed']:
+                count +=1
+
+        config_name='environment.%s.%s' % (self.v_name, name)
+        self._traj.f_add_config(config_name, count,
+                                    comment =comment)
+
+        return config_name
 
     @ property
     def v_trajectory(self):
         ''' The trajectory of the Environment
         '''
         return self._traj
+
+    @property
+    def v_hexsha(self):
+        '''The SHA1 identifier of the environment. It is identical to the SHA1 of the git
+        commit. If version control is not used, the environment hash is computed from the
+        trajectory name and the current timestamp.'''
+        return self._hexsha
+
+    @property
+    def v_time(self):
+        ''' Time of the creation of the environmnet, human readable.
+        '''
+        return self._time
+
+    @property
+    def v_timestamp(self):
+        '''Time of creation as python datetime float'''
+        return self._timestamp
+
+    @property
+    def v_name(self):
+        ''' Name of the Environment
+        '''
+        return self._name
+
 
     def _add_hdf5_storage_service(self):
         ''' Adds the standard HDF5 storage service to the trajectory.
@@ -564,6 +648,16 @@ class Environment(object):
                     raise RuntimeError('You can only use the reduce comments if you enable '
                                        'the summary tables.')
 
+        count = 0
+        for run_name, run_dict in self._traj.f_get_run_information(copy=False).iteritems():
+            if not run_dict['completed']:
+                count +=1
+
+        config_name='environment.%s.runs' % self.v_name
+        self._traj.f_add_config(config_name, count,
+                                    comment ='The number of single runs to be executed.')
+
+
         self._traj._prepare_experiment()
 
         if continuable:
@@ -603,8 +697,7 @@ class Environment(object):
 
     def _do_run(self, runfunc, *args, **kwargs):
 
-        if self._git_repository is not None:
-            make_git_commit(self,self._git_repository, self._git_message)
+
 
         log_path = self._log_path
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
@@ -612,9 +705,9 @@ class Environment(object):
 
         self._storage_service = self._traj.v_storage_service
 
-        if multiproc and mode != globally.WRAP_MODE_NONE:
+        if multiproc and mode != pypetconstants.WRAP_MODE_NONE:
 
-            if mode == globally.WRAP_MODE_QUEUE:
+            if mode == pypetconstants.WRAP_MODE_QUEUE:
                 manager = multip.Manager()
                 queue = manager.Queue()
                 self._logger.info('Starting the Storage Queue!')
@@ -628,7 +721,7 @@ class Environment(object):
                 queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
-            elif mode == globally.WRAP_MODE_LOCK:
+            elif mode == pypetconstants.WRAP_MODE_LOCK:
                 manager = multip.Manager()
                 lock = manager.Lock()
                 queue = None
@@ -638,7 +731,7 @@ class Environment(object):
 
             else:
                 raise RuntimeError('The mutliprocessing mode %s, you chose is not supported, use %s or %s.'
-                                    %(globally.WRAP_MODE_QUEUE, globally.WRAP_MODE_LOCK))
+                                    %(pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_LOCK))
 
 
             ncores =  self._traj.f_get('config.ncores').f_get()
@@ -665,7 +758,7 @@ class Environment(object):
             mpool.close()
             mpool.join()
 
-            if mode == globally.WRAP_MODE_QUEUE:
+            if mode == pypetconstants.WRAP_MODE_QUEUE:
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 

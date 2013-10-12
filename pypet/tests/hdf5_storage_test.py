@@ -8,7 +8,7 @@ from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import globally
+from pypet import pypetconstants
 import logging
 import pypet.petexceptions as pex
 

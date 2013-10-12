@@ -1,6 +1,6 @@
 __author__ = 'robert'
 
-from pypet import globally
+from pypet import pypetconstants
 
 
 class Annotations(object):
@@ -96,8 +96,8 @@ class Annotations(object):
         resstr = ''
         for key in sorted(self.__dict__.keys()):
             resstr+='%s=%s, ' % (key,self.__dict__[key])
-            if len(resstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                resstr=resstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+            if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                resstr=resstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
                 return resstr
 
         if len(resstr)>2:

@@ -8,7 +8,7 @@ import logging
 import tables as pt
 import os
 import numpy as np
-from pypet import globally
+from pypet import pypetconstants
 import pypet.petexceptions as pex
 
 
@@ -194,7 +194,7 @@ class HDF5StorageService(StorageService):
 
     For example:
 
-    >>> HDF5StorageService.load(globally.LEAF, myresult, load_only=['spikestimes','nspikes'])
+    >>> HDF5StorageService.load(pypetconstants.LEAF, myresult, load_only=['spikestimes','nspikes'])
 
     For a list of supported items see :func:`~pypet.storageservice.HDF5StorageService.store`
     and :func:`~pypet.storageservice.HDF5StorageService.load`.
@@ -318,7 +318,7 @@ class HDF5StorageService(StorageService):
     }
     ''' Mapping from object type to storage flag'''
 
-    for item in globally.PARAMETER_SUPPORTED_DATA:
+    for item in pypetconstants.PARAMETER_SUPPORTED_DATA:
         TYPE_FLAG_MAPPING[item]=ARRAY
 
 
@@ -445,20 +445,20 @@ class HDF5StorageService(StorageService):
             opened = self._srvc_opening_routine('r')
 
 
-            if msg == globally.TRAJECTORY:
+            if msg == pypetconstants.TRAJECTORY:
                 self._trj_load_trajectory(msg,stuff_to_load,*args,**kwargs)
 
 
-            elif msg == globally.LEAF:
+            elif msg == pypetconstants.LEAF:
                 self._prm_load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
-            elif (msg == globally.GROUP):
+            elif (msg == pypetconstants.GROUP):
                 self._node_load_node(stuff_to_load,*args,**kwargs)
 
-            elif msg == globally.TREE:
+            elif msg == pypetconstants.TREE:
                 self._tree_load_tree(stuff_to_load,*args,**kwargs)
 
-            elif msg ==globally.LIST:
+            elif msg ==pypetconstants.LIST:
                 self._srvc_load_several_items(stuff_to_load,*args,**kwargs)
 
             else:
@@ -696,40 +696,40 @@ class HDF5StorageService(StorageService):
 
             opened= self._srvc_opening_routine('a',msg)
 
-            if msg == globally.MERGE:
+            if msg == pypetconstants.MERGE:
 
                 self._trj_merge_trajectories(*args,**kwargs)
 
-            elif msg == globally.BACKUP:
+            elif msg == pypetconstants.BACKUP:
                 self._trj_backup_trajectory(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.PREPARE_MERGE:
+            elif msg == pypetconstants.PREPARE_MERGE:
                 self._trj_update_trajectory(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.TRAJECTORY:
+            elif msg == pypetconstants.TRAJECTORY:
 
                 self._trj_store_trajectory(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.SINGLE_RUN:
+            elif msg == pypetconstants.SINGLE_RUN:
 
                 self._srn_store_single_run(stuff_to_store,*args,**kwargs)
 
-            elif msg in (globally.LEAF, globally.UPDATE_LEAF):
+            elif msg in (pypetconstants.LEAF, pypetconstants.UPDATE_LEAF):
                 self._prm_store_parameter_or_result(msg,stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.REMOVE:
+            elif msg == pypetconstants.REMOVE:
                 self._all_remove_parameter_or_result_or_group(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.GROUP:
+            elif msg == pypetconstants.GROUP:
                 self._node_store_node(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.REMOVE_INCOMPLETE_RUNS:
+            elif msg == pypetconstants.REMOVE_INCOMPLETE_RUNS:
                 self._trj_remove_incomplete_runs(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.TREE:
+            elif msg == pypetconstants.TREE:
                 self._tree_store_tree(stuff_to_store,*args,**kwargs)
 
-            elif msg == globally.LIST:
+            elif msg == pypetconstants.LIST:
                 self._srvc_store_several_items(stuff_to_store,*args,**kwargs)
 
             else:
@@ -788,7 +788,7 @@ class HDF5StorageService(StorageService):
                                                  title=self._file_title)
 
                     if not ('/'+self._trajectory_name) in self._hdf5file:
-                        if not msg == globally.TRAJECTORY:
+                        if not msg == pypetconstants.TRAJECTORY:
                             raise ValueError('Your trajectory cannot be found in the hdf5file, '
                                              'please use >>traj.store()<< before storing anyhting else.')
 
@@ -927,6 +927,7 @@ class HDF5StorageService(StorageService):
         self._logger.info('Finished backup of %s.' % traj.v_name)
 
     def _trj_copy_table_entries(self,rename_dict,other_trajectory_name):
+        #TODO change merge!
         self._trj_copy_table_entries_from_table_name('result_table',rename_dict,other_trajectory_name)
         self._trj_copy_table_entries_from_table_name('derived_parameter_table',rename_dict,other_trajectory_name)
 
@@ -1064,7 +1065,7 @@ class HDF5StorageService(StorageService):
         ### Store the parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
-            self.store(globally.UPDATE_LEAF,param)
+            self.store(pypetconstants.UPDATE_LEAF,param)
 
         # ### Store the changed groups
         # for group_node in changed_groups:
@@ -1168,13 +1169,13 @@ class HDF5StorageService(StorageService):
 
 
 
-        if (as_new and (load_derived_params != globally.LOAD_NOTHING or load_results !=
-                        globally.LOAD_NOTHING)):
+        if (as_new and (load_derived_params != pypetconstants.LOAD_NOTHING or load_results !=
+                        pypetconstants.LOAD_NOTHING)):
             raise ValueError('You cannot load a trajectory as new and load the derived '
                                  'parameters and results. Only parameters are allowed.')
 
 
-        if as_new and load_params != globally.LOAD_DATA:
+        if as_new and load_params != pypetconstants.LOAD_DATA:
             raise ValueError('You cannot load the trajectory as new and not load the data of '
                                  'the parameters.')
 
@@ -1185,7 +1186,7 @@ class HDF5StorageService(StorageService):
                              ('derived_parameters',load_derived_params),
                              ('results',load_results) ):
 
-            if loading != globally.LOAD_NOTHING:
+            if loading != pypetconstants.LOAD_NOTHING:
                 self._trj_load_sub_branch(traj,traj,what,self._trajectory_group,loading)
 
 
@@ -1247,7 +1248,7 @@ class HDF5StorageService(StorageService):
             else:
                 traj_node=traj_node._children[name]
 
-            if load_annotations or load_data in [globally.LOAD_SKELETON,globally.LOAD_DATA]:
+            if load_annotations or load_data in [pypetconstants.LOAD_SKELETON,pypetconstants.LOAD_DATA]:
                 self._ann_load_annotations(traj_node,hdf5_group)
 
         hdf5_group = getattr(hdf5_group,leaf_name)
@@ -1270,10 +1271,10 @@ class HDF5StorageService(StorageService):
         '''
 
 
-        descriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH, pos=0),
+        descriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH, pos=0),
                          'time': pt.StringCol(len(traj.v_time), pos=1),
                          'timestamp' : pt.FloatCol(pos=3),
-                         'comment':  pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH, pos=4),
+                         'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH, pos=4),
                          'length':pt.IntCol(pos=2)}
                          # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
 
@@ -1286,12 +1287,12 @@ class HDF5StorageService(StorageService):
                                     flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW))
 
 
-        rundescription_dict = {'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH,pos=1),
+        rundescription_dict = {'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=1),
                          'time': pt.StringCol(len(traj.v_time),pos=2),
                          'timestamp' : pt.FloatCol(pos=3),
                          'idx' : pt.IntCol(pos=0),
                          'completed' : pt.IntCol(pos=5),
-                         'parameter_summary' : pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                         'parameter_summary' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
                                                             pos=4)}
 
         runtable = self._all_get_or_create_table(where=self._overview_group,
@@ -1322,12 +1323,12 @@ class HDF5StorageService(StorageService):
             paramdescriptiondict ={}
             expectedrows=0
 
-            paramdescriptiondict['location']= pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH,
+            paramdescriptiondict['location']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH,
                                                            pos=1)
-            paramdescriptiondict['name']= pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH,
+            paramdescriptiondict['name']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,
                                                        pos=0)
             if not table_name == 'explored_parameters':
-                paramdescriptiondict['value']=pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH)
+                paramdescriptiondict['value']=pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
             if table_name == 'config':
                 expectedrows= len(traj._config)
@@ -1336,7 +1337,7 @@ class HDF5StorageService(StorageService):
                 expectedrows= len(traj._parameters)
 
             if table_name == 'explored_parameters':
-                paramdescriptiondict['array']= pt.StringCol(globally.HDF5_STRCOL_MAX_ARRAY_LENGTH)
+                paramdescriptiondict['array']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH)
                 expectedrows=len(traj._explored_parameters)
 
             if table_name == 'results_trajectory':
@@ -1353,7 +1354,7 @@ class HDF5StorageService(StorageService):
                 if table_name.startswith('derived') or table_name.endswith('parameters'):
                     paramdescriptiondict['length']= pt.IntCol()
 
-                paramdescriptiondict['comment']= pt.StringCol(globally.HDF5_STRCOL_MAX_COMMENT_LENGTH)
+                paramdescriptiondict['comment']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH)
 
 
 
@@ -1439,16 +1440,16 @@ class HDF5StorageService(StorageService):
 
         self._ann_store_annotations(traj,self._trajectory_group)
 
-        self._tree_store_recursively(globally.LEAF,traj.config,self._trajectory_group)
+        self._tree_store_recursively(pypetconstants.LEAF,traj.config,self._trajectory_group)
         ## If we extended a trajectory we want to call update in any case
         if traj._stored:
-            msg = globally.UPDATE_LEAF
+            msg = pypetconstants.UPDATE_LEAF
         else:
-            msg = globally.LEAF
+            msg = pypetconstants.LEAF
 
         self._tree_store_recursively(msg,traj.parameters,self._trajectory_group)
-        self._tree_store_recursively(globally.LEAF,traj.derived_parameters,self._trajectory_group)
-        self._tree_store_recursively(globally.LEAF,traj.results,self._trajectory_group)
+        self._tree_store_recursively(pypetconstants.LEAF,traj.derived_parameters,self._trajectory_group)
+        self._tree_store_recursively(pypetconstants.LEAF,traj.results,self._trajectory_group)
 
 
         self._logger.info('Finished storing Trajectory.')
@@ -1487,7 +1488,7 @@ class HDF5StorageService(StorageService):
     ########################  Storing Sub Trees ###########################################
 
     def _tree_load_recursively(self,traj, parent_traj_node, hdf5group,
-                              load_data=globally.UPDATE_SKELETON, recursive=True):
+                              load_data=pypetconstants.UPDATE_SKELETON, recursive=True):
 
         path_name = parent_traj_node.v_full_name
         name = hdf5group._v_name
@@ -1509,11 +1510,11 @@ class HDF5StorageService(StorageService):
             if in_trajectory:
                 instance=parent_traj_node._children[name]
 
-                if load_data == globally.UPDATE_SKELETON :
+                if load_data == pypetconstants.UPDATE_SKELETON :
                     return
 
                 if (not instance.f_is_empty()
-                    and load_data == globally.UPDATE_DATA):
+                    and load_data == pypetconstants.UPDATE_DATA):
                     return
 
                 # if load_data == globally.LOAD_ANNOTATIONS:
@@ -1521,7 +1522,7 @@ class HDF5StorageService(StorageService):
                 #     return
 
 
-            if not in_trajectory or load_data==globally.LOAD_DATA:
+            if not in_trajectory or load_data==pypetconstants.LOAD_DATA:
                 class_name = self._all_get_from_attrs(hdf5group,HDF5StorageService.CLASS_NAME)
                 comment = self._all_get_from_attrs(hdf5group,HDF5StorageService.COMMENT)
 
@@ -1547,7 +1548,7 @@ class HDF5StorageService(StorageService):
 
 
 
-            if load_data in [globally.LOAD_DATA, globally.UPDATE_DATA]:
+            if load_data in [pypetconstants.LOAD_DATA, pypetconstants.UPDATE_DATA]:
                 self._prm_load_parameter_or_result(instance,_hdf5_group=hdf5group)
         else:
 
@@ -1559,7 +1560,7 @@ class HDF5StorageService(StorageService):
                 new_traj_node = parent_traj_node._children[name]
                 newly_created=False
 
-            if (load_data in [globally.LOAD_DATA, globally.LOAD_SKELETON] or
+            if (load_data in [pypetconstants.LOAD_DATA, pypetconstants.LOAD_SKELETON] or
                                             newly_created):
 
                 self._ann_load_annotations(new_traj_node,node=hdf5group)
@@ -1584,7 +1585,7 @@ class HDF5StorageService(StorageService):
             except AttributeError:
                 new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
 
-            msg = globally.UPDATE_LEAF
+            msg = pypetconstants.UPDATE_LEAF
         else:
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
@@ -1619,7 +1620,7 @@ class HDF5StorageService(StorageService):
                                (traj_node.v_name,hdf5_location))
             raise
 
-        self._tree_store_recursively(globally.LEAF,traj_node,parent_hdf5_node,recursive)
+        self._tree_store_recursively(pypetconstants.LEAF,traj_node,parent_hdf5_node,recursive)
 
     def _tree_load_tree(self,parent_traj_node,child_name,recursive,load_data,trajectory):
 
@@ -1661,7 +1662,7 @@ class HDF5StorageService(StorageService):
         for branch in ('results','derived_parameters'):
             branch_name = branch +'.'+single_run.v_name
             if branch_name in single_run:
-                self._trj_store_sub_branch(globally.LEAF,single_run,
+                self._trj_store_sub_branch(pypetconstants.LEAF,single_run,
                                            branch_name,self._trajectory_group)
 
         try:
@@ -1696,8 +1697,8 @@ class HDF5StorageService(StorageService):
         ''' Stores the explored parameters as a Node in the HDF5File under the results nodes for easier comprehension of the hdf5file.
         '''
 
-        paramdescriptiondict={'name': pt.StringCol(globally.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'value' :pt.StringCol(globally.HDF5_STRCOL_MAX_VALUE_LENGTH)}
+        paramdescriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH),
+                                'value' :pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)}
 
         where = 'results.'+name
 
@@ -1730,8 +1731,8 @@ class HDF5StorageService(StorageService):
                 runsummary = runsummary + ',   '
 
             valstr = expparam.f_val_to_str()
-            if len(valstr) >= globally.HDF5_STRCOL_MAX_LOCATION_LENGTH:
-                valstr = valstr[0:globally.HDF5_STRCOL_MAX_LOCATION_LENGTH-3]
+            if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+                valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH-3]
                 valstr+='...'
             runsummary = runsummary + expparam.v_name + ': ' +valstr
 
@@ -1884,7 +1885,7 @@ class HDF5StorageService(StorageService):
 
                 if not typestr is None:
                     if not typestr == repr(type(data)):
-                        data = globally.PARAMETERTYPEDICT[typestr](data)
+                        data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
                         type_changed = True
 
 
@@ -1906,7 +1907,7 @@ class HDF5StorageService(StorageService):
                 if not first_item is None:
                     if not typestr == repr(type(data)):
                         for idx,item in enumerate(data):
-                            data[idx] = globally.PARAMETERTYPEDICT[typestr](item)
+                            data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
                             type_changed = True
 
 
@@ -2058,23 +2059,23 @@ class HDF5StorageService(StorageService):
     @staticmethod
     def _all_get_value_string(item, logger):
         valstr = item.f_val_to_str()
-        if len(valstr) >= globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+        if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
             logger.debug('The value string >>%s<< was too long I truncated it to'
                                  ' %d characters' %
-                                 (valstr,globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-            valstr = valstr[0:globally.HDF5_STRCOL_MAX_COMMENT_LENGTH]
+                                 (valstr,pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+            valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH]
 
         return valstr
 
     @staticmethod
     def _all_get_array_str(item, logger):
         arraystr = str(item.f_get_array())
-        if len(arraystr) >= globally.HDF5_STRCOL_MAX_ARRAY_LENGTH:
+        if len(arraystr) >= pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH:
             logger.debug('The array string >>%s<< was too long I truncated it to'
                                  ' %d characters' %
-                                 (arraystr,globally.HDF5_STRCOL_MAX_ARRAY_LENGTH))
+                                 (arraystr,pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH))
 
-            arraystr=arraystr[0:globally.HDF5_STRCOL_MAX_ARRAY_LENGTH]
+            arraystr=arraystr[0:pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH]
 
         return arraystr
 
@@ -2204,8 +2205,8 @@ class HDF5StorageService(StorageService):
 
         if where in['derived_parameters','results']:
             creator_name = instance.v_creator_name
-            if creator_name.startswith(globally.RUN_NAME):
-                run_mask = globally.RUN_NAME+'X'*globally.FORMAT_ZEROS
+            if creator_name.startswith(pypetconstants.RUN_NAME):
+                run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
                 split_name[1]=run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
@@ -2234,7 +2235,7 @@ class HDF5StorageService(StorageService):
 
     def _prm_add_meta_info(self,instance,group,msg):
 
-        if msg == globally.UPDATE_LEAF:
+        if msg == pypetconstants.UPDATE_LEAF:
             flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW)
         else:
             flags=(HDF5StorageService.ADD_ROW,)
@@ -2283,7 +2284,7 @@ class HDF5StorageService(StorageService):
         else:
             newly_created = False
 
-        if msg == globally.UPDATE_LEAF or newly_created:
+        if msg == pypetconstants.UPDATE_LEAF or newly_created:
             self._prm_add_meta_info(instance,_hdf5_group,msg)
 
         ## Store annotations
@@ -2304,7 +2305,7 @@ class HDF5StorageService(StorageService):
 
 
         for key, data_to_store in store_dict.items():
-            if (not instance.v_parameter or msg == globally.LEAF) and  key in _hdf5_group:
+            if (not instance.v_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
                 self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
                                    (key, fullname))
 
@@ -2493,13 +2494,13 @@ class HDF5StorageService(StorageService):
                 _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
                                                HDF5StorageService.COLL_MATRIX)
 
-            elif type(data) in globally.PARAMETER_SUPPORTED_DATA:
+            elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
                 _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
                                 HDF5StorageService.COLL_SCALAR)
 
                 strtype = repr(type(data))
 
-                if not strtype in globally.PARAMETERTYPEDICT:
+                if not strtype in pypetconstants.PARAMETERTYPEDICT:
                     raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
                                    (str(data),str(type(data))))
 
@@ -2517,7 +2518,7 @@ class HDF5StorageService(StorageService):
                 if len(data) > 0:
                     strtype = repr(type(data[0]))
 
-                    if not strtype in globally.PARAMETERTYPEDICT:
+                    if not strtype in pypetconstants.PARAMETERTYPEDICT:
                         raise TypeError('I do not know how to handel >>%s<< its type is '
                                            '>>%s<<.' % (str(data),strtype))
 
@@ -2585,7 +2586,7 @@ class HDF5StorageService(StorageService):
             if hasattr(hdf5group,tablename):
                 table = getattr(hdf5group,tablename)
 
-                if msg == globally.UPDATE_LEAF:
+                if msg == pypetconstants.UPDATE_LEAF:
                     nstart= table.nrows
                     datasize = data.shape[0]
                     if nstart==datasize:
@@ -2599,7 +2600,7 @@ class HDF5StorageService(StorageService):
                 else:
                     raise ValueError('Table %s already exists, appending is only supported for '
                                      'parameter merging and appending, please use >>msg= %s<<.' %
-                                     (tablename,globally.UPDATE_LEAF))
+                                     (tablename,pypetconstants.UPDATE_LEAF))
 
                 self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' %
                                    (tablename,self._filename, fullname))

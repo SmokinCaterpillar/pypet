@@ -16,7 +16,7 @@ import inspect
 import numpy as np
 
 import pypet.petexceptions as pex
-from pypet import globally
+from pypet import pypetconstants
 from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, STORE,LOAD,REMOVE
 
@@ -134,9 +134,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
     @v_search_strategy.setter
     def v_search_strategy(self,strategy):
-        if not strategy == globally.BFS or strategy == globally.DFS:
+        if not strategy == pypetconstants.BFS or strategy == pypetconstants.DFS:
             raise ValueError('Please use strategies %s or %s others are not supported atm.' %
-                             (globally.BFS,globally.DFS))
+                             (pypetconstants.BFS,pypetconstants.DFS))
 
         self._search_strategy = strategy
 
@@ -378,7 +378,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         ''' Stores the single run to disk
         '''
         #self._srn_add_explored_params()
-        self._storage_service.store(globally.SINGLE_RUN, self, trajectory_name=self.v_trajectory_name)
+        self._storage_service.store(pypetconstants.SINGLE_RUN, self, trajectory_name=self.v_trajectory_name)
 
     def f_store_item(self,item,*args,**kwargs):
         ''' Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`.
@@ -424,7 +424,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)
 
         if fetched_items:
-            self._storage_service.store(globally.LIST, fetched_items, trajectory_name=self.v_trajectory_name)
+            self._storage_service.store(pypetconstants.LIST, fetched_items, trajectory_name=self.v_trajectory_name)
         else:
             raise ValueError('Your storage was not successful, could not find a single item '
                                  'to store.')
@@ -610,7 +610,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access=True
         self._check_uniqueness=False
-        self._search_strategy=globally.BFS
+        self._search_strategy=pypetconstants.BFS
 
         if filename is None:
             self._storage_service=None
@@ -673,10 +673,10 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def v_comment(self, comment):
 
         comment = str(comment)
-        if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+        if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
             raise AttributeError('Your comment is too long ( %d characters), only comments up to'
                                  '%d characters are allowed.' %
-                                 (len(comment),globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+                                 (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
 
         self._comment=comment
 
@@ -985,7 +985,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         if fetched_items:
             if self._stored and remove_from_storage:
                 try:
-                    self._storage_service.store(globally.LIST, fetched_items,
+                    self._storage_service.store(pypetconstants.LIST, fetched_items,
                                                trajectory_name=self.v_name)
                 except:
                     self._logger.error('Could not remove >>%s<< from the trajectory. Maybe the'
@@ -1001,7 +1001,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def _remove_incomplete_runs(self):
-        self._storage_service.store(globally.REMOVE_INCOMPLETE_RUNS, self,
+        self._storage_service.store(pypetconstants.REMOVE_INCOMPLETE_RUNS, self,
                                       trajectory_name=self.v_name)
 
 
@@ -1080,11 +1080,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         ## If the trajectory is ought to be expanded we remove the subtrees of previous results
         ## first since they won't be used during an experiment
         for node_name in self.results._children.keys():
-            if node_name.startswith(globally.RUN_NAME):
+            if node_name.startswith(pypetconstants.RUN_NAME):
                 self.results.f_remove_child(node_name,recursive=True)
 
         for node_name in self.derived_parameters._children.keys():
-            if node_name.startswith(globally.RUN_NAME):
+            if node_name.startswith(pypetconstants.RUN_NAME):
                 self.derived_parameters.f_remove_child(node_name,recursive=True)
 
         self.f_store()
@@ -1272,7 +1272,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
     def _add_run_info(self, idx):
 
-        runname = globally.FORMATTED_RUN_NAME % idx
+        runname = pypetconstants.FORMATTED_RUN_NAME % idx
         self._single_run_ids[runname] = idx
         self._single_run_ids[idx] = runname
         info_dict = {}
@@ -1300,8 +1300,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def _finalize(self):
         self.f_restore_default()
         self._nn_interface._change_root(self)
-        self.f_load(self.v_name,None, False, globally.LOAD_NOTHING, globally.LOAD_NOTHING,
-                  globally.LOAD_NOTHING)
+        self.f_load(self.v_name,None, False, pypetconstants.LOAD_NOTHING, pypetconstants.LOAD_NOTHING,
+                  pypetconstants.LOAD_NOTHING)
 
     def f_update_skeleton(self):
         '''Loads the full skeleton from the storage service.
@@ -1311,8 +1311,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         This will only add empty results and derived parameters (i.e. the skeleton) and load annotations.
 
         '''
-        self.f_load(self.v_name,None, False, globally.UPDATE_SKELETON, globally.UPDATE_SKELETON,
-                  globally.UPDATE_SKELETON)
+        self.f_load(self.v_name,None, False, pypetconstants.UPDATE_SKELETON, pypetconstants.UPDATE_SKELETON,
+                  pypetconstants.UPDATE_SKELETON)
 
     def f_load_item(self,item,*args,**kwargs):
         '''Loads a single item, see also :func:`~pypet.trajectory.Trajectory.f_load_items`'''
@@ -1364,7 +1364,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
         if fetched_items:
-            self._storage_service.load(globally.LIST, fetched_items,
+            self._storage_service.load(pypetconstants.LIST, fetched_items,
                                       trajectory_name=self.v_name)
         else:
             self._logger.warning('Your loading was not successful, could not find a single item '
@@ -1451,21 +1451,21 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             trajectory_name = self.v_name
 
         if as_new and load_parameters is None:
-            load_parameters=globally.LOAD_DATA
+            load_parameters=pypetconstants.LOAD_DATA
         elif load_parameters is None:
-            load_parameters = globally.UPDATE_DATA
+            load_parameters = pypetconstants.UPDATE_DATA
 
         if as_new and load_derived_parameters is None:
-            load_derived_parameters = globally.LOAD_NOTHING
+            load_derived_parameters = pypetconstants.LOAD_NOTHING
         elif load_derived_parameters is None:
-            load_derived_parameters=globally.LOAD_SKELETON
+            load_derived_parameters=pypetconstants.LOAD_SKELETON
 
         if as_new and load_results is None:
-            load_results = globally.LOAD_NOTHING
+            load_results = pypetconstants.LOAD_NOTHING
         elif load_results is None:
-            load_results = globally.LOAD_SKELETON
+            load_results = pypetconstants.LOAD_SKELETON
 
-        self._storage_service.load(globally.TRAJECTORY, self, trajectory_name=trajectory_name,
+        self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=trajectory_name,
                                   trajectory_index=trajectory_index,
                                   as_new=as_new, load_params=load_parameters,
                                   load_derived_params=load_derived_parameters,
@@ -1530,7 +1530,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         :param backup_filename: Name of file where to store the backup!
 
         '''
-        self._storage_service.store(globally.BACKUP, self, trajectory_name=self.v_name,
+        self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     backup_filename=backup_filename)
 
 
@@ -1540,7 +1540,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 backup_filename = None,
                 move_nodes=False,
                 delete_trajectory=False,
-                merge_git_commits=True):
+                merge_config=True):
         ''' Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. That means both need to have the same
@@ -1590,7 +1590,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param delete_trajectory: If you want to delete the other trajectory after merging
 
-        :param merge_git_commits:
+        :param merge_config:
 
             Whether or not to merge all config parameters under `config.git` of the
             other trajectory in the current one.
@@ -1652,13 +1652,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         self._logger.info('Updating Trajectory information and changed parameters in storage.')
 
-        self._storage_service.store(globally.PREPARE_MERGE, self,
+        self._storage_service.store(pypetconstants.PREPARE_MERGE, self,
                                    trajectory_name=self.v_name,
                                    changed_parameters=changed_parameters,
                                    rename_dict=rename_dict)
 
         try:
-            self._storage_service.store(globally.MERGE, None, trajectory_name=self.v_name,
+            self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
                                        other_trajectory_name=other_trajectory.v_name,
                                        rename_dict=rename_dict, move_nodes=move_nodes,
                                        delete_trajectory=delete_trajectory)
@@ -1685,16 +1685,18 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
         # Finally we will meget the git commits
-        if merge_git_commits:
-            self._merge_git_commits(other_trajectory)
+        if merge_config:
+            self._merge_config(other_trajectory)
 
         self._logger.info('Finished Merging!')
 
-    def _merge_git_commits(self,other_trajectory):
+    def _merge_config(self,other_trajectory):
 
-        if not 'config.git' in other_trajectory:
-            self._logger.debug('No git commits found in other trajectory.')
-        else:
+
+        self._logger.info('Merging config!')
+
+        if 'config.git' in other_trajectory:
+
             self._logger.info('Merging git commits!')
             git_node = other_trajectory.f_get('config.git')
             param_list = []
@@ -1705,6 +1707,16 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
             self._logger.info('Merging git commits successfull!')
+
+        if 'config.environment' in other_trajectory:
+
+            self._logger.info('Merging environment config!')
+            env_node = other_trajectory.f_get('config.environment')
+            param_list = []
+            for param in env_node.f_iter_leaves():
+                param_list.append(self.f_add_config(param))
+
+            self.f_store_items(param_list)
 
 
     def _merge_slowly(self, other_trajectory, rename_dict):
@@ -1777,7 +1789,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 timestamp = other_trajectory.f_get_run_information(runname)['timestamp']
                 completed = other_trajectory.f_get_run_information(runname)['completed']
 
-                new_runname = globally.FORMATTED_RUN_NAME % count
+                new_runname = pypetconstants.FORMATTED_RUN_NAME % count
 
                 self._run_information[new_runname] = dict(idx=count,
                                                           time=time, timestamp=timestamp,
@@ -1967,7 +1979,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         '''
         #self._srn_add_explored_params()
-        self._storage_service.store(globally.TRAJECTORY, self, trajectory_name=self.v_name)
+        self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
         self._stored = True
 
     def f_is_empty(self):

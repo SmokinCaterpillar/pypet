@@ -3,7 +3,7 @@ __author__ = 'robert'
 
 from pypet.environment import Environment
 from pypet.utils.explore import cartesian_product
-from pypet import globally
+from pypet import pypetconstants
 
 
 # Let's reuse the simple multiplication example
@@ -34,7 +34,7 @@ env.f_switch_off_large_overview()
 #Let's enable multiprocessing with A queue and 2 workers
 traj.environment.multiproc=True
 traj.environment.ncores=2
-traj.environment.wrap_mode = globally.WRAP_MODE_QUEUE
+traj.environment.wrap_mode = pypetconstants.WRAP_MODE_QUEUE
 
 # Run the simulation
 env.f_run(multiply)

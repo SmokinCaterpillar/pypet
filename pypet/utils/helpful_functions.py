@@ -4,7 +4,7 @@ __author__ = 'Robert Meyer'
 from collections import Sequence, Mapping, Set
 import numpy as np
 import pandas as pd
-from pypet import globally
+from pypet import pypetconstants
 
 
 
@@ -78,7 +78,7 @@ def nested_equal(a, b):
         return b is None
     if isinstance(a, basestring):
          return a == b
-    if isinstance(a, globally.PARAMETER_SUPPORTED_DATA):
+    if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
         return a==b
     if isinstance(a, np.ndarray):
         return np.all(a==b)

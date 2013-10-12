@@ -6,7 +6,7 @@ __author__ = 'robert'
 
 import inspect
 import pypet.petexceptions as pex
-from pypet import globally
+from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 import logging
@@ -142,10 +142,10 @@ class NNLeafNode(NNTreeNode):
     def v_comment(self, comment):
 
         comment = str(comment)
-        if len(comment)>=globally.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+        if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
             raise AttributeError('Your comment is too long ( %d characters), only comments up to'
                                  '%d characters are allowed.' %
-                                 (len(comment),globally.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+                                 (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
 
         self._comment=comment
 
@@ -341,18 +341,18 @@ class NaturalNamingInterface(object):
 
         if node.v_leaf:
             if store_load ==STORE:
-                return globally.LEAF
+                return pypetconstants.LEAF
             elif store_load == LOAD:
-                return globally.LEAF
+                return pypetconstants.LEAF
             elif store_load == REMOVE:
-                 return globally.REMOVE
+                 return pypetconstants.REMOVE
         else:
             if store_load ==STORE:
-                return globally.GROUP
+                return pypetconstants.GROUP
             elif store_load == LOAD:
-                return globally.GROUP
+                return pypetconstants.GROUP
             elif store_load == REMOVE:
-                 return globally.REMOVE
+                 return pypetconstants.REMOVE
         #raise ValueError('I do not know how to f_store >>%s<<' % str(node))
 
 
@@ -387,7 +387,7 @@ class NaturalNamingInterface(object):
             #         raise TypeError('You want to store/load >>%s<< but this belongs to the '
             #                         'parent trajectory not to the current single run.' % fullname)
 
-            if (msg == globally.REMOVE and
+            if (msg == pypetconstants.REMOVE and
                         item.v_full_name in self._root_instance._explored_parameters):
                 raise TypeError('You cannot remove an explored parameter of a trajectory stored '
                                 'into an hdf5 file.')
@@ -518,8 +518,8 @@ class NaturalNamingInterface(object):
             if len(split_name) == 2:
                 index = split_name[1]
                 if index.isdigit():
-                    if len(index) < globally.FORMAT_ZEROS:
-                        expanded = globally.FORMATTED_RUN_NAME % int(index)
+                    if len(index) < pypetconstants.FORMAT_ZEROS:
+                        expanded = pypetconstants.FORMATTED_RUN_NAME % int(index)
 
         if name in ['cr', 'currentrun', 'current_run']:
             expanded = self._root_instance.v_name
@@ -557,8 +557,8 @@ class NaturalNamingInterface(object):
 
                 add=''
 
-                if (not ((name.startswith(globally.RUN_NAME) and
-                                  len(name) ==len(globally.RUN_NAME)+globally.FORMAT_ZEROS) or
+                if (not ((name.startswith(pypetconstants.RUN_NAME) and
+                                  len(name) ==len(pypetconstants.RUN_NAME)+pypetconstants.FORMAT_ZEROS) or
                                   name == 'trajectory') ):
 
                     if root._is_run:
@@ -576,8 +576,8 @@ class NaturalNamingInterface(object):
 
                 add = ''
 
-                if (not ((name.startswith(globally.RUN_NAME) and
-                                  len(name) ==len(globally.RUN_NAME)+globally.FORMAT_ZEROS) or
+                if (not ((name.startswith(pypetconstants.RUN_NAME) and
+                                  len(name) ==len(pypetconstants.RUN_NAME)+pypetconstants.FORMAT_ZEROS) or
                                   name == 'trajectory') ):
 
                     if root._is_run:
@@ -810,13 +810,13 @@ class NaturalNamingInterface(object):
 
         name = split_names.pop()
         location = '.'.join(split_names)
-        if len(name)>= globally.HDF5_STRCOL_MAX_NAME_LENGTH:
+        if len(name)>= pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
             faulty_names = '%s %s is too long the name can only have %d characters but it has %d,' % \
-                           (faulty_names,name,len(name),globally.HDF5_STRCOL_MAX_NAME_LENGTH)
+                           (faulty_names,name,len(name),pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
 
-        if len(location) >= globally.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+        if len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
             faulty_names = '%s %s is too long the location can only have %d characters but it has %d,' % \
-                           (faulty_names,name,len(location),globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)
+                           (faulty_names,name,len(location),pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
 
         split_names.append(name)
         return faulty_names
@@ -931,15 +931,15 @@ class NaturalNamingInterface(object):
             return data
 
     @staticmethod
-    def _iter_nodes( node, recursive=False, search_strategy=globally.BFS, as_run=None):
+    def _iter_nodes( node, recursive=False, search_strategy=pypetconstants.BFS, as_run=None):
 
         if recursive:
-            if search_strategy == globally.BFS:
+            if search_strategy == pypetconstants.BFS:
                 if as_run is None:
                     return NaturalNamingInterface._recursive_traversal_bfs(node)
                 else:
                     return NaturalNamingInterface._recursive_traversal_bfs_as_run(node, as_run)
-            elif search_strategy == globally.DFS:
+            elif search_strategy == pypetconstants.DFS:
                 if as_run is None:
                     return NaturalNamingInterface._recursive_traversal_dfs(node)
                 else:
@@ -1352,7 +1352,7 @@ class NNGroupNode(NNTreeNode):
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        search_strategy=self._nn_interface._get_search_strategy())
 
-    def f_iter_nodes(self, recursive=False, search_strategy=globally.BFS):
+    def f_iter_nodes(self, recursive=False, search_strategy=pypetconstants.BFS):
         ''' Iterates over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
@@ -1372,7 +1372,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._iter_leaves(self)
 
 
-    def f_get(self, name, fast_access=False, check_uniqueness=False, search_strategy=globally.BFS):
+    def f_get(self, name, fast_access=False, check_uniqueness=False, search_strategy=pypetconstants.BFS):
         ''' Searches for an item (parameter/result/group node) with the given `name`-
 
         :param name: Name of the item (full name or parts of the full name)
@@ -1430,12 +1430,12 @@ class NNGroupNode(NNTreeNode):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.store(globally.TREE, self._children[name], trajectory_name=traj.v_name,
+        storage_service.store(pypetconstants.TREE, self._children[name], trajectory_name=traj.v_name,
                               recursive=recursive)
 
 
 
-    def f_load_child(self,name,recursive=False,load_data=globally.UPDATE_DATA):
+    def f_load_child(self,name,recursive=False,load_data=pypetconstants.UPDATE_DATA):
         '''Loads a child or recursively a subtree from disk.
 
         For how to choose 'load_data' see :ref:'loading'.
@@ -1447,7 +1447,7 @@ class NNGroupNode(NNTreeNode):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.load(globally.TREE, self,child_name=name, trajectory_name=traj.v_name,
+        storage_service.load(pypetconstants.TREE, self,child_name=name, trajectory_name=traj.v_name,
                              recursive=recursive, load_data=load_data, trajectory=traj)
 
 
