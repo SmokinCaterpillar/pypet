@@ -117,11 +117,18 @@ class Environment(object):
     The first thing you usually do is to create and environment object that takes care about
     the running of the experiment and parameter space exploration.
 
-    :param trajectory: String or trajectory instance. If a string is supplied, a novel
-                       trajectory is created with that name.
+    :param trajectory:
+
+        String or trajectory instance. If a string is supplied, a novel
+        trajectory is created with that name.
+        Note that the comment and the dynamically imported classes (see below) are only considered
+        if a novel
+        trajectory is created. If you supply a trajectory instance, these fields can be ignored.
 
 
     :param comment: Comment added to the trajectory if a novel trajectory is created.
+
+
 
     :param dynamically_imported_classes:
 
@@ -139,60 +146,26 @@ class Environment(object):
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
 
 
+    :param log_folder:
 
-    :param use_hdf5: Whether or not to use the standard hdf5 storage service, if False the following
-                    arguments below will be ignored.
+        Path to a folder where all log files will be stored. The log files will be added to a
+        sub-folder with the name of the trajectory.
 
-    :param filename: The name of the hdf5 file
+    :param multiproc:
 
-    :param file_title: Title of the hdf5 file (only important if file is created new)
-
-    :param git_repository:
-
-        If your code base is under git version control you can specify where the path
-        (relative or absolute) to
-        the folder containing the `.git` directory.
-        Note in order to use this tool you need GitPython_.
-        If you set this path the environment
-        will trigger a commit of your code base adding all files that are currently under
-        version control.
-        Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
-        The user can specify the commit message, see below. Note that the message
-        will be augmented by the name of the trajectory, the comment of the trajectory
-        and the explored parameters.
-
-        This will add information about the revision to the trajectory, see below.
-
-    :param git_message:
-
-        Message passed onto git command.
-
-
-    .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
-
-    Note that the comment and the dynamically imported classes are only considered if a novel
-    trajectory is created. If you supply a trajectory instance, these fields can be ignored.
-
-
-    The Environment will automatically add some config settings to your trajectory (if they are not
-    already present in your trajectory).
-
-    These are the following (all are added under `traj.config` where traj is your trajectory
-    object, that you can get via :func:`~pypet.environment.Environment.v_trajectory`).
-
-    * environment.multiproc:
 
         Whether or not to use multiprocessing. Default is 0 (False). If you use
         multiprocessing, all your data and the tasks you compute
         must be pickable!
 
-    * environment.ncores:
 
-          If multiproc is 1 (True), this specifies the number of processes that will be spawned
-          to run your experiment. Note if you use QUEUE mode (see below) the queue process
-          is not included in this number and will add another extra process for storing.
+    :param ncores:
 
-    * environment.wrap_mode:
+        If multiproc is 1 (True), this specifies the number of processes that will be spawned
+        to run your experiment. Note if you use QUEUE mode (see below) the queue process
+        is not included in this number and will add another extra process for storing.
+
+    :param wrap_mode:
 
          If multiproc is 1 (True), specifies how storage to disk is handled via
          the storage service.
@@ -219,7 +192,7 @@ class Environment(object):
         If you don't want wrapping at all use :const:`~pypet.globally.WRAP_MODE_NONE` ('NONE')
 
 
-    * environment.continuable:
+    :param continuable:
 
         Whether the environment should take special care to allow to resume or continue
         crashed trajectories. Default is 1 (True).
@@ -233,29 +206,16 @@ class Environment(object):
         In order to resume trajectories use
         :func:`~pypet.environment.Environment.f_continue_run`
 
+    :param use_hdf5:
 
-    * hdf5.overview.XXXXX
+        Whether or not to use the standard hdf5 storage service, if False the following
+        arguments below will be ignored.
 
-        Whether the XXXXXX overview table should be created.
-        XXXXXX from ['config','parameters','derived_parameters_trajectory',
-        'derived_parameters_runs','derived_parameters_runs_summary',
-        'results_trajectory', 'results_runs', 'results_runs_summary',
-        'result','explored_parameters'].
-        Default is True/1
+    :param filename: The name of the hdf5 file
 
-        Note that these tables create a lot of overhead, if you want small hdf5 files set
-        these values to False (0). Most memory is taken by the `results_runs`,
-        `derived_parameters_runs` and `explored_parameters_runs` tables.
+    :param file_title: Title of the hdf5 file (only important if file is created new)
 
-        the 'XXXXXX_summary' tables give a summary about all results or derived parameters.
-        It is assumed that results and derived parameters with equal names in individual runs
-        are similar and only the first result or derived parameter that was created
-        is shown as an example.
-
-        The summary table can be used in combination with `hdf5.purge_duplicate_comments` to only store
-        a single comment for every result with the same name in each run, see below.
-
-    * hdf5.purge_duplicate_comments
+    :param purge_duplicate_comments:
 
         If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
         parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
@@ -276,24 +236,85 @@ class Environment(object):
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
-        Default is True/1
 
-    * hdf5.overview.explored_parameters
+    :param small_overview_tables:
 
-            Whether an overview table about the explored parameters is added in each
-            single run subgroup.
-            Default is True/1
+        Whether the small overview table should be created.
+        Small tables are giving overview about 'config','parameters','derived_parameters_trajectory',
+        'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
 
-    * hdf5.results_per_run
+        Note that these tables create a some overhead, if you want small hdf5 files set
+        these value to False.
 
-            Expected results you store per run. If you give a good/correct estimate
-            storage to hdf5 file is much faster if you want overview tables.
+        The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
+        It is assumed that results and derived parameters with equal names in individual runs
+        are similar and only the first result or derived parameter that was created
+        is shown as an example.
 
-            Default is 0, i.e. the number of results is not estimated!
+        The summary table can be used in combination with `purge_duplicate_comments` to only store
+        a single comment for every result with the same name in each run, see above.
 
-    * hdf5.derived_parameters_per_run
 
-          Analogous to the above.
+    :param large_overview_tables:
+
+        Whether to add large overview tables. This encompasses information about every derived
+        parameter and result in the single runs, and the explored parameters in every single run.
+        If you want small hdf5 files, this is the first option to set to False.
+
+    :param results_per_run:
+
+        Expected results you store per run. If you give a good/correct estimate
+        storage to hdf5 file is much faster in case you store LARGE overview tables.
+
+        Default is 0, i.e. the number of results is not estimated!
+
+    :param derived_parameters_per_run:
+
+        Analogous to the above.
+
+    :param git_repository:
+
+        If your code base is under git version control you can specify where the path
+        (relative or absolute) to
+        the folder containing the `.git` directory.
+        Note in order to use this tool you need GitPython_.
+        If you set this path the environment
+        will trigger a commit of your code base adding all files that are currently under
+        version control.
+        Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
+        The user can specify the commit message, see below. Note that the message
+        will be augmented by the name of the trajectory, the comment of the trajectory
+        and the explored parameters.
+
+        This will add information about the revision to the trajectory, see below.
+
+    :param git_message:
+
+        Message passed onto git command.
+
+
+    .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
+
+    The Environment will automatically add some config settings to your trajectory.
+    Thus, you can always look up how your trajectory was run. This encompasses all above named
+    parameters, as
+    well as some information about the environment. This additional information includes
+    a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
+    If you use git integration, the SHA-1 hash code will be the one from your git commit.
+    Otherwise the code will be calculated from the trajectory name, the current time and your
+    current pypet version.
+
+    The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
+    `X` are the first seven characters of the SHA-1 hash code followed by a human readable
+    timestamp.
+
+    All information about the environment can be found in your trajectory under
+    `config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. Your trajectory could
+    potentially be run by several environments due to merging or extending an existing trajectory.
+    Thus, you will be able to track how your trajectory was build over time.
+
+    Git information is added to your trajectory as follows:
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.hexsha
 
@@ -329,18 +350,25 @@ class Environment(object):
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
-                 multiproc=0,
+                 multiproc=False,
                  ncores=1,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 purge_duplicate_comments=True,
+                 small_overview_tables=True,
+                 large_overview_tables=True,
+                 results_per_run=0,
+                 derived_parameters_per_run=0,
                  git_repository = None,
                  git_message=''):
 
 
-
+        if purge_duplicate_comments and not small_overview_tables:
+            raise RuntimeError('You can not purge duplicate comments without having the'
+                               ' small overview tables.')
 
         name = 'environment'
 
@@ -481,7 +509,8 @@ class Environment(object):
                                                 'explored parameters in each run.')
 
 
-            self._traj.f_add_config('hdf5.purge_duplicate_comments',1,'Whether comments of results and'
+            self._traj.f_add_config('hdf5.purge_duplicate_comments',int(purge_duplicate_comments),
+                                                            comment='Whether comments of results and'
                                                             ' derived parameters should only'
                                                             'be stored for the very first instance.'
                                                             ' Works only if the summary tables are'
@@ -489,17 +518,20 @@ class Environment(object):
 
 
 
-            self._traj.f_add_config('hdf5.results_per_run', 0,
+            self._traj.f_add_config('hdf5.results_per_run', int(results_per_run),
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance.')
 
 
-            self._traj.f_add_config('hdf5.derived_parameters_per_run', 0,
+            self._traj.f_add_config('hdf5.derived_parameters_per_run', int(derived_parameters_per_run),
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance.')
 
 
-
+            if not small_overview_tables:
+                self.f_switch_off_small_overview()
+            if not large_overview_tables:
+                self.f_switch_off_large_overview()
 
 
         self._logger.info('Environment initialized.')
@@ -529,7 +561,7 @@ class Environment(object):
 
         for handler in root.handlers:
             handler.setFormatter(f)
-        self._logger = logging.getLogger('pypet.environment.Environment')
+        self._logger = logging.getLogger('pypet.environment.Environment=%s' % self.v_name)
 
 
     def f_switch_off_large_overview(self):
@@ -547,7 +579,12 @@ class Environment(object):
 
 
     def f_switch_off_all_overview(self):
-        ''' Switches all overview tables off and switches off `purge_duplicate_comments`.
+        '''Switches all tables off'''
+        self.f_switch_off_small_overview()
+        self.f_switch_off_large_overview()
+
+    def f_switch_off_small_overview(self):
+        ''' Switches off small overview tables and switches off `purge_duplicate_comments`.
         '''
         self._traj.config.hdf5.overview.parameters = 0
         self._traj.config.hdf5.overview.config=0
@@ -557,7 +594,7 @@ class Environment(object):
         self._traj.config.hdf5.overview.results_trajectory=0
         self._traj.config.hdf5.overview.results_runs_summary=0
         self._traj.config.hdf5.purge_duplicate_comments=0
-        self.f_switch_off_large_overview()
+
 
     def f_continue_run(self, continuefile):
         ''' Resume crashed trajectories by supplying the '.cnt' file.

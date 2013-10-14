@@ -10,13 +10,22 @@ Welcome to pypet's documentation!
 The new python parameter exploration toolbox. *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
 
-_HDF5: http://www.hdfgroup.org/HDF5/
+.. _HDF5: http://www.hdfgroup.org/HDF5/
 
 ===========================
 IMPORTANT!
 ===========================
 The current program is a BETA version,
 please treat it as such and use very carefully.
+
+Moreover, you WILL NOT be able to use trajectories that were created with the *alpha*
+version any more. I am sorry if you have already explored a lot of parameter spaces.
+If this bugs you a lot, let me know and I'll take a look whether I could write
+a converter.
+
+Note that until the 0.1.0 version there still might be some changes to the API. Yet, with  0.1.0
+I will guarantee a stable API :-)
+
 If you find some bugs or have some questions
 feel free to contact me (see below).
 
@@ -29,13 +38,19 @@ beginning of November :-)
 Requirements
 ============================
 
+Python 2.6 or 2.7
+
 * tables >= 2.3.1
 
 * pandas >= 0.12.0
 
 * numpy >= 1.6.1
 
-* scipy >= 0.10.0
+* scipy >= 0.9.0
+
+For git integration you additionally need
+
+* GitPython
 
 
 ==========================

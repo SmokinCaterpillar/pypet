@@ -6,7 +6,7 @@ Here you can find global constants. These constants define the data supported by
 service and the standard parameter, maximum lenght of comments, messages for storing and loading
 etc.
 
-.. automodule:: pypet.globally
+.. automodule:: pypet.pypetconstants
     :members:
     :member-order: bysource
 

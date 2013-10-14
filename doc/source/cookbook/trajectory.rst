@@ -9,7 +9,7 @@ More on Trajectories and Single Runs (and Annotations)
 Trajectory
 ------------------------------------
 
-For some example code on on topics dicussed here
+For some example code on on topics discussed here
 see the :ref:`example-02`.
 
 The :class:`~pypet.trajectory.Trajectory` is the standard container for all results and parameters
@@ -215,7 +215,7 @@ Note that fast access only works for parameter objects (i.e. for everything you 
 is an empty parameter, you will get in return the parameter object. Fast access works
 in one particular case also for results, and that is, if the result contains exactly one item
 with the name of the parameter.
-For isntance if you add the result `traj.f_add_result('z',10), you can fast access it, since
+For isntance if you add the result `traj.f_add_result('z',10)`, you can fast access it, since
 the first positional argument is mapped to the name 'z'.
 If it is empty or contains more than 1 item you will always get in return the result object.
 
@@ -351,7 +351,7 @@ The most straightforward way to store everything is to say:
 
     >>> traj.store()
 
-and that's it. In fact if you use the trajectory in combination with the environment (see
+and that's it. In fact, if you use the trajectory in combination with the environment (see
 :ref:`more-on-environment`) you
 do not need to do this call by yourself at all, this is done by the environment.
 
@@ -367,6 +367,10 @@ Note that in order to allow storage of single items, you need to have stored the
 least once. If you operate during a single run, this has been done before, if not,
 simply call `traj.store()` once before.
 
+Moreover, if you call `f_empty()` on a large result, only the reference to the giant data block within
+the result is deleted. So in order to make the python garbage collector free the memory, you must
+ensure that you do not have any external reference of your own in your code to the giant data.
+
 To avoid re-opneing an closing of the hdf5 file over and over again there is also the
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
@@ -374,7 +378,7 @@ or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 OF NOTE: If you want to store single items you should prefer
 :func:`~pypet.trajectory.SingleRun.f_store_items` over
 :func:`~pypet.naturalnaming.NNGroupNode.f_store_child` simply because for the latter the
-storage service only needs to know the individual item, whereas the former requires the
+storage service only needs to know the individual item. Whereas the former requires the
 service to know the entire trajectory. This can be painful in case of multiprocessing
 and using a queue plus a single storage process. Accordingly, the whole trajectory
 needs to be pickled and is sent over the queue!
@@ -429,7 +433,7 @@ They can be found under the top-group `overview`.
 
         All three are analogous to the result overviews above.
 
-* The `explored_parameters` overview over you parameters explored in the single runs
+* The `explored_parameters` overview about you parameters explored in the single runs
 
 * In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing the values in each run.
 

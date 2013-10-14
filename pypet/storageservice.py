@@ -1362,9 +1362,9 @@ class HDF5StorageService(StorageService):
         if version != VERSION and not force:
             raise pex.VersionMismatchError('Current pypet version is %s but your trajectory'
                                             ' was created with version %s.'
-                                            ' Use force=True to perform your load regardless'
+                                            ' Use >>force=True<< to perform your load regardless'
                                             ' of version mismatch.' %
-                                           (pypet.__version__, version))
+                                           (VERSION, version))
         elif version != VERSION :
             self._logger.warning('Current pypet version is %s but your trajectory'
                                             ' was created with version %s.'

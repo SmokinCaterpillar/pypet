@@ -243,7 +243,7 @@ texinfo_documents = [
 #texinfo_show_urls = 'footnote'
 
 
-# For reat the docs
+# For read the docs
 class Mock(object):
     def __init__(self, *args, **kwargs):
         pass
@@ -263,6 +263,6 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = ['tables', 'numpy', 'brian' ,'pandas', 'brian.units', 'brian.fundamentalunits',
-                'brian.monitor']
+                'brian.monitor', 'scipy', 'scipy.sparse']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()

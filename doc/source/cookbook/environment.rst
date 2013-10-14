@@ -11,82 +11,69 @@ keeps log
 files and can be used to distribute your simulations onto several cpus.
 
 Note in case you use the environment there is no need to call :func:`~pypet.trajectory.SingleRun.f_store`
-for data storage, this will always be called before the runs and at the end of a single Run automatically.
+for data storage, this will always be called before the runs and at the end of a single run automatically.
 
 You start your simulations by creating an environment object:
 
->>> env = Environment(self, trajectory='trajectory',\
+>>> env = Environment(trajectory='trajectory',\
                  comment='',\
                  dynamically_imported_classes=None,\
-                 log_folder='../log/',\
+                 log_folder=None,\
+                 multiproc=False,\
+                 ncores=1,\
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,\
+                 continuable=1,\
                  use_hdf5=True,\
-                 filename='../experiments.h5',\
-                 file_title='experiment')
+                 filename=None,\
+                 file_title=None,\
+                 purge_duplicate_comments=True,\
+                 small_overview_tables=True,\
+                 large_overview_tables=True,\
+                 results_per_run=0,\
+                 derived_parameters_per_run=0,\
+                 git_repository = None,\
+                 git_message=''):
 
+You can pass the following arguments:
 
-The first argument `trajectory` can either be a string or a given trajectory object. In case of
-a string, a new trajectory with that name is created. You can access the new trajectory
-via `v_trajectory` property. If a new trajectory is created, the comment and dynamically imported
-classes are added to the trajectory. The argument `dynamically_imported_classes` is important
-if you have written your own *parameter* or *result* classes, you can pass these either
-as class variables `MyCustomParameterClass` or as strings leading to the classes in your package:
-`'mysim.myparameters.MyCustomParameterClass'`. If you have several classes, just put them in
-a list `dynamically_imported_classes=[MyCustomParameterClass,MyCustomResultClass]`.
-The trajectory needs to know your custom classes in case you want to load a custom class
-from disk and the trajectory needs to know how they are built.
+* `trajectory`
 
-The `log_folder` specifies where all log files will be stored.
-In the log folder the environment will create a sub-folder with the name of the trajectory where
-all txt files will be put.
-In there you will find several log files.
-The environment will create a major logfile (*main.txt*) incorporating all messages of the
-current log level and beyond and
-a log file that only contains warnings and errors *warnings_and_errors.txt*.
-Moreover, if you use multiprocessing
-there will be a log file for every process named *proces_XXXX.txt* with *XXXX* the process
-id. If you don't set a log level elsewhere before, the standard level will be *INFO*
-(if you have no clue what I am talking about, take a look at the logging_ module).
+    The first argument `trajectory` can either be a string or a given trajectory object. In case of
+    a string, a new trajectory with that name is created. You can access the new trajectory
+    via `v_trajectory` property. If a new trajectory is created, the comment and dynamically imported
+    classes are added to the trajectory.
 
-If you want to use the standard hdf5 storage service provided with this package, set
-`use_hdf5=True`. You can specify the name of the hdf5 file and, if it has to be created new,
-the file title. If you want to use your own storage service (You don't have an SQL one do you?),
-set `use_hdf5=False` and add your custom storage service to the trajectory:
+* `dynamically_imported_classes`
 
- >>> env.v_trajectory.v_storage_service = MyCustomService(...)
+    The argument `dynamically_imported_classes` is important
+    if you have written your own *parameter* or *result* classes, you can pass these either
+    as class variables `MyCustomParameterClass` or as strings leading to the classes in your package:
+    `'mysim.myparameters.MyCustomParameterClass'`. If you have several classes, just put them in
+    a list `dynamically_imported_classes=[MyCustomParameterClass,MyCustomResultClass]`.
+    The trajectory needs to know your custom classes in case you want to load a custom class
+    from disk and the trajectory needs to know how they are built.
 
-.. _logging: http://docs.python.org/2/library/logging.html
+    It is VERY important, that every class name is UNIQUE. So you should not have
+    two classes named `'MyCustomParameter'` in two different python modules!
+    The identification of the class works only via it's name and not it's path in your packages.
 
-.. _config-added-by-environment:
+* `multiproc`
 
---------------------------------------
-Config Data added by the Environment
---------------------------------------
+    `multiproc` specifies whether or not to use multiprocessing
+    (:ref:`more-on-multiprocessing`). Default is 0 (False). If you use
+    multiprocessing. All your data and the tasks you compute must be pickable!
 
-The environment will add some config data to your trajectory. You can change this data
-later on (except for the log folder, that has already been created), to enable multiprocessing
-and the ability to continue and resume broken or crashed trajectories.
+* `ncores`
 
-The following config parameters are added:
+    If multiproc is 1 (True), this specifies the number of processes that will be spawned
+    to run your experiment. Note if you use `'QUEUE'` mode (see below) the queue process
+    is not included in this number and will add another extra process for storing.
 
-* environment.multiproc:
-
-    Whether or not to use multiprocessing. Default is 0 (False). If you use
-    multiprocessing, all your data and the tasks you compute
-    must be pickable!
-
-
-* environment.ncores:
-
-      If multiproc is 1 (True), this specifies the number of processes that will be spawned
-      to run your experiment. Note if you use QUEUE mode (see below) the queue process
-      is not included in this number and will add another extra process for storing.
-
-
-* environment.wrap_mode:
+* `wrap_mode`
 
      If multiproc is 1 (True), specifies how storage to disk is handled via
      the storage service. Since hdf5 is not thread safe, the hdf5 storage service
-     needs to wrapped with a helper class to allow the interaction with multiple processes.
+     needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
      There are two options:
 
@@ -113,8 +100,7 @@ The following config parameters are added:
      If you have no clue what I am talking about, you might want to take a look at multiprocessing_
      in python to learn more about locks, queues and thread safety and so forth.
 
-
-* environment.continuable:
+* `continuable`
 
     Whether the environment should take special care to allow to resume or continue
     crashed trajectories. Default is 1 (True).
@@ -128,35 +114,107 @@ The following config parameters are added:
     In order to resume trajectories use
     :func:`~pypet.environment.Environment.f_continue_run`
 
+* `log_folder`
 
-* hdf5.XXXXX_overview
+    The `log_folder` specifies where all log files will be stored.
+    In the log folder the environment will create a sub-folder with the name of the trajectory where
+    all txt files will be put.
+    In there you will find several log files.
+    The environment will create a major logfile (*main.txt*) incorporating all messages of the
+    current log level and beyond and
+    a log file that only contains warnings and errors *warnings_and_errors.txt*.
+    Moreover, if you use multiprocessing,
+    there will be a log file for every process named *proces_XXXX.txt* with *XXXX* the process
+    id. If you don't set a log level elsewhere before, the standard level will be *INFO*
+    (if you have no clue what I am talking about, take a look at the logging_ module).
 
-        Whether the XXXXXX overview table should be created in your hdf5 file.
-        XXXXXX from ['config','parameter','derived_parameter','result','explored_parameter'].
-        Default is 1 (True)
+* `use_hdf5`:
 
-        Note that these tables create a lot of overhead, if you want small hdf5 files set
-        these values to 0 (False). Most memory is taken by the `result_overview` and
-        `derived_parameter_overview`!
+    If you want to use the standard hdf5 storage service provided with this package, set
+    `use_hdf5=True`. You can specify the name of the hdf5 file and, if it has to be created new,
+    the file title. If you want to use your own storage service (You don't have an SQL one do you?),
+    set `use_hdf5=False` and add your custom storage service to the trajectory:
 
-* hdf5.explored_parameter_overview_in_runs
+    >>> env.v_trajectory.v_storage_service = MyCustomService(...)
 
-        Whether an overview table about the explored parameters is added in each
-        single run subgroup.
-        Default is 1 (True)
+* `purge_duplicate_comments`
 
-* hdf5.results_per_run
+    If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
+    parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
+    you set a comment, normally that comment would be attached to each and every instance.
+    This can produce a lot of unnecessary overhead if the comment is the same for every
+    result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
+    first result or derived parameter instance created is stored or comments
+    that differ from this first comment. You might want to take a look at
+    :ref:`more-on-duplicate-comments`.
 
-        Expected results you store per run. If you give a good/correct estimate
-        storage to hdf5 file is much faster if you want overview tables.
+* `small_overview_tables`
 
-        Default is 0, i.e. the number of results is not estimated!
+    Whether the small overview table should be created.
+    Small tables are giving overview about 'config','parameters','derived_parameters_trajectory',
+    'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
+    You might want to check out :ref:`more-on-overview`.
 
-* hdf5.derived_parameters_per_run
 
-      Analogous to the above.
+* `large_overview_tables`
+
+    Whether to add large overview tables. This encompasses information about every derived
+    parameter and result in the single runs, and the explored parameters in every single run.
+    If you want small hdf5 files, this is the first option to set to False.
+
+* `results_per_run`
+
+    Expected results you store per run. If you give a good/correct estimate
+    storage to hdf5 file is much faster in case you store LARGE overview tables.
+
+    Default is 0, i.e. the number of results is not estimated!
+
+* `derived_parameters_per_run`
+
+    Analogous to the above.
+
+* `git_repository`
+
+    If your code base is under git version control you can specify where the path
+    (relative or absolute) to
+    the folder containing the `.git` directory. See also :ref:`more-on-git`.
+
+
+* `git_message`
+
+    Message passed onto git command.
+
+
+.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
+.. _logging: http://docs.python.org/2/library/logging.html
 
 .. _multiprocessing: http://docs.python.org/2/library/multiprocessing.html
+
+.. _config-added-by-environment:
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Config Data added by the Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Environment will automatically add some config settings to your trajectory.
+Thus, you can always look up how your trajectory was run. This encompasses all above named
+parameters, as
+well as some information about the environment. This additional information includes
+a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
+If you use git integration (:ref:`more-on-git`), the SHA-1 hash code will be the one from your git commit.
+Otherwise the code will be calculated from the trajectory name, the current time, and your
+current pypet version.
+
+The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
+`X` are the first seven characters of the SHA-1 hash code followed by a human readable
+timestamp.
+
+All information about the environment can be found in your trajectory under
+`config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. Your trajectory could
+potentially be run by several environments due to merging or extending an existing trajectory.
+Thus, you will be able to track how your trajectory was build over time.
+
 
 .. _more-on-overview:
 
@@ -165,8 +223,9 @@ Overview Tables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Overview tables give you a nice summary about all *parameters* and *results* you needed and
-computed during your simulations. They will be placed at the top-level in your trajectory
-group in the hdf5 file. In addition, for every single run there will be a small overview
+computed during your simulations. They will be placed under the subgroup
+`overview` at the top-level in your trajectory group in the hdf5 file.
+In addition, for every single run there will be a small overview
 table about the explored parameter values of that run
 (see also :ref:`more-on-storage`).
 
@@ -175,8 +234,10 @@ I would advice you to switch of the result, derived parameter
 and explored parameter overview in each single run. You don't have to do that by hand,
 simply use :func:`~pypet.environment.Environment.f_switch_off_large_overview`
 or :func:`~pypet.environment.Environment.f_switch_off_all_overview` to disable all tables.
+Or specify whether you want large and/or small tables on environment creation.
 
-_more-on-duplicate-comments
+
+.. _more-on-duplicate-comments:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Purging duplicate Comments
@@ -194,13 +255,15 @@ in another run again, let's say run_00000001, the name will be mapped to
 `results.run_00000001.my_result`. But this time the comment will not be saved to disk,
 since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
 Note that comments will be compared and storage will only be discarded if the strings
-are exactly the same.
+are exactly the same. Moreover, the comment will only be compared to the comment of the very
+first result, if all comments are equal except for the very first one, all of these equal comments
+will be stored!
 
 Furthermore, consider if you reload your data, the result instance `results.run_00000001.my_result`
 won't have a comment only the instance `results.run_00000000.my_result`.
 
 If you do not want to purge duplicate comments, set the config parameter
-`'config.hdf5.purge_duplicate_comments'` to 0 or False.
+`'purge_duplicate_comments'` to 0 or False.
 
 
 .. _more-on-multiprocessing:
@@ -275,7 +338,7 @@ In order to use the feature of git integration you additionally need GitPython_.
 
 To trigger an automatic commit simply pass the arguments `git_repository` and `git_message`
 to the :class:`~pypet.environment.Environment` constructor. `git_repository`
-specifies the path to the folder containing the `.git` directory. `git_message` is optionally
+specifies the path to the folder containing the `.git` directory. `git_message` is optional
 and adds the corresponding message to the commit. Note that the message will always be
 augmented with some short information about the trajectory you are running.
 
@@ -285,7 +348,7 @@ config subtree of your trajectory, so you can easily recall that commit from git
 The automatic commit will only commit changes in files that are currently tracked by
 your git repository, it will NOT add new files.
 So make sure that if you create new files you put them into your repository before running
-and experiment.
+an experiment.
 
 The autocommit function is similar to calling `$ git add -u` and `$ git commit -m 'Some Message``
 in your linux console!
@@ -336,7 +399,7 @@ to the fully explored parameters but only to a single parameter space point.
 Resuming an Experiment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If all of your data is picklable, you can use the config `config.environment.continuable=1`.
+If all of your data is picklable, you can use the config parameter `continuable=1`.
 This will create a '.cnt' file with the name of your trajectory in the
 folder where your final hdf5 file will be placed. The `.cnt` file is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
