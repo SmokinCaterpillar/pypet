@@ -1,5 +1,12 @@
 pypet 0.1b.0
 
+*
+
+    If you merge trajectory, all environment settings of both are kept.
+
+*
+    More information about the environment is added to the trajectory
+
 *   BUG FIX:
 
     Recall of trajectory comments from diks yielded numpy strings instead of python strings
@@ -15,7 +22,7 @@ pypet 0.1b.0
 
 *
 
-    More fine graine overview tables
+    More fine grain overview tables
 
 *
 

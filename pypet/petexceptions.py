@@ -19,6 +19,15 @@ class ParameterNotArrayException(TypeError):
     def __str__(self):
         return repr(self._msg)
 
+class VersionMismatchError(TypeError):
+    '''Exception raised if the current version of pypet does not match the version with which
+        the trajectory was handled'''
+    def __init__(self,msg):
+        self._msg=msg
+
+    def __str__(self):
+        return repr(self._msg)
+
 
 class DefaultReplacementError(Exception):
     '''Exception raised if added parameters should actually replace default settings, but have not probably due to a type.'''

@@ -10,7 +10,7 @@ import os
 import numpy as np
 from pypet import pypetconstants
 import pypet.petexceptions as pex
-
+from pypet import __version__ as VERSION
 
 
 from pypet.parameter import ObjectTable
@@ -927,40 +927,149 @@ class HDF5StorageService(StorageService):
         self._logger.info('Finished backup of %s.' % traj.v_name)
 
     def _trj_copy_table_entries(self,rename_dict,other_trajectory_name):
-        #TODO change merge!
-        self._trj_copy_table_entries_from_table_name('result_table',rename_dict,other_trajectory_name)
-        self._trj_copy_table_entries_from_table_name('derived_parameter_table',rename_dict,other_trajectory_name)
+
+        self._trj_copy_table_entries_from_table_name('derived_parameters_runs',rename_dict,other_trajectory_name)
+        self._trj_copy_table_entries_from_table_name('results_trajectory',rename_dict,other_trajectory_name)
+        self._trj_copy_table_entries_from_table_name('results_runs',rename_dict,other_trajectory_name)
+
+        self._trj_copy_summary_table_entries_from_table_name('results_runs_summary', rename_dict, other_trajectory_name)
+        self._trj_copy_summary_table_entries_from_table_name('derived_parameters_runs_summary', rename_dict, other_trajectory_name)
+        
+        
+    def _trj_copy_summary_table_entries_from_table_name(self, tablename, rename_dict, other_trajectory_name):
+        
+        count_dict = {}
+
+        for old_name in rename_dict:
+
+            run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
+
+            old_split_name = old_name.split('.')
+            old_split_name[1]=run_mask
+            old_mask_name = '.'.join(old_split_name)
 
 
-    def _trj_copy_table_entries_from_table_name(self,tablename,rename_dict,other_trajectory_name):
+            if not old_mask_name in count_dict:
+                count_dict[old_mask_name]=0
+
+            count_dict[old_mask_name]=count_dict[old_mask_name]+1
+
+
         try:
-            other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/'+tablename)
-            new_value_dict={}
+            try:
+                other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
+            except AttributeError:
+                other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/overview/'+tablename)
 
-            for row in  other_table:
+            new_row_dict={}
+
+            for row in other_table:
                 location = row['location']
                 name = row['name']
                 full_name = location+'.'+name
 
-                if full_name in rename_dict:
-                    new_value_dict[rename_dict[full_name]] = row['value']
+                if full_name in count_dict:
+                    new_row_dict[full_name] = self._trj_read_out_row(other_table.colnames, row)
 
             try:
-                table= self._hdf5file.get_node('/'+self._trajectory_name+'/'+tablename)
+                table= self._hdf5file.get_node('/'+self._trajectory_name+'/overview/'+tablename)
             except AttributeError:
-                table= self._hdf5file.getNode('/'+self._trajectory_name+'/'+tablename)
+                table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
 
             for row in table:
                 location = row['location']
                 name = row['name']
                 full_name = location+'.'+name
 
-                if full_name in new_value_dict:
-                    row['value'] = new_value_dict[full_name]
-
+                if full_name in new_row_dict:
+                    row['number_of_items'] = row['number_of_items'] + count_dict[full_name]
+                    del new_row_dict[full_name]
                     row.update()
 
+            table.flush()
             self._hdf5file.flush()
+
+
+            for key in sorted(new_row_dict.keys()):
+                not_inserted_row = new_row_dict[key]
+                new_row = table.row
+
+                for col_name in table.colnames:
+                    new_row[col_name] = not_inserted_row[col_name]
+
+                new_row.append()
+
+            table.flush()
+            self._hdf5file.flush()
+
+        except pt.NoSuchNodeError:
+            self._logger.warning('Did not find table >>%s<< in one of the trajectories,'
+                              ' skipped copying.' % tablename)
+
+        
+
+    @staticmethod
+    def _trj_read_out_row(colnames,row):
+        result_dict= {}
+        for colname in colnames:
+            result_dict[colname]=row[colname]
+
+        return result_dict
+
+
+    def _trj_copy_table_entries_from_table_name(self,tablename, rename_dict,other_trajectory_name):
+        try:
+            try:
+                other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
+            except AttributeError:
+                other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/overview/'+tablename)
+
+            new_row_dict={}
+
+            for row in other_table.iterrows():
+                location = row['location']
+                name = row['name']
+                full_name = location+'.'+name
+
+                if full_name in rename_dict:
+                    read_out_row = self._trj_read_out_row(other_table.colnames,row)
+                    new_location = rename_dict[full_name].split('.')
+                    new_location = '.'.join(new_location[0:-1])
+                    read_out_row['location'] = new_location
+                    new_row_dict[rename_dict[full_name]] = read_out_row
+
+            try:
+                table= self._hdf5file.get_node('/'+self._trajectory_name+'/overview/'+tablename)
+            except AttributeError:
+                table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
+
+            for row in table.iterrows():
+                location = row['location']
+                name = row['name']
+                full_name = location+'.'+name
+
+                if full_name in new_row_dict:
+                    for col_name in table.colnames:
+                        row[col_name] = new_row_dict[full_name][col_name]
+
+                    del new_row_dict[full_name]
+                    row.update()
+
+            table.flush()
+            self._hdf5file.flush()
+
+            for key in sorted(new_row_dict.keys()):
+                not_inserted_row = new_row_dict[key]
+                new_row = table.row
+
+                for col_name in table.colnames:
+                    new_row[col_name] = not_inserted_row[col_name]
+
+                new_row.append()
+
+            table.flush()
+            self._hdf5file.flush()
+
         except pt.NoSuchNodeError:
             self._logger.warning('Did not find table >>%s<< in one of the trajectories,'
                               ' skipped copying.' % tablename)
@@ -1035,7 +1144,7 @@ class HDF5StorageService(StorageService):
                 self._hdf5file.removeNode(where='/', name=other_trajectory_name, recursive = True)
 
 
-    def _trj_update_trajectory(self, traj, changed_parameters,rename_dict):
+    def _trj_update_trajectory(self, traj, changed_parameters):
 
         # changed_parameters = kwargs.pop('changed_parameters')
         # new_results = kwargs.pop('new_results')
@@ -1045,21 +1154,6 @@ class HDF5StorageService(StorageService):
         insert_dict = self._all_extract_insert_dict(traj,infotable.colnames)
         self._all_add_or_modify_row(traj.v_name,insert_dict,infotable,index=0,
                                     flags=(HDF5StorageService.MODIFY_ROW,))
-
-
-        new_results = sorted(rename_dict.itervalues())
-
-        ## We only add the table entries, since we can merge via the hdf5 storage service
-        for result_name in new_results:
-            result = traj.f_get(result_name)
-            try:
-                tablename='result_table'
-                table = getattr(self._trajectory_group,tablename)
-                self._all_store_param_or_result_table_entry(result,table,
-                                                            flags=(HDF5StorageService.ADD_ROW,
-                                                                   HDF5StorageService.MODIFY_ROW))
-            except pt.NoSuchNodeError:
-                pass
 
 
         ### Store the parameters
@@ -1137,7 +1231,7 @@ class HDF5StorageService(StorageService):
 
     ######################## LOADING A TRAJECTORY #################################################
 
-    def _trj_load_trajectory(self,msg, traj, as_new, load_params,load_derived_params,load_results):
+    def _trj_load_trajectory(self,msg, traj, as_new, load_params,load_derived_params,load_results, force):
 
         ''' Loads a single trajectory from a given file.
 
@@ -1162,7 +1256,7 @@ class HDF5StorageService(StorageService):
             #     raise TypeError('You cannot f_load a trajectory from disk into a non-_empty one.')
             traj._stored=True
 
-        self._trj_load_meta_data(traj,as_new)
+        self._trj_load_meta_data(traj,as_new,force)
         self._ann_load_annotations(traj,self._trajectory_group)
 
 
@@ -1192,11 +1286,15 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _trj_load_meta_data(self,traj, as_new):
+    def _trj_load_meta_data(self,traj, as_new, force):
 
 
         metatable = self._overview_group.info
         metarow = metatable[0]
+
+        version = metarow['version']
+
+        self._trj_check_version(version,force)
 
         if as_new:
             length = int(metarow['lenght'])
@@ -1207,6 +1305,7 @@ class HDF5StorageService(StorageService):
             traj._timestamp = float(metarow['timestamp'])
             traj._time = str(metarow['time'])
             traj._name = str(metarow['name'])
+            traj._version = str(metarow['version'])
 
             single_run_table = self._overview_group.runs
 
@@ -1217,6 +1316,7 @@ class HDF5StorageService(StorageService):
                 time = str(row['time'])
                 completed = int(row['completed'])
                 summary=str(row['parameter_summary'])
+                hexsha = str(row['short_environment_hexsha'])
                 traj._single_run_ids[id] = name
                 traj._single_run_ids[name] = id
 
@@ -1227,6 +1327,7 @@ class HDF5StorageService(StorageService):
                 info_dict['completed'] = completed
                 info_dict['name'] = name
                 info_dict['parameter_summary'] = summary
+                info_dict['short_environment_hexsha'] = hexsha
                 traj._run_information[name] = info_dict
 
 
@@ -1256,7 +1357,23 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _trj_store_meta_data(self,traj):
+    def _trj_check_version( self, version, force):
+
+        if version != VERSION and not force:
+            raise pex.VersionMismatchError('Current pypet version is %s but your trajectory'
+                                            ' was created with version %s.'
+                                            ' Use force=True to perform your load regardless'
+                                            ' of version mismatch.' %
+                                           (pypet.__version__, version))
+        elif version != VERSION :
+            self._logger.warning('Current pypet version is %s but your trajectory'
+                                            ' was created with version %s.'
+                                            ' Yet, you enforced the load, so I will'
+                                            ' handle the trajectory despite the'
+                                            ' version mismatch.' %
+                                           (VERSION , version))
+
+    def _trj_store_meta_data(self, traj):
         ''' Stores general information about the trajectory in the hdf5file.
 
         The 'info' table will contain ththane name of the trajectory, it's timestamp, a comment,
@@ -1275,7 +1392,8 @@ class HDF5StorageService(StorageService):
                          'time': pt.StringCol(len(traj.v_time), pos=1),
                          'timestamp' : pt.FloatCol(pos=3),
                          'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH, pos=4),
-                         'length':pt.IntCol(pos=2)}
+                         'length':pt.IntCol(pos=2),
+                         'version' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5)}
                          # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
 
         infotable = self._all_get_or_create_table(where=self._overview_group, tablename='info',
@@ -1291,9 +1409,10 @@ class HDF5StorageService(StorageService):
                          'time': pt.StringCol(len(traj.v_time),pos=2),
                          'timestamp' : pt.FloatCol(pos=3),
                          'idx' : pt.IntCol(pos=0),
-                         'completed' : pt.IntCol(pos=5),
+                         'completed' : pt.IntCol(pos=6),
                          'parameter_summary' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                                            pos=4)}
+                                                            pos=4),
+                         'short_environment_hexsha' : pt.StringCol(7,pos=5)}
 
         runtable = self._all_get_or_create_table(where=self._overview_group,
                                                  tablename='runs',
@@ -1356,7 +1475,8 @@ class HDF5StorageService(StorageService):
 
                 paramdescriptiondict['comment']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH)
 
-
+            if table_name.endswith('summary'):
+                paramdescriptiondict['number_of_items']= pt.IntCol(dflt=1)
 
 
             if table_name.startswith('derived_parameters_runs'):
@@ -1679,6 +1799,7 @@ class HDF5StorageService(StorageService):
         insert_dict = self._all_extract_insert_dict(single_run,table.colnames)
         insert_dict['parameter_summary'] = run_summary
         insert_dict['completed'] = 1
+        insert_dict['short_environment_hexsha'] = single_run.v_environment_hexsha[0:7]
 
 
         # unused_parameters = self._srn_get_unused_parameters(single_run)
@@ -1745,7 +1866,7 @@ class HDF5StorageService(StorageService):
 
 
     ######################################### Storing a Trajectory and a Single Run #####################
-    def _all_find_param_or_result_entry(self, param_or_result, table):
+    def _all_find_param_or_result_entry_and_return_iterator(self, param_or_result, table):
 
         location = param_or_result.v_location
         name = param_or_result.v_name
@@ -1756,29 +1877,15 @@ class HDF5StorageService(StorageService):
 
         condition = """(namecol == name) & (locationcol == location)"""
 
-        row_iterator = table.where(condition,condvars=condvars)
+        return table.where(condition,condvars=condvars)
 
-        row = None
-        try:
-            row = row_iterator.next()
-        except StopIteration:
-            pass
 
-        try:
-            row_iterator.next()
-            raise RuntimeError('There is something completely wrong, found >>%s<< twice in a table!' %
-                                full_name)
-        except StopIteration:
-            pass
-
-        return row
 
     @staticmethod
-    def _all_get_table_name(where, instance):
+    def _all_get_table_name(where, creator_name):
         if where in ['config','parameters']:
                 return where
         else:
-            creator_name = instance.v_creator_name
             if creator_name == 'trajectory':
                 return '%s_trajectory' % where
             else:
@@ -2054,6 +2161,9 @@ class HDF5StorageService(StorageService):
 
             insert_dict['array'] = self._all_get_array_str(item,self._logger)
 
+        if 'version' in colnames:
+            insert_dict['version'] = item.v_version
+
         return insert_dict
 
     @staticmethod
@@ -2196,6 +2306,53 @@ class HDF5StorageService(StorageService):
                                                  'type >>%s<<.' %(key,str(dtype)))
 
 
+    def _prm_meta_remove_summary(self, instance):
+
+        split_name = instance.v_full_name.split('.')
+        where = split_name[0]
+
+        if where in['derived_parameters','results']:
+            creator_name = instance.v_creator_name
+            if creator_name.startswith(pypetconstants.RUN_NAME):
+                run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
+                split_name[1]=run_mask
+                new_full_name = '.'.join(split_name)
+                old_full_name = instance.v_full_name
+                instance._rename(new_full_name)
+                try:
+                    table_name = where+'_runs_summary'
+                    table = getattr(self._overview_group,table_name)
+
+                    row_iterator= self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+
+
+                    row = row_iterator.next()
+
+                    nitems = row['number_of_items']-1
+                    row['number_of_items'] = nitems
+                    row.update()
+
+                    try:
+                        row_iterator.next()
+                        raise RuntimeError('There is something completely wrong, found >>%s<< twice in a table!' %
+                                        instance.v_full_name)
+                    except StopIteration:
+                        pass
+
+
+                    table.flush()
+
+                    if nitems == 0:
+                        self._all_store_param_or_result_table_entry(instance,table,
+                                                    flags=(HDF5StorageService.REMOVE_ROW,))
+
+
+                except  pt.NoSuchNodeError:
+                    pass
+                finally:
+                    # Get the old name back
+                    instance._rename(old_full_name)
+                    
     def _prm_meta_add_summary(self,instance):
         '''Add data to the summary tables and returns if comment has to be stored.'''
         definitely_store_comment=True
@@ -2215,9 +2372,30 @@ class HDF5StorageService(StorageService):
                     table_name = where+'_runs_summary'
                     table = getattr(self._overview_group,table_name)
 
-                    row= self._all_find_param_or_result_entry(instance, table)
+                    row_iterator= self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+
+                    row = None
+                    try:
+                        row = row_iterator.next()
+                    except StopIteration:
+                        pass
+
                     if row is not None:
+                        nitems = row['number_of_items']+1
                         definitely_store_comment=instance.v_comment != row['comment']
+                        row['number_of_items'] = nitems
+                        row.update()
+
+                        try:
+                            row_iterator.next()
+                            raise RuntimeError('There is something completely wrong, found >>%s<< twice in a table!' %
+                                            instance.v_full_name)
+                        except StopIteration:
+                            pass
+
+
+                        table.flush()
+
                     else:
                         self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=(HDF5StorageService.ADD_ROW,))
@@ -2245,7 +2423,7 @@ class HDF5StorageService(StorageService):
 
 
         try:
-            table_name = self._all_get_table_name(where,instance)
+            table_name = self._all_get_table_name(where,instance.v_creator_name)
 
             table = getattr(self._overview_group,table_name)
 
@@ -2534,11 +2712,14 @@ class HDF5StorageService(StorageService):
         if instance.v_leaf:
             base_group = split_name[0]
 
-            tablename = self._all_get_table_name(base_group,instance)
+            tablename = self._all_get_table_name(base_group,instance.v_creator_name)
             table = getattr(self._overview_group,tablename)
 
             self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=(HDF5StorageService.REMOVE_ROW,))
+
+
+            self._prm_meta_remove_summary(instance)
 
 
         node_name = split_name.pop()

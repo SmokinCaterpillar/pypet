@@ -177,7 +177,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
 
-        keys = sorted(traj.f_to_dict(short_names=False).keys())
+        keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):
             keys[idx] = key.replace('.','_')
 
@@ -198,14 +198,23 @@ def simple_calculations(traj, arg1, simple_kwarg):
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'
 
+
+def to_dict_wo_config(traj):
+        res_dict={}
+        res_dict.update(traj.parameters.f_to_dict(fast_access=False))
+        res_dict.update(traj.derived_parameters.f_to_dict(fast_access=False))
+        res_dict.update(traj.results.f_to_dict(fast_access=False))
+
+        return res_dict
+
 class TrajectoryComparator(unittest.TestCase):
 
     def compare_trajectories(self,traj1,traj2):
 
-        old_items = traj1.f_to_dict(fast_access=False)
-        new_items = traj2.f_to_dict(fast_access=False)
+        old_items = to_dict_wo_config(traj1)
+        new_items = to_dict_wo_config(traj2)
 
-
+        self.assertEqual(len(traj1),len(traj2), 'Length unequal %d != %d.' % (len(traj1), len(traj2)))
 
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():

@@ -15,10 +15,15 @@ import itertools as it
 import inspect
 import numpy as np
 
+from pypet import __version__ as VERSION
+
 import pypet.petexceptions as pex
 from pypet import pypetconstants
 from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, STORE,LOAD,REMOVE
+
+import hashlib
+
 
 from pypet.storageservice import HDF5StorageService
 
@@ -52,9 +57,8 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._parent_trajectory = parent_trajectory
 
-        #if init_time is None:
-        init_time = time.time()
 
+        init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
 
         self._name = name
@@ -98,6 +102,8 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._is_run = True
         self._annotations = None
+
+        self._environment_hexsha = parent_trajectory.v_environment_hexsha
 
 
     def __getstate__(self):
@@ -197,6 +203,10 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def v_check_uniqueness(self, val):
         self._check_uniqueness = bool(val)
 
+    @property
+    def v_environment_hexsha(self):
+        '''If used with an environment this returns the current SHA-1 code of the environment'''
+        return self._environment_hexsha
 
     @property
     def v_storage_service(self):
@@ -570,6 +580,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         filename=None, file_title = None):
 
 
+        self._version = VERSION
         super(SingleRun,self).__init__(root=True)
         #if init_time is None:
         init_time = time.time()
@@ -611,6 +622,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self._fast_access=True
         self._check_uniqueness=False
         self._search_strategy=pypetconstants.BFS
+
+        self._environment_hexsha = None
 
         if filename is None:
             self._storage_service=None
@@ -663,6 +676,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self.f_add_result_group('results')
         self.f_add_derived_parameter_group('derived_parameters')
 
+
+
+    @property
+    def v_version(self):
+        '''The version of pypet that was used to create the trajectory'''
+        return self._version
 
     @property
     def v_comment(self):
@@ -914,6 +933,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             * name: Name of the run
 
             * parameter_summary: A string summary of the explored parameter settings for the particular run.
+
+            * short_environment_hexsha: The short version of the environment SHA-1 code
 
 
         If no name or idx is given than a list of all dictionaries is returned.
@@ -1283,6 +1304,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         info_dict['completed'] = 0
         info_dict['name'] = runname
         info_dict['parameter_summary'] = 'Not yet my friend!'
+        info_dict['short_environment_hexsha'] = 'notyet1'
 
         self._run_information[runname] = info_dict
 
@@ -1377,7 +1399,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
              as_new=False,
              load_parameters=None,
              load_derived_parameters=None,
-             load_results=None):
+             load_results=None,
+             force=False):
         ''' Loads a trajectory via the storage service.
 
         :param trajectory_name:
@@ -1434,6 +1457,15 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
                     Only items that are currently not in your trajectory are loaded with data.
 
+        :param force:
+
+            Pypet will refuse to load trajectories that have been created with pypet with a
+            different version number. To load a trajectory from a previous version simply put
+            force = True.
+
+
+
+
         :raises:
 
             Attribute Error:
@@ -1469,7 +1501,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                   trajectory_index=trajectory_index,
                                   as_new=as_new, load_params=load_parameters,
                                   load_derived_params=load_derived_parameters,
-                                  load_results=load_results)
+                                  load_results=load_results,
+                                  force=force)
 
         if as_new:
             for param in self._parameters.itervalues():
@@ -1477,6 +1510,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             for param in self._derived_parameters.itervalues():
                 param.f_unlock()
+
+
 
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
@@ -1512,14 +1547,14 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         if not my_keyset == other_keyset:
             diff1 = my_keyset - other_keyset
             diff2 = other_keyset - my_keyset
-            raise TypeError('Cannot f_merge trajectories, they do not live in the same space,the '
+            raise TypeError('Cannot merge trajectories, they do not live in the same space,the '
                             'f_set of parameters >>%s<< is only found in the current trajectory '
                             'and >>%s<< only in the other trajectory.' % (str(diff1), str(diff2)))
 
         for key, other_param in allotherparams.items():
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
-                raise TypeError('Cannot f_merge trajectories, values of parameters >>%s<< are not '
+                raise TypeError('Cannot merge trajectories, values of parameters >>%s<< are not '
                                 'of the same type. Types are %s (current) and %s (other).' %
                                 (key, str(type(my_param.f_get())), str(type(other_param.f_get()))))
 
@@ -1540,7 +1575,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 backup_filename = None,
                 move_nodes=False,
                 delete_trajectory=False,
-                merge_config=True):
+                merge_config=True,
+                keep_other_trajectory_info=True):
         ''' Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. That means both need to have the same
@@ -1592,8 +1628,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param merge_config:
 
-            Whether or not to merge all config parameters under `config.git` of the
-            other trajectory in the current one.
+            Whether or not to merge all config parameters under `config.git`, `config.environment`,
+            and `config.merge` of the
+            other trajectory into the current one.
+
+        :param keep_other_trajectory_info:
+
+            Whether to keep information like length, name, etc. of the other trajectory.
 
         If you cannot directly merge trajectories within one HDF5 file a slow merging process
         is used. Results are loaded, stored and emptied again one after the other. Might take
@@ -1607,6 +1648,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         '''
 
         ## Check if trajectories can be merged
+
+
         self._check_if_both_have_same_parameters(other_trajectory,
                                                  ignore_trajectory_derived_parameters)
 
@@ -1618,6 +1661,85 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             other_trajectory.f_backup(backup_filename=backup_filename)
             self.f_backup(backup_filename=backup_filename)
 
+        self._logger.info('Adding merge information')
+
+
+        timestamp = time.time()
+        formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+
+        hexsha=hashlib.sha1(self.v_name +
+                            str(self.v_timestamp) +
+                            other_trajectory.v_name +
+                            str(other_trajectory.v_timestamp) +
+                            VERSION).hexdigest()
+
+        short_hexsha= hexsha[0:7]
+
+        merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
+
+        config_name='merge.%s.timestamp' % merge_name
+        self.f_add_config(config_name,timestamp,
+                                    comment ='Timestamp of merge.')
+
+        config_name='merge.%s.hexsha' % merge_name
+        self.f_add_config(config_name,hexsha,
+                                    comment ='SHA-1 identifier of the merge')
+
+
+        config_name='merge.%s.remove_duplicates' % merge_name
+        self.f_add_config(config_name,int(remove_duplicates),
+                                    comment ='Option to remove duplicate entries.')
+
+        config_name='merge.%s.ignore_trajectory_derived_parameters' % merge_name
+        self.f_add_config(config_name,int(ignore_trajectory_derived_parameters),
+                                    comment ='Whether or not to ignore trajectory derived'
+                                             ' parameters')
+
+        config_name='merge.%s.ignore_trajectory_results' % merge_name
+        self.f_add_config(config_name,int(ignore_trajectory_results),
+                                    comment ='Whether or not to ignore trajectory results.')
+
+        config_name='merge.%s.length_before_merge' % merge_name
+        self.f_add_config(config_name,len(self),
+                                    comment ='Length of trajectory before merge.')
+
+
+        if trial_parameter is not None:
+            config_name='merge.%s.trial_parameter' % merge_name
+            self.f_add_config(config_name,len(other_trajectory),
+                          comment ='Name of trial parameter.')
+
+        if keep_other_trajectory_info:
+            if other_trajectory.v_version != self.v_version:
+
+                config_name='merge.%s.other_trajectory.version' % merge_name
+                self.f_add_config(config_name,other_trajectory.v_version,
+                                            comment ='The version of pypet you used to manage the merged'
+                                                     ' trajectory. Is only added if other trajectorie\'s'
+                                                       ' version differs from current trajectory version')
+
+            config_name='merge.%s.other_trajectory.name' % merge_name
+            self.f_add_config(config_name,other_trajectory.v_name,
+                              comment ='Name of other trajectory merged into the current one.')
+
+
+            config_name='merge.%s.other_trajectory.timestamp' % merge_name
+            self.f_add_config(config_name,other_trajectory.v_timestamp,
+                              comment ='Timestamp of creation of other trajectory merged into the'
+                                       ' current one.')
+
+            config_name='merge.%s.other_trajectory.length' % merge_name
+            self.f_add_config(config_name,len(other_trajectory),
+                              comment ='Length of other trajectory')
+
+            if other_trajectory.v_comment:
+                config_name='merge.%s.other_trajectory.comment' % merge_name
+                self.f_add_config(config_name,other_trajectory.v_comment,
+                                  comment ='Comment of other trajectory.')
+
+
+
+
 
 
         self._logger.info('Merging the parameters.')
@@ -1625,15 +1747,16 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                                                                trial_parameter,
                                                                ignore_trajectory_derived_parameters)
 
+
+        config_name='merge.%s.merged_runs' % merge_name
+        self.f_add_config(config_name,int(np.sum(used_runs)),
+                              comment ='Number of merged runs.')
+
         if np.all(used_runs == 0):
-            self._logger.warning('Your f_merge discards all runs of the other trajectory, maybe you '
-                                 'try to f_merge a trajectory with itself?')
-            return
-            # if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in other_trajectory:
-        #     self._logger.info('Merging derived trajectory parameters')
-        #     changed_derived_parameters = self._merge_trajectory_derived_parameters(other_trajectory,used_runs)
-        # else:
-        #     changed_derived_parameters = []
+            self._logger.warning('Your merge discards all runs of the other trajectory, maybe you '
+                                 'try to merge a trajectory with itself?')
+
+
 
         rename_dict = {}
 
@@ -1654,8 +1777,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         self._storage_service.store(pypetconstants.PREPARE_MERGE, self,
                                    trajectory_name=self.v_name,
-                                   changed_parameters=changed_parameters,
-                                   rename_dict=rename_dict)
+                                   changed_parameters=changed_parameters)
 
         try:
             self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
@@ -1688,6 +1810,11 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         if merge_config:
             self._merge_config(other_trajectory)
 
+
+        merge_group = self.f_get('config.merge')
+        self.config.f_store_child('merge')
+        merge_group.f_store_child(merge_name,recursive=True)
+
         self._logger.info('Finished Merging!')
 
     def _merge_config(self,other_trajectory):
@@ -1706,7 +1833,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             self.f_store_items(param_list)
 
 
-            self._logger.info('Merging git commits successfull!')
+            self._logger.info('Merging git commits successful!')
 
         if 'config.environment' in other_trajectory:
 
@@ -1717,6 +1844,22 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 param_list.append(self.f_add_config(param))
 
             self.f_store_items(param_list)
+
+            self._logger.info('Merging config successful!')
+
+        if 'config.merge' in other_trajectory:
+
+            self._logger.info('Merging merge config!')
+            merge_node = other_trajectory.f_get('config.merge')
+            param_list = []
+            for param in merge_node.f_iter_leaves():
+                param_list.append(self.f_add_config(param))
+
+            self.f_store_items(param_list)
+
+            self._logger.info('Merging config successful!')
+
+
 
 
     def _merge_slowly(self, other_trajectory, rename_dict):
@@ -1788,12 +1931,14 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 time = other_trajectory.f_get_run_information(runname)['time']
                 timestamp = other_trajectory.f_get_run_information(runname)['timestamp']
                 completed = other_trajectory.f_get_run_information(runname)['completed']
+                hexsha = other_trajectory.f_get_run_information(runname)['short_environment_hexsha']
 
                 new_runname = pypetconstants.FORMATTED_RUN_NAME % count
 
                 self._run_information[new_runname] = dict(idx=count,
                                                           time=time, timestamp=timestamp,
-                                                          completed=completed)
+                                                          completed=completed,
+                                                          short_environment_hexsha=hexsha)
 
                 self._single_run_ids[count] = new_runname
                 self._single_run_ids[new_runname] = count
@@ -1937,7 +2082,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         ## Now f_merge into the new trajectory
         adding_length = int(sum(use_runs))
         if adding_length == 0:
-            return 0, []
+            return use_runs, []
 
         for my_param, other_param in params_to_change.itervalues():
             fullname = my_param.v_full_name

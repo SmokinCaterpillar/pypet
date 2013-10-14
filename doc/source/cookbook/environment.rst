@@ -211,7 +211,8 @@ Multiprocessing
 
 For a full code example on multiprocessing see :ref:`example-04`
 
-The following code snippet shows how to enable multiprocessing with 4 cpus:
+The following code snippet shows how to enable multiprocessing with 4 cpus. The config parameters
+are passed to the Environment and will also be added to your trajectory and hdf5 file.
 
 .. code-block:: python
 
@@ -221,14 +222,11 @@ The following code snippet shows how to enable multiprocessing with 4 cpus:
                  log_folder='../log/',
                  use_hdf5=True,
                  filename='../experiments.h5',
-                 file_title='experiment')
+                 file_title='experiment',
+                 multiproc=True,
+                 ncores=4,
+                 wrap_mode='QUEUE')
 
-
-    traj = env.v_tracetory
-
-    traj.multiproc = True
-
-    traj.ncores = 4
 
     {...}
 
@@ -241,7 +239,7 @@ box. However, if you want multiprocessing, the environment will automatically pr
 classes for the hdf5 storage service to allow safe data storage.
 
 There are two different modes that are supported. You can choose between them via setting
-`config.environment.wrap_mode`. You can choose between `'QUEUE'` and `'LOCK'`. If you
+`wrap_mode`. You can choose between `'QUEUE'` and `'LOCK'`. If you
 have your own service that is already thread safe you can also choose `'NONE'` to skip wrapping.
 
 If you chose the `'QUEUE'` mode, there will be an additional process spawned that is the only

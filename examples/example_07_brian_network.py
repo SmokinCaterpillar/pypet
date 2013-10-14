@@ -88,18 +88,20 @@ def main():
     logging.basicConfig(level = logging.DEBUG)
 
 
+     #Let's to multiprocessing this time with a lock (which is default)
     env = Environment(trajectory='Example_07_BRIAN',
                       filename='experiments/example_07/HDF5/example_07.hdf5',
                       file_title='Example_07_Euler_Integration',
                       log_folder='experiments/example_07/LOGS/',
                       comment = 'Go Brian!',
-                      dynamically_imported_classes=[BrianMonitorResult,BrianParameter])
+                      dynamically_imported_classes=[BrianMonitorResult,BrianParameter],
+                      multiproc=True,
+                      ncores=2)
 
     traj = env.v_trajectory
 
-    #Let's to multiprocessing this time with a lock (which is default)
-    traj.multiproc = 1
-    traj.ncores= 2
+
+
 
 
     # 1st Add the parameters

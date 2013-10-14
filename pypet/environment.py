@@ -18,10 +18,13 @@ import traceback
 import hashlib
 import time
 import datetime
-import pypet
+
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
 from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
+
+from pypet import __version__ as VERSION
+
 
 def _single_run(args):
 
@@ -365,6 +368,7 @@ class Environment(object):
             self._time = formatted_time
 
 
+
         if self.v_trajectory.v_storage_service is not None and filename is None:
             self._file_title=self._traj.v_storage_service._file_title
             self._filename=self._traj.v_storage_service._filename
@@ -387,13 +391,17 @@ class Environment(object):
         if self._git_repository is not None:
             self._hexsha=make_git_commit(self,self._git_repository, self._git_message)
         else:
-            self._hexsha=hashlib.sha1(self.v_trajectory.v_name+str(self.v_timestamp)).hexdigest()
+            self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
+                                      str(self.v_trajectory.v_timestamp) +
+                                      str(self.v_timestamp) +
+                                      VERSION).hexdigest()
 
         short_hexsha= self._hexsha[0:7]
 
         self._name = name+'_'+str(short_hexsha)+'_'+self._time
 
 
+        self._traj._environment_hexsha=self._hexsha
 
 
         if log_folder is None:
@@ -405,12 +413,13 @@ class Environment(object):
         # # Adding some default configuration
         # if not self._traj.f_contains('config.environment.log_path'):
         log_path = os.path.join(log_folder,self._traj.v_name)
-        #     self._traj.f_add_config('environment.log_path', log_path).f_lock()
+        #     self._traj.f_add_config('environment.log_path', self.v_namelog_path).f_lock()
         # else:
         #     log_path=self._traj.f_get('config.environment.log_path').f_get()
 
 
         self._make_logger(log_path)
+
         self._log_path = log_path
 
         storage_service = self._traj.v_storage_service
@@ -434,19 +443,13 @@ class Environment(object):
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_timestamp,
-                                    comment ='Timesamp of environment creation.')
+                                    comment ='Timestamp of environment creation.')
 
-        config_name='environment.%s.time' % self.v_name
-        self._traj.f_add_config(config_name,self.v_time,
-                                    comment ='Human readable time string of environment creation.')
 
         config_name='environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment')
 
-        config_name='environment.%s.version' % self.v_name
-        self._traj.f_add_config(config_name,pypet.__version__,
-                                    comment ='The version of pypet you used to manage your data.')
 
 
 
@@ -454,6 +457,16 @@ class Environment(object):
         self._traj.f_add_config(config_name, continuable, comment='Whether or not a continue file should'
                                                               ' be created. If yes, everything must be'
                                                               ' pickable.')
+
+        config_name='environment.%s.trajectory.name' % self.v_name
+        self._traj.f_add_config(config_name,self.v_trajectory.v_name,
+                                    comment ='Name of trajectory to run.')
+
+        config_name='environment.%s.trajectory.timestamp' % self.v_name
+        self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+                                    comment ='Timestamp of trajectory.')
+
+
 
 
         if self._use_hdf5 and not self.v_trajectory.v_stored:
@@ -490,6 +503,9 @@ class Environment(object):
 
 
         self._logger.info('Environment initialized.')
+
+
+
 
 
     def _make_logger(self,log_path):
@@ -561,22 +577,15 @@ class Environment(object):
 
         self._traj._remove_incomplete_runs()
 
-        self._add_numer_of_runs('runs_continued','The number of runs that will be executed'
-                                                   ' for this continued run')
+        config_name='environment.%s.continued_runs' % self.v_name
+        if not config_name in self._traj:
+            self._traj.f_add_config(config_name, 1,
+                                    comment ='Added if a crashed trajectory was continued.')
+
         self._do_run(runfunc,*args,**kwargs)
 
 
-    def _add_numer_of_runs(self, name, comment):
-        count = 0
-        for run_name, run_dict in self._traj.f_get_run_information(copy=False).iteritems():
-            if not run_dict['completed']:
-                count +=1
 
-        config_name='environment.%s.%s' % (self.v_name, name)
-        self._traj.f_add_config(config_name, count,
-                                    comment =comment)
-
-        return config_name
 
     @ property
     def v_trajectory(self):
@@ -653,9 +662,10 @@ class Environment(object):
             if not run_dict['completed']:
                 count +=1
 
-        config_name='environment.%s.runs' % self.v_name
-        self._traj.f_add_config(config_name, count,
-                                    comment ='The number of single runs to be executed.')
+        config_name='environment.%s.normal_runs' % self.v_name
+        if not config_name in self._traj:
+            self._traj.f_add_config(config_name, 1,
+                                    comment ='Added if trajectory was explored normally and not continued.')
 
 
         self._traj._prepare_experiment()
