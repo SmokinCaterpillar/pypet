@@ -88,6 +88,11 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(self.traj.FortyTwo.f_get() == 42)
 
 
+    def test_get_item(self):
+
+        self.assertEqual(self.traj.peter.paul, self.traj['peter.paul'])
+
+
     def testremove(self):
         self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'),remove_empty_groups=True)
 

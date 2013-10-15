@@ -35,17 +35,11 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     ''' Constitutes one specific parameter combination in the whole trajectory.
 
     A SingleRun instance is accessed during the actual run phase of a trajectory.
-    There exists a SignleRun object for each point in the parameter space.
-    The object contains a copy of the trajectory. How large that copy is depends on
-    `v_full_copy` in the parent trajectory. If `v_full_copy=True` than the full
-    trajectory can be accessed. Otherwise from each parameter array
-    only the idxth parameter can be accesses, where idx is the index of the current run.
+    There exists a SingleRun object for each point in the parameter space.
 
-    parameters can no longer be added, the parameter set is supposed to be complete before
+
+    Parameters can no longer be added, the parameter set is supposed to be complete before
     a the actual running of the experiment. However, derived parameters can still be added.
-    This might be useful, for example, to store a connectivity matrix of neural network,
-    that is built new for each point in the trajectory.
-
 
     The instance of a SingleRun is never instantiated by the user but by the parent trajectory.
 
@@ -118,9 +112,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
 
     def __len__(self):
-        ''' Length of a single run can only be 1 and nothing else!
-        :return:
-        '''
+        ''' Length of a single run can only be 1 and nothing else!'''
         return 1
 
     @property
@@ -132,7 +124,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def v_search_strategy(self):
         '''Search strategy for lookup of items in the trajectory tree.
 
-        Default is breadth first search (BFS), you could alos chose depth first search (DFS),
+        Default is breadth first search (BFS), you could also choose depth first search (DFS),
         but not recommended!
 
         '''
@@ -178,7 +170,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
     @property
     def v_fast_access(self):
-        '''Whether parameter instances (False) or their values (True) are returned via natural naming
+        '''Whether parameter instances (False) or their values (True) are returned via natural naming.
+
+        Works also for results if they contain a single item with the name of the result.
 
         Default is True.
         '''
@@ -190,7 +184,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
     @property
     def v_check_uniqueness(self):
-        '''Whether natural naming should check if naming is unambiguous
+        '''Whether natural naming should check if naming is unambiguous.
 
         Default is False. If True, searching a parameter or result via
         :func'~pypet.naturalnaming.NNGroupNode.f_get` will take O(N), because all nodes have
@@ -205,7 +199,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
     @property
     def v_environment_hexsha(self):
-        '''If used with an environment this returns the current SHA-1 code of the environment'''
+        '''If used with an environment this returns the current SHA-1 code of the environment.'''
         return self._environment_hexsha
 
     @property
@@ -218,7 +212,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         if not copy and fast_access:
             raise TypeError('You cannot access the original dictionary and use fast access at the'
-                            'same time!')
+                            ' same time!')
         if not fast_access:
             if copy:
                 return param_dict.copy()
@@ -268,17 +262,22 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def f_to_dict(self,fast_access = False, short_names=False, copy = True):
         ''' Returns a dictionary with pairings of (full) names as keys and instances/values.
 
-        :param fast_access: If True, parameter values are returned instead of the instances-
+        :param fast_access:
 
-        :param short_names: If true, keys are not full names but only the names. Raises a Value
-                            Error if the names are not unique.
+            If True, parameter values are returned instead of the instances.
+            Works also for results if they contain a single item with the name of the result.
 
-        :param copy: If `fast_access=False` and `short_names=False` you can access the original
-                    data dictionary if you set `copy=False`. If you do that, please do not
-                    modify anything! Raises Value Error if `copy=False` and `fast_access=True`
-                    or `short_names=True`.
+        :param short_names:
 
+            If true, keys are not full names but only the names. Raises a Value
+            Error if the names are not unique.
 
+        :param copy:
+
+            If `fast_access=False` and `short_names=False` you can access the original
+            data dictionary if you set `copy=False`. If you do that, please do not
+            modify anything! Raises Value Error if `copy=False` and `fast_access=True`
+            or `short_names=True`.
 
         :return: dictionary
 
@@ -291,13 +290,17 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         ''' Returns a dictionary containing the full config names as keys and the config parameters
          or the config parameter values.
 
-        :param fast_access: Determines whether the parameter objects or their values are returned
-         in the dictionary.
+        :param fast_access:
 
-        :param copy: Whether the original dictionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
-                     Not copy and fast access at the same time do not work! Raises TypeError
-                     if fast access is true and copy false.
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises TypeError
+            if fast access is true and copy false.
 
         :return: Dictionary containing the config data
 
@@ -306,41 +309,47 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         '''
         return self._return_item_dictionary(self._config,fast_access, copy)
 
-    def f_get_parameters(self, fast_access=False,copy=True):
+    def f_get_parameters(self, fast_access=False, copy=True):
         ''' Returns a dictionary containing the full parameter names as keys and the parameters
          or the parameter values.
 
-         Requires O(n)
 
-        :param fast_access: Determines whether the parameter objects or their values are returned
-         in the dictionary.
+        :param fast_access:
 
-        :param copy: Whether the original dictionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
-                     Not using copy and fast access at the same time does not work! Raises TypeError
-                     if fast access is true and copy false.
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises TypeError
+            if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
         :raises: TypeError
 
         '''
-        return self._return_item_dictionary(self._parameters,fast_access)
+        return self._return_item_dictionary(self._parameters,fast_access, copy)
 
 
     def f_get_explored_parameters(self, fast_access=False, copy=True):
         ''' Returns a dictionary containing the full parameter names as keys and the parameters
          or the parameter values.
 
-         Requires O(n)
 
-        :param fast_access: Determines whether the parameter objects or their values are returned
-         in the dictionary.
+        :param fast_access:
 
-        :param copy: Whether the original dictionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
-                     Not using copy and fast access at the same time does not work! Raises TypeError
-                     if fast access is true and copy false.
+            Determines whether the parameter objects or their values are returned
+            in the dictionary..
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises TypeError
+            if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
@@ -353,15 +362,17 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         ''' Returns a dictionary containing the full parameter names as keys and the parameters
          or the parameter values.
 
-         Requires O(n)
+         :param fast_access:
 
-        :param fast_access: Determines whether the parameter objects or their values are returned
-         in the dictionary.
+            Determines whether the parameter objects or their values are returned
+            in the dictionary. .
 
-        :param copy: Whether the original dictionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
-                     Not using copy and fast access at the same time does not work! Raises TypeError
-                     if fast access is true and copy false.
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises TypeError
+            if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
@@ -370,17 +381,26 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         '''
         return self._return_item_dictionary(self._derived_parameters, fast_access, copy)
 
-    def f_get_results(self,copy=True):
+    def f_get_results(self, fast_access=False, copy=True):
         ''' Returns a dictionary containing the full result names as keys and the corresponding
         result objects.
 
-        :param copy: Whether the original dictionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
+        :param fast_access:
 
+            Determines whether the result objects or their values are returned
+            in the dictionary. Works only for results if they contain a single item with
+            the name of the result.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises TypeError
+            if fast access is true and copy false.
 
         :return: Dictionary containing the results.
         '''
-        return self._return_item_dictionary(self._results, False,copy)
+        return self._return_item_dictionary(self._results, fast_access, copy)
 
 
 
@@ -398,24 +418,30 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def f_store_items(self, iterator, *args, **kwargs):
         ''' Stores individual items to disk.
 
-        This function is useful is you calculated very large results (or large derived parameters)
+        This function is useful if you calculated very large results (or large derived parameters)
         during runtime and you want to write these to disk immediately and empty them afterwards
         to free some memory.
 
 
-        :param iterator: an iterable containing the parameters or results to store, either their
-                        names or the instances.
+        :param iterator:
+
+            An iterable containing the parameters or results to store, either their
+            names or the instances.
 
         :param non_empties: Will only store the subset of provided items that are not empty.
 
-        :param args: additional arguments passed to the storage service
+        :param args: Additional arguments passed to the storage service
 
-        :param kwargs: additional keyword arguments passed to the storage service
+        :param kwargs: Additional keyword arguments passed to the storage service
 
-        :raises: TypeError: If the (parent) trajectory has never been stored to disk. In this case
-                            use :func:'pypet.trajectory.f_store` first.
+        :raises:
 
-                ValueError: If no item could be found to be stored.
+            TypeError:
+
+                If the (parent) trajectory has never been stored to disk. In this case
+                use :func:'pypet.trajectory.f_store` first.
+
+            ValueError: If no item could be found to be stored.
 
         Note if you use the standard hdf5 storage service, there are no additional arguments
         or keyword arguments to pass!
@@ -447,6 +473,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         It is tried if the class can be created by default, if not the list of the dynamically
         loaded classes is used (see __init__).
+
         '''
         try:
             new_class = eval(class_name)
@@ -467,8 +494,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     '''The trajectory manages results and parameters.
 
-
-    The trajectory is the common object to interact with before and during a simulation.
+    The trajectory is the container to interact with before and during a simulation.
     You can add four types of data to the trajectory:
 
     * Config:
@@ -478,7 +504,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         obtain from your simulations.
 
         They specify runtime environment parameters like how many CPUs you use for
-        multiprocessing, where the storage file into on disk can be found, etc.
+        multiprocessing etc.
 
         In fact, if you use the default runtime environment of this project, the environment
         will add some config parameters to your trajectory.
@@ -519,10 +545,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         Result are added via the :func:`~pypet.naturalnaming.ResultGroup.f_add_result`
 
     There are several ways to access the parameters and results, to learn about these, fast access,
-    and natural naming see :ref:`more-on-access`
+    and natural naming see :ref:`more-on-access`.
 
 
-    
     :param name:
 
         Name of the trajectory, if `add_time=True` the current time is added as a string
@@ -556,7 +581,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     :param filename:
 
         If you want to use the default :class:`HDF5StorageService`, you can specify the
-        filename of the HDF5 file. If you specify the file name, the trajectory
+        filename of the HDF5 file. If you specify the filename, the trajectory
         will automatically create the corresponding service object.
 
     :param file_title:
@@ -725,7 +750,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         :func:`pypet.trajectory.Trajectory.f_as_run:`. See it's documentation for a description
         of making the trajectory behave like a single run.
 
-        Set to -1 to make the trajectory to turn everything back to default
+        Set to -1 to make the trajectory turn everything back to default
 
         '''
         return self._idx
@@ -804,7 +829,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def f_as_run(self, name_or_idx):
         ''' Can make the trajectory behave like a single run, for easy data analysis.
 
-         Has tthe following effects
+         Has the following effects:
 
         *
             `v_idx` and `v_as_run` are set to the approriate index and run name
@@ -824,9 +849,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             `traj.results.run_00000007`. Yet, you can still explicitly name other subtrees,
             i.e. `traj.results.run_00000004.z` will still work.
 
-            Note that this functionality also applays to the iterator functions
+            Note that this functionality also effects the iterator functions
             :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` and
-            :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves`
+            :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves`.
 
             Also the shortcuts `cr`, `current_run` and, `currentrun` will map to the selected
             runname, i.e. `traj.derived_parameters.cr` with the settings from above mapped to
@@ -843,49 +868,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 self._idx=name_or_idx
 
             self._set_explored_parameters_to_idx(self.v_idx)
-
-
-
-
-
-    # def __iter__(self):
-    #     ''' Iterator over all single runs.
-    #
-    #     equivalent to calling :func:`~pypet.trajectory.Trajectory.f_iter_runs`:
-    #
-    #         >>> traj.f_iter_runs(non_completed=False)
-    #
-    #     '''
-    #     return self.f_iter_runs(non_completed=False)
-
-    # def f_finalize(self):
-    #     ''' If you called :func:` ~pypet.trajectory.Trajectory.f_iter_runs` without completing a full
-    #     iteration you are advised to call this function.
-    #
-    #     Resets all parameters to the default values and restores proper natural naming.
-    #     '''
-    #     self._finalize()
-    #
-    # def f_iter_runs(self, non_completed=False):
-    #     ''' Returns an Iterator over all single runs.
-    #
-    #     Will also lock all parameters and reset them to the default values after
-    #     the iteration is completed.
-    #
-    #     Note that this manipulates your original trajectory!
-    #     If you break the iteration and want to restore your original trajectory call
-    #     :func:`~pypet.trajectory.Trajectory.f_finalize()
-    #
-    #     :param non_completed: Whether only not completed runs should be considered or not.
-    #
-    #     '''
-    #     self.f_lock_parameters()
-    #     self.f_lock_derived_parameters()
-    #     for idx in xrange(len(self)):
-    #         if (not non_completed) or self.f_get_run_information(idx)['completed'] == 0:
-    #             yield self._make_single_run(idx)
-    #
-    #     self._finalize()
 
 
 
@@ -980,13 +962,19 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         This function can also be used to erase data from disk via the storage service.
 
-        :param iterable: A sequence of items you want to remove. Either the instances themselves
-                         or strings with the names of the item.
+        :param iterable:
 
-        :param remove_from_storage: Boolean whether you want to also delete the item from your
-                                    storage.
-        :param remove_empty_groups: If your deletion of the instance leads to empty groups,
-                                    these will be deleted, too.
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the item.
+
+        :param remove_from_storage:
+
+            Boolean whether you want to also delete the item from your storage.
+
+        :param remove_empty_groups:
+
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too.
 
         :param args:    Additional arguments passed to the storage service
 
@@ -996,7 +984,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         or keyword arguments to pass!
 
         '''
-        #kwargs['trajectory'] = self
 
         remove_from_storage = kwargs.pop('remove_from_storage',False)
         remove_empty_groups = kwargs.get('remove_empty_groups',False)
@@ -1062,16 +1049,16 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
     def f_preset_parameter(self, param_name, *args, **kwargs):
         ''' Can be called before parameters are added to the Trajectory in order to change the
-        values that are stored
-        into the parameter on creation.
+        values that are stored into the parameter on creation.
 
-        After creation of a Parameter, the instance of the parameter is called with `param.f_set(*args,**kwargs)`.
+        After creation of a Parameter, the instance of the parameter is called
+        with `param.f_set(*args,**kwargs)`.
 
 
-        Before an experiment is carried out it is checked if all parameters that were marked were also
-        preset.
+        Before an experiment is carried out it is checked if all parameters that were
+        marked were also preset.
 
-        :param param_name: The name of the parameter that is to be changed after its creation.
+        :param param_name: The full name of the parameter that is to be changed after its creation.
 
         Example:
 
@@ -1189,10 +1176,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
 
-
-
-
-
     def f_is_completed(self, name_or_id=None):
         '''Whether or not a given run is completed.
         
@@ -1258,6 +1241,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
     def f_explore(self, build_dict):
         ''' Prepares the trajectory to explore the parameter space.
+
         To explore the parameter space you need to provide a dictionary with the names of the
         parameters to explore as keys and iterables specifying the exploration array as values.
 
@@ -1341,8 +1325,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         self.f_load_items([item],*args,**kwargs)
 
     def f_load_items(self, iterator, *args, **kwargs):
-        ''' Loads parameters specified in `iterator`. You can directly list the Parameter objects or their
-        names.
+        ''' Loads parameters specified in `iterator`. You can directly list the Parameter
+        objects or their names.
 
         If names are given the `~pypet.trajectory.Trajectory.f_get` method is applied to find the
         parameters or results in the
@@ -1437,9 +1421,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
                 :const:`pypet.pypetconstants.LOAD_SKELETON`: (1)
 
-                        The skeleton including annotations are loaded, i.e. the items are empty.
-                        Note that if the items already exist in your trajectory an Attribute
-                        Error is thrown. If this is the case use -1 instead.
+                    The skeleton including annotations are loaded, i.e. the items are empty.
+                    Note that if the items already exist in your trajectory an Attribute
+                    Error is thrown. If this is the case use -1 instead.
 
                 :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
@@ -1450,8 +1434,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
                 :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
 
-                    The skeleton and annotations are updated, i.e. only items that are not currently part
-                    of your trajectory are loaded empty
+                    The skeleton and annotations are updated, i.e. only items that are not
+                    currently part of your trajectory are loaded empty
 
                 :const:`pypet.pypetconstants.UPDATE_DATA`: (-2) Like (2)
 
@@ -1459,11 +1443,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param force:
 
-            Pypet will refuse to load trajectories that have been created with pypet with a
+            Pypet will refuse to load trajectories that have been created via pypet with a
             different version number. To load a trajectory from a previous version simply put
             force = True.
-
-
 
 
         :raises:
@@ -1562,7 +1544,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     def f_backup(self, backup_filename):
         '''Backs up the trajectory with the given storage service.
 
-        :param backup_filename: Name of file where to store the backup!
+        :param backup_filename: Name of file where to store the backup.
 
         '''
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
@@ -1574,14 +1556,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 ignore_trajectory_results= False,
                 backup_filename = None,
                 move_nodes=False,
-                delete_trajectory=False,
+                delete_other_trajectory=False,
                 merge_config=True,
                 keep_other_trajectory_info=True):
         ''' Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. That means both need to have the same
-        parameters with similar types of values. Yet, if the other trajectory explores
-        different parameters than the current one, merging will take care of that.
+        parameters with similar types of values.
 
         :param other_trajectory: Other trajectory instance to merge into the current one.
 
@@ -1599,8 +1580,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         :param ignore_trajectory_derived_parameters:
 
-                    Whether you want to ignore or merge derived parameters
-                    kept under `.derived_parameters.trajectory`
+            Whether you want to ignore or merge derived parameters
+            kept under `.derived_parameters.trajectory`
 
         :param ignore_trajectory_results:
 
@@ -1619,12 +1600,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         :param move_nodes:
 
            If you use the HDF5 storage service and both trajectories are
-           stored in the same file merging is achieved fast directly within
+           stored in the same file, merging is achieved fast directly within
            the file. You can choose if you want to copy nodes from the other
            trajectory to the current one, or if you want to move them. Accordingly
            the stored data is no longer accessible in the other trajectory.
 
-        :param delete_trajectory: If you want to delete the other trajectory after merging
+        :param delete_other_trajectory: If you want to delete the other trajectory after merging
 
         :param merge_config:
 
@@ -1783,7 +1764,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
                                        other_trajectory_name=other_trajectory.v_name,
                                        rename_dict=rename_dict, move_nodes=move_nodes,
-                                       delete_trajectory=delete_trajectory)
+                                       delete_trajectory=delete_other_trajectory)
 
 
 
@@ -2145,13 +2126,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             param._restore_default()
 
 
-    def f_prepare_parameter_space_point(self, n):
+    def _prepare_parameter_space_point(self, n):
         ''' Notifies the explored parameters what the current point in the parameter space it is,
         i.e. which is the current run.
-
-        The function calls
-        :func:`~pypet.parameter.Parameter.set_parameter_access` in all its explored parameters.
-
         '''
 
         # extract only one particular paramspacepoint
@@ -2169,7 +2146,3 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         name = self.f_idx_to_run(idx)
         return SingleRun(name, idx, self)
-
-
-
-

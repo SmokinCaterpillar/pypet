@@ -2,5 +2,5 @@
 Exceptions
 ====================
 
-.. automodule:: pypet.petexceptions
+.. automodule:: pypet.pypetexceptions
     :members:

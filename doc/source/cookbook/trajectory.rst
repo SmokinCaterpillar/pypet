@@ -453,7 +453,7 @@ size of the final hdf5 file.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
 
-.. _loading:
+.. _more-on-loading:
 
 ------------------------------------
 Loading

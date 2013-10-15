@@ -10,7 +10,7 @@ class Annotations(object):
     These annotations are stored in the attributes of the hdf5 nodes in the hdf5 file,
     you might wanna take a look at pytables attributes_.
 
-    Annotations should be small (short strings or basic python data types). Since there storage
+    Annotations should be small (short strings or basic python data types). Since their storage
     and retrieval is quite slow!
 
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
@@ -21,6 +21,7 @@ class Annotations(object):
         '''Returns annotations as dictionary.
 
         :param copy: Whether to returner a shallow copy or the real thing (aka __dict__).
+
         '''
         if copy:
             return self.__dict__.copy()
@@ -73,6 +74,7 @@ class Annotations(object):
 
         Items in args are added as `annotation` and `annotation_X` where
         'X' is the position in args for following arguments.
+
         '''
         for idx,arg in enumerate(args):
             if idx == 0:
@@ -122,10 +124,6 @@ class WithAnnotations(object):
         If you use the standard HDF5 storage service, they will be stored as hdf5 node
         attributes_.
 
-        For example:
-
-        >>> traj._c
-
         .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
         '''
@@ -134,7 +132,8 @@ class WithAnnotations(object):
     def f_set_annotations(self,*args,**kwargs):
         '''Sets Annotations
 
-        Eqivalent to calling `v_annotations.f_set(*args,**kwargs)`
+        Equivalent to calling `v_annotations.f_set(*args,**kwargs)`
+
         '''
         self._annotations.f_set(*args,**kwargs)
 
@@ -142,6 +141,7 @@ class WithAnnotations(object):
         '''Returns annotations
 
         Equivalent to `v_annotations.f_get(*args)`
+
         '''
         return self._annotations.f_get(*args)
 
@@ -149,6 +149,7 @@ class WithAnnotations(object):
         '''Returns annotations as string.
 
         Equivalent to `v_annotations.f_ann_to_str()`
+
         '''
         return self._annotations.f_ann_to_str()
 

@@ -95,7 +95,6 @@ class NNTreeNode(WithAnnotations):
     def _rename(self, full_name):
         ''' Renames the parameter or result.
         '''
-        #self.v_full_name = fullname
         split_name = full_name.split('.')
 
         if full_name != '':
@@ -234,7 +233,7 @@ class NNLeafNode(NNTreeNode):
         ''' Removes all data from the result.
 
         If the result has already been stored to disk via a trajectory and a storage service,
-        the data on disk is not affected by `f_emptyty`.
+        the data on disk is not affected by `f_empty`.
 
         Yet, this function is particularly useful if you have stored very large data to disk
         and you want to free some memory on RAM but still keep the skeleton of the result.
@@ -243,18 +242,11 @@ class NNLeafNode(NNTreeNode):
         raise NotImplementedError('You should implement this!')
 
 class NaturalNamingInterface(object):
+    '''Class to manage the tree structure of a trajectory.
 
+    Handles search, insertion, etc.
 
-    # TYPE_NODE_MAPPING = {
-    #     'result_group' : ResultGroup,
-    #     'config_group' : ConfigGroup,
-    #     'derived_parameter_group' : DerivedParameterGroup
-    #     'parameter_group' : ParameterGroup
-    # }
-
-
-
-
+    '''
     def __init__(self, root_instance):
 
         self._root_instance = root_instance
@@ -510,9 +502,6 @@ class NaturalNamingInterface(object):
         return False
 
 
-
-
-
     def _shortcut(self, name):
 
         expanded = None
@@ -702,12 +691,6 @@ class NaturalNamingInterface(object):
 
         return self._add_to_nninterface(start_node,name,type_name,group_type_name,instance,
                                             constructor,args,kwargs)
-
-
-
-
-
-
 
 
     def _add_to_nninterface(self, start_node, name, type_name, group_type_name,
@@ -1201,9 +1184,10 @@ class NaturalNamingInterface(object):
 
 class NNGroupNode(NNTreeNode):
     ''' A group node hanging somewhere under the trajectory or single run root node.
-    You can add other groups or parameters/results to it.
-    '''
 
+    You can add other groups or parameters/results to it.
+
+    '''
     def __init__(self, nn_interface=None, full_name='', root=False):
         super(NNGroupNode,self).__init__(full_name,root=root,leaf=False)
         self._children={}
@@ -1226,7 +1210,7 @@ class NNGroupNode(NNTreeNode):
 
     def f_has_children(self):
         '''Checks if node has children or not'''
-        return len(self._children)==0
+        return len(self._children) == 0
 
     def __getattr__(self, name):
 
@@ -1239,8 +1223,8 @@ class NNGroupNode(NNTreeNode):
                                  'problems)' % name)
 
         return self.f_get(name, self._nn_interface._get_fast_access(),
-                        self._nn_interface._get_check_uniqueness(),
-                        self._nn_interface._get_search_strategy())
+                            self._nn_interface._get_check_uniqueness(),
+                            self._nn_interface._get_search_strategy())
 
     def __contains__(self, item):
         return self.f_contains(item)
@@ -1253,12 +1237,14 @@ class NNGroupNode(NNTreeNode):
         only to free RAM memory!
 
         If you want to free memory on disk via your storage service,
-        use :func:`~pypet.trajectory.Trajectory.f_remove_item(s)` of your trajectory.
+        use :func:`~pypet.trajectory.Trajectory.f_remove_items` of your trajectory.
 
         :param name: Name of child
 
-        :param recursive: Must be true if child is a group that has children. Will remove
-                            the whole subtree in this case. Otherwise a Type Error is thrown.
+        :param recursive:
+
+            Must be true if child is a group that has children. Will remove
+            the whole subtree in this case. Otherwise a Type Error is thrown.
 
         :raises: TypeError
 
@@ -1345,14 +1331,19 @@ class NNGroupNode(NNTreeNode):
 
             instance.f_set(value)
 
-    def __getattr__(self, key):
-        if key.startswith('_'):
-            raise AttributeError('Trajectory node does not contain >>%s<<' % key)
+    def __getitem__(self, item):
+        ''' Equivalent to natural naming access, i.e. `group.item`.
+        '''
+        return getattr(self, item)
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError('Trajectory node does not contain >>%s<<' % name)
 
         if not '_nn_interface' in self.__dict__:
             raise AttributeError('This is to avoid pickling issues')
 
-        return self._nn_interface._get(self,key,fast_access=self._nn_interface._get_fast_access(),
+        return self._nn_interface._get(self,name,fast_access=self._nn_interface._get_fast_access(),
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        search_strategy=self._nn_interface._get_search_strategy())
 
@@ -1377,20 +1368,24 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_get(self, name, fast_access=False, check_uniqueness=False, search_strategy=pypetconstants.BFS):
-        ''' Searches for an item (parameter/result/group node) with the given `name`-
+        ''' Searches for an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
 
         :param fast_access: If the result is a parameter, whether fast access should be applied.
 
-        :param check_uniqueness: Whether it should be checked if the name unambiguously yields
-                                 a single result.
+        :param check_uniqueness:
+
+            Whether it should be checked if the name unambiguously yields
+            a single result.
 
         :param search_strategy: The search strategy (default and recommended is BFS)
 
-        :return: The found instance (result/parameter/group node) or if fast access is True and you
-                 found
-                 a parameter, the parameter's value is returned.
+        :return:
+
+            The found instance (result/parameter/group node) or if fast access is True and you found
+            a parameter, the parameter's value is returned.
+
         '''
         return self._nn_interface._get(self, name, fast_access=fast_access,
                                        check_uniqueness=check_uniqueness,
@@ -1399,8 +1394,10 @@ class NNGroupNode(NNTreeNode):
     def f_get_children(self, copy=True):
         '''Returns a children dictionary.
 
-        :param copy: Whether the group's original dicitionary or a shallow copy is returned.
-                     If you want the real dictionary please do not modify it at all!
+        :param copy:
+
+            Whether the group's original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
 
         :returns: Dictionary of nodes
         '''
@@ -1410,12 +1407,14 @@ class NNGroupNode(NNTreeNode):
             return self._children
 
     def f_to_dict(self,fast_access = False, short_names=False):
-        ''' Returns a dictionary with pairings of (full) names as keys and instances/values.
+        ''' Returns a dictionary with pairings of (full) names as keys and instances as values.
 
-        :param fast_access: If True, parameter values are returned instead of the instances-
+        :param fast_access: If True, parameter values are returned instead of the instances.
 
-        :param short_names: If true, keys are not full names but only the names. Raises a Value
-                            Error if the names are not unique.
+        :param short_names:
+
+            If true, keys are not full names but only the names. Raises a Value
+            Error if the names are not unique.
 
         :return: dictionary
 
@@ -1426,7 +1425,7 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_store_child(self,name,recursive=False):
-        '''Stores a child or recursively a subtree to disk'''
+        '''Stores a child or recursively a subtree to disk.'''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))
@@ -1442,7 +1441,7 @@ class NNGroupNode(NNTreeNode):
     def f_load_child(self,name,recursive=False,load_data=pypetconstants.UPDATE_DATA):
         '''Loads a child or recursively a subtree from disk.
 
-        For how to choose 'load_data' see :ref:'loading'.
+        For how to choose 'load_data' see :ref:'more-on-loading'.
         '''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %

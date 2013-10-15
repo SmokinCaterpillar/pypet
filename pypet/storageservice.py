@@ -22,7 +22,7 @@ from pandas import DataFrame, read_hdf
 
 
 class MultiprocWrapper(object):
-    '''Abstract class definition of Wrapper
+    '''Abstract class definition of a Wrapper.
 
     Note that only storing is required, loading is optional.
     '''
@@ -31,11 +31,11 @@ class MultiprocWrapper(object):
 
 
 class QueueStorageServiceSender(MultiprocWrapper):
-    ''' For multiprocessing with :const:`pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
+    ''' For multiprocessing with :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
         original storage service.
 
         All storage requests are send over a queue to the process running the
-        :class:`pypet.storageservice.QueueStorageServiceWriter`.
+        :class:`~pypet.storageservice.QueueStorageServiceWriter`.
 
         Does not support loading of data!
 
@@ -56,7 +56,7 @@ class QueueStorageServiceSender(MultiprocWrapper):
         return result
 
     def store(self,*args,**kwargs):
-        '''Puts data to store on queue'''
+        '''Puts data to store on queue.'''
         try:
             self.queue.put(('STORE',args,kwargs))
         except IOError:
@@ -75,15 +75,17 @@ class QueueStorageServiceSender(MultiprocWrapper):
 
 
     def send_done(self):
-        '''Signals the writer, that it can stop listening to the queue'''
+        '''Signals the writer that it can stop listening to the queue'''
         self.queue.put(('DONE',[],{}))
 
 class QueueStorageServiceWriter(object):
+    '''Wrapper class that listens to the queue and stores queue items via the storage service.'''
     def __init__(self, storage_service, queue):
         self._storage_service = storage_service
         self._queue = queue
 
     def run(self):
+        '''Starts listening to the queue.'''
         while True:
             try:
                 msg,args,kwargs = self._queue.get()
@@ -390,9 +392,9 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_load: The trajectory
 
-                :param as_new: Whether to load trajectroy as new
+                :param as_new: Whether to load trajectory as new
 
-                :param load_params: How to load parameters and config, see also :ref:`loading`.
+                :param load_params: How to load parameters and config, see also :ref:`more-on-loading`.
 
                 :param load_derived_params: How to load derived parameters
 
@@ -424,7 +426,7 @@ class HDF5StorageService(StorageService):
 
                 :param recursive: Whether to load recursively the sub tree below child
 
-                :param load_data: How to load stuff, see also :ref:`loading`.
+                :param load_data: How to load stuff, see also :ref:`more-on-loading`.
 
                 :param trajectory: The trajectory object
 
@@ -498,11 +500,6 @@ class HDF5StorageService(StorageService):
 
                     Dictionary containing all parameters that were enlarged due to merging.
 
-                :param rename_dict:
-
-                    Dictionary containing the old result and derived parameter names in the
-                    other trajectory and their new names in the current trajectory.
-
 
             * :const:`pypet.pypetconstants.MERGE` ('MERGE')
 
@@ -557,7 +554,7 @@ class HDF5StorageService(StorageService):
 
             * :const:`pypet.pypetconstants.LEAF` or :const:`pypetconstants.UPDATE_LEAF` ('LEAF' or 'UPDATE_LEAF')
 
-                Stores a parameter or result. Use msg = 'UPDATE_LEAF' if a paremeter was expanded
+                Stores a parameter or result. Use msg = 'UPDATE_LEAF' if a parameter was expanded
                 (due to merging or expanding the trajectory) to modify it's data.
 
                 Modification of results is not supported (yet). Everything stored to disk is
@@ -565,8 +562,8 @@ class HDF5StorageService(StorageService):
 
                 Note that anything that is supported by the storage service and that is
                 stored to disk will be perfectly recovered.
-                For instance, you store a tuple of numpy integers, you will get a tuple
-                of numpy integers after loading!
+                For instance, you store a tuple of numpy 64 bit integers, you will get a tuple
+                of numpy 64 bit integers after loading!
 
                 :param stuff_to_sore: Result or parameter to store
 
@@ -580,8 +577,9 @@ class HDF5StorageService(StorageService):
 
                         * python natives (int,str,bool,float,complex),
 
-                        * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
-                          np.complex, np.str
+                        *
+                            numpy natives, arrays and matrices of type np.int8-64, np.uint8-64,
+                            np.float32-64, np.complex, np.str
 
 
                         *
@@ -602,7 +600,7 @@ class HDF5StorageService(StorageService):
 
                         * pandas DataFrames_
 
-                        * :class:`pypet.parameter.ObjectTable`
+                        * :class:`~pypet.parameter.ObjectTable`
 
                     .. _DataFrames: http://pandas.pydata.org/pandas-docs/dev/dsintro.html#dataframe
 
@@ -644,7 +642,7 @@ class HDF5StorageService(StorageService):
 
 
                 Removes an item from disk. Empty group nodes, results and non-explored
-                parameters can be removed
+                parameters can be removed.
 
                 :param stuff_to_store: The item to be removed.
 
@@ -1181,7 +1179,7 @@ class HDF5StorageService(StorageService):
             idx = run_info['idx']
 
 
-            traj.f_prepare_parameter_space_point(idx)
+            traj._prepare_parameter_space_point(idx)
             run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
                                                       add_table)
 

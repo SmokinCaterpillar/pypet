@@ -1,9 +1,11 @@
 __author__ = 'Robert Meyer'
 
-from pypet.storageservice import HDF5StorageService
+
 import time
 
 def add_commit_variables(traj, new_commit, repo_folder, message):
+    '''Adds commit information to the trajectory
+    '''
 
     git_hexhsa= 'hexsha'
     git_name_rev = 'name_rev'
@@ -29,15 +31,15 @@ def add_commit_variables(traj, new_commit, repo_folder, message):
     rev=traj.f_add_config(git_commit_name+git_name_rev, new_commit.name_rev,
             comment='String describing the commits hex sha based on the closest Reference')
 
-    repo=traj.f_add_config(git_commit_name+git_repository, repo_folder,
-                      comment='Path to the folder with the .git directory.')
+    # repo=traj.f_add_config(git_commit_name+git_repository, repo_folder,
+    #                   comment='Path to the folder with the .git directory.')
 
     date=traj.f_add_config(git_commit_name+git_committed_date,
-                           new_commit.committed_date, comment='Date of commit')
+                           new_commit.committed_date, comment='Date of commit as unix epoch seconds')
 
-    formatted_time=traj.f_add_config(git_commit_name+git_time,
-                           git_time_value,
-                           comment='Date of commit in human readable format.')
+    # formatted_time=traj.f_add_config(git_commit_name+git_time,
+    #                        git_time_value,
+    #                        comment='Date of commit in human readable format.')
 
     msg = traj.f_add_config(git_commit_name+git_message, message,
                             comment='The commit message')
@@ -46,7 +48,7 @@ def add_commit_variables(traj, new_commit, repo_folder, message):
     #traj.f_store_items([hex,rev,repo,date,formatted_time,msg])
 
 def make_git_commit(environment, git_repository, user_message):
-    ''' Makes a commit returns the sha1 code of the commit otherwise False
+    ''' Makes a commit returns the SHA_1 code of the commit otherwise False
     '''
 
     import git
@@ -57,22 +59,17 @@ def make_git_commit(environment, git_repository, user_message):
 
     traj = environment.v_trajectory
 
-    explore_str = ''
-    for param in traj._explored_parameters.values():
-        arraystr = HDF5StorageService._all_get_array_str(param, environment._logger)
-        explore_str = explore_str + '`%s` explores `%s`; ' %\
-                (param.v_name, arraystr)
 
     if traj.v_comment:
-        commentstr = 'Comment: `%s`,' % traj.v_comment
+        commentstr = ', Comment: `%s`' % traj.v_comment
     else:
         commentstr = ''
 
     if user_message:
        user_message += ' -- '
 
-    message = '%sTrajectory: `%s`, Time: `%s`, %s Explored Parameters: %s' % \
-              (user_message,traj.v_name, traj.v_time, commentstr, explore_str)
+    message = '%sTrajectory: `%s`, Time: `%s`%s' % \
+              (user_message,traj.v_name, traj.v_time, commentstr)
 
 
     repo.git.add('-u')

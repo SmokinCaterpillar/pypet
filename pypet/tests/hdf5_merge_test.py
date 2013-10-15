@@ -16,12 +16,7 @@ from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 import logging
-import cProfile
-from pypet.utils.helpful_functions import flatten_dictionary
-from pypet.utils.comparisons import results_equal,parameters_equal
-import scipy.sparse as spsp
-import shutil
-import pandas as pd
+
 from test_helpers import add_params, create_param_dict, run_tests, simple_calculations, \
     make_temp_file, TrajectoryComparator, multipy
 from hdf5_storage_test import ResultSortTest
@@ -134,7 +129,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial')
+        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial')
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA)
@@ -182,7 +177,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,delete_trajectory=False, trial_parameter='trial',
+        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial',
                             backup_filename=1)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_results=pypetconstants.UPDATE_DATA,load_derived_parameters=pypetconstants.UPDATE_DATA,
@@ -230,7 +225,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 
@@ -274,7 +269,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=False,delete_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
         merged_traj.f_update_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA, load_derived_parameters=pypetconstants.UPDATE_DATA, load_results=pypetconstants.UPDATE_DATA)
 

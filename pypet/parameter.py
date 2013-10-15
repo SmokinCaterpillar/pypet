@@ -201,8 +201,6 @@ class BaseParameter(NNLeafNode):
     def _equal_values(self,val1,val2):
         ''' Checks if the parameter considers two values as equal.
 
-
-        :return: True or False
         :raises: TypeError: If both values are not supported by the parameter.
 
         '''
@@ -223,9 +221,7 @@ class BaseParameter(NNLeafNode):
         ''' Checks if two values agree in type.
 
         For example, two 32 bit integers would be of same type, but not a string and an integer,
-        or not a 64 bit and a 32 bit integer.
-
-        :return: True or False
+        nor a 64 bit and a 32 bit integer.
 
         :raises: TypeError: if both values are not supported by the parameter.
 
@@ -254,8 +250,6 @@ class BaseParameter(NNLeafNode):
                                                          self.v_full_name,
                                                          len(self), self.f_val_to_str())
 
-        # if self.():
-        #     returnstr += ', Array: %s' %str(self.f_get_array())
 
         return returnstr
 
@@ -290,10 +284,12 @@ class BaseParameter(NNLeafNode):
         >>> print parm.f_get()
         >>> 44.0
 
-        :raises: ParameterLockedException:  if parameter is locked.
+        :raises: ParameterLockedException:  If parameter is locked.
 
-                 TypeError: If the parameter is an array or if the type of the
-                                 data value is not supported by the parameter.
+                 TypeError:
+
+                     If the parameter is an array or if the type of the
+                     data value is not supported by the parameter.
 
         '''
         raise NotImplementedError( "Should have implemented this." )
@@ -302,6 +298,7 @@ class BaseParameter(NNLeafNode):
         '''  Equivalent to `f_get_array[idx]`
 
         :raises: TypeError if parameter is not an array
+
         '''
         return self.f_get_array().__getitem__(idx)
 
@@ -344,34 +341,36 @@ class BaseParameter(NNLeafNode):
 
         :param iterable: An iterable specifying the exploration array
 
-                         For example:
+             For example:
 
-                         >>> param = Parameter('groupA.groupB.myparam',data=22.33,\
-                          comment='I am a neat example')
-                         >>> param._explore([3.0,2.0,1.0])
+             >>> param = Parameter('groupA.groupB.myparam',data=22.33,\
+              comment='I am a neat example')
+             >>> param._explore([3.0,2.0,1.0])
 
-        :raises: ParameterLockedExcpetion: if the parameter is locked.
+        :raises:
 
-                 TypeError: if the parameter is already an array.
+            ParameterLockedExcpetion: If the parameter is locked.
+
+            TypeError: If the parameter is already an array.
 
         '''
 
         raise NotImplementedError( "Should have implemented this." )
 
     def _expand(self, iterable):
-        ''' Similar to :func:`_explore` but appends to the exploration array.
-
+        ''' Similar to :func:`~pypet.parameter.BaseParameter._explore` but appends to the exploration array.
 
         :param iterable: An iterable specifying the exploration array.
 
+        :raises:
 
-        :raises: ParameterLockedExcpetion: If the parameter is locked.
+            ParameterLockedExcpetion: If the parameter is locked.
 
-                 TypeError: if the parameter is not an array.
+            TypeError: if the parameter is not an array.
 
         Example usage:
 
-        >>> param = Parameter('groupA.groupB.myparam',data=3.13, comment='I am a neat example')
+        >>> param = Parameter('groupA.groupB.myparam', data=3.13, comment='I am a neat example')
         >>> param._explore([3.0,2.0,1.0])
         >>> param._expand([42.0,43.0])
         >>> print param.f_get_array()
@@ -388,12 +387,14 @@ class BaseParameter(NNLeafNode):
 
         :param idx: The index within the exploration parameter
 
-                    If the parameter is not an array, the single data value is considered
-                    regardless of the value of `idx`.
-                    Raises ValueError if the parameter is explored and `idx>=len(param)`
+                If the parameter is not an array, the single data value is considered
+                regardless of the value of `idx`.
+                Raises ValueError if the parameter is explored and `idx>=len(param)`
 
-        :raises: ValueError: if the parameter is an array and `idx` is larger or equal to the
-                             length of the parameter
+        :raises: ValueError:
+
+            If the parameter is an array and `idx` is larger or equal to the
+            length of the parameter
 
         Example usage:
 
@@ -436,9 +437,12 @@ class BaseParameter(NNLeafNode):
         been stored with a service to disk and is shrunk, it can be restored by loading from
         disk.
 
-        :raises: ParameterLockedException: if the parameter is locked.
+        :raises:
 
-                 TypeError: if  is the parameter is not an array.
+            ParameterLockedException: If the parameter is locked.
+
+            TypeError: if  is the parameter is not an array.
+
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -462,22 +466,17 @@ class BaseParameter(NNLeafNode):
 
       
 class Parameter(BaseParameter):
-    ''' The standard parameter that handles access to simulation parameters.
+    ''' The standard container that handles access to simulation parameters.
 
     Parameters are simple container objects for data values. They handle single values as well as
     the so called exploration array. An array containing multiple values which is accessed
     one after the other in individual simulation runs.
 
-
     Parameter exploration is usually initiated through the trajectory see
     `:func:~pypet.trajectory.Trajectory.explore` and `:func:~pypet.trajectory.Trajectory.expand`.
 
     To access the parameter's data value one can call the :func:`~pypet.parameter.Parameter.f_get`
-    method. Granted the parameter
-    is explored via the trajectory, in order to
-    access values of the exploration array, one first has to call the
-    :func:`~pypet.parameter.Parameter._set_parameter_access`
-    method with the index of the run and then use :func:`~pypet.parameter.Parameter.f_get`.
+    method.
 
     Parameters support the concept of locking. Once a value of the parameter has been accessed,
     the parameter cannot be changed anymore unless it is explicitly unlocked using
@@ -486,27 +485,28 @@ class Parameter(BaseParameter):
     
     Supported data values for the parameter are
 
-    * python natives (int,str,bool,float,complex),
+    * python natives (int, str, bool, float, complex),
 
     * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
       np.complex, np.str
 
-    * python homogeneous not nested  tuples
+    * python homogeneous non-nested  tuples
     
     Note that for larger numpy arrays it is recommended to use the ArrayParameter.
 
+    Example usage:
 
-     Example usage:
-
-     >>> param = Parameter('traffic.mobiles.ncars',data=42, comment='I am a neat example')
+    >>> param = Parameter('traffic.mobiles.ncars',data=42, comment='I am a neat example')
 
     :param full_name: The full name of the parameter. Grouping can be achieved by using colons.
 
-    :param data: A data value that is handled by the parameter. It is checked whether the parameter
+    :param data:
+
+        A data value that is handled by the parameter. It is checked whether the parameter
         :func:`~pypet.parameter.Parameter.f_supports` the data. If not an TypeError is thrown.
         If the parameter becomes explored, the data value is kept as a default. After
-        simulation the default value can be retained by calling
-        :func:`~pypet.parameter.Parameter._restore_default`.
+        simulation the default value will be restored.
+
         The data can be accessed as follows:
 
         >>> param.f_get()
@@ -518,7 +518,9 @@ class Parameter(BaseParameter):
         >>> print param.f_get()
         43
 
-    :param comment: A useful comment describing the parameter.
+    :param comment:
+
+        A useful comment describing the parameter.
         The comment can be changed later on using the 'v_comment' variable.
 
         >>> print param.v_comment
@@ -660,8 +662,6 @@ class Parameter(BaseParameter):
 
         :raises: TypeError
 
-        :return: True or False
-
         '''
         if self.f_supports(val1) != self.f_supports(val2):
             return False
@@ -712,9 +712,9 @@ class Parameter(BaseParameter):
 
 
     def _convert_data(self, val):
-        ''' Converts data to be handled by the parameter
+        ''' Converts data to be handled by the parameter.
 
-        * sets numpy arrays immutable.
+        The only operation so far is to set numpy arrays immutable.
 
         :param val: the data value to convert
 
@@ -734,15 +734,14 @@ class Parameter(BaseParameter):
     def f_get_array(self):
         ''' Returns an python tuple of the exploration array.
 
-
-        :return: data tuple
-
         Example usage:
 
         >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
         >>> param._explore([42,43,43])
         >>> print param.f_get_array()
         >>> (42,43,44)
+
+        :raises: TypeError: If parameter is not explored.
 
         '''
         if not self.f_is_array():
@@ -919,6 +918,7 @@ class ArrayParameter(Parameter):
     '''
 
     IDENTIFIER = '__rr__'
+    '''Identifier to mark stored data as an array'''
 
     def _set_logger(self):
         self._logger = logging.getLogger('pypet.parameter.ArrayParameter=' + self.v_full_name)
@@ -1007,13 +1007,14 @@ class ArrayParameter(Parameter):
 
 
 class SparseParameter(ArrayParameter):
-    ''' Parameter that handles scipy csr, csc, bsr and dia matrices.
+    ''' Parameter that handles scipy csr, csc, bsr and dia sparse matrices.
 
     Sparse Parameter inherits from :class:`pypet.parameter.ArrayParameter` and supports
     arrays and native python data as well.
     '''
 
     IDENTIFIER = '__spsp__'
+    '''Identifier to mark stored data as a sparse matrix'''
 
     DIA_NAME_LIST = ['format', 'data', 'offsets', 'shape']
     OTHER_NAME_LIST = ['format', 'data', 'indices', 'indptr', 'shape']
@@ -1052,9 +1053,7 @@ class SparseParameter(ArrayParameter):
 
     def f_supports(self, data):
         '''Sparse matrices support scipy csr, csc, bsr and dia matrices and everything their parent
-        class the :calls:`~pypet.parameter.ArrayParameter` supports.
-
-        :return: True of False if data is supported.
+        class the :class:`~pypet.parameter.ArrayParameter` supports.
 
         '''
         if self._is_supported_matrix(data):
@@ -1222,35 +1221,39 @@ class SparseParameter(ArrayParameter):
 
 
 class PickleParameter(Parameter):
-    ''' A parameter class that supports all pickable objects, and pickles everything!
+    ''' A parameter class that supports all picklable objects, and pickles everything!
 
     If you use the default HDF5 storage service, the pickle dumps are stored on disk.
     Works similar to the array parameter regarding memory management.
 
     '''
-    IDENTIFIER='__pckl__'
 
     def _set_logger(self):
         self._logger = logging.getLogger('pypet.parameter.PickleParameter=' + self.v_full_name)
 
     def f_supports(self, data):
-        ''' There is no straightforward check if an object can be pickled, so you have to take care that it can be pickled '''
+        ''' There is no straightforward check if an object can be pickled and this function will
+        always return True.
+
+        So you have to take care in advance that the item can be pickled.
+
+        '''
         return True
 
     def _convert_data(self, val):
         return val
 
     def _build_name(self,name_id):
-        return 'xp%s%08d' % (PickleParameter.IDENTIFIER,name_id)
+        return 'xp%08d' % name_id
 
     def _store(self):
         store_dict={}
         dump = pickle.dumps(self._data)
-        store_dict['data'+PickleParameter.IDENTIFIER] = dump
+        store_dict['data'] = dump
 
         if self.f_is_array():
 
-            store_dict['explored_data'+PickleParameter.IDENTIFIER] = \
+            store_dict['explored_data'] = \
                 ObjectTable(columns=['idx'],index=range(len(self)))
 
             smart_dict = {}
@@ -1269,7 +1272,7 @@ class PickleParameter(Parameter):
                     add = True
 
                 name = self._build_name(name_id)
-                store_dict['explored_data'+PickleParameter.IDENTIFIER]['idx'][idx] = name_id
+                store_dict['explored_data']['idx'][idx] = name_id
 
                 if add:
                     store_dict[name] = pickle.dumps(val)
@@ -1280,11 +1283,11 @@ class PickleParameter(Parameter):
 
     def _load(self,load_dict):
 
-        dump = load_dict['data'+PickleParameter.IDENTIFIER]
+        dump = load_dict['data']
         self._data = pickle.loads(dump)
 
-        if 'explored_data'+PickleParameter.IDENTIFIER in load_dict:
-                explore_table = load_dict['explored_data'+PickleParameter.IDENTIFIER]
+        if 'explored_data'in load_dict:
+                explore_table = load_dict['explored_data']
 
                 name_col = explore_table['idx']
 
@@ -1302,22 +1305,16 @@ class PickleParameter(Parameter):
 
 
 
-
-      
-
-            
-                            
-
 class BaseResult(NNLeafNode):
     ''' The basic api to store results.
 
-    Compared to parameters (see :class: BaseParameter) results are also initialised with a fullname
-    and a comment.
+    Compared to parameters (see :class:`~pypet.parameter.BaseParameter`) results are also
+    initialised with a fullname and a comment.
     As before grouping is achieved by colons in the name.
 
     Example usage:
 
-    >>> result = Result(fullname='very.important.result',comment='I am important but f_emptyty :('
+    >>> result = Result(fullname='very.important.result',comment='I am important but empty :('
 
     '''
     def __init__(self, full_name, comment=''):
@@ -1356,18 +1353,18 @@ class Result(BaseResult):
 
         * pandas DataFrames_
 
-        * :class:`pypet.parameter.ObjectTable`
+        * :class:`~pypet.parameter.ObjectTable`
 
     .. _DataFrames: http://pandas.pydata.org/pandas-docs/dev/dsintro.html#dataframe
 
-    Such values are either set on initialisation of with :func:`~pypet.parameter.Result.f_set`
+    Such values are either set on initialisation or with :func:`~pypet.parameter.Result.f_set`
 
     Example usage:
 
     >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
         [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
 
-    :param fullanme: The fullname of the result, grouping can be achieved are separated by colons,
+    :param fullanme: The fullname of the result, grouping can be achieved by colons,
 
 
     :param comment: A useful comment describing the parameter.
@@ -1376,11 +1373,16 @@ class Result(BaseResult):
         >>> param.v_comment
         'I am a neat example!'
 
-    :param args: data that is handled by the result, it is kept by the result under the names
-        `run%d` with `%d` being the position in the argument list.
-        Can be changed or more can be added via :func:`~pypet.parameter.Result.f_set`
+    :param args:
 
-    :param kwargs: data that is handled by the result, it is kept by the result under the names
+        Data that is handled by the result.
+        The first positional argument is stored with the name of the result.
+        Following arguments are stored with `name_X` where `X` is the position
+        of the argument.
+
+    :param kwargs:
+
+        Data that is handled by the result, it is kept by the result under the names
         specified by the keys of kwargs.
         Can be changed or more can be added via :func:`~pypet.parameter.Result.f_set`
 
@@ -1394,11 +1396,6 @@ class Result(BaseResult):
         'ArthurDent'
         >>> print res.f_get('myresult','hitchhiker')
         ([1000,2000], 'ArthurDent')
-
-
-    :raises: AttributeError: If the data in args or kwargs is not supported. Checks type of
-                             outer data structure, i.e. checks if you have a list or dictionary.
-                             But it does not check on individual values within dicts or lists.
 
     Alternatively one can also use :func:`~pypet.parameter.Result.f_set`
 
@@ -1415,6 +1412,13 @@ class Result(BaseResult):
     >>> res.ford = 'prefect'
     >>> res.ford
     'prefect'
+
+
+    :raises: AttributeError:
+
+        If the data format in args or kwargs is not known to the result. Checks type of
+        outer data structure, i.e. checks if you have a list or dictionary.
+        But it does not check on individual values within dicts or lists.
 
     '''
     def __init__(self, full_name, *args, **kwargs):
@@ -1438,6 +1442,7 @@ class Result(BaseResult):
 
     @v_no_data_string.setter
     def v_no_data_string(self,boolean):
+        '''Sets the no_data_string property'''
         self._no_data_string(boolean)
 
 
@@ -1447,7 +1452,7 @@ class Result(BaseResult):
 
     def f_val_to_str(self):
         ''' Summarizes data handled by the result as a string.
-        Calls `__str__` on all handled data if `v_no_data_string=True`, else only
+        Calls `__str__` on all handled data if `v_no_data_string=False`, else only
         the name/key of the handled data is printed.
 
         :return: string
@@ -1476,7 +1481,8 @@ class Result(BaseResult):
 
     def __str__(self):
 
-        datastr = str([(key,str(type(val))) for key,val in self._data.iteritems()])
+        datastr = self.f_val_to_str()
+
         if self.v_comment:
             return '<%s>: %s (Comment:%s): %s' % (self.f_get_class_name(),
                                                   self.v_full_name,self.v_comment,datastr)
@@ -1506,8 +1512,10 @@ class Result(BaseResult):
     def f_to_dict(self, copy = True):
         ''' Returns all handled data as a dictionary
 
-        :param copy: Whether the original dictionary or a shallow copy is returned. If you get
-                     the real thing, please do not modify it!
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned. If you get
+            the real thing, please do not modify it!
 
         :return: Data dictionary
 
@@ -1521,7 +1529,7 @@ class Result(BaseResult):
     def f_is_empty(self):
         ''' True if no data has been put into the result.
 
-        Also True if all data has been erased via :func:`~pypet.parameter.Result.f_empty`
+        Also True if all data has been erased via :func:`~pypet.parameter.Result.f_empty`.
 
         '''
         return len(self._data)== 0
@@ -1534,9 +1542,11 @@ class Result(BaseResult):
     def f_set(self,*args, **kwargs):
         ''' Method to put data into the result.
 
-        :param args: The first positional argument is stored with the name of the result.
-                    Following arguments are stored with `name_X` where `X` is the position
-                    of the argument.
+        :param args:
+
+            The first positional argument is stored with the name of the result.
+            Following arguments are stored with `name_X` where `X` is the position
+            of the argument.
 
         :param kwargs: Arguments are stored with the key as name.
 
@@ -1572,7 +1582,7 @@ class Result(BaseResult):
         ''' Returns items handled by the result.
 
          If only a single name is given a single data item is returned, if several names are
-         given, a list is returned. For integer inputs the results returns `resultname_X`.
+         given, a list is returned. For integer inputs the result returns `resultname_X`.
 
          If the result contains only a single entry you can call `f_get()` without arguments.
          If you call `f_get()` and the result contains more than one element a ValueError is
@@ -1749,6 +1759,7 @@ class SparseResult(Result):
 
     IDENTIFIER = SparseParameter.IDENTIFIER
 
+    @copydoc(Result.f_set_single)
     def f_set_single(self, name, item):
         if SparseResult.IDENTIFIER in name:
             raise AttributeError('Your result name contains the identifier for sparse matrices,'
@@ -1823,7 +1834,7 @@ class PickleResult(Result):
     Note that it is not checked whether data can be pickled, so take care that it works!
     '''
 
-    IDENTIFIER=PickleParameter.IDENTIFIER
+
 
     def f_set_single(self, name, item):
         '''Adds a single data item to the pickle result.
@@ -1842,11 +1853,10 @@ class PickleResult(Result):
     def _store(self):
         store_dict ={}
         for key, val in self._data.items():
-            store_dict[key+PickleResult.IDENTIFIER] = pickle.dumps(val)
+            store_dict[key] = pickle.dumps(val)
         return store_dict
 
 
     def _load(self, load_dict):
         for key, val in load_dict.items():
-            new_key = key[:-len(PickleResult.IDENTIFIER)]
-            self._data[new_key] = pickle.loads(val)
+            self._data[key] = pickle.loads(val)

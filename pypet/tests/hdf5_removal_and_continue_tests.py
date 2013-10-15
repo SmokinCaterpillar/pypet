@@ -12,18 +12,15 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
+
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 import logging
-from pypet.utils.helpful_functions import flatten_dictionary
-from pypet.utils.comparisons import results_equal,parameters_equal
-import scipy.sparse as spsp
+
 import os
-import shutil
-import pandas as pd
+
 import tables as pt
 from test_helpers import add_params, simple_calculations, create_param_dict, run_tests, \
     TrajectoryComparator, make_temp_file

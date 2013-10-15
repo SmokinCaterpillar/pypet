@@ -22,7 +22,7 @@ I would divide any numerical simulations into 3 phases:
         Here you will only add parameters (see :func:`pypet.naturalnaming.ParameterNode.f_add_parameter`,
         and :ref:`more-on-adding`) to your trajectory, no results, no derived parameters,
         no building of
-        other objects used during your simulation. ONLY parameters. You could write a conf.py
+        other objects used during your simulation. ONLY parameters. You could write a `conf.py`
         file that adds all parameters to your trajectory. To exclude parameter sets and
         to allow some control flow, you can consider :ref:`more-on-presetting`.
 
@@ -50,7 +50,7 @@ I would divide any numerical simulations into 3 phases:
         some other arguments (like some objects not managed by your trajectory) to carry out the
         simulation (see :func:`pypet.environment.Environment.f_run, and :ref:`more-on-running`).
 
-        Usually to speed up your simulations and to compute several runs in parallel you can
+        Usually to speed up your simulations and to compute several runs in parallel, you can
         use multiprocessing at this stage, see :ref:`more-on-multiprocessing`.
 
 

@@ -9,10 +9,12 @@ from pypet.trajectory import Trajectory, SingleRun
 import os
 import sys
 import logging
+
 try:
     import cPickle as pickle
 except:
     import pickle
+
 import multiprocessing as multip
 import traceback
 import hashlib
@@ -115,7 +117,7 @@ class Environment(object):
 
 
     The first thing you usually do is to create and environment object that takes care about
-    the running of the experiment and parameter space exploration.
+    the running of the experiment.
 
     :param trajectory:
 
@@ -189,27 +191,29 @@ class Environment(object):
          waiting until the lock is released.
          Yet, single runs do not need to be pickled before storage!
 
-        If you don't want wrapping at all use :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
+         If you don't want wrapping at all use :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
 
 
     :param continuable:
 
         Whether the environment should take special care to allow to resume or continue
         crashed trajectories. Default is 1 (True).
-        Everything must be pickable in order to allow
+        Everything must be picklable in order to allow
         continuing of trajectories. Assume you run experiments that take
         a lot of time. If during your experiments there is a power failure,
         you can resume your trajectory after the last single run that was still
         successfully stored via your storage service.
         This will create a `.cnt` file in the same folder as your hdf5 file,
         using this you can continue crashed trajectories.
+        If you do not use hdf5 files or the hdf5 storage servive, the `.cnt` file is placed
+        into the log folger.
         In order to resume trajectories use
-        :func:`~pypet.environment.Environment.f_continue_run`
+        :func:`~pypet.environment.Environment.f_continue_run`.
 
     :param use_hdf5:
 
         Whether or not to use the standard hdf5 storage service, if False the following
-        arguments below will be ignored.
+        arguments below will be ignored:
 
     :param filename: The name of the hdf5 file
 
@@ -236,6 +240,8 @@ class Environment(object):
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
+        You need summary tables (see below) to be able to purge duplicate comments.
+
 
     :param small_overview_tables:
 
@@ -243,7 +249,7 @@ class Environment(object):
         Small tables are giving overview about 'config','parameters','derived_parameters_trajectory',
         'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
 
-        Note that these tables create a some overhead, if you want small hdf5 files set
+        Note that these tables create some overhead, if you want small hdf5 files set
         these value to False.
 
         The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
@@ -274,7 +280,7 @@ class Environment(object):
 
     :param git_repository:
 
-        If your code base is under git version control you can specify where the path
+        If your code base is under git version control you can specify here the path
         (relative or absolute) to
         the folder containing the `.git` directory.
         Note in order to use this tool you need GitPython_.
@@ -283,8 +289,7 @@ class Environment(object):
         version control.
         Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
         The user can specify the commit message, see below. Note that the message
-        will be augmented by the name of the trajectory, the comment of the trajectory
-        and the explored parameters.
+        will be augmented by the name of the trajectory, and the comment of the trajectory.
 
         This will add information about the revision to the trajectory, see below.
 
@@ -326,17 +331,10 @@ class Environment(object):
 
         String describing the commits hex sha based on the closest Reference
 
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.repository
-
-        Path to git repository
-
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
 
         Commit date as Unix Epoch data
 
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.time
-
-        Formatted time string of commit
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
 
@@ -565,11 +563,11 @@ class Environment(object):
 
 
     def f_switch_off_large_overview(self):
-        ''' Switches the tables comsuming the most memory off.
+        ''' Switches off the tables consuming the most memory.
 
-            * Result Overview
+            * Single Run Result Overview
 
-            * Derived Parameter Overview
+            * Single Run Derived Parameter Overview
 
             * Explored Parameter Overview in each Single Run
         '''
@@ -596,11 +594,11 @@ class Environment(object):
         self._traj.config.hdf5.purge_duplicate_comments=0
 
 
-    def f_continue_run(self, continuefile):
-        ''' Resume crashed trajectories by supplying the '.cnt' file.
+    def f_continue_run(self, continue_file):
+        ''' Resumes crashed trajectories by supplying the '.cnt' file.
         '''
 
-        continue_dict = pickle.load(open(continuefile,'rb'))
+        continue_dict = pickle.load(open(continue_file,'rb'))
         runfunc = continue_dict['runfunc']
         args = continue_dict['args']
         kwargs = continue_dict['kwargs']
@@ -634,12 +632,12 @@ class Environment(object):
     def v_hexsha(self):
         '''The SHA1 identifier of the environment. It is identical to the SHA1 of the git
         commit. If version control is not used, the environment hash is computed from the
-        trajectory name and the current timestamp.'''
+        trajectory name, the current timestamp and your current pypet version.'''
         return self._hexsha
 
     @property
     def v_time(self):
-        ''' Time of the creation of the environmnet, human readable.
+        ''' Time of the creation of the environment, human readable.
         '''
         return self._time
 
@@ -678,9 +676,9 @@ class Environment(object):
 
                 Iterable over the results returned by runfunc.
 
-                (Not over results stored in the trajectory!
+                Does not iterate over results stored in the trajectory!
                 In order to do that simply interact with the trajectory object, potentially after
-                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results.)
+                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results.
 
         '''
 
@@ -847,14 +845,3 @@ class Environment(object):
 
             return results
                 
-        
-        
-
-    # def task_iterator(self,log_path,queue,runfunc,multiproc,args,kwargs):
-    #
-    #     for n in xrange(len(self._traj)):
-    #         if not self._traj.f_is_completed(n):
-    #             res_tuple=(self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
-    #                 multiproc, args, kwargs)
-    #             print res_tuple
-    #             yield res_tuple

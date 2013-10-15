@@ -6,7 +6,7 @@ Created on 10.06.2013
 
 
 from pypet.parameter import Parameter,Result,ObjectTable
-## Unfortunatley I have to this for read the docs to be able to mock brian
+## Unfortunatley I have to do this for read the docs to be able to mock brian
 try:
     from brian.units import *
     from brian.stdunits import *

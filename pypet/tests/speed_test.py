@@ -1,10 +1,9 @@
 __author__ = 'Robert Meyer'
 
-import numpy as np
-from pypet.parameter import Parameter
+
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
-import pickle
+
 import logging
 import cProfile
 
