@@ -19,7 +19,7 @@ import pickle
 import logging
 import cProfile
 import scipy.sparse as spsp
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 import multiprocessing as multip
 
 import pypet.storageservice as stsv

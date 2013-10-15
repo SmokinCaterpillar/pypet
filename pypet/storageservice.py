@@ -9,7 +9,7 @@ import tables as pt
 import os
 import numpy as np
 from pypet import pypetconstants
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
 
 
@@ -31,7 +31,7 @@ class MultiprocWrapper(object):
 
 
 class QueueStorageServiceSender(MultiprocWrapper):
-    ''' For multiprocessing with :const:`pypet.globally.WRAP_MODE_QUEUE`, replaces the
+    ''' For multiprocessing with :const:`pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
         original storage service.
 
         All storage requests are send over a queue to the process running the
@@ -384,7 +384,7 @@ class HDF5StorageService(StorageService):
 
         The following messages (first argument msg) are understood:
 
-            * :const:`pypet.globally.TRAJECTORY` ('TRAJECTORY')
+            * :const:`pypet.pypetconstants.TRAJECTORY` ('TRAJECTORY')
 
                 Loads a trajectory.
 
@@ -398,7 +398,7 @@ class HDF5StorageService(StorageService):
 
                 :param load_results: How to load results
 
-            * :const:`pypet.globally.LEAF` ('LEAF')
+            * :const:`pypet.pypetconstants.LEAF` ('LEAF')
 
                 Loads a parameter or result.
 
@@ -414,7 +414,7 @@ class HDF5StorageService(StorageService):
                     Throws a ValueError if data cannot be found.
 
 
-            * :const:`pypet.globally.TREE` ('TREE')
+            * :const:`pypet.pypetconstants.TREE` ('TREE')
 
                 Loads a whole sub tree
 
@@ -428,7 +428,7 @@ class HDF5StorageService(StorageService):
 
                 :param trajectory: The trajectory object
 
-            * :const:`pypet.globally.LIST` ('LIST')
+            * :const:`pypet.pypetconstants.LIST` ('LIST')
 
                 Analogous to :ref:`storing lists <store-lists>`
 
@@ -465,7 +465,7 @@ class HDF5StorageService(StorageService):
                 raise pex.NoSuchServiceError('I do not know how to handle >>%s<<' % msg)
 
             self._srvc_closing_routine(opened)
-        except Exception,e:
+        except:
             self._srvc_closing_routine(True)
             self._logger.error('Failed loading  >>%s<<' % str(stuff_to_load))
             raise
@@ -486,7 +486,7 @@ class HDF5StorageService(StorageService):
 
         The following messages (first argument msg) are understood:
 
-            * :const:`pypet.globally.PREPARE_MERGE` ('PREPARE_MERGE'):
+            * :const:`pypet.pypetconstants.PREPARE_MERGE` ('PREPARE_MERGE'):
 
                 Called to prepare a trajectory for merging, see also 'MERGE' below.
 
@@ -504,7 +504,7 @@ class HDF5StorageService(StorageService):
                     other trajectory and their new names in the current trajectory.
 
 
-            * :const:`pypet.globally.MERGE` ('MERGE')
+            * :const:`pypet.pypetconstants.MERGE` ('MERGE')
 
                 Note that before merging within HDF5 file, the storage service will be called
                 with msg='PREPARE_MERGE' before, see above.
@@ -533,7 +533,7 @@ class HDF5StorageService(StorageService):
                     Whether to delete the other trajectory after merging.
 
 
-            * :const:`pypet.globally.BACKUP` ('BACKUP')
+            * :const:`pypet.pypetconstants.BACKUP` ('BACKUP')
 
 
                 :param stuff_to_store: Trajectory to be backed up
@@ -544,7 +544,7 @@ class HDF5StorageService(StorageService):
                     as your hdf5 file adding `backup_XXXXX.hdf5` where *XXXXX* is the
                     name of your current trajectory.
 
-            * :const:`pypet.globally.TRAJECTORY` ('TRAJECTORY')
+            * :const:`pypet.pypetconstants.TRAJECTORY` ('TRAJECTORY')
 
                 Stores the whole trajectory
 
@@ -555,7 +555,7 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_store: The single run to be stored
 
-            * :const:`pypet.globally.LEAF` or :const:`globally.UPDATE_LEAF` ('LEAF' or 'UPDATE_LEAF')
+            * :const:`pypet.pypetconstants.LEAF` or :const:`pypetconstants.UPDATE_LEAF` ('LEAF' or 'UPDATE_LEAF')
 
                 Stores a parameter or result. Use msg = 'UPDATE_LEAF' if a paremeter was expanded
                 (due to merging or expanding the trajectory) to modify it's data.
@@ -640,7 +640,7 @@ class HDF5StorageService(StorageService):
                     data. See :const:`pypet.HDF5StorageSerive.TYPE_FLAG_MAPPING` for the mapping
                     from type to flag.
 
-            * :const:`pypet.globally.REMOVE` ('REMOVE')
+            * :const:`pypet.pypetconstants.REMOVE` ('REMOVE')
 
 
                 Removes an item from disk. Empty group nodes, results and non-explored
@@ -653,17 +653,17 @@ class HDF5StorageService(StorageService):
                     Whether to also remove groups that become empty due to removal
                     Default is False.
 
-            * :const:`pypet.globally.GROUP` ('GROUP')
+            * :const:`pypet.pypetconstants.GROUP` ('GROUP')
 
                 :param stuff_to_store: The group to store
 
-            * :const:`pypet.globally.REMOVE_INCOMPLETE_RUNS` ('REMOVE_INCOMPLETE_RUNS')
+            * :const:`pypet.pypetconstants.REMOVE_INCOMPLETE_RUNS` ('REMOVE_INCOMPLETE_RUNS')
 
                 Removes all data from hdf5 file that is from an incomplete run.
 
                 :param stuff_to_store: The trajectory
 
-            * :const:`pypet.globally.TREE`
+            * :const:`pypet.pypetconstants.TREE`
 
                 Stores a single node or a full sub tree
 
@@ -671,7 +671,7 @@ class HDF5StorageService(StorageService):
 
                 :param recursive: Whether to store recursively the whole sub-tree
 
-            * :const:`pypet.globally.LIST`
+            * :const:`pypet.pypetconstants.LIST`
 
                 .. _store-lists:
 
@@ -737,7 +737,7 @@ class HDF5StorageService(StorageService):
 
             self._srvc_closing_routine(opened)
 
-        except Exception,e:
+        except:
             self._srvc_closing_routine(True)
             self._logger.error('Failed storing >>%s<<' % str(stuff_to_store))
             raise
@@ -1163,7 +1163,7 @@ class HDF5StorageService(StorageService):
 
         # ### Store the changed groups
         # for group_node in changed_groups:
-        #     self.store(globally.GROUP,group_node)
+        #     self.store(pypetconstants.GROUP,group_node)
 
         run_table = getattr(self._overview_group,'runs')
         actual_rows = run_table.nrows
@@ -1394,7 +1394,7 @@ class HDF5StorageService(StorageService):
                          'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH, pos=4),
                          'length':pt.IntCol(pos=2),
                          'version' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5)}
-                         # 'loaded_from' : pt.StringCol(globally.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
+                         # 'loaded_from' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
 
         infotable = self._all_get_or_create_table(where=self._overview_group, tablename='info',
                                                description=descriptiondict, expectedrows=len(traj))
@@ -1613,7 +1613,7 @@ class HDF5StorageService(StorageService):
         path_name = parent_traj_node.v_full_name
         name = hdf5group._v_name
 
-        # if not name in parent_traj_node._children and load_data==globally.LOAD_ANNOTATIONS:
+        # if not name in parent_traj_node._children and load_data==pypetconstants.LOAD_ANNOTATIONS:
         #     return
 
         is_leaf = self._all_get_from_attrs(hdf5group,HDF5StorageService.LEAF)
@@ -1637,7 +1637,7 @@ class HDF5StorageService(StorageService):
                     and load_data == pypetconstants.UPDATE_DATA):
                     return
 
-                # if load_data == globally.LOAD_ANNOTATIONS:
+                # if load_data == pypetconstants.LOAD_ANNOTATIONS:
                 #     self._ann_load_annotations(instance,node=hdf5group)
                 #     return
 
@@ -2544,7 +2544,7 @@ class HDF5StorageService(StorageService):
         try:
 
             if key in group:
-                # if msg == globally.PARAMETER:
+                # if msg == pypetconstants.PARAMETER:
                 #     return
 
                 raise ValueError('DataFrame >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
@@ -2614,7 +2614,7 @@ class HDF5StorageService(StorageService):
 
         try:
             if key in group:
-                # if append_mode == globally.PARAMETER:
+                # if append_mode == pypetconstants.PARAMETER:
                 #     return
 
                 raise ValueError('Array >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
@@ -2789,7 +2789,7 @@ class HDF5StorageService(StorageService):
                 ## If the table exists, it already knows what the original data of the input was:
                 data_type_dict = {}
             else:
-                # if msg == globally.UPDATE_LEAF:
+                # if msg == pypetconstants.UPDATE_LEAF:
                     # self._logger.debug('Table >>%s<< of >>%s<< does not exist, '
                     #                    'I will create it!' % (tablename,fullname))
 

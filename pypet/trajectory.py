@@ -8,7 +8,7 @@ import logging
 import datetime
 import time
 from pypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayParameter, \
-    PickleResult, SparseParameter
+    PickleResult, SparseParameter, SparseResult
 
 import importlib as imp
 import itertools as it
@@ -17,7 +17,7 @@ import numpy as np
 
 from pypet import __version__ as VERSION
 
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 from pypet import pypetconstants
 from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, STORE,LOAD,REMOVE
@@ -428,7 +428,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
                                 'actually cause the storage of all items in the trajectory.')
 
 
-        # if iterator == globally.ALL:
+        # if iterator == pypetconstants.ALL:
         #     iterator = self._all_current.itervalues()
 
         fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)
@@ -1431,29 +1431,29 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             You can specify how to load the parameters and config/derived_parameters/results.
 
-                :const:`pypet.globally.LOAD_NOTHING`: (0)
+                :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
 
                     Nothing is loaded
 
-                :const:`pypet.globally.LOAD_SKELETON`: (1)
+                :const:`pypet.pypetconstants.LOAD_SKELETON`: (1)
 
                         The skeleton including annotations are loaded, i.e. the items are empty.
                         Note that if the items already exist in your trajectory an Attribute
                         Error is thrown. If this is the case use -1 instead.
 
-                :const:`pypet.globally.LOAD_DATA`: (2)
+                :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
                     The whole data is loaded.
                     Note that if the items already exist in your trajectory an Attribute
                     Error is thrown. If this is the case use -2 instead.
 
 
-                :const:`pypet.globally.UPDATE_SKELETON`: (-1)
+                :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
 
                     The skeleton and annotations are updated, i.e. only items that are not currently part
                     of your trajectory are loaded empty
 
-                :const:`pypet.globally.UPDATE_DATA`: (-2) Like (2)
+                :const:`pypet.pypetconstants.UPDATE_DATA`: (-2) Like (2)
 
                     Only items that are currently not in your trajectory are loaded with data.
 

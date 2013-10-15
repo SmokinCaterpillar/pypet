@@ -10,7 +10,7 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import pypetconstants
 import logging
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -157,7 +157,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         ###Test, that you cannot append to data
         with self.assertRaises(ValueError):
-            self.traj.f_store_item('filename')
+            self.traj.f_store_item('multiproc')
 
         self.make_run()
 
@@ -176,7 +176,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         ###Test, that you cannot append to data
         with self.assertRaises(ValueError):
-            self.traj.f_store_item('filename')
+            self.traj.f_store_item('multiproc')
 
         self.make_run()
 

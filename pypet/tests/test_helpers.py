@@ -2,7 +2,8 @@ __author__ = 'Robert Meyer'
 
 from pypet.utils.comparisons import results_equal,parameters_equal
 from pypet.utils.helpful_functions import nested_equal, nest_dictionary, flatten_dictionary
-from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter, SparseParameter
+from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
+    BaseParameter, SparseParameter, SparseResult
 import scipy.sparse as spsp
 import os
 import logging
@@ -16,6 +17,7 @@ else:
 import shutil
 import numpy as np
 import pandas as pd
+
 
 import tempfile
 
@@ -194,6 +196,11 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_derived_parameter('mega',33, comment='It is huuuuge!')
 
         traj.f_add_result(PickleResult,'pickling.result', my_dict)
+
+        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42)
+        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52)
+        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62)
+        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72)
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'

@@ -71,7 +71,7 @@ HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
 '''Maximum lenght of the location'''
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
 ''' Maximum length of a value string'''
-HDF5_STRCOL_MAX_COMMENT_LENGTH = 256
+HDF5_STRCOL_MAX_COMMENT_LENGTH = 512
 ''' Maximum length of a comment '''
 HDF5_STRCOL_MAX_ARRAY_LENGTH = 2048
 ''' Maximum length of a parameter array summary '''

@@ -16,6 +16,13 @@ ArrayParameter
     :members:
 
 ----------------------
+SparseParameter
+----------------------
+
+.. autoclass:: pypet.parameter.SparseParameter
+    :members:
+
+----------------------
 PickleParameter
 ----------------------
 
@@ -28,6 +35,14 @@ Result
 -----------------------
 
 .. autoclass:: pypet.parameter.Result
+    :members:
+    :inherited-members:
+
+----------------------------
+SparseResult
+----------------------------
+
+.. autoclass:: pypet.parameter.SparseResult
     :members:
     :inherited-members:
 

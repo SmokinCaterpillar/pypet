@@ -5,7 +5,7 @@ __author__ = 'robert'
 
 
 import inspect
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
@@ -166,6 +166,7 @@ class NNLeafNode(NNTreeNode):
         return ''
 
 
+
     def __str__(self):
         ''' String representation of the parameter or result, If not other specified this is
         simply the full name.
@@ -308,6 +309,9 @@ class NaturalNamingInterface(object):
 
     def _fetch_from_string(self,store_load, name, args, kwargs):
 
+        if not isinstance(name, basestring):
+            raise TypeError('No string!')
+
         node = self._root_instance.f_get(name)
 
         return self._fetch_from_node(store_load,node,args,kwargs)
@@ -327,8 +331,8 @@ class NaturalNamingInterface(object):
             kwargs = store_tuple[3]
         if len(store_tuple) > 4:
             print store_tuple
-            raise TypeError('Your argument tuple has to many entries, please call stuff '
-                            'to f_store with [(msg,item,args,kwargs),]')
+            raise TypeError('Your argument tuple has to many entries, please call '
+                            'store with [(msg,item,args,kwargs),...]')
 
         ##dummy test
         _ = self._fetch_from_node(store_load,node)
@@ -367,7 +371,7 @@ class NaturalNamingInterface(object):
 
             try:
                 item_tuple = self._fetch_from_string(store_load,iter_item,args,kwargs)
-            except AttributeError:
+            except TypeError:
                 try:
                     item_tuple = self._fetch_from_node(store_load,iter_item,args,kwargs)
                 except AttributeError:
@@ -1128,8 +1132,8 @@ class NaturalNamingInterface(object):
         :param fast_access: If the default evaluation of a parameter should be returned.
         :param check_uniqueness: If search through the Parameter tree should be stopped after finding an entry or
         whether it should be chekced if the path through the tree is not unique.
-        :param: search_strategy: The strategy to search the tree, either breadth first search (globally.BFS) or depth first
-        seach (globally.DFS).
+        :param: search_strategy: The strategy to search the tree, either breadth first search (pypetconstants.BFS) or depth first
+        seach (pypetconstants.DFS).
         :return: The requested object or it's default evaluation. Raises an error if the object cannot be found.
         '''
 
@@ -1175,7 +1179,7 @@ class NaturalNamingInterface(object):
 
         # Check in O(N)
         # [Worst Case, Average Case is better since looking into a single dict costs O(1)]
-        # globally.BFS or globally.DFS
+        # pypetconstants.BFS or pypetconstants.DFS
         # If check Uniqueness == True, search is slower since the full dictionary
         # is always searched
 

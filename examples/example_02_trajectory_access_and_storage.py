@@ -2,7 +2,7 @@ __author__ = 'robert'
 
 
 from pypet.trajectory import Trajectory
-from pypet.petexceptions import NotUniqueNodeError
+from pypet.pypetexceptions import NotUniqueNodeError
 
 
 

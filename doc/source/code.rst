@@ -9,7 +9,7 @@ Library Reference
     pypetdoc/environmentdoc
     pypetdoc/annotationsdoc
     pypetdoc/utilsdoc
-    pypetdoc/petexceptionsdoc
+    pypetdoc/pypetexceptionsdoc
     pypetdoc/pypetconstantsdoc
     pypetdoc/storageservicedoc
     pypetdoc/brianparameterdoc

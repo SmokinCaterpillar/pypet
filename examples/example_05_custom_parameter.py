@@ -63,7 +63,7 @@ class FunctionParameter(Parameter):
             return super(FunctionParameter,self)._convert_data(val)
 
     # For more complicate parameters you might consider implementing
-    # f_supports (we do not need it since we convert the data to stuff the parameter already
+    # _supports (we do not need it since we convert the data to stuff the parameter already
     #    supports, and that is strings!)
     # and
     # the private functions

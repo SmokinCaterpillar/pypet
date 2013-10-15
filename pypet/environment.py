@@ -172,7 +172,7 @@ class Environment(object):
 
          There are two options:
 
-         :const:`~pypet.globally.WRAP_MODE_QUEUE`: ('QUEUE')
+         :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
          Another process for storing the trajectory is spawned. The sub processes
          running the individual single runs will add their results to a
@@ -181,7 +181,7 @@ class Environment(object):
          will be pickled and send over the queue for storage!
 
 
-         :const:`~pypet.globally.WRAP_MODE_LOCK`: ('LOCK')
+         :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('LOCK')
 
          Each individual process takes care about storage by itself. Before
          carrying out the storage, a lock is placed to prevent the other processes
@@ -189,7 +189,7 @@ class Environment(object):
          waiting until the lock is released.
          Yet, single runs do not need to be pickled before storage!
 
-        If you don't want wrapping at all use :const:`~pypet.globally.WRAP_MODE_NONE` ('NONE')
+        If you don't want wrapping at all use :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
 
 
     :param continuable:

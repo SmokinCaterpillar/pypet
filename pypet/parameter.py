@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 
 import logging
-import petexceptions as pex
+import pypetexceptions as pex
 import numpy as np
 from pypet.utils.helpful_functions import nested_equal, copydoc
 from pypet import pypetconstants
@@ -23,12 +23,11 @@ class ObjectTable(DataFrame):
     ''' Wrapper class for pandas data frames.
     It creates data frames with dtype=object.
 
-    Data stored into an object table preserves its original type. For instance, a python int
+    Data stored into an object table preserves its original type when stored to disk.
+    For instance, a python int
     is not automatically converted to a numpy 64 bit integer (np.int64).
 
     The object table serves as a standard data structure to hand data to a storage service.
-    Given the default HDF5 storage service the types of the stored data are also preserved
-    and reconstructed after loading from disk.
 
     '''
     def __init__(self, data=None, index = None, columns = None, copy=False):
@@ -41,32 +40,34 @@ class ObjectTable(DataFrame):
 
 class BaseParameter(NNLeafNode):
     '''Abstract class that specifies the methods that need to be implemented for a trajectory
-    parameter
+    parameter.
 
     Parameters are simple container objects for data values. They handle single values as well as
     the so called exploration array. An array containing multiple values which are accessed
     one after the other in individual simulation runs.
 
     Parameter exploration is usually initiated through the trajectory see
-    `:func:~pypet.trajectory.Trajectory.explore` and `:func:~pypet.trajectory.Trajectory.expand`.
+    `:func:~pypet.trajectory.Trajectory.explore` and :func:`~pypet.trajectory.Trajectory.expand`.
 
-    To access the parameter's data value one can call the :func:`f_get` method. Granted the parameter
-    is explored via the trajectory, in order to
-    access values of the exploration array, one first has to call the :func:`_set_parameter_access`
-    method with the index of the run and then use :func:`f_get`.
+    To access the parameter's data value one can call the :func:`f_get` method.
 
     Parameters support the concept of locking. Once a value of the parameter has been accessed,
     the parameter cannot be changed anymore unless it is explicitly unlocked using :func:`f_unlock`.
     This prevents parameters from being changed during runtime of a simulation.
 
-    If multiprocessing is desired the parameter must be pickable!
+    If multiprocessing is desired the parameter must be picklable!
 
-    :param fullname: The fullname of the parameter in the trajectory tree, groupings are
+    :param fullname:
+
+        The fullname of the parameter in the trajectory tree, groupings are
         separated by a colon:
         `fullname = 'supergroup.subgroup.paramname'`
 
-    :param comment: A useful comment describing the parameter:
-        `comment = 'The number of cars for traffic jam simulations'`
+    :param comment:
+
+        A useful comment describing the parameter:
+        `comment = 'Some useful text, dude!'`
+
     ''' 
     def __init__(self, full_name, comment=''):
         super(BaseParameter,self).__init__(full_name,comment, parameter=True)
@@ -75,7 +76,11 @@ class BaseParameter(NNLeafNode):
         self._locked = False
         self._full_copy = False
 
+    def f_supports(self, data):
+        ''' Checks whether the data is supported by the parameter.
 
+        '''
+        return type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA
 
 
     @property
@@ -90,11 +95,6 @@ class BaseParameter(NNLeafNode):
         return not self.f_is_empty()
 
 
-    # @property
-    # def v_value(self):
-    #     '''The current value of the parameter'''
-    #     return self.f_get()
-
     @property
     def v_full_copy(self):
         '''Whether or not the full parameter including the exploration array or only the current
@@ -104,7 +104,7 @@ class BaseParameter(NNLeafNode):
         parameters need to be pickled and are sent to the individual processes.
         Each process than runs an individual point in the parameter space trajectory.
         As a consequence, you do not need the exploration array during these calculations.
-        Thus, if the full copy mode is f_set to False the parameter is pickled without
+        Thus, if the full copy mode is set to False the parameter is pickled without
         the exploration array and you can save memory.
 
         If you want to access the full exploration array during individual runs, you need to set
@@ -121,7 +121,8 @@ class BaseParameter(NNLeafNode):
         >>> dump=pickle.dumps(param)
         >>> newparam = pickle.loads(dump)
         >>> print newparam.f_get_array()
-        ()
+        TypeError
+
         >>> param.v_full_copy=True
         >>> dump = pickle.dumps(param)
         >>> newparam=pickle.loads(dump)
@@ -179,7 +180,7 @@ class BaseParameter(NNLeafNode):
         lock the parameter or counts as usage!
 
         String is truncated if it is longer or equal to the value specified in
-        `:const:`globally.HDF5_STRCOL_MAX_COMMENT_LENGTH`
+        `:const:`~pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH`
 
         '''
         old_locked = self._locked
@@ -196,11 +197,6 @@ class BaseParameter(NNLeafNode):
             self._locked = old_locked
 
 
-    def f_supports(self, data):
-        ''' Checks whether the data is supported by the parameter.
-
-        '''
-        return type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA
 
     def _equal_values(self,val1,val2):
         ''' Checks if the parameter considers two values as equal.
@@ -1088,6 +1084,8 @@ class SparseParameter(ArrayParameter):
             return_list=['dia', matrix.data, matrix.offsets, matrix.shape]
 
             return_names=SparseParameter.DIA_NAME_LIST
+        else:
+            raise RuntimeError('You shall not pass!')
 
         hash_list = []
         for item in return_list:
@@ -1103,7 +1101,8 @@ class SparseParameter(ArrayParameter):
     def _set_logger(self):
         self._logger = logging.getLogger('pypet.parameter.SparseParameter=' + self.v_full_name)
 
-    def _get_name_list(self,is_dia):
+    @staticmethod
+    def _get_name_list(is_dia):
         if is_dia:
             return SparseParameter.DIA_NAME_LIST
         else:
@@ -1116,11 +1115,11 @@ class SparseParameter(ArrayParameter):
         else:
             store_dict = {}
             data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
-            rename_list = ['data_%s%s' % (name, SparseParameter.IDENTIFIER)
+            rename_list = ['data%s%s' % (SparseParameter.IDENTIFIER,name)
                                  for name in name_list]
 
             is_dia = int(len(rename_list)==4)
-            store_dict['data_is_dia'+SparseParameter.IDENTIFIER]= is_dia
+            store_dict['data%sis_dia' % SparseParameter.IDENTIFIER]= is_dia
 
             for idx,name in enumerate(rename_list):
                 store_dict[name] = data_list[idx]
@@ -1165,7 +1164,7 @@ class SparseParameter(ArrayParameter):
 
     def _build_names(self, name_id, is_dia):
         name_list = self._get_name_list(is_dia)
-        return tuple(['xspm_%s%s%08d' % (name, SparseParameter.IDENTIFIER,name_id)
+        return tuple(['xspm%s%s%08d' % (SparseParameter.IDENTIFIER, name, name_id)
                                     for name in name_list])
 
 
@@ -1189,10 +1188,10 @@ class SparseParameter(ArrayParameter):
 
     def _load(self,load_dict):
         try:
-            is_dia =  load_dict['data_is_dia'+SparseParameter.IDENTIFIER]
+            is_dia =  load_dict['data%sis_dia' % SparseParameter.IDENTIFIER]
 
             name_list = self._get_name_list(is_dia)
-            rename_list = ['data_%s%s' % (name, SparseParameter.IDENTIFIER)
+            rename_list = ['data%s%s' % (SparseParameter.IDENTIFIER,name)
                                  for name in name_list]
 
             data_list = [load_dict[name] for name in rename_list]
@@ -1649,15 +1648,26 @@ class Result(BaseResult):
         if name in ['comment', 'Comment']:
             self.v_comment= item
 
-        if type(item) in ((np.ndarray,ObjectTable,DataFrame,dict,tuple,list,np.matrix)+
-                             pypetconstants.PARAMETER_SUPPORTED_DATA):
-            if (not type(item) in pypetconstants.PARAMETER_SUPPORTED_DATA) and len(item) == 0:
-                self._logger.warning('The Item >>%s<< is _empty.' % name)
+        if self._supports(item):
+
+            self._check_if_empty(item, name)
 
             self._data[name] = item
         else:
             raise AttributeError('Your result >>%s<< of type >>%s<< is not supported.' %
                                  (name,str(type(item))))
+
+    def _check_if_empty(self, item, name):
+        try:
+            if len(item) ==0:
+                self._logger.warning('The Item >>%s<< is empty.' % name)
+        except TypeError:
+            # If the item does not support len operation we can ignore that
+            pass
+
+    def _supports(self, item):
+        return type(item) in ((np.ndarray,ObjectTable,DataFrame,dict,tuple,list,np.matrix)+
+                             pypetconstants.PARAMETER_SUPPORTED_DATA)
 
 
     @property
@@ -1730,36 +1740,78 @@ class Result(BaseResult):
 
         return self._data[name]
 
-# class SparseResult(Result):
-#     ''' Adds the support of scipy sparse matrices to the result.
-#
-#     Supported Formats are csr, csc, bsr, and dia.
-#     '''
-#
-#     def f_set_single(self, name, item):
-#         if SparseParameter.IDENTIFIER in name:
-#             raise AttributeError('Your result name contains the identifier for sparse matrices,'
-#                                  ' please do not use %s in your result names.' %
-#                                  SparseParameter.IDENTIFIER)
-#         else:
-#             super(SparseResult,self).f_set_single(name,item)
-#
-#     def _store(self):
-#         store_dict = {}
-#         for key, val in self._data:
-#             if SparseParameter._is_supported_matrix(val):
-#                 store_dict[key+SparseParameter.IDENTIFIER] = ObjectTable(columns=['data_is_dia'+SparseParameter.IDENTIFIER],index=[0])
-#
-#                 data_list, name_list, hash_tuple= self._serialize_matrix(self._data)
-#                 rename_list = ['dsp_%s%s' % (name, SparseParameter.IDENTIFIER)
-#                                      for name in name_list]
-#
-#                 is_dia = int(len(rename_list)==4)
-#                 store_dict['data']['data_is_dia'+SparseParameter.IDENTIFIER][0] = is_dia
-#             else:
-#                 store_dict[key]=val
-#
-#         return  store_dict
+class SparseResult(Result):
+    ''' Adds the support of scipy sparse matrices to the result.
+
+    Supported Formats are csr, csc, bsr, and dia.
+    Supports also all data, handled by the standard result.
+    '''
+
+    IDENTIFIER = SparseParameter.IDENTIFIER
+
+    def f_set_single(self, name, item):
+        if SparseResult.IDENTIFIER in name:
+            raise AttributeError('Your result name contains the identifier for sparse matrices,'
+                                 ' please do not use %s in your result names.' %
+                                 SparseResult.IDENTIFIER)
+        else:
+            super(SparseResult,self).f_set_single(name,item)
+
+
+    def _supports(self, item):
+        if SparseParameter._is_supported_matrix(item):
+            return True
+        else:
+            return super(SparseResult,self)._supports(item)
+
+    def _check_if_empty(self, item, name):
+        if SparseParameter._is_supported_matrix(item):
+            if item.getnnz()==0:
+                self._logger.warning('The Item >>%s<< is empty.' % name)
+        else:
+            super(SparseResult,self)._check_if_empty(item, name)
+
+    def _store(self):
+        store_dict = {}
+        for key, val in self._data.iteritems():
+            if SparseParameter._is_supported_matrix(val):
+
+                data_list, name_list, hash_tuple= SparseParameter._serialize_matrix(val)
+                rename_list = ['%s%s%s' % (key, SparseParameter.IDENTIFIER,name)
+                                     for name in name_list]
+
+                is_dia = int(len(rename_list)==4)
+                store_dict[key+SparseResult.IDENTIFIER+'is_dia'] =  is_dia
+
+                for idx,name in enumerate(rename_list):
+                    store_dict[name] = data_list[idx]
+
+            else:
+                store_dict[key]=val
+
+        return  store_dict
+
+    def _load(self, load_dict):
+
+        for key in load_dict.keys():
+            # We delete keys over time:
+            if key in load_dict:
+                if SparseResult.IDENTIFIER in key:
+                    new_key = key.split(SparseResult.IDENTIFIER)[0]
+
+                    is_dia = load_dict.pop(new_key+SparseResult.IDENTIFIER+'is_dia')
+
+                    name_list = SparseParameter._get_name_list(is_dia)
+                    rename_list = ['%s%s%s' % (new_key,SparseResult.IDENTIFIER,name)
+                                         for name in name_list]
+
+                    data_list = [load_dict.pop(name) for name in rename_list]
+                    matrix = SparseParameter._reconstruct_matrix(data_list)
+                    self._data[new_key]=matrix
+                else:
+                    self._data[key]=load_dict[key]
+
+
 
 
 
@@ -1771,6 +1823,7 @@ class PickleResult(Result):
     Note that it is not checked whether data can be pickled, so take care that it works!
     '''
 
+    IDENTIFIER=PickleParameter.IDENTIFIER
 
     def f_set_single(self, name, item):
         '''Adds a single data item to the pickle result.
@@ -1789,10 +1842,11 @@ class PickleResult(Result):
     def _store(self):
         store_dict ={}
         for key, val in self._data.items():
-            store_dict[key] = pickle.dumps(val)
+            store_dict[key+PickleResult.IDENTIFIER] = pickle.dumps(val)
         return store_dict
 
 
     def _load(self, load_dict):
         for key, val in load_dict.items():
-            self._data[key] = pickle.loads(val)
+            new_key = key[:-len(PickleResult.IDENTIFIER)]
+            self._data[new_key] = pickle.loads(val)

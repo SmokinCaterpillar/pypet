@@ -2,7 +2,7 @@
 Cookbook
 =================================
 
-You can find here some more explanation on various concepts of *pypet*:
+Here you can find some more explanations on various concepts of *pypet*:
 
 
 .. toctree::

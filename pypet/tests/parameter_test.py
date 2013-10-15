@@ -14,7 +14,7 @@ else:
 from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter, SparseParameter
 import pickle
 import scipy.sparse as spsp
-import pypet.petexceptions as pex
+import pypet.pypetexceptions as pex
 
 
 class Dummy():
