@@ -104,9 +104,13 @@ Simply install via `pip install --pre pypet`
 
 Or
 
-Package release can also be found on `pypi.python.org`_. Download, unpack and `python setup.py install` it
+Package release can also be found on `pypi.python.org`_. Download, unpack and `python setup.py install` it.
+
+By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
 
 .. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
+
+.. _`github.com/SmokinCaterpillar/pypet`: https://github.com/SmokinCaterpillar/pypet
 
 ---------------------------
 Documentation

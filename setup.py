@@ -61,7 +61,7 @@ setup(
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'Topic :: Scientific/Engineering',
         'License :: OSI Approved :: BSD License',
         'Topic :: Utilities']
 )
