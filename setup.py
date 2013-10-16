@@ -26,7 +26,7 @@ install_requires=[
         'tables >= 2.3.1',
         'pandas >= 0.12.0',
         'numpy >= 1.6.1',
-        'scipy >= 0.10.0']
+        'scipy >= 0.9.0']
 
 # check if importlib exists, if not (aka python 2.6) install it
 try:
