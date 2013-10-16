@@ -485,7 +485,7 @@ class Parameter(BaseParameter):
     
     Supported data values for the parameter are
 
-    * python natives (int, str, bool, float, complex),
+    * python natives (int, long, str, bool, float, complex),
 
     * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
       np.complex, np.str
@@ -1331,7 +1331,7 @@ class Result(BaseResult):
 
     Data that can safely be stored into a Result are:
 
-        * python natives (int,str,bool,float,complex),
+        * python natives (int, long, str, bool, float, complex),
 
         * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
           np.complex, np.str

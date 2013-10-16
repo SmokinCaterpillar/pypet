@@ -148,7 +148,7 @@ Main Features
 
 * Support for many different **data formats**
 
-    * python native data types: bool, int, float, str, complex
+    * python native data types: bool, int, long, float, str, complex
 
     * list, tuple, dict
 

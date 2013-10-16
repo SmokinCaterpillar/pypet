@@ -85,7 +85,7 @@ So far, the following parameters exist:
 
  *  :class:`~pypet.parameter.Parameter`:
 
-    Container for native python data: int, float, str, bool, complex, and
+    Container for native python data: int, long, float, str, bool, complex, and
     Numpy data: np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str.
     Numpy arrays and matrices are allowed as well.
 
@@ -191,7 +191,7 @@ The following results exist:
 
     Data that can safely be stored into a Result are:
 
-        * python natives (int,str,bool,float,complex),
+        * python natives (int,long,str,bool,float,complex),
 
         * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
           np.complex, np.str

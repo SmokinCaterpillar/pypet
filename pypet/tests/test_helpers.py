@@ -86,6 +86,7 @@ def create_param_dict(param_dict):
     normal_dict = param_dict['Normal']
     normal_dict['string'] = 'Im a test string!'
     normal_dict['int'] = 42
+    normal_dict['long'] = long(42)
     normal_dict['double'] = 42.42
     normal_dict['bool'] =True
     normal_dict['trial'] = 0
@@ -140,7 +141,7 @@ def add_params(traj,param_dict):
     for key, val in flat_dict.items():
         if isinstance(val, (np.ndarray,tuple)):
             traj.f_add_parameter(ArrayParameter,key,val )
-        elif isinstance(val, (int,str,bool,float)):
+        elif isinstance(val, (int,str,bool,long,float)):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
             traj.f_add_parameter(SparseParameter,key,val).v_annotations.f_set(
@@ -178,6 +179,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__INTaRRAy'] = np.array([1,2,3])
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
+        my_dict['__LONG'] = long(42)
 
         keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):

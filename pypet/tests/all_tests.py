@@ -24,6 +24,18 @@ try:
 except ImportError:
     pass
 
+def run_all_tests(keep=False, folder=None):
+    ''' Runs all tests.
+
+    :param keep: Whether to keep the test data or delete all temporary hdf5 files.
+
+    :param folder:
+
+            Folder where to store test data. If None, a temporary directory is requested from
+            the OS.
+
+    '''
+    run_tests(not keep, folder)
 
 if __name__ == '__main__':
     opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])

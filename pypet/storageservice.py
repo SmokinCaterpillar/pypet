@@ -2678,7 +2678,7 @@ class HDF5StorageService(StorageService):
 
                 if not strtype in pypetconstants.PARAMETERTYPEDICT:
                     raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
-                                   (str(data),str(type(data))))
+                                   (str(data),repr(type(data))))
 
                 _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
 
@@ -2688,7 +2688,7 @@ class HDF5StorageService(StorageService):
 
             else:
                 raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
-                                   (str(data),str(type(data))))
+                                   (str(data),repr(type(data))))
 
             if type(data) in (list,tuple):
                 if len(data) > 0:
@@ -2895,7 +2895,7 @@ class HDF5StorageService(StorageService):
                 return pt.Col.from_dtype(np.dtype(type(val)))
         except Exception:
             self._logger.error('Failure in storing >>%s<< of Parameter/Result >>%s<<.'
-                               ' Its type was >>%s<<.' % (key,fullname,str(type(val))))
+                               ' Its type was >>%s<<.' % (key,fullname,repr(type(val))))
             raise
 
 

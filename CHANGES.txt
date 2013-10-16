@@ -1,5 +1,11 @@
 pypet 0.1b.0
 
+*   Support for `long` types
+
+*   Better start of tests
+
+pypet 0.1b.0
+
 *   Group nodes support __getitem__
 
 *   SparseResult
