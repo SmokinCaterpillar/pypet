@@ -75,9 +75,8 @@ you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
-Currently the storage method of choice is HDF5_.
+Currently the storage method of choice is HDF5 (http://www.hdfgroup.org/HDF5/).
 
-.. _HDF5: http://www.hdfgroup.org/HDF5/
 
 ---------------------------
 Package Organization
@@ -106,21 +105,16 @@ Or
 
 Package release can also be found on `pypi.python.org`_. Download, unpack and `python setup.py install` it.
 
-By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
-
-.. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
-
-.. _`github.com/SmokinCaterpillar/pypet`: https://github.com/SmokinCaterpillar/pypet
+By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet
 
 ---------------------------
 Documentation
 ---------------------------
 
-Documentation can be found on `pypet.readthedocs.org`_
+Documentation can be found on http://pypet.readthedocs.org/.
 
 If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**
 
-.. _`pypet.readthedocs.org`: http://pypet.readthedocs.org/
 
 ---------------------------
 Acknowledgements
@@ -129,29 +123,22 @@ Acknowledgements
 
 *   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions.
 
-    You might wanna check out their SpykeViewer_ 
-    tool for visualization of MEA recordings and NEO_ data
+    You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
+    tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
 
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project.
 
 
-*   Thanks to the `BCCN Berlin`_,
+*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
     the Research Training Group GRK 1589/1, and the
-    `Neural Information Processing Group`_ for support.
+    Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support.
 
-.. _SpykeViewer: https://github.com/rproepp/spykeviewer
 
-.. _NEO: http://pythonhosted.org/neo
-
-.. _`BCCN Berlin`: http://www.bccn-berlin.de
-
-.. _`Neural Information Processing Group`: http://www.ni.tu-berlin.de
-
-================
+--------------
 Main Features
-================
+--------------
 
 * **Novel tree container** `Trajectory`, for handling and managing of
   parameters and results of numerical simulations
@@ -170,11 +157,11 @@ Main Features
 
     * SciPy sparse matrices
 
-    * pandas_ DataFrames
+    * pandas DataFrames (http://pandas.pydata.org/)
 
-    * BRIAN_ Quantities
+    * BRIAN Quantities (http://briansimulator.org/)
 
-    * BRIAN_ Monitors
+    * BRIAN Monitors
 
 * Easily **extendible** to other data formats!
 
@@ -196,10 +183,6 @@ Main Features
 
 * **Git Integration**, make automatic commits of your source code every time you run an experiment
 
-
-.. _pandas: http://pandas.pydata.org/
-
-.. _BRIAN: http://briansimulator.org/
 
 
 ======================
@@ -340,7 +323,8 @@ and `--folder=` to specify a folder where to store the hdf5 files instead of the
 ------------------------------------
 License
 ------------------------------------
-Read LICENSE
+
+BSD, please read LICENSE file.
 
 
 ------------------------------------
