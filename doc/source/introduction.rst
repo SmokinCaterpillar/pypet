@@ -35,13 +35,15 @@ Currently the storage method of choice is HDF5_ via PyTables_.
 Install
 ---------------------------
 
-Simply install via `pip install pypet`
+Simply install via `pip install --pre pypet`
 
 Or
 
-Package release can also be found on https://pypi.python.org/pypi/pypet
+Package release can also be found on `pypi.python.org`_
 
-    Download, unpack and `python setup.py install` it
+Download, unpack and `python setup.py install` it
+
+.. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
 
 ---------------------------------
 What to do with pypet?
@@ -135,7 +137,7 @@ Let's take a look at the snippet at once:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation
-    env.run(multiply)
+    env.f_run(multiply)
 
 
 
@@ -186,15 +188,20 @@ of :math:`x=y=1.0`
 
 Well, calculating :math:`1.0*1.0` is quite boring, we want to figure out more products, that is
 the results of the cartesian product set :math:`\{1.0,2.0,3.0,4.0\} \times \{6.0,7.0,8.0\}`.
-Therefore we use :func:`~pypet.trajectory.Trajectory.explore` in combination with the builder function
-:func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both parameters.
+Therefore we use :func:`~pypet.trajectory.Trajectory.f_explore` in combination with the builder function
+:func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both parameters:
+
+.. code-block:: python
+
+    # Explore the parameters with a cartesian product:
+    traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
 Finally, we need to tell the environment to run our job `multiply`
 
 .. code-block:: python
 
     # Run the simulation
-    env.run(multiply)
+    env.f_run(multiply)
 
 And that's it. If we now inspect the new hdf5 file in `examples/HDF/example_01.hdf5`,
 we will see that our results have been stored right in there, and, of course, the trajectory with
@@ -213,7 +220,7 @@ Main Features
 
 * **Grouping** of parameters and results
 
-* Accessing handled items via **natural naming**: eg: `traj.parameters.traffic.ncars`
+* Accessing handled items via **natural naming**, e.g. `traj.parameters.traffic.ncars`
 
 * Support for many different **data formats**
 
@@ -223,9 +230,11 @@ Main Features
 
     * Numpy arrays and matrices
 
+    * SciPy sparse matrices
+
     * pandas_ DataFrames
 
-    * BRIAN_ Qunatities
+    * BRIAN_ Quantities
 
     * BRIAN_ Monitors
 
@@ -235,7 +244,7 @@ Main Features
 
 * **Merging** of *trajectories* residing in the same space
 
-* Support for **multiprocessing**, distributing of individual simulation runs to several
+* Support for **multiprocessing**, distribute your individual simulation runs to several
   processes.
 
 * **Storage** of simulation data, i.e. the *trajectory*, *parameters*, and *results* into
@@ -245,11 +254,9 @@ Main Features
 
 * **Resuming** a crashed simulation (maybe due to power shut down) after the latest completed run
 
-* **Annotations** of parameters, results in groups, that are stored as _HDF5 node attributes
+* **Annotations** of parameters, results and groups, these annotations are stored as HDF5 node attributes
 
-* **Git Integration**, make automatic commits of your source code every time you run an experiment.
-  In order to use the git integration you also need GitPython_.
-
+* **Git Integration**, make automatic commits of your source code every time you run an experiment
 
 .. _pandas: http://pandas.pydata.org/
 

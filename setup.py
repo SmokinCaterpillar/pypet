@@ -51,13 +51,17 @@ setup(
     author='Robert Meyer',
     author_email='robert.meyer@ni.tu-berlin.de',
     description='A toolkit for numerical simulations to allow easy parameter exploration and storage of results.',
-    long_description=open('long_description.txt').read(),
+    long_description=open('README.md').read(),
     url='https://github.com/SmokinCaterpillar/pypet',
     install_requires=install_requires,
     classifiers=[
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2 :: Only',
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        'Topic :: Scientific/Engineering :: Bio-Informatics']
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'License :: OSI Approved :: BSD License',
+        'Topic :: Utilities']
 )
