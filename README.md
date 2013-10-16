@@ -3,7 +3,7 @@ pypet
 =========
 
 The new python parameter exploration toolkit. pypet manages exploration of the parameter space and
-data storage into HDF5_ files for you.
+data storage into HDF5 files for you.
 
 ===========================
 IMPORTANT!
@@ -45,7 +45,6 @@ Python 2.6 or 2.7
 For git integration you additionally need
 
 * GitPython
-
 
 =========================
 What is pypet all about?
@@ -103,9 +102,9 @@ Simply install via `pip install --pre pypet`
 
 Or
 
-Package release can also be found on `pypi.python.org`_. Download, unpack and `python setup.py install` it.
+Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack and `python setup.py install` it.
 
-By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet
+By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet.
 
 ---------------------------
 Documentation
@@ -237,7 +236,8 @@ values:
 
 This is our function multiply. The function uses a so called `Trajectory`
 container which manages our parameters. We can access the parameters simply by natural naming,
-as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result with name `'z'` to the `traj` object.
+as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result with name `'z'`
+to the `traj` object.
 
 After the definition of the job that we want to simulate, we create an environment which
 will run the simulation.
@@ -253,7 +253,8 @@ will run the simulation.
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
 store the trajectory into, the title of the file, a folder for the log files, and a
 comment that is added to the trajectory. There are more options available like
-the number of processors for multiprocessing or how verbose the final hdf5 file is supposed to be. Check out the documentation_ if you want to know more.
+the number of processors for multiprocessing or how verbose the final hdf5 file is supposed to be.
+Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
 ::
@@ -295,8 +296,6 @@ So have fun using this tool!
 Cheers,
     Robert
 
-
-.. _documentation: http://pypet.readthedocs.org/
 
 ================================
 Miscellaneous
