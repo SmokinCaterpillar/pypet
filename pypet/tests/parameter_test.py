@@ -15,6 +15,7 @@ from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayPara
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
+from pypet.utils.helpful_functions import nested_equal
 
 
 class Dummy():
@@ -63,6 +64,25 @@ class ParameterTest(unittest.TestCase):
         #Add explortation:
         self.explore()
 
+    def test_get_item(self):
+        for paramname in self.explore_dict:
+            param = self.param[paramname]
+            val1=param.f_get_array()[1]
+            val2=param[1]
+            self.assertTrue(nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+
+    def test_type_error_for_get_item(self):
+        for name,param in self.param.items():
+            if not name in self.explore_dict:
+                with self.assertRaises(TypeError):
+                    param[1]
+
+    def test_type_error_for_shrink(self):
+        for name,param in self.param.items():
+            if not name in self.explore_dict:
+                with self.assertRaises(TypeError):
+                    param._shrink()
+
     def explore(self):
         self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
@@ -83,6 +103,40 @@ class ParameterTest(unittest.TestCase):
                 self.param[key]._restore_default()
                 param_val = self.param[key].f_get()
                 self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
+
+
+
+    def test_expanding_type_error(self):
+        for name,param in self.param.items():
+            if not name in self.explore_dict:
+                #Test locking
+                with self.assertRaises(TypeError):
+                    param._expand([1,2,3])
+
+                #Test wron param type
+                with self.assertRaises(TypeError):
+                    param.f_unlock()
+                    param._expand([1,2,3])
+
+
+    def test_rename(self):
+        for name,param in self.param.iteritems():
+            param._rename('test.test.wirsing')
+            self.assertTrue(param.v_name=='wirsing')
+            self.assertTrue(param.v_full_name=='test.test.wirsing')
+            self.assertTrue(param.v_location=='test.test')
+
+
+
+    def test_expanding(self):
+        for name,param in self.param.items():
+            if name in self.explore_dict:
+                param.f_unlock()
+                param._expand(self.explore_dict[name])
+
+                self.assertTrue(len(param) == 2*len(self.explore_dict[name]),
+                                'Expanding of %s did not work.' % name)
+
 
     def test_exploration(self):
         for key, vallist in self.explore_dict.items():
@@ -168,7 +222,6 @@ class ParameterTest(unittest.TestCase):
 
         self.testMetaSettings()
 
-
     def test_resizing_and_deletion(self):
 
         for key, param in self.param.items():
@@ -179,6 +232,7 @@ class ParameterTest(unittest.TestCase):
             with self.assertRaises(pex.ParameterLockedException):
                 param._shrink()
 
+
             param.f_unlock()
 
 
@@ -187,8 +241,8 @@ class ParameterTest(unittest.TestCase):
 
             if param.f_is_array():
                 self.assertTrue(len(param)>1)
+                param._shrink()
 
-            param._shrink()
             self.assertTrue(len(param) == 1)
 
             self.assertFalse(param.f_is_empty())

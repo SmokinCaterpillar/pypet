@@ -169,6 +169,61 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertIsInstance(self.traj.Parker, ImAResultInDisguise)
 
+class TrajectoryFindTest(unittest.TestCase):
+    def setUp(self):
+        name = 'Traj'
+        traj = Trajectory(name)
+
+        traj.f_add_parameter('x',0)
+        traj.f_add_parameter('y',0.0)
+        traj.f_add_parameter('z','test')
+        traj.f_add_parameter('ar', np.array([1,2,3]))
+        traj.f_add_parameter('scalar', 42)
+        self.explore(traj)
+        self.traj=traj
+
+    def test_simple_find_idx(self):
+        pred = lambda x: x==2
+
+        it = self.traj.f_find_idx('x',pred)
+        it_list = [i for i in it]
+
+        self.assertEqual(len(it_list),1, 'Should find 1 item but found %d' % len(it_list) )
+
+        self.assertEqual(it_list[0],1, 'Found wrong index, should find 1 but found %s' % it_list[0])
+
+    def test_complex_find_statement(self):
+        pred = lambda x,ar,z,scalar: (scalar == 42 and
+                                     (x == 2 or x==4 or x==5) and
+                                     (z == 'meter' or z=='berserker' ) and
+                                     np.all(np.array([4,5,6]) == ar))
+
+        it = self.traj.f_find_idx(('x', 'ar','z','scalar'),pred)
+        it_list = [i for i in it]
+
+        self.assertEqual(len(it_list),2, 'Should find 2 items but found %d' % len(it_list) )
+
+        self.assertEqual(it_list[0],1, 'Found wrong index, should find 1 but found %s' % it_list[0])
+        self.assertEqual(it_list[1],3, 'Found wrong index, should find 1 but found %s' % it_list[1])
+
+    def test_find_nothing(self):
+        pred = lambda x: x==12
+
+        it = self.traj.f_find_idx('x',pred)
+        it_list = [i for i in it]
+
+        self.assertEqual(len(it_list),0, 'Should find 0 items but found %d' % len(it_list) )
+
+
+    def explore(self,traj):
+        explore_dict = {'x':[1,2,3,4],
+                        'y':[0.0,42.0,44.0,44.0],
+                        'z':['peter','meter','treter', 'berserker'],
+                        'ar': [np.array([1,2,3]),np.array([4,5,6]),np.array([1,2,3]),np.array([4,5,6])]
+                        }
+
+        traj.f_explore(explore_dict)
+
 class TrajectoryMergeTest(unittest.TestCase):
 
     def setUp(self):

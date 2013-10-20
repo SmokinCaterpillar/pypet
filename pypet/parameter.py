@@ -882,21 +882,31 @@ class Parameter(BaseParameter):
 
     @copydoc(BaseParameter._shrink)
     def _shrink(self):
-        if self.f_is_empty():
-            raise TypeError('Cannot _shrink _empty Parameter.')
 
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
+
+        if not self.f_is_array():
+            raise TypeError('Cannot shrink non-array Parameter.')
+
+        if self.f_is_empty():
+            raise TypeError('Cannot shrink empty Parameter.')
 
         del self._explored_data
         self._explored_data={}
 
     @copydoc(BaseParameter.f_empty)
     def f_empty(self):
+
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
-        self._shrink()
+        if self.f_is_empty():
+            raise TypeError('Cannot empty an already empty Parameter.')
+
+        if self.f_is_array():
+            self._shrink()
+
         del self._data
         self._data=None
 

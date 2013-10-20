@@ -1120,14 +1120,14 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         iter_list = []
         for name in name_list:
             param = self.f_get(name)
-            if param.v_parameter:
+            if not param.v_parameter:
                 raise TypeError('>>%s<< is not a parameter it is a %s, find is not applicable' %
                                 (name, str(type(param))))
 
             if param.f_is_array():
                 iter_list.append(iter(param.f_get_array()))
             else:
-                iter_list.append((param.f_get() for dummy in xrange(len(self))))
+                iter_list.append(it.repeat(param.f_get(), len(self)))
 
         logic_iter = it.imap(predicate, *iter_list)
 
