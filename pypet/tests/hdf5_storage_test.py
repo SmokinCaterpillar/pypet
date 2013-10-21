@@ -23,10 +23,9 @@ import random
 
 import tables as pt
 
-from test_helpers import add_params, create_param_dict, simple_calculations, run_tests,\
+from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multipy
 
-SINGLETEST=[0]
 class EnvironmentTest(TrajectoryComparator):
 
 
@@ -117,6 +116,8 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         self.logfolder = make_temp_file('experiments/tests/Log')
+
+        random.seed()
         self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
@@ -149,7 +150,6 @@ class EnvironmentTest(TrajectoryComparator):
         simple_kwarg= 13.0
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
-    @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_run(self):
 
         ###Explore
@@ -168,7 +168,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-    @unittest.skipIf(SINGLETEST != [0] and 11 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_run_complex(self):
 
         ###Explore
@@ -197,7 +196,6 @@ class EnvironmentTest(TrajectoryComparator):
 
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_expand(self):
         ###Explore
         self.explore(self.traj)
@@ -214,7 +212,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_expand_after_reload(self):
         ###Explore
         self.explore(self.traj)
@@ -256,7 +253,6 @@ class EnvironmentTest(TrajectoryComparator):
 
     ################## Overview TESTS #############################
 
-    @unittest.skipIf(SINGLETEST != [0] and 6 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_switch_off_large_tables(self):
         ###Explore
         self.explore(self.traj)
@@ -271,7 +267,6 @@ class EnvironmentTest(TrajectoryComparator):
             self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
         hdf5file.close()
 
-    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_switch_off_all_tables(self):
         ###Explore
         self.explore(self.traj)
@@ -288,7 +283,6 @@ class EnvironmentTest(TrajectoryComparator):
         hdf5file.close()
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 4 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_switch_on_all_comments(self):
         self.explore(self.traj)
         self.traj.purge_duplicate_comments=0
@@ -305,7 +299,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         hdf5file.close()
 
-    @unittest.skipIf(SINGLETEST != [0] and 5 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_purge_duplicate_comments(self):
         self.explore(self.traj)
 
@@ -389,7 +382,6 @@ class ResultSortTest(TrajectoryComparator):
         traj.f_expand(self.expand_dict)
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 7 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_if_results_are_sorted_correctly(self):
 
         ###Explore
@@ -410,7 +402,6 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-    @unittest.skipIf(SINGLETEST != [0] and 9 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_expand(self):
         ###Explore
         self.explore(self.traj)
@@ -449,7 +440,6 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-    @unittest.skipIf(SINGLETEST != [0] and 10 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_expand_after_reload(self):
         ###Explore
         self.explore(self.traj)
@@ -491,4 +481,4 @@ class ResultSortTest(TrajectoryComparator):
 
 
 if __name__ == '__main__':
-    run_tests()
+    make_run()

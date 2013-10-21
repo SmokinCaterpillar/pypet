@@ -18,8 +18,6 @@ import pypet.pypetexceptions as pex
 from pypet.utils.helpful_functions import nested_equal
 
 
-class Dummy():
-    pass
 
 class ParameterTest(unittest.TestCase):
 

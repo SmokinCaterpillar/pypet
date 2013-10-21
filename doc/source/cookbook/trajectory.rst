@@ -656,6 +656,46 @@ This will print the following statement:
 
 To see this in action you might want to check out :ref:`example-03`.
 
+.. _more-on-find-idx:
+
+-----------------------------------------------------------
+Looking for Subsets of Parameter Combinations (f_find_idx)
+-----------------------------------------------------------
+
+Let's say you already explored the parameter space and gathered some results.
+The next step would be to post-process and analyze the results. Yet, you are not
+interested in all results at the moment but only for subsets where the parameters
+have certain values. You can find the corresponding run indices with the
+:func:`~pypet.Trajectory.f_find_idx` function.
+
+In order to filter for particular settings you need a *lambda* filter function
+(You don't know what lambda function are? You might wanna read about it in diveintopython_) and
+a list specifying the names of the parameters that you want to filter.
+
+For instance, let's assume we explored the parameters `'x'` and `'y'` and the cartesian product
+of :math:`x \in \{1,2,3,4\}` and :math:`y \in \{6,7,8\}`. We want to know the run indexes for
+`x==2` or `y==8`. First we need to formulate a lambda filter function:
+
+    >>>my_filter_function = lambda x,y: x==2 and y==8
+
+Next we can ask the trajectory to return an iterator over all run indices that fulfil the
+above named condition:
+
+    >>> idx_iterator = traj.f_find_idx(['parameters.x', 'parameters.y'],my_filter_function)
+
+Note the list `['parameters.x', 'parameters.y']` to tell the trajectory which parameters are
+associated with the variables in the lambda function. Make sure they are in the same order as
+in your lambda function.
+
+Now if we print the indexes found by the lambda filter, we get:
+
+    >>> print [idx for idx in idx_iterator]
+    [1, 5, 8, 9, 10, 11]
+
+To see this in action check out :ref:`example-08`.
+
+.. _diveintopython: http://www.diveintopython.net/power_of_introspection/lambda_functions.html
+
 .. _more-on-presetting:
 
 ----------------------------------

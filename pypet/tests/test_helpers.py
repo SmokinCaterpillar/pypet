@@ -57,7 +57,7 @@ def make_temp_file(filename):
         logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
         raise
 
-def run_tests(remove=None, folder=None):
+def make_run(remove=None, folder=None):
 
     if remove is None:
         remove = REMOVE

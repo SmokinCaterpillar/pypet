@@ -12,3 +12,4 @@ Here you can find some example code how to use the *pypet*.
     examplesdoc/example_05
     examplesdoc/example_06
     examplesdoc/example_07
+    examplesdoc/example_08

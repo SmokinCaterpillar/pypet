@@ -17,15 +17,9 @@ from pypet.environment import Environment
 from pypet import pypetconstants
 import logging
 
-from test_helpers import add_params, create_param_dict, run_tests, simple_calculations, \
+from test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
     make_temp_file, TrajectoryComparator, multipy
 from hdf5_storage_test import ResultSortTest
-
-REMOVE = True
-SINGLETEST=[0]
-
-
-
 
 
 class MergeTest(TrajectoryComparator):
@@ -43,7 +37,7 @@ class MergeTest(TrajectoryComparator):
 
     def make_environment(self, idx, filename):
 
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
         #self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         logfolder = make_temp_file('experiments/tests/Log')
@@ -57,34 +51,28 @@ class MergeTest(TrajectoryComparator):
 
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self.merge_basic_only_adding_more_trials(True)
 
-    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_move_nodes(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self.merge_basic_only_adding_more_trials(False)
 
-    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_basic_within_same_file_and_skipping_duplicates_which_will_be_all(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
         self.basic_and_skipping_duplicates_which_will_be_all()
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 4 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_basic_within_same_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 5 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge2.hdf5'), make_temp_file('experiments/tests/HDF5/merge3.hdf5'), make_temp_file('experiments/tests/HDF5/merge4.hdf5')]
         self.merge_basic_only_adding_more_trials(True)
 
-    @unittest.skipIf(SINGLETEST != [0] and 6 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes_test_backup(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self.merge_basic_only_adding_more_trials_with_backup(True)
@@ -345,7 +333,6 @@ class TestMergeResultsSort(ResultSortTest):
         self.env2=env2
         self.traj2=traj2
 
-    @unittest.skipIf(SINGLETEST != [0] and 7 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_normally(self):
 
         self.explore(self.traj)
@@ -367,7 +354,6 @@ class TestMergeResultsSort(ResultSortTest):
         self.traj.f_load(load_results=pypetconstants.UPDATE_DATA)
         self.check_if_z_is_correct(self.traj)
 
-    @unittest.skipIf(SINGLETEST != [0] and 8 not in SINGLETEST,'Skipping because, single debug is not pointing to the function ')
     def test_merge_remove_duplicates(self):
 
         self.explore(self.traj)
@@ -400,4 +386,4 @@ class TestMergeResultsSort(ResultSortTest):
 
 
 if __name__ == '__main__':
-    run_tests()
+    make_run()

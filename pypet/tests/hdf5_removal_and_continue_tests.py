@@ -22,11 +22,8 @@ import logging
 import os
 
 import tables as pt
-from test_helpers import add_params, simple_calculations, create_param_dict, run_tests, \
+from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
     TrajectoryComparator, make_temp_file
-
-SINGLETEST=[0]
-
 
 
 
@@ -44,7 +41,7 @@ class ContinueTest(TrajectoryComparator):
 
     def make_environment(self, idx, filename):
 
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         logfolder = make_temp_file('experiments/tests/Log')
@@ -65,8 +62,6 @@ class ContinueTest(TrajectoryComparator):
         traj.f_explore(cartesian_product(self.explored))
 
 
-    @unittest.skipIf(SINGLETEST != [0] and 1 not in SINGLETEST,'Skipping because, '
-                                                               'single debug is not pointing to the function ')
     def test_continueing(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
 
@@ -120,8 +115,6 @@ class ContinueTest(TrajectoryComparator):
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
-    @unittest.skipIf(SINGLETEST != [0] and 2 not in SINGLETEST,'Skipping because, '
-                                                               'single debug is not pointing to the function ')
     def test_removal(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
 
@@ -177,8 +170,7 @@ class ContinueTest(TrajectoryComparator):
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
-    @unittest.skipIf(SINGLETEST != [0] and 3 not in SINGLETEST,'Skipping because, '
-                                                'single debug is not pointing to the function ')
+
     def test_multiple_storage_and_loading(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
 
@@ -226,4 +218,4 @@ class ContinueTest(TrajectoryComparator):
 
 
 if __name__ == '__main__':
-    run_tests()
+    make_run()

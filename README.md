@@ -318,18 +318,6 @@ You can pass additional arguments as `$ python all_tests.py -k --folder='myfolde
 they will be deleted after the completed tests)
 and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
 
-Alternatively you can start python from console and use the following code snippet to run all tests:
-
-
->>> from pypet.tests.all_tests import run_all_tests
->>> run_all_tests()
-
-Moreover, `run_all_tests` accepts two arguments `keep` and `folder` and they work as the options
-`-k` and `--folder` mentioned above. For instance, to store all test files into `'~/mypypet'` and
-keep them for inspection run `run_all_tests(keep=True,folder='~/mypypet')`.
-
-
-
 ------------------------------------
 License
 ------------------------------------

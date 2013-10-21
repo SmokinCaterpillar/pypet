@@ -10,7 +10,7 @@ else:
     import unittest
 
 from pypet.brian.parameter import BrianParameter
-from pypet.tests.parameter_test import ParameterTest, Dummy
+from pypet.tests.parameter_test import ParameterTest
 from brian.stdunits import mV, mA, kHz,ms
 
 

@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 from pypet import pypetconstants
 from hdf5_storage_test import EnvironmentTest, ResultSortTest
-from test_helpers import run_tests
+from test_helpers import make_run
 
 class MultiprocQueueTest(EnvironmentTest):
 
@@ -19,7 +19,7 @@ class MultiprocLockTest(EnvironmentTest):
         self.multiproc = True
         self.ncores = 3
 
-class MultiprocQueueTest(ResultSortTest):
+class MultiprocSortQueueTest(ResultSortTest):
 
     def set_mode(self):
         self.mode = pypetconstants.WRAP_MODE_QUEUE
@@ -27,7 +27,7 @@ class MultiprocQueueTest(ResultSortTest):
         self.ncores = 4
 
 
-class MultiprocLockTest(ResultSortTest):
+class MultiprocSortLockTest(ResultSortTest):
 
      def set_mode(self):
         self.mode = pypetconstants.WRAP_MODE_LOCK
@@ -39,4 +39,4 @@ class MultiprocLockTest(ResultSortTest):
 
 
 if __name__ == '__main__':
-    run_tests()
+    make_run()

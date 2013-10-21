@@ -20,10 +20,8 @@ import cProfile
 from brian import *
 from pypet.utils.explore import cartesian_product
 import shutil
-from test_helpers import run_tests, make_temp_file
+from test_helpers import make_run, make_temp_file
 
-
-REMOVE = True
 
 
 
@@ -120,7 +118,7 @@ class NetworkTest(unittest.TestCase):
 
 
     def setUp(self):
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
 
         env = Environment(trajectory='Test',
@@ -156,4 +154,4 @@ class NetworkTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    run_tests()
+    make_run()
