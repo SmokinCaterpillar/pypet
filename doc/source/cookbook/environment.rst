@@ -16,6 +16,7 @@ for data storage, this will always be called before the runs and at the end of a
 You start your simulations by creating an environment object:
 
 >>> env = Environment(trajectory='trajectory',\
+                 add_time=True,\
                  comment='',\
                  dynamically_imported_classes=None,\
                  log_folder=None,\
@@ -42,6 +43,15 @@ You can pass the following arguments:
     a string, a new trajectory with that name is created. You can access the new trajectory
     via `v_trajectory` property. If a new trajectory is created, the comment and dynamically imported
     classes are added to the trajectory.
+
+* `add_time`
+
+    Whether the current time in format XXXX_XX_XX_XXhXXmXXs is added to the trajectory name if
+    the trajectory is newly created.
+
+* `comment`
+
+    The comment that will be added to a newly created trajectory.
 
 * `dynamically_imported_classes`
 
@@ -248,10 +258,20 @@ are exactly the same. Moreover, the comment will only be compared to the comment
 first result, if all comments are equal except for the very first one, all of these equal comments
 will be stored!
 
+
 In order to allow the purge of duplicate comments you need the `summary` overview tables.
 
-Furthermore, consider if you reload your data, the result instance `results.run_00000001.my_result`
+Furthermore, consider if you reload your data from the example above,
+the result instance `results.run_00000001.my_result`
 won't have a comment only the instance `results.run_00000000.my_result`.
+
+**IMPORTANT**: The result that was stored AT FIRST to disk is considered as the prototypical one.
+If you allow multiprocessing, this is not necessarily the result in run 0 but the
+result in the run that finished first! For example, it might be the case that `run_00000001` was
+finished before `run_00000000` because both are executed in parallel. To see which result
+was taken as the example one and which will be the only one
+that keeps a comment, look into the column `example_item_run_name` of the overview table
+to see the name of the first completed run that contains the result.
 
 If you do not want to purge duplicate comments, set the config parameter
 `'purge_duplicate_comments'` to 0 or False.

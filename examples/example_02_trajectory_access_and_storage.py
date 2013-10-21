@@ -74,7 +74,7 @@ traj = Trajectory(filename='experiments/example_02/HDF5/example_02.hdf5')
 #We want to load the last trajectory in the file, therefore index =-1
 #We want to load the parameters therefore load_parameters=2
 #We only want to load the skeleton of the result
-traj.f_load(trajectory_index=-1,load_parameters=2,load_results=1)
+traj.f_load(index=-1,load_parameters=2,load_results=1)
 
 ##Let's check if our result is in fact empty
 if traj.gross_income_of_film.f_is_empty():

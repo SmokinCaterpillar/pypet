@@ -4,6 +4,9 @@ pypet 0.1b.1
 
 *   Documentation for the `f_find_idx` function
 
+*   The parameters `trajectory_name` and `trajectory_index` in f_load have been renamed to
+    `name` and `index`
+
 pypet 0.1b.0
 
 *   Group nodes support __getitem__

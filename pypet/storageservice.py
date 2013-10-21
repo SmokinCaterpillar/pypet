@@ -97,8 +97,9 @@ class QueueStorageServiceWriter(object):
                 elif msg == 'STORE':
                     self._storage_service.store(*args,**kwargs)
                 else:
-                    pass
-                    #raise RuntimeError('You queued something that was not intended to be queued!')
+                    raise RuntimeError('You queued something that was not intended to be queued!')
+            except:
+                raise
             finally:
                 self._queue.task_done()
 
@@ -770,7 +771,7 @@ class HDF5StorageService(StorageService):
 
     def _srvc_opening_routine(self,mode,msg=None):
 
-        if self._hdf5file == None:
+        if self._hdf5file is None:
 
 
                 if 'a' in mode or 'w' in mode:
@@ -809,7 +810,8 @@ class HDF5StorageService(StorageService):
                         raise ValueError('Please specify either a name of a trajectory or an index'
                                      'but not both at the same time.')
                     
-                    ### Fuck Pandas, we have to wait until the next relaese until this is supported:
+                    ### Bad Pandas, we have to wait until the next release until opening in 'r' is
+                    # supported:
                     mode = 'a'
                     if not os.path.isfile(self._filename):
                         raise ValueError('Filename ' + self._filename + ' does not exist.')
@@ -859,7 +861,7 @@ class HDF5StorageService(StorageService):
             return False
 
     def _srvc_closing_routine(self, closing):
-        if closing and self._hdf5file != None and self._hdf5file.isopen:
+        if closing and self._hdf5file is not None and self._hdf5file.isopen:
             self._hdf5file.flush()
             self._hdf5file.close()
             self._hdf5file = None
@@ -993,7 +995,19 @@ class HDF5StorageService(StorageService):
                 new_row = table.row
 
                 for col_name in table.colnames:
-                    new_row[col_name] = not_inserted_row[col_name]
+
+                    # This is to allow backwards compatibility
+                    if col_name == 'example_item_run_name' and not col_name in other_table.colnames:
+                        continue
+
+                    if col_name == 'example_item_run_name':
+                        old_run_idx = not_inserted_row[col_name]
+                        old_run_name = pypetconstants.FORMATTED_RUN_NAME % old_run_idx
+                        new_run_name = rename_dict[old_run_name]
+                        new_run_idx = int(new_run_name.split(pypetconstants.RUN_NAME)[1])
+                        new_row[col_name] = new_run_idx
+                    else:
+                        new_row[col_name] = not_inserted_row[col_name]
 
                 new_row.append()
 
@@ -1475,6 +1489,8 @@ class HDF5StorageService(StorageService):
 
             if table_name.endswith('summary'):
                 paramdescriptiondict['number_of_items']= pt.IntCol(dflt=1)
+                paramdescriptiondict['example_item_run_name'] = \
+                    pt.StringCol(len(pypetconstants.RUN_NAME)+pypetconstants.FORMAT_ZEROS+3,pos=2)
 
 
             if table_name.startswith('derived_parameters_runs'):
@@ -1890,7 +1906,7 @@ class HDF5StorageService(StorageService):
                 return '%s_runs' % where
 
 
-    def _all_store_param_or_result_table_entry(self,param_or_result,table, flags):
+    def _all_store_param_or_result_table_entry(self,param_or_result,table, flags, additional_info=None):
         ''' Stores a single overview table.
 
         Called from _trj_store_meta_data and store_single_run
@@ -1917,7 +1933,7 @@ class HDF5StorageService(StorageService):
         if HDF5StorageService.REMOVE_ROW in flags:
             insert_dict={}
         else:
-            insert_dict = self._all_extract_insert_dict(param_or_result,colnames)
+            insert_dict = self._all_extract_insert_dict(param_or_result,colnames,additional_info)
 
         self._all_add_or_modify_row(fullname,insert_dict,table,condition=condition,
                                     condvars=condvars,flags=flags)
@@ -2121,7 +2137,7 @@ class HDF5StorageService(StorageService):
             row[key] = val
 
 
-    def _all_extract_insert_dict(self,item,colnames):
+    def _all_extract_insert_dict(self,item, colnames, additional_info=None):
         insert_dict={}
 
         if 'length' in colnames:
@@ -2143,8 +2159,11 @@ class HDF5StorageService(StorageService):
 
             insert_dict['value'] = self._all_get_value_string(item, self._logger)
 
-        if 'creator_name' in colnames:
-            insert_dict['creator_name'] = item.v_location.split('.')[1]
+        # if 'creator_name' in colnames:
+        #     insert_dict['creator_name'] = item.v_creator_name
+
+        if 'example_item_run_name' in colnames:
+            insert_dict['example_item_run_name'] = additional_info['example_item_run_name']
 
         if 'idx' in colnames:
             insert_dict['idx'] = item.v_idx
@@ -2156,7 +2175,6 @@ class HDF5StorageService(StorageService):
             insert_dict['timestamp'] = item.v_timestamp
 
         if 'array' in colnames:
-
             insert_dict['array'] = self._all_get_array_str(item,self._logger)
 
         if 'version' in colnames:
@@ -2396,7 +2414,9 @@ class HDF5StorageService(StorageService):
 
                     else:
                         self._all_store_param_or_result_table_entry(instance,table,
-                                                        flags=(HDF5StorageService.ADD_ROW,))
+                                            flags=(HDF5StorageService.ADD_ROW,),
+                                            additional_info={'example_item_run_name':creator_name})
+
                         definitely_store_comment=True
 
                 #There are 2 cases of exceptions, either the table is switched off, or
@@ -2924,9 +2944,12 @@ class HDF5StorageService(StorageService):
         if isinstance(load_only,basestring):
             load_only=[load_only]
 
-        ## We do not want to manipulate the original list
+
         if load_only is not None:
-            load_only = load_only.copy()
+            self._logger.debug('I am in load only mode, I will only lode %s.' %
+                                   str(load_only))
+            loaded=[]
+
 
         if _hdf5_group is None:
             _hdf5_group = self._all_get_node_by_name(param.v_full_name)
@@ -2943,14 +2966,11 @@ class HDF5StorageService(StorageService):
         for node in _hdf5_group:
             if not load_only is None:
 
-                self._logger.debug('I am in load only mode, I will only lode %s.' %
-                                   str(load_only))
-
-
                 if not node._v_name in load_only:
                     continue
                 else:
-                    load_only.remove(node._v_name)
+                    loaded.append(node._v_name)
+
 
 
             load_type = self._all_get_from_attrs(node,HDF5StorageService.STORAGE_TYPE)
@@ -2968,10 +2988,10 @@ class HDF5StorageService(StorageService):
                                              'structure of %s [%s].' %
                                              (full_name, str(node),str(load_type)) )
 
-
-        if not load_only is None and len(load_only) > 0:
-            raise ValueError('You marked %s for load only, but I cannot find these for >>%s<<' %
-                             (str(load_only),full_name))
+        if load_only is not None:
+            if not set(loaded) == set(load_only):
+                raise ValueError('You marked %s for load only, but I cannot find these for >>%s<<' %
+                                 (str(set(load_only)-set(loaded)),full_name))
         
         param._load(load_dict)
 

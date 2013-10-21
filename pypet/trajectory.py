@@ -601,8 +601,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
     comment = 'I am a neat example!', filename='experiment.hdf5', file_title='Experiments')
 
     '''
-    def __init__(self, name='my_trajectory',add_time=True,comment='', dynamically_imported_classes=None,
-        filename=None, file_title = None):
+    def __init__(self, name='my_trajectory', add_time=True, comment='',
+                 dynamically_imported_classes=None,
+                 filename=None, file_title = None):
 
 
         self._version = VERSION
@@ -1378,8 +1379,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def f_load(self,
-             trajectory_name=None,
-             trajectory_index = None,
+             name=None,
+             index = None,
              as_new=False,
              load_parameters=None,
              load_derived_parameters=None,
@@ -1387,12 +1388,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
              force=False):
         ''' Loads a trajectory via the storage service.
 
-        :param trajectory_name:
+        :param name:
 
             Name of the trajectory to be loaded. If no name or index is specified
             the current name of the trajectory is used.
 
-        :param trajectory_index:
+        :param index:
 
             If you don't specify a name you can also specify an index.
             The corresponding trajectory in the hdf5 file at the index
@@ -1401,8 +1402,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         :param as_new:
 
             Whether you want to rerun the experiments. So the trajectory is loaded only
-            with parameters, the current trajectory name is kept in this case, which should be different
-            from the trajectory name specified in the input parameter `trajectory_name`.
+            with parameters, the current trajectory name is kept in this case, which should be
+            different
+            from the trajectory name specified in the input parameter `name`.
             If you load `as_new=True` all parameters and derived parameters are unlocked.
             If you load `as_new=False` the current trajectory is replaced by the one on disk,
             i.e. name, timestamp, formatted time etc. are all taken from disk.
@@ -1461,8 +1463,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         '''
 
-        if trajectory_name is None and trajectory_index is None:
-            trajectory_name = self.v_name
+        if name is None and index is None:
+            name = self.v_name
 
         if as_new and load_parameters is None:
             load_parameters=pypetconstants.LOAD_DATA
@@ -1479,8 +1481,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         elif load_results is None:
             load_results = pypetconstants.LOAD_SKELETON
 
-        self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=trajectory_name,
-                                  trajectory_index=trajectory_index,
+        self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
+                                  trajectory_index=index,
                                   as_new=as_new, load_params=load_parameters,
                                   load_derived_params=load_derived_parameters,
                                   load_results=load_results,

@@ -127,10 +127,9 @@ class Environment(object):
         if a novel
         trajectory is created. If you supply a trajectory instance, these fields can be ignored.
 
+    :param add_time: If True the current time is added to the trajectory name if created new.
 
     :param comment: Comment added to the trajectory if a novel trajectory is created.
-
-
 
     :param dynamically_imported_classes:
 
@@ -345,6 +344,7 @@ class Environment(object):
 
     '''
     def __init__(self, trajectory='trajectory',
+                 add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
@@ -376,6 +376,7 @@ class Environment(object):
         #Acquiring the current time
         if isinstance(trajectory,basestring):
             self._traj = Trajectory(trajectory,
+                                    add_time=add_time,
                                     dynamically_imported_classes=dynamically_imported_classes,
                                     comment=comment)
 

@@ -151,7 +151,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
     def test_run(self):
-
+        self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore
         self.explore(self.traj)
 
@@ -169,7 +169,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(self.traj,newtraj)
 
     def test_run_complex(self):
-
+        self.traj.f_add_parameter('TEST', 'test_run_complex')
         ###Explore
         self.explore_complex_params(self.traj)
 
@@ -190,14 +190,15 @@ class EnvironmentTest(TrajectoryComparator):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
-        newtraj.f_load(trajectory_name=trajectory_name, load_derived_parameters=2,load_results=2,
-                       trajectory_index=trajectory_index, as_new=as_new)
+        newtraj.f_load(name=trajectory_name, load_derived_parameters=2,load_results=2,
+                       index=trajectory_index, as_new=as_new)
         return newtraj
 
 
 
     def test_expand(self):
         ###Explore
+        self.traj.f_add_parameter('TEST', 'test_expand')
         self.explore(self.traj)
 
         self.make_run()
@@ -213,6 +214,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(self.traj,newtraj)
 
     def test_expand_after_reload(self):
+        self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
         ###Explore
         self.explore(self.traj)
 
@@ -227,7 +229,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.traj = self.env.v_trajectory
 
-        self.traj.f_load(trajectory_name=traj_name)
+        self.traj.f_load(name=traj_name)
 
         self.expand()
 
@@ -254,6 +256,7 @@ class EnvironmentTest(TrajectoryComparator):
     ################## Overview TESTS #############################
 
     def test_switch_off_large_tables(self):
+        self.traj.f_add_parameter('TEST', 'test_switch_off_LARGE_tables')
         ###Explore
         self.explore(self.traj)
 
@@ -269,6 +272,7 @@ class EnvironmentTest(TrajectoryComparator):
 
     def test_switch_off_all_tables(self):
         ###Explore
+        self.traj.f_add_parameter('TEST', 'test_switch_off_ALL_tables')
         self.explore(self.traj)
 
         self.env.f_switch_off_all_overview()
@@ -313,22 +317,42 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.overview.results_runs_summary=1
         self.make_run()
 
+
         hdf5file = pt.openFile(self.filename)
-        traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
 
-        for node in traj_group._f_walkGroups():
-            if 'SRVC_LEAF' in node._v_attrs:
-                if 'run_00000000' in node._v_pathname:
-                    self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                    'There is no comment in node %s!' % node._v_name)
-                elif 'run_' in node._v_pathname:
-                    self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
-                                    'There is a comment in node %s!' % node._v_name)
-                else:
-                    self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                    'There is no comment in node %s!' % node._v_name)
+        try:
+            traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
 
-        hdf5file.close()
+
+            for node in traj_group._f_walkGroups():
+                if 'SRVC_LEAF' in node._v_attrs:
+                    if 'run_' in node._v_pathname:
+                        comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
+                        if comment_run_name in node._v_pathname:
+                            self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                            'There is no comment in node %s!' % node._v_name)
+                        else:
+                            self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
+                                            'There is a comment in node %s!' % node._v_name)
+                    else:
+                        self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                    'There is no comment in node %s!' % node._v_name)
+        finally:
+            hdf5file.close()
+
+
+    def get_comment_run_name(self, traj_group, pathname, name):
+
+        if 'results' in pathname:
+            overview_table = traj_group.overview.results_runs_summary
+        else:
+            overview_table = traj_group.overview.derived_parameters_runs_summary
+
+        for row in overview_table:
+            if row['name']==name:
+                comment_run_name =  row['example_item_run_name']
+
+        return comment_run_name
 
 
 class ResultSortTest(TrajectoryComparator):
@@ -367,8 +391,8 @@ class ResultSortTest(TrajectoryComparator):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
-        newtraj.f_load(trajectory_name=trajectory_name, load_derived_parameters=2,load_results=2,
-                       trajectory_index=trajectory_index, as_new=as_new)
+        newtraj.f_load(name=trajectory_name, load_derived_parameters=2,load_results=2,
+                       index=trajectory_index, as_new=as_new)
         return newtraj
 
 
@@ -421,7 +445,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.traj = self.env.v_trajectory
 
-        self.traj.f_load(trajectory_name=traj_name)
+        self.traj.f_load(name=traj_name)
 
         self.expand(self.traj)
 
