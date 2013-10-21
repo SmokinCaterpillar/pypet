@@ -4,23 +4,23 @@ __author__ = 'Robert Meyer'
 
 import getopt
 import sys
-from hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest
-from parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest
-from trajectory_test import SingleRunQueueTest, SingleRunTest, TrajectoryFindTest, TrajectoryMergeTest, TrajectoryTest
-from hdf5_storage_test import ResultSortTest, EnvironmentTest
-from hdf5_merge_test import TestMergeResultsSort, MergeTest
-from hdf5_removal_and_continue_tests import ContinueTest
-from utilstest import CartesianTest
-from environment_test import EnvironmentTest
-from test_helpers import make_run
+from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest
+from pypet.tests.parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest
+from pypet.tests.trajectory_test import SingleRunQueueTest, SingleRunTest, TrajectoryFindTest, TrajectoryMergeTest, TrajectoryTest
+from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest
+from pypet.tests.hdf5_merge_test import TestMergeResultsSort, MergeTest
+from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
+from pypet.tests.utilstest import CartesianTest
+from pypet.tests.environment_test import EnvironmentTest
+from pypet.tests.test_helpers import make_run
 
 import os
 import unittest
 # Works only if someone has installed Brian
 try:
-    from brian_parameter_test import BrianParameterTest, BrianParameterStringMode
+    from pypet.tests.brian_parameter_test import BrianParameterTest, BrianParameterStringMode
     if not os.getenv('TRAVIS',False):
-        from brian_full_network_test import NetworkTest
+        from pypet.tests.brian_full_network_test import NetworkTest
 except ImportError:
     pass
 

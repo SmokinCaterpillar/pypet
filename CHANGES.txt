@@ -1,8 +1,8 @@
-pypet 0.1b.0
+pypet 0.1b.1
 
 *   Support for `long` types
 
-*   Better start of tests
+*   Documentation for the `f_find_idx` function
 
 pypet 0.1b.0
 

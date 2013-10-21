@@ -102,7 +102,20 @@ Simply install via `pip install --pre pypet`
 
 Or
 
-Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack and `python setup.py install` it.
+Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
+and `python setup.py install` it.
+
+pypet has been tested for python 2.6 and python 2.7 for Linux using
+*Travis-CI* (https://www.travis-ci.org/). However, so far there was only limited testing under
+Windows.
+
+In principle, pypet should work for **Windows** out of the box if you have installed
+all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
+pip is not possible. You have to download the tar file from https://pypi.python.org/pypi/pypet and
+unzip it (using WinRaR, 7zip, etc. You might need to unpack it twice, first
+the `tar.gz` file and then the remaining `tar` file in the subfolder). Next, open a windows
+terminal and navigate to your unpacked pypet files to the folder containing the `setup.py` file.
+As above run from the terminal `python setup.py install`.
 
 By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet.
 
