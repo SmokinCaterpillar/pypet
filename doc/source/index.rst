@@ -121,15 +121,16 @@ Tests
 Tests can be found in `pypet/tests`.
 Note that they involve heavy file IO and it might not be the case
 that you have privileges on your system to write files to a temporary folder.
-The tests suite will make use of the :func:`tempfile.gettempdir()` function to
+The tests suite will make use of the `tempfile.gettempdir()` function to
 access a temporary folder.
 
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
-You can pass additional arguments as `$ python all_tests.py -k --folder='myfolder/'` with
+You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/` with
 `-k` to keep the hdf5 files created by the tests (if you want to inspect them, otherwise
 they will be deleted after the completed tests)
 and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
+If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
 If you do not want to browse to your installation folder, you can also download
 :download:`all_tests.py <../../pypet/tests/all_tests.py>`.

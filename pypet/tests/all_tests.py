@@ -39,6 +39,7 @@ if __name__ == '__main__':
 
         if opt == '--folder':
             folder = arg
-            print 'I will put all data into folder >>%s<<' % folder
+            print 'I will put all data into folder >>%s<<.' % folder
 
+    sys.argv=[sys.argv[0]]
     make_run(remove, folder)

@@ -45,7 +45,7 @@ def make_temp_file(filename):
             actual_tempdir=user_tempdir
 
         if not os.path.isdir(actual_tempdir):
-            os.mkdir(actual_tempdir)
+            os.makedirs(actual_tempdir)
 
         return os.path.join(actual_tempdir,filename)
     except OSError:
