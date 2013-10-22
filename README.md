@@ -18,14 +18,14 @@ If this bugs you a lot, let me know and I'll take a look whether I could write
 a converter.
 
 Note that until the 0.1.0 version there still might be some changes to the API. Yet, with  0.1.0
-I will guarantee a stable API :-)
+I will guarantee a stable API.
 
 I decided to integrate pypet first in my own research project before publishing the
 official 0.1.0 release. Thus, I have a more profound testing environment than only using
 unittests. The official 0.1.0 release is postponed to beginning of next year or end of
 this year.
 However, feel free to use this beta version and feel free to give feedback,
-suggestion,s and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
+suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
 or use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
 Thanks!
