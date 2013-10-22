@@ -39,7 +39,7 @@ traj.huge_matrices.f_empty()
 
 # Check if the data was deleted
 if traj.huge_matrices.f_is_empty():
-    print 'Nothing there!'
+    print 'As promised: Nothing there!'
 else:
     print 'What a disappointing peace of crap this software is!'
 
@@ -65,7 +65,7 @@ traj.f_load(name=old_traj_name, load_results=pypetconstants.LOAD_SKELETON)
 if traj.huge_matrices.f_is_empty():
     print 'Told you!'
 else:
-    ' Unbelievable, this sucks!'
+    print 'Unbelievable, this sucks!'
 
 # Now let's only load `monty` and `mat1`.
 # We can do this by passing the keyword argument `load_only` to the load item function:

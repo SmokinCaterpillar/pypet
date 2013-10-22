@@ -20,13 +20,15 @@ a converter.
 Note that until the 0.1.0 version there still might be some changes to the API. Yet, with  0.1.0
 I will guarantee a stable API :-)
 
-If you find some bugs or have some questions
-feel free to contact me (see below).
+I decided to integrate pypet first in my own research project before publishing the
+official 0.1.0 release. Thus, I have a more profound testing environment than only using
+unittests. The official 0.1.0 release is postponed to beginning of next year or end of
+this year.
+However, feel free to use this beta version and feel free to give feedback,
+suggestion,s and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
+or use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
 Thanks!
-
-Release of the official 0.1.0 version at end of October,
-beginning of November :-)
 
 ---------------------
 Requirements
@@ -49,7 +51,6 @@ For git integration you additionally need
 =========================
 What is pypet all about?
 =========================
-
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
@@ -75,7 +76,6 @@ You can actively explore these by following a *trajectory* through the space spa
 by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
 Currently the storage method of choice is HDF5 (http://www.hdfgroup.org/HDF5/).
-
 
 ---------------------------
 Package Organization
@@ -127,7 +127,6 @@ Documentation can be found on http://pypet.readthedocs.org/.
 
 If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**
 
-
 ---------------------------
 Acknowledgements
 ---------------------------
@@ -146,7 +145,6 @@ Acknowledgements
 *   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
     the Research Training Group GRK 1589/1, and the
     Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support.
-
 
 --------------
 Main Features
@@ -194,8 +192,6 @@ Main Features
 * **Annotations** of parameters, results and groups, these annotations are stored as HDF5 node attributes
 
 * **Git Integration**, make automatic commits of your source code every time you run an experiment
-
-
 
 ======================
 Quick Working Example
@@ -308,7 +304,6 @@ So have fun using this tool!
 
 Cheers,
     Robert
-
 
 ================================
 Miscellaneous

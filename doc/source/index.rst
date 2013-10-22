@@ -15,10 +15,11 @@ and data storage into HDF5_ files for you.
 ===========================
 IMPORTANT!
 ===========================
-The current program is a BETA version,
+
+The current program is a **BETA** version,
 please treat it as such and use very carefully.
 
-Moreover, you WILL NOT be able to use trajectories that were created with the *alpha*
+Moreover, you WILL NOT be able to use trajectories that were created with the *ALPHA*
 version any more. I am sorry if you have already explored a lot of parameter spaces.
 If this bugs you a lot, let me know and I'll take a look whether I could write
 a converter.
@@ -26,13 +27,15 @@ a converter.
 Note that until the 0.1.0 version there still might be some changes to the API. Yet, with  0.1.0
 I will guarantee a stable API :-)
 
-If you find some bugs or have some questions
-feel free to contact me (see below).
+I decided to integrate pypet first in my own research project before publishing the
+official 0.1.0 release. Thus, I have a more profound testing environment than only using
+unittests. The official 0.1.0 release is postponed to beginning of next year or end of
+this year.
+However, feel free to use this beta version and feel free to give feedback,
+suggestion,s and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
+or use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
 Thanks!
-
-Release of the official 0.1.0 version at end of October,
-beginning of November :-)
 
 ============================
 Requirements
@@ -120,6 +123,7 @@ Note that they involve heavy file IO and it might not be the case
 that you have privileges on your system to write files to a temporary folder.
 The tests suite will make use of the :func:`tempfile.gettempdir()` function to
 access a temporary folder.
+
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder='myfolder/'` with
@@ -127,7 +131,8 @@ You can pass additional arguments as `$ python all_tests.py -k --folder='myfolde
 they will be deleted after the completed tests)
 and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
 
-
+If you do not want to browse to your installation folder, you can also download
+:download:`all_tests.py <../../pypet/tests/all_tests.py>`.
 
 ===================
 Indices and Tables

@@ -3,7 +3,7 @@ __author__ = 'robert'
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter,BrianMonitorResult
 from pypet.utils.explore import cartesian_product
-# This is bad style I know, I'll make that better next time:
+# Don't do this at home:
 from brian import *
 import logging
 
@@ -41,8 +41,7 @@ def run_net(traj):
 
     defaultclock.dt=traj.defaultclock
 
-    # We let brian grasp the stuff from the local namespace, it's awful, I will change this example
-    # soon:
+    # We let brian grasp the stuff from the local namespace,
     C=traj.C
     gL=traj.gL
     EL=traj.EL
@@ -88,21 +87,17 @@ def main():
     logging.basicConfig(level = logging.DEBUG)
 
 
-     #Let's to multiprocessing this time with a lock (which is default)
+    # Let's to multiprocessing this time with a lock (which is default)
     env = Environment(trajectory='Example_07_BRIAN',
                       filename='experiments/example_07/HDF5/example_07.hdf5',
                       file_title='Example_07_Euler_Integration',
                       log_folder='experiments/example_07/LOGS/',
                       comment = 'Go Brian!',
-                      dynamically_imported_classes=[BrianMonitorResult,BrianParameter],
+                      dynamically_imported_classes=[BrianMonitorResult, BrianParameter],
                       multiproc=True,
                       ncores=2)
 
     traj = env.v_trajectory
-
-
-
-
 
     # 1st Add the parameters
     add_params(traj)
@@ -113,7 +108,6 @@ def main():
 
     # 3rd let's run our experiment
     env.f_run(run_net)
-
 
     #You can take a look at the results in the hdf5 file if you want!
 
