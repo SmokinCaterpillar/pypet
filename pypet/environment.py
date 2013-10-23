@@ -115,7 +115,6 @@ def _queue_handling(handler,log_path):
 class Environment(object):
     ''' The environment to run a parameter exploration.
 
-
     The first thing you usually do is to create and environment object that takes care about
     the running of the experiment.
 
@@ -124,8 +123,8 @@ class Environment(object):
         String or trajectory instance. If a string is supplied, a novel
         trajectory is created with that name.
         Note that the comment and the dynamically imported classes (see below) are only considered
-        if a novel
-        trajectory is created. If you supply a trajectory instance, these fields can be ignored.
+        if a novel trajectory is created. If you supply a trajectory instance, these fields
+        can be ignored.
 
     :param add_time: If True the current time is added to the trajectory name if created new.
 
@@ -133,11 +132,11 @@ class Environment(object):
 
     :param dynamically_imported_classes:
 
-          If you wrote custom parameters or results
-          that need to be loaded
+          If you wrote custom parameters or results that need to be loaded
           dynamically during runtime. The module containing the class
           needs to be specified here as a list of classes or strings
           naming classes and there module paths.
+
           For example:
           `dynamically_imported_classes =
           ['pypet.parameter.PickleParameter',MyCustomParameter]`
@@ -149,7 +148,8 @@ class Environment(object):
 
     :param log_folder:
 
-        Path to a folder where all log files will be stored. The log files will be added to a
+        Path to a folder where all log files will be stored. If none is specified the default
+        `./logs/` is chosen. The log files will be added to a
         sub-folder with the name of the trajectory.
 
     :param multiproc:
@@ -157,7 +157,7 @@ class Environment(object):
 
         Whether or not to use multiprocessing. Default is 0 (False). If you use
         multiprocessing, all your data and the tasks you compute
-        must be pickable!
+        must be picklable!
 
 
     :param ncores:
@@ -198,14 +198,17 @@ class Environment(object):
         Whether the environment should take special care to allow to resume or continue
         crashed trajectories. Default is 1 (True).
         Everything must be picklable in order to allow
-        continuing of trajectories. Assume you run experiments that take
+        continuing of trajectories.
+
+        Assume you run experiments that take
         a lot of time. If during your experiments there is a power failure,
         you can resume your trajectory after the last single run that was still
         successfully stored via your storage service.
-        This will create a `.cnt` file in the same folder as your hdf5 file,
+
+        The environment will create a `.cnt` file in the same folder as your hdf5 file,
         using this you can continue crashed trajectories.
-        If you do not use hdf5 files or the hdf5 storage servive, the `.cnt` file is placed
-        into the log folger.
+        If you do not use hdf5 files or the hdf5 storage service, the `.cnt` file is placed
+        into the log folder.
         In order to resume trajectories use
         :func:`~pypet.environment.Environment.f_continue_run`.
 
@@ -214,14 +217,17 @@ class Environment(object):
         Whether or not to use the standard hdf5 storage service, if False the following
         arguments below will be ignored:
 
-    :param filename: The name of the hdf5 file
+    :param filename:
 
-    :param file_title: Title of the hdf5 file (only important if file is created new)
+        The name of the hdf5 file. If none is specified the default './hdf5/experiment.hdf5'
+        is chosen.
+
+    :param file_title: Title of the hdf5 file (only important if file is created new).
 
     :param purge_duplicate_comments:
 
-        If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
-        parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
+        If you add a result via :func:`~pypet.trajectory.SingleRun.f_add_result` or a derived
+        parameter :func:`~pypet.trajectory.SingleRun.f_add_derived_parameter` and
         you set a comment, normally that comment would be attached to each and every instance.
         This can produce a lot of unnecessary overhead if the comment is the same for every
         result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
@@ -239,6 +245,9 @@ class Environment(object):
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
+        If you use multiprocessing, the result comment of the first finished run is kept.
+        This is not necessarily the run with the lowest index.
+
         You need summary tables (see below) to be able to purge duplicate comments.
 
 
@@ -249,7 +258,7 @@ class Environment(object):
         'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
 
         Note that these tables create some overhead, if you want small hdf5 files set
-        these value to False.
+        `small_overview_tables` to False.
 
         The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
         It is assumed that results and derived parameters with equal names in individual runs
@@ -263,7 +272,7 @@ class Environment(object):
     :param large_overview_tables:
 
         Whether to add large overview tables. This encompasses information about every derived
-        parameter and result in the single runs, and the explored parameters in every single run.
+        parameters, results, and the explored parameters in every single run.
         If you want small hdf5 files, this is the first option to set to False.
 
     :param results_per_run:
@@ -288,9 +297,9 @@ class Environment(object):
         version control.
         Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
         The user can specify the commit message, see below. Note that the message
-        will be augmented by the name of the trajectory, and the comment of the trajectory.
+        will be augmented by the name and the comment of the trajectory.
 
-        This will add information about the revision to the trajectory, see below.
+        This will also add information about the revision to the trajectory, see below.
 
     :param git_message:
 
@@ -302,11 +311,11 @@ class Environment(object):
 
     The Environment will automatically add some config settings to your trajectory.
     Thus, you can always look up how your trajectory was run. This encompasses all above named
-    parameters, as
-    well as some information about the environment. This additional information includes
+    parameters, as well as some information about the environment.
+    This additional information includes
     a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
     If you use git integration, the SHA-1 hash code will be the one from your git commit.
-    Otherwise the code will be calculated from the trajectory name, the current time and your
+    Otherwise the code will be calculated from the trajectory name, the current time, and your
     current pypet version.
 
     The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
@@ -328,18 +337,15 @@ class Environment(object):
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.name_rev
 
-        String describing the commits hex sha based on the closest Reference
+        String describing the commits hexsha based on the closest Reference
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
 
         Commit date as Unix Epoch data
 
-
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
 
         The commit message
-
-
 
 
     '''
@@ -578,7 +584,7 @@ class Environment(object):
 
 
     def f_switch_off_all_overview(self):
-        '''Switches all tables off'''
+        '''Switches all tables off.'''
         self.f_switch_off_small_overview()
         self.f_switch_off_large_overview()
 
@@ -644,7 +650,7 @@ class Environment(object):
 
     @property
     def v_timestamp(self):
-        '''Time of creation as python datetime float'''
+        '''Time of creation as python datetime float.'''
         return self._timestamp
 
     @property
@@ -657,7 +663,7 @@ class Environment(object):
     def _add_hdf5_storage_service(self):
         ''' Adds the standard HDF5 storage service to the trajectory.
 
-        See also :class:`pypet.storageservice.HDF5StorageService`
+        See also :class:`pypet.storageservice.HDF5StorageService`.
         '''
         self._storage_service = HDF5StorageService(self._filename,
                                                  self._file_title )
@@ -679,7 +685,9 @@ class Environment(object):
 
                 Does not iterate over results stored in the trajectory!
                 In order to do that simply interact with the trajectory object, potentially after
-                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results.
+                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results
+                at once with :func:`~pypet.trajectory.f_load` or loading manually with
+                :func:`~pypet.trajectory.f_load_items`.
 
         '''
 

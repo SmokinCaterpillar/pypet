@@ -10,7 +10,7 @@ class Annotations(object):
     These annotations are stored in the attributes of the hdf5 nodes in the hdf5 file,
     you might wanna take a look at pytables attributes_.
 
-    Annotations should be small (short strings or basic python data types). Since their storage
+    Annotations should be small (short strings or basic python data types) since their storage
     and retrieval is quite slow!
 
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
@@ -87,7 +87,7 @@ class Annotations(object):
             self.f_set_single(key,arg)
 
     def f_set_single(self,name,data):
-        ''' Sets a single annotation '''
+        ''' Sets a single annotation. '''
         setattr(self,name,data)
 
     def f_ann_to_str(self):
@@ -130,7 +130,7 @@ class WithAnnotations(object):
         return self._annotations
 
     def f_set_annotations(self,*args,**kwargs):
-        '''Sets Annotations
+        '''Sets annotations.
 
         Equivalent to calling `v_annotations.f_set(*args,**kwargs)`
 
@@ -138,7 +138,7 @@ class WithAnnotations(object):
         self._annotations.f_set(*args,**kwargs)
 
     def f_get_annotations(self,*args):
-        '''Returns annotations
+        '''Returns annotations.
 
         Equivalent to `v_annotations.f_get(*args)`
 

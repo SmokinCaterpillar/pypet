@@ -1,3 +1,13 @@
+pypet 0.1b.2
+
+*   v_leaf renamed to v_is_leaf
+
+*   f_is_root renamed to v_is_root and changed to property
+
+*   v_fast_accessible renamed to f_supports_fast_access and changed to function
+
+*   v_parameter changed to v_is_parameter
+
 pypet 0.1b.1
 
 *   Support for `long` types

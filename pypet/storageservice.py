@@ -91,8 +91,6 @@ class QueueStorageServiceWriter(object):
                 msg,args,kwargs = self._queue.get()
 
                 if msg == 'DONE':
-                    # self._queue.close()
-                    #self._queue.join_thread()
                     break
                 elif msg == 'STORE':
                     self._storage_service.store(*args,**kwargs)
@@ -107,6 +105,7 @@ class LockWrapper(MultiprocWrapper):
     ''' For multiprocessing in LOCK mode, augments a storage service with a lock.
 
     The lock is acquired before storage or loading and released afterwards.
+
     '''
     def __init__(self,storage_service, lock):
         self._storage_service = storage_service
@@ -157,10 +156,14 @@ class LockWrapper(MultiprocWrapper):
 
 class StorageService(object):
     '''Abstract base class defining the storage service interface.'''
-    def store(self,msg,stuff_to_store,trajectoryname,*args,**kwargs):
+    def store(self,msg,stuff_to_store,*args,**kwargs):
+        ''' See :class:`pypet.storageservice.HDF5StorageService` for an example of an implementation
+        and requirements for the API.'''
         raise NotImplementedError('Implement this!')
 
-    def load(self,msg,stuff_to_load,trajectoryname,*args,**kwargs):
+    def load(self,msg,stuff_to_load,*args,**kwargs):
+        ''' See :class:`pypet.storageservice.HDF5StorageService` for an example of an implementation
+        and requirements for the API.'''
         raise NotImplementedError('Implement this!')
 
 
@@ -168,6 +171,7 @@ class LazyStorageService(StorageService):
     '''This lazy guy does nothing! Only for debugging purposes.
 
     Ignores all storage and loading requests and simply executes `pass` instead.
+
     '''
     def load(self,*args,**kwargs):
         ''' Nope, I won't care, dude!
@@ -293,7 +297,7 @@ class HDF5StorageService(StorageService):
     DICT = 'DICT'
     ''' Stored as dict.
 
-    In fact, stored as pytable, but the dictionary wil be constructed.
+    In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
     TABLE = 'TABLE'
     '''Stored as pytable_
@@ -349,7 +353,7 @@ class HDF5StorageService(StorageService):
     COMMENT = INIT_PREFIX+'COMMENT'
     ''' Comment of parameter or result'''
     LENGTH = INIT_PREFIX+'LENGTH'
-    ''' Lenght of a parameter if it is an array'''
+    ''' Length of a parameter if it is an array'''
 
 
 
@@ -381,7 +385,7 @@ class HDF5StorageService(StorageService):
 
         The storage service always accepts these parameters:
 
-        :param trajectory_name: Name or current trajectory and name of top node in hdf5 file
+        :param trajectory_name: Name of current trajectory and name of top node in hdf5 file.
 
         :param filename: Name of the hdf5 file
 
@@ -423,7 +427,7 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_load: The parent node (!) not the one where loading starts!
 
-                :param child_name: Name of child node, that should be loaded
+                :param child_name: Name of child node that should be loaded
 
                 :param recursive: Whether to load recursively the sub tree below child
 
@@ -499,7 +503,7 @@ class HDF5StorageService(StorageService):
 
                 :param changed_parameters:
 
-                    Dictionary containing all parameters that were enlarged due to merging.
+                    List containing all parameters that were enlarged due to merging.
 
 
             * :const:`pypet.pypetconstants.MERGE` ('MERGE')
@@ -538,7 +542,7 @@ class HDF5StorageService(StorageService):
 
                 :param backup_filename:
 
-                    Name of backup file. If None The backup filename will be the same folder
+                    Name of backup file. If None the backup filename will be the same folder
                     as your hdf5 file adding `backup_XXXXX.hdf5` where *XXXXX* is the
                     name of your current trajectory.
 
@@ -624,7 +628,7 @@ class HDF5StorageService(StorageService):
 
                         :const:`~pypet.HDF5StorageService.DICT` ('DICT')
 
-                            Store stuff as pytable but reconstruct it later as dictionary
+                            Store stuff as pytable but reconstructs it later as dictionary
                             on loading
 
                         :const:`~pypet.HDF%StorageService.FRAME` ('FRAME')
@@ -703,7 +707,7 @@ class HDF5StorageService(StorageService):
                 self._trj_backup_trajectory(stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.PREPARE_MERGE:
-                self._trj_update_trajectory(stuff_to_store,*args,**kwargs)
+                self._trj_prepare_merge(stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.TRAJECTORY:
 
@@ -1156,7 +1160,7 @@ class HDF5StorageService(StorageService):
                 self._hdf5file.removeNode(where='/', name=other_trajectory_name, recursive = True)
 
 
-    def _trj_update_trajectory(self, traj, changed_parameters):
+    def _trj_prepare_merge(self, traj, changed_parameters):
 
         # changed_parameters = kwargs.pop('changed_parameters')
         # new_results = kwargs.pop('new_results')
@@ -1724,7 +1728,7 @@ class HDF5StorageService(StorageService):
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
 
-        if traj_node.v_leaf:
+        if traj_node.v_is_leaf:
 
             self._prm_store_parameter_or_result(msg, traj_node, _hdf5_group=new_hdf5_group)
 
@@ -1758,7 +1762,7 @@ class HDF5StorageService(StorageService):
 
     def _tree_load_tree(self,parent_traj_node,child_name,recursive,load_data,trajectory):
 
-        if parent_traj_node.f_is_root():
+        if parent_traj_node.v_is_root:
             full_child_name = child_name
         else:
             full_child_name = parent_traj_node.v_full_name+'.'+child_name
@@ -2459,7 +2463,7 @@ class HDF5StorageService(StorageService):
         setattr(group._v_attrs,HDF5StorageService.LEAF,1)
 
 
-        if instance.v_parameter and instance.f_is_array():
+        if instance.v_is_parameter and instance.f_is_array():
             setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
             try:
                 tablename = 'explored_parameters'
@@ -2501,7 +2505,7 @@ class HDF5StorageService(StorageService):
 
 
         for key, data_to_store in store_dict.items():
-            if (not instance.v_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
+            if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
                 self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
                                    (key, fullname))
 
@@ -2727,7 +2731,7 @@ class HDF5StorageService(StorageService):
 
         split_name = instance.v_full_name.split('.')
 
-        if instance.v_leaf:
+        if instance.v_is_leaf:
             base_group = split_name[0]
 
             tablename = self._all_get_table_name(base_group,instance.v_creator_name)
@@ -2749,7 +2753,7 @@ class HDF5StorageService(StorageService):
         except AttributeError:
             the_node = self._hdf5file.getNode(where=where, name=node_name)
 
-        if not instance.v_leaf:
+        if not instance.v_is_leaf:
             if len(the_node._v_groups) != 0:
                 raise TypeError('You cannot remove a group that is not empty!')
 

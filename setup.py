@@ -55,6 +55,7 @@ setup(
     url='https://github.com/SmokinCaterpillar/pypet',
     install_requires=install_requires,
     classifiers=[
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 2 :: Only',

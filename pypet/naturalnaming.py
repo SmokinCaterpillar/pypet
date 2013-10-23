@@ -35,9 +35,9 @@ FAST_UPPER_BOUND = 2
 
 
 class NNTreeNode(WithAnnotations):
+    ''' Abstract class to define the general node in the trajectory tree.
+    '''
     def __init__(self,full_name,root,leaf):
-        #self.v_full_name = full_name
-
         super(NNTreeNode,self).__init__()
 
         self._rename(full_name)
@@ -52,13 +52,31 @@ class NNTreeNode(WithAnnotations):
 
     @property
     def v_leaf(self):
+        '''Whether node is a leaf or not (i.e. it is a group node)
+
+        DEPRECATED: Please use v_is_leaf!
+        '''
+        self._logger.warning('Using deprecated property `v_leaf`, please use `v_is_leaf` instead.')
+        return self.v_is_leaf
+
+    @property
+    def v_is_leaf(self):
         '''Whether node is a leaf or not (i.e. it is a group node)'''
         return self._leaf
 
 
-
     def f_is_root(self):
-        '''Returns whether the group is root (True for the trajectory and a single run object)'''
+        '''Whether the group is root (True for the trajectory and a single run object)
+
+        DEPRECATED: Please use property v_is_root!
+        '''
+        self._logger.warning('Using deprecated function `f_is_root()`, please use '
+                             'property `v_is_root` instead.')
+        return self.v_is_root
+
+    @property
+    def v_is_root(self):
+        '''Whether the group is root (True for the trajectory and a single run object)'''
         return self._depth==0
 
     @property
@@ -113,7 +131,7 @@ class NNTreeNode(WithAnnotations):
 
     def f_get_class_name(self):
         ''' Returns the class name of the parameter or result or group,
-        equivalent to `return self.__class__.__name__`
+        equivalent to `obj.__class__.__name__`
         '''
         return self.__class__.__name__
 
@@ -149,13 +167,34 @@ class NNLeafNode(NNTreeNode):
         self._comment=comment
 
 
-    @property
-    def v_fast_accessible(self):
+    def f_supports_fast_access(self):
         '''Whether or not fast access can be supported by the Parameter or Result'''
         raise NotImplementedError('You should implement this!')
 
+
+    @property
+    def v_fast_accessible(self):
+        '''Whether or not fast access can be supported by the Parameter or Result
+
+        DEPRECATED: Please use function `f_supports_fast_access` instead!
+
+        '''
+        self._logger.warning('Using deprecated property `v_fast_accessible`, please use'
+                             ' function `f_supports_fast_access()` instead.' )
+        return self.f_supports_fast_access()
+
     @property
     def v_parameter(self):
+        '''Whether the node is a parameter or not (i.e. a result)
+
+        DEPRECATED: Please use `v_is_parameter` instead!
+        '''
+        self._logger.warning('Using deprecated property `v_parameter`, use `v_is_parameter`'
+                             ' instead.')
+        return self.v_is_parameter
+
+    @property
+    def v_is_parameter(self):
         '''Whether the node is a parameter or not (i.e. a result)'''
         return self._parameter
 
@@ -165,22 +204,20 @@ class NNLeafNode(NNTreeNode):
         return ''
 
 
-
     def __str__(self):
-        ''' String representation of the parameter or result, If not other specified this is
+        ''' String representation of the parameter or result, If not specified in subclass this is
         simply the full name.
         '''
         return self.v_full_name
 
 
 
-
-
     def _store_flags(self):
-        ''' We do not return storage flags, we let the storage service infer how to store
+        ''' Currently not used because I let the storage service infer how to store
         stuff from the data itself.
 
-        If you write your own parameter you can make specifications on how to store data,
+        If you write your own parameter or result you can implement this function
+        to make specifications on how to store data,
         see also :func:`pypet.storageservice.HDF5StorageService.store`.
 
         '''
@@ -194,7 +231,7 @@ class NNLeafNode(NNTreeNode):
         Returns a dictionary containing these simple structures.
         Understood basic structures are
 
-        * python natives (int,str,bool,float,complex)
+        * python natives (int, long, str,bool,float,complex)
 
         * python lists and tuples
 
@@ -216,27 +253,32 @@ class NNLeafNode(NNTreeNode):
         ''' Method called by the storage service to reconstruct the original result.
 
         Data contained in the load_dict is equal to the data provided by the result
-        when previously called with _store()
+        when previously called with _store().
 
-        :param load_dict: The dictionary containing basic data structures
+        :param load_dict:
+
+            The dictionary containing basic data structures, see also
+            :func:`~pypet.naturalnaming._store`.
+
 
         '''
         raise  NotImplementedError('Implement this!')
 
 
     def f_is_empty(self):
-        ''' Returns true if no data is handled by a result or parameter
+        ''' Returns true if no data is handled by a result or parameter.
         '''
         raise NotImplementedError('You should implement this!')
 
     def f_empty(self):
-        ''' Removes all data from the result.
+        ''' Removes all data from the result or parameter.
 
         If the result has already been stored to disk via a trajectory and a storage service,
         the data on disk is not affected by `f_empty`.
 
         Yet, this function is particularly useful if you have stored very large data to disk
-        and you want to free some memory on RAM but still keep the skeleton of the result.
+        and you want to free some memory on RAM but still keep the skeleton of your result or
+        parameter.
 
         '''
         raise NotImplementedError('You should implement this!')
@@ -335,7 +377,7 @@ class NaturalNamingInterface(object):
     @staticmethod
     def _node_to_msg(store_load,node):
 
-        if node.v_leaf:
+        if node.v_is_leaf:
             if store_load ==STORE:
                 return pypetconstants.LEAF
             elif store_load == LOAD:
@@ -350,7 +392,6 @@ class NaturalNamingInterface(object):
             elif store_load == REMOVE:
                  return pypetconstants.REMOVE
         #raise ValueError('I do not know how to f_store >>%s<<' % str(node))
-
 
     def _fetch_items(self, store_load, iterable, args, kwargs):
         only_empties = kwargs.pop('only_empties', False)
@@ -392,11 +433,10 @@ class NaturalNamingInterface(object):
             item_list.append(item_tuple)
         return item_list
 
-
     def _remove_subtree(self,start_node,name):
 
         def _remove_subtree_inner(node):
-            if not node.v_leaf:
+            if not node.v_is_leaf:
 
                 for name in node._children.keys():
                     child = node._children[name]
@@ -413,11 +453,6 @@ class NaturalNamingInterface(object):
         _remove_subtree_inner(child)
         del start_node._children[name]
 
-
-
-
-
-
     def _delete_node(self,node):
 
         full_name = node.v_full_name
@@ -431,7 +466,7 @@ class NaturalNamingInterface(object):
             ## You cannot delete root or nodes in first layer
             return
 
-        if node.v_leaf:
+        if node.v_is_leaf:
             if full_name in root._parameters:
                 del root._parameters[full_name]
 
@@ -457,8 +492,6 @@ class NaturalNamingInterface(object):
 
             del self._flat_storage_dict[full_name]
 
-
-
         else:
             del root._groups[full_name]
 
@@ -477,8 +510,6 @@ class NaturalNamingInterface(object):
         full_name = instance.v_full_name
         split_name = full_name.split('.')
         self._remove_recursive(self._root_instance,split_name,remove_empty_groups)
-
-
 
     def _remove_recursive(self,actual_node,split_name,remove_empty_groups):
 
@@ -500,7 +531,6 @@ class NaturalNamingInterface(object):
                 return True
 
         return False
-
 
     def _shortcut(self, name):
 
@@ -538,7 +568,7 @@ class NaturalNamingInterface(object):
     def _add_prefix( self,name, start_node, group_type_name):
 
         ## If we add an instance with a full name at root, we do not need to add the prefix
-        if start_node.f_is_root():
+        if start_node.v_is_root:
             for prefix in ('results','parameters','derived_parameters','config'):
                 if name.startswith(prefix):
                     return name
@@ -583,7 +613,7 @@ class NaturalNamingInterface(object):
 
                 return add+name
 
-        if start_node.f_is_root():
+        if start_node.v_is_root:
 
             if group_type_name == PARAMETER_GROUP:
                 return 'parameters.'+name
@@ -912,7 +942,7 @@ class NaturalNamingInterface(object):
     @staticmethod
     def _get_result(data, fast_access):
 
-        if fast_access and data.v_fast_accessible:
+        if fast_access and data.f_supports_fast_access():
             return data.f_get()
         else:
             return data
@@ -940,7 +970,7 @@ class NaturalNamingInterface(object):
     @staticmethod
     def _iter_leaves(node):
         for node in node.f_iter_nodes(recursive=True):
-            if node.v_leaf:
+            if node.v_is_leaf:
                 yield node
             else:
                 continue
@@ -951,7 +981,7 @@ class NaturalNamingInterface(object):
             raise ValueError('You can not request the original data with >>fast_access=True<< or'
                              ' >>short_names=True<<.')
 
-        if node.f_is_root():
+        if node.v_is_root:
             temp_dict = self._flat_storage_dict
 
             if not fast_access and not short_names:
@@ -1172,7 +1202,7 @@ class NaturalNamingInterface(object):
 
         if result is None:
             raise AttributeError('The node or param/result >>%s<<, cannot be found.' % name)
-        if result.v_leaf:
+        if result.v_is_leaf:
             return self._get_result(result, fast_access)
         else:
             return result
@@ -1195,7 +1225,7 @@ class NNGroupNode(NNTreeNode):
 
     def __str__(self):
 
-        if not self.f_is_root():
+        if not self.v_is_root:
             name = self.v_full_name
         else:
             name = self.v_name
@@ -1256,7 +1286,7 @@ class NNGroupNode(NNTreeNode):
         else:
             child = self._children[name]
 
-            if not child.v_leaf and child.f_has_children and not recursive:
+            if not child.v_is_leaf and child.f_has_children and not recursive:
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with >>recursive = True')
             else:
@@ -1325,7 +1355,7 @@ class NNGroupNode(NNTreeNode):
         else:
             instance = self.f_get(key)
 
-            if not instance.v_parameter:
+            if not instance.v_is_parameter:
                 raise AttributeError('You cannot assign values to a tree node or a list of nodes '
                                      'and results, it only works for parameters ')
 
@@ -1384,7 +1414,7 @@ class NNGroupNode(NNTreeNode):
         :return:
 
             The found instance (result/parameter/group node) or if fast access is True and you found
-            a parameter, the parameter's value is returned.
+            a parameter or result that supports fast access, the contained value is returned.
 
         '''
         return self._nn_interface._get(self, name, fast_access=fast_access,
@@ -1441,7 +1471,7 @@ class NNGroupNode(NNTreeNode):
     def f_load_child(self,name,recursive=False,load_data=pypetconstants.UPDATE_DATA):
         '''Loads a child or recursively a subtree from disk.
 
-        For how to choose 'load_data' see :ref:'more-on-loading'.
+        For how to choose 'load_data' see :ref:`more-on-loading`.
         '''
         if not name in self._children:
                 raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
@@ -1458,21 +1488,23 @@ class NNGroupNode(NNTreeNode):
 
 
 class ParameterGroup(NNGroupNode):
-    ''' Group node in your trajectory, hanging below `traj.parameters` (or the `parameters` group itself).
+    ''' Group node in your trajectory, hanging below `traj.parameters`
+    (or the `parameters` group itself).
 
     You can add other groups or parameters to it.
+
     '''
     def f_add_parameter_group(self,name):
         '''Adds an empty parameter group under the current node.
 
         Adds the full name of the current node
         as prefix to the name of the group.
-        If current node is the trajectory or single run (root), the prefix `'parameters'`
+        If current node is the trajectory (root), the prefix `'parameters'`
         is added to the full name.
 
         The `name` can also contain subgroups separated via colons, for example:
         `name=subgroup1.subgroup2.subgroup3`. These other parent groups will be automatically
-        be created.
+        created.
 
         '''
         return self._nn_interface._add_generic(self,type_name = PARAMETER_GROUP,
@@ -1600,7 +1632,8 @@ class DerivedParameterGroup(NNGroupNode):
         :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter`.
 
         Naming prefixes are added as in
-        :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
+        :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`.
+
         '''
         return self._nn_interface._add_generic(self,type_name = DERIVED_PARAMETER,
                                                group_type_name = DERIVED_PARAMETER_GROUP,
@@ -1612,6 +1645,7 @@ class ConfigGroup(NNGroupNode):
     ''' Group node in your trajectory, hanging below `traj.config`.
 
     You can add other groups or parameters to it.
+
     '''
     def f_add_config_group(self,name):
         '''Adds an empty config group under the current node.

@@ -33,7 +33,7 @@ PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'numpy.uint64'>": np.uint64,
  "<type 'numpy.uint8'>": np.uint8,
  "<type 'str'>": str}
-''' A Mapping (dict) from the the string represenation of a type and the type.
+''' A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
 '''
@@ -61,7 +61,7 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
                        np.complex_,
                        np.str,
                        np.str_)
-'''Set of supported scalar types by the storage and the standard parameter'''
+'''Set of supported scalar types by the storage service and the standard parameter'''
 
 
 ################### HDF5 Naming and Comments ##########################
@@ -70,7 +70,7 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
 HDF5_STRCOL_MAX_NAME_LENGTH = 64
 '''Maximum length of a (short) name'''
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
-'''Maximum lenght of the location'''
+'''Maximum length of the location string'''
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
 ''' Maximum length of a value string'''
 HDF5_STRCOL_MAX_COMMENT_LENGTH = 512
@@ -81,7 +81,7 @@ HDF5_STRCOL_MAX_ARRAY_LENGTH = 2048
 ######## Multiprocessing Modes #############
 
 WRAP_MODE_QUEUE = 'QUEUE'
-'''For multiprocesseing, queue multiprocessing mode '''
+'''For multiprocessing, queue multiprocessing mode '''
 WRAP_MODE_LOCK = 'LOCK'
 ''' Lock multiprocessing mode '''
 WRAP_MODE_NONE = 'NONE'
@@ -90,18 +90,15 @@ WRAP_MODE_NONE = 'NONE'
 
 ############ Loading Constants ###########################
 LOAD_SKELETON = 1
-'''For trajectory loading, loads only the skeleton '''
+'''For trajectory loading, loads only the skeleton.'''
 LOAD_DATA = 2
-''' Loads skeleton and data '''
+''' Loads skeleton and data.'''
 LOAD_NOTHING = 0
 ''' Loads nothing '''
 UPDATE_SKELETON = -1
-''' Updates skeleton, i.e. adds only items that are not part of your current trajectory '''
+''' Updates skeleton, i.e. adds only items that are not part of your current trajectory.'''
 UPDATE_DATA = -2
-''' Updates skeleton and data, adds only items that are not part of your current trajectory'''
-# LOAD_ANNOTATIONS = 3
-# ''' Reloads all annotations! Be Aware this option overrides all given annotations!'''
-
+''' Updates skeleton and data, adds only items that are not part of your current trajectory.'''
 
 
 
@@ -109,15 +106,15 @@ UPDATE_DATA = -2
 LEAF ='LEAF'
 ''' For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object'''
 UPDATE_LEAF = 'UPDATE_LEAF'
-''' Updates a *leaf* node, currently only parameters that are extended in length can be updated'''
+''' Updates a *leaf* node, currently only parameters that are extended in length can be updated.'''
 TRAJECTORY = 'TRAJECTORY'
 ''' Stores the whole trajectory'''
 MERGE = 'MERGE'
 ''' Merges two trajectories '''
 GROUP = 'GROUP'
-''' Stores a group node, can be recursive'''
+''' Stores a group node, can be recursive.'''
 LIST = 'LIST'
-''' Stores a list of different things, in order to avoid reopening and closing of the hdf5 file'''
+''' Stores a list of different things, in order to avoid reopening and closing of the hdf5 file.'''
 SINGLE_RUN = 'SINGLE_RUN'
 ''' Stores a single run'''
 PREPARE_MERGE = 'PREPARE_MERGE'
@@ -132,15 +129,14 @@ TREE = 'TREE'
 ''' Stores a subtree of the trajectory'''
 
 
-# Search Strategies
+################### Search Strategies ##########################
 BFS = 'BFS'
 '''For search in trajectory tree, breadth first search, default strategy'''
 DFS = 'DFS'
 '''Depth first search in trajectory tree, not recommended'''
 
 
-########## Names of Runs
-#### Naming
+########## Names of Runs ####################
 FORMAT_ZEROS=8
 ''' Number of leading zeros'''
 RUN_NAME = 'run_'

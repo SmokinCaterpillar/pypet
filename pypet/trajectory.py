@@ -778,8 +778,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         return self._as_run
 
     @v_as_run.setter
-    def v_as_run(self,idx):
-        return self.f_as_run(idx)
+    def v_as_run(self,run_name):
+        return self.f_as_run(run_name)
 
     @property
     def v_full_copy(self):
@@ -1121,7 +1121,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         iter_list = []
         for name in name_list:
             param = self.f_get(name)
-            if not param.v_parameter:
+            if not param.v_is_parameter:
                 raise TypeError('>>%s<< is not a parameter it is a %s, find is not applicable' %
                                 (name, str(type(param))))
 
@@ -1216,7 +1216,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         count = 0#Don't like it but ok
         for key, builditerable in build_dict.items():
             act_param = self.f_get(key, check_uniqueness=True)
-            if not act_param.v_leaf or not act_param.v_parameter:
+            if not act_param.v_is_leaf or not act_param.v_is_parameter:
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
 
@@ -1256,7 +1256,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         count = 0#Don't like it but ok
         for key, builditerable in build_dict.items():
             act_param = self.f_get(key, check_uniqueness=True)
-            if not act_param.v_leaf or not act_param.v_parameter:
+            if not act_param.v_is_leaf or not act_param.v_is_parameter:
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
             act_param._explore(builditerable)

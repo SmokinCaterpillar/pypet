@@ -165,7 +165,7 @@ Main Features
 
     * Numpy arrays and matrices
 
-    * SciPy sparse matrices
+    * Scipy sparse matrices
 
     * pandas DataFrames (http://pandas.pydata.org/)
 
