@@ -22,7 +22,7 @@ def deprecated(msg=''):
     def wrapper(func):
         @functools.wraps(func)
         def new_func(*args, **kwargs):
-            warning_string = "Call to deprecated function or property {}.".format(func.__name__)
+            warning_string = "Call to deprecated function or property `%s`." % func.__name__
             warning_string= warning_string + ' ' + msg
             warnings.warn_explicit(
                  warning_string,

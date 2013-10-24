@@ -9,6 +9,7 @@ def cartesian_product(parameter_dict, combined_parameters = ()):
     ''' Generates a Cartesian product of the input parameter dictionary.
 
     For example:
+
     >>> print cartesian_product({'param1':[1,2,3], 'param2':[42.0, 52.5]})
     {'param1':[1,1,2,2,3,3],'param2': [42.0,52.5,42.0,52.5,42.0,52.5]}
 
@@ -20,13 +21,14 @@ def cartesian_product(parameter_dict, combined_parameters = ()):
 
         Tuple of tuples. Defines the order of the parameters and parameters that are
         linked together.
-        If an inner tuple contains only a single item, you can space the
+        If an inner tuple contains only a single item, you can spare the
         inner tuple brackets.
 
 
         For example:
+
         >>> print cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'],\
-        'param3' : [1,2,3]}, (('param3',),('param1', 'param2')))
+        'param3' : [1,2,3]}, ('param3',('param1', 'param2')))
         {param3':[1,1,2,2,3,3],'param1' : [42.0,52.5,42.0,52.5,42.0,52.5],\
         'param2':['a','b','a','b','a','b']}
 
@@ -69,6 +71,7 @@ def cartesian_product_old(param_dict, combined_parameter_list=[]):
 
     
     For example:
+
     >>> print cartesian_product({'param1.entry1':[1,2,3], 'param2.entry1' = [42.0, 42.5]})
     {'param1.entry1':[1,1,2,2,3,3],'param2.entry2' = [42.0,42.5,42.0,42.5,42.0,42.5]}
     
