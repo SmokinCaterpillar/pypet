@@ -17,13 +17,14 @@ They are the containers of choice for everything in the trajectory stored under 
 Parameter containers follow these two principles:
 
  *  A key concept in numerical simulations is **exploration** of the parameter space. Therefore,
-    the parameter containers not only keep a single value but can hold an *exploration array*
-    of values.
-    To avoid confusion with numpy arrays, I will explicitly always state exploration array.
+    the parameter containers not only keep a single value but can hold a *range*
+    of values. These values typically reside in the same dimension, i.e. only integers, only
+    strings, only numpy arrays, etc.
+
     Exploration is initiated via the trajectory, see :ref:`parameter-exploration`.
     The individual values in the exploration array can be accessed one after the other
     for distinct simulations.
-    How the exploration array is implemented depends on the parameter.
+    How the exploration range is implemented depends on the parameter.
 
  *  The parameter can be **locked**, meaning as soon as the parameter is assigned to hold a specific
     value and the value has already been used somewhere,
@@ -36,7 +37,7 @@ Parameter containers follow these two principles:
     In fact, I ran into this problem during my PhD using someone else's simulations.
     Thus, debugging took ages. As a consequence, this project was born.
 
-    By definition parameters are fixed values, that once used never change.
+    By definition parameters are fixed values that once used never change.
     An exception to this rule is solely the *exploration*
     of the parameter space (see :ref:`parameter-exploration`), but this
     requires to run a number of distinct simulations anyway.
@@ -53,9 +54,9 @@ data they except. The :class:`~pypet.parameter.Parameter` excepts only:
     * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
       np.complex, np.str
 
-    * python homogeneous not nested tuples
+    * python homogeneous non-nested tuples
 
-And by *only*, I mean they except exactly these types and nothing else, not even objects
+And by *only*, I mean they handle exactly these types and nothing else, not even objects
 that are derived from these data types.
 
 Why so very restrictive again? Well, the reason is that we store these values to disk into
@@ -68,7 +69,7 @@ The storage service that comes with this package will take care
 that the exact type of an instance is NOT lost. However, this guarantee of type conservations
 comes with the cost that types are restricted.
 
-However, that does not mean that data tha is not supported cannot be used as a parameter at all.
+However, that does not mean that data which is not supported cannot be used as a parameter at all.
 You have two possibilities if your data is not supported. First, write your own parameter
 that converts your data to the basic types supported by the storage service. This is rather easy,
 the API :class:`~pypet.parameter.BaseParameter` is really small. Or second of all,
@@ -85,47 +86,49 @@ So far, the following parameters exist:
 
  *  :class:`~pypet.parameter.Parameter`:
 
-    Container for native python data: int, long, float, str, bool, complex, and
+    Container for native python data: int, long, float, str, bool, complex; and
     Numpy data: np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str.
     Numpy arrays and matrices are allowed as well.
 
-    However for larger numpy arrays,
-    the ArrayParameter
+    However, for larger numpy arrays, the ArrayParameter
     is recommended. The array parameter will keep a large array only once,
     even if it is used several
-    times during exploration in the exploration array.
+    times during exploration, see below.
 
  *  :class:`~pypet.parameter.ArrayParameter`
 
     Container for native python data as well as tuples and numpy arrays and matrices.
     The array parameter is the method of choice for large numpy arrays or python tuples.
     These are kept only once (and by the hdf5 storage service stored only once to disk)
-    and in the exploration array you can find references to these arrays. This is particularly
+    In the exploration range you can find references to these arrays. This is particularly
     useful if you reuse an array many times in distinct simulation, for example, by exploring
     the parameter space in form of a cartesian product.
 
     For instance, assume you explore a numpy array with default value
     `numpy.array([1,2,3])`.
-    A potential exploration could be: `[numpy.array([1,2,3]),numpy.array([3,4,3]),
+    A potential exploration range could be: `[numpy.array([1,2,3]),numpy.array([3,4,3]),
     numpy.array([1,2,3]),numpy.array([3,4,3])]`
     So you reuse `numpy.array([1,2,3])` and `numpy.array([3,4,3])` twice. If you would
     put this data into the standard Parameter, the full list `[numpy.array([1,2,3]),numpy.array([3,4,3]),
     numpy.array([1,2,3]),numpy.array([3,4,3])` would be stored to disk.
-    The ArrayParameter is smarter. It will store `numpy.array([1,2,3])` and `numpy.array([3,4,3])`
-    once and in addition a list of references
-    `[ref_to_array_1,ref_to_array_2,ref_to_array_1,ref_to_array_2]`
+    The ArrayParameter is smarter. It will ask the storage service only to store
+    `numpy.array([1,2,3])` and `numpy.array([3,4,3])` once and in addition a list of references
+    `[ref_to_array_1,ref_to_array_2,ref_to_array_1,ref_to_array_2]`.
+
+    Subclasses the standard Parameter and, therefore, supports also native python data.
 
 
  * :class:`~pypet.parameter.SparseParameter`:
 
     Container for SciPy_ sparse matrices. Supported formats are csr, csc, bsr, and dia.
+    Subclasses the ArrayParameter, and handles memory management similarly.
 
     .. _SciPy: http://docs.scipy.org/doc/scipy/reference/sparse.html
 
  *  :class:`~pypet.parameter.PickleParameter`:
 
     Container for all the data that can be pickled. Like the array parameter, distinct objects
-    are kept only once and are referred to in the exploration array.
+    are kept only once and are referred to in the exploration range.
 
 Parameters can be changed and values can be requested with the getter and setter methods:
 :func:`~pypet.parameter.Parameter.f_get` and :func:`~pypet.parameter.Parameter.f_set`.
@@ -148,7 +151,7 @@ And, of course, results support natural naming as well.
 For example:
 
     >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!')
-    >>> res.f_set(333,mystring='String!')
+    >>> res.f_set(333, mystring='String!')
     >>> res.f_get('myresult')
     333
     >>> res.f_get('mystring')
@@ -183,10 +186,12 @@ The following results exist:
 
 * :class:`~pypet.parameter.Result`:
 
-    Light Container that stores tables and arrays.
+    Light Container that stores python native data and numpy arrays.
 
-    Note that no sanity checks on individual data is made
-    and you have to take care, that your data is understood by the storage service.
+    Note that no sanity checks on individual data is made in case your data is a container.
+    For instance, if you hand a python list over to the result it is not checked if the individual
+    elements of the list are valid data items supported by the storage service.
+    You have to take care, that your data is understood by the storage service.
     It is assumed that results tend to be large and therefore sanity checks would be too expensive.
 
     Data that can safely be stored into a Result are:
@@ -197,9 +202,12 @@ The following results exist:
           np.complex, np.str
 
 
-        * python lists and tuples of the previous types (python natives + numpy natives and arrays)
+        * python lists and tuples (non-nested!) with homogeneous data of the previous types.
 
-        * python dictionaries of the previous types (not nested!)
+        *
+            python dictionaries (non-nested)  with strings as keys. Values must be of the
+            previously listed types (including numpy arrays and matrices) and
+            can be heterogeneous.
 
         * pandas_ data frames
 
@@ -222,7 +230,8 @@ The following results exist:
 
 
 For those of you using BRIAN_, there exists also the
-:class:`pypet.brian.parameter.BrianMonitorResult`
+:class:`pypet.brian.parameter.BrianMonitorResult` for monitor data and the
+:class:`pypet.brian.parameter.BrianResult` to handle brian quantities as results.
 
 
 .. _BRIAN: http://briansimulator.org/

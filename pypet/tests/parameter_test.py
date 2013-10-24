@@ -16,10 +16,44 @@ import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 from pypet.utils.helpful_functions import nested_equal
-
+import warnings
 
 
 class ParameterTest(unittest.TestCase):
+
+
+    def test_deprecated_methods_that_have_new_names(self):
+        for param in self.param.values():
+            with warnings.catch_warnings(record=True) as warnings_list:
+                # Cause all warnings to always be triggered.
+                warnings.simplefilter("always")
+                # Trigger a warning.
+                self.assertEqual(param.v_parameter, param.v_is_parameter)
+                self.assertEqual(param.v_leaf, param.v_is_leaf)
+                self.assertEqual(param.f_is_root(), param.v_is_root)
+                self.assertEqual(param.v_fast_accessible, param.f_supports_fast_access())
+                # Verify some things
+                assert len(warnings_list) == 4
+                for warning in warnings_list:
+                    assert issubclass(warning.category, DeprecationWarning)
+                    assert "deprecated" in str(warning.message)
+
+
+    def test_deprecated_range_methods_that_have_new_names(self):
+        for param in self.param.values():
+            with warnings.catch_warnings(record=True) as warnings_list:
+                # Cause all warnings to always be triggered.
+                warnings.simplefilter("always")
+                # Trigger a warning.
+                self.assertEqual(param.f_is_array(), param.f_has_range())
+                if param.f_has_range():
+                    self.assertEqual(id(param.f_get_array()),id(param.f_get_range()))
+                # Verify some things
+                assert len(warnings_list) == 1 or len(warnings_list)==2
+                for warning in warnings_list:
+                    assert issubclass(warning.category, DeprecationWarning)
+                    assert "deprecated" in str(warning.message)
+
 
 
     def testMetaSettings(self):
@@ -65,7 +99,7 @@ class ParameterTest(unittest.TestCase):
     def test_get_item(self):
         for paramname in self.explore_dict:
             param = self.param[paramname]
-            val1=param.f_get_array()[1]
+            val1=param.f_get_range()[1]
             val2=param[1]
             self.assertTrue(nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
 
@@ -147,7 +181,7 @@ class ParameterTest(unittest.TestCase):
 
                 self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
 
-                param_val = self.param[key].f_get_array()[idx]
+                param_val = self.param[key].f_get_range()[idx]
                 self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
 
             param._restore_default()
@@ -235,23 +269,23 @@ class ParameterTest(unittest.TestCase):
 
 
             if len(param)> 1:
-                self.assertTrue(param.f_is_array())
+                self.assertTrue(param.f_has_range())
 
-            if param.f_is_array():
+            if param.f_has_range():
                 self.assertTrue(len(param)>1)
                 param._shrink()
 
             self.assertTrue(len(param) == 1)
 
             self.assertFalse(param.f_is_empty())
-            self.assertFalse(param.f_is_array())
+            self.assertFalse(param.f_has_range())
 
 
 
             param.f_empty()
 
             self.assertTrue(param.f_is_empty())
-            self.assertFalse(param.f_is_array())
+            self.assertFalse(param.f_has_range())
 
 class ArrayParameterTest(ParameterTest):
 

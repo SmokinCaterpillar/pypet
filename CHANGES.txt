@@ -1,5 +1,17 @@
 pypet 0.1b.2
 
+*   Comments are no longer limited in size
+
+*   New Brian Result
+
+*   Storage Service in case of purging now sets the comment to the result with the lowest index,
+    in case of multiprocessing.
+
+*   Old API names are kept, but emit a depricated warning.
+
+*   The exploration array is now termed range. Accordingly, the function `f_is_array` is
+    renamed `f_has_range` and `f_get_array` renamed to `f_get_range`.
+
 *   v_leaf renamed to v_is_leaf
 
 *   f_is_root renamed to v_is_root and changed to property

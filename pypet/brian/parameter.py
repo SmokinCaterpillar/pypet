@@ -22,11 +22,17 @@ import numpy as np
 import logging
 import pandas as pd
 
+from pypet.utils.helpful_functions import copydoc
+
 
 class BrianParameter(Parameter):
     ''' A Parameter class that supports BRIAN Quantities.
 
-    There are two storage modes:
+    Note that only scalar BRIAN quantities are supported, lists, tuples or dictionaries
+    of BRIAN quantities cannot be handled.
+
+    There are two storage modes, that can be either passed to constructor or changed
+    via `v_storage_mode`:
 
     * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE`: ('FLOAT')
 
@@ -132,9 +138,9 @@ class BrianParameter(Parameter):
                                                        'mode' :[self._storage_mode] })
 
 
-                if self.f_is_array():
+                if self.f_has_range():
                     valstr_list = []
-                    for val in self._explored_data:
+                    for val in self._explored_range:
                         valstr = val.in_best_unit(python_code=True)
                         valstr_list.append(valstr)
 
@@ -149,9 +155,9 @@ class BrianParameter(Parameter):
                                                        'unit':[unitstr],
                                                        'mode':[self._storage_mode]})
 
-                if self.f_is_array():
+                if self.f_has_range():
                     value_list = []
-                    for val in self._explored_data:
+                    for val in self._explored_range:
                         value = float(val)
                         value_list.append(value)
 
@@ -190,7 +196,7 @@ class BrianParameter(Parameter):
                         brian_quantity = eval(valstr)
                         explore_list.append(brian_quantity)
 
-                    self._explored_data=tuple(explore_list)
+                    self._explored_range=tuple(explore_list)
             elif self._storage_mode == BrianParameter.FLOAT_MODE:
 
                 # Recreate the brain units from the vale as float and unit as string:
@@ -207,7 +213,7 @@ class BrianParameter(Parameter):
                         brian_quantity = value*unit
                         explore_list.append(brian_quantity)
 
-                    self._explored_data=tuple(explore_list)
+                    self._explored_range=tuple(explore_list)
 
 
         except KeyError:
@@ -216,9 +222,132 @@ class BrianParameter(Parameter):
         self._default = self._data
 
 
+class BrianResult(Result):
+    ''' A result class that can handle BRIAN quantities.
+
+    Note that only scalar BRIAN quantities are supported, lists, tuples or dictionaries
+    of BRIAN quantities cannot be handled.
+
+    Supports also all data supported by the standard :class:`~pypet.parameter.Result`.
+
+    Storage mode works as for :class:`~pypet.brian.parameter.BrianParameter`.
+
+    '''
+
+    IDENTIFIER=BrianParameter.IDENTIFIER
+    ''' Identifier String to label brian data '''
+
+    FLOAT_MODE = 'FLOAT'
+    '''Float storage mode'''
+    STRING_MODE = 'STRING'
+    '''String storage mode'''
+
+    def __init__(self, full_name, *args, **kwargs):
+        super(BrianResult,self).__init__(full_name, *args, **kwargs)
+
+        self._storage_mode=None
+        storage_mode = kwargs.pop('storage_mode',BrianResult.FLOAT_MODE)
+        self.v_storage_mode=storage_mode
+
+    @property
+    def v_storage_mode(self):
+        '''
+        There are two storage modes:
+
+
+        * :const:`~pypet.brian.parameter.BrianResult.FLOAT_MODE`: ('FLOAT')
+
+            The value is stored as a float and the unit as a sting,
+
+            i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
+
+        * :const:`~pypet.brian.parameter.BrianResult.STRING_MODE`: ('STRING')
+
+            The value and unit are stored combined together as a string,
+
+            i.e. `12 mV` is stored as `'12.0 * mV'`
+
+        '''
+        return self._storage_mode
+
+    @v_storage_mode.setter
+    def v_storage_mode(self, storage_mode):
+        assert (storage_mode == BrianResult.STRING_MODE or storage_mode == BrianResult.FLOAT_MODE)
+        self._storage_mode = storage_mode
+
+    @copydoc(Result.f_set_single)
+    def f_set_single(self, name, item):
+        if BrianResult.IDENTIFIER in name:
+            raise AttributeError('Your result name contains the identifier for brian data,'
+                                 ' please do not use %s in your result names.' %
+                                 BrianResult.IDENTIFIER)
+        elif name == 'storage_mode':
+            self.v_storage_mode=item
+        else:
+            super(BrianResult,self).f_set_single(name,item)
+
+    def _supports(self, data):
+        if isinstance(data, Quantity):
+            return True
+        else:
+            return super(BrianParameter,self)._supports(data)
+
+
+    def _store(self):
+        store_dict={}
+        for key, val in self._data.iteritems():
+            if isinstance(val,Quantity):
+
+                if self._storage_mode == BrianResult.STRING_MODE:
+
+                    valstr = self._data.in_best_unit(python_code=True)
+                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'data':[valstr],
+                                                           'mode' :[self._storage_mode] })
+
+                elif self._storage_mode == BrianResult.FLOAT_MODE:
+                    unitstr = repr(get_unit_fast(self._data))
+                    value = float(self._data)
+                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'value':[value],
+                                                           'unit':[unitstr],
+                                                           'mode':[self._storage_mode]})
+
+                else:
+                    raise RuntimeError('You shall not pass!')
+
+                return store_dict
+            else:
+                store_dict[key]=val
+
+
+    def _load(self,load_dict):
+
+        for key in load_dict.iteritems():
+            if BrianResult.IDENTIFIER in key:
+                data_table = load_dict[key]
+                self._storage_mode = data_table['mode'][0]
+                new_key = key.split(BrianResult.IDENTIFIER)[0]
+
+                if self._storage_mode == BrianResult.STRING_MODE:
+                    valstr = data_table['data'][0]
+
+                    self._data[new_key] = eval(valstr)
+
+                elif self._storage_mode == BrianParameter.FLOAT_MODE:
+
+                    # Recreate the brain units from the vale as float and unit as string:
+                    unit = eval(data_table['unit'][0])
+                    value = data_table['value'][0]
+                    self._data[new_key] = value*unit
+            else:
+                self._data[key]=load_dict[key]
 
 class BrianMonitorResult(Result):
     ''' A Result class that supports brian monitors.
+
+    Subclasses :class:`~pypet.parameter.Result`, NOT :class:`~pypet.brian.parameter.BrianResult`.
+    The storage mode here works slightly different than in
+    :class:`~pypet.brian.parameter.BrianResult` and :class:`~pypet.brian.parameter.BrianParameter`,
+    see below.
 
     Monitor attributes are extracted and added as results with the attribute names.
     Note the original monitors are NOT stored, only their attribute/property values are kept.

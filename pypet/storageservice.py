@@ -2148,7 +2148,16 @@ class HDF5StorageService(StorageService):
             insert_dict['length'] = len(item)
 
         if 'comment' in colnames:
-            insert_dict['comment'] = item.v_comment
+            comment = item.v_comment
+            if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                self._logger.debug('Your comment is too long ( %d characters), only comments up to'
+                                     '%d characters can be stored into overview tables. '
+                                     'Comment in table will be truncated.' %
+                                     (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
+
+                comment = comment[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+
+            insert_dict['comment'] = comment
 
         if 'location' in colnames:
             insert_dict['location'] = item.v_location
@@ -2199,7 +2208,7 @@ class HDF5StorageService(StorageService):
 
     @staticmethod
     def _all_get_array_str(item, logger):
-        arraystr = str(item.f_get_array())
+        arraystr = str(item.f_get_range())
         if len(arraystr) >= pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH:
             logger.debug('The array string >>%s<< was too long I truncated it to'
                                  ' %d characters' %
@@ -2372,27 +2381,42 @@ class HDF5StorageService(StorageService):
                 finally:
                     # Get the old name back
                     instance._rename(old_full_name)
-                    
+
     def _prm_meta_add_summary(self,instance):
-        '''Add data to the summary tables and returns if comment has to be stored.'''
+        '''Add data to the summary tables and returns if comment has to be stored.
+
+        Also moves comments upwards in the hierarchy if purge all comments and a lower index
+        run has completed, only necessary for multiprocessing.
+        '''
         definitely_store_comment=True
 
         split_name = instance.v_full_name.split('.')
         where = split_name[0]
 
+        # Check if we are in the subtree that has runs overview tables
         if where in['derived_parameters','results']:
             creator_name = instance.v_creator_name
+
+            # Check sub-subtree
             if creator_name.startswith(pypetconstants.RUN_NAME):
+                # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
                 split_name[1]=run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
+                # Rename the item for easier storage
                 instance._rename(new_full_name)
                 try:
+                    # Get the overview table
                     table_name = where+'_runs_summary'
                     table = getattr(self._overview_group,table_name)
 
-                    row_iterator= self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+                    # True if comment must be moved upwards to lower index
+                    erase_old_comment=False
+
+                    # Find the overview table entry
+                    row_iterator = \
+                        self._all_find_param_or_result_entry_and_return_iterator(instance, table)
 
                     row = None
                     try:
@@ -2401,8 +2425,53 @@ class HDF5StorageService(StorageService):
                         pass
 
                     if row is not None:
+                        # If row found we need to increase the number of items
                         nitems = row['number_of_items']+1
-                        definitely_store_comment=instance.v_comment != row['comment']
+
+                        # Get the run name of the example
+                        example_item_run_name = row['example_item_run_name']
+
+                        # Get the old comment:
+                        location_string = row['location']
+                        other_parent_node_name = location_string.replace(run_mask,example_item_run_name)
+                        other_parent_node_name = '/' + self._trajectory_name + '/' + \
+                                                 other_parent_node_name.replace('.','/')
+                        try:
+                            example_item_node = self._hdf5file.get_node(where=other_parent_node_name,
+                                                                                   name=instance.v_name)
+                        except AttributeError:
+                            example_item_node = self._hdf5file.getNode(where=other_parent_node_name,
+                                                                                  name = instance.v_name)
+
+                        # Check if comment is obsolete
+                        example_comment = str(example_item_node._v_attrs[HDF5StorageService.COMMENT])
+                        definitely_store_comment=instance.v_comment != example_comment
+
+                        # We can rely on lexicographic comparisons with run indices
+                        if creator_name < example_item_run_name:
+                            # In case the statement is true and the comments are equal, we need
+                            # to move the comment to a result or derived parameter with a lower
+                            # run name:
+                            if not definitely_store_comment:
+
+                                # We need to purge the comment in the other result or derived parameter
+                                erase_old_comment=True
+                                definitely_store_comment=True
+
+                                row['example_item_run_name']=creator_name
+                                row['value'] = self._all_get_value_string(instance,self._logger)
+                            else:
+                                self._logger.warning('Your example value and comment in the overview'
+                                                     ' table cannot be set to the lowest index'
+                                                     ' item because results or derived parameters'
+                                                     ' with lower indices have '
+                                                     ' a different comment! The comment of `%s` '
+                                                     ' in run `%s'
+                                                     ' differs from the current result or'
+                                                     ' derived parameter in run `%s`.' %
+                                                       (instance.v_name, creator_name, example_item_run_name))
+
+
                         row['number_of_items'] = nitems
                         row.update()
 
@@ -2415,6 +2484,11 @@ class HDF5StorageService(StorageService):
 
 
                         table.flush()
+
+                        if self._purge_duplicate_comments and erase_old_comment:
+                            del example_item_node._v_attrs[HDF5StorageService.COMMENT]
+
+                        self._hdf5file.flush()
 
                     else:
                         self._all_store_param_or_result_table_entry(instance,table,
@@ -2463,7 +2537,7 @@ class HDF5StorageService(StorageService):
         setattr(group._v_attrs,HDF5StorageService.LEAF,1)
 
 
-        if instance.v_is_parameter and instance.f_is_array():
+        if instance.v_is_parameter and instance.f_has_range():
             setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
             try:
                 tablename = 'explored_parameters'

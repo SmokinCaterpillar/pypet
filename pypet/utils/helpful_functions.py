@@ -5,8 +5,34 @@ from collections import Sequence, Mapping, Set
 import numpy as np
 import pandas as pd
 from pypet import pypetconstants
+import warnings
+import functools
 
 
+def deprecated(msg=''):
+    '''This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.
+
+    :param msg:
+
+        Additional message added to the warning.
+
+    '''
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            warning_string = "Call to deprecated function or property {}.".format(func.__name__)
+            warning_string= warning_string + ' ' + msg
+            warnings.warn_explicit(
+                 warning_string,
+                 category=DeprecationWarning,
+                 filename=func.func_code.co_filename,
+                 lineno=func.func_code.co_firstlineno + 1
+             )
+            return func(*args, **kwargs)
+        return new_func
+    return wrapper
 
 
 

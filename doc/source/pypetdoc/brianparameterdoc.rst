@@ -1,11 +1,18 @@
-===============================
-Brian Parameters and Monitors
-===============================
+========================================
+Brian Parameters, Results and Monitors
+========================================
 --------------------
 BrianParameter
 --------------------
 
 .. autoclass:: pypet.brian.parameter.BrianParameter
+    :members:
+
+----------------------
+BrianResult
+----------------------
+
+.. autoclass:: pypet.brian.parameter.BrianResult
     :members:
 
 ----------------------

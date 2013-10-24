@@ -265,13 +265,13 @@ Furthermore, consider if you reload your data from the example above,
 the result instance `results.run_00000001.my_result`
 won't have a comment only the instance `results.run_00000000.my_result`.
 
-**IMPORTANT**: The result that was stored AT FIRST to disk is considered as the prototypical one.
-If you allow multiprocessing, this is not necessarily the result in run 0 but the
-result in the run that finished first! For example, it might be the case that `run_00000001` was
-finished before `run_00000000` because both are executed in parallel. To see which result
-was taken as the example one and which will be the only one
-that keeps a comment, look into the column `example_item_run_name` of the overview table
-to see the name of the first completed run that contains the result.
+**IMPORTANT**: If you use multiprocessing, the storage service will take care that the comment for
+the result or derived parameter with the lowest run index will be considered, regardless
+of the order of the finishing of your runs. Note that this only works properly if all
+comments are the same. Otherwise the comment in the overview table might not be the one
+with the lowest run index. Moreover, if you merge trajectories (see ref:`more-on-merging`)
+there is no support for purging comments in the other trajectory. All comments of the other trajectory's
+results and derived parameters will be kept and merged into your current one.
 
 If you do not want to purge duplicate comments, set the config parameter
 `'purge_duplicate_comments'` to 0 or False.

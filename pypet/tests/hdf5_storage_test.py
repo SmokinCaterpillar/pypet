@@ -303,6 +303,52 @@ class EnvironmentTest(TrajectoryComparator):
 
         hdf5file.close()
 
+    def test_purge_duplicate_comments_but_check_moving_comments_up_the_hierarchy(self):
+        self.explore(self.traj)
+
+        with self.assertRaises(RuntimeError):
+            self.traj.purge_duplicate_comments=1
+            self.traj.overview.results_runs_summary=0
+            self.make_run()
+
+        self.traj.f_get('purge_duplicate_comments').f_unlock()
+        self.traj.purge_duplicate_comments=1
+        self.traj.f_get('results_runs_summary').f_unlock()
+        self.traj.overview.results_runs_summary=1
+
+        # We fake that the trajectory starts with run_00000001
+        self.traj._run_information['run_00000000']['completed']=1
+        self.make_run()
+
+        # Noe we make the first run
+        self.traj._run_information['run_00000000']['completed']=0
+        self.make_run()
+
+
+        hdf5file = pt.openFile(self.filename)
+
+        try:
+            traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
+
+
+            for node in traj_group._f_walkGroups():
+                if 'SRVC_LEAF' in node._v_attrs:
+                    if 'run_' in node._v_pathname:
+                        #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
+                        comment_run_name = 'run_00000000'
+                        if comment_run_name in node._v_pathname:
+                            self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                            'There is no comment in node %s!' % node._v_name)
+                        else:
+                            self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
+                                            'There is a comment in node %s!' % node._v_name)
+                    else:
+                        self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
+                                    'There is no comment in node %s!' % node._v_name)
+        finally:
+            hdf5file.close()
+
+
     def test_purge_duplicate_comments(self):
         self.explore(self.traj)
 
@@ -327,7 +373,8 @@ class EnvironmentTest(TrajectoryComparator):
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
                     if 'run_' in node._v_pathname:
-                        comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
+                        #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
+                        comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:
                             self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
                                             'There is no comment in node %s!' % node._v_name)
@@ -340,19 +387,19 @@ class EnvironmentTest(TrajectoryComparator):
         finally:
             hdf5file.close()
 
-
-    def get_comment_run_name(self, traj_group, pathname, name):
-
-        if 'results' in pathname:
-            overview_table = traj_group.overview.results_runs_summary
-        else:
-            overview_table = traj_group.overview.derived_parameters_runs_summary
-
-        for row in overview_table:
-            if row['name']==name:
-                comment_run_name =  row['example_item_run_name']
-
-        return comment_run_name
+    #
+    # def get_comment_run_name(self, traj_group, pathname, name):
+    #
+    #     if 'results' in pathname:
+    #         overview_table = traj_group.overview.results_runs_summary
+    #     else:
+    #         overview_table = traj_group.overview.derived_parameters_runs_summary
+    #
+    #     for row in overview_table:
+    #         if row['name']==name:
+    #             comment_run_name =  row['example_item_run_name']
+    #
+    #     return comment_run_name
 
 
 class ResultSortTest(TrajectoryComparator):

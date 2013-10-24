@@ -716,13 +716,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
     @v_comment.setter
     def v_comment(self, comment):
-
-        comment = str(comment)
-        if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-            raise AttributeError('Your comment is too long ( %d characters), only comments up to'
-                                 '%d characters are allowed.' %
-                                 (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-
+        comment=str(comment)
         self._comment=comment
 
 
@@ -1125,8 +1119,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 raise TypeError('>>%s<< is not a parameter it is a %s, find is not applicable' %
                                 (name, str(type(param))))
 
-            if param.f_is_array():
-                iter_list.append(iter(param.f_get_array()))
+            if param.f_has_range():
+                iter_list.append(iter(param.f_get_range()))
             else:
                 iter_list.append(it.repeat(param.f_get(), len(self)))
 
@@ -1973,13 +1967,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 raise TypeError('Your trial_parameter >>%s<< does not evaluate to a real parameter'
                                 ' in the trajectory' % trial_parameter)
 
-            if my_trial_parameter.f_is_array():
-                my_trial_list = my_trial_parameter.f_get_array()
+            if my_trial_parameter.f_has_range():
+                my_trial_list = my_trial_parameter.f_get_range()
             else:
                 my_trial_list = [my_trial_parameter.f_get()]
 
-            if other_trial_parameter.f_is_array():
-                other_trial_list = other_trial_parameter.f_get_array()
+            if other_trial_parameter.f_has_range():
+                other_trial_list = other_trial_parameter.f_get_range()
             else:
                 other_trial_list = [other_trial_parameter.f_get()]
             mytrialset = set(my_trial_list)
@@ -2024,12 +2018,12 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 params_to_change[key] = (my_param, other_param)
                 continue
 
-            if (my_param.f_is_array()
-                or other_param.f_is_array()
+            if (my_param.f_has_range()
+                or other_param.f_has_range()
                 or not my_param._equal_values(my_param.f_get(), other_param.f_get())):
 
                 params_to_change[key] = (my_param, other_param)
-                if not my_param.f_is_array() and not other_param.f_is_array():
+                if not my_param.f_has_range() and not other_param.f_has_range():
                     remove_duplicates = False
 
         ## Now first check if we use all runs ore f_remove_items duplicates:
@@ -2040,10 +2034,10 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 for jrun in xrange(len(self)):
                     change = True
                     for my_param, other_param in params_to_change.itervalues():
-                        if other_param.f_is_array():
+                        if other_param.f_has_range():
                             other_param._set_parameter_access(irun)
 
-                        if my_param.f_is_array():
+                        if my_param.f_has_range():
                             my_param._set_parameter_access(jrun)
 
                         val1 = my_param.f_get()
@@ -2073,13 +2067,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             if fullname == trial_parameter:
                 other_array = [x + mymaxtrial + 1 for x in other_trial_list]
             else:
-                if other_param.f_is_array():
-                    other_array = (x for run, x in it.izip(use_runs, other_param.f_get_array()) if \
+                if other_param.f_has_range():
+                    other_array = (x for run, x in it.izip(use_runs, other_param.f_get_range()) if \
                                    run)
                 else:
                     other_array = (other_param.f_get() for dummy in xrange(adding_length))
 
-            if not my_param.f_is_array():
+            if not my_param.f_has_range():
                 my_param.f_unlock()
                 my_param._explore((my_param.f_get() for dummy in xrange(len(self))))
 

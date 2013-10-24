@@ -536,6 +536,7 @@ there are a functions to remove items not only from RAM but also from disk:
 with `remove_from_storage=True`.
 Note that you cannot remove explored parameters.
 
+.. _more-on-merging:
 
 ------------------------------------
 Merging and Backup

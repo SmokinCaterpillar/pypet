@@ -4,7 +4,7 @@ __author__ = 'Robert Meyer'
 import UserDict
 import itertools as itools
 
-class ChainMap(UserDict.DictMixin):
+class ChainMap(object):
     """Combine multiple mappings for sequential lookup.
     """
 

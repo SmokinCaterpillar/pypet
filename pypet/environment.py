@@ -240,13 +240,16 @@ class Environment(object):
         in the node associated with this result in your hdf5 file you will find the comment
         `'Mostly harmless!'`. If you call `traj.f_add_result('my_result',-43, comment='Mostly harmless!')`
         in another run again, let's say run 00000001, the name will be mapped to
-        `results.run_00000001.my_result`. But this time the comment will not be saved to disk,
+        `results.run_00000001.my_result`. But this time the comment will not be saved to disk
         since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
-        If you use multiprocessing, the result comment of the first finished run is kept.
-        This is not necessarily the run with the lowest index.
+        If you use multiprocessing, the storage service will take care that the comment for
+        the result or derived parameter with the lowest run index will be considered, regardless
+        of the order of the finishing of your runs. Note that this only works properly if all
+        comments are the same. Otherwise the comment in the overview table might not be the one
+        with the lowest run index.
 
         You need summary tables (see below) to be able to purge duplicate comments.
 

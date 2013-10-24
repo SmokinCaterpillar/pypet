@@ -9,6 +9,7 @@ import pypet.pypetexceptions as pex
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
+from pypet.utils.helpful_functions import deprecated
 import logging
 
 
@@ -51,12 +52,12 @@ class NNTreeNode(WithAnnotations):
         return self._depth
 
     @property
+    @deprecated( msg='Please use `v_is_leaf` instead.')
     def v_leaf(self):
         '''Whether node is a leaf or not (i.e. it is a group node)
 
         DEPRECATED: Please use v_is_leaf!
         '''
-        self._logger.warning('Using deprecated property `v_leaf`, please use `v_is_leaf` instead.')
         return self.v_is_leaf
 
     @property
@@ -64,14 +65,12 @@ class NNTreeNode(WithAnnotations):
         '''Whether node is a leaf or not (i.e. it is a group node)'''
         return self._leaf
 
-
+    @deprecated( msg='Please use property `v_is_root` instead.')
     def f_is_root(self):
         '''Whether the group is root (True for the trajectory and a single run object)
 
         DEPRECATED: Please use property v_is_root!
         '''
-        self._logger.warning('Using deprecated function `f_is_root()`, please use '
-                             'property `v_is_root` instead.')
         return self.v_is_root
 
     @property
@@ -159,11 +158,6 @@ class NNLeafNode(NNTreeNode):
     def v_comment(self, comment):
 
         comment = str(comment)
-        if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-            raise AttributeError('Your comment is too long ( %d characters), only comments up to'
-                                 '%d characters are allowed.' %
-                                 (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-
         self._comment=comment
 
 
@@ -173,24 +167,22 @@ class NNLeafNode(NNTreeNode):
 
 
     @property
+    @deprecated(msg='Please use function `f_supports_fast_access()` instead.')
     def v_fast_accessible(self):
         '''Whether or not fast access can be supported by the Parameter or Result
 
         DEPRECATED: Please use function `f_supports_fast_access` instead!
 
         '''
-        self._logger.warning('Using deprecated property `v_fast_accessible`, please use'
-                             ' function `f_supports_fast_access()` instead.' )
         return self.f_supports_fast_access()
 
     @property
+    @deprecated(msg='Please use `v_is_parameter` instead.')
     def v_parameter(self):
         '''Whether the node is a parameter or not (i.e. a result)
 
         DEPRECATED: Please use `v_is_parameter` instead!
         '''
-        self._logger.warning('Using deprecated property `v_parameter`, use `v_is_parameter`'
-                             ' instead.')
         return self.v_is_parameter
 
     @property

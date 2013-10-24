@@ -115,7 +115,7 @@ def main():
 
 
     # Let's get the exploration array:
-    initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_array()
+    initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_range()
     # Now let's plot our simulated equations for the different initial conditions:
     # We will iterate through the run names
     for idx,run_name in enumerate(traj.f_get_run_names()):

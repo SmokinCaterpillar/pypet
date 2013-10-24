@@ -8,6 +8,7 @@ from pypet.utils.helpful_functions import nested_equal, copydoc
 from pypet import pypetconstants
 from pandas import DataFrame
 from pypet.naturalnaming import NNLeafNode
+from pypet.utils.helpful_functions import deprecated
 import scipy.sparse as spsp
 
 try:
@@ -38,7 +39,7 @@ class BaseParameter(NNLeafNode):
     parameter.
 
     Parameters are simple container objects for data values. They handle single values as well as
-    the so called exploration array. An array containing multiple values which are accessed
+    ranges of potential values. These range arrays contain multiple values which are accessed
     one after the other in individual simulation runs.
 
     Parameter exploration is usually initiated through the trajectory see
@@ -52,7 +53,7 @@ class BaseParameter(NNLeafNode):
 
     If multiprocessing is desired the parameter must be picklable!
 
-    :param fullname:
+    :param full_name:
 
         The fullname of the parameter in the trajectory tree, groupings are
         separated by a colon:
@@ -92,17 +93,17 @@ class BaseParameter(NNLeafNode):
 
     @property
     def v_full_copy(self):
-        '''Whether or not the full parameter including the exploration array or only the current
+        '''Whether or not the full parameter including the range or only the current
         data is copied during pickling.
 
         If you run your simulations in multiprocessing mode, the whole trajectory and all
         parameters need to be pickled and are sent to the individual processes.
-        Each process than runs an individual point in the parameter space trajectory.
-        As a consequence, you do not need the exploration array during these calculations.
+        Each process than runs an individual point in the parameter space.
+        As a consequence, you do not need the full ranges during these calculations.
         Thus, if the full copy mode is set to False the parameter is pickled without
-        the exploration array and you can save memory.
+        the range array and you can save memory.
 
-        If you want to access the full exploration array during individual runs, you need to set
+        If you want to access the full range during individual runs, you need to set
         `v_full_copy` to True.
 
         It is recommended NOT to do that in order to save memory and also do obey the
@@ -115,13 +116,13 @@ class BaseParameter(NNLeafNode):
         >>> param._explore([1,2,3,4])
         >>> dump=pickle.dumps(param)
         >>> newparam = pickle.loads(dump)
-        >>> print newparam.f_get_array()
+        >>> print newparam.f_get_range()
         TypeError
 
         >>> param.v_full_copy=True
         >>> dump = pickle.dumps(param)
         >>> newparam=pickle.loads(dump)
-        >>> print newparam.f_get_array()
+        >>> print newparam.f_get_range()
         (1,2,3,4)
 
 
@@ -134,9 +135,17 @@ class BaseParameter(NNLeafNode):
         val=bool(val)
         self._full_copy = val
 
-
+    @deprecated(msg='Please use `f_has_range()` instead.')
     def f_is_array(self):
-        ''' Returns true if the parameter is explored and contains an exploration array.
+        ''' Returns true if the parameter is explored and contains a range array.
+
+        DEPRECATED: Use `f_has_range()` instead.
+
+        '''
+        return self.f_has_range()
+
+    def f_has_range(self):
+        ''' Returns true if the parameter is explored and contains a range array.
         '''
         raise NotImplementedError( "Should have implemented this." )
 
@@ -155,7 +164,7 @@ class BaseParameter(NNLeafNode):
     def __len__(self):
         ''' Returns the length of the parameter.
         
-        Only parameters that are explored can have a length larger than 1.
+        Only parameters that have a defined range can have a length larger than 1.
         If no values have been added to the parameter its length is 0.
 
         '''
@@ -190,8 +199,19 @@ class BaseParameter(NNLeafNode):
 
 
 
-    def _equal_values(self,val1,val2):
+    def _equal_values(self, val1, val2):
         ''' Checks if the parameter considers two values as equal.
+
+        This is important for the trajectory in case of merging. In case you want to delete
+        duplicate parameter points, the trajectory needs to know when two parameters
+        are equal. Since equality is not always implemented by values handled by
+        parameters in the same way, the parameters need to judge whether they values are equal.
+
+        The straightforward example here is a numpy array.
+        Checking for equality of two numpy arrays yields
+        a third numpy array containing truth values of a piecewise comparison.
+        Accordingly, the parameter could judge two numpy arrays equal if ALL of the numpy
+        array elements are equal.
 
         :raises: TypeError: If both values are not supported by the parameter.
 
@@ -214,6 +234,34 @@ class BaseParameter(NNLeafNode):
 
         For example, two 32 bit integers would be of same type, but not a string and an integer,
         nor a 64 bit and a 32 bit integer.
+
+        This is important for exploration. You are only allowed to explore data that
+        is of the same type as the default value.
+
+        One could always come up with a trivial solution of `type(val1)==type(val2)`.
+        But sometimes your parameter does want even more strict equality or
+        less type equality.
+
+        For example, the :class:`~pypet.parameter.Parameter` has a stricter sense of
+        type equality regarding numpy arrays. In order to have two numpy arrays of the same type,
+        they must also agree in shape. However, the :class:`~pypet.parameter.ArrayParameter`,
+        considers all numpy arrays as of being of same type regardless of their shape.
+
+        Moreover, the :class:`~pypet.parameter.SparseParameter` considers all supported
+        sparse matrices (csc, csr, bsr, dia) as being of the same type. You can make
+        explorations using all these four types at once.
+
+        The difference in how strict types are treated arises from the way parameter data
+        is stored to disk and how the parameters hand over their data to the storage service
+        (see :func:`pypet.parameter.BaseParameter._store`).
+
+        The :class:`~pypet.parameter.Parameter`  puts all it's data in an
+        :class:`~pypet.parameter.ObjectTable` which
+        has strict constraints on the column sizes. This means that numpy array columns only
+        accept numpy arrays with a particular size. In contrast, the array and sparse
+        parameter hand over their data as individual items which result in individual entries
+        in the hdf5 node. In order to see what I mean simply run an experiment with all 3
+        parameters, explore all of them, and take a look at the resulting hdf5 file!
 
         :raises: TypeError: if both values are not supported by the parameter.
 
@@ -278,21 +326,18 @@ class BaseParameter(NNLeafNode):
 
         :raises: ParameterLockedException:  If parameter is locked.
 
-                 TypeError:
-
-                     If the parameter is an array or if the type of the
-                     data value is not supported by the parameter.
+                 TypeError: If the type of the data value is not supported by the parameter.
 
         '''
         raise NotImplementedError( "Should have implemented this." )
 
     def __getitem__(self, idx):
-        '''  Equivalent to `f_get_array[idx]`
+        '''  Equivalent to `f_get_range[idx]`
 
-        :raises: TypeError if parameter is not an array
+        :raises: TypeError if parameter has not a range
 
         '''
-        return self.f_get_array().__getitem__(idx)
+        return self.f_get_range().__getitem__(idx)
 
 
     def f_get(self):
@@ -309,10 +354,11 @@ class BaseParameter(NNLeafNode):
 
         raise NotImplementedError( "Should have implemented this." )
 
+    @deprecated(msg='Please use `f_get_range()` instead!')
     def f_get_array(self):
-        ''' Returns an iterable to iterate over the values of the exploration array.
+        ''' Returns an iterable to iterate over the values of the exploration range.
 
-        Note that the returned values should be either a copy of the exploration array
+        Note that the returned values should be either a copy of the exploration range
         or the array must be immutable, for example a python tuple.
 
         :return: immutable sequence
@@ -326,14 +372,36 @@ class BaseParameter(NNLeafNode):
 
         :raises: TypeError if the parameter is not explored.
 
+        DEPRECATED: Use `f_get_range()` instead!
+
+        '''
+        return self.f_get_range()
+
+    def f_get_range(self):
+        ''' Returns an iterable to iterate over the values of the exploration range.
+
+        Note that the returned values should be either a copy of the exploration range
+        or the array must be immutable, for example a python tuple.
+
+        :return: immutable sequence
+
+        Example usage:
+
+        >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
+        >>> param._explore([42,43,43])
+        >>> print param.f_get_range()
+        >>> (42,43,44)
+
+        :raises: TypeError if the parameter is not explored.
+
         '''
 
         raise NotImplementedError( "Should have implemented this." )
     
     def _explore(self, iterable):
-        ''' The default method to create and explored parameter containing an array of entries.
+        ''' The default method to create and explored parameter containing a range of entries.
 
-        :param iterable: An iterable specifying the exploration array
+        :param iterable: An iterable specifying the exploration range
 
              For example:
 
@@ -345,7 +413,7 @@ class BaseParameter(NNLeafNode):
 
             ParameterLockedException: If the parameter is locked.
 
-            TypeError: If the parameter is already an array.
+            TypeError: If the parameter is already explored.
 
         '''
 
@@ -353,42 +421,42 @@ class BaseParameter(NNLeafNode):
 
     def _expand(self, iterable):
         ''' Similar to :func:`~pypet.parameter.BaseParameter._explore` but appends to
-        the exploration array.
+        the exploration range.
 
-        :param iterable: An iterable specifying the exploration array.
+        :param iterable: An iterable specifying the exploration range.
 
         :raises:
 
-            ParameterLockedExcpetion: If the parameter is locked.
+            ParameterLockedException: If the parameter is locked.
 
-            TypeError: if the parameter is not an array.
+            TypeError: If the parameter did not have a range before.
 
         Example usage:
 
         >>> param = Parameter('groupA.groupB.myparam', data=3.13, comment='I am a neat example')
         >>> param._explore([3.0,2.0,1.0])
         >>> param._expand([42.0,43.0])
-        >>> print param.f_get_array()
+        >>> print param.f_get_range()
         >>> (3.0,2.0,1.0,42.0,43.0)
 
         '''
         raise NotImplementedError("Should have implemented this.")
 
     def _set_parameter_access(self, idx=0):
-        ''' Sets the current value according to the `idx` in the exploration array.
+        ''' Sets the current value according to the `idx` in the exploration range.
 
         Prepares the parameter for further usage, and tells it which point in the parameter
         space should be accessed by calls to :func:`~pypet.parameter.Parameter.f_get`.
 
-        :param idx: The index within the exploration array.
+        :param idx: The index within the exploration range.
 
-                If the parameter is not an array, the single data value is considered
+                If the parameter has no range, the single data value is considered
                 regardless of the value of `idx`.
                 Raises ValueError if the parameter is explored and `idx>=len(param)`.
 
         :raises: ValueError:
 
-            If the parameter is an array and `idx` is larger or equal to the
+            If the parameter has a range and `idx` is larger or equal to the
             length of the parameter.
 
         Example usage:
@@ -436,7 +504,7 @@ class BaseParameter(NNLeafNode):
 
             ParameterLockedException: If the parameter is locked.
 
-            TypeError: if  is the parameter is not an array.
+            TypeError: if  is the parameter has no range.
 
         '''
         raise NotImplementedError( "Should have implemented this." )
@@ -464,7 +532,7 @@ class Parameter(BaseParameter):
     ''' The standard container that handles access to simulation parameters.
 
     Parameters are simple container objects for data values. They handle single values as well as
-    the so called exploration array. An array containing multiple values which is accessed
+    the so called exploration range. An array containing multiple values which is accessed
     one after the other in individual simulation runs.
 
     Parameter exploration is usually initiated through the trajectory see
@@ -530,7 +598,7 @@ class Parameter(BaseParameter):
         self._default = None #The default value, which is the same as Data,
         # but it is necessary to keep a reference to it to restore the original value
         # after exploration
-        self._explored_data=tuple()#The Explored Data
+        self._explored_range=tuple()#The Explored Data
         self._set_logger()
 
         if not data == None:
@@ -547,7 +615,7 @@ class Parameter(BaseParameter):
         method (or at initialisation).
 
         If the parameter is explored during the runtime of a simulation,
-        the actual value of the parameter is changed and taken from the exploration array.
+        the actual value of the parameter is changed and taken from the exploration range.
         Calling :func:`~pypet.parameter.Parameter._restore_default` sets the parameter's value
         back to it's original value.
 
@@ -568,14 +636,14 @@ class Parameter(BaseParameter):
     def __len__(self):
         if self._data is None:
             return 0
-        elif len(self._explored_data)>0:
-            return len(self._explored_data)
+        elif len(self._explored_range)>0:
+            return len(self._explored_range)
         else:
             return 1
 
-    @copydoc(BaseParameter.f_is_array)
-    def f_is_array(self):
-        return len(self._explored_data)>0
+    @copydoc(BaseParameter.f_has_range)
+    def f_has_range(self):
+        return len(self._explored_range)>0
        
     def __getstate__(self):
         ''' Returns the actual state of the parameter for pickling.
@@ -586,7 +654,7 @@ class Parameter(BaseParameter):
         # If we don't need a full copy of the Parameter (because a single process needs
         # only access to a single point in the parameter space we can delete the rest
         if not self._full_copy :
-            result['_explored_data'] = tuple()
+            result['_explored_range'] = tuple()
 
         del result['_logger'] #pickling does not work with loggers
         return result
@@ -603,11 +671,11 @@ class Parameter(BaseParameter):
       
     @copydoc(BaseParameter._set_parameter_access)
     def _set_parameter_access(self, idx=0):
-        if idx >= len(self) and self.f_is_array():
-            raise ValueError('You try to access the %dth parameter in the array of parameters, '
-                             'yet there are only %d potential parameters.' % (idx, len(self)))
+        if idx >= len(self) and self.f_has_range():
+            raise ValueError('You try to access data item No. %d in the parameter range, '
+                             'yet there are only %d potential items.' % (idx, len(self)))
         else:
-            self._data = self._explored_data[idx]
+            self._data = self._explored_range[idx]
 
     def f_supports(self, data):
         ''' Checks if input data is supported by the parameter.'''
@@ -689,7 +757,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter >>' + self._name + '<< is locked!')
 
 
-        if self.f_is_array():
+        if self.f_has_range():
             raise AttributeError('Your Parameter is an explored array can no longer change values!')
 
 
@@ -723,25 +791,25 @@ class Parameter(BaseParameter):
         return val
 
 
-    @copydoc(BaseParameter.f_get_array)
-    def f_get_array(self):
-        ''' Returns an python tuple of the exploration array.
+    @copydoc(BaseParameter.f_get_range)
+    def f_get_range(self):
+        ''' Returns an python tuple of the exploration range.
 
         Example usage:
 
         >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
         >>> param._explore([42,43,43])
-        >>> print param.f_get_array()
+        >>> print param.f_get_range()
         >>> (42,43,44)
 
         :raises: TypeError: If parameter is not explored.
 
         '''
-        if not self.f_is_array():
+        if not self.f_has_range():
             raise TypeError('Your parameter >>%s<< is not array, so cannot return array.' %
                                     self.v_full_name)
         else:
-            return self._explored_data
+            return self._explored_range
 
 
     def _explore(self, explore_iterable):
@@ -750,10 +818,10 @@ class Parameter(BaseParameter):
         Raises ParameterLockedException if the parameter is locked.
         Raises TypeError if the parameter does not support the data,
         the types of the data in the iterable are not the same as the type of the default value,
-        or the parameter has already an exploration array.
+        or the parameter has already an exploration range.
 
         Note that the parameter will iterate over the whole iterable once and store
-        the individual data values into a tuple. Thus, the whole exploration array is
+        the individual data values into a tuple. Thus, the whole exploration range is
         explicitly stored in memory.
 
         :param iterable: An iterable specifying the exploration array
@@ -761,7 +829,7 @@ class Parameter(BaseParameter):
         For example:
 
         >>> param._explore([3.0,2.0,1.0])
-        >>> param.f_get_array()
+        >>> param.f_get_range()
         (3.0,2.0,1.0)
 
 
@@ -771,13 +839,13 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self.v_full_name)
 
-        if self.f_is_array():
+        if self.f_has_range():
             raise TypeError('Your Parameter %s is already explored, cannot _explore it further!' % self._name)
 
 
         data_tuple = self._data_sanity_checks(explore_iterable)
 
-        self._explored_data = data_tuple
+        self._explored_range = data_tuple
         self.f_lock()
 
     def _expand(self,explore_iterable):
@@ -786,19 +854,19 @@ class Parameter(BaseParameter):
         Raises ParameterLockedException if the parameter is locked.
         Raises TypeError if the parameter does not support the data,
         the types of the data in the iterable are not the same as the type of the default value,
-        or the parameter was not an array before.
+        or the parameter did not have an array before.
 
         Note that the parameter will iterate over the whole iterable once and store
-        the individual data values into a tuple. Thus, the whole exploration array is
+        the individual data values into a tuple. Thus, the whole exploration range is
         explicitly stored in memory.
 
-        :param iterable: An iterable specifying the exploration array
+        :param iterable: An iterable specifying the exploration range
 
                          For example:
 
                          >>> param = Parameter('Im.an.example', data=33.33, comment='Wooohoo!')
                          >>> param._explore([3.0,2.0,1.0])
-                         >>> param.f_get_array()
+                         >>> param.f_get_range()
                          >>> (3.0,2.0,1.0)
 
         :raises TypeError,ParameterLockedException
@@ -807,7 +875,7 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter >>%s<< is locked!' % self.v_full_name)
 
-        if not self.f_is_array():
+        if not self.f_has_range():
             raise TypeError('Your Parameter is not an array and can therefore not be expanded.' % self._name)
 
 
@@ -815,7 +883,7 @@ class Parameter(BaseParameter):
 
 
 
-        self._explored_data = self._explored_data + data_tuple
+        self._explored_range = self._explored_range + data_tuple
         self.f_lock()
 
 
@@ -824,6 +892,7 @@ class Parameter(BaseParameter):
 
         Checks if the data values are supported by the parameter and if the values are of the same
         type as the default value.
+
         '''
         data_tuple = []
 
@@ -852,8 +921,8 @@ class Parameter(BaseParameter):
     def _store(self):
         store_dict={}
         store_dict['data'] = ObjectTable(data={'data':[self._data]})
-        if self.f_is_array():
-            store_dict['explored_data'] = ObjectTable(data={'data':self._explored_data})
+        if self.f_has_range():
+            store_dict['explored_data'] = ObjectTable(data={'data':self._explored_range})
 
 
         return store_dict
@@ -863,7 +932,7 @@ class Parameter(BaseParameter):
         self._data = self._convert_data(load_dict['data']['data'][0])
         self._default=self._data
         if 'explored_data' in load_dict:
-            self._explored_data = tuple([self._convert_data(x)
+            self._explored_range = tuple([self._convert_data(x)
                                    for x in load_dict['explored_data']['data'].tolist()])
 
 
@@ -879,14 +948,14 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
-        if not self.f_is_array():
+        if not self.f_has_range():
             raise TypeError('Cannot shrink non-array Parameter.')
 
         if self.f_is_empty():
             raise TypeError('Cannot shrink empty Parameter.')
 
-        del self._explored_data
-        self._explored_data={}
+        del self._explored_range
+        self._explored_range={}
 
     @copydoc(BaseParameter.f_empty)
     def f_empty(self):
@@ -897,7 +966,7 @@ class Parameter(BaseParameter):
         if self.f_is_empty():
             raise TypeError('Cannot empty an already empty Parameter.')
 
-        if self.f_is_array():
+        if self.f_has_range():
             self._shrink()
 
         del self._data
@@ -935,7 +1004,7 @@ class ArrayParameter(Parameter):
 
             store_dict['data'+ArrayParameter.IDENTIFIER] = self._data
 
-            if self.f_is_array():
+            if self.f_has_range():
                 ## Supports smart storage by hashing numpy arrays are hashed by their data attribute
                 smart_dict = {}
 
@@ -943,7 +1012,7 @@ class ArrayParameter(Parameter):
                     ObjectTable(columns=['idx'],index=range(len(self)))
 
                 count = 0
-                for idx,elem in enumerate(self._explored_data):
+                for idx,elem in enumerate(self._explored_range):
 
                     try:
                         hash(elem)
@@ -973,8 +1042,6 @@ class ArrayParameter(Parameter):
         return 'xa%s%08d' % (ArrayParameter.IDENTIFIER, name_id)
 
 
-
-
     def _load(self,load_dict):
         try:
             self._data = load_dict['data'+ArrayParameter.IDENTIFIER]
@@ -989,7 +1056,7 @@ class ArrayParameter(Parameter):
                     arrayname = self._build_name(name_id)
                     explore_list.append(load_dict[arrayname])
 
-                self._explored_data=tuple([self._convert_data(x) for x in explore_list])
+                self._explored_range=tuple([self._convert_data(x) for x in explore_list])
 
         except KeyError:
             super(ArrayParameter,self)._load(load_dict)
@@ -1014,6 +1081,9 @@ class SparseParameter(ArrayParameter):
 
     Sparse Parameter inherits from :class:`pypet.parameter.ArrayParameter` and supports
     arrays and native python data as well.
+
+    Uses same memory management than its superclass.
+
     '''
 
     IDENTIFIER = '__spsp__'
@@ -1026,6 +1096,7 @@ class SparseParameter(ArrayParameter):
         ''' The sparse parameter is less restrictive than the parameter. If both values
         are sparse matrices they are considered to be of same type
         regardless of their size and values they contain.
+
         '''
         if self._is_supported_matrix(val1) and self._is_supported_matrix(val2):
             return True
@@ -1126,7 +1197,7 @@ class SparseParameter(ArrayParameter):
             for idx,name in enumerate(rename_list):
                 store_dict[name] = data_list[idx]
 
-            if self.f_is_array():
+            if self.f_has_range():
                 ## Supports smart storage by hashing
                 smart_dict = {}
 
@@ -1135,7 +1206,7 @@ class SparseParameter(ArrayParameter):
                                 index=range(len(self)))
 
                 count = 0
-                for idx,elem in enumerate(self._explored_data):
+                for idx,elem in enumerate(self._explored_range):
 
                     data_list, name_list, hash_tuple = self._serialize_matrix(elem)
 
@@ -1214,7 +1285,7 @@ class SparseParameter(ArrayParameter):
                     matrix = self._reconstruct_matrix(data_list)
                     explore_list.append(matrix)
 
-                self._explored_data=tuple(explore_list)
+                self._explored_range=tuple(explore_list)
 
 
         except KeyError:
@@ -1227,7 +1298,8 @@ class PickleParameter(Parameter):
     ''' A parameter class that supports all picklable objects, and pickles everything!
 
     If you use the default HDF5 storage service, the pickle dumps are stored to disk.
-    Works similar to the array parameter regarding memory management.
+    Works similar to the array parameter regarding memory management (Equality of objects
+    is based on object id).
 
     There is no straightforward check to guarantee that data is picklable, so you have to
     take care that all data handled by the PickleParameter supports pickling.
@@ -1257,7 +1329,7 @@ class PickleParameter(Parameter):
         dump = pickle.dumps(self._data)
         store_dict['data'] = dump
 
-        if self.f_is_array():
+        if self.f_has_range():
 
             store_dict['explored_data'] = \
                 ObjectTable(columns=['idx'],index=range(len(self)))
@@ -1266,7 +1338,7 @@ class PickleParameter(Parameter):
             count = 0
 
 
-            for idx, val in enumerate(self._explored_data):
+            for idx, val in enumerate(self._explored_range):
 
                 obj_id = id(val)
 
@@ -1303,7 +1375,7 @@ class PickleParameter(Parameter):
                     loaded = pickle.loads(load_dict[arrayname])
                     explore_list.append(loaded)
 
-                self._explored_data=tuple(explore_list)
+                self._explored_range=tuple(explore_list)
 
 
         self._default=self._data
@@ -1315,7 +1387,7 @@ class BaseResult(NNLeafNode):
     ''' The basic api to store results.
 
     Compared to parameters (see :class:`~pypet.parameter.BaseParameter`) results are also
-    initialised with a fullname and a comment.
+    initialised with a full name and a comment.
     As before grouping is achieved by colons in the name.
 
     Example usage:
@@ -1331,7 +1403,7 @@ class BaseResult(NNLeafNode):
 class Result(BaseResult):
     ''' Light Container that stores tables and arrays.
 
-    Note that no sanity checks on individual data is made (only outer data structure)
+    Note that no sanity checks on individual data is made (only on outer data structure)
     and you have to take care, that your data is understood by the storage service.
     It is assumed that results tend to be large and therefore sanity checks would be too expensive.
 
@@ -1343,7 +1415,6 @@ class Result(BaseResult):
           np.complex, np.str
 
         *
-
             python lists and tuples of the previous types
             (python natives + numpy natives and arrays)
             Lists and tuples are not allowed to be nested and must be
@@ -1362,12 +1433,17 @@ class Result(BaseResult):
 
     .. _DataFrames: http://pandas.pydata.org/pandas-docs/dev/dsintro.html#dataframe
 
+    Note that containers should NOT be empty (like empty dicts or lists) at the time
+    they are saved to disk. The standard HDF5 storage service cannot store empty containers!
+
+    The Result emits a warning if you hand it over an empty container.
+
     Such values are either set on initialisation or with :func:`~pypet.parameter.Result.f_set`
 
     Example usage:
 
     >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
-        [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
+        [1000,2000], {'a':'b','c':333}, hitchhiker='Arthur Dent')
 
     :param fullanme: The fullname of the result, grouping can be achieved by colons,
 
@@ -1603,7 +1679,7 @@ class Result(BaseResult):
         Example:
 
         >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
-        [1000,2000], {'a':'b','c':'d'}, hitchhiker='Arthur Dent')
+        [1000,2000], {'a':'b','c':333}, hitchhiker='Arthur Dent')
         >>> res.f_get('hitchhiker')
         'Arthur Dent'
         >>> res.f_get(0)
@@ -1677,6 +1753,13 @@ class Result(BaseResult):
                                  (name,str(type(item))))
 
     def _check_if_empty(self, item, name):
+        ''' Checks if the result is requested to handle an empty item, like an empyt list or
+        dicitonary.
+
+        Empty items are problematic because they cannot be stored by the storage service.
+        Emits a waring in case of an empty item.
+
+        '''
         try:
             if len(item) ==0:
                 self._logger.warning('The Item >>%s<< is empty.' % name)
@@ -1773,6 +1856,7 @@ class SparseResult(Result):
     '''
 
     IDENTIFIER = SparseParameter.IDENTIFIER
+    '''Identifier string to label sparse matrix data'''
 
     @copydoc(Result.f_set_single)
     def f_set_single(self, name, item):

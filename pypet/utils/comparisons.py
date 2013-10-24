@@ -65,8 +65,8 @@ def parameters_equal(a,b):
     if not len(a) == len(b):
         return False
 
-    if a.f_is_array():
-        for myitem, bitem in it.izip(a.f_get_array(),b.f_get_array()):
+    if a.f_has_range():
+        for myitem, bitem in it.izip(a.f_get_range(),b.f_get_range()):
             if not a._values_of_same_type(myitem,bitem):
                 return False
 

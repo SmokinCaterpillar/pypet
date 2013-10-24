@@ -90,12 +90,12 @@ class ContinueTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
 
-        ### Create a crash and say, that the first and last run did not work.
+        ### Create a crash and say, that the second last and last run did not work.
         pt_file = pt.openFile(self.filenames[0],mode='a')
         runtable = pt_file.getNode('/'+self.trajs[0].v_name+'/overview/runs')
 
         for idx,row in enumerate(runtable.iterrows()):
-            if idx == 0 or idx == 3:
+            if idx == 2 or idx == 3:
                 row['completed'] = 0
                 row.update()
 
