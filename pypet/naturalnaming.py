@@ -1,3 +1,5 @@
+from pypet.utils.decorators import deprecated
+
 __author__ = 'robert'
 
 
@@ -9,7 +11,6 @@ import pypet.pypetexceptions as pex
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
-from pypet.utils.helpful_functions import deprecated
 import logging
 
 

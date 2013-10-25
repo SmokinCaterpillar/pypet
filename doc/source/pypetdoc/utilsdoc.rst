@@ -24,5 +24,5 @@ Based on the suggestion from HERE_, thanks again Lauritz V. Thaulow :-)
 
 .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
 
-.. automodule:: pypet.utils.helpful_functions
+.. automodule:: pypet.utils.comparisons
     :members: nested_equal

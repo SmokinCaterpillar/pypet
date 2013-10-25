@@ -1,56 +1,7 @@
 __author__ = 'Robert Meyer'
 
-
-from collections import Sequence, Mapping, Set
-import numpy as np
-import pandas as pd
-from pypet import pypetconstants
-import warnings
-import functools
-
-
-def deprecated(msg=''):
-    '''This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used.
-
-    :param msg:
-
-        Additional message added to the warning.
-
-    '''
-    def wrapper(func):
-        @functools.wraps(func)
-        def new_func(*args, **kwargs):
-            warning_string = "Call to deprecated function or property `%s`." % func.__name__
-            warning_string= warning_string + ' ' + msg
-            warnings.warn_explicit(
-                 warning_string,
-                 category=DeprecationWarning,
-                 filename=func.func_code.co_filename,
-                 lineno=func.func_code.co_firstlineno + 1
-             )
-            return func(*args, **kwargs)
-        return new_func
-    return wrapper
-
-
-
-
-def copydoc(fromfunc, sep="\n"):
-    """
-    Decorator: Copy the docstring of `fromfunc`
-    """
-    def _decorator(func):
-        sourcedoc = fromfunc.__doc__
-        if func.__doc__ == None:
-            func.__doc__ = sourcedoc
-        else:
-            func.__doc__ = sep.join([sourcedoc, func.__doc__])
-        return func
-    return _decorator
-
-
+from pypet.utils.decorators import deprecated
+from pypet.utils.comparisons import nested_equal as nested_equal_new
 
 def flatten_dictionary(nested_dict, separator):
     flat_dict = {}
@@ -82,58 +33,16 @@ def nest_dictionary(flat_dict, separator):
 
 
 
-
+@deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
 def nested_equal(a, b):
     """
     Compare two objects recursively by element, handling numpy objects.
 
     Assumes hashable items are not mutable in a way that affects equality.
+
+    DEPRECATED: Use `pypet.utils.comparisons.nested_equal` instead.
     """
-
-    # for types that support __eq__
-    if hasattr(a,'__eq__'):
-        try:
-            custom_eq= a == b
-            if isinstance(custom_eq,bool):
-                return custom_eq
-        except ValueError:
-            pass
-
-
-
-    #Check equality according to type type [sic].
-    if a is None:
-        return b is None
-    if isinstance(a, basestring):
-         return a == b
-    if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
-        return a==b
-    if isinstance(a, np.ndarray):
-        return np.all(a==b)
-    if isinstance(a, pd.DataFrame):
-        new_frame = a == b
-        new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
-        return np.all(new_frame.as_matrix())
-    if isinstance(a, Sequence):
-        return all(nested_equal(x, y) for x, y in zip(a, b))
-    if isinstance(a, Mapping):
-        if set(a.keys()) != set(b.keys()):
-            return False
-        return all(nested_equal(a[k], b[k]) for k in a.keys())
-    if isinstance(a, Set):
-         return a == b
-
-    if hasattr(a,'__dict__'):
-        if not hasattr(b,'__dict__'):
-            return False
-
-        if set(a.__dict__.keys()) != set(b.__dict__.keys()):
-            return False
-
-        return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__.keys())
-
-    return id(a) == id(b)
-
+    return nested_equal_new(a,b)
 
 
 

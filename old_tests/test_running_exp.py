@@ -1,16 +1,14 @@
+from multiprocessing import Pool, Manager
+import multiprocessing
 
+import numpy as np
+import scipy.sparse as spsp
 
 from pypet.parameter import *
 from pypet.trajectory import Trajectory, SingleRun
-import numpy as np
-import scipy.sparse as spsp
 import pypet.utils.explore as ut
-from multiprocessing import log_to_stderr, get_logger, Pool, freeze_support, Manager
-from multiprocessing.synchronize import Lock
 from pypet.configuration import config
-from pypet.mplogging import  listener_configurer,listener_process,worker_configurer
-import multiprocessing
-
+from pypet.utils.mplogging import  listener_configurer,listener_process,worker_configurer
 
 
 def do_stuff(args):

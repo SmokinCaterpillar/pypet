@@ -1,3 +1,5 @@
+from pypet.utils.comparisons import nested_equal
+
 __author__ = 'robert'
 
 
@@ -8,7 +10,7 @@ else:
     import unittest
 
 from pypet.utils.explore import cartesian_product
-from pypet.utils.helpful_functions import nested_equal
+
 
 class CartesianTest(unittest.TestCase):
 

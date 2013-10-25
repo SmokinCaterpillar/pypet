@@ -1,7 +1,7 @@
 __author__ = 'Robert Meyer'
 
-from pypet.utils.comparisons import results_equal,parameters_equal
-from pypet.utils.helpful_functions import nested_equal, nest_dictionary, flatten_dictionary
+from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
+from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
     BaseParameter, SparseParameter, SparseResult
 import scipy.sparse as spsp

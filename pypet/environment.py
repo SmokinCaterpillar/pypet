@@ -4,11 +4,13 @@ Created on 03.06.2013
 @author: robert
 '''
 
-from pypet.mplogging import StreamToLogger
-from pypet.trajectory import Trajectory, SingleRun
 import os
 import sys
 import logging
+
+from pypet.utils.mplogging import StreamToLogger
+from pypet.trajectory import Trajectory, SingleRun
+
 
 try:
     import cPickle as pickle

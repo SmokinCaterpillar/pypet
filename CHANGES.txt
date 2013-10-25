@@ -1,5 +1,7 @@
 pypet 0.1b.2
 
+*   Better categorizations of the utility functions
+
 *   Comments are no longer limited in size
 
 *   New Brian Result

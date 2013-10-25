@@ -7,6 +7,8 @@ Created on 10.06.2013
 
 from pypet.parameter import Parameter,Result,ObjectTable
 ## Unfortunatley I have to do this for read the docs to be able to mock brian
+from pypet.utils.decorators import copydoc
+
 try:
     from brian.units import *
     from brian.stdunits import *
@@ -21,8 +23,6 @@ from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
 import numpy as np
 import logging
 import pandas as pd
-
-from pypet.utils.helpful_functions import copydoc
 
 
 class BrianParameter(Parameter):

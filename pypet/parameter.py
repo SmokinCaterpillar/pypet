@@ -1,14 +1,15 @@
+from pypet.utils.comparisons import nested_equal
+from pypet.utils.decorators import deprecated, copydoc
+
 __author__ = 'Robert Meyer'
 
 
 import logging
 import pypetexceptions as pex
 import numpy as np
-from pypet.utils.helpful_functions import nested_equal, copydoc
 from pypet import pypetconstants
 from pandas import DataFrame
 from pypet.naturalnaming import NNLeafNode
-from pypet.utils.helpful_functions import deprecated
 import scipy.sparse as spsp
 
 try:

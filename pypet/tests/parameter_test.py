@@ -1,4 +1,4 @@
-
+from pypet.utils.comparisons import nested_equal
 
 __author__ = 'Robert Meyer'
 
@@ -15,7 +15,6 @@ from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayPara
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
-from pypet.utils.helpful_functions import nested_equal
 import warnings
 
 
