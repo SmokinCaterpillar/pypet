@@ -1,5 +1,5 @@
-from pypet.utils.comparisons import nested_equal
-from pypet.utils.decorators import deprecated, copydoc
+
+
 
 __author__ = 'Robert Meyer'
 
@@ -11,6 +11,9 @@ from pypet import pypetconstants
 from pandas import DataFrame
 from pypet.naturalnaming import NNLeafNode
 import scipy.sparse as spsp
+import pypet.utils.comparisons as comp
+from pypet.utils.decorators import deprecated, copydoc
+
 
 try:
     import cPickle as pickle
@@ -28,6 +31,20 @@ class ObjectTable(DataFrame):
     is not automatically converted to a numpy 64 bit integer (np.int64).
 
     The object table serves as a data structure to hand data to a storage service.
+
+    Example Usage:
+
+    >>> ObjectTable(data={'characters':['Luke', 'Han', 'Spock'], 'Random_Values' :[42,43,44] })
+
+    Creates the following table:
+
+    ::
+             Random_Values characters
+        0            42       Luke
+        1            43        Han
+        2            44      Spock
+
+
 
     '''
     def __init__(self, data=None, index = None, columns = None, copy=False):
@@ -228,7 +245,7 @@ class BaseParameter(NNLeafNode):
         if not self._values_of_same_type(val1,val2):
             return False
 
-        return nested_equal(val1,val2)
+        return comp.nested_equal(val1,val2)
 
     def _values_of_same_type(self,val1,val2):
         ''' Checks if two values agree in type.
@@ -1663,6 +1680,11 @@ class Result(BaseResult):
         '''
         return self.f_get(name)
 
+    def __iter__(self):
+        ''' Equivalent to iterating over the keys of the data dictionary.
+        '''
+        return self._data.__iter__()
+
     def f_get(self,*args):
         ''' Returns items handled by the result.
 
@@ -1747,6 +1769,9 @@ class Result(BaseResult):
         if self._supports(item):
 
             self._check_if_empty(item, name)
+
+            if name in self._data:
+                self._logger.debug('Replacing `%s` in result `%s`.' % (name, self.v_full_name))
 
             self._data[name] = item
         else:

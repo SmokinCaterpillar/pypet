@@ -109,9 +109,29 @@ def nested_equal(a, b):
     if isinstance(a, np.ndarray):
         return np.all(a==b)
     if isinstance(a, pd.DataFrame):
-        new_frame = a == b
-        new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
-        return np.all(new_frame.as_matrix())
+        try:
+            new_frame = a == b
+            new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
+            return np.all(new_frame.as_matrix())
+        except ValueError:
+            # The Value Error can happen if the data frame is of dtype=object and contains
+            # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
+            for name, cola in a.iteritems():
+                if not name in b:
+                    return False
+
+                colb = b[name]
+
+                if not len(cola)==len(colb):
+                    return False
+
+                for idx,itema in enumerate(cola):
+                    itemb = colb[idx]
+                    if not nested_equal(itema,itemb):
+                        return False
+
+            return True
+
     if isinstance(a, Sequence):
         return all(nested_equal(x, y) for x, y in zip(a, b))
     if isinstance(a, Mapping):

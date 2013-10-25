@@ -47,7 +47,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def __init__(self, name, idx, parent_trajectory):
 
 
-        super(SingleRun,self).__init__(root=True)
+        super(SingleRun,self).__init__()
 
         self._parent_trajectory = parent_trajectory
 
@@ -607,7 +607,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
         self._version = VERSION
-        super(SingleRun,self).__init__(root=True)
+        super(SingleRun,self).__init__()
         #if init_time is None:
         init_time = time.time()
 
@@ -1077,8 +1077,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         self.f_lock_parameters()
         self.f_lock_derived_parameters()
-        for param in self._explored_parameters.itervalues():
-            param.v_full_copy = self._full_copy
+
 
         ## If the trajectory is ought to be expanded we remove the subtrees of previous results
         ## first since they won't be used during an experiment

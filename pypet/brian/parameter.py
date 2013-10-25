@@ -15,7 +15,7 @@ try:
 except TypeError:
     pass
 
-from brian.fundamentalunits import Unit, Quantity, get_unit
+from brian.fundamentalunits import Unit, Quantity, get_unit, get_unit_fast
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
     MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
@@ -290,7 +290,7 @@ class BrianResult(Result):
         if isinstance(data, Quantity):
             return True
         else:
-            return super(BrianParameter,self)._supports(data)
+            return super(BrianResult,self)._supports(data)
 
 
     def _store(self):
@@ -300,13 +300,13 @@ class BrianResult(Result):
 
                 if self._storage_mode == BrianResult.STRING_MODE:
 
-                    valstr = self._data.in_best_unit(python_code=True)
+                    valstr = val.in_best_unit(python_code=True)
                     store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'data':[valstr],
                                                            'mode' :[self._storage_mode] })
 
                 elif self._storage_mode == BrianResult.FLOAT_MODE:
-                    unitstr = repr(get_unit_fast(self._data))
-                    value = float(self._data)
+                    unitstr = repr(get_unit_fast(val))
+                    value = float(val)
                     store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'value':[value],
                                                            'unit':[unitstr],
                                                            'mode':[self._storage_mode]})
@@ -314,14 +314,15 @@ class BrianResult(Result):
                 else:
                     raise RuntimeError('You shall not pass!')
 
-                return store_dict
             else:
                 store_dict[key]=val
+
+        return store_dict
 
 
     def _load(self,load_dict):
 
-        for key in load_dict.iteritems():
+        for key in load_dict:
             if BrianResult.IDENTIFIER in key:
                 data_table = load_dict[key]
                 self._storage_mode = data_table['mode'][0]
@@ -373,6 +374,10 @@ class BrianMonitorResult(Result):
     *  MultiStateMonitor
 
     * StateMonitor
+
+    **IMPORTANT**: Use only 1 result per monitor! Do not store several monitors into a single
+    result. Many monitors have fields with the same name but different data. Storing 2 monitors
+    into the same result might cause the lost of information about one of the monitors.
 
 
     Example:
@@ -467,9 +472,6 @@ class BrianMonitorResult(Result):
     
     def _extract_monitor_data(self,monitor):
         ## Check for each monitor separately:
-
-
-
         if isinstance(monitor, SpikeCounter):
             self._extract_spike_counter(monitor)
 
@@ -485,12 +487,11 @@ class BrianMonitorResult(Result):
         elif  isinstance(monitor, PopulationRateMonitor):
             self._extract_population_rate_monitor(monitor)
 
-
         elif isinstance(monitor, ISIHistogramMonitor):
             self._extract_isi_hist_monitor(monitor)
 
         elif isinstance(monitor,SpikeMonitor):
-            self._extrac_spike_monitor(monitor)
+            self._extract_spike_monitor(monitor)
 
         elif isinstance(monitor, MultiStateMonitor):
             self._extract_multi_state_monitor(monitor)
@@ -529,29 +530,32 @@ class BrianMonitorResult(Result):
         self.f_set(delay = monitor.delay)
         self.f_set(nspikes = monitor.nspikes)
 
-
+    @staticmethod
+    def _get_format_string(monitor):
+        digits= len(str(len(monitor.source)))
+        format_string = '%0'+str(digits)+'d'
+        return format_string
 
     def _extract_state_spike_monitor(self,monitor):
 
         self.f_set(source = str(monitor.source))
 
-
-
         varnames = monitor._varnames
         if not isinstance(varnames, tuple) :
             varnames = (varnames,)
+
+        for idx,varname in enumerate(varnames):
+            unit = repr(get_unit_fast(monitor.spikes[0][idx+2]))
+            self.f_set(**{varname+'_unit':unit})
+
 
         self.f_set(varnames = varnames)
 
         #self.f_set(record = monitor.record)
         self.f_set(delay=monitor.delay)
         self.f_set(nspikes = monitor.nspikes)
-
-        # if hasattr(monitor, 'function'):
-        #     data_dict['function'] = [getsource(monitor.function)]
-
-        self.f_set(nspikes = monitor.nspikes)
         self.f_set(times_unit = 'second')
+
 
         if self._storage_mode==BrianMonitorResult.TABLE_MODE:
             spike_dict={}
@@ -565,11 +569,14 @@ class BrianMonitorResult(Result):
                 spike_dict['times'] = nounit_list
                 spike_dict['neuron'] = list(zip_lists[0])
 
+                spiked_neurons = sorted(list(set(spike_dict['neuron'])))
+                self.f_set(neurons_with_spikes=spiked_neurons)
+
                 count = 2
                 for varname in varnames:
 
                     var_list = list(zip_lists[count])
-                    self.f_set(**{varname+'_unit':  repr(get_unit(var_list[0]))})
+
                     nounit_list = [np.float64(var) for var in var_list]
                     spike_dict[varname] = nounit_list
                     count = count +1
@@ -577,20 +584,29 @@ class BrianMonitorResult(Result):
                 self.f_set(spikes=pd.DataFrame(data=spike_dict))
 
         elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
+
+                format_string = self._get_format_string(monitor)
+                self.f_set(format_string=format_string)
+
+                spiked_neurons = set()
+
                 for neuron in range(len(monitor.source)):
                     spikes = monitor.times(neuron)
                     if len(spikes)>0:
-                        key = 'spiketimes_%08d' % neuron
+
+                        spiked_neurons.add(neuron)
+
+                        key = 'spiketimes_' + format_string % neuron
                         self.f_set(**{key:spikes})
+
+                spiked_neurons = sorted(list(spiked_neurons))
+                self.f_set(neurons_with_spikes=spiked_neurons)
 
                 for varname in varnames:
                      for neuron in range(len(monitor.source)):
                          values = monitor.values(varname,neuron)
                          if len(values)>0:
-                             key = varname+'_unit'
-                             if not  key in self:
-                                 self.f_set(**{key:  repr(get_unit(values[0]))})
-                             key = varname+'_idx%08d' % neuron
+                             key = varname+'_' + format_string % neuron
                              self.f_set(**{key:values})
 
 
@@ -599,7 +615,7 @@ class BrianMonitorResult(Result):
 
 
      
-    def _extrac_spike_monitor(self,monitor):
+    def _extract_spike_monitor(self,monitor):
         
         #assert isinstance(monitor, SpikeMonitor)
 
@@ -610,7 +626,8 @@ class BrianMonitorResult(Result):
 
         self.f_set(nspikes = monitor.nspikes)
 
-        self.f_set(times_unit='second')
+        self.f_set(times_unit = 'second')
+
 
         self.f_set(delay=monitor.delay)
 
@@ -627,14 +644,28 @@ class BrianMonitorResult(Result):
                 spike_dict['times'] = nounit_list
                 spike_dict['neuron'] = list(zip_lists[0])
 
+                spiked_neurons = sorted(list(set(spike_dict['neuron'])))
+                self.f_set(neurons_with_spikes=spiked_neurons)
+
                 spikeframe = pd.DataFrame(data=spike_dict)
                 self.f_set(spikes=spikeframe)
 
         elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
+                format_string = self._get_format_string(monitor)
+                self.f_set(format_string=format_string)
+
+                spiked_neurons = set()
+
                 for neuron, spikes in monitor.spiketimes.items():
                     if len(spikes)>0:
-                        key = 'spiketimes_%08d' % neuron
+
+                        spiked_neurons.add(neuron)
+
+                        key = 'spiketimes_' +format_string % neuron
                         self.f_set(**{key:spikes})
+
+                spiked_neurons = sorted(list(spiked_neurons))
+                self.f_set(neurons_with_spikes=spiked_neurons)
 
         else:
                 raise RuntimeError('You shall not pass!')

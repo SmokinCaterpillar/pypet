@@ -1,4 +1,3 @@
-from pypet.utils.comparisons import nested_equal
 
 __author__ = 'Robert Meyer'
 
@@ -11,11 +10,16 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter, SparseParameter
+from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter,\
+    SparseParameter, ObjectTable, Result, SparseResult, PickleResult
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import warnings
+import pandas as pd
+import pypet.utils.comparisons as comp
+from pypet.utils.helpful_classes import ChainMap
+
 
 
 class ParameterTest(unittest.TestCase):
@@ -100,7 +104,7 @@ class ParameterTest(unittest.TestCase):
             param = self.param[paramname]
             val1=param.f_get_range()[1]
             val2=param[1]
-            self.assertTrue(nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
 
     def test_type_error_for_get_item(self):
         for name,param in self.param.items():
@@ -133,7 +137,7 @@ class ParameterTest(unittest.TestCase):
             if not key in self.explore_dict:
                 self.param[key]._restore_default()
                 param_val = self.param[key].f_get()
-                self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
+                self.assertTrue(np.all(repr(val) == repr(param_val)),'%s != %s'  %(str(val),str(param_val)))
 
 
 
@@ -234,7 +238,7 @@ class ParameterTest(unittest.TestCase):
         self.testMetaSettings()
 
 
-    def test_pickling_with_multiprocessing(self):
+    def test_pickling_with_mocking_multiprocessing(self):
         for key, param in self.param.items():
             param.f_unlock()
             param.v_full_copy=False
@@ -468,6 +472,155 @@ class SparseParameterTest(ParameterTest):
         for key, vallist in self.explore_dict.items():
             self.param[key]._explore(vallist)
 
+
+class ResultTest(unittest.TestCase):
+
+    def make_results(self):
+        self.results= {}
+        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',**self.data)
+        self.results['test.res.args']=self.Constructor('test.res.args')
+        self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
+
+        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.kwargs'].f_set(**self.data)
+
+    def make_constructor(self):
+        self.Constructor=Result
+
+    def setUp(self):
+
+        if not hasattr(self,'data'):
+            self.data={}
+
+        self.data['integer'] = 42
+        self.data['float'] = 42.424242
+        self.data['string'] = 'TestString! 66'
+        self.data['long'] = long(44444444444444444444444)
+        self.data['numpy_array'] = np.array([[3232.3,232323.0,323232323232.32323232],[4,4]])
+        self.data['tuple'] = (444,444,443)
+        self.data['list'] = ['3','4','666']
+        self.data['dict'] = {'a':'b','c':42, 'd': (1,2,3)}
+        self.data['object_table'] = ObjectTable(data={'characters':['Luke', 'Han', 'Spock'],
+                                    'Random_Values' :[42,43,44],
+                                    'Arrays': [np.array([1,2]),np.array([3.4]), np.array([5,5])]})
+        self.data['pandas_frame'] = pd.DataFrame(data={'characters':['Luke', 'Han', 'Spock'],
+                                    'Random_Values' :[42,43,44],
+                                    'Doubles': [1.2,3.4,5.6]})
+
+        self.make_constructor()
+        self.make_results()
+
+
+    def test_rename(self):
+        for name,res in self.results.iteritems():
+            res._rename('test.test.wirsing')
+            self.assertTrue(res.v_name=='wirsing')
+            self.assertTrue(res.v_full_name=='test.test.wirsing')
+            self.assertTrue(res.v_location=='test.test')
+
+
+    def test_meta_settings(self):
+        for key, res in self.results.items():
+            self.assertEqual(res.v_full_name, key)
+            self.assertEqual(res.v_name, key.split('.')[-1])
+            self.assertEqual(res.v_location, '.'.join(key.split('.')[0:-1]))
+
+    def test_natural_naming(self):
+        for res_name,res in self.results.items():
+            for key, val1 in res.f_to_dict().items():
+                val2 = getattr(res, key)
+                self.assertTrue(comp.nested_equal(val1,val2))
+
+    def test_get_item(self):
+        for res_name,res in self.results.items():
+            for key, val1 in res.f_to_dict().items():
+                val2 = res[key]
+                self.assertTrue(comp.nested_equal(val1,val2))
+
+    def test_Attribute_error_for_get_item(self):
+        for res in self.results.values():
+            with self.assertRaises(AttributeError):
+                res['IDONOTEXIST']
+
+    def test_reject_outer_data_structure(self):
+        for res in self.results.values():
+            with self.assertRaises(TypeError):
+                res.f_set(doesntwork=ChainMap({},{}))
+
+    def test_the_insertion_made_implicetly_in_setUp(self):
+        for key, val1 in self.data.items():
+            res = self.results['test.res.kwargs']
+            val2 = res[key]
+            self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
+
+
+    def test_pickling(self):
+        for key, res in self.results.items():
+
+            dump = pickle.dumps(res)
+
+            newRes = pickle.loads(dump)
+
+            self.results[key] = newRes
+
+        self.test_the_insertion_made_implicetly_in_setUp()
+
+        self.test_meta_settings()
+
+    def test_storage_and_loading(self):
+
+        for key, res in self.results.items():
+            store_dict = res._store()
+
+            constructor = res.__class__
+
+
+            res = constructor('')
+
+            res._load(store_dict)
+
+            res._rename(key)
+
+            self.results[key] = res
+
+
+        self.test_the_insertion_made_implicetly_in_setUp()
+
+        self.test_meta_settings()
+
+class PickleResultTest(ResultTest):
+    def make_constructor(self):
+        self.Constructor=PickleResult
+
+    def test_reject_outer_data_structure(self):
+        # Since it pickles everything, it does accept all sorts of objects
+        pass
+
+class SparseResultTest(ResultTest):
+
+    def make_constructor(self):
+        self.Constructor=SparseResult
+
+    def setUp(self):
+
+        if not hasattr(self,'data'):
+            self.data={}
+
+        self.data['spsparse_csc'] = spsp.csc_matrix((1000,100))
+        self.data['spsparse_csc'][1,2] = 44.5
+
+        self.data['spsparse_csr'] = spsp.csr_matrix((2222,22))
+        self.data['spsparse_csr'][1,3] = 44.5
+
+        self.data['spsparse_bsr'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_bsr'][3,2] = 44.5
+        self.data['spsparse_bsr'] = self.data['spsparse_bsr'].tobsr()
+
+        self.data['spsparse_dia'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_dia'][3,2] = 44.5
+        self.data['spsparse_dia'] = self.data['spsparse_dia'].todia()
+
+        super(SparseResultTest,self).setUp()
 
 if __name__ == '__main__':
     unittest.main()

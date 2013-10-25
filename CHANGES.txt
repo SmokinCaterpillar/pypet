@@ -1,5 +1,13 @@
 pypet 0.1b.2
 
+*   Results support __iter__()
+
+*   BrianMonitorResult, the name of state variables in array mode
+    is changed to varname+'_%Xd', instead of varname+'_idx%08d', and 'spiketimes_%08d' to
+    'spiketimes_%Xd' and X is chosen in accordance with the number of neurons
+
+*   BUG FIX: nested_equal now supports Object Tables containing numpy arrays
+
 *   Better categorizations of the utility functions
 
 *   Comments are no longer limited in size

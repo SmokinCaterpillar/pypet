@@ -39,7 +39,7 @@ FAST_UPPER_BOUND = 2
 class NNTreeNode(WithAnnotations):
     ''' Abstract class to define the general node in the trajectory tree.
     '''
-    def __init__(self,full_name,root,leaf):
+    def __init__(self,full_name,leaf):
         super(NNTreeNode,self).__init__()
 
         self._rename(full_name)
@@ -142,7 +142,7 @@ class NNLeafNode(NNTreeNode):
     '''
 
     def __init__(self,full_name,comment,parameter):
-        super(NNLeafNode,self).__init__(full_name=full_name,root=False,leaf=True)
+        super(NNLeafNode,self).__init__(full_name=full_name,leaf=True)
         self._parameter=parameter
 
 
@@ -852,16 +852,16 @@ class NaturalNamingInterface(object):
 
 
         if type_name == RESULT_GROUP:
-            return ResultGroup(self,full_name=full_name, root=False)
+            return ResultGroup(self,full_name=full_name)
 
         elif type_name == PARAMETER_GROUP:
-            return ParameterGroup(self,full_name=full_name, root=False)
+            return ParameterGroup(self,full_name=full_name)
 
         elif type_name == CONFIG_GROUP:
-            return ConfigGroup(self,full_name=full_name, root=False)
+            return ConfigGroup(self,full_name=full_name)
 
         elif type_name == DERIVED_PARAMETER_GROUP:
-            return DerivedParameterGroup(self,full_name=full_name, root=False)
+            return DerivedParameterGroup(self,full_name=full_name)
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -1211,8 +1211,8 @@ class NNGroupNode(NNTreeNode):
     You can add other groups or parameters/results to it.
 
     '''
-    def __init__(self, nn_interface=None, full_name='', root=False):
-        super(NNGroupNode,self).__init__(full_name,root=root,leaf=False)
+    def __init__(self, nn_interface=None, full_name=''):
+        super(NNGroupNode,self).__init__(full_name,leaf=False)
         self._children={}
         self._nn_interface=nn_interface
 
