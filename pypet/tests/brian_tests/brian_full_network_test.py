@@ -122,9 +122,9 @@ class NetworkTest(unittest.TestCase):
 
 
         env = Environment(trajectory='Test',
-                          filename=make_temp_file('experiments/tests/brian/HDF5/test.hdf5'),
+                          filename=make_temp_file('experiments/tests/brian_tests/HDF5/test.hdf5'),
                           file_title='test',
-                          log_folder=make_temp_file('experiments/tests/brian/log'))
+                          log_folder=make_temp_file('experiments/tests/brian_tests/log'))
 
         traj = env.v_trajectory
 

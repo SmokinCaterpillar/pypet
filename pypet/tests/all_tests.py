@@ -17,12 +17,13 @@ from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
 try:
-    from pypet.tests.brian.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
+    from pypet.tests.brian_tests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
         BrianResult, BrianResultStringModeTest
     if not os.getenv('TRAVIS',False):
-        from pypet.tests.brian.brian_monitor_test import BrianMonitorTest
-        from pypet.tests.brian.brian_full_network_test import NetworkTest
-except ImportError:
+        from pypet.tests.brian_tests.brian_monitor_test import BrianMonitorTest
+        from pypet.tests.brian_tests.brian_full_network_test import NetworkTest
+except ImportError as e:
+    print e.message
     pass
 
 

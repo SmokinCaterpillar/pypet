@@ -30,7 +30,7 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - pip install pandas==$PANDAS_VERSION
   - echo "+++++++++++ Installing Brian +++++++++++"
-  - pip install brian
+  - pip install brian_tests
   - echo "+++++++++++ Installing GitPython +++++++++++"
   - pip install GitPython
   #Temporal solution to travis issue #155

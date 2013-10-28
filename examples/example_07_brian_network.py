@@ -41,7 +41,7 @@ def run_net(traj):
 
     defaultclock.dt=traj.defaultclock
 
-    # We let brian grasp the stuff from the local namespace,
+    # We let brian_tests grasp the stuff from the local namespace,
     C=traj.C
     gL=traj.gL
     EL=traj.EL
@@ -62,7 +62,7 @@ def run_net(traj):
     neuron.w=a*(neuron.vm-EL)
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,N) # bifurcation parameter
 
-    #Run the brian stuff initially for 100 milliseconds
+    #Run the brian_tests stuff initially for 100 milliseconds
     run(100*msecond,report='text') # we discard the first spikes
 
     # Create a Spike Monitor
@@ -74,7 +74,7 @@ def run_net(traj):
     # Now record for real for 500 milliseconds
     run(500*msecond,report='text')
 
-    # Add the brian monitor
+    # Add the brian_tests monitor
     traj.v_standard_result = BrianMonitorResult
     traj.f_add_result('SpikeMonitor',MSpike)
     traj.f_add_result('StateMonitorV', MStateV)

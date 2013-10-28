@@ -4,7 +4,7 @@ from pypet.tests.parameter_test import ResultTest
 
 __author__ = 'Robert Meyer'
 
-from pypet.tests.brian.run_a_brian_network import run_network
+from pypet.tests.brian_tests.run_a_brian_network import run_network
 import pypet.utils.comparisons as comp
 
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \

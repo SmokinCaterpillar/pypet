@@ -10,7 +10,7 @@ import sys
 def alpha2beta(filename):
     ''' Converts a hdf5 file with data generated from alpha version to the new format.
 
-    IMPORTANT: Works only if you have NOT used pickle, sparse or brian parameters!
+    IMPORTANT: Works only if you have NOT used pickle, sparse or brian_tests parameters!
 
     IMPORTANT: The overview tables will be rendered useless!
 
