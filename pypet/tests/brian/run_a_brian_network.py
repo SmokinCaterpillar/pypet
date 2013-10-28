@@ -17,7 +17,7 @@ def run_network():
     b=0.08*nA
     I=8*nA
     Vcut=DeltaT# practical threshold condition
-    N=25
+    N=10
 
     reset = 'vm=Vr;w+=b'
 
@@ -53,7 +53,7 @@ def run_network():
 
     VanRossum = VanRossumMetric(neuron, tau=5*msecond)
 
-    run(25*msecond,report='text')
+    run(10*msecond,report='text')
 
 
     monitor_dict['SpikeMonitor']=MSpike

@@ -355,29 +355,7 @@ class BrianMonitorResult(Result):
 
     Add monitor on `__init__` via `monitor=` or via `f_set(monitor=brian_monitor)`
 
-    Following monitors are supported:
-
-    * SpikeCounter
-
-    * VanRossumMetric
-
-    * PopulationSpikeCounter
-
-    * StateSpikeMonitor
-
-    * PopulationRateMonitor
-
-    * ISIHistogramMonitor:
-
-    * SpikeMonitor
-
-    *  MultiStateMonitor
-
-    * StateMonitor
-
-    **IMPORTANT**: Use only 1 result per monitor! Do not store several monitors into a single
-    result. Many monitors have fields with the same name but different data. Storing 2 monitors
-    into the same result might cause the lost of information about one of the monitors.
+    **IMPORTANT**: You can only use 1 result per monitor. Otherwise a 'TypeError' is thrown.
 
 
     Example:
@@ -392,8 +370,7 @@ class BrianMonitorResult(Result):
     * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
 
         Default, information is stored into a single table where
-        the first column is the neuron index,
-        second column is the spike time
+        one column contains the neuron index, another the spiketimes and
         following columns contain variable values (in case of the StateSpikeMonitor)
         This is a very compact storage form.
 
@@ -404,6 +381,232 @@ class BrianMonitorResult(Result):
         Note that this mode does sort everything according to the neurons but
         reading and writing of data might take muuuuuch longer compared to
         the other mode.
+
+    Following monitors are supported and the following values are extraced:
+
+    * SpikeCounter
+
+        * count
+
+            Array of spike counts for each neuron
+
+        * nspikes
+
+            Number of recorded spikes
+
+        * source
+
+            Name of source recorded from as string.
+
+    * VanRossumMetric
+
+        * tau
+
+            Time constant of kernel.
+
+        * tau_unit
+
+            'second'
+
+        * distance
+
+            A square symmetric matrix containing the distances
+
+        * N
+
+            Number of neurons.
+
+        * source
+
+    * PopulationSpikeCounter
+
+        * delay
+
+            Recording delay
+
+        * nspikes
+
+        * source
+
+    * StateSpikeMonitor
+
+        * delay
+
+        * nspikes
+
+        * source
+
+        * varnames
+
+            Names of recorded variables as tuple of strings.
+
+        * spiketimes_unit
+
+            'second'
+
+        * variablename_unit
+
+            Unit of recorded variable as a string.
+            'variablename' is mapped to the name of a recorded variable. For instance,
+            if you recorded the membrane potential named 'vm' you would get a field named
+            'vm_unit'.
+
+        If you use v_storage_mode=:const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`
+
+            * spikes
+
+                pandas DataFrame containing in the columns:
+
+                'neuron': neuron indices
+
+                'spiketimes': times of spiking
+
+                'variablename': values of the recorded variables
+
+        If you use v_storage_mode=:const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`
+
+            * spiketimes_XXX
+
+                spiketimes of neuron 'XXX' for each neuron you recorded from. The number of digits
+                used to represent and format the neuron index are chosen automatically.
+
+            * variablename_XXX
+
+                Value of the recorded variable at spiketimes for neuron `XXX`
+
+            * format_string
+
+                String used to format the neuron index, for example `'%03d'`.
+
+
+    * PopulationRateMonitor
+
+        * times
+
+            The times of the bins.
+
+        * times_unit
+
+            'second'
+
+        * rate
+
+            An array of rates in Hz
+
+        * rate_unit
+
+            'Hz'
+
+        * source
+
+        * bin
+
+            The duration of a bin (in second).
+
+        * delay
+
+    * ISIHistogramMonitor:
+
+        * source
+
+        * delay
+
+        * nspikes
+
+        * bins
+
+            The bins array passed at initialisation of the monitor.
+
+        * count
+
+            An array of length `len(bins)` counting how many ISIs were in each bin.
+
+    * SpikeMonitor
+
+        * delay
+
+        * nspikes
+
+        * source
+
+
+        * spiketimes_unit
+
+            'second'
+
+        If you use v_storage_mode=:const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`
+
+            * spikes
+
+                pandas DataFrame containing in the columns:
+
+                'neuron': neuron indices
+
+                'spiketimes': times of spiking
+
+        If you use v_storage_mode=:const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`
+
+            * spiketimes_XXX
+
+                spiketimes of neuron 'XXX' for each neuron you recorded from. The number of digits
+                used to represent and format the neuron index are chosen automatically.
+
+            * format_string
+
+                String used to format the neuron index, for example `'%03d'`.
+
+    * StateMonitor
+
+        * source
+
+        * record
+
+            What to record. Can be 'True' to record from all neurons. A single integer value
+            or a list of integers.
+
+        * when
+
+            When recordings were made, for a list of potential values see BRIAN_.
+
+        .. _BRIAN: http://briansimulator.org/docs/reference-monitors.html
+
+        * timestep
+
+            Integer defining the clock timestep a recording was made.
+
+        * times
+
+            Array of recording times
+
+        * times_unit
+
+            'second'
+
+        * mean
+
+            Mean value of the state variable for every neuron in the group.
+
+        * var
+
+            Unbiased estimated of variances of state variable for each neuron.
+
+        * values
+
+            A 2D array of the values of all recorded neurons, each row is a single neuron's value
+
+        * unit
+
+            The unit of the values as a string
+
+        * varname
+
+            Name of recorded variable
+
+    * MultiStateMonitor
+
+        As above but instead of values and unit, the result contains
+        'varname_values' and 'varname_unit',
+        where 'varname' is the name of the recorded variable.
 
     '''
 
@@ -418,11 +621,30 @@ class BrianMonitorResult(Result):
         super(BrianMonitorResult,self).__init__(full_name)
 
         self._storage_mode=None
+        self._monitor_type=None
         storage_mode = kwargs.pop('storage_mode',BrianMonitorResult.TABLE_MODE)
         self.v_storage_mode=storage_mode
 
+
         self.f_set(*args,**kwargs)
 
+    def _store(self):
+        store_dict = super(BrianMonitorResult,self)._store()
+
+        if self._monitor_type is not None:
+            store_dict['monitor_type'] = self._monitor_type
+        if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
+            store_dict['storage_mode'] = self.v_storage_mode
+
+        return store_dict
+
+    def _load(self, load_dict):
+        if 'monitor_type' in load_dict:
+            self._monitor_type = load_dict['monitor_type']
+        if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
+            self._storage_mode = load_dict['storage_mode']
+
+        super(BrianMonitorResult, self)._load(load_dict)
 
     @property
     def v_storage_mode(self):
@@ -449,8 +671,18 @@ class BrianMonitorResult(Result):
         '''
         return self._storage_mode
 
+    @property
+    def v_monitor_type(self):
+        ''' The type of the stored monitor. Each MonitorResult can only manage a single Monitor
+        '''
+        return self._monitor_type
+
     @v_storage_mode.setter
     def v_storage_mode(self, storage_mode):
+
+        if self._monitor_type is not None:
+            raise TypeError('Cannot change the storage mode if you already extracted a monitor.')
+
         assert (storage_mode == BrianMonitorResult.ARRAY_MODE or storage_mode == BrianMonitorResult.TABLE_MODE)
         self._storage_mode = storage_mode
 
@@ -471,6 +703,13 @@ class BrianMonitorResult(Result):
 
     
     def _extract_monitor_data(self,monitor):
+
+        if self._monitor_type is not None:
+            raise TypeError('Your result `%s` already extracted data from a `%s` monitor.'
+                             ' Please use a new empty result for a new monitor.')
+
+        self._monitor_type = monitor.__class__.__name__
+
         ## Check for each monitor separately:
         if isinstance(monitor, SpikeCounter):
             self._extract_spike_counter(monitor)
@@ -554,11 +793,13 @@ class BrianMonitorResult(Result):
         #self.f_set(record = monitor.record)
         self.f_set(delay=monitor.delay)
         self.f_set(nspikes = monitor.nspikes)
-        self.f_set(times_unit = 'second')
+        self.f_set(spiketimes_unit = 'second')
 
 
         if self._storage_mode==BrianMonitorResult.TABLE_MODE:
             spike_dict={}
+
+
 
             if len(monitor.spikes)>0:
                 zip_lists = zip(*monitor.spikes)
@@ -566,7 +807,7 @@ class BrianMonitorResult(Result):
 
                 nounit_list = [np.float64(time) for time in time_list]
 
-                spike_dict['times'] = nounit_list
+                spike_dict['spiketimes'] = nounit_list
                 spike_dict['neuron'] = list(zip_lists[0])
 
                 spiked_neurons = sorted(list(set(spike_dict['neuron'])))
@@ -626,7 +867,7 @@ class BrianMonitorResult(Result):
 
         self.f_set(nspikes = monitor.nspikes)
 
-        self.f_set(times_unit = 'second')
+        self.f_set(spiketimes_unit = 'second')
 
 
         self.f_set(delay=monitor.delay)
@@ -641,7 +882,7 @@ class BrianMonitorResult(Result):
 
                 nounit_list = [np.float64(time) for time in time_list]
 
-                spike_dict['times'] = nounit_list
+                spike_dict['spiketimes'] = nounit_list
                 spike_dict['neuron'] = list(zip_lists[0])
 
                 spiked_neurons = sorted(list(set(spike_dict['neuron'])))
@@ -748,13 +989,13 @@ class BrianMonitorResult(Result):
         self.f_set(timestep = monitor.timestep)
 
         self.f_set(source = str(monitor.P))
-        
+        self.f_set(times_unit = 'second')
+
 
         self.f_set(mean = monitor.mean)
         self.f_set(var = monitor.var)
         if len(monitor.times)>0:
             self.f_set(times = monitor.times)
             self.f_set(values = monitor.values)
-            self.f_set(times_unit = 'second')
 
             
