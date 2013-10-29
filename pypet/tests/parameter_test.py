@@ -537,6 +537,13 @@ class ResultTest(unittest.TestCase):
                 val2 = res[key]
                 self.assertTrue(comp.nested_equal(val1,val2))
 
+    def test_f_to_dict_no_copy(self):
+        for res_name,res in self.results.items():
+            for key, val1 in res.f_to_dict(copy=False).items():
+                val2 = res[key]
+                self.assertTrue(comp.nested_equal(val1,val2))
+
+
     def test_Attribute_error_for_get_item(self):
         for res in self.results.values():
             with self.assertRaises(AttributeError):

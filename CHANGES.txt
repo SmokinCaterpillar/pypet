@@ -1,9 +1,13 @@
 pypet 0.1b.2
 
+*   Annotations support __iter__
+
+*   Annotations support __getitem__
+
 *   BrianMonitorResult, the property and columne 'times' for the Spike and StateSpikeMonitor
     has been renamed 'spiketimes'.
 
-*   Results support __iter__()
+*   Results support __iter__
 
 *   BrianMonitorResult, the name of state variables in array mode
     is changed to varname+'_%Xd', instead of varname+'_idx%08d', and 'spiketimes_%08d' to

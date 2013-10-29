@@ -262,7 +262,7 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['tables', 'numpy', 'brian_tests' ,'pandas', 'brian_tests.units', 'brian_tests.fundamentalunits',
-                'brian_tests.monitor', 'scipy', 'scipy.sparse']
+MOCK_MODULES = ['tables', 'numpy', 'briantests' ,'pandas', 'briantests.units', 'briantests.fundamentalunits',
+                'briantests.monitor', 'scipy', 'scipy.sparse']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()

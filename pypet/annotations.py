@@ -1,6 +1,6 @@
 __author__ = 'robert'
 
-from pypet import pypetconstants
+from pypet.utils.decorators import deprecated
 
 
 class Annotations(object):
@@ -16,6 +16,12 @@ class Annotations(object):
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
     '''
+
+    def __iter__(self):
+        return self.__dict__.__iter__()
+
+    def __getitem__(self, item):
+        return self.f_get(item)
 
     def f_to_dict(self,copy=True):
         '''Returns annotations as dictionary.
@@ -92,19 +98,11 @@ class Annotations(object):
 
     def f_ann_to_str(self):
         '''Returns all annotations as a concatenated string.
-
-        Truncates string if longer than maximum comment length.
         '''
         resstr = ''
         for key in sorted(self.__dict__.keys()):
-            resstr+='%s=%s, ' % (key,self.__dict__[key])
-            if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                resstr=resstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
-                return resstr
-
-        if len(resstr)>2:
-            resstr=resstr[0:-2]
-        return resstr
+            resstr+='%s=%s; ' % (key,str(self.__dict__[key]))
+        return resstr[:-2]
 
     def __str__(self):
         return self.f_ann_to_str()
@@ -145,10 +143,21 @@ class WithAnnotations(object):
         '''
         return self._annotations.f_get(*args)
 
+    def f_ann_to_str(self):
+        '''Returns annotations as string.
+
+        Equivalent to `v_annotations.f_ann_to_str()`
+
+        '''
+        return self._annotations.f_ann_to_str()
+
+    @deprecated('Please use `f_ann_to_str.')
     def f_ann_to_string(self):
         '''Returns annotations as string.
 
         Equivalent to `v_annotations.f_ann_to_str()`
+
+        DEPRICATED: Please use `f_ann_to_str()` instead.
 
         '''
         return self._annotations.f_ann_to_str()

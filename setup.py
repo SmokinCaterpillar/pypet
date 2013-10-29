@@ -46,7 +46,7 @@ setup(
     packages=['pypet',
               'pypet.brian',
               'pypet.tests',
-              'pypet.tests.brian_tests',
+              'pypet.tests.briantests',
               'pypet.utils'],
     license='BSD',
     author='Robert Meyer',
