@@ -20,6 +20,7 @@ else:
 
 import scipy.sparse as spsp
 import random
+import tables
 
 import tables as pt
 
@@ -287,6 +288,62 @@ class EnvironmentTest(TrajectoryComparator):
         hdf5file.close()
 
 
+    def test_store_form_tuple(self):
+        self.traj.f_store()
+
+        self.traj.f_add_result('TestResItem', 42, 43)
+
+        with self.assertRaises(ValueError):
+             self.traj.f_store_item((pypetconstants.LEAF, self.traj.TestResItem,(),{},5))
+
+        self.traj.f_store_item((pypetconstants.LEAF, self.traj.TestResItem))
+
+        self.traj.results.tr.f_remove_child('TestResItem')
+
+        self.assertTrue('TestResItem' not in self.traj)
+
+        self.traj.results.tr.f_load_child('TestResItem', load_data=pypetconstants.LOAD_SKELETON)
+
+        self.traj.f_load_item((pypetconstants.LEAF,self.traj.TestResItem,(),{'load_only': 'TestResItem'}))
+
+        self.assertTrue(self.traj.TestResItem, 42)
+
+    def test_store_single_group(self):
+        self.traj.f_store()
+
+        self.traj.f_add_parameter_group('new.test.group').v_annotations.f_set(42)
+
+        self.traj.f_store_item('new.group')
+
+
+        # group is below test not new, so ValueError thrown:
+        with self.assertRaises(ValueError):
+            self.traj.parameters.new.f_remove_child('group')
+
+        # group is below test not new, so ValueError thrown:
+        with self.assertRaises(ValueError):
+            self.traj.parameters.new.f_store_child('group')
+
+        # group has children and recursive is false
+        with self.assertRaises(TypeError):
+            self.traj.parameters.new.f_remove_child('test')
+
+
+        self.traj.new.f_remove_child('test', recursive=True)
+
+        self.assertTrue('new.group' not in self.traj)
+
+        self.traj.new.f_load_child('test', recursive=True, load_data=pypetconstants.LOAD_SKELETON)
+
+        self.assertTrue(self.traj.new.group.v_annotations.annotation, 42)
+
+        self.traj.f_remove_item('new.test.group', remove_from_storage=True, remove_empty_groups=True)
+
+        with self.assertRaises(tables.NoSuchNodeError):
+            self.traj.parameters.f_load_child('new', recursive=True, load_data=pypetconstants.LOAD_SKELETON)
+
+
+
     def test_switch_on_all_comments(self):
         self.explore(self.traj)
         self.traj.purge_duplicate_comments=0
@@ -387,19 +444,7 @@ class EnvironmentTest(TrajectoryComparator):
         finally:
             hdf5file.close()
 
-    #
-    # def get_comment_run_name(self, traj_group, pathname, name):
-    #
-    #     if 'results' in pathname:
-    #         overview_table = traj_group.overview.results_runs_summary
-    #     else:
-    #         overview_table = traj_group.overview.derived_parameters_runs_summary
-    #
-    #     for row in overview_table:
-    #         if row['name']==name:
-    #             comment_run_name =  row['example_item_run_name']
-    #
-    #     return comment_run_name
+
 
 
 class ResultSortTest(TrajectoryComparator):

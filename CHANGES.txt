@@ -1,5 +1,11 @@
 pypet 0.1b.2
 
+*   Explored Sparse matrices are stored under a slightly different name to disk.
+
+*   BUG FIX: BFS works properly
+
+*   BUG FIX: f_iter_runs is now affected if f_as_run is chosen
+
 *   Annotations support __iter__
 
 *   Annotations support __getitem__

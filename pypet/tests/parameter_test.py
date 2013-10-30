@@ -19,6 +19,7 @@ import warnings
 import pandas as pd
 import pypet.utils.comparisons as comp
 from pypet.utils.helpful_classes import ChainMap
+from pypet.utils.explore import cartesian_product
 
 
 
@@ -41,6 +42,68 @@ class ParameterTest(unittest.TestCase):
                     assert issubclass(warning.category, DeprecationWarning)
                     assert "deprecated" in str(warning.message)
 
+
+    def test_equal_values(self):
+        for param in self.param.values():
+            self.assertTrue(param._equal_values(param.f_get(),param.f_get()))
+
+            self.assertFalse(param._equal_values(param.f_get(),23432432432))
+
+            self.assertFalse(param._equal_values(param.f_get(),ChainMap()))
+
+            if not isinstance(param, PickleParameter):
+                with self.assertRaises(TypeError):
+                     self.assertFalse(param._equal_values(ChainMap(),ChainMap()))
+
+
+    def test_parameter_locking(self):
+        for param in self.param.itervalues():
+
+            param.f_lock()
+
+            with self.assertRaises(pex.ParameterLockedException):
+                param.f_set(3)
+
+            with self.assertRaises(pex.ParameterLockedException):
+                param._explore([3])
+
+            with self.assertRaises(pex.ParameterLockedException):
+                param._expand([3])
+
+            with self.assertRaises(pex.ParameterLockedException):
+                param._shrink()
+
+            with self.assertRaises(pex.ParameterLockedException):
+                param.f_empty()
+
+    def test_param_accepts_not_unsupported_data(self):
+
+        for param in self.param.itervalues():
+            if not isinstance(param, PickleParameter):
+                with self.assertRaises(TypeError):
+                    param.f_set(ChainMap())
+
+    def test_parameter_access_throws_ValueError(self):
+
+        for name,param in self.param.items():
+            if name in self.explore_dict:
+                self.assertTrue(param.f_has_range())
+
+                with self.assertRaises(ValueError):
+                    param._set_parameter_access(1232121321321)
+
+    def test_values_of_same_type(self):
+        for param in self.param.values():
+            self.assertTrue(param._values_of_same_type(param.f_get(),param.f_get()))
+
+            if not isinstance(param.f_get(), int):
+                self.assertFalse(param._values_of_same_type(param.f_get(),23432432432))
+
+            self.assertFalse(param._values_of_same_type(param.f_get(),ChainMap()))
+
+            if not isinstance(param, PickleParameter):
+                with self.assertRaises(TypeError):
+                     self.assertFalse(param._equal_values(ChainMap(),ChainMap()))
 
     def test_deprecated_range_methods_that_have_new_names(self):
         for param in self.param.values():
@@ -119,10 +182,10 @@ class ParameterTest(unittest.TestCase):
                     param._shrink()
 
     def explore(self):
-        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+        self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
-                           'val0':[1,2,3]}
+                           'val0':[1,2,3]})
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
@@ -196,6 +259,18 @@ class ParameterTest(unittest.TestCase):
 
         for key, param in self.param.items():
             store_dict = param._store()
+
+            # Due to smart storing the storage dict should be small and only contain 5 items or less
+            # 1 for data, 1 for reference, and 3 for the array/matrices/items
+            if param.f_has_range():
+                if isinstance(param,(ArrayParameter, PickleParameter)) and \
+                        not isinstance(param, SparseParameter):
+                    self.assertTrue(len(store_dict)<6)
+                # For sparse parameter it is more:
+                if isinstance(param, SparseParameter):
+                    self.assertTrue(len(store_dict)<23)
+
+
 
             constructor = param.__class__
 
@@ -322,11 +397,11 @@ class ArrayParameterTest(ParameterTest):
         matrices = []
 
 
-        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+        self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
-                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]}
+                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]} ,(('npstr','val0'),'myinttuple'))
 
         ### Convert the explored stuff into numpy arrays
         #for idx, val in enumerate(self.explore_dict['myinttuple']):
@@ -368,6 +443,8 @@ class PickleParameterTest(ParameterTest):
     def explore(self):
 
         matrices = []
+
+
         for irun in range(3):
 
             spsparse_lil = spsp.lil_matrix((111,111))
@@ -376,11 +453,11 @@ class PickleParameterTest(ParameterTest):
             matrices.append(spsparse_lil)
 
 
-        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+        self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
-                           'spsparse_lil' : matrices}
+                           'spsparse_lil' : matrices}, (('npstr','val0'),'spsparse_lil'))
 
 
 
@@ -456,14 +533,16 @@ class SparseParameterTest(ParameterTest):
             matrices_dia.append(spsparse_dia.todia())
 
 
-        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+        self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
                            'spsparse_csr' : matrices_csr,
                            'spsparse_csc' : matrices_csc,
                            'spsparse_bsr' : matrices_bsr,
-                           'spsparse_dia' : matrices_dia}
+                           'spsparse_dia' : matrices_dia},
+                            (('npstr','val0'),('spsparse_csr',
+                            'spsparse_csc', 'spsparse_bsr','spsparse_dia')) )
 
 
 
@@ -486,6 +565,32 @@ class ResultTest(unittest.TestCase):
 
     def make_constructor(self):
         self.Constructor=Result
+
+
+
+
+    def test_deletion(self):
+
+        for res in self.results.values():
+            for key in res.f_to_dict():
+                delattr(res,key)
+
+            self.assertTrue(res.f_is_empty())
+
+    def f_set_numbering(self):
+        int_list = range(10)
+        for res in self.results.values():
+            res.f_set(*int_list)
+
+            self.assertEqual(res.f_get(*int_list), tuple(int_list))
+
+            for integer in int_list:
+                if integer == 0:
+                    name = res.v_name
+                else:
+                    name = res.v_name+'%d' % integer
+
+                self.assertTrue(name in node.v_annotations)
 
     def setUp(self):
 
@@ -517,6 +622,26 @@ class ResultTest(unittest.TestCase):
             self.assertTrue(res.v_name=='wirsing')
             self.assertTrue(res.v_full_name=='test.test.wirsing')
             self.assertTrue(res.v_location=='test.test')
+
+    def test_emptying(self):
+        for res in self.results.values():
+
+            self.assertFalse(res.f_is_empty())
+            res.f_empty()
+
+            self.assertTrue(res.f_is_empty())
+
+
+    def test_no_data_string(self):
+        for  res in self.results.values():
+            resstr = ''
+            for key in sorted(res._data.keys()):
+                resstr += '%s, ' % key
+
+            resstr=resstr[0:-2]
+            res.v_no_data_string = True
+
+            self.assertTrue(resstr.startswith(res.f_val_to_str()[0:-3]))
 
 
     def test_meta_settings(self):

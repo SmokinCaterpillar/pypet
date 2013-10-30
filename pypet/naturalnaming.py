@@ -11,6 +11,7 @@ import pypet.pypetexceptions as pex
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
+import itertools as itools
 import logging
 
 
@@ -352,17 +353,19 @@ class NaturalNamingInterface(object):
 
         node = store_tuple[1]
         msg = store_tuple[0]
+        args=()
+        kwargs={}
         if len(store_tuple) > 2:
             args = store_tuple[2]
         if len(store_tuple) > 3:
             kwargs = store_tuple[3]
         if len(store_tuple) > 4:
             print store_tuple
-            raise TypeError('Your argument tuple has to many entries, please call '
+            raise ValueError('Your argument tuple has to many entries, please call '
                             'store with [(msg,item,args,kwargs),...]')
 
         ##dummy test
-        _ = self._fetch_from_node(store_load,node)
+        _ = self._fetch_from_node(store_load,node, args, kwargs)
 
         return (msg,node,args,kwargs)
 
@@ -410,12 +413,6 @@ class NaturalNamingInterface(object):
                 continue
             if non_empties and item.f_is_empty():
                 continue
-
-            # if self._root_instance._is_run:
-            #     fullname = item.v_full_name
-            #     if not self._root_instance.v_name in fullname:
-            #         raise TypeError('You want to store/load >>%s<< but this belongs to the '
-            #                         'parent trajectory not to the current single run.' % fullname)
 
             if (msg == pypetconstants.REMOVE and
                         item.v_full_name in self._root_instance._explored_parameters):
@@ -940,20 +937,16 @@ class NaturalNamingInterface(object):
         else:
             return data
 
-    @staticmethod
-    def _iter_nodes( node, recursive=False, search_strategy=pypetconstants.BFS, as_run=None):
+
+    def _iter_nodes(self, node, recursive=False, search_strategy=pypetconstants.BFS):
+
+        as_run = self._get_as_run()
 
         if recursive:
             if search_strategy == pypetconstants.BFS:
-                if as_run is None:
-                    return NaturalNamingInterface._recursive_traversal_bfs(node)
-                else:
-                    return NaturalNamingInterface._recursive_traversal_bfs_as_run(node, as_run)
+                return NaturalNamingInterface._recursive_traversal_bfs(node, as_run)
             elif search_strategy == pypetconstants.DFS:
-                if as_run is None:
-                    return NaturalNamingInterface._recursive_traversal_dfs(node)
-                else:
-                    return NaturalNamingInterface._recursive_traversal_dfs_as_run(node, as_run)
+                return NaturalNamingInterface._recursive_traversal_dfs(node, as_run)
             else:
                 raise ValueError('Your search method is not understood!')
         else:
@@ -1006,47 +999,39 @@ class NaturalNamingInterface(object):
 
     @staticmethod
     def _make_child_iterator(node, run_name):
-        if node.v_depth == 1 and run_name in node._children:
+        if run_name is not None and node.v_depth == 1 and run_name in node._children:
             return [node._children[run_name]]
         else:
             return node._children.itervalues()
 
     @staticmethod
-    def _recursive_traversal_bfs_as_run(node, run_name):
-        if not node._leaf:
-            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
-                yield child
+    def _recursive_traversal_bfs(node, run_name=None):
+        queue = iter([node])
+        start = True
 
-            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
-                for new_node in NaturalNamingInterface._recursive_traversal_bfs_as_run(child,run_name):
-                    yield new_node
+        while(True):
+            try:
+                item = queue.next()
+                if start:
+                    start = False
+                else:
+                    yield item
 
-    @staticmethod
-    def _recursive_traversal_dfs_as_run(node, run_name):
-        if not node._leaf:
-            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
-                yield child
-                for new_node in NaturalNamingInterface._recursive_traversal_dfs_as_run(child):
-                    yield new_node
-
-    @staticmethod
-    def _recursive_traversal_bfs(node):
-        if not node._leaf:
-            for child in node._children.itervalues():
-                yield child
-
-            for child in node._children.itervalues():
-                for new_node in NaturalNamingInterface._recursive_traversal_bfs(child):
-                    yield new_node
+                if not item._leaf:
+                    queue = itools.chain(queue,
+                                     NaturalNamingInterface._make_child_iterator(item, run_name))
+            except StopIteration:
+                break
 
 
     @staticmethod
-    def _recursive_traversal_dfs(node):
+    def _recursive_traversal_dfs(node, run_name=None):
         if not node._leaf:
-            for child in node._children.itervalues():
+            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
                 yield child
-                for new_node in NaturalNamingInterface._recursive_traversal_dfs(child):
+                for new_node in NaturalNamingInterface._recursive_traversal_dfs(child, run_name):
                     yield new_node
+
 
 
     def _very_fast_search(self, node, key, as_run):
@@ -1089,13 +1074,16 @@ class NaturalNamingInterface(object):
 
         return result_node
 
+    def _get_as_run(self):
+        if not self._root_instance._is_run:
+            return self._root_instance.v_as_run
+        else:
+            return None
 
     def _search(self,node,  key, check_uniqueness, search_strategy):
 
-        if not self._root_instance._is_run:
-            as_run = self._root_instance.v_as_run
-        else:
-            as_run = None
+        as_run = self._get_as_run()
+
 
         try:
             return self._very_fast_search(node, key, as_run)
@@ -1107,10 +1095,8 @@ class NaturalNamingInterface(object):
             else:
                 pass
 
-        nodes_iterator = NaturalNamingInterface._iter_nodes(node, recursive=True,
-                                                            search_strategy=search_strategy,
-                                                            as_run=as_run)
-
+        nodes_iterator = self._iter_nodes(node, recursive=True,
+                                                search_strategy=search_strategy)
         result_node = None
         for child in nodes_iterator:
             if key == child.v_name:
@@ -1269,11 +1255,15 @@ class NNGroupNode(NNTreeNode):
             Must be true if child is a group that has children. Will remove
             the whole subtree in this case. Otherwise a Type Error is thrown.
 
-        :raises: TypeError
+        :raises:
+
+            TypeError if recursive is false but there are children below the node.
+
+            ValueError if child does not exist.
 
         '''
         if not name in self._children:
-                raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
+                raise ValueError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))
 
         else:
@@ -1327,7 +1317,7 @@ class NNGroupNode(NNTreeNode):
                 return False
         else:
             if name in self._children:
-                result = self._children
+                result = self._children[name]
             else:
                 return False
 
@@ -1448,9 +1438,13 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_store_child(self,name,recursive=False):
-        '''Stores a child or recursively a subtree to disk.'''
+        '''Stores a child or recursively a subtree to disk.
+
+        :raises: ValueError if the child does not exist.
+
+        '''
         if not name in self._children:
-                raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
+                raise ValueError('Your group >>%s<< does not contain the child >>%s<<.' %
                                 (self.v_full_name,name))
 
         traj = self._nn_interface._root_instance
@@ -1463,12 +1457,8 @@ class NNGroupNode(NNTreeNode):
 
     def f_load_child(self,name,recursive=False,load_data=pypetconstants.UPDATE_DATA):
         '''Loads a child or recursively a subtree from disk.
-
         For how to choose 'load_data' see :ref:`more-on-loading`.
         '''
-        if not name in self._children:
-                raise TypeError('Your group >>%s<< does not contain the child >>%s<<.' %
-                                (self.v_full_name,name))
 
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service

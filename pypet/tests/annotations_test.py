@@ -50,7 +50,7 @@ class AnnotationsTest(unittest.TestCase):
 
 
     def add_annotations(self, traj):
-        funcs = 3
+        funcs = 4
 
         for idx,node in enumerate(traj.f_iter_nodes(recursive=True)):
             for name in self.annotations:
@@ -64,6 +64,8 @@ class AnnotationsTest(unittest.TestCase):
                     node.v_annotations.f_set(**{name:anno})
                 elif idx % funcs == 2:
                     node.v_annotations.f_set_single(name,anno)
+                elif idx % funcs == 3:
+                    setattr(node.v_annotations,name, anno)
 
 
     def test_annotations_insert(self):
@@ -146,6 +148,18 @@ class AnnotationsTest(unittest.TestCase):
 
             self.assertEqual(dict_str, ann_str, '%s!=%s' % (dict_str, ann_str))
 
+            ann_str = str(node.v_annotations)
+            self.assertEqual(dict_str, ann_str, '%s!=%s' % (dict_str, ann_str))
+
+    def test_single_get_and_getattr_and_setattr(self):
+
+        self.traj.f_add_parameter('test2', 42)
+
+        self.traj.f_get('test2').v_annotations.test = 4
+
+        self.assertTrue(self.traj.f_get('test2').v_annotations.test, 4)
+
+        self.assertTrue(self.traj.f_get('test2').v_annotations.f_get(), 4)
 
     def test_get_annotations(self):
         key_list = sorted(self.annotations.keys())

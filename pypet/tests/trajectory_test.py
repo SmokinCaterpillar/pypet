@@ -22,6 +22,8 @@ import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import multiprocessing as multip
 
+import copy
+
 import pypet.storageservice as stsv
 
 class ImAParameterInDisguise(Parameter):
@@ -65,6 +67,8 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_parameter('peter.markus.yve',6)
 
+        self.traj.f_add_result('Test',42)
+
         self.traj.peter.f_add_parameter('paul.peter')
 
         with self.assertRaises(AttributeError):
@@ -77,7 +81,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
 
-    def testGet(self):
+    def test_f_get(self):
         self.traj.v_fast_access=True
         self.traj.f_get('FloatParam', fast_access=True) == self.traj.FloatParam
 
@@ -91,6 +95,137 @@ class TrajectoryTest(unittest.TestCase):
     def test_get_item(self):
 
         self.assertEqual(self.traj.peter.paul, self.traj['peter.paul'])
+
+    @staticmethod
+    def get_depth_dict(traj, as_run=None):
+
+        bfs_queue=[traj]
+        depth_dict={}
+        while len(bfs_queue)>0:
+            item = bfs_queue.pop(0)
+            depth = item.v_depth
+            if not depth in depth_dict:
+                depth_dict[depth]=[]
+
+            depth_dict[depth].append(item)
+
+            if not item.v_is_leaf:
+                if as_run in item._children:
+                    bfs_queue.append(item._children[as_run])
+                else:
+                    for child in item._children.itervalues():
+                        bfs_queue.append(child)
+
+        return depth_dict
+
+
+    def test_iter_bfs(self):
+
+        depth_dict = self.get_depth_dict(self.traj)
+
+        depth_dict[0] =[]
+
+        prev_depth = 0
+
+        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='BFS'):
+            if prev_depth != node.v_depth:
+                self.assertEqual(len(depth_dict[prev_depth]),0)
+                prev_depth = node.v_depth
+
+            depth_dict[node.v_depth].remove(node)
+
+    def test_iter_dfs(self):
+
+        prev_node = None
+
+        x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
+
+        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+            if not prev_node is None:
+                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+                    self.assertTrue(node.v_name in prev_node._children)
+
+            prev_node = node
+
+    def test_iter_bfs_as_run(self):
+        as_run = 1
+
+        self.traj.f_add_result('results.run_00000000.resulttest', 42)
+        self.traj.f_add_result('results.run_00000001.resulttest', 43)
+
+        self.traj.f_as_run(as_run)
+
+        depth_dict = self.get_depth_dict(self.traj, self.traj.f_idx_to_run(as_run))
+
+        depth_dict[0] =[]
+
+        prev_depth = 0
+
+        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='BFS'):
+            self.assertTrue('run_00000000' not in node.v_full_name)
+            if prev_depth != node.v_depth:
+                self.assertEqual(len(depth_dict[prev_depth]),0)
+                prev_depth = node.v_depth
+
+            depth_dict[node.v_depth].remove(node)
+
+    def test_iter_dfs_as_run(self):
+
+        self.traj.f_add_result('results.run_00000000.resulttest', 42)
+        self.traj.f_add_result('results.run_00000001.resulttest', 43)
+
+        self.traj.f_as_run('run_00000001')
+
+        prev_node = None
+
+        x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
+
+        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+            self.assertTrue('run_00000000' not in node.v_full_name)
+
+            if not prev_node is None:
+                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+                    self.assertTrue(node.v_name in prev_node._children)
+
+            prev_node = node
+
+
+
+
+
+
+    def test_illegal_namings(self):
+        self.traj=Trajectory()
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('f_get')
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
+                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
+                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri')
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
+                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
+                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri.test')
+
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('tr',22)
+
+
+
+    def test_attribute_error_raises_when_leaf_and_group_with_same_name_are_added(self):
+
+        self.traj = Trajectory()
+
+        self.traj.f_add_parameter('test.param1')
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('test.param1.param2')
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('test')
 
 
     def testremove(self):
@@ -168,6 +303,101 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_result('Peter.Parker')
 
         self.assertIsInstance(self.traj.Parker, ImAResultInDisguise)
+
+
+    def test_remove_of_explored_stuff_if_saved(self):
+
+        self.traj = Trajectory()
+
+        self.traj.f_add_parameter('test', 42)
+
+        self.traj.f_explore({'test':[1,2,3,4]})
+
+        self.traj._stored=True
+
+        self.traj.parameters.f_remove_child('test')
+
+        len(self.traj) == 4
+
+    def test_remov_of_explored_stuff_if_not_saved(self):
+
+        self.traj = Trajectory()
+
+        self.traj.f_add_parameter('test', 42)
+
+        self.traj.f_explore({'test':[1,2,3,4]})
+
+        self.traj.parameters.f_remove_child('test')
+
+        len(self.traj) == 1
+
+    def test_not_unique_search(self):
+        self.traj = Trajectory()
+
+        self.traj.f_add_parameter('ghgghg.test')
+        self.traj.f_add_parameter('ghdsfdfdsfdsghg.test')
+
+        self.traj.v_check_uniqueness=True
+        with self.assertRaises(pex.NotUniqueNodeError):
+            self.traj.test
+
+
+    def test_contains_item_identity(self):
+
+        peterpaul = self.traj.f_get('peter.paul')
+
+        self.assertTrue(peterpaul in self.traj)
+
+        peterpaulcopy = copy.deepcopy(peterpaul)
+
+        self.assertFalse(peterpaulcopy in self.traj)
+
+
+    def test_get_children(self):
+
+        for node in self.traj.f_iter_nodes():
+            if not node.v_is_leaf:
+                self.assertEqual(id(node.f_get_children(copy=False)), id(node._children))
+
+                self.assertNotEqual(id(node.f_get_children(copy=True)), id(node._children))
+
+                self.assertEqual(sorted(node.f_get_children(copy=True).keys()),
+                                 sorted(node._children.keys()))
+
+    def test_short_cuts(self):
+
+        self.traj = Trajectory()
+
+        self.traj.f_add_parameter('test', 42)
+
+        self.traj.f_add_result('safd', 42)
+
+        self.traj.f_explore({'test':[1,2,3,4]})
+
+        self.assertEqual(id(self.traj.par), id(self.traj.parameters))
+        self.assertEqual(id(self.traj.param), id(self.traj.parameters))
+
+
+        self.assertEqual(id(self.traj.dpar), id(self.traj.derived_parameters))
+        self.assertEqual(id(self.traj.dparam), id(self.traj.derived_parameters))
+
+        self.assertEqual(id(self.traj.conf), id(self.traj.config))
+
+        self.assertEqual(id(self.traj.res), id(self.traj.results))
+
+        self.assertEqual(id(self.traj.results.traj), id(self.traj.results.trajectory))
+        self.assertEqual(id(self.traj.results.tr), id(self.traj.results.trajectory))
+
+        srun = self.traj._make_single_run(3)
+
+        srun.f_add_result('sdffds',42)
+
+
+        self.assertEqual(id(srun.results.cr), id(srun.results.f_get(srun.v_name)))
+        self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
+        self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
+
+
 
 class TrajectoryFindTest(unittest.TestCase):
     def setUp(self):

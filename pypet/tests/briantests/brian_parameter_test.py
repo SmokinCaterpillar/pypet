@@ -11,6 +11,7 @@ else:
 from pypet.brian.parameter import BrianParameter, BrianResult
 from pypet.tests.parameter_test import ParameterTest, ResultTest
 from brian.stdunits import mV, mA, kHz,ms
+from pypet.utils.explore import cartesian_product
 
 
 
@@ -38,11 +39,11 @@ class BrianParameterTest(ParameterTest):
 
 
     def explore(self):
-        self.explore_dict={'npstr':[np.array(['Uno', 'Dos', 'Tres']),
+        self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
-                           'mV1' : [42.0*mV,3*mV,4*mV]}
+                           'mV1' : [42.0*mV,3*mV,4*mV]})
 
 
 

@@ -145,7 +145,7 @@ class BaseParameter(NNLeafNode):
 
 
         '''
-        self._full_copy
+        return self._full_copy
 
     @v_full_copy.setter
     def v_full_copy(self,val):
@@ -692,8 +692,12 @@ class Parameter(BaseParameter):
         if idx >= len(self) and self.f_has_range():
             raise ValueError('You try to access data item No. %d in the parameter range, '
                              'yet there are only %d potential items.' % (idx, len(self)))
-        else:
+        elif self.f_has_range:
             self._data = self._explored_range[idx]
+        else:
+            self._logger.warning('You try to change the access to a parameter range of parameter'
+                                 ' `%s`. The parameter has no range, your setting has no'
+                                 ' effect.')
 
     def f_supports(self, data):
         ''' Checks if input data is supported by the parameter.'''
@@ -1255,6 +1259,11 @@ class SparseParameter(ArrayParameter):
 
     def _build_names(self, name_id, is_dia):
         name_list = self._get_name_list(is_dia)
+        return tuple(['xspm%s%s%s%08d' % (SparseParameter.IDENTIFIER, name, SparseParameter.IDENTIFIER, name_id)
+                                    for name in name_list])
+
+    def _build_names_old(self, name_id, is_dia):
+        name_list = self._get_name_list(is_dia)
         return tuple(['xspm%s%s%08d' % (SparseParameter.IDENTIFIER, name, name_id)
                                     for name in name_list])
 
@@ -1298,8 +1307,15 @@ class SparseParameter(ArrayParameter):
                 explore_list = []
                 for irun, name_id in enumerate(idx_col):
                     is_dia = dia_col[irun]
-                    name_list = self._build_names(name_id,is_dia)
-                    data_list = [load_dict[name] for name in name_list]
+
+                    # To make everything work with the old format we have the try catch block
+                    try:
+                        name_list = self._build_names(name_id,is_dia)
+                        data_list = [load_dict[name] for name in name_list]
+                    except KeyError:
+                        name_list = self._build_names_old(name_id,is_dia)
+                        data_list = [load_dict[name] for name in name_list]
+
                     matrix = self._reconstruct_matrix(data_list)
                     explore_list.append(matrix)
 
@@ -1340,7 +1356,7 @@ class PickleParameter(Parameter):
         return val
 
     def _build_name(self,name_id):
-        return 'xp%08d' % name_id
+        return 'xp_%08d' % name_id
 
     def _store(self):
         store_dict={}
@@ -1543,7 +1559,7 @@ class Result(BaseResult):
     @v_no_data_string.setter
     def v_no_data_string(self,boolean):
         '''Sets the no_data_string property'''
-        self._no_data_string(boolean)
+        self._no_data_string=boolean
 
 
     def __contains__(self, item):
@@ -1561,20 +1577,21 @@ class Result(BaseResult):
         '''
         if not self._no_data_string:
             resstr=''
-            for key,val in iter(sorted(self._data.items())):
+            for key in sorted(self._data.keys()):
+                val = self._data[key]
                 resstr+= '%s=%s, ' % (key, str(val))
 
                 if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
                     resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH-3]+'...'
                     return resstr
 
-            resstr=resstr[0:-2]
-            return resstr
+            return resstr[0:-2]
         else:
-            resstr = ', '.join(self._data.keys())
+            resstr = ', '.join(sorted(self._data.keys()))
 
             if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
                     resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+                    return resstr
 
             return resstr
 
@@ -1763,8 +1780,7 @@ class Result(BaseResult):
         >>> res.f_get('answer')
         >>> 42
         '''
-        if name in ['comment', 'Comment']:
-            self.v_comment= item
+
 
         if self._supports(item):
 

@@ -14,10 +14,7 @@ from pypet.tests.utilstest import CartesianTest
 from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
 
-try:
-    from pypet.tests import mpcoverage
-except ImportError:
-    pass
+
 
 from pypet.tests.test_helpers import make_run
 
