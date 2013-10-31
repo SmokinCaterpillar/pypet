@@ -2218,15 +2218,15 @@ class HDF5StorageService(StorageService):
 
         return arraystr
 
-    def _all_get_groups(self,key):
-        newhdf5group = self._trajectory_group
-        split_key = key.split('.')
-        for name in split_key:
-            try:
-                newhdf5group = newhdf5group._f_get_child(name)
-            except AttributeError:
-                newhdf5group = newhdf5group._f_getChild(name)
-        return newhdf5group
+    # def _all_get_groups(self,key):
+    #     newhdf5group = self._trajectory_group
+    #     split_key = key.split('.')
+    #     for name in split_key:
+    #         try:
+    #             newhdf5group = newhdf5group._f_get_child(name)
+    #         except AttributeError:
+    #             newhdf5group = newhdf5group._f_getChild(name)
+    #     return newhdf5group
 
     def _all_create_or_get_groups(self, key):
         newhdf5group = self._trajectory_group

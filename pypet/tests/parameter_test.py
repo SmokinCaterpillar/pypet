@@ -25,6 +25,42 @@ from pypet.utils.explore import cartesian_product
 
 class ParameterTest(unittest.TestCase):
 
+    def test_type_error_for_not_supported_data(self):
+
+        for param in self.param.values():
+            if not isinstance(param, PickleParameter):
+                with self.assertRaises(TypeError):
+                    param._values_of_same_type(ChainMap(),ChainMap())
+
+                with self.assertRaises(TypeError):
+                    param._equal_values(ChainMap(),ChainMap())
+
+
+
+
+    def test_type_error_for_exploring_if_range_does_not_match(self):
+
+        param = self.param['val1']
+
+        with self.assertRaises(TypeError):
+            param._explore(['a','b'])
+
+        with self.assertRaises(TypeError):
+            param._explore([ChainMap(),ChainMap()])
+
+        with self.assertRaises(ValueError):
+            param._explore([])
+
+    def test_cannot_expand_and_not_explore_throwing_type_error(self):
+
+        for param in self.param.values():
+            if not param.f_has_range():
+                with self.assertRaises(TypeError):
+                    param._expand([12,33])
+            else:
+                with self.assertRaises(TypeError):
+                    param._explore([12,33])
+
 
     def test_deprecated_methods_that_have_new_names(self):
         for param in self.param.values():
@@ -567,7 +603,24 @@ class ResultTest(unittest.TestCase):
         self.Constructor=Result
 
 
+    def test_f_get_errors(self):
 
+        res = Result('test')
+
+        with self.assertRaises(AttributeError):
+            res.f_get()
+
+        res.f_set(1,2,42)
+
+        with self.assertRaises(ValueError):
+            res.f_get()
+
+    def test_contains(self):
+        if 'test.res.kwargs' in self.results:
+            res = self.results['test.res.kwargs']
+            self.assertTrue('integer' in res)
+
+            self.assertFalse('integoAr' in res)
 
     def test_deletion(self):
 

@@ -935,7 +935,7 @@ class Parameter(BaseParameter):
 
 
         if len(data_tuple) == 0:
-            raise ValueError('Cannot _explore an _empty list!')
+            raise ValueError('Cannot explore an empty list!')
 
         return tuple(data_tuple)
 
@@ -985,8 +985,8 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
-        if self.f_is_empty():
-            raise TypeError('Cannot empty an already empty Parameter.')
+        # if self.f_is_empty():
+        #     raise TypeError('Cannot empty an already empty Parameter.')
 
         if self.f_has_range():
             self._shrink()
