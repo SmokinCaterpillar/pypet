@@ -69,7 +69,7 @@ class MergeTest(TrajectoryComparator):
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
 
-    def test_merge_basic_within_same_file_only_adding_more_trials(self):
+    def test_merge_basic_with_separate_files_only_adding_more_trials(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge2.hdf5'), make_temp_file('experiments/tests/HDF5/merge3.hdf5'), make_temp_file('experiments/tests/HDF5/merge4.hdf5')]
         self.merge_basic_only_adding_more_trials(True)
 
@@ -77,8 +77,12 @@ class MergeTest(TrajectoryComparator):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self.merge_basic_only_adding_more_trials_with_backup(True)
 
-    def merge_basic_only_adding_more_trials(self,copy_nodes):
+    def test_merge_basic_within_same_file_only_adding_more_trials_delete_other_trajectory(self):
+        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
+        self.merge_basic_only_adding_more_trials(False, True)
 
+
+    def merge_basic_only_adding_more_trials(self, copy_nodes, delete_traj=False):
 
         self.envs=[]
         self.trajs = []
@@ -117,7 +121,18 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial')
+
+        # We cannot copy nodes and delete the other trajectory
+        with self.assertRaises(ValueError):
+            merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=True,
+                                trial_parameter='trial')
+
+
+
+        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,
+                            delete_other_trajectory=delete_traj,
+                            trial_parameter='trial')
+
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA)

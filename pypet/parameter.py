@@ -1795,8 +1795,8 @@ class Result(BaseResult):
                                  (name,str(type(item))))
 
     def _check_if_empty(self, item, name):
-        ''' Checks if the result is requested to handle an empty item, like an empyt list or
-        dicitonary.
+        ''' Checks if the result is requested to handle an empty item, like an empty list or
+        dictionary.
 
         Empty items are problematic because they cannot be stored by the storage service.
         Emits a waring in case of an empty item.
@@ -1878,9 +1878,6 @@ class Result(BaseResult):
         if (not '_data' in self.__dict__):
 
             raise AttributeError('This is to avoid pickling issues!')
-
-        if name in ['Comment', 'comment']:
-            return self._comment
 
         if not name in self._data:
             raise  AttributeError('>>%s<< is not part of your result >>%s<<.' % (name,self.v_full_name))

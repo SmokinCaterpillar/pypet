@@ -447,9 +447,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         or keyword arguments to pass!
 
         '''
-        if self._is_run:
-            if not self._stored:
-                raise TypeError('Cannot f_store stuff for a trajectory that has never been '
+
+        if not self._stored:
+            raise TypeError('Cannot store stuff for a trajectory that has never been '
                                 'stored to disk. Please call traj.f_store() first, which will '
                                 'actually cause the storage of all items in the trajectory.')
 
@@ -677,9 +677,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         if not dynamically_imported_classes is None:
             self.f_add_to_dynamic_imports(dynamically_imported_classes)
-
-
-        # self._loadedfrom = 'None'
 
 
         faulty_names = self._nn_interface._check_names([name])
@@ -1623,8 +1620,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         '''
 
-        ## Check if trajectories can be merged
+        ## Check for settings with too much overhead
+        if not move_nodes and delete_other_trajectory:
+            raise ValueError('You want to copy nodes, but delete the old trajectory, this is too '
+                             'much overhead, please use move_nodes = True, '
+                             'delete_other_trajectory = True')
 
+        ## Check if trajectories can be merged
 
         self._check_if_both_have_same_parameters(other_trajectory,
                                                  ignore_trajectory_derived_parameters)

@@ -460,7 +460,7 @@ class HDF5StorageService(StorageService):
                 self._prm_load_parameter_or_result(stuff_to_load,*args,**kwargs)
 
             elif (msg == pypetconstants.GROUP):
-                self._node_load_node(stuff_to_load,*args,**kwargs)
+                self._grp_load_group(stuff_to_load,*args,**kwargs)
 
             elif msg == pypetconstants.TREE:
                 self._tree_load_tree(stuff_to_load,*args,**kwargs)
@@ -724,7 +724,7 @@ class HDF5StorageService(StorageService):
                 self._all_remove_parameter_or_result_or_group(stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.GROUP:
-                self._node_store_node(stuff_to_store,*args,**kwargs)
+                self._grp_store_group(stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.REMOVE_INCOMPLETE_RUNS:
                 self._trj_remove_incomplete_runs(stuff_to_store,*args,**kwargs)
@@ -803,9 +803,10 @@ class HDF5StorageService(StorageService):
                                                    title=self._trajectory_name)
 
                     try:
-                        self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
-                    except AttributeError:
                         self._trajectory_group = self._hdf5file.get_node('/'+self._trajectory_name)
+                    except AttributeError:
+                        self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
+
 
                 elif mode == 'r':
                     
@@ -835,7 +836,7 @@ class HDF5StorageService(StorageService):
                                     self._trajectory_index  < -len(nodelist)):
                             raise ValueError('Trajectory No. %d does not exists, there are only '
                                              '%d trajectories in %s.'
-                                            % (self._trajectory_name,len(nodelist),self._filename))
+                                            % (self._trajectory_index,len(nodelist),self._filename))
 
                         self._trajectory_group = nodelist[self._trajectory_index]
                         self._trajectory_name = self._trajectory_group._v_name
@@ -1097,13 +1098,6 @@ class HDF5StorageService(StorageService):
     def _trj_merge_trajectories(self,other_trajectory_name,rename_dict,move_nodes=False,
                                 delete_trajectory=False):
 
-
-        if not move_nodes and delete_trajectory:
-            raise ValueError('You want to copy nodes, but delete the old trajectory, this is too '
-                             'much overhead, please use move_nodes = True, '
-                             'delete_trajectory = True')
-
-
         # other_trajectory_name = other_trajectory.v_full_name
         if not ('/'+other_trajectory_name) in self._hdf5file:
             raise ValueError('Cannot merge >>%s<< and >>%s<<, because the second trajectory cannot '
@@ -1136,13 +1130,14 @@ class HDF5StorageService(StorageService):
                                              name=node._v_name,createparents=True )
                 else:
                     try:
-                        self._hdf5file.copyNode(where=old_location, newparent=new_location,
-                                              name=node._v_name,createparents=True,
-                                              recursive = True)
-                    except AttributeError:
                         self._hdf5file.copy_node(where=old_location, newparent=new_location,
                                               name=node._v_name,createparents=True,
                                               recursive = True)
+                    except AttributeError:
+                        self._hdf5file.copyNode(where=old_location, newparent=new_location,
+                                              name=node._v_name,createparents=True,
+                                              recursive = True)
+
 
 
             try:
@@ -1313,7 +1308,7 @@ class HDF5StorageService(StorageService):
         self._trj_check_version(version,force)
 
         if as_new:
-            length = int(metarow['lenght'])
+            length = int(metarow['length'])
             for irun in range(length):
                 traj._add_run_info(irun)
         else:
@@ -1638,10 +1633,8 @@ class HDF5StorageService(StorageService):
 
         if is_leaf:
 
-            if path_name=='':
-                full_name=name
-            else:
-                full_name = '%s.%s' % (path_name,name)
+
+            full_name = '%s.%s' % (path_name,name)
 
 
             in_trajectory =  name in parent_traj_node._children
@@ -1669,7 +1662,7 @@ class HDF5StorageService(StorageService):
 
 
                 if not array_length is None and array_length >1 and array_length != len(traj):
-                        raise RuntimeError('Something is completely odd. Yo load parameter'
+                        raise RuntimeError('Something is completely odd. You load parameter'
                                                ' >>%s<< of length %d into a trajectory of length'
                                                ' %d. They should be equally long!'  %
                                                (full_name,array_length,len(traj)))
@@ -1733,7 +1726,7 @@ class HDF5StorageService(StorageService):
             self._prm_store_parameter_or_result(msg, traj_node, _hdf5_group=new_hdf5_group)
 
         else:
-            self._node_store_node(traj_node,_hdf5_group=new_hdf5_group)
+            self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
 
             if recursive:
                 for child in traj_node._children.itervalues():
@@ -1807,6 +1800,7 @@ class HDF5StorageService(StorageService):
             add_table = single_run.f_get('config.hdf5.overview.explored_parameters_runs').f_get()
         except:
             add_table = True
+
         # For better readability add the explored parameters to the results
         run_summary = self._srn_add_explored_params(single_run.v_name,
                                                     single_run._explored_parameters.values(),
@@ -1870,9 +1864,11 @@ class HDF5StorageService(StorageService):
                 runsummary = runsummary + ',   '
 
             valstr = expparam.f_val_to_str()
+
             if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
                 valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH-3]
                 valstr+='...'
+
             runsummary = runsummary + expparam.v_name + ': ' +valstr
 
             if add_table:
@@ -2044,6 +2040,7 @@ class HDF5StorageService(StorageService):
 
             elif self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
                                           HDF5StorageService.COLL_MATRIX):
+
                     data = np.matrix(data)
                     type_changed = True
 
@@ -2285,7 +2282,7 @@ class HDF5StorageService(StorageService):
             annotations =item_with_annotations.v_annotations
 
             if not annotations.f_is_empty():
-                raise AttributeError('Loading into non-empty annotations!')
+                raise TypeError('Loading into non-empty annotations!')
 
             current_attrs = node._v_attrs
 
@@ -2300,9 +2297,9 @@ class HDF5StorageService(StorageService):
 
 
 
-    ############################################## Storing Nodes ################################
+    ############################################## Storing Groups ################################
 
-    def _node_store_node(self,node_in_traj, _hdf5_group = None):
+    def _grp_store_group(self,node_in_traj, _hdf5_group = None):
 
 
         if _hdf5_group is None:
@@ -2311,7 +2308,7 @@ class HDF5StorageService(StorageService):
         self._ann_store_annotations(node_in_traj,_hdf5_group)
 
 
-    def _node_load_node(self,node_in_traj, _hdf5_group=None):
+    def _grp_load_group(self,node_in_traj, _hdf5_group=None):
 
 
         if _hdf5_group is None:
@@ -2640,15 +2637,8 @@ class HDF5StorageService(StorageService):
         try:
 
             if key in group:
-                # if msg == pypetconstants.PARAMETER:
-                #     return
-
                 raise ValueError('DataFrame >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
 
-
-
-            #assert isinstance(data_to_store,DataFrame)
-            #assert isinstance(group, pt.Group)
 
             name = group._v_pathname+'/' +key
             data_to_store.to_hdf(self._filename, name, append=True,data_columns=True)
@@ -2668,7 +2658,6 @@ class HDF5StorageService(StorageService):
 
 
     def _prm_store_into_carray(self, msg, key, data, group, fullname):
-
 
         try:
             if key in group:
@@ -2710,14 +2699,8 @@ class HDF5StorageService(StorageService):
 
         try:
             if key in group:
-                # if append_mode == pypetconstants.PARAMETER:
-                #     return
-
                 raise ValueError('Array >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
 
-
-            # if isinstance(data, np.ndarray):
-            #     size = data.size
             if hasattr(data,'__len__'):
                 size = len(data)
             else:

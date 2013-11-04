@@ -67,6 +67,13 @@ class BrianResultTest(ResultTest):
     def make_constructor(self):
         self.Constructor=BrianResult
 
+    def test_illegal_naming(self):
+        for res in self.results.values():
+            data_dict = {'val'+BrianResult.IDENTIFIER:42}
+            with self.assertRaises(AttributeError):
+                res.f_set(**data_dict)
+
+
     def setUp(self):
 
         if not hasattr(self,'data'):

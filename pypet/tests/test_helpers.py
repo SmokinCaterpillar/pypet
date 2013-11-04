@@ -3,7 +3,7 @@ __author__ = 'Robert Meyer'
 from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
 from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
-    BaseParameter, SparseParameter, SparseResult
+    BaseParameter, SparseParameter, SparseResult, ObjectTable
 import scipy.sparse as spsp
 import os
 import logging
@@ -97,7 +97,7 @@ def create_param_dict(param_dict):
     numpy_dict['double'] = np.array([1.0,2.0,3.0,4.0])
     numpy_dict['bool'] = np.array([True,False, True])
 
-    param_dict['Numpy_2D']['double'] = np.array([[1.0,2.0],[3.0,4.0]])
+    param_dict['Numpy_2D']['double'] = np.matrix([[1.0,2.0],[3.0,4.0]])
     param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
 
     spsparse_csc = spsp.csc_matrix((2222,22))
@@ -203,6 +203,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52)
         traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62)
         traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72)
+
+        myobjtab = ObjectTable(data={'strings':['a','abc','qwertt'], 'ints':[1,2,3]})
+
+        traj.f_add_result('object_table', myobjtab)
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'

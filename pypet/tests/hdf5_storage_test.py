@@ -27,6 +27,105 @@ import tables as pt
 from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multipy
 
+
+class StorageTest(TrajectoryComparator):
+
+    def test_storage_service_errors(self):
+
+        traj = Trajectory(filename=make_temp_file('testnoservice.hdf5'))
+
+        traj_name = traj.v_name
+
+        # you cannot store stuff before the trajectory was stored once:
+        with self.assertRaises(ValueError):
+            traj.v_storage_service.store('FAKESERVICE', self, trajectory_name = traj.v_name)
+
+
+        traj.f_store()
+
+        with self.assertRaises(ValueError):
+            traj.v_storage_service.store('FAKESERVICE', self, trajectory_name = 'test')
+
+        with self.assertRaises(pex.NoSuchServiceError):
+            traj.v_storage_service.store('FAKESERVICE', self, trajectory_name = traj.v_name)
+
+        with self.assertRaises(ValueError):
+            traj.f_load(name = 'test', index=1)
+
+        with self.assertRaises(RuntimeError):
+            traj.v_storage_service.store('LIST', [('LEAF',None,None,None,None)],trajectory_name = traj.v_name)
+
+        with self.assertRaises(ValueError):
+            traj.f_load(index=9999)
+
+        with self.assertRaises(ValueError):
+            traj.f_load(name='Non-Existising-Traj')
+
+        with self.assertRaises(ValueError):
+            traj.f_load(as_new=True,load_parameters=1, name = traj_name)
+
+        with self.assertRaises(ValueError):
+            traj.f_load(as_new=True,load_parameters=2, load_results=2,
+                        name=traj_name)
+
+
+    def test_version_mismatch(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('testversionmismatch.hdf5'))
+
+        traj.f_add_parameter('group1.test',42)
+
+        traj.f_add_result('testres', 42)
+
+        traj.group1.f_set_annotations(Test=44)
+
+        traj._version='0.1a.1'
+
+        traj.f_store()
+
+
+
+        traj2 = Trajectory(name=traj.v_name, add_time=False,
+                           filename=make_temp_file('testversionmismatch.hdf5'))
+
+        with self.assertRaises(pex.VersionMismatchError):
+            traj2.f_load(load_results=2,load_parameters=2)
+
+        traj2.f_load(load_results=2,load_parameters=2, force=True)
+
+        self.compare_trajectories(traj,traj2)
+
+
+    def test_store_items_and_groups(self):
+
+        traj = Trajectory(name='testtraj', filename=make_temp_file('teststoreitems.hdf5'))
+
+        traj.f_store()
+
+        traj.f_add_parameter('group1.test',42, comment= 'TooLong' * pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH)
+
+        traj.f_add_result('testres', 42)
+
+        traj.group1.f_set_annotations(Test=44)
+
+        traj.f_store_items(['test','testres','group1'])
+
+        with self.assertRaises(ValueError):
+            traj.f_load_item('testres',load_only='not-exisiting')
+
+        traj2 = Trajectory(name=traj.v_name, add_time=False,
+                           filename=make_temp_file('teststoreitems.hdf5'))
+
+        traj2.f_load(load_results=2,load_parameters=2)
+
+        self.compare_trajectories(traj,traj2)
+
+
+
+
+
+
+
+
 class EnvironmentTest(TrajectoryComparator):
 
 
@@ -122,7 +221,9 @@ class EnvironmentTest(TrajectoryComparator):
         self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          results_per_run=5,
+                          derived_parameters_per_run=5)
 
         traj = env.v_trajectory
 
@@ -168,6 +269,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
+
 
     def test_run_complex(self):
         self.traj.f_add_parameter('TEST', 'test_run_complex')

@@ -449,6 +449,8 @@ class ArrayParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
+
+
 class PickleParameterTest(ParameterTest):
 
     def setUp(self):
@@ -602,6 +604,23 @@ class ResultTest(unittest.TestCase):
     def make_constructor(self):
         self.Constructor=Result
 
+    def test_f_get_many_items(self):
+        for res in self.results.values():
+            if 'integer' in res and 'float' in res:
+                myreslist = res.f_get('integer', 'float')
+                self.assertEqual([self.data['integer'], self.data['float']],myreslist)
+
+    def test_getattr_and_setattr(self):
+        for res in self.results.values():
+            res.iamanewvar = 42
+            self.assertTrue(res.iamanewvar,42)
+            with self.assertRaises(AttributeError):
+                res.iamanonexistingvar
+
+    def test_deletion_throws_error_if_item_not_there(self):
+        for res in self.results.values():
+            with self.assertRaises(AttributeError):
+                del res.idonotexistforsure
 
     def test_f_get_errors(self):
 
@@ -806,6 +825,12 @@ class SparseResultTest(ResultTest):
         self.data['spsparse_dia'] = self.data['spsparse_dia'].todia()
 
         super(SparseResultTest,self).setUp()
+
+    def test_illegal_naming(self):
+        for res in self.results.values():
+            data_dict = {'val'+SparseResult.IDENTIFIER:42}
+            with self.assertRaises(AttributeError):
+                res.f_set(**data_dict)
 
 if __name__ == '__main__':
     unittest.main()

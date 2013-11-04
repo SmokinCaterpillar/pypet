@@ -798,7 +798,6 @@ class NaturalNamingInterface(object):
         faulty_names = ''
 
 
-
         for split_name in split_names:
             if split_name in self._not_admissible_names:
                 faulty_names = '%s %s is a method/attribute of the trajectory/treenode/naminginterface,' % \
