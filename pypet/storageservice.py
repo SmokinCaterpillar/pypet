@@ -1778,7 +1778,7 @@ class HDF5StorageService(StorageService):
 
 
 
-    ######################## Storing a Signle Run ##########################################
+    ######################## Storing a Single Run ##########################################
 
     def _srn_store_single_run(self,single_run,*args,**kwargs):
         ''' Stores the derived parameters and results of a single run.
@@ -2168,9 +2168,6 @@ class HDF5StorageService(StorageService):
         if 'value' in colnames:
 
             insert_dict['value'] = self._all_get_value_string(item, self._logger)
-
-        # if 'creator_name' in colnames:
-        #     insert_dict['creator_name'] = item.v_creator_name
 
         if 'example_item_run_name' in colnames:
             insert_dict['example_item_run_name'] = additional_info['example_item_run_name']

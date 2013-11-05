@@ -1010,7 +1010,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
     def f_shrink(self):
-        ''' Shrinks the trajectory and removes all exploration arrays from the parameters.
+        ''' Shrinks the trajectory and removes all exploration ranges from the parameters.
         Only possible if the trajectory has not been stored to disk before or was loaded as new.
 
         :raises: TypeError if the trajectory was stored before.

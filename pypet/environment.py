@@ -1,8 +1,8 @@
-'''
+"""
 Created on 03.06.2013
 
 @author: robert
-'''
+"""
 
 import os
 import sys
@@ -14,7 +14,7 @@ from pypet.trajectory import Trajectory, SingleRun
 
 try:
     import cPickle as pickle
-except:
+except ImportError:
     import pickle
 
 import multiprocessing as multip
@@ -32,6 +32,29 @@ from pypet.utils.decorators import deprecated
 
 
 def _single_run(args):
+    """ Performs a single run of the experiment.
+
+    :param args: List of arguments:
+
+        0. The single run object containing all parameters set to the corresponding run index.
+
+        1. Path to log files
+
+        2. A queue object, only necessary in case of multiprocessing in queue mode.
+
+        3. The user's job function
+
+        4. Number of total runs (int)
+
+        5. Whether to use multiprocessing or not (bool)
+
+        6. The arguments handed to the user's job function (as *args)
+
+        7. The keyword arguments handed to the user's job function (as **kwargs)
+
+    :return: Results computed by the user's job function which are not stored into the trajectory.
+
+    """
 
     try:
         traj=args[0] 
@@ -46,17 +69,17 @@ def _single_run(args):
         assert isinstance(traj, SingleRun)
         root = logging.getLogger()
         idx = traj.v_idx
-        #If the logger has no handler, add one:
-        #print root.handlers
 
         if multiproc:
             
-            #print 'do i come here?'
+            # In case of multiprocessing we want to have a log file for each individual process.
             pid = os.getpid()
             filename = 'process_%s.txt' % str(pid)
             filename=log_path+'/'+filename
             exists = os.path.isfile(filename)
 
+            # If the file does not exist we need to create it and create a handler that logs
+            # all messages into the file.
             if not exists:
 
                 h=logging.FileHandler(filename=filename)
@@ -64,40 +87,48 @@ def _single_run(args):
                 h.setFormatter(f)
                 root.addHandler(h)
 
-                #Redirect standard out and error to the file
+                # Also copy standard out and error to the log files
                 outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
                 sys.stdout = outstl
 
                 errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
                 sys.stderr = errstl
-            
-            
-        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-        sys.stdout = outstl
 
-        ## Add the queue for storage
-        if not queue == None:
+
+        ## Add the queue for storage in case of multiprocessing in queue mode.
+        if queue is not None:
             traj.v_storage_service.queue = queue
     
         root.info('\n--------------------------------\n '
                   'Starting single run #%d of %d '
                   '\n--------------------------------\n' % (idx,total_runs))
+
+        # Run the job function of the user
         result =runfunc(traj,*runparams,**kwrunparams)
+
         root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
+
+        # Store the single run
         traj.f_store()
+
+        # Make some final adjustments to the single run before termination
         traj._finalize()
+
         root.info('\n--------------------------------\n '
                   'Finished single run #%d of %d '
                   '\n--------------------------------' % (idx,total_runs))
+
         return result
 
     except:
-        errstr = "\n\n########## ERROR ##########\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
+        errstr = "\n\n############## ERROR ##############\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
         logging.getLogger('STDERR').error(errstr)
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 def _queue_handling(handler,log_path):
+    """ Starts running a queue handler and creates a log file for the queue."""
 
+    # Create a new log file for the queue writer
     filename = 'queue_process.txt'
     filename=log_path+'/'+filename
     root = logging.getLogger()
@@ -113,10 +144,12 @@ def _queue_handling(handler,log_path):
 
     errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
     sys.stderr = errstl
+
+    # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
 
 class Environment(object):
-    ''' The environment to run a parameter exploration.
+    """ The environment to run a parameter exploration.
 
     The first thing you usually do is to create and environment object that takes care about
     the running of the experiment.
@@ -135,8 +168,8 @@ class Environment(object):
 
     :param dynamically_imported_classes:
 
-          If you wrote custom parameters or results that need to be loaded
-          dynamically during runtime. The module containing the class
+          If you've written custom parameters or results that need to be loaded
+          dynamically during runtime, the module containing the class
           needs to be specified here as a list of classes or strings
           naming classes and there module paths.
 
@@ -147,7 +180,6 @@ class Environment(object):
           If you only have a single class to import, you do not need
           the list brackets:
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
-
 
     :param log_folder:
 
@@ -161,7 +193,6 @@ class Environment(object):
         Whether or not to use multiprocessing. Default is 0 (False). If you use
         multiprocessing, all your data and the tasks you compute
         must be picklable!
-
 
     :param ncores:
 
@@ -178,20 +209,19 @@ class Environment(object):
 
          :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
-         Another process for storing the trajectory is spawned. The sub processes
-         running the individual single runs will add their results to a
-         multiprocessing queue that is handled by an additional process.
-         Note that this requires additional memory since single runs
-         will be pickled and send over the queue for storage!
-
+             Another process for storing the trajectory is spawned. The sub processes
+             running the individual single runs will add their results to a
+             multiprocessing queue that is handled by an additional process.
+             Note that this requires additional memory since single runs
+             will be pickled and send over the queue for storage!
 
          :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('LOCK')
 
-         Each individual process takes care about storage by itself. Before
-         carrying out the storage, a lock is placed to prevent the other processes
-         to store data. Accordingly, sometimes this leads to a lot of processes
-         waiting until the lock is released.
-         Yet, single runs do not need to be pickled before storage!
+             Each individual process takes care about storage by itself. Before
+             carrying out the storage, a lock is placed to prevent the other processes
+             to store data. Accordingly, sometimes this leads to a lot of processes
+             waiting until the lock is released.
+             Yet, single runs do not need to be pickled before storage!
 
          If you don't want wrapping at all use :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
 
@@ -217,7 +247,7 @@ class Environment(object):
 
     :param use_hdf5:
 
-        Whether or not to use the standard hdf5 storage service, if False the following
+        Whether or not to use the standard hdf5 storage service, if false the following
         arguments below will be ignored:
 
     :param filename:
@@ -225,7 +255,7 @@ class Environment(object):
         The name of the hdf5 file. If none is specified the default './hdf5/experiment.hdf5'
         is chosen.
 
-    :param file_title: Title of the hdf5 file (only important if file is created new).
+    :param file_title: Title of the hdf5 file (only important if file is created new)
 
     :param purge_duplicate_comments:
 
@@ -233,37 +263,40 @@ class Environment(object):
         parameter :func:`~pypet.trajectory.SingleRun.f_add_derived_parameter` and
         you set a comment, normally that comment would be attached to each and every instance.
         This can produce a lot of unnecessary overhead if the comment is the same for every
-        result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
+        instance over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
         first result or derived parameter instance created in a run is stored or comments
         that differ from this first comment.
 
         For instance,
-        during a single run you call `traj.f_add_result('my_result`,42, comment='Mostly harmless!')`
+        during a single run you call `traj.f_add_result('my_result`,42, comment='Mostly
+        harmless!')`
         and the result will be renamed to `results.run_00000000.my_result`. After storage
-        in the node associated with this result in your hdf5 file you will find the comment
-        `'Mostly harmless!'`. If you call `traj.f_add_result('my_result',-43, comment='Mostly harmless!')`
+        in the node associated with this result in your hdf5 file, you will find the comment
+        `'Mostly harmless!'` there. If you call
+        `traj.f_add_result('my_result',-43, comment='Mostly harmless!')`
         in another run again, let's say run 00000001, the name will be mapped to
         `results.run_00000001.my_result`. But this time the comment will not be saved to disk
-        since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
+        since `'Mostly harmless!'` is already part of the very first result with the name
+        'my_result'.
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
         If you use multiprocessing, the storage service will take care that the comment for
-        the result or derived parameter with the lowest run index will be considered, regardless
+        the result or derived parameter with the lowest run index will be considered regardless
         of the order of the finishing of your runs. Note that this only works properly if all
         comments are the same. Otherwise the comment in the overview table might not be the one
         with the lowest run index.
 
         You need summary tables (see below) to be able to purge duplicate comments.
 
-
     :param small_overview_tables:
 
-        Whether the small overview table should be created.
-        Small tables are giving overview about 'config','parameters','derived_parameters_trajectory',
-        'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
+        Whether the small overview tables should be created.
+        Small tables are giving overview about 'config','parameters',
+        'derived_parameters_trajectory', 'derived_parameters_runs_summary',
+        'results_trajectory','results_runs_summary'.
 
-        Note that these tables create some overhead, if you want small hdf5 files set
+        Note that these tables create some overhead. If you want very small hdf5 files set
         `small_overview_tables` to False.
 
         The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
@@ -274,11 +307,10 @@ class Environment(object):
         The summary table can be used in combination with `purge_duplicate_comments` to only store
         a single comment for every result with the same name in each run, see above.
 
-
     :param large_overview_tables:
 
         Whether to add large overview tables. This encompasses information about every derived
-        parameters, results, and the explored parameters in every single run.
+        parameter, result, and the explored parameter in every single run.
         If you want small hdf5 files, this is the first option to set to False.
 
     :param results_per_run:
@@ -296,8 +328,9 @@ class Environment(object):
 
         If your code base is under git version control you can specify here the path
         (relative or absolute) to
-        the folder containing the `.git` directory.
+        the folder containing the `.git` directory as a string.
         Note in order to use this tool you need GitPython_.
+
         If you set this path the environment
         will trigger a commit of your code base adding all files that are currently under
         version control.
@@ -317,7 +350,7 @@ class Environment(object):
 
     The Environment will automatically add some config settings to your trajectory.
     Thus, you can always look up how your trajectory was run. This encompasses all above named
-    parameters, as well as some information about the environment.
+    parameters as well as some information about the environment.
     This additional information includes
     a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
     If you use git integration, the SHA-1 hash code will be the one from your git commit.
@@ -338,12 +371,12 @@ class Environment(object):
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.hexsha
 
         The SHA-1 hash of the commit.
-        `commit_XXXXXXX_XXXX_XX_XX_XXhXXmXXs` is mapped to the first seven items of the sha hash
-        and the formatted data of the commit, e.g. `commit_7ef7hd4_2015_10_21_16h29m00s`
+        `commit_XXXXXXX_XXXX_XX_XX_XXhXXmXXs` is mapped to the first seven items of the SHA-1 hash
+        and the formatted data of the commit, e.g. `commit_7ef7hd4_2015_10_21_16h29m00s`.
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.name_rev
 
-        String describing the commits hexsha based on the closest Reference
+        String describing the commits hexsha based on the closest reference
 
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
 
@@ -354,7 +387,7 @@ class Environment(object):
         The commit message
 
 
-    '''
+    """
     def __init__(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
@@ -376,28 +409,32 @@ class Environment(object):
                  git_message=''):
 
 
+        # First check if purge settings are valid
         if purge_duplicate_comments and not small_overview_tables:
-            raise RuntimeError('You can not purge duplicate comments without having the'
+            raise RuntimeError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
-        name = 'environment'
 
         self._git_repository = git_repository
         self._git_message=git_message
 
-        #Acquiring the current time
-        if isinstance(trajectory,basestring):
+        # Check if a novel trajectory needs to be created.
+        if isinstance(trajectory,str):
+            # Create a new trajectory
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
                                     dynamically_imported_classes=dynamically_imported_classes,
                                     comment=comment)
 
-            self._timestamp = self.v_trajectory.v_timestamp
-            self._time = self.v_trajectory.v_time
+            self._timestamp = self.v_trajectory.v_timestamp # Timestamp of creation
+            self._time = self.v_trajectory.v_time # Formatted timestamp
 
         else:
+
             self._traj = trajectory
 
+            # If no new trajectory is created the time of the environment differs from the trajectory
+            # and must be computed from the current time.
             init_time = time.time()
 
             formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
@@ -406,8 +443,7 @@ class Environment(object):
 
             self._time = formatted_time
 
-
-
+        # If no filename is supplied, take the filename from the trajectory's storage service
         if self.v_trajectory.v_storage_service is not None and filename is None:
             self._file_title=self._traj.v_storage_service._file_title
             self._filename=self._traj.v_storage_service._filename
@@ -419,50 +455,53 @@ class Environment(object):
                 self._file_title = file_title
 
             if filename is None:
+                # If no filename is supplied and the filename cannot be extracted from the
+                # trajectory, create the default filename
                 self._filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
             else:
                 self._filename=filename
 
-        self._use_hdf5 = use_hdf5
+        self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
+
+        # Check if the user wants to use the hdf5 storage service if yes,
+        # add a service to the trajectory
         if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
             self._add_hdf5_storage_service()
 
+        # In case the user provided a git repository path, a git commit is performed
+        # and the environment's hexsha is taken from the commit
         if self._git_repository is not None:
-            self._hexsha=make_git_commit(self,self._git_repository, self._git_message)
+            self._hexsha=make_git_commit(self,self._git_repository, self._git_message) # Identifier
+            # hexsha
         else:
+            # Otherwise we need to create a novel hexsha
             self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
                                       str(self.v_trajectory.v_timestamp) +
                                       str(self.v_timestamp) +
                                       VERSION).hexdigest()
 
+        # Create the name of the environment
         short_hexsha= self._hexsha[0:7]
+        name = 'environment'
+        self._name = name+'_'+str(short_hexsha)+'_'+self._time # Name of environment
 
-        self._name = name+'_'+str(short_hexsha)+'_'+self._time
-
-
+        # The trajectory should know the hexsha of the current environment.
+        # Thus, for all runs, one can identify by which environment they were run.
         self._traj._environment_hexsha=self._hexsha
 
-
+        # If no log folder is provided, create the default log folder
         if log_folder is None:
             log_folder = os.path.join(os.getcwd(), 'logs')
 
-
-
-
-        # # Adding some default configuration
-        # if not self._traj.f_contains('config.environment.log_path'):
+        # The actual log folder is a sub-folder with the trajectory name
         log_path = os.path.join(log_folder,self._traj.v_name)
-        #     self._traj.f_add_config('environment.log_path', self.v_namelog_path).f_lock()
-        # else:
-        #     log_path=self._traj.f_get('config.environment.log_path').f_get()
-
-
-        self._make_logger(log_path)
-
         self._log_path = log_path
 
-        storage_service = self._traj.v_storage_service
+        # Create the loggers
+        self._make_logger(log_path)
 
+
+        # Add config values to the trajectory
         config_name='environment.%s.ncores' % self.v_name
         self._traj.f_add_config(config_name,ncores, comment='Number of processors in case of multiprocessing')
 
@@ -507,7 +546,7 @@ class Environment(object):
 
 
 
-
+        # Add HDF5 config in case the user wants the standard service
         if self._use_hdf5 and not self.v_trajectory.v_stored:
             for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
 
@@ -549,23 +588,34 @@ class Environment(object):
 
 
     def _make_logger(self,log_path):
+
+        # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
 
+        # Check if there already exist logging handlers, if so, the user has already set a log
+        # level. If not, set the log level to INFO
         if len(logging.getLogger().handlers)==0:
             logging.basicConfig(level=logging.INFO)
 
+        # Add a handler for storing everything to a text file
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h=logging.FileHandler(filename=log_path+'/main.txt')
-        #sh = logging.StreamHandler(sys.stdout)
         root = logging.getLogger()
         root.addHandler(h)
 
+        # Add a handler for storing warnings and errors to a text file
         h=logging.FileHandler(filename=log_path+'/warnings_and_errors.txt')
-        #sh = logging.StreamHandler(sys.stdout)
         h.setLevel(logging.WARNING)
         root = logging.getLogger()
         root.addHandler(h)
+
+        # Also copy standard out and error to the log files
+        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+        sys.stdout = outstl
+
+        errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+        sys.stderr = errstl
 
         for handler in root.handlers:
             handler.setFormatter(f)
@@ -573,7 +623,7 @@ class Environment(object):
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
-        ''' Switches off the tables consuming the most memory.
+        """ Switches off the tables consuming the most memory.
 
             * Single Run Result Overview
 
@@ -582,30 +632,30 @@ class Environment(object):
             * Explored Parameter Overview in each Single Run
 
 
-        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+        DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
-        '''
+        """
         self._traj.config.hdf5.overview.results_runs=0
         self._traj.config.hdf5.overview.derived_parameters_runs = 0
         self._traj.config.hdf5.overview.explored_parameters_runs = 0
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_all_overview(self):
-        '''Switches all tables off.
+        """Switches all tables off.
 
-        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+        DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
-        '''
+        """
         self.f_switch_off_small_overview()
         self.f_switch_off_large_overview()
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_small_overview(self):
-        ''' Switches off small overview tables and switches off `purge_duplicate_comments`.
+        """ Switches off small overview tables and switches off `purge_duplicate_comments`.
 
-        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+        DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
-        '''
+        """
         self._traj.config.hdf5.overview.parameters = 0
         self._traj.config.hdf5.overview.config=0
         self._traj.config.hdf5.overview.explored_parameters=0
@@ -617,82 +667,96 @@ class Environment(object):
 
 
     def f_continue_run(self, continue_file):
-        ''' Resumes crashed trajectories by supplying the '.cnt' file.
-        '''
+        """ Resumes crashed trajectories by supplying the '.cnt' file.
+        """
 
+        # Unpack the stored data
         continue_dict = pickle.load(open(continue_file,'rb'))
+        # User's job function
         runfunc = continue_dict['runfunc']
+        # Arguments to the user's job function
         args = continue_dict['args']
+        # Keyword arguments to the user's job function
         kwargs = continue_dict['kwargs']
+        # Unpack the trajectory
         self._traj = continue_dict['trajectory']
         self._traj.v_full_copy = continue_dict['full_copy']
+        # Load meta data
         self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
              load_derived_parameters=pypetconstants.LOAD_NOTHING,
              load_results=pypetconstants.LOAD_NOTHING)
 
 
-
+        # Remove incomplete runs
         self._traj._remove_incomplete_runs()
 
+        # Check how many runs are about to be done
+        count = 0
+        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
+            if not run_dict['completed']:
+                count +=1
+
+        # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name='environment.%s.continued_runs' % self.v_name
         if not config_name in self._traj:
-            self._traj.f_add_config(config_name, 1,
+            self._traj.f_add_config(config_name, count,
                                     comment ='Added if a crashed trajectory was continued.')
 
-        self._do_run(runfunc,*args,**kwargs)
+        # Resume the experiment
+        self._do_runs(runfunc,*args,**kwargs)
 
 
 
 
     @ property
     def v_trajectory(self):
-        ''' The trajectory of the Environment
-        '''
+        """ The trajectory of the Environment"""
         return self._traj
 
     @property
     def v_hexsha(self):
-        '''The SHA1 identifier of the environment. It is identical to the SHA1 of the git
-        commit. If version control is not used, the environment hash is computed from the
-        trajectory name, the current timestamp and your current pypet version.'''
+        """The SHA1 identifier of the environment.
+
+        It is identical to the SHA1 of the git commit.
+        If version control is not used, the environment hash is computed from the
+        trajectory name, the current timestamp and your current pypet version."""
         return self._hexsha
 
     @property
     def v_time(self):
-        ''' Time of the creation of the environment, human readable.
-        '''
+        """ Time of the creation of the environment, human readable."""
         return self._time
 
     @property
     def v_timestamp(self):
-        '''Time of creation as python datetime float.'''
+        """Time of creation as python datetime float."""
         return self._timestamp
 
     @property
     def v_name(self):
-        ''' Name of the Environment
-        '''
+        """ Name of the Environment"""
         return self._name
 
 
     def _add_hdf5_storage_service(self):
-        ''' Adds the standard HDF5 storage service to the trajectory.
+        """ Adds the standard HDF5 storage service to the trajectory.
 
-        See also :class:`pypet.storageservice.HDF5StorageService`.
-        '''
+        See also :class:`~pypet.storageservice.HDF5StorageService`.
+
+        """
         self._storage_service = HDF5StorageService(self._filename,
                                                  self._file_title )
 
         self._traj.v_storage_service=self._storage_service
 
     def f_run(self, runfunc, *args,**kwargs):
-        ''' Runs the experiments and explores the parameter space.
+        """ Runs the experiments and explores the parameter space.
 
         :param runfunc: The task or job to do
 
         :param args: Additional arguments (not the ones in the trajectory) passed to runfunc
 
-        :param kwargs:  Additional keyword arguments (not the ones in the trajectory) passed to runfunc
+        :param kwargs: Additional keyword arguments (not the ones in the trajectory) passed to runfunc
 
         :return:
 
@@ -704,11 +768,12 @@ class Environment(object):
                 at once with :func:`~pypet.trajectory.f_load` or loading manually with
                 :func:`~pypet.trajectory.f_load_items`.
 
-        '''
-
-        continuable = self._traj.f_get('config.environment.continuable').f_get()
+        """
 
 
+
+
+        # Make some sanity checks if the user wants the standard hdf5 service.
         if self._use_hdf5:
             if ( (not self._traj.f_get('results_runs_summary').f_get() or
                         not self._traj.f_get('results_runs_summary').f_get()) and
@@ -716,58 +781,63 @@ class Environment(object):
                     raise RuntimeError('You can only use the reduce comments if you enable '
                                        'the summary tables.')
 
+        # Check how many runs are about to be done
         count = 0
-        for run_name, run_dict in self._traj.f_get_run_information(copy=False).iteritems():
+        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
             if not run_dict['completed']:
                 count +=1
-
+        # Add the amount to be run to the trajectory
         config_name='environment.%s.normal_runs' % self.v_name
         if not config_name in self._traj:
-            self._traj.f_add_config(config_name, 1,
+            self._traj.f_add_config(config_name, count,
                                     comment ='Added if trajectory was explored normally and not continued.')
 
-
+        # Make some preparations (locking of parameters etc)
         self._traj._prepare_experiment()
 
+        # Make the trajectory continuable in case the user wants that
+        continuable = self._traj.f_get('config.environment.continuable').f_get()
         if continuable:
-            #HERE!
+
             dump_dict ={}
+            # Put the file into the hdf5 file folder. If no hdf5 files are used, put it into
+            # the log folder.
             if self._use_hdf5:
                 filename = self._filename
-                #dump_dict['filename'] = filename
-                dumpfolder= os.path.split(filename)[0]
-
-                # # Make folder if not existing, can happen if Non standard service is used
-                # if not os.path.isdir(dumpfolder):
-                #     os.mkdir(dumpfolder)
-
-                dumpfilename=os.path.join(dumpfolder,self._traj.v_name+'.cnt')
+                dump_folder= os.path.split(filename)[0]
+                dump_filename=os.path.join(dump_folder,self._traj.v_name+'.cnt')
             else:
-                dumpfilename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
+                dump_filename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
 
+            # Store all relevant info in a dictionary and pickle it.
             prev_full_copy = self._traj.v_full_copy
             dump_dict['full_copy'] = prev_full_copy
-            #dump_dict['dump_filename'] = dumpfilename
-            #dump_dict['storage_service'] = self._storage_service
             dump_dict['runfunc'] = runfunc
             dump_dict['args'] = args
             dump_dict['kwargs'] = kwargs
-            #dump_dict['filename'] = filename
             self._traj.v_full_copy=True
             dump_dict['trajectory'] = self._traj
 
-
-            pickle.dump(dump_dict,open(dumpfilename,'wb'))
+            pickle.dump(dump_dict,open(dump_filename,'wb'))
 
             self._traj.v_full_copy=prev_full_copy
 
-        self._do_run(runfunc,*args,**kwargs)
+        # Start the runs
+        self._do_runs(runfunc,*args,**kwargs)
 
 
-    def _do_run(self, runfunc, *args, **kwargs):
+    def _do_runs(self, runfunc, *args, **kwargs):
+        """ Starts the individual single runs.
 
+        Starts runs sequentially or initiates multiprocessing.
 
+        :param runfunc: The user's job
+        :param args: Arguments handed to the job
+        :param kwargs: Keyword arguments handed to the job
 
+        :return: Iterable over the results of the individual runs
+
+        """
         log_path = self._log_path
         multiproc = self._traj.f_get('config.environment.multiproc').f_get()
         mode = self._traj.f_get('config.environment.wrap_mode').f_get()
@@ -775,36 +845,49 @@ class Environment(object):
         self._storage_service = self._traj.v_storage_service
 
         if multiproc and mode != pypetconstants.WRAP_MODE_NONE:
-
+            # Prepare Multiprocessing
             if mode == pypetconstants.WRAP_MODE_QUEUE:
+                # For queue mode we need to have a queue in a block of shared memory.
+                # Accordingly wee need a Multiprocessing Manager.
                 manager = multip.Manager()
                 queue = manager.Queue()
                 self._logger.info('Starting the Storage Queue!')
+
+                # Wrap a queue writer around the storage service
                 queue_writer = QueueStorageServiceWriter(self._storage_service,queue)
 
+                # Start the queue process
                 queue_process = multip.Process(name='QueueProcess',target=_queue_handling, args=(queue_writer,log_path))
-                #queue_process.daemon=True
                 queue_process.start()
 
+                # Replace the storage service of the trajectory by a sender.
+                # The sender will put all data onto the queue.
+                # The writer from above will receive the data from the queue and hand it over to
+                # the storage service
                 queue_sender = QueueStorageServiceSender()
                 queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
             elif mode == pypetconstants.WRAP_MODE_LOCK:
+                # We need a lock that is shared by all processes.
+                # Accordingly, we use the Multiprocessing Manager.
                 manager = multip.Manager()
                 lock = manager.Lock()
                 queue = None
 
+                # Wrap around the storage service to allow the placement of locks around
+                # the storage procedure.
                 lock_wrapper = LockWrapper(self._storage_service,lock)
                 self._traj.v_storage_service=lock_wrapper
 
             else:
-                raise RuntimeError('The mutliprocessing mode %s, you chose is not supported, use %s or %s.'
-                                    %(pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_LOCK))
+                raise RuntimeError('The mutliprocessing mode %s, your choice is '
+                                   'not supported, use `%s` or `%s`.'
+                                    %(mode,pypetconstants.WRAP_MODE_QUEUE,
+                                      pypetconstants.WRAP_MODE_LOCK))
 
-
+            # Create a pool of `ncores` processes
             ncores =  self._traj.f_get('config.ncores').f_get()
-            
             mpool = multip.Pool(ncores)
 
             self._logger.info('\n*****************************************************************'
@@ -813,27 +896,30 @@ class Environment(object):
                               '\n*****************************************************************'
                               '************************************\n' %
                               (self._traj.v_name, ncores))
-            
+
+            # Create a generator to generate the tasks for the mp-pool
             iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
                          multiproc, args, kwargs) for n in xrange(len(self._traj))
                                                             if not self._traj.f_is_completed(n))
 
 
-            # iterator = self.task_iterator( log_path, queue, runfunc, multiproc, args, kwargs)
-
+            # Let the pool workers do their jobs provided by the generator
             results = mpool.imap(_single_run,iterator)
 
-            
+            # Everything is done
             mpool.close()
             mpool.join()
 
+            # In case of queue mode, we need to signal to the queue writer that no more data
+            # will be put onto the queue
             if mode == pypetconstants.WRAP_MODE_QUEUE:
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
+            # That's about it!
             mpool.terminate()
 
-
+            # Replace the wrapped storage service with the original one and do some finalization
             self._traj.v_storage_service=self._storage_service
             self._traj._finalize()
 
@@ -846,18 +932,20 @@ class Environment(object):
 
             return results
         else:
-
+            # Single Processing
             self._logger.info('\n*****************************************************************'
                               '*********************************************\n'
                               'STARTING runs of trajectory >>%s<<.'
                               '\n*****************************************************************'
                               '*********************************************\n' %
                               self._traj.v_name)
-            
+
+            # Sequentially run all single runs and append the results to a queue
             results = [_single_run((self._traj._make_single_run(n),log_path,None,runfunc,
                                     len(self._traj),multiproc,args,kwargs)) for n in xrange(len(self._traj))
                                     if not self._traj.f_is_completed(n)]
 
+            # Do some finalization
             self._traj._finalize()
 
             self._logger.info('\n*****************************************************************'
