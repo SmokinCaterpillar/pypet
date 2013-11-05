@@ -211,7 +211,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def _return_item_dictionary(param_dict,fast_access,copy):
 
         if not copy and fast_access:
-            raise TypeError('You cannot access the original dictionary and use fast access at the'
+            raise ValueError('You cannot access the original dictionary and use fast access at the'
                             ' same time!')
         if not fast_access:
             if copy:
@@ -299,12 +299,12 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Whether the original dictionary or a shallow copy is returned.
             If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises TypeError
+            Not Copying and fast access do not work at the same time! Raises ValueError
             if fast access is true and copy false.
 
         :return: Dictionary containing the config data
 
-        :raises: TypeError
+        :raises: ValueError
 
         '''
         return self._return_item_dictionary(self._config,fast_access, copy)
@@ -323,12 +323,12 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Whether the original dictionary or a shallow copy is returned.
             If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises TypeError
+            Not Copying and fast access do not work at the same time! Raises ValueError
             if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
-        :raises: TypeError
+        :raises: ValueError
 
         '''
         return self._return_item_dictionary(self._parameters,fast_access, copy)
@@ -348,12 +348,12 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Whether the original dictionary or a shallow copy is returned.
             If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises TypeError
+            Not Copying and fast access do not work at the same time! Raises ValueError
             if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
-        :raises: TypeError
+        :raises: ValueError
 
         '''
         return self._return_item_dictionary(self._explored_parameters,fast_access,copy)
@@ -371,12 +371,12 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Whether the original dictionary or a shallow copy is returned.
             If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises TypeError
+            Not Copying and fast access do not work at the same time! Raises ValueError
             if fast access is true and copy false.
 
         :return: Dictionary containing the parameters.
 
-        :raises: TypeError
+        :raises: ValueError
 
         '''
         return self._return_item_dictionary(self._derived_parameters, fast_access, copy)
@@ -395,10 +395,13 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Whether the original dictionary or a shallow copy is returned.
             If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises TypeError
+            Not Copying and fast access do not work at the same time! Raises ValueError
             if fast access is true and copy false.
 
         :return: Dictionary containing the results.
+
+        :raises: ValueError
+
         '''
         return self._return_item_dictionary(self._results, fast_access, copy)
 
@@ -1243,7 +1246,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         '''
 
-        count = 0#Don't like it but ok
+        count = 0 #Don't like it but ok
         for key, builditerable in build_dict.items():
             act_param = self.f_get(key, check_uniqueness=True)
             if not act_param.v_is_leaf or not act_param.v_is_parameter:
@@ -1255,11 +1258,18 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             self._explored_parameters[name] = act_param
 
-            if count == 0:
+
+            if count == 0 and len(self) == 1:
                 length = len(act_param)#Not so nice, but this should always be the same numbert
-            else:
-                if not length == len(act_param):
-                    raise ValueError('The parameters to explore have not the same size!')
+            elif len(self) > 1:
+                length = len(self)
+                self._logger.warning('Your trajectory is already explored. But the parameter `%s`'
+                                     ' you want to explore matches the current trajectory length.'
+                                     ' I will add it to'
+                                     ' the existing explored parameters' % key)
+
+            if not length == len(act_param):
+                raise ValueError('The parameters to explore have not the same size!')
             count+=1
 
         for irun in range(length):
@@ -1482,9 +1492,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             for param in self._parameters.itervalues():
                 param.f_unlock()
 
-            for param in self._derived_parameters.itervalues():
-                param.f_unlock()
-
 
 
 
@@ -1693,8 +1700,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                 config_name='merge.%s.other_trajectory.version' % merge_name
                 self.f_add_config(config_name,other_trajectory.v_version,
                                             comment ='The version of pypet you used to manage the merged'
-                                                     ' trajectory. Is only added if other trajectorie\'s'
-                                                       ' version differs from current trajectory version')
+                                            ' trajectory. Is only added if other trajectorie\'s'
+                                            ' version differs from current trajectory version')
 
             config_name='merge.%s.other_trajectory.name' % merge_name
             self.f_add_config(config_name,other_trajectory.v_name,
@@ -1847,9 +1854,8 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         for other_key, new_key in rename_dict.iteritems():
 
             other_instance = other_trajectory.f_get(other_key)
-            was_empty = False
+
             if other_instance.f_is_empty():
-                was_empty = True
                 other_trajectory.f_load_items(other_instance)
 
             my_instance = self.f_get(new_key)
@@ -1864,9 +1870,9 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             self.f_store_item(my_instance)
 
-            if was_empty:
-                other_instance._empty()
-                my_instance._empty()
+
+            other_instance.f_empty()
+            my_instance.f_empty()
 
 
     def _merge_trajectory_results(self, other_trajectory, rename_dict):
@@ -1939,9 +1945,6 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                     param_type = self._create_class(param_type)
                     self.f_add_derived_parameter(param_type,new_dpar_name, comment=comment)
 
-
-            else:
-                continue
 
 
     def _rename_key(self, key, pos, newname):

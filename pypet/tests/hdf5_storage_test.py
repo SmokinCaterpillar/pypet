@@ -257,9 +257,6 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        ###Test, that you cannot append to data
-        with self.assertRaises(ValueError):
-            self.traj.f_store_item('multiproc')
 
         self.make_run()
 
@@ -275,10 +272,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_add_parameter('TEST', 'test_run_complex')
         ###Explore
         self.explore_complex_params(self.traj)
-
-        ###Test, that you cannot append to data
-        with self.assertRaises(ValueError):
-            self.traj.f_store_item('multiproc')
 
         self.make_run()
 

@@ -20,7 +20,7 @@ import cProfile
 from brian import *
 from pypet.utils.explore import cartesian_product
 import shutil
-from test_helpers import make_run, make_temp_file
+from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_run
 
 
 
@@ -114,7 +114,7 @@ def run_net(traj):
     traj.f_add_result('RecentStateMonitorwMean', MRecentStatewMean)
     traj.f_add_result('VanRossumMetric', VanRossum)
 
-class NetworkTest(unittest.TestCase):
+class NetworkTest(TrajectoryComparator):
 
 
     def setUp(self):
@@ -124,7 +124,9 @@ class NetworkTest(unittest.TestCase):
         env = Environment(trajectory='Test',
                           filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
                           file_title='test',
-                          log_folder=make_temp_file('experiments/tests/briantests/log'))
+                          log_folder=make_temp_file('experiments/tests/briantests/log'),
+                          dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                                                        BrianMonitorResult])
 
         traj = env.v_trajectory
 
@@ -147,10 +149,36 @@ class NetworkTest(unittest.TestCase):
         self.traj = traj
 
 
+    def test_singleprocessing(self):
+        self.env.f_run(run_net)
+
+        self.traj.f_load(load_derived_parameters=-2, load_results=-2)
+
+        traj2 = Trajectory(name = self.traj.v_name, add_time=False,
+                           filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                                                        BrianMonitorResult])
+
+        traj2.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
+
+        self.compare_trajectories(self.traj, traj2)
+
+
     def test_multiprocessing(self):
         self.traj.multiproc = True
         self.traj.ncores = 3
         self.env.f_run(run_net)
+
+        self.traj.f_load(load_derived_parameters=-2, load_results=-2)
+
+        traj2 = Trajectory(name = self.traj.v_name, add_time=False,
+                           filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                                                        BrianMonitorResult])
+
+        traj2.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
+
+        self.compare_trajectories(self.traj, traj2)
 
 
 if __name__ == '__main__':

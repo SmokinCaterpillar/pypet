@@ -21,6 +21,7 @@ import cProfile
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import multiprocessing as multip
+import pypet.utils.comparisons as comp
 
 import copy
 
@@ -38,7 +39,10 @@ class TrajectoryTest(unittest.TestCase):
     def setUp(self):
         name = 'Moop'
 
-        self.traj = Trajectory(name,[ImAParameterInDisguise])
+        self.traj = Trajectory(name,dynamically_imported_classes=[ImAParameterInDisguise,
+                                                                  'pypet.tests.test_helpers.ImAResultInDisguise'])
+
+        self.assertTrue(self.traj.f_is_empty())
 
         comment = 'This is a comment'
         self.traj.v_comment=comment
@@ -71,13 +75,160 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.peter.f_add_parameter('paul.peter')
 
+        self.traj.f_add_config('make.impossible.promises',1)
+
         with self.assertRaises(AttributeError):
             self.traj.markus.peter
 
-
-
         with self.assertRaises(AttributeError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
+
+    def test_value_error_on_search_strategy_assignment(self):
+        with self.assertRaises(ValueError):
+            self.traj.v_search_strategy = 'ewnforenfre'
+
+    def test_get_data_dictionaries_directly(self):
+
+        ############## Cofig ###################
+        config_dict_from_subtree = self.traj.config.f_to_dict()
+
+        self.assertTrue(len(config_dict_from_subtree)>0)
+
+        config_dict_directly = self.traj.f_get_config(copy=True)
+
+        self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
+                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+
+        config_dict_directly = self.traj.f_get_config(copy=False)
+
+        self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
+                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+
+
+        config_dict_from_subtree = self.traj.config.f_to_dict(fast_access=True)
+
+        with self.assertRaises(ValueError):
+            config_dict_directly = self.traj.f_get_config(copy=False, fast_access=True)
+
+        config_dict_directly = self.traj.f_get_config(copy=True, fast_access=True)
+
+        self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
+                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+
+        ############## Parameters #############################
+        parameters_dict_from_subtree = self.traj.parameters.f_to_dict()
+
+        self.assertTrue(len(parameters_dict_from_subtree)>0)
+
+        parameters_dict_directly = self.traj.f_get_parameters(copy=True)
+
+        self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
+                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+
+        parameters_dict_directly = self.traj.f_get_parameters(copy=False)
+
+        self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
+                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+
+
+        ### Empty Parameters won't support fast access so we need to set
+        self.traj.paul.peter.f_set(42)
+
+        parameters_dict_from_subtree = self.traj.parameters.f_to_dict(fast_access=True)
+
+        with self.assertRaises(ValueError):
+            parameters_dict_directly = self.traj.f_get_parameters(copy=False, fast_access=True)
+
+        parameters_dict_directly = self.traj.f_get_parameters(copy=True, fast_access=True)
+
+        self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
+                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+
+        ################# Derived Parameters ############################
+        derived_parameters_dict_from_subtree = self.traj.derived_parameters.f_to_dict()
+
+        self.assertTrue(len(derived_parameters_dict_from_subtree)>0)
+
+        derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=True)
+
+        self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
+                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+
+        derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=False)
+
+        self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
+                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+
+
+        derived_parameters_dict_from_subtree = self.traj.derived_parameters.f_to_dict(fast_access=True)
+
+        with self.assertRaises(ValueError):
+            derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=False, fast_access=True)
+
+        derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=True, fast_access=True)
+
+        self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
+                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+
+
+
+        ############## Results #################################
+        results_dict_from_subtree = self.traj.results.f_to_dict()
+
+        self.assertTrue(len(results_dict_from_subtree)>0)
+
+        results_dict_directly = self.traj.f_get_results(copy=True)
+
+        self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
+                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+
+        results_dict_directly = self.traj.f_get_results(copy=False)
+
+        self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
+                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+
+
+        results_dict_from_subtree = self.traj.results.f_to_dict(fast_access=True)
+
+        with self.assertRaises(ValueError):
+            results_dict_directly = self.traj.f_get_results(copy=False, fast_access=True)
+
+        results_dict_directly = self.traj.f_get_results(copy=True, fast_access=True)
+
+        self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
+                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+
+
+        ################### Explored Parameters #######################
+
+
+        #We need to unlock the parameter because we have accessed it above
+        self.traj.f_get('yve').f_unlock()
+        explore_dict = {'yve':[4,5,65,66]}
+
+        # We can add to existing explored parameters if we match the length
+        self.traj.f_explore(explore_dict)
+
+        explore_dict_directly = self.traj.f_get_explored_parameters(copy=False)
+
+        for key in explore_dict:
+            self.assertTrue(comp.nested_equal(self.traj.f_get(key),
+                                              explore_dict_directly[self.traj.f_get(key).v_full_name]))
+
+        explore_dict_directly = self.traj.f_get_explored_parameters(copy=True)
+
+        for key in explore_dict:
+            self.assertTrue(comp.nested_equal(self.traj.f_get(key),
+                                              explore_dict_directly[self.traj.f_get(key).v_full_name]))
+
+        with self.assertRaises(ValueError):
+            explore_dict_directly = self.traj.f_get_explored_parameters(copy=False, fast_access=True)
+
+        explore_dict_directly = self.traj.f_get_explored_parameters(copy=True, fast_access=True)
+
+        for key in explore_dict:
+            self.assertTrue(comp.nested_equal(self.traj.f_get(key,fast_access=True),
+                                              explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
 
 
@@ -264,7 +415,7 @@ class TrajectoryTest(unittest.TestCase):
             self.traj._prepare_experiment()
 
 
-    def test_if_pickable(self):
+    def test_if_picklable(self):
 
         self.traj.v_fast_access=True
 

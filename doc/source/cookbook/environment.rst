@@ -230,10 +230,8 @@ table about the explored parameter values of that run
 
 However, if you have many *runs* and *results* and *derived_parameters*,
 I would advice you to switch of the result, derived parameter
-and explored parameter overview in each single run. You don't have to do that by hand,
-simply use :func:`~pypet.environment.Environment.f_switch_off_large_overview`
-or :func:`~pypet.environment.Environment.f_switch_off_all_overview` to disable all tables.
-Or specify whether you want large and/or small tables on environment creation.
+and explored parameter overview in each single run. These tables are switched off if you
+pass `large_overview_tables=False` as a parameter at environment construction (see above).
 
 
 .. _more-on-duplicate-comments:

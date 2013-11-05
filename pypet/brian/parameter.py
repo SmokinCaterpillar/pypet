@@ -360,21 +360,21 @@ class BrianMonitorResult(Result):
 
     Example:
 
-    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor', monitor=SpikeMonitor(...), comment='Im a SpikeMonitor Example!')
+    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor', monitor=SpikeMonitor(...), storage_mode='TABLE', comment='Im a SpikeMonitor Example!')
     >>> brian_result.nspikes
     1337
 
 
     There are two storage modes in case you use the SpikeMonitor and StateSpikeMonitor:
 
-    * :const:`~pbrian_testbrian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
+    * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
 
         Default, information is stored into a single table where
         one column contains the neuron index, another the spiketimes and
         following columns contain variable values (in case of the StateSpikeMonitor)
         This is a very compact storage form.
 
-    * :const:`~pbrian_testbrian.parameter.BrianParameter.ARRAY_MODE`: ('ARRAY')
+    * :const:`~pypet.brian.parameter.BrianParameter.ARRAY_MODE`: ('ARRAY')
 
         For each neuron there will be a new hdf5 array,
         i.e. if you have many neurons your result node will have many entries.
@@ -618,15 +618,14 @@ class BrianMonitorResult(Result):
     #keywords=set(['data','values','spikes','times','rate','count','mean_var',])
 
     def __init__(self, full_name, *args, **kwargs):
-        super(BrianMonitorResult,self).__init__(full_name)
 
-        self._storage_mode=None
-        self._monitor_type=None
+        self._storage_mode = None
+        self._monitor_type = None
         storage_mode = kwargs.pop('storage_mode',BrianMonitorResult.TABLE_MODE)
         self.v_storage_mode=storage_mode
 
+        super(BrianMonitorResult,self).__init__(full_name, *args, **kwargs)
 
-        self.f_set(*args,**kwargs)
 
     def _store(self):
         store_dict = super(BrianMonitorResult,self)._store()
@@ -673,7 +672,7 @@ class BrianMonitorResult(Result):
 
     @property
     def v_monitor_type(self):
-        ''' The type of the stored monitor. Each MonitorResult can only manage a single Monitor
+        ''' The type of the stored monitor. Each MonitorResult can only manage a single Monitor.
         '''
         return self._monitor_type
 
@@ -692,10 +691,7 @@ class BrianMonitorResult(Result):
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         '''
 
-        if name == 'storage_mode':
-            self.v_storage_mode=item
-
-        elif isinstance(item, (Monitor, MultiStateMonitor)):
+        if isinstance(item, (Monitor, MultiStateMonitor)):
             self._extract_monitor_data(item)
         else:
             super(BrianMonitorResult,self).f_set_single(name,item)

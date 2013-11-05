@@ -89,6 +89,10 @@ def nested_equal(a, b):
     """
 
     # for types that support __eq__
+
+    if id(a) == id(b):
+        return True
+
     if hasattr(a,'__eq__'):
         try:
             custom_eq= a == b

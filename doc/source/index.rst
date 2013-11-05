@@ -131,6 +131,9 @@ If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 If you do not want to browse to your installation folder, you can also download
 :download:`all_tests.py <../../pypet/tests/all_tests.py>`.
 
+Running all tests can take up to 10 minutes. The test suite encompasses more than 300 tests
+(if you have installed BRIAN) and has a code coverage of more than 90%!
+
 ===================
 Indices and Tables
 ===================

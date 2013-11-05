@@ -49,6 +49,59 @@ class MergeTest(TrajectoryComparator):
         self.envs.append(env)
         self.trajs.append( env.v_trajectory)
 
+    def test_merging_errors_if_trajs_do_not_match(self):
+
+        self.filenames = [make_temp_file('experiments/tests/HDF5/merge_errors.hdf5'), 0]
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self.param_dict={}
+        create_param_dict(self.param_dict)
+
+        for irun in [0,1]:
+            add_params(self.trajs[irun], self.param_dict)
+
+
+        self.explore(self.trajs[0])
+        self.explore(self.trajs[1])
+
+        for irun in [0,1]:
+            self.make_run(self.envs[irun])
+
+        for irun in [0,1]:
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
+
+
+        self.trajs[0].f_add_parameter('Merging.Denied', 13)
+
+        ##f_merge without destroying the original trajectory
+        merged_traj = self.trajs[0]
+
+        # We cannot merge trajectories which parameters differ
+        with self.assertRaises(TypeError):
+            merged_traj.f_merge(self.trajs[1])
+
+        self.trajs[1].f_add_parameter('Merging.Denied', 13.13)
+        # We cannot merge trajectories where parameters differ in type
+        with self.assertRaises(TypeError):
+            merged_traj.f_merge(self.trajs[1])
+
+        self.trajs[1].f_get('Denied').f_unlock()
+        self.trajs[1].f_get('Denied').f_set(15)
+
+        merged_traj.f_merge(self.trajs[1])
+
+
 
 
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes(self):
@@ -68,9 +121,18 @@ class MergeTest(TrajectoryComparator):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0, 0]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
+    def test_basic_within_separate_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
+        self.filenames = [make_temp_file('experiments/tests/HDF5/merge2.hdf5'),
+                          make_temp_file('experiments/tests/HDF5/merge3.hdf5'),
+                          make_temp_file('experiments/tests/HDF5/merge4.hdf5')]
+        self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
+
+
 
     def test_merge_basic_with_separate_files_only_adding_more_trials(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge2.hdf5'), make_temp_file('experiments/tests/HDF5/merge3.hdf5'), make_temp_file('experiments/tests/HDF5/merge4.hdf5')]
+        self.filenames = [make_temp_file('experiments/tests/HDF5/merge2.hdf5'),
+                          make_temp_file('experiments/tests/HDF5/merge3.hdf5'),
+                          make_temp_file('experiments/tests/HDF5/merge4.hdf5')]
         self.merge_basic_only_adding_more_trials(True)
 
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes_test_backup(self):

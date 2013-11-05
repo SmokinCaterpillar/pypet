@@ -157,7 +157,7 @@ class WithAnnotations(object):
 
         Equivalent to `v_annotations.f_ann_to_str()`
 
-        DEPRICATED: Please use `f_ann_to_str()` instead.
+        DEPRECATED: Please use `f_ann_to_str()` instead.
 
         '''
         return self._annotations.f_ann_to_str()

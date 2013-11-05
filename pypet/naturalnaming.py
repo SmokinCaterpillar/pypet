@@ -787,7 +787,7 @@ class NaturalNamingInterface(object):
 
             return act_node
         except:
-            self._logger.error('Failed storing >>%s<< under >>%s<<.' %
+            self._logger.error('Failed adding >>%s<< under >>%s<<.' %
                                (name, start_node.v_full_name))
             raise
 

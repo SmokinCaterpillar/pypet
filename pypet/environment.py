@@ -28,6 +28,7 @@ from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
 
 from pypet import __version__ as VERSION
+from pypet.utils.decorators import deprecated
 
 
 def _single_run(args):
@@ -547,9 +548,6 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-
-
-
     def _make_logger(self,log_path):
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
@@ -573,7 +571,7 @@ class Environment(object):
             handler.setFormatter(f)
         self._logger = logging.getLogger('pypet.environment.Environment=%s' % self.v_name)
 
-
+    @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
         ''' Switches off the tables consuming the most memory.
 
@@ -582,19 +580,31 @@ class Environment(object):
             * Single Run Derived Parameter Overview
 
             * Explored Parameter Overview in each Single Run
+
+
+        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+
         '''
         self._traj.config.hdf5.overview.results_runs=0
         self._traj.config.hdf5.overview.derived_parameters_runs = 0
         self._traj.config.hdf5.overview.explored_parameters_runs = 0
 
-
+    @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_all_overview(self):
-        '''Switches all tables off.'''
+        '''Switches all tables off.
+
+        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+
+        '''
         self.f_switch_off_small_overview()
         self.f_switch_off_large_overview()
 
+    @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_small_overview(self):
         ''' Switches off small overview tables and switches off `purge_duplicate_comments`.
+
+        DEPRECATED: Please pass whether to use the tables to the Environment constructor.
+
         '''
         self._traj.config.hdf5.overview.parameters = 0
         self._traj.config.hdf5.overview.config=0
