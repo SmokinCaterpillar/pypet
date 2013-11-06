@@ -132,7 +132,7 @@ class LockWrapper(MultiprocWrapper):
                 try:
                     self._lock.release()
                 except RuntimeError:
-                    self._logger.error('Could not release lock >>%s<<!' % str(self._lock))
+                    self._logger.error('Could not release lock `%s`!' % str(self._lock))
 
 
 
@@ -149,7 +149,7 @@ class LockWrapper(MultiprocWrapper):
                 try:
                     self._lock.release()
                 except RuntimeError:
-                    self._logger.error('Could not release lock >>%s<<!' % str(self._lock))
+                    self._logger.error('Could not release lock `%s`!' % str(self._lock))
 
 
 
@@ -469,12 +469,12 @@ class HDF5StorageService(StorageService):
                 self._srvc_load_several_items(stuff_to_load,*args,**kwargs)
 
             else:
-                raise pex.NoSuchServiceError('I do not know how to handle >>%s<<' % msg)
+                raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
             self._srvc_closing_routine(opened)
         except:
             self._srvc_closing_routine(True)
-            self._logger.error('Failed loading  >>%s<<' % str(stuff_to_load))
+            self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
 
 
@@ -736,13 +736,13 @@ class HDF5StorageService(StorageService):
                 self._srvc_store_several_items(stuff_to_store,*args,**kwargs)
 
             else:
-                raise pex.NoSuchServiceError('I do not know how to handle >>%s<<' % msg)
+                raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
             self._srvc_closing_routine(opened)
 
         except:
             self._srvc_closing_routine(True)
-            self._logger.error('Failed storing >>%s<<' % str(stuff_to_store))
+            self._logger.error('Failed storing `%s`' % str(stuff_to_store))
             raise
 
 
@@ -922,7 +922,7 @@ class HDF5StorageService(StorageService):
 
         if ('/'+self._trajectory_name) in backup_hdf5file:
 
-            raise ValueError('I cannot backup  >>%s<< into file >>%s<<, there is already a '
+            raise ValueError('I cannot backup  `%s` into file `%s`, there is already a '
                              'trajectory with that name.' % (traj.v_name,backup_filename))
 
         backup_root = backup_hdf5file.root
@@ -1020,7 +1020,7 @@ class HDF5StorageService(StorageService):
             self._hdf5file.flush()
 
         except pt.NoSuchNodeError:
-            self._logger.warning('Did not find table >>%s<< in one of the trajectories,'
+            self._logger.warning('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
         
@@ -1088,7 +1088,7 @@ class HDF5StorageService(StorageService):
             self._hdf5file.flush()
 
         except pt.NoSuchNodeError:
-            self._logger.warning('Did not find table >>%s<< in one of the trajectories,'
+            self._logger.warning('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
 
@@ -1100,7 +1100,7 @@ class HDF5StorageService(StorageService):
 
         # other_trajectory_name = other_trajectory.v_full_name
         if not ('/'+other_trajectory_name) in self._hdf5file:
-            raise ValueError('Cannot merge >>%s<< and >>%s<<, because the second trajectory cannot '
+            raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
                              'be found in my file.')
 
         for old_name, new_name in rename_dict.iteritems():
@@ -1467,7 +1467,7 @@ class HDF5StorageService(StorageService):
                 expectedrows= len(traj._parameters)
 
             if table_name == 'explored_parameters':
-                paramdescriptiondict['array']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH)
+                paramdescriptiondict['range']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH)
                 expectedrows=len(traj._explored_parameters)
 
             if table_name == 'results_trajectory':
@@ -1561,7 +1561,7 @@ class HDF5StorageService(StorageService):
 
         if not traj._stored and self._trajectory_group._v_nchildren>0:
             raise RuntimeError('You want to store a completely new trajectory with name'
-                               ' >>%s<< but this trajectory is already found in file >>%s<<' %
+                               ' `%s` but this trajectory is already found in file `%s`' %
                                (traj.v_name,self._filename))
 
         self._trj_store_meta_data(traj)
@@ -1663,7 +1663,7 @@ class HDF5StorageService(StorageService):
 
                 if not array_length is None and array_length >1 and array_length != len(traj):
                         raise RuntimeError('Something is completely odd. You load parameter'
-                                               ' >>%s<< of length %d into a trajectory of length'
+                                               ' `%s` of length %d into a trajectory of length'
                                                ' %d. They should be equally long!'  %
                                                (full_name,array_length,len(traj)))
 
@@ -1746,7 +1746,7 @@ class HDF5StorageService(StorageService):
                 parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,
                                                           name=hdf5_location)
         except pt.NoSuchNodeError:
-            self._logger.error('Cannot store >>%s<< the parental hdf5 node with path >>%s<< does '
+            self._logger.error('Cannot store `%s` the parental hdf5 node with path `%s` does '
                                'not exist! Store the parental node first!' %
                                (traj_node.v_name,hdf5_location))
             raise
@@ -1768,7 +1768,7 @@ class HDF5StorageService(StorageService):
             except AttributeError:
                 hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
         except pt.NoSuchNodeError:
-            self._logger.error('Cannot load >>%s<< the hdf5 node >>%s<< does not exist!'
+            self._logger.error('Cannot load `%s` the hdf5 node `%s` does not exist!'
                                 % (child_name,hdf5_node_name))
 
             raise
@@ -2098,7 +2098,7 @@ class HDF5StorageService(StorageService):
                 pass
 
             if  multiple_entries:
-                 raise RuntimeError('There is something entirely wrong, >>%s<< '
+                 raise RuntimeError('There is something entirely wrong, `%s` '
                                     'appears more than once in table %s.'
                                     %(item_name,table._v_name))
 
@@ -2121,13 +2121,13 @@ class HDF5StorageService(StorageService):
             pass
 
         if  multiple_entries:
-             raise RuntimeError('There is something entirely wrong, >>%s<< '
+             raise RuntimeError('There is something entirely wrong, `%s` '
                                 'appears more than once in table %s.'
                                 %(item_name,table._v_name))
 
         ## Check if we added something
         if row is None:
-            raise RuntimeError('Could not add or modify entries of >>%s<< in '
+            raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' %(item_name,table._v_name))
         table.flush()
 
@@ -2145,14 +2145,9 @@ class HDF5StorageService(StorageService):
             insert_dict['length'] = len(item)
 
         if 'comment' in colnames:
-            comment = item.v_comment
-            if len(comment)>=pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                self._logger.debug('Your comment is too long ( %d characters), only comments up to'
-                                     '%d characters can be stored into overview tables. '
-                                     'Comment in table will be truncated.' %
-                                     (len(comment),pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-
-                comment = comment[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]+'...'
+            comment = self._all_cut_string(item.v_comment,
+                                           pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
+                                           self._logger)
 
             insert_dict['comment'] = comment
 
@@ -2167,7 +2162,8 @@ class HDF5StorageService(StorageService):
 
         if 'value' in colnames:
 
-            insert_dict['value'] = self._all_get_value_string(item, self._logger)
+            insert_dict['value'] = self._all_cut_string(item.f_val_to_str(),
+                                    pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH, self._logger)
 
         if 'example_item_run_name' in colnames:
             insert_dict['example_item_run_name'] = additional_info['example_item_run_name']
@@ -2181,8 +2177,14 @@ class HDF5StorageService(StorageService):
         if 'timestamp' in colnames:
             insert_dict['timestamp'] = item.v_timestamp
 
+        if 'range' in colnames:
+            insert_dict['range'] = self._all_cut_string(str(item.f_get_range()),
+                                    pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH, self._logger)
+
+        # To allow backwards compatibility
         if 'array' in colnames:
-            insert_dict['array'] = self._all_get_array_str(item,self._logger)
+            insert_dict['array'] = self._all_cut_string(str(item.f_get_range()),
+                                    pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH, self._logger)
 
         if 'version' in colnames:
             insert_dict['version'] = item.v_version
@@ -2190,27 +2192,15 @@ class HDF5StorageService(StorageService):
         return insert_dict
 
     @staticmethod
-    def _all_get_value_string(item, logger):
-        valstr = item.f_val_to_str()
-        if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-            logger.debug('The value string >>%s<< was too long I truncated it to'
+    def _all_cut_string(string, max_length, logger):
+        if len(string) >= max_length:
+            logger.debug('The string `%s` was too long I truncated it to'
                                  ' %d characters' %
-                                 (valstr,pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH))
-            valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH]
+                                 (string,max_length))
+            string = string[0:max_length]
 
-        return valstr
+        return string
 
-    @staticmethod
-    def _all_get_array_str(item, logger):
-        arraystr = str(item.f_get_range())
-        if len(arraystr) >= pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH:
-            logger.debug('The array string >>%s<< was too long I truncated it to'
-                                 ' %d characters' %
-                                 (arraystr,pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH))
-
-            arraystr=arraystr[0:pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH]
-
-        return arraystr
 
     # def _all_get_groups(self,key):
     #     newhdf5group = self._trajectory_group
@@ -2325,8 +2315,8 @@ class HDF5StorageService(StorageService):
                 if dtype in HDF5StorageService.TYPE_FLAG_MAPPING:
                     flags_dict[key]=HDF5StorageService.TYPE_FLAG_MAPPING[dtype]
                 else:
-                    raise pex.NoSuchServiceError('I cannot store >>%s<<, I do not understand the'
-                                                 'type >>%s<<.' %(key,str(dtype)))
+                    raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
+                                                 'type `%s`.' %(key,str(dtype)))
 
 
     def _prm_meta_remove_summary(self, instance):
@@ -2357,7 +2347,7 @@ class HDF5StorageService(StorageService):
 
                     try:
                         row_iterator.next()
-                        raise RuntimeError('There is something completely wrong, found >>%s<< twice in a table!' %
+                        raise RuntimeError('There is something completely wrong, found `%s` twice in a table!' %
                                         instance.v_full_name)
                     except StopIteration:
                         pass
@@ -2453,7 +2443,9 @@ class HDF5StorageService(StorageService):
                                 definitely_store_comment=True
 
                                 row['example_item_run_name']=creator_name
-                                row['value'] = self._all_get_value_string(instance,self._logger)
+                                row['value'] = self._all_cut_string(instance.f_val_to_str(),
+                                                    pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                                                    self._logger)
                             else:
                                 self._logger.warning('Your example value and comment in the overview'
                                                      ' table cannot be set to the lowest index'
@@ -2471,7 +2463,7 @@ class HDF5StorageService(StorageService):
 
                         try:
                             row_iterator.next()
-                            raise RuntimeError('There is something completely wrong, found >>%s<< twice in a table!' %
+                            raise RuntimeError('There is something completely wrong, found `%s` twice in a table!' %
                                             instance.v_full_name)
                         except StopIteration:
                             pass
@@ -2598,13 +2590,13 @@ class HDF5StorageService(StorageService):
     def _prm_store_dict_as_table(self, msg, key, data_to_store, group, fullname):
 
         if key in group:
-            raise ValueError('Dictionary >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+            raise ValueError('Dictionary `%s` already exists in `%s`. Appending is not supported (yet).')
 
 
         #assert isinstance(data_to_store,dict)
 
         if key in group:
-            raise ValueError('Dict >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+            raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
 
         temp_dict={}
         for innerkey, val in data_to_store.iteritems():
@@ -2634,7 +2626,7 @@ class HDF5StorageService(StorageService):
         try:
 
             if key in group:
-                raise ValueError('DataFrame >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+                raise ValueError('DataFrame `%s` already exists in `%s`. Appending is not supported (yet).')
 
 
             name = group._v_pathname+'/' +key
@@ -2648,7 +2640,7 @@ class HDF5StorageService(StorageService):
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing DataFrame >>%s<< of >>%s<<.' %(key,fullname))
+            self._logger.error('Failed storing DataFrame `%s` of `%s`.' %(key,fullname))
             raise
 
 
@@ -2658,7 +2650,7 @@ class HDF5StorageService(StorageService):
 
         try:
             if key in group:
-                raise ValueError('CArray >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+                raise ValueError('CArray `%s` already exists in `%s`. Appending is not supported (yet).')
 
 
             # if isinstance(data, np.ndarray):
@@ -2669,7 +2661,7 @@ class HDF5StorageService(StorageService):
                 size = 1
 
             if size == 0:
-                self._logger.warning('>>%s<< of >>%s<< is _empty, I will skip storing.' %(key,fullname))
+                self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
                 return
 
             #try using pytables 3.0.0 API
@@ -2686,7 +2678,7 @@ class HDF5StorageService(StorageService):
             setattr(carray._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
+            self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
 
@@ -2696,7 +2688,7 @@ class HDF5StorageService(StorageService):
 
         try:
             if key in group:
-                raise ValueError('Array >>%s<< already exists in >>%s<<. Appending is not supported (yet).')
+                raise ValueError('Array `%s` already exists in `%s`. Appending is not supported (yet).')
 
             if hasattr(data,'__len__'):
                 size = len(data)
@@ -2704,7 +2696,7 @@ class HDF5StorageService(StorageService):
                 size = 1
 
             if size == 0:
-                self._logger.warning('>>%s<< of >>%s<< is _empty, I will skip storing.' %(key,fullname))
+                self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
                 return
 
             try:
@@ -2716,7 +2708,7 @@ class HDF5StorageService(StorageService):
             setattr(array._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.ARRAY)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing array >>%s<< of >>%s<<.' % (key, fullname))
+            self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
 
@@ -2755,7 +2747,7 @@ class HDF5StorageService(StorageService):
                 strtype = repr(type(data))
 
                 if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                    raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
+                    raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
                                    (str(data),repr(type(data))))
 
                 _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
@@ -2765,7 +2757,7 @@ class HDF5StorageService(StorageService):
                                 HDF5StorageService.COLL_DICT)
 
             else:
-                raise TypeError('I do not know how to handel >>%s<< its type is >>%s<<.' %
+                raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
                                    (str(data),repr(type(data))))
 
             if type(data) in (list,tuple):
@@ -2773,8 +2765,8 @@ class HDF5StorageService(StorageService):
                     strtype = repr(type(data[0]))
 
                     if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                        raise TypeError('I do not know how to handel >>%s<< its type is '
-                                           '>>%s<<.' % (str(data),strtype))
+                        raise TypeError('I do not know how to handel `%s` its type is '
+                                           '`%s`.' % (str(data),strtype))
 
                     _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
                                                         HDF5StorageService.SCALAR_TYPE,strtype)
@@ -2847,12 +2839,12 @@ class HDF5StorageService(StorageService):
                     nstart= table.nrows
                     datasize = data.shape[0]
                     if nstart==datasize:
-                        self._logger.debug('There is no new data to the parameter >>%s<<. I will'
-                                           ' skip storage of table >>%s<<' % (fullname,tablename))
+                        self._logger.debug('There is no new data to the parameter `%s`. I will'
+                                           ' skip storage of table `%s`' % (fullname,tablename))
                         return
                     else:
-                        self._logger.debug('There is new data to the parameter >>%s<<. I will'
-                                           ' add data to table >>%s<<' % (fullname,tablename))
+                        self._logger.debug('There is new data to the parameter `%s`. I will'
+                                           ' add data to table `%s`' % (fullname,tablename))
 
                 else:
                     raise ValueError('Table %s already exists, appending is only supported for '
@@ -2866,7 +2858,7 @@ class HDF5StorageService(StorageService):
                 data_type_dict = {}
             else:
                 # if msg == pypetconstants.UPDATE_LEAF:
-                    # self._logger.debug('Table >>%s<< of >>%s<< does not exist, '
+                    # self._logger.debug('Table `%s` of `%s` does not exist, '
                     #                    'I will create it!' % (tablename,fullname))
 
                 description_dict, data_type_dict = self._prm_make_description(data,fullname)
@@ -2907,7 +2899,7 @@ class HDF5StorageService(StorageService):
             table.flush()
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing table >>%s<< of >>%s<<.' %(tablename,fullname))
+            self._logger.error('Failed storing table `%s` of `%s`.' %(tablename,fullname))
             raise
 
 
@@ -2972,8 +2964,8 @@ class HDF5StorageService(StorageService):
             else:
                 return pt.Col.from_dtype(np.dtype(type(val)))
         except Exception:
-            self._logger.error('Failure in storing >>%s<< of Parameter/Result >>%s<<.'
-                               ' Its type was >>%s<<.' % (key,fullname,repr(type(val))))
+            self._logger.error('Failure in storing `%s` of Parameter/Result `%s`.'
+                               ' Its type was `%s`.' % (key,fullname,repr(type(val))))
             raise
 
 
@@ -3048,7 +3040,7 @@ class HDF5StorageService(StorageService):
 
         if load_only is not None:
             if not set(loaded) == set(load_only):
-                raise ValueError('You marked %s for load only, but I cannot find these for >>%s<<' %
+                raise ValueError('You marked %s for load only, but I cannot find these for `%s`' %
                                  (str(set(load_only)-set(loaded)),full_name))
         
         param._load(load_dict)
@@ -3067,7 +3059,7 @@ class HDF5StorageService(StorageService):
             for innerkey, vallist in temp_dict.items():
                 innder_dict[innerkey] = vallist[0]
         except:
-            self._logger.error('Failed loading >>%s<< of >>%s<<.' % (leaf._v_name,full_name))
+            self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name,full_name))
             raise
 
 
@@ -3078,7 +3070,7 @@ class HDF5StorageService(StorageService):
             dataframe = read_hdf(self._filename,pathname,mode='r')
             load_dict[name] = dataframe
         except:
-            self._logger.error('Failed loading >>%s<< of >>%s<<.' % (pd_node._v_name,full_name))
+            self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))
             raise
 
     def _prm_read_table(self,table,load_dict, full_name):
@@ -3108,7 +3100,7 @@ class HDF5StorageService(StorageService):
                 else:
                     load_dict[table_name] = ObjectTable(data={colname:data_list})
         except:
-            self._logger.error('Failed loading >>%s<< of >>%s<<.' % (table._v_name,full_name))
+            self._logger.error('Failed loading `%s` of `%s`.' % (table._v_name,full_name))
             raise
 
 
@@ -3123,7 +3115,7 @@ class HDF5StorageService(StorageService):
 
             load_dict[array._v_name]=result
         except:
-            self._logger.error('Failed loading >>%s<< of >>%s<<.' % (array._v_name,full_name))
+            self._logger.error('Failed loading `%s` of `%s`.' % (array._v_name,full_name))
             raise
 
 

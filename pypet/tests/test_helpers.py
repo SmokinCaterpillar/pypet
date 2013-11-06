@@ -130,7 +130,10 @@ def create_param_dict(param_dict):
     param_dict['Tuples']['float'] = (44.4,42.1,3.)
     param_dict['Tuples']['str'] = ('1','2wei','dr3i')
 
-    param_dict['Pickle']['list']= ['b','h', 42, ()]
+    param_dict['Pickle']['list']= ['b','h', 53, (),0]
+    param_dict['Pickle']['list']= ['b','h', 42, (),1]
+    param_dict['Pickle']['list']= ['b',[444,43], 44, (),2]
+
 
 
 def add_params(traj,param_dict):
@@ -148,7 +151,9 @@ def add_params(traj,param_dict):
                 **{'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
                                  'Second_Fav':np.array([43.0,43.0])})
         elif isinstance(val,list):
-            traj.f_add_parameter(PickleParameter,key,val, comment='Im a comment!')
+            # The last item of the list `val` is an int between 0 and 2, we can use it as a
+            # protocol read out to test all protocols
+            traj.f_add_parameter(PickleParameter,key,val, comment='Im a comment!', protocol=val[-1])
         else:
             raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
@@ -197,7 +202,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
         traj.f_add_derived_parameter('mega',33, comment='It is huuuuge!')
 
-        traj.f_add_result(PickleResult,'pickling.result', my_dict)
+        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1)
+        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2)
+        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0)
 
         traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42)
         traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52)

@@ -473,8 +473,11 @@ class PickleParameterTest(ParameterTest):
 
     def make_params(self):
         self.param = {}
+        count = 0
         for key, val in self.data.items():
-            self.param[key] = PickleParameter(self.location+'.'+key, val, comment=key)
+            self.param[key] = PickleParameter(self.location+'.'+key, val, comment=key, protocol=count)
+            count +=1
+            count = count % 3
 
 
 
@@ -831,6 +834,18 @@ class SparseResultTest(ResultTest):
             data_dict = {'val'+SparseResult.IDENTIFIER:42}
             with self.assertRaises(AttributeError):
                 res.f_set(**data_dict)
+
+    def make_results(self):
+        self.results= {}
+        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',
+                                                                  protocol=0, **self.data)
+        self.results['test.res.args']=self.Constructor('test.res.args')
+        self.results['test.res.args'].v_protocol=1
+
+        self.results['test.res.kwargs']=self.Constructor('test.res.kwargs', protocol=2)
+
+        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.kwargs'].f_set(**self.data)
 
 if __name__ == '__main__':
     unittest.main()

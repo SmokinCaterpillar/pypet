@@ -1,13 +1,36 @@
-__author__ = 'robert'
+""" Module defining annotations.
+
+This module contains two classes:
+
+    1. :class:`~pypet.annotations.Annotations`
+
+        Container class for annotations. There are no restrictions regarding what is considered
+        to be an annotation. In principle, this can be any python object. However,
+        if using the standard :class:`~pypet.storageservice.HDF5StorageService`,
+        these annotations are stored as hdf5 node attributes.
+        Accordingly, annotations should be rather small since reading
+        and writing these attributes to disk is slow.
+
+    2. :class:`~pypet.annotations.WithAnnotations`
+
+        Abstract class to subclass from. Instances that subclass `WithAnnotations`
+        have the `v_annotations` property which is an instance of the `Annotations` class
+        to handle annotations. They also acquire some functions to put annotations directly
+        into the `v_annotations` object like `f_set_annotations`.
+
+"""
+
+__author__ = 'Robert Meyer'
 
 from pypet.utils.decorators import deprecated
+
 
 
 class Annotations(object):
     """ Simple container class for annotations.
 
     Every tree node (*leaves* and *group* nodes) can be annotated.
-    In case you use the standard HDF5 storage service,
+    In case you use the standard :class:`~pypet.storageservice.HDF5StorageService`,
     these annotations are stored in the attributes of the hdf5 nodes in the hdf5 file,
     you might wanna take a look at pytables attributes_.
 
@@ -58,7 +81,7 @@ class Annotations(object):
                 return self.__dict__[self.__dict__.keys()[0]]
             elif len(self.__dict__) > 1:
                 raise ValueError('Your annotation contains more than one entry: '
-                                 '>>%s<< Please use >>f_get<< with one of these.' %
+                                 '`%s` Please use >>f_get<< with one of these.' %
                                  (str(self.__dict__.keys())))
             else:
                 raise AttributeError('Your annotation is empty, cannot access data.')

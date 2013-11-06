@@ -228,11 +228,58 @@ In addition, for every single run there will be a small overview
 table about the explored parameter values of that run
 (see also :ref:`more-on-storage`).
 
+The following tables are created:
+
+* An `info` table listing general information about your trajectory
+
+* A `runs` table summarizing the single runs
+
+* The instance tables:
+
+    `parameters`
+
+        Containing all parameters, and some information about comments, length etc.
+
+    `config`,
+
+        As above, but config parameters
+
+    `results_runs`
+
+        All results of all individual runs, to reduce memory size only a short value
+        summary and the name is given.
+
+
+    `results_runs_summary`
+
+        Only the very first result with a particular name is listed. For instance
+        if you create the result 'my_result' in all runs only the result of run_00000000
+        is listed with detailed information.
+
+        If you use this table, you can purge duplicate comments, see :ref:`more-on-duplicate-comments`.
+
+
+    `results_trajectroy`
+
+        All results created directly with the trajectory and not within single runs are listed.
+
+    `derived_parameters_trajectory`
+
+    `derived_parameters_runs`
+
+    `derived_parameters_runs_summary`
+
+        All three are analogous to the result overviews above.
+
+* The `explored_parameters` overview about your parameters explored in the single runs.
+
+* In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
+  the values in each run.
+
 However, if you have many *runs* and *results* and *derived_parameters*,
 I would advice you to switch of the result, derived parameter
 and explored parameter overview in each single run. These tables are switched off if you
 pass `large_overview_tables=False` as a parameter at environment construction (see above).
-
 
 .. _more-on-duplicate-comments:
 

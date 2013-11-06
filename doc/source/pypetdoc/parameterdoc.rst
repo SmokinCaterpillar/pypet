@@ -1,6 +1,9 @@
 =========================
 Parameters and Results
 =========================
+
+.. automodule:: pypet.parameter
+
 --------------------
 Parameter
 --------------------

@@ -51,6 +51,6 @@ if __name__ == '__main__':
 
         if opt == '--filename':
             filename = arg
-            print 'I will convert >>%s<<' % filename
+            print 'I will convert `%s`' % filename
 
     alpha2beta(filename)

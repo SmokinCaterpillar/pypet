@@ -245,7 +245,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_get_item(self):
 
-        self.assertEqual(self.traj.peter.paul, self.traj['peter.paul'])
+        self.assertEqual(self.traj.markus.yve, self.traj['markus.yve'].f_get())
 
     @staticmethod
     def get_depth_dict(traj, as_run=None):

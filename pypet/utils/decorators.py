@@ -31,11 +31,25 @@ def deprecated(msg=''):
 
 
 def copydoc(fromfunc, sep="\n"):
-    """
-    Decorator: Copy the docstring of `fromfunc`
+    """Decorator: Copy the docstring of `fromfunc`
+
+    If the doc contains a line with the keyword `ABSTRACT`,
+    like `ABSTRACT: Needs to be defined in subclass`, this line and the line after are removed.
+
     """
     def _decorator(func):
         sourcedoc = fromfunc.__doc__
+
+        # Remove the ABSTRACT line:
+        split_doc = sourcedoc.split('\n')
+        split_doc_no_abstract = [line for line in split_doc if not 'ABSTRACT' in line]
+
+        # If the length is different we have found an ABSTRACT line
+        # Finally we want to remove the final blank line, otherwise
+        # we would have three blank lines at the end
+        if len(split_doc) != len(split_doc_no_abstract):
+            sourcedoc = '\n'.join(split_doc_no_abstract[:-1])
+
         if func.__doc__ == None:
             func.__doc__ = sourcedoc
         else:

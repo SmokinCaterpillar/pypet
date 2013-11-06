@@ -491,7 +491,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
                     if class_name == class_name_to_test:
                         new_class = self._load_class(dynamic_class)
                         return new_class
-            raise ImportError('Could not create the class named >>%s<<.' % class_name)
+            raise ImportError('Could not create the class named `%s`.' % class_name)
 
 
 class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
@@ -815,7 +815,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
         for item in dynamically_imported_classes:
             if not (isinstance(item, basestring) or inspect.isclass(item)):
-                raise TypeError('Your dynamic import >>%s<< is neither a class nor a string.' %
+                raise TypeError('Your dynamic import `%s` is neither a class nor a string.' %
                                 str(item))
 
         self._dynamic_imports.extend(dynamically_imported_classes)
@@ -991,7 +991,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
                     self._storage_service.store(pypetconstants.LIST, fetched_items,
                                                trajectory_name=self.v_name)
                 except:
-                    self._logger.error('Could not remove >>%s<< from the trajectory. Maybe the'
+                    self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
                                        ' item(s) was/were never stored to disk.')
                     raise
 
@@ -1031,7 +1031,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
     def _preset(self,name,args,kwargs):
         if name in self:
-            raise ValueError('Parameter >>%s<< is already part of your trajectory, use the normal'
+            raise ValueError('Parameter `%s` is already part of your trajectory, use the normal'
                              'accessing routine to change config.' % name)
         else:
             self._changed_default_parameters[name] = (args, kwargs)
@@ -1115,7 +1115,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
         for name in name_list:
             param = self.f_get(name)
             if not param.v_is_parameter:
-                raise TypeError('>>%s<< is not a parameter it is a %s, find is not applicable' %
+                raise TypeError('`%s` is not a parameter it is a %s, find is not applicable' %
                                 (name, str(type(param))))
 
             if param.f_has_range():
@@ -1529,13 +1529,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             diff1 = my_keyset - other_keyset
             diff2 = other_keyset - my_keyset
             raise TypeError('Cannot merge trajectories, they do not live in the same space,the '
-                            'f_set of parameters >>%s<< is only found in the current trajectory '
-                            'and >>%s<< only in the other trajectory.' % (str(diff1), str(diff2)))
+                            'f_set of parameters `%s` is only found in the current trajectory '
+                            'and `%s` only in the other trajectory.' % (str(diff1), str(diff2)))
 
         for key, other_param in allotherparams.items():
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
-                raise TypeError('Cannot merge trajectories, values of parameters >>%s<< are not '
+                raise TypeError('Cannot merge trajectories, values of parameters `%s` are not '
                                 'of the same type. Types are %s (current) and %s (other).' %
                                 (key, str(type(my_param.f_get())), str(type(other_param.f_get()))))
 
@@ -1861,7 +1861,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             my_instance = self.f_get(new_key)
             if not my_instance.f_is_empty():
                 raise RuntimeError('You want to slowly f_merge results, but your target result '
-                                   '>>%s<< is not _empty, this should not happen.' %
+                                   '`%s` is not _empty, this should not happen.' %
                                    my_instance.v_full_name)
 
             load_dict = other_instance._store()
@@ -1884,7 +1884,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
 
             if key in self._results:
-                self._logger.warning('You already have a trajectory result called >>%s<< in your '
+                self._logger.warning('You already have a trajectory result called `%s` in your '
                                      'trajectory. I will not copy it.' % key)
                 continue
 
@@ -1968,7 +1968,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             my_trial_parameter = self.f_get(trial_parameter)
             other_trial_parameter = other_trajectory.f_get(trial_parameter)
             if not isinstance(my_trial_parameter, BaseParameter):
-                raise TypeError('Your trial_parameter >>%s<< does not evaluate to a real parameter'
+                raise TypeError('Your trial_parameter `%s` does not evaluate to a real parameter'
                                 ' in the trajectory' % trial_parameter)
 
             if my_trial_parameter.f_has_range():
@@ -1986,13 +1986,13 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
             if mytrialset != set(range(mymaxtrial + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
                                 'contain integers from 0 to %d, but it infact it '
-                                'f_contains >>%s<<.' % (mymaxtrial, str(mytrialset)))
+                                'f_contains `%s`.' % (mymaxtrial, str(mytrialset)))
 
             othertrialset = set(other_trial_list)
             othermaxtrial = max(othertrialset)
             if othertrialset != set(range(othermaxtrial + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
-                                'contain integers from 0 to %d, but it infact it f_contains >>%s<< in the other trajectory.' % (
+                                'contain integers from 0 to %d, but it infact it f_contains `%s` in the other trajectory.' % (
                     othermaxtrial, str(othertrialset)))
 
             trial_parameter = my_trial_parameter.v_full_name
@@ -2015,7 +2015,7 @@ class Trajectory(SingleRun,ParameterGroup,ConfigGroup):
 
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
-                raise TypeError('The parameters with name >>%s<< are not of the same type, cannot '
+                raise TypeError('The parameters with name `%s` are not of the same type, cannot '
                                 'f_merge trajectory.' % key)
 
             if my_param.v_full_name == trial_parameter:

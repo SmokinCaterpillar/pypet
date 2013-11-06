@@ -1,5 +1,14 @@
-__author__ = 'Robert Meyer'
+""" Module providing the functionality to allow automatic git commits.
 
+* :func:`~pypet.gitintegration.make_git_commit` performs the git commit
+
+* :func:`~pypet.gitintegration.add_commit_variables` adds some information about the commit to a
+  :class:`~pypet.trajectory.Trajectory`.
+
+
+"""
+
+__author__ = 'Robert Meyer'
 
 import time
 
@@ -22,7 +31,7 @@ def add_commit_variables(traj, new_commit, message):
     traj.f_add_config(git_commit_name+git_hexhsa, new_commit.hexsha,
                           comment='SHA-1 hash of commit')
 
-    # Add the descitpion string
+    # Add the description string
     traj.f_add_config(git_commit_name+git_name_rev, new_commit.name_rev,
             comment='String describing the commits hex sha based on the closest Reference')
 
@@ -40,7 +49,8 @@ def add_commit_variables(traj, new_commit, message):
 def make_git_commit(environment, git_repository, user_message):
     """ Makes a commit returns the SHA_1 code of the commit."""
 
-    # Import GitPython
+    # Import GitPython, we do it here to allow also users not having GitPython installed
+    # to use the normal environment
     import git
 
     # Open the repository

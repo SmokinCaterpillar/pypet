@@ -1,17 +1,16 @@
+"""This module contains constants defined for a global scale and used across most pypet modules.
+
+It contains constants defining the maximum length of a parameter/result name or constants
+that are recognized by storage services to determine how to store and load data.
+
+"""
+
 __author__ = 'Robert Meyer'
-
-''' This module contains constants defined on a global scale,
-that might be interesting to the user.
-'''
-
 
 import numpy as np
 
 
-
-
 ###################### Supported Data ########################
-
 
 PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'complex'>": complex,
@@ -33,11 +32,10 @@ PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'numpy.uint64'>": np.uint64,
  "<type 'numpy.uint8'>": np.uint8,
  "<type 'str'>": str}
-''' A Mapping (dict) from the the string representation of a type and the type.
+""" A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
-'''
-
+"""
 
 PARAMETER_SUPPORTED_DATA = (np.int8,
                        np.int16,
@@ -61,85 +59,89 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
                        np.complex_,
                        np.str,
                        np.str_)
-'''Set of supported scalar types by the storage service and the standard parameter'''
+"""Set of supported scalar types by the storage service and the standard parameter"""
+
 
 
 ################### HDF5 Naming and Comments ##########################
 
-
 HDF5_STRCOL_MAX_NAME_LENGTH = 64
-'''Maximum length of a (short) name'''
+"""Maximum length of a (short) name"""
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
-'''Maximum length of the location string'''
+"""Maximum length of the location string"""
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
-''' Maximum length of a value string'''
+""" Maximum length of a value string"""
 HDF5_STRCOL_MAX_COMMENT_LENGTH = 256
-''' Maximum length of a comment '''
+""" Maximum length of a comment """
 HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
-''' Maximum length of a parameter array summary '''
+""" Maximum length of a parameter array summary """
+
 
 ######## Multiprocessing Modes #############
 
 WRAP_MODE_QUEUE = 'QUEUE'
-'''For multiprocessing, queue multiprocessing mode '''
+"""For multiprocessing, queue multiprocessing mode """
 WRAP_MODE_LOCK = 'LOCK'
-''' Lock multiprocessing mode '''
+""" Lock multiprocessing mode """
 WRAP_MODE_NONE = 'NONE'
-''' No multiprocessing wrapping for the storage service'''
+""" No multiprocessing wrapping for the storage service"""
 
 
 ############ Loading Constants ###########################
-LOAD_SKELETON = 1
-'''For trajectory loading, loads only the skeleton.'''
-LOAD_DATA = 2
-''' Loads skeleton and data.'''
-LOAD_NOTHING = 0
-''' Loads nothing '''
-UPDATE_SKELETON = -1
-''' Updates skeleton, i.e. adds only items that are not part of your current trajectory.'''
-UPDATE_DATA = -2
-''' Updates skeleton and data, adds only items that are not part of your current trajectory.'''
 
+LOAD_SKELETON = 1
+"""For trajectory loading, loads only the skeleton."""
+LOAD_DATA = 2
+""" Loads skeleton and data."""
+LOAD_NOTHING = 0
+""" Loads nothing """
+UPDATE_SKELETON = -1
+""" Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
+UPDATE_DATA = -2
+""" Updates skeleton and data, adds only items that are not part of your current trajectory."""
 
 
 ##################### STORING Message Constants ################################
+
 LEAF ='LEAF'
-''' For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object'''
+""" For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object"""
 UPDATE_LEAF = 'UPDATE_LEAF'
-''' Updates a *leaf* node, currently only parameters that are extended in length can be updated.'''
+""" Updates a *leaf* node, currently only parameters that are extended in length can be updated."""
 TRAJECTORY = 'TRAJECTORY'
-''' Stores the whole trajectory'''
+""" Stores the whole trajectory"""
 MERGE = 'MERGE'
-''' Merges two trajectories '''
+""" Merges two trajectories """
 GROUP = 'GROUP'
-''' Stores a group node, can be recursive.'''
+""" Stores a group node, can be recursive."""
 LIST = 'LIST'
-''' Stores a list of different things, in order to avoid reopening and closing of the hdf5 file.'''
+""" Stores a list of different things, in order to avoid reopening and closing of the hdf5 file."""
 SINGLE_RUN = 'SINGLE_RUN'
-''' Stores a single run'''
+""" Stores a single run"""
 PREPARE_MERGE = 'PREPARE_MERGE'
-''' Updates a trajectory before it is going to be merged'''
+""" Updates a trajectory before it is going to be merged"""
 BACKUP = 'BACKUP'
-''' Backs up a trajectory'''
+""" Backs up a trajectory"""
 REMOVE='REMOVE'
-''' Removes an item from hdf5 file'''
+""" Removes an item from hdf5 file"""
 REMOVE_INCOMPLETE_RUNS = 'REMOVE_INCOMPLETE_RUNS'
-''' Removes incomplete runs to continue a crashed trajectory'''
+""" Removes incomplete runs to continue a crashed trajectory"""
 TREE = 'TREE'
-''' Stores a subtree of the trajectory'''
+""" Stores a subtree of the trajectory"""
 
 
 ################### Search Strategies ##########################
+
 BFS = 'BFS'
-'''For search in trajectory tree, breadth first search, default strategy'''
+"""For search in trajectory tree, breadth first search, default strategy"""
 DFS = 'DFS'
-'''Depth first search in trajectory tree, not recommended'''
+"""Depth first search in trajectory tree, not recommended"""
 
 
 ########## Names of Runs ####################
+
 FORMAT_ZEROS=8
-''' Number of leading zeros'''
+""" Number of leading zeros"""
 RUN_NAME = 'run_'
-'''Name of a single run'''
+"""Name of a single run"""
 FORMATTED_RUN_NAME=RUN_NAME+'%0'+str(FORMAT_ZEROS)+'d'
-'''Name formatted with leading zeros'''
+"""Name formatted with leading zeros"""

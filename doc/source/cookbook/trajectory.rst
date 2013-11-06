@@ -188,12 +188,28 @@ the group names `parameters`, `config`, `derived_parameters.trajectory`, `derive
 `results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
+To access data put into your trajectory you can use
+
+*
+
+  :func:`~pypet.trajectory.f_get` method. You might want to take a look at the function
+  definition to check out the other arguments you can pass to :func:`~pypet.trajectory.f_get`.
+
+*
+
+    Use the square brackets - as you do with dictionaries - like `traj['nrebras']` which is
+    equivalent to calling `traj.f_get('nzebras')`.
+
+*
+
+    Use natural naming dot notation like  `traj.nzebras`.
+    The latter supports some special features see below.
+
 .. _more-on-access:
 
 ----------------------
 Natural Naming
 ----------------------
-
 
 As said before *trajectories* instantiate trees and the tree can be browsed via natural naming.
 
@@ -256,15 +272,15 @@ request, a breadth first search [#]_ is applied to find the corresponding group/
     >>> traj.parameters.ncycles
     11
 
-Search is established with very fast look up and usually needs much less then :math:`O(n)`
+Search is established with very fast look up and usually needs much less then :math:`O(N)`
 [most often :math:`O(1)` or :math:`O(d)`, where :math:`d` is the depth of the tree
-and `n` the total number of nodes, i.e. *groups* + *leaves*)
+and `N` the total number of nodes, i.e. *groups* + *leaves*)
 
 However, sometimes your shortcuts are not unique and you might find several solutions for
 your natural naming search in the tree. To speed up the lookup, the search is stopped after the
 first result. So you won't be notified whether your result is actually unique. Yet, you
 can set `v_check_uniqueness=True` at your trajectory object and it will be checked for these
-circumstances. Nonetheless, enabling `v_check_uniqueness=True` will require always :math:`O(n)` for
+circumstances. Nonetheless, enabling `v_check_uniqueness=True` will require always :math:`O(N)` for
 your lookups. So do that
 for debugging purposes once and switch it off during your real simulation runs to save time!
 
@@ -401,55 +417,11 @@ pickle_ module.
 If you store a trajectory to disk it's tree structure is also found in the structure of
 the HDF5 file!
 In addition, there will be some overview tables summarizing what you stored into the hdf5 file.
-They can be found under the top-group `overview`.
+They can be found under the top-group `overview`, the different tables are listed in the
+:ref:`more-on-overview` section.
 
-* An `info` table listing general information about your trajectory
-
-* A `runs` table summarizing the single runs
-
-* The instance tables:
-
-    `parameters`
-
-        Containing all parameters, and some information about comments, length etc.
-
-    `config`,
-
-        As above, but config parameters
-
-    `results_runs`
-
-        All results of all individual runs, to reduce memory size only a short value
-        summary and the name is given.
-
-
-    `results_runs_summary`
-
-        Only the very first result with a particular name is listed. For instance
-        if you create the result 'my_result' in all runs only the result of run_00000000
-        is listed with detailed information.
-
-        If you use this table, you can purge duplicate comments, see :ref:`more-on-duplicate-comments`.
-
-
-    `results_trajectroy`
-
-        All results created directly with the trajectory and not within single runs are listed.
-
-    `derived_parameters_trajectory`
-
-    `derived_parameters_runs`
-
-    `derived_parameters_runs_summary`
-
-        All three are analogous to the result overviews above.
-
-* The `explored_parameters` overview about your parameters explored in the single runs.
-
-* In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing the values in each run.
-
-Btw, you can switch the creation of these tables off (See :ref:`more-on-overview`) to reduce the
-size of the final hdf5 file.
+Btw, you can switch the creation of these tables off passing the appropriate arguments to the
+environment constructor to reduce the size of the final hdf5 file.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
 

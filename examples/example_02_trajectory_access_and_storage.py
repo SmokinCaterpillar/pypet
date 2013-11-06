@@ -53,7 +53,7 @@ print 'The name of the actor playing Luke is %s.' % traj.luke_skywalker
 
 #And now what happens if you forbid it
 traj.v_fast_access=False
-print 'The object found for luke_skywalker is >>%s<<.' % str(traj.luke_skywalker)
+print 'The object found for luke_skywalker is `%s`.' % str(traj.luke_skywalker)
 
 #Let's store the trajectory:
 traj.f_store()

@@ -1,32 +1,39 @@
-"""
-Created on 03.06.2013
+""" Module containing the environment to run experiments.
 
-@author: robert
+An :class:`~pypet.environment.Environment` provides an interface to run experiments based on
+parameter exploration.
+
+The environment contains and might even create a :class:`~pypet.trajectory.Trajectory`
+container which can be filled with parameters and results (see :mod:`pypet.parameter`).
+Instance of :class:`~pypet.trajectory.SingleRun` based on this trajectory are
+distributed to the user's job function to perform a single run of an experiment.
+
+An `Environment` is the handyman for scheduling, it can be used for multiprocessing and takes
+care of organizational issues like logging.
+
 """
+
+__author__ = 'Robert Meyer'
 
 import os
 import sys
 import logging
-
-from pypet.utils.mplogging import StreamToLogger
-from pypet.trajectory import Trajectory, SingleRun
-
-
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
 import multiprocessing as multip
 import traceback
 import hashlib
 import time
 import datetime
 
-from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,QueueStorageServiceWriter, LockWrapper
+from pypet.utils.mplogging import StreamToLogger
+from pypet.trajectory import Trajectory, SingleRun
+from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
+    QueueStorageServiceWriter, LockWrapper
 from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
-
 from pypet import __version__ as VERSION
 from pypet.utils.decorators import deprecated
 
@@ -34,7 +41,7 @@ from pypet.utils.decorators import deprecated
 def _single_run(args):
     """ Performs a single run of the experiment.
 
-    :param args: List of arguments:
+    :param args: List of arguments
 
         0. The single run object containing all parameters set to the corresponding run index.
 
@@ -52,7 +59,7 @@ def _single_run(args):
 
         7. The keyword arguments handed to the user's job function (as **kwargs)
 
-    :return: Results computed by the user's job function which are not stored into the trajectory.
+    :return: Results computed by the user's job function which are not stored into the trajectory
 
     """
 
@@ -99,9 +106,9 @@ def _single_run(args):
         if queue is not None:
             traj.v_storage_service.queue = queue
     
-        root.info('\n--------------------------------\n '
+        root.info('\n===================================\n '
                   'Starting single run #%d of %d '
-                  '\n--------------------------------\n' % (idx,total_runs))
+                  '\n===================================\n' % (idx,total_runs))
 
         # Run the job function of the user
         result =runfunc(traj,*runparams,**kwrunparams)
@@ -114,9 +121,9 @@ def _single_run(args):
         # Make some final adjustments to the single run before termination
         traj._finalize()
 
-        root.info('\n--------------------------------\n '
+        root.info('\n===================================\n '
                   'Finished single run #%d of %d '
-                  '\n--------------------------------' % (idx,total_runs))
+                  '\n===================================\n' % (idx,total_runs))
 
         return result
 
@@ -152,7 +159,7 @@ class Environment(object):
     """ The environment to run a parameter exploration.
 
     The first thing you usually do is to create and environment object that takes care about
-    the running of the experiment.
+    the running of the experiment. You can provide the following arguments:
 
     :param trajectory:
 
@@ -189,10 +196,8 @@ class Environment(object):
 
     :param multiproc:
 
-
         Whether or not to use multiprocessing. Default is 0 (False). If you use
-        multiprocessing, all your data and the tasks you compute
-        must be picklable!
+        multiprocessing, all your data and the tasks you compute must be picklable!
 
     :param ncores:
 
@@ -230,11 +235,10 @@ class Environment(object):
 
         Whether the environment should take special care to allow to resume or continue
         crashed trajectories. Default is 1 (True).
-        Everything must be picklable in order to allow
-        continuing of trajectories.
+        Everything must be picklable in order to allow continuing of trajectories.
 
-        Assume you run experiments that take
-        a lot of time. If during your experiments there is a power failure,
+        Assume you run experiments that take a lot of time.
+        If during your experiments there is a power failure,
         you can resume your trajectory after the last single run that was still
         successfully stored via your storage service.
 
@@ -242,8 +246,8 @@ class Environment(object):
         using this you can continue crashed trajectories.
         If you do not use hdf5 files or the hdf5 storage service, the `.cnt` file is placed
         into the log folder.
-        In order to resume trajectories use
-        :func:`~pypet.environment.Environment.f_continue_run`.
+
+        In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue_run`.
 
     :param use_hdf5:
 
@@ -263,13 +267,12 @@ class Environment(object):
         parameter :func:`~pypet.trajectory.SingleRun.f_add_derived_parameter` and
         you set a comment, normally that comment would be attached to each and every instance.
         This can produce a lot of unnecessary overhead if the comment is the same for every
-        instance over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
+        instance over all runs. If `purge_duplicate_comments=1` than only the comment of the
         first result or derived parameter instance created in a run is stored or comments
         that differ from this first comment.
 
-        For instance,
-        during a single run you call `traj.f_add_result('my_result`,42, comment='Mostly
-        harmless!')`
+        For instance, during a single run you call
+        `traj.f_add_result('my_result`,42, comment='Mostly harmless!')`
         and the result will be renamed to `results.run_00000000.my_result`. After storage
         in the node associated with this result in your hdf5 file, you will find the comment
         `'Mostly harmless!'` there. If you call
@@ -277,7 +280,7 @@ class Environment(object):
         in another run again, let's say run 00000001, the name will be mapped to
         `results.run_00000001.my_result`. But this time the comment will not be saved to disk
         since `'Mostly harmless!'` is already part of the very first result with the name
-        'my_result'.
+        'results.run_00000000.my_result'.
         Note that the comments will be compared and storage will only be discarded if the strings
         are exactly the same.
 
@@ -311,7 +314,7 @@ class Environment(object):
 
         Whether to add large overview tables. This encompasses information about every derived
         parameter, result, and the explored parameter in every single run.
-        If you want small hdf5 files, this is the first option to set to False.
+        If you want small hdf5 files, this is the first option to set to false.
 
     :param results_per_run:
 
@@ -327,13 +330,11 @@ class Environment(object):
     :param git_repository:
 
         If your code base is under git version control you can specify here the path
-        (relative or absolute) to
-        the folder containing the `.git` directory as a string.
+        (relative or absolute) to the folder containing the `.git` directory as a string.
         Note in order to use this tool you need GitPython_.
 
-        If you set this path the environment
-        will trigger a commit of your code base adding all files that are currently under
-        version control.
+        If you set this path the environment will trigger a commit of your code base
+        adding all files that are currently under version control.
         Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
         The user can specify the commit message, see below. Note that the message
         will be augmented by the name and the comment of the trajectory.
@@ -344,13 +345,12 @@ class Environment(object):
 
         Message passed onto git command.
 
-
     .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 
     The Environment will automatically add some config settings to your trajectory.
-    Thus, you can always look up how your trajectory was run. This encompasses all above named
-    parameters as well as some information about the environment.
+    Thus, you can always look up how your trajectory was run. This encompasses most of the above
+    named parameters as well as some information about the environment.
     This additional information includes
     a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
     If you use git integration, the SHA-1 hash code will be the one from your git commit.
@@ -463,7 +463,7 @@ class Environment(object):
 
         self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
-        # Check if the user wants to use the hdf5 storage service if yes,
+        # Check if the user wants to use the hdf5 storage service. If yes,
         # add a service to the trajectory
         if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
             self._add_hdf5_storage_service()
@@ -593,8 +593,8 @@ class Environment(object):
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
 
-        # Check if there already exist logging handlers, if so, the user has already set a log
-        # level. If not, set the log level to INFO
+        # Check if there already exist logging handlers, if so, we assume the user
+        # has already set a log  level. If not, we set the log level to INFO
         if len(logging.getLogger().handlers)==0:
             logging.basicConfig(level=logging.INFO)
 
@@ -667,8 +667,7 @@ class Environment(object):
 
 
     def f_continue_run(self, continue_file):
-        """ Resumes crashed trajectories by supplying the '.cnt' file.
-        """
+        """ Resumes crashed trajectories by supplying the '.cnt' file."""
 
         # Unpack the stored data
         continue_dict = pickle.load(open(continue_file,'rb'))
@@ -729,7 +728,7 @@ class Environment(object):
 
     @property
     def v_timestamp(self):
-        """Time of creation as python datetime float."""
+        """Time of creation as python datetime float"""
         return self._timestamp
 
     @property
@@ -770,9 +769,6 @@ class Environment(object):
 
         """
 
-
-
-
         # Make some sanity checks if the user wants the standard hdf5 service.
         if self._use_hdf5:
             if ( (not self._traj.f_get('results_runs_summary').f_get() or
@@ -786,6 +782,7 @@ class Environment(object):
         for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
             if not run_dict['completed']:
                 count +=1
+
         # Add the amount to be run to the trajectory
         config_name='environment.%s.normal_runs' % self.v_name
         if not config_name in self._traj:
@@ -809,7 +806,7 @@ class Environment(object):
             else:
                 dump_filename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
 
-            # Store all relevant info in a dictionary and pickle it.
+            # Store all relevant info into a dictionary and pickle it.
             prev_full_copy = self._traj.v_full_copy
             dump_dict['full_copy'] = prev_full_copy
             dump_dict['runfunc'] = runfunc
@@ -818,7 +815,7 @@ class Environment(object):
             self._traj.v_full_copy=True
             dump_dict['trajectory'] = self._traj
 
-            pickle.dump(dump_dict,open(dump_filename,'wb'))
+            pickle.dump(dump_dict,open(dump_filename,'wb'),protocol=2)
 
             self._traj.v_full_copy=prev_full_copy
 
@@ -890,11 +887,11 @@ class Environment(object):
             ncores =  self._traj.f_get('config.ncores').f_get()
             mpool = multip.Pool(ncores)
 
-            self._logger.info('\n*****************************************************************'
-                              '************************************\n'
-                              'STARTING runs of trajectory >>%s<< in parallel with %d cores.'
-                              '\n*****************************************************************'
-                              '************************************\n' %
+            self._logger.info('\n************************************************************\n'
+                              '************************************************************\n'
+                              'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
+                              '\n************************************************************\n'
+                              '************************************************************\n' %
                               (self._traj.v_name, ncores))
 
             # Create a generator to generate the tasks for the mp-pool
@@ -923,21 +920,21 @@ class Environment(object):
             self._traj.v_storage_service=self._storage_service
             self._traj._finalize()
 
-            self._logger.info('\n*****************************************************************'
-                              '***************************************************\n'
-                              'FINISHED all runs of trajectory >>%s<< in parallel with %d cores.'
-                              '\n*****************************************************************'
-                              '***************************************************\n' %
+            self._logger.info('\n************************************************************\n'
+                              '************************************************************\n'
+                              'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
+                              '\n************************************************************\n'
+                              '************************************************************\n' %
                               (self._traj.v_name, ncores))
 
             return results
         else:
             # Single Processing
-            self._logger.info('\n*****************************************************************'
-                              '*********************************************\n'
-                              'STARTING runs of trajectory >>%s<<.'
-                              '\n*****************************************************************'
-                              '*********************************************\n' %
+            self._logger.info('\n************************************************************\n'
+                              '************************************************************\n'
+                              'STARTING runs of trajectory\n`%s`.'
+                              '\n************************************************************\n'
+                              '************************************************************\n' %
                               self._traj.v_name)
 
             # Sequentially run all single runs and append the results to a queue
@@ -948,11 +945,11 @@ class Environment(object):
             # Do some finalization
             self._traj._finalize()
 
-            self._logger.info('\n*****************************************************************'
-                              '*********************************************\n'
-                              'FINISHED all runs of trajectory >>%s<<.'
-                              '\n*****************************************************************'
-                              '*********************************************\n' %
+            self._logger.info('\n************************************************************\n'
+                              '************************************************************\n'
+                              'FINISHED all runs of trajectory\n`%s`.'
+                              '\n************************************************************\n'
+                              '************************************************************\n' %
                               self._traj.v_name)
 
             return results

@@ -243,11 +243,11 @@ class BrianResult(Result):
     '''String storage mode'''
 
     def __init__(self, full_name, *args, **kwargs):
-        super(BrianResult,self).__init__(full_name, *args, **kwargs)
-
         self._storage_mode=None
         storage_mode = kwargs.pop('storage_mode',BrianResult.FLOAT_MODE)
         self.v_storage_mode=storage_mode
+
+        super(BrianResult,self).__init__(full_name, *args, **kwargs)
 
     @property
     def v_storage_mode(self):

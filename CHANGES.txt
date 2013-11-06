@@ -1,5 +1,9 @@
 pypet 0.1b.2
 
+*   __getitem__ of the trajectory always returns the instance and fast access is not applied
+
+*   PickleResult and PickleParameter support the choice of protocol
+
 *   Explored Sparse matrices are stored under a slightly different name to disk.
 
 *   BUG FIX: BFS works properly
