@@ -94,11 +94,13 @@ class ObjectTable(DataFrame):
 
     Creates the following table:
 
-    ::
-             Random_Values characters
-        0            42       Luke
-        1            43        Han
-        2            44      Spock
+        ======  ==============  ===========
+        Index   Random_Values   characters
+        ======  ==============  ===========
+        0       42              Luke
+        1       43              Han
+        2       44              Spock
+        ======  ==============  ===========
 
     .. _pandas: http://pandas.pydata.org/
 

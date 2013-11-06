@@ -12,8 +12,7 @@ import itertools as it
 
 
 def results_equal(a,b):
-    ''' Compares two result objects
-    '''
+    """Compares two result instances"""
     if not isinstance(a, pypet.parameter.Result) or not isinstance(b, pypet.parameter.Result):
         return False
 
@@ -44,7 +43,7 @@ def results_equal(a,b):
     return True
 
 def parameters_equal(a,b):
-    '''Compares two parameter objects'''
+    '''Compares two parameter instances'''
     if not isinstance(b, pypet.parameter.BaseParameter) or not isinstance(a, pypet.parameter.BaseParameter):
         return False
 
@@ -82,17 +81,18 @@ def parameters_equal(a,b):
 
 
 def nested_equal(a, b):
-    """
-    Compare two objects recursively by element, handling numpy objects.
+    """Compares two objects recursively by their elements, also handling numpy objects.
 
     Assumes hashable items are not mutable in a way that affects equality.
+    Based on the suggestion from HERE_, thanks again Lauritz V. Thaulow :-)
+
+    .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
+
     """
-
-    # for types that support __eq__
-
     if id(a) == id(b):
         return True
 
+    # for types that support __eq__
     if hasattr(a,'__eq__'):
         try:
             custom_eq= a == b
@@ -100,8 +100,6 @@ def nested_equal(a, b):
                 return custom_eq
         except ValueError:
             pass
-
-
 
     #Check equality according to type type [sic].
     if a is None:

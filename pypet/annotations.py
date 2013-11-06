@@ -37,8 +37,7 @@ class Annotations(object):
     Annotations should be small (short strings or basic python data types) since their storage
     and retrieval is quite slow!
 
-    .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes
-    .html#the-attributeset-class
+    .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
     """
 
@@ -145,8 +144,7 @@ class WithAnnotations(object):
         If you use the standard HDF5 storage service, they will be stored as hdf5 node
         attributes_.
 
-        .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes
-        .html#the-attributeset-class
+        .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
         """
         return self._annotations
