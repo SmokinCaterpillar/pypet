@@ -69,6 +69,8 @@ def main():
     traj.f_explore(ut.cartesian_product,explore_dict,cmb_list)
     
     traj._prepare_experiment()
+    traj.f_store()
+
     for n in xrange(len(traj)):
         do_stuff(traj._make_single_run(n))
 

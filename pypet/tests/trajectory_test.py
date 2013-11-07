@@ -80,7 +80,7 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.traj.markus.peter
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
     def test_value_error_on_search_strategy_assignment(self):
@@ -348,20 +348,20 @@ class TrajectoryTest(unittest.TestCase):
     def test_illegal_namings(self):
         self.traj=Trajectory()
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('f_get')
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
                                       'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
                                       'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri')
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
                                       'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
                                       'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri.test')
 
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('tr',22)
 
 
@@ -413,6 +413,33 @@ class TrajectoryTest(unittest.TestCase):
         ### should raise an error because 'I_do_not_exist', does not exist:
         with self.assertRaises(pex.DefaultReplacementError):
             self.traj._prepare_experiment()
+
+    def test_f_is_completed(self):
+        traj = Trajectory()
+
+        traj.f_add_parameter('test', 42)
+
+        traj.f_explore({'test':[1,2,3,4]})
+
+        self.assertFalse(traj.f_is_completed())
+
+        for run_name in traj.f_get_run_names():
+            self.assertFalse(traj.f_is_completed(run_name))
+
+        traj._run_information[traj.f_idx_to_run(1)]['completed']=1
+
+        self.assertFalse(traj.f_is_completed())
+
+        self.assertTrue(traj.f_is_completed(1))
+
+        for run_name in traj.f_get_run_names():
+            traj._run_information[run_name]['completed']=1
+
+        self.assertTrue(traj.f_is_completed())
+
+        for run_name in traj.f_get_run_names():
+            self.assertTrue(traj.f_is_completed(run_name))
+
 
 
     def test_if_picklable(self):

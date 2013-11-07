@@ -38,6 +38,8 @@ def add_params(traj):
 
 # This is our job that we will execute
 def run_net(traj):
+    # We want to give every network a fresh start
+    clear(True, True)
 
     defaultclock.dt=traj.defaultclock
 
@@ -71,8 +73,8 @@ def run_net(traj):
     MStateV = StateMonitor(neuron,'vm',record=[1,2,3])
 
 
-    # Now record for real for 500 milliseconds
-    run(500*msecond,report='text')
+    # Now record for real for 250 milliseconds
+    run(250*msecond,report='text')
 
     # Add the briantests monitor
     traj.v_standard_result = BrianMonitorResult

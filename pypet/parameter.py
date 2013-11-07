@@ -66,6 +66,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+import pickletools
 
 import numpy as np
 import scipy.sparse as spsp
@@ -657,6 +658,9 @@ class Parameter(BaseParameter):
 
     Note that for larger numpy arrays it is recommended to use the
     :class:`~pypet.parameter.ArrayParameter`.
+
+
+    In case you create a new parameter you can pass the following arguments:
 
     :param full_name: The full name of the parameter. Grouping can be achieved by using colons.
 
@@ -1556,8 +1560,7 @@ class PickleParameter(Parameter):
     You can pass the pickle protocol via `protocol=2` to the constructor or change it with
     the `v_protocol` property. Default protocol is 0.
     Note that after storage to disk changing the protocol has no effect.
-    Note that on loading it is not checked which protocol was used for storing.
-    Thus, when loading a pickle dump the property `v_protocol` is left unchanged.
+    If the parameter is loaded, `v_protocol` is set to the protocol used to store the data.
 
     """
     def __init__(self, full_name, data=None, comment='',protocol=2):
@@ -1651,6 +1654,11 @@ class PickleParameter(Parameter):
 
         return store_dict
 
+    @staticmethod
+    def _get_protocol(dump):
+        protolist = [tup[0].proto for tup in pickletools.genops(dump)]
+        #op, fs, snd = next(pickletools.genops(dump))
+        return int(max(protolist))
 
     def _load(self,load_dict):
         """Reconstructs objects from the pickle dumps in `load_dict`.
@@ -1658,9 +1666,15 @@ class PickleParameter(Parameter):
         The 'explored_data' entry in `load_dict` is used to reconstruct
         the exploration range in the correct order.
 
+        Sets the `v_protocol` property to the protocol used to store 'data'.
+
         """
         dump = load_dict['data']
+
         self._data = pickle.loads(dump)
+
+        self.v_protocol = self._get_protocol(dump)
+
 
         if 'explored_data'in load_dict:
                 explore_table = load_dict['explored_data']
@@ -1736,6 +1750,9 @@ class Result(BaseResult):
 
     >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!' \
         [1000,2000], {'a':'b','c':333}, hitchhiker='Arthur Dent')
+
+
+    In case you create a new result you can pass the following arguments:
 
     :param fullanme: The fullname of the result, grouping can be achieved by colons,
 
@@ -2248,9 +2265,13 @@ class PickleResult(Result):
 
     You can pass the pickle protocol via `protocol=2` to the constructor or change it with
     the `v_protocol` property. Default protocol is 0.
+
     Note that after storage to disk changing the protocol has no effect.
-    Note that on loading it is not checked which protocol was used for storing.
-    Thus, when loading a pickle dump the property `v_protocol` is left unchanged.
+    If the parameter is loaded, `v_protocol` is set to a protocol used to
+    store an item. Note that items are reconstructed from a dictionary and the protocol
+    is taken from the first one found in the dictionary. This is a rather arbitrary choice.
+    Yet, the underlying assumption is that all items were pickled with the same protocol,
+    which is the general case.
 
     """
     def __init__(self, full_name, *args, **kwargs):
@@ -2296,6 +2317,13 @@ class PickleResult(Result):
         return store_dict
 
     def _load(self, load_dict):
-        """Reconstructs all items from the pickle dumps in `load_dict`"""
-        for key, val in load_dict.items():
+        """Reconstructs all items from the pickle dumps in `load_dict`.
+
+        Sets the `v_protocol` property to the protocol of the first reconstructed item.
+
+        """
+        for idx, key in enumerate(load_dict):
+            val = load_dict[key]
             self._data[key] = pickle.loads(val)
+            if idx == 0:
+                self.v_protocol = PickleParameter._get_protocol(val)

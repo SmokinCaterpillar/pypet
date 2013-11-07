@@ -70,11 +70,16 @@ HDF5_STRCOL_MAX_NAME_LENGTH = 64
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
 """Maximum length of the location string"""
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
-""" Maximum length of a value string"""
+"""Maximum length of a value string"""
 HDF5_STRCOL_MAX_COMMENT_LENGTH = 256
-""" Maximum length of a comment """
+"""Maximum length of a comment """
 HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
-""" Maximum length of a parameter array summary """
+"""Maximum length of a parameter array summary """
+HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
+"""Maximum length of human readable runtime, 18 characters allows to display up to 999 days
+excluding the microseconds
+
+"""
 
 
 ######## Multiprocessing Modes #############

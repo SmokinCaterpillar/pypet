@@ -158,7 +158,7 @@ class ParameterTest(unittest.TestCase):
 
 
 
-    def testMetaSettings(self):
+    def test_meta_settings(self):
         for key, param in self.param.items():
             self.assertEqual(param.v_full_name, self.location+'.'+key)
             self.assertEqual(param.v_name, key)
@@ -326,7 +326,7 @@ class ParameterTest(unittest.TestCase):
 
         self.test_exploration()
 
-        self.testMetaSettings()
+        self.test_meta_settings()
 
 
     def test_pickling_without_multiprocessing(self):
@@ -346,7 +346,7 @@ class ParameterTest(unittest.TestCase):
 
         self.test_the_insertion_made_implicetly_in_setUp()
 
-        self.testMetaSettings()
+        self.test_meta_settings()
 
 
     def test_pickling_with_mocking_multiprocessing(self):
@@ -366,7 +366,7 @@ class ParameterTest(unittest.TestCase):
 
         self.test_the_insertion_made_implicetly_in_setUp()
 
-        self.testMetaSettings()
+        self.test_meta_settings()
 
     def test_resizing_and_deletion(self):
 
@@ -474,12 +474,22 @@ class PickleParameterTest(ParameterTest):
     def make_params(self):
         self.param = {}
         count = 0
+        self.protocols={}
         for key, val in self.data.items():
-            self.param[key] = PickleParameter(self.location+'.'+key, val, comment=key, protocol=count)
+            self.param[key] = PickleParameter(self.location+'.'+key, val,
+                                              comment=key, protocol=count)
+            self.protocols[key]=count
             count +=1
             count = count % 3
 
 
+    def test_meta_settings(self):
+        for key, param in self.param.items():
+            self.assertEqual(param.v_full_name, self.location+'.'+key)
+            self.assertEqual(param.v_name, key)
+            self.assertEqual(param.v_location, self.location)
+            self.assertEqual(param.v_protocol, self.protocols[key], '%d != %d' %
+                                                        (param.v_protocol, self.protocols[key]))
 
     def explore(self):
 
@@ -802,6 +812,26 @@ class PickleResultTest(ResultTest):
     def test_reject_outer_data_structure(self):
         # Since it pickles everything, it does accept all sorts of objects
         pass
+
+    def test_meta_settings(self):
+        for key, res in self.results.items():
+            self.assertEqual(res.v_full_name, key)
+            self.assertEqual(res.v_name, key.split('.')[-1])
+            self.assertEqual(res.v_location, '.'.join(key.split('.')[0:-1]))
+            self.assertEqual(res.v_protocol, self.protocols[key])
+
+    def make_results(self):
+        self.results= {}
+        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',protocol=0,**self.data)
+        self.results['test.res.args']=self.Constructor('test.res.args',protocol=1)
+        self.results['test.res.kwargs']=self.Constructor('test.res.kwargs',protocol=2)
+
+        self.protocols={'test.res.on_constructor':0,
+                        'test.res.args':1,
+                        'test.res.kwargs':2}
+
+        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
 

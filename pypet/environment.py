@@ -110,11 +110,17 @@ def _single_run(args):
                   'Starting single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
 
+        # Measure start time
+        traj._set_start_time()
+
         # Run the job function of the user
         result =runfunc(traj,*runparams,**kwrunparams)
 
-        root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
+        # Measure time of finishing
+        traj._set_finish_time()
 
+
+        root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
         # Store the single run
         traj.f_store()
 
@@ -503,79 +509,79 @@ class Environment(object):
 
         # Add config values to the trajectory
         config_name='environment.%s.ncores' % self.v_name
-        self._traj.f_add_config(config_name,ncores, comment='Number of processors in case of multiprocessing')
+        self._traj.f_add_config(config_name,ncores,
+                                comment='Number of processors in case of multiprocessing')
 
         config_name='environment.%s.multiproc' % self.v_name
-        self._traj.f_add_config(config_name, multiproc, comment= 'Whether or not to use multiprocessing. If yes'
-                                                            ' than everything must be pickable.')
-
+        self._traj.f_add_config(config_name, multiproc,
+                                comment= 'Whether or not to use multiprocessing. If yes'
+                                         ' than everything must be pickable.')
 
         config_name='environment.%s.wrap_mode' % self.v_name
         self._traj.f_add_config(config_name,wrap_mode,
-                                    comment ='Multiprocessing mode (if multiproc), '
-                                             'i.e. whether to use QUEUE '
-                                             'or LOCK'
-                                             ' for thread/process safe storing.'
-                                             'If you do not want wrap the storage service'
-                                             ' use wrap_mode=NONE')
+                                    comment ='Multiprocessing mode (if multiproc),'
+                                             ' i.e. whether to use QUEUE'
+                                             ' or LOCK or NONE'
+                                             ' for thread/process safe storing')
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_timestamp,
-                                    comment ='Timestamp of environment creation.')
-
+                                    comment ='Timestamp of environment creation')
 
         config_name='environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment')
 
-
-
-
         config_name='environment.%s.continuable' % self._name
-        self._traj.f_add_config(config_name, continuable, comment='Whether or not a continue file should'
-                                                              ' be created. If yes, everything must be'
-                                                              ' pickable.')
+        self._traj.f_add_config(config_name, continuable,
+                                comment='Whether or not a continue file should'
+                                        ' be created. If yes, everything must be'
+                                        ' picklable.')
+
+        if self._traj.v_version != VERSION:
+            config_name='environment.%s.version' % self.v_name
+            self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+                                    comment ='Pypet version if it differs from the version'
+                                             ' of the trajectory')
 
         config_name='environment.%s.trajectory.name' % self.v_name
         self._traj.f_add_config(config_name,self.v_trajectory.v_name,
-                                    comment ='Name of trajectory to run.')
+                                    comment ='Name of trajectory')
 
         config_name='environment.%s.trajectory.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
-                                    comment ='Timestamp of trajectory.')
-
-
+                                    comment ='Timestamp of trajectory')
 
         # Add HDF5 config in case the user wants the standard service
         if self._use_hdf5 and not self.v_trajectory.v_stored:
             for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
 
                 self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
-                                                                  'table with that name.')
+                                                                  'table with that name')
 
 
             self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
-                                        comment='If there are overview tables about the '
-                                                'explored parameters in each run.')
+                                        comment='Whether there are overview tables about the '
+                                                'explored parameters in each run')
 
 
             self._traj.f_add_config('hdf5.purge_duplicate_comments',int(purge_duplicate_comments),
-                                                            comment='Whether comments of results and'
-                                                            ' derived parameters should only'
-                                                            'be stored for the very first instance.'
-                                                            ' Works only if the summary tables are'
-                                                            ' active.')
+                                                comment='Whether comments of results and'
+                                                        ' derived parameters should only'
+                                                        ' be stored for the very first instance.'
+                                                        ' Works only if the summary tables are'
+                                                        ' active.')
 
 
 
             self._traj.f_add_config('hdf5.results_per_run', int(results_per_run),
                                         comment='Expected number of results per run,'
-                                            ' a good guess can increase storage performance.')
+                                            ' a good guess can increase storage performance')
 
 
             self._traj.f_add_config('hdf5.derived_parameters_per_run', int(derived_parameters_per_run),
                                         comment='Expected number of derived parameters per run,'
-                                            ' a good guess can increase storage performance.')
+                                            ' a good guess can increase storage performance')
 
 
             if not small_overview_tables:
@@ -789,8 +795,9 @@ class Environment(object):
             self._traj.f_add_config(config_name, count,
                                     comment ='Added if trajectory was explored normally and not continued.')
 
-        # Make some preparations (locking of parameters etc)
+        # Make some preparations (locking of parameters etc) and store the trajectory
         self._traj._prepare_experiment()
+        self._traj.f_store()
 
         # Make the trajectory continuable in case the user wants that
         continuable = self._traj.f_get('config.environment.continuable').f_get()

@@ -95,6 +95,8 @@ def main():
     traj.f_explore(ut.cartesian_product,explore_dict,cmb_list)
     
     traj._prepare_experiment()
+    traj.f_store()
+
     it = ((traj._make_single_run(n),lock,queue,worker_configurer) for n in xrange(len(traj)))
     moo = pool.imap(do_stuff, it)
     

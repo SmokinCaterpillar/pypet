@@ -1114,6 +1114,8 @@ class NaturalNamingInterface(object):
 
         :return: The new added instance
 
+        :raises: ValueError if naming of the new item is invalid
+
         """
 
         # First check if the naming of the new item is appropriate
@@ -1122,7 +1124,7 @@ class NaturalNamingInterface(object):
         faulty_names= self._check_names(split_name)
 
         if faulty_names:
-            raise AttributeError(
+            raise ValueError(
                 'Your Parameter/Result/Node `%s` f_contains the following not admissible names: '
                 '%s please choose other names.'
                 % (name, faulty_names))
@@ -1826,7 +1828,7 @@ class NNGroupNode(NNTreeNode):
             the provided item and the found item are exactly the same instance, i.e.
             `id(item)==id(found_item)`.
 
-        :param: recursive:
+        :param recursive:
 
             Whether the whole sub tree under the group should be checked or only
             its immediate children. Default is the whole sub tree.
@@ -1951,7 +1953,15 @@ class NNGroupNode(NNTreeNode):
 
         :raises:
 
-            AttributeError if no node with the given name can be found
+            AttributeError: If no node with the given name can be found
+
+            NotUniqueNodeError
+
+                If `check_uniqueness=True` and searching `name` yields more than
+                one node
+
+
+
 
         """
         return self._nn_interface._get(self, name, fast_access=fast_access,
@@ -2174,7 +2184,7 @@ class DerivedParameterGroup(NNGroupNode):
                                                args = (name,), kwargs={})
 
     def f_add_derived_parameter(self,*args,**kwargs):
-        """ Adds a derived parameter under the current group.
+        """Adds a derived parameter under the current group.
 
         Similar to
         :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter`

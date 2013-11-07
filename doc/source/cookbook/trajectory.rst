@@ -85,9 +85,9 @@ it is not shown in the result and derived parameter overview tables, see also
 :ref:`more-on-overview`). It can also be found
 as an hdf5 attribute of the corresponding nodes in the hdf5 file (this is true for all *leaves*).
 
-----------------------------
+--------------------
 Naming Convention
-----------------------------
+--------------------
 
 
 To avoid confusion with natural naming scheme (see below) and the functionality provided
@@ -188,6 +188,12 @@ the group names `parameters`, `config`, `derived_parameters.trajectory`, `derive
 `results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
+.. _more-on-access:
+
+---------------------------------
+Accessing Data in the Trajectory
+---------------------------------
+
 To access data put into your trajectory you can use
 
 *
@@ -205,11 +211,10 @@ To access data put into your trajectory you can use
     Use natural naming dot notation like  `traj.nzebras`.
     The latter supports some special features see below.
 
-.. _more-on-access:
 
-----------------------
+^^^^^^^^^^^^^^^
 Natural Naming
-----------------------
+^^^^^^^^^^^^^^^
 
 As said before *trajectories* instantiate trees and the tree can be browsed via natural naming.
 

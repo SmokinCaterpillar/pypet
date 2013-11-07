@@ -2,7 +2,6 @@
 
 __author__ = 'Robert Meyer'
 
-__version__ = "$Revision: 70b79ccd671a $"# $Source$
 
 import logging
 import tables as pt
@@ -1192,7 +1191,7 @@ class HDF5StorageService(StorageService):
             idx = run_info['idx']
 
 
-            traj._prepare_parameter_space_point(idx)
+            traj._set_explored_parameters_to_idx(idx)
             run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
                                                       add_table)
 
@@ -1328,6 +1327,15 @@ class HDF5StorageService(StorageService):
                 completed = int(row['completed'])
                 summary=str(row['parameter_summary'])
                 hexsha = str(row['short_environment_hexsha'])
+
+
+                # To allow backwards compatibility we need this try catch block
+                try:
+                    runtime = str(row['runtime'])
+                    finish_timestamp = float(row['finish_timestamp'])
+                except KeyError as ke:
+                    self._logger.warning('Could not load runtime, ' + repr(ke))
+
                 traj._single_run_ids[id] = name
                 traj._single_run_ids[name] = id
 
@@ -1339,6 +1347,15 @@ class HDF5StorageService(StorageService):
                 info_dict['name'] = name
                 info_dict['parameter_summary'] = summary
                 info_dict['short_environment_hexsha'] = hexsha
+                info_dict['runtime'] = runtime
+                info_dict['finish_timestamp'] = finish_timestamp
+
+
+
+
+
+
+
                 traj._run_information[name] = info_dict
 
 
@@ -1420,10 +1437,13 @@ class HDF5StorageService(StorageService):
                          'time': pt.StringCol(len(traj.v_time),pos=2),
                          'timestamp' : pt.FloatCol(pos=3),
                          'idx' : pt.IntCol(pos=0),
-                         'completed' : pt.IntCol(pos=6),
+                         'completed' : pt.IntCol(pos=8),
                          'parameter_summary' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                                            pos=4),
-                         'short_environment_hexsha' : pt.StringCol(7,pos=5)}
+                                                            pos=6),
+                         'short_environment_hexsha' : pt.StringCol(7,pos=7),
+                         'finish_timestamp' : pt.FloatCol(pos=4),
+                         'runtime' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_RUNTIME_LENGTH,
+                                                  pos=5)}
 
         runtable = self._all_get_or_create_table(where=self._overview_group,
                                                  tablename='runs',
@@ -2135,7 +2155,10 @@ class HDF5StorageService(StorageService):
     def _all_insert_into_row(self, row, insert_dict):
 
         for key, val in insert_dict.items():
-            row[key] = val
+            try:
+                row[key] = val
+            except KeyError as ke:
+                self._logger.warning('Could not write `%s` into a table, ' % key+ repr(ke))
 
 
     def _all_extract_insert_dict(self,item, colnames, additional_info=None):
@@ -2161,7 +2184,6 @@ class HDF5StorageService(StorageService):
             insert_dict['class_name'] = item.f_get_class_name()
 
         if 'value' in colnames:
-
             insert_dict['value'] = self._all_cut_string(item.f_val_to_str(),
                                     pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH, self._logger)
 
@@ -2189,15 +2211,27 @@ class HDF5StorageService(StorageService):
         if 'version' in colnames:
             insert_dict['version'] = item.v_version
 
+        if 'finish_timestamp' in colnames:
+            insert_dict['finish_timestamp'] = item._finish_timestamp
+
+        if 'runtime' in colnames:
+            runtime = item._runtime
+            if len(runtime) > pypetconstants.HDF5_STRCOL_MAX_RUNTIME_LENGTH:
+                #If string is too long we cut the microseconds
+                runtime = runtime.split('.')[0]
+
+            insert_dict['runtime'] = runtime
+
+
         return insert_dict
 
     @staticmethod
     def _all_cut_string(string, max_length, logger):
-        if len(string) >= max_length:
+        if len(string) > max_length:
             logger.debug('The string `%s` was too long I truncated it to'
                                  ' %d characters' %
                                  (string,max_length))
-            string = string[0:max_length]
+            string = string[0:max_length-3] + '...'
 
         return string
 
