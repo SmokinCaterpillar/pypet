@@ -1696,13 +1696,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             raise TypeError('Can only merge trajectories, the other trajectory'
                             ' is of type `%s`.' % str(type(other_trajectory)))
 
-        if not (self._stored and other_trajectory._stored):
-            raise TypeError('Both trajectories need to be stored to disk to perform a merge!')
 
         self.f_update_skeleton()
         other_trajectory.f_update_skeleton()
 
-        ## Load all parameters of the current and the other trajectory
+        # Load all parameters of the current and the other trajectory
         if self._stored:
             self.f_load_items(self._parameters.values(), only_empties=True)
         if other_trajectory._stored:
@@ -2323,12 +2321,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 if not my_param.f_has_range() and not other_param.f_has_range():
                     remove_duplicates = False
 
-        ## Now first check if we use all runs or remove duplicates:
+        # Check if we use all runs or remove duplicates:
         use_runs = np.ones(len(other_trajectory))
         if remove_duplicates:
 
             # We need to compare all parameter combinations in the current trajectory
-            # to all parameter combinations in the other trajectory to sport duplicate points.
+            # to all parameter combinations in the other trajectory to spot duplicate points.
             # Quadratic Complexity!
             for irun in xrange(len(other_trajectory)):
                 for jrun in xrange(len(self)):
@@ -2353,19 +2351,19 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                     # If we found one parameter space point in the current trajectory
                     # that matches the ith point in the other, we do not need the ith
-                    # point. We can also skip comparing to rest of the points in the
+                    # point. We can also skip comparing to the rest of the points in the
                     # current trajectory
                     if change:
                         use_runs[irun] = 0.0
                         break
 
-            ## Restore changed default values
+            # Restore changed default values
             for my_param, other_param in params_to_change.itervalues():
                 other_param._restore_default()
                 my_param._restore_default()
 
 
-        ## Now merge parameters into the current trajectory
+        # Merge parameters into the current trajectory
         adding_length = int(sum(use_runs))
         if adding_length == 0:
             return use_runs, []
@@ -2373,7 +2371,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for my_param, other_param in params_to_change.itervalues():
             fullname = my_param.v_full_name
 
-            # Now we need the new ranges to enlarge all parameters
+            # We need the new ranges to enlarge all parameters
             if fullname == trial_parameter:
                 other_range = [x + mymaxtrial + 1 for x in other_trial_list]
             else:
