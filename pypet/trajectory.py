@@ -19,6 +19,7 @@ import hashlib
 import importlib
 import itertools as itools
 import inspect
+from collections import OrderedDict
 
 import numpy as np
 
@@ -491,7 +492,8 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         :param iterator:
 
             An iterable containing the parameters or results to store, either their
-            names or the instances.
+            names or the instances. You can also pass group instances or names here
+            to store the annotations of the groups.
 
         :param non_empties:
 
@@ -1187,7 +1189,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
         if len(self._changed_default_parameters):
-            raise pex.DefaultReplacementError(
+            raise pex.PresettingError(
                 'The following parameters were supposed to replace a '
                 'default value, but it was never tried to '
                 'add default values with these names: %s' %
@@ -1616,7 +1618,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             If you don't specify a name you can specify an integer index instead.
             The corresponding trajectory in the hdf5 file at the index
-            position is loaded (counting starts with 0).
+            position is loaded (counting starts with 0). Negative indices are also allowed
+            counting in reverse order. For instance, `-1` refers to the last trajectory in
+            the file, `-2` to the second last, and so on.
 
         :param as_new:
 
@@ -1654,12 +1658,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
 
-                    The skeleton and annotations are updated, i.e. only items that are not
+                    The skeleton is updated, i.e. only items that are not
                     currently part of your trajectory are loaded empty.
 
                 :const:`pypet.pypetconstants.UPDATE_DATA`: (-2) Like (2)
 
                     Only items that are currently not in your trajectory are loaded with data.
+
+
+                Note that in all cases except :const:`pypet.pypetconstants.LOAD_NOTHING`,
+                annotations will be reloaded if the corresponding instance
+                is created or the annotations of an existing instance were emptied before.
 
         :param force:
 
@@ -1700,8 +1709,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,
-                                  as_new=as_new, load_params=load_parameters,
-                                  load_derived_params=load_derived_parameters,
+                                  as_new=as_new, load_parameters=load_parameters,
+                                  load_derived_parameters=load_derived_parameters,
                                   load_results=load_results,
                                   force=force)
 
@@ -1768,10 +1777,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                 'of the same type. Types are %s (current) and %s (other).' %
                                 (key, str(type(my_param.f_get())), str(type(other_param.f_get()))))
 
-    def f_backup(self, backup_filename):
+    def f_backup(self, backup_filename=None):
         """Backs up the trajectory with the given storage service.
 
-        :param backup_filename: Name of file where to store the backup.
+        :param backup_filename:
+
+            Name of file where to store the backup.
+
+            In case you use the standard HDF5 storage service and `backup_filename=None`,
+            the file will be chosen automatically.
+            The backup file will be in the same folder as your hdf5 file and
+            named 'backup_XXXXX.hdf5' where 'XXXXX' is the name of your current trajectory.
 
         """
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
@@ -1821,9 +1837,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param backup_filename:
 
             If specified, backs up both trajectories into the given filename.
-            You could also say backup_filename = True, than the trajectories
-            are backed up into a file in your data folder and a name is
-            automatically chosen.
+
+            You can also choose `backup_filename = True`, than the trajectories
+            are backed up into **two separate** files in your data folder and names are
+            automatically chosen as in :func:`~pypet.trajectory.Trajectory.f_backup`.
 
         :param move_nodes:
 
@@ -1974,7 +1991,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
-        rename_dict = {}
+        # It is ordered to keep the order of trajectory traversal also in the dict
+        rename_dict = OrderedDict()
 
         # Keep track of all trajectory results that should be merged and put
         # information into `rename_dict`
@@ -2100,29 +2118,34 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             other_instance = other_trajectory.f_get(other_key)
 
-            if other_instance.f_is_empty():
+
+            if other_instance.v_is_leaf and other_instance.f_is_empty():
                 other_trajectory.f_load_items(other_instance)
 
             # The empty instances for the new data have already been created before
             my_instance = self.f_get(new_key)
 
-            if not my_instance.f_is_empty():
+            if my_instance.v_is_leaf and not my_instance.f_is_empty():
                 raise RuntimeError('You want to slowly merge results, but your target result '
                                    '`%s` is not _empty, this should not happen.' %
                                    my_instance.v_full_name)
 
-            load_dict = other_instance._store()
-            my_instance._load(load_dict)
+            if other_instance.v_is_leaf:
+                load_dict = other_instance._store()
+                my_instance._load(load_dict)
+
+            # Copy the annotations
             my_instance.f_set_annotations(**other_instance.v_annotations.f_to_dict(copy=False))
 
             self.f_store_item(my_instance)
 
             # We do not want to blow up the RAM Memory
-            if other_instance.v_is_parameter:
-                other_instance.f_unlock()
-                my_instance.f_unlock()
-            other_instance.f_empty()
-            my_instance.f_empty()
+            if other_instance.v_is_leaf:
+                if other_instance.v_is_parameter:
+                    other_instance.f_unlock()
+                    my_instance.f_unlock()
+                other_instance.f_empty()
+                my_instance.f_empty()
 
 
     def _merge_trajectory_results(self, other_trajectory, rename_dict):
@@ -2141,20 +2164,30 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        other_results = other_trajectory.f_get('results.trajectory').f_to_dict()
+        other_nodes_iterator = other_trajectory.f_get('results.trajectory').f_iter_nodes()
 
-        for key, result in other_results.iteritems():
+        for node in other_nodes_iterator:
 
-            if key in self._results:
-                self._logger.warning('You already have a trajectory result called `%s` in your '
-                                     'trajectory. I will not copy it.' % key)
-                continue
+            full_name = node.v_full_name
 
-            rename_dict[key] = key
-            comment = result.v_comment
-            result_type = result.f_get_class_name()
-            result_type = self._create_class(result_type)
-            self.f_add_result(result_type,key, comment=comment)
+            if node.v_is_leaf:
+
+                if full_name in self._results:
+                    self._logger.warning('You already have a trajectory result called `%s` in your '
+                                         'trajectory. I will not copy it.' % full_name)
+                    continue
+
+                comment = node.v_comment
+                result_type = node.f_get_class_name()
+                result_type = self._create_class(result_type)
+                self.f_add_result(result_type,full_name, comment=comment)
+            else:
+                if full_name in self._groups:
+                    continue
+                self.f_add_result_group(full_name)
+
+            rename_dict[full_name] = full_name
+
 
     def _merge_single_runs(self, other_trajectory, used_runs, rename_dict):
         """Checks which single run results and derived parameters should be marked for merge.
@@ -2171,7 +2204,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :param rename_dict:
 
-            Dictionary that is filled with the names of results and derived parameters
+            Dictionary that is filled with the names of groups, results and derived parameters
             in the `other_trajectory` as keys and the corresponding new names
             in the current trajectory as values. We DO need to rename results and derived
             parameters here because the names of the single runs are changed.
@@ -2188,15 +2221,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             idx = other_trajectory.f_get_run_information(runname)['idx']
             if used_runs[idx]:
                 try:
-                    results = other_trajectory.f_get('results.' + runname).f_to_dict()
+                    results_subtree_iterator = other_trajectory.f_get(
+                                                'results.' + runname).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    results = {}
+                    results_subtree_iterator = []
 
                 try:
-                    derived_params = other_trajectory.f_get(
-                        'derived_parameters.' + runname).f_to_dict()
+                    derived_params_iterator = other_trajectory.f_get(
+                        'derived_parameters.' + runname).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    derived_params = {}
+                    derived_params_iterator = []
 
                 # Update the run information dict of the current trajectory
                 other_info_dict = other_trajectory.f_get_run_information(runname)
@@ -2223,23 +2257,35 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 # Create new empty result instance for every result in the other trajectory
                 # that is going to be merged into the current one
-                for result_name, result in results.iteritems():
-                    new_result_name = self._rename_key(result_name, 1, new_runname)
-                    rename_dict[result_name] = new_result_name
-                    comment = result.v_comment
-                    result_type = result.f_get_class_name()
-                    result_type = self._create_class(result_type)
-                    self.f_add_result(result_type,new_result_name, comment=comment)
+                for node in results_subtree_iterator:
+
+                    node_name = node.v_full_name
+                    new_node_name = self._rename_key(node_name, 1, new_runname)
+                    rename_dict[node_name] = new_node_name
+
+                    if node.v_is_leaf:
+                        comment = node.v_comment
+                        result_type = node.f_get_class_name()
+                        result_type = self._create_class(result_type)
+                        self.f_add_result(result_type,new_node_name, comment=comment)
+
+                    else:
+                        self.f_add_result_group(new_node_name)
 
                 # Create new empty derived parameter instance for every derived parameter
                 # in the other trajectory that is going to be merged into the current one
-                for dpar_name, dpar in derived_params.iteritems():
-                    new_dpar_name = self._rename_key(dpar_name, 1, new_runname)
-                    rename_dict[dpar_name] = new_dpar_name
-                    comment = dpar.v_comment
-                    param_type = dpar.f_get_class_name()
-                    param_type = self._create_class(param_type)
-                    self.f_add_derived_parameter(param_type,new_dpar_name, comment=comment)
+                for node in derived_params_iterator:
+                    node_name = node.v_full_name
+                    new_node_name = self._rename_key(node_name, 1, new_runname)
+                    rename_dict[node_name] = new_node_name
+
+                    if node.v_is_leaf:
+                        comment = node.v_comment
+                        dpar_type = node.f_get_class_name()
+                        dpar_type = self._create_class(dpar_type)
+                        self.f_add_derived_parameter(dpar_type, new_node_name, comment=comment)
+                    else:
+                        self.f_add_derived_parameter_group(new_node_name)
 
     @staticmethod
     def _rename_key(key, pos, new_name):

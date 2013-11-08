@@ -407,17 +407,8 @@ To avoid re-opneing an closing of the hdf5 file over and over again there is als
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
-OF NOTE: If you want to store single items you should prefer
-:func:`~pypet.trajectory.SingleRun.f_store_items` over
-:func:`~pypet.naturalnaming.NNGroupNode.f_store_child` simply because for the former the
-storage service only needs to know the individual item. Whereas the latter requires the
-service to know the entire trajectory. This can be painful in case of multiprocessing
-and using a queue plus a single storage process. Accordingly, the whole trajectory
-needs to be pickled and is sent over the queue!
-
 If you never heard about pickling or object serialization, you might want to take a loot at the
 pickle_ module.
-
 
 If you store a trajectory to disk it's tree structure is also found in the structure of
 the HDF5 file!
@@ -474,13 +465,16 @@ If you choose tha latter load mode, you can specify how the individual subtrees 
 
 * :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
 
-    The skeleton and annotations are updated, i.e. only items that are not currently part of your trajectory
+    The skeleton is updated, i.e. only items that are not currently part of your trajectory
     in RAM are loaded empty.
 
 * :const:`pypet.pypetconstants.UPDATE_DATA`: (-2)
 
      Like (2) but only items that are currently not in your trajectory are loaded.
 
+Note that in all cases except :const:`pypet.pypetconstants.LOAD_NOTHING`,
+annotations will be reloaded if the corresponding instance
+is created or the annotations of an existing instance were emptied before.
 
 As for storage, you can load single items manually by
 :func:`~pypet.trajectory.Trajectory.f_load_item`. If you load a large result with many entries

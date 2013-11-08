@@ -21,7 +21,7 @@ class VersionMismatchError(TypeError):
         return repr(self._msg)
 
 
-class DefaultReplacementError(Exception):
+class PresettingError(Exception):
     """Exception raised if parameter presetting failed.
 
     Probable cause might be a typo in the parameter name.

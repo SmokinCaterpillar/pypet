@@ -411,7 +411,7 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(self.traj.testconf == 1)
 
         ### should raise an error because 'I_do_not_exist', does not exist:
-        with self.assertRaises(pex.DefaultReplacementError):
+        with self.assertRaises(pex.PresettingError):
             self.traj._prepare_experiment()
 
     def test_f_is_completed(self):

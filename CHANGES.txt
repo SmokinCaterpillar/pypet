@@ -1,5 +1,7 @@
 pypet 0.1b.2
 
+*   DefaultReplacementError is now called PresettingError
+
 *   Now the runtime of single runs is measured and stored.
 
 *   __getitem__ of the trajectory always returns the instance and fast access is not applied

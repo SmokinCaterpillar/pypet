@@ -114,7 +114,8 @@ class MergeTest(TrajectoryComparator):
 
     def test_basic_within_same_file_and_skipping_duplicates_which_will_be_all(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
-        self.basic_and_skipping_duplicates_which_will_be_all()
+        with self.assertRaises(ValueError):
+            self.basic_and_skipping_duplicates_which_will_be_all()
 
 
     def test_basic_within_same_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
@@ -234,7 +235,6 @@ class MergeTest(TrajectoryComparator):
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA)
 
-
         self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
         self.trajs[1].f_store_item('rrororo33o333o3o3oo3')
         self.trajs[2].f_add_result('rrororo33o333o3o3oo3',1234567890)
@@ -249,7 +249,6 @@ class MergeTest(TrajectoryComparator):
                            load_parameters=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
-
 
     def basic_and_skipping_duplicates_which_leads_to_one_remaining(self):
 
