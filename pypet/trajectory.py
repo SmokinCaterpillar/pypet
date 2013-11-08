@@ -482,6 +482,11 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         during runtime and you want to write these to disk immediately and empty them afterwards
         to free some memory.
 
+        Instead of storing individual paremeters or results you can also store whole subtrees with
+        :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
+
+
+        You can pass the following arguments to `f_store_items`:
 
         :param iterator:
 
@@ -492,13 +497,14 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
             Optional keyword argument (boolean),
             if `True` will only store the subset of provided items that are not empty.
+            Empty parameters or results found in `iterator` are simply ignored.
 
         :param args: Additional arguments passed to the storage service
 
         :param kwargs:
 
             Additional keyword arguments passed to the storage service
-            (except kwarg non_empties)
+            (except kwarg `non_empties`)
 
         :raises:
 
@@ -1521,15 +1527,26 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.f_load_items([item],*args,**kwargs)
 
     def f_load_items(self, iterator, *args, **kwargs):
-        """Loads parameters specified in `iterator`.
+        """Loads parameters and results specified in `iterator`.
 
-        You can directly list the Parameter objects or their names.
+        You can directly list the Parameter objects or just their names.
 
         If names are given the `~pypet.trajectory.Trajectory.f_get` method is applied to find the
-        parameters or results in the trajectory.
+        parameters or results in the trajectory. Accordingly, the parameters and results
+        you want to load must already exist in your trajectory (in RAM), probably they
+        are just empty skeletons waiting desperately to handle data.
+        If they do not exist in RAM yet, but have been stored to disk before,
+        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
+        bring your trajectory tree skeleton up to date.
+        Then you can load the data of individual results or parameters one by one.
 
-        This function is useful if you called :func:`~pypet.trajectory.Trajectory.f_update_skeleton`
-        before and now you want to load the data of individual results one by one.
+        If want to load the whole trajectory at once or ALL results and parameters that are
+        still empty take a look at :func:`~pypet.trajectory.Trajectory.f_load`.
+        To load subtrees of your trajectory you might want to check out
+        :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
+
+        To load a list of parameters or results with `f_load_items` you can pass
+        the following arguments:
 
         :param iterator: A list with parameters or results to be loaded.
 
@@ -1537,21 +1554,22 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Optional keyword argument (boolean),
             if `True` only empty parameters or results are passed
-            to the storage service to get loaded.
+            to the storage service to get loaded. Non-empty parameters or results found in
+            `iterator` are simply ignored.
 
         :param args: Additional arguments directly passed to the storage service
 
         :param kwargs:
 
             Additional keyword arguments directly passed to the storage service
-            (except the kwarg only_empties)
+            (except the kwarg `only_empties`)
 
             If you use the standard hdf5 storage service, you can pass the following additional
             keyword argument:
 
             :param load_only:
 
-                If you load a result, you can partially load it and ignore the rest.
+                If you load a result, you can partially load it and ignore the rest of data items.
                 Just specify the name of the data you want to load. You can also provide a list,
                 for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`
 
@@ -1561,7 +1579,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if not self._stored:
             raise TypeError(
-                'Cannot f_load stuff from disk for a trajectory that has never been stored.')
+                'Cannot load stuff from disk for a trajectory that has never been stored.')
 
         fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
         if fetched_items:
@@ -1569,7 +1587,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                       trajectory_name=self.v_name)
         else:
             self._logger.warning('Your loading was not successful, could not find a single item '
-                                 'to f_load.')
+                                 'to load.')
 
     def f_load(self,
              name=None,
@@ -1581,6 +1599,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
              force=False):
         """Loads a trajectory via the storage service.
 
+
+        If you want to load individual results or parameters manually, you can take
+        a look at :func:`~pypet.trajectory.Trajectory.f_load_items`.
+        To only load subtrees check out :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
+
+
+        For `f_load` you can pass the following arguments:
+
         :param name:
 
             Name of the trajectory to be loaded. If no name or index is specified
@@ -1588,7 +1614,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :param index:
 
-            If you don't specify a name you can also specify an index.
+            If you don't specify a name you can specify an integer index instead.
             The corresponding trajectory in the hdf5 file at the index
             position is loaded (counting starts with 0).
 
@@ -1607,7 +1633,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :param load_results: How results are loaded
 
-            You can specify how to load the parameters and config/derived_parameters/results
+            You can specify how to load the parameters, derived parameters and results
             as follows:
 
                 :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
@@ -1638,7 +1664,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param force:
 
             pypet will refuse to load trajectories that have been created using pypet with a
-            different version number. To enforce the load of a trajectory from a previous version
+            different version number. To force the load of a trajectory from a previous version
             simply set `force = True`.
 
 
@@ -1679,13 +1705,15 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                   load_results=load_results,
                                   force=force)
 
-        # If a trajectory is newly loaded all parameters are unlocked.
+        # If a trajectory is newly loaded, all parameters are unlocked.
         if as_new:
             for param in self._parameters.itervalues():
                 param.f_unlock()
+            self._stored=False
         else:
             self.f_lock_parameters()
             self.f_lock_derived_parameters()
+            self._stored=True
 
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
@@ -1696,15 +1724,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             raise TypeError('Can only merge trajectories, the other trajectory'
                             ' is of type `%s`.' % str(type(other_trajectory)))
 
-
-        self.f_update_skeleton()
-        other_trajectory.f_update_skeleton()
+        if self._stored:
+            self.f_update_skeleton()
+        if other_trajectory._stored:
+            other_trajectory.f_update_skeleton()
 
         # Load all parameters of the current and the other trajectory
         if self._stored:
-            self.f_load_items(self._parameters.values(), only_empties=True)
+            self.f_load_items(self._parameters.itervalues(), only_empties=True)
         if other_trajectory._stored:
-            other_trajectory.f_load_items(other_trajectory._parameters.values(), only_empties=True)
+            other_trajectory.f_load_items(other_trajectory._parameters.itervalues(),
+                                          only_empties=True)
 
         self.f_restore_default()
         other_trajectory.f_restore_default()
@@ -1712,7 +1742,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         allmyparams = self._parameters.copy()
         allotherparams = other_trajectory._parameters.copy()
 
-        # If not ignored add also the trajectory derived parameters to the comparison
+        # If not ignored, add also the trajectory derived parameters to check for merging
         if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
             my_traj_dpars = self.f_get('derived_parameters.trajectory').f_to_dict()
             allmyparams.update(my_traj_dpars)
@@ -1730,7 +1760,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                             'f_set of parameters `%s` is only found in the current trajectory '
                             'and `%s` only in the other trajectory.' % (str(diff1), str(diff2)))
 
-        # Check if corresponding paremters in both trajectories are of the same type
+        # Check if corresponding parameters in both trajectories are of the same type
         for key, other_param in allotherparams.items():
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
@@ -1765,15 +1795,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param trial_parameter:
 
             If you have a particular parameter that specifies only the trial
-            number, i.e. an integer parameter running form 0 to N1 and
-            0 to N2, the parameter is modified that after merging it will
-            cover the range 0 to N1+N2+1 with N1 number of single runs in current
-            trajectory and N2 number of single runs in the other trajectory.
+            number, i.e. an integer parameter running form 0 to T1 and
+            0 to T2, the parameter is modified such that after merging it will
+            cover the range 0 to T1+T2+1. T1 is the number of individual trials in the current
+            trajectory and T2 number of trials in the other trajectory.
 
         :param remove_duplicates:
 
             Whether you want to remove duplicate parameter points.
             Requires N1 * N2 (quadratic complexity in single runs).
+            A ValueError is raised if no runs would be merged.
 
         :param ignore_trajectory_derived_parameters:
 
@@ -1797,12 +1828,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param move_nodes:
 
            If you use the HDF5 storage service and both trajectories are
-           stored in the same file, merging is achieved fast directly within
+           stored in the same file, merging is performed fast directly within
            the file. You can choose if you want to copy nodes ('move_nodes=False`)
            from the other trajectory to the current one, or if you want to move them.
            Accordingly, the stored data is no longer accessible in the other trajectory.
 
-        :param delete_other_trajectory: If you want to delete the other trajectory after merging
+        :param delete_other_trajectory:
+
+            If you want to delete the other trajectory after merging. Only possible if
+            you have chosen to `move_nodes`. Why would do you want to expensively copy
+            data before and than erase it?
 
         :param merge_config:
 
@@ -1814,8 +1849,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Whether to keep information like length, name, etc. of the other trajectory.
 
-        If you cannot directly merge trajectories within one HDF5 file a slow merging process
-        is used. Results are loaded, stored and emptied again one after the other. Might take
+        If you cannot directly merge trajectories within one HDF5 file, a slow merging process
+        is used. Results are loaded, stored, and emptied again one after the other. Might take
         some time!
 
         Annotations of parameters and derived parameters under `.derived_parameters.trajectory`
@@ -1828,8 +1863,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # Check for settings with too much overhead
         if not move_nodes and delete_other_trajectory:
             raise ValueError('You want to copy nodes, but delete the old trajectory, this is too '
-                             'much overhead, please use move_nodes = True, '
-                             'delete_other_trajectory = True')
+                             'much overhead, please use `move_nodes = True`.')
 
         # Check if trajectories can be merged
         self._check_if_both_have_same_parameters(other_trajectory,
@@ -1871,21 +1905,21 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                     comment ='Option to remove duplicate entries')
 
         config_name='merge.%s.ignore_trajectory_derived_parameters' % merge_name
-        self.f_add_config(config_name,int(ignore_trajectory_derived_parameters),
+        self.f_add_config(config_name, int(ignore_trajectory_derived_parameters),
                                     comment ='Whether or not to ignore trajectory derived'
                                              ' parameters')
 
         config_name='merge.%s.ignore_trajectory_results' % merge_name
-        self.f_add_config(config_name,int(ignore_trajectory_results),
+        self.f_add_config(config_name, int(ignore_trajectory_results),
                                     comment ='Whether or not to ignore trajectory results')
 
         config_name='merge.%s.length_before_merge' % merge_name
-        self.f_add_config(config_name,len(self),
+        self.f_add_config(config_name, len(self),
                                     comment ='Length of trajectory before merge')
 
-        if self._traj.v_version != VERSION:
+        if self.v_version != VERSION:
             config_name='merge.%s.version' % merge_name
-            self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+            self.f_add_config(config_name, self.v_version,
                                     comment ='Pypet version if it differs from the version'
                                              ' of the trajectory')
 
@@ -1931,23 +1965,26 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                                                ignore_trajectory_derived_parameters)
 
         config_name='merge.%s.merged_runs' % merge_name
-        self.f_add_config(config_name,int(np.sum(used_runs)),
+        self.f_add_config(config_name, int(np.sum(used_runs)),
                               comment ='Number of merged runs')
 
         if np.all(used_runs == 0):
-            self._logger.warning('Your merge discards all runs of the other trajectory, maybe you '
+            raise ValueError('Your merge discards all runs of the other trajectory, maybe you '
                                  'try to merge a trajectory with itself?')
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
         rename_dict = {}
 
+        # Keep track of all trajectory results that should be merged and put
+        # information into `rename_dict`
         if not ignore_trajectory_results and 'results.trajectory' in other_trajectory:
             self._logger.info('Merging trajectory results skeletons')
             self._merge_trajectory_results(other_trajectory, rename_dict)
 
         # Single runs are rather easy to merge, we simply keep track of the changed namings
-        # of the runs and let the storage service do the job in the next step
+        # of the results and derived parameters in `rename_dict`
+        # and let the storage service do the job in the next step
         self._logger.info('Merging single run skeletons')
         self._merge_single_runs(other_trajectory, used_runs, rename_dict)
 
@@ -1960,8 +1997,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                    changed_parameters=changed_parameters)
 
         try:
-            # Merge the single run derived parameters and results
-            # within the same hdf5 file
+            # Merge the single run derived parameters and all results
+            # within the same hdf5 file based on `renamed_dict`
             self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
                                        other_trajectory_name=other_trajectory.v_name,
                                        rename_dict=rename_dict, move_nodes=move_nodes,
@@ -1972,9 +2009,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         except pex.NoSuchServiceError:
             # If the storage service does not support merge we end up here
             self._logger.warning('My storage service does not support merging of trajectories, '
-                                 'I will use the f_load mechanism of the other trajectory and copy '
-                                 'the results manually and slowly. Note that thereby the other '
-                                 'trajectory will be altered.')
+                                 'I will use the f_load mechanism of the other trajectory and store '
+                                 'the results slowly item by item. Note that thereby the other '
+                                 'trajectory will be altered (in RAM).')
 
 
             self._merge_slowly(other_trajectory, rename_dict)
@@ -1984,7 +2021,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.warning(str(e))
 
             self._logger.warning('Could not perfom fast merging. '
-                                 'I will use the f_load mechanism of the other trajectory and copy '
+                                 'I will use the `f_load` method of the other trajectory and store '
                                  'the results slowly item by item. Note that thereby the other '
                                  'trajectory will be altered (in RAM).')
 
@@ -2004,7 +2041,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     def _merge_config(self,other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
-        of the other trajectory in the current one.
+        of the other trajectory into the current one.
+
         """
 
         self._logger.info('Merging config!')
@@ -2019,7 +2057,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 param_list.append(self.f_add_config(param))
 
             self.f_store_items(param_list)
-
 
             self._logger.info('Merging git commits successful!')
 
@@ -2066,7 +2103,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if other_instance.f_is_empty():
                 other_trajectory.f_load_items(other_instance)
 
-            # The empty instance for the new data have already been created before
+            # The empty instances for the new data have already been created before
             my_instance = self.f_get(new_key)
 
             if not my_instance.f_is_empty():
@@ -2081,6 +2118,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self.f_store_item(my_instance)
 
             # We do not want to blow up the RAM Memory
+            if other_instance.v_is_parameter:
+                other_instance.f_unlock()
+                my_instance.f_unlock()
             other_instance.f_empty()
             my_instance.f_empty()
 
@@ -2096,6 +2136,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Dictionary that is filled with the names of results in the `other_trajectory`
             as keys and the corresponding new names in the current trajectory as values.
+            Note for results kept under `.results.trajectory` there is actually no need to
+            change the names. So we will simply keep the original name.
 
         """
 
@@ -2131,7 +2173,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Dictionary that is filled with the names of results and derived parameters
             in the `other_trajectory` as keys and the corresponding new names
-            in the current trajectory as values.
+            in the current trajectory as values. We DO need to rename results and derived
+            parameters here because the names of the single runs are changed.
+            For example, the result `.results.run_0000001.myresult` might be reassigned the
+            new full name `.results.run_00000012.myresult` when merged into the current trajectory.
 
         """
         count = len(self) # Variable to count the increasing new run indices and create
@@ -2160,7 +2205,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 completed = other_info_dict['completed']
                 short_environment_hexsha = other_info_dict['short_environment_hexsha']
                 finish_timestamp =  other_info_dict['finish_timestamp']
-                runtime = other_info_dict['runname']
+                runtime = other_info_dict['runtime']
 
                 new_runname = pypetconstants.FORMATTED_RUN_NAME % count
 
@@ -2186,8 +2231,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     result_type = self._create_class(result_type)
                     self.f_add_result(result_type,new_result_name, comment=comment)
 
-                # Create new empty derived parameter instance for every result in the other
-                # trajectory that is going to be merged into the current one
+                # Create new empty derived parameter instance for every derived parameter
+                # in the other trajectory that is going to be merged into the current one
                 for dpar_name, dpar in derived_params.iteritems():
                     new_dpar_name = self._rename_key(dpar_name, 1, new_runname)
                     rename_dict[dpar_name] = new_dpar_name
@@ -2197,7 +2242,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     self.f_add_derived_parameter(param_type,new_dpar_name, comment=comment)
 
     @staticmethod
-    def _rename_key(self, key, pos, new_name):
+    def _rename_key(key, pos, new_name):
         """Renames a specific position of a key string with colon separation.
 
         Example usage:
@@ -2211,12 +2256,18 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         renamed_key = '.'.join(split_key)
         return renamed_key
 
-    def _merge_parameters(self, other_trajectory, remove_duplicates=False, trial_parameter=None,
+    def _merge_parameters(self, other_trajectory, remove_duplicates=False,
+                          trial_parameter_name=None,
                           ignore_trajectory_derived_parameters=False):
         """Merges parameters from the other trajectory into the current one.
 
-        The parameters in the current trajectory are directly increased (in RAM), no storage
-        service is needed here.
+        The explored parameters in the current trajectory are directly enlarged (in RAM),
+        no storage service is needed here. Later on in `f_merge` the storage service
+        will be requested to store the enlarge parameters to disk.
+
+        Note explored parameters are always enlarged. Unexplored parameters might become
+        new explored parameters if they differ in their default values
+        in the current and the other trajectory, respectively.
 
         :return: A tuple with two elements:
 
@@ -2232,22 +2283,28 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        if trial_parameter:
+        if trial_parameter_name:
             if remove_duplicates:
                 self._logger.warning('You have given a trial parameter and you want to '
-                                     'f_remove_items duplicates. There cannot be any duplicates '
+                                     'remove_items duplicates. There cannot be any duplicates '
                                      'when adding trials, I will not look for duplicates.')
                 remove_duplicates = False
 
 
-        if trial_parameter:
+        # Dictionary containing full parameter names as keys
+        # and pairs of parameters from both trajectories as values.
+        # Parameters kept in this dictionary are marked for merging and will be enlarged
+        # with ranges and values of corresponding parameters in the other trajectory
+        params_to_change = {}
+
+        if trial_parameter_name:
             # We want to merge a trial parameter
             # First make some sanity checks
-            my_trial_parameter = self.f_get(trial_parameter)
-            other_trial_parameter = other_trajectory.f_get(trial_parameter)
+            my_trial_parameter = self.f_get(trial_parameter_name, check_uniqueness=True)
+            other_trial_parameter = other_trajectory.f_get(trial_parameter_name)
             if not isinstance(my_trial_parameter, BaseParameter):
                 raise TypeError('Your trial_parameter `%s` does not evaluate to a real parameter'
-                                ' in the trajectory' % trial_parameter)
+                                ' in the trajectory' % trial_parameter_name)
 
             # Extract the ranges of both trial parameters
             if my_trial_parameter.f_has_range():
@@ -2262,34 +2319,40 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             else:
                 other_trial_list = [other_trial_parameter.f_get()]
 
-            # Make sanity checks if both ranges contain all numbers from 0 to N1
-            # for the current trajectory and 0 to N2 for the other trajectory
+            # Make sanity checks if both ranges contain all numbers from 0 to T1
+            # for the current trajectory and 0 to T2 for the other trajectory
             mytrialset = set(my_trial_list)
-            mymaxtrial = max(mytrialset)
+            mymaxtrial_T1 = max(mytrialset) # maximum trial index in current trajectory aka T1
 
-            if mytrialset != set(range(mymaxtrial + 1)):
+            if mytrialset != set(range(mymaxtrial_T1 + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
-                                'contain integers from 0 to %d, but it infact it '
-                                'f_contains `%s`.' % (mymaxtrial, str(mytrialset)))
+                                'contain integers from 0 to %d, but it in fact it '
+                                'contains `%s`.' % (mymaxtrial_T1, str(mytrialset)))
 
             othertrialset = set(other_trial_list)
-            othermaxtrial = max(othertrialset)
-            if othertrialset != set(range(othermaxtrial + 1)):
+            othermaxtrial_T2 = max(othertrialset) # maximum trial index in other trajectory aka T2
+            if othertrialset != set(range(othermaxtrial_T2 + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
-                                'contain integers from 0 to %d, but it infact it f_contains `%s` in the other trajectory.' % (
-                    othermaxtrial, str(othertrialset)))
+                                'contain integers from 0 to %d, but it infact it contains `%s` '
+                                'in the other trajectory.' % (
+                    othermaxtrial_T2, str(othertrialset)))
 
-            trial_parameter = my_trial_parameter.v_full_name
+            # If the trial parameter's name was just given in parts we update it here
+            # to the full name
+            trial_parameter_name = my_trial_parameter.v_full_name
 
             # If we had the very exceptional case, that our trial parameter was not explored,
             # aka we only had 1 trial, we have to add it to the explored parameters
-            if not trial_parameter in self._explored_parameters:
-                self._explored_parameters[trial_parameter] = my_trial_parameter
+            if not trial_parameter_name in self._explored_parameters:
+                self._explored_parameters[trial_parameter_name] = my_trial_parameter
+
+            # We need to mark the trial parameter for merging
+            params_to_change[trial_parameter_name] = (my_trial_parameter, other_trial_parameter)
 
 
-        # Now check which parameters differ:
-        params_to_change = {}
 
+        # Dictionary containing all parameters of the other trajectory, we will iterate through it
+        # to spot parameters that need to be enlarge or become new explored parameters
         params_to_merge = other_trajectory._parameters.copy()
 
         if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
@@ -2298,17 +2361,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             params_to_merge.update(trajectory_derived_parameters)
 
         # Iterate through all parameters of the other trajectory
+        # and check which differ from the parameters of the current trajectory
         for key, other_param in params_to_merge.iteritems():
 
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
                 raise TypeError('The parameters with name `%s` are not of the same type, cannot '
-                                'f_merge trajectory.' % key)
+                                'merge trajectory.' % key)
 
-            # We have taken care about the trial parameter before , but we can mark it as
-            # a parameter to merge
-            if my_param.v_full_name == trial_parameter:
-                params_to_change[key] = (my_param, other_param)
+            # We have taken care about the trial parameter before, it is already
+            # marked for merging
+            if my_param.v_full_name == trial_parameter_name:
                 continue
 
             # If a parameter was explored in one of the trajectories or two unexplored
@@ -2317,6 +2380,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 or other_param.f_has_range()
                 or not my_param._equal_values(my_param.f_get(), other_param.f_get())):
 
+                # If two unexplored parameters differ, that means they differ in every run,
+                # accordingly we do not need to check for duplicate runs anymore
                 params_to_change[key] = (my_param, other_param)
                 if not my_param.f_has_range() and not other_param.f_has_range():
                     remove_duplicates = False
@@ -2371,9 +2436,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for my_param, other_param in params_to_change.itervalues():
             fullname = my_param.v_full_name
 
-            # We need the new ranges to enlarge all parameters
-            if fullname == trial_parameter:
-                other_range = [x + mymaxtrial + 1 for x in other_trial_list]
+            # We need new ranges to enlarge all parameters marked for merging
+            if fullname == trial_parameter_name:
+                # The trial parameter now has to cover the range 0 to T1+T2+1
+                other_range = [x + mymaxtrial_T1 + 1 for x in other_trial_list]
             else:
                 # In case we do not use all runs we need to filter the ranges of the
                 # parameters of the other trajectory
@@ -2383,6 +2449,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 else:
                     other_range = (other_param.f_get() for _ in xrange(adding_length))
 
+            # If a parameter in the current trajectory was marked for merging but was not
+            # explored before, we need to explore it first, simply by creating the range of
+            # the current trajectory's length containing only it's default value
             if not my_param.f_has_range():
                 my_param.f_unlock()
                 my_param._explore((my_param.f_get() for _ in xrange(len(self))))
@@ -2402,10 +2471,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         If you use the HDF5 Storage Service only novel data is stored to disk.
 
-        If you have results that have been stored to disk before only new items are added and
+        If you have results that have been stored to disk before only new data items are added and
         already present data is NOT overwritten.
-
         Overwriting existing data with the HDF5 storage service is currently not supported.
+
+        If you want to store individual parameters or results, you might want to
+        take a look at :func:`~pypet.SingleRun.f_store_items`.
+        To store whole subtrees of your trajectory check out
+        :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
+        Note both functions require that your trajectory was stored to disk with `f_store`
+        at least once before.
 
         """
         self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
@@ -2434,7 +2509,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             param._set_parameter_access(idx)
 
     def _make_single_run(self, idx):
-        """Creates a SingleRun object for parameter exploration with run index `idx`."""
+        """Creates a SingleRun object for parameter exploration with run index `idx`.
+
+        Note that this changes the root node of the trajectory tree to the novel SingleRun
+        instance. Accordingly, until switching the root node back to the current trajectory,
+        you cannot interact with the tree via the trajectory but only through the SingleRun
+        instance.
+
+        """
         self._set_explored_parameters_to_idx(idx)
         name = self.f_idx_to_run(idx)
         return SingleRun(name, idx, self)

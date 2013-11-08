@@ -393,6 +393,9 @@ class BaseParameter(NNLeafNode):
 
         Please use it very carefully, or best do not use this function at all.
         There should better be no reason to unlock a locked parameter!
+        The only exception I can think of is to unlock a large derived parameter
+        after usage to subsequently call :func:`~pypet.parameter.BaseParameter.f_empty`
+        to clear memory.
 
         """
         self._locked = False

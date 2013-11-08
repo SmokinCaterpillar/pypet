@@ -540,7 +540,7 @@ class Environment(object):
 
         if self._traj.v_version != VERSION:
             config_name='environment.%s.version' % self.v_name
-            self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+            self._traj.f_add_config(config_name,self.v_trajectory.v_version,
                                     comment ='Pypet version if it differs from the version'
                                              ' of the trajectory')
 

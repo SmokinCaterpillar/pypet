@@ -699,7 +699,7 @@ class TrajectoryMergeTest(unittest.TestCase):
 
     def test_merge_parameters_without_remove(self):
         # remove_duplicates = True should be discarded by the trial parameter
-        self.traj._merge_parameters(self.traj2,trial_parameter='Trials',remove_duplicates=True)
+        self.traj._merge_parameters(self.traj2, trial_parameter_name='Trials',remove_duplicates=True)
 
     def test_merge_parameters_with_remove(self):
         self.traj._merge_parameters(self.traj2,remove_duplicates=True)
