@@ -19,7 +19,6 @@ import hashlib
 import importlib
 import itertools as itools
 import inspect
-from collections import OrderedDict
 
 import numpy as np
 
@@ -1991,8 +1990,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
-        # It is ordered to keep the order of trajectory traversal also in the dict
-        rename_dict = OrderedDict()
+        rename_dict = {}
 
         # Keep track of all trajectory results that should be merged and put
         # information into `rename_dict`
@@ -2118,34 +2116,29 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             other_instance = other_trajectory.f_get(other_key)
 
-
-            if other_instance.v_is_leaf and other_instance.f_is_empty():
+            if other_instance.f_is_empty():
                 other_trajectory.f_load_items(other_instance)
 
             # The empty instances for the new data have already been created before
             my_instance = self.f_get(new_key)
 
-            if my_instance.v_is_leaf and not my_instance.f_is_empty():
+            if not my_instance.f_is_empty():
                 raise RuntimeError('You want to slowly merge results, but your target result '
                                    '`%s` is not _empty, this should not happen.' %
                                    my_instance.v_full_name)
 
-            if other_instance.v_is_leaf:
-                load_dict = other_instance._store()
-                my_instance._load(load_dict)
-
-            # Copy the annotations
+            load_dict = other_instance._store()
+            my_instance._load(load_dict)
             my_instance.f_set_annotations(**other_instance.v_annotations.f_to_dict(copy=False))
 
             self.f_store_item(my_instance)
 
             # We do not want to blow up the RAM Memory
-            if other_instance.v_is_leaf:
-                if other_instance.v_is_parameter:
-                    other_instance.f_unlock()
-                    my_instance.f_unlock()
-                other_instance.f_empty()
-                my_instance.f_empty()
+            if other_instance.v_is_parameter:
+                other_instance.f_unlock()
+                my_instance.f_unlock()
+            other_instance.f_empty()
+            my_instance.f_empty()
 
 
     def _merge_trajectory_results(self, other_trajectory, rename_dict):
@@ -2154,6 +2147,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         If a result is marked for merge an empty instance is created in the current trajectory.
 
         Emits a warning if a result in the other trajectory already exists in the current one.
+
+        Stores all group nodes with annotations that are not part of the current trajectory
+        to disk. Results are only created empty and not stored in order to try to
+        conduct faster merging and copying of results in the hdf5 file.
 
         :param rename_dict:
 
@@ -2164,29 +2161,40 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        other_nodes_iterator = other_trajectory.f_get('results.trajectory').f_iter_nodes()
+        other_result_nodes = other_trajectory.f_get('results.trajectory').f_iter_nodes(recursive=True)
 
-        for node in other_nodes_iterator:
+        to_store_groups_with_annotations = []
 
-            full_name = node.v_full_name
-
+        for node in other_result_nodes:
+            full_name=node.v_full_name
             if node.v_is_leaf:
-
-                if full_name in self._results:
+                # If the node is a result, check if the result already exists,
+                # if not mark it for merge later on
+                if full_name in self:
                     self._logger.warning('You already have a trajectory result called `%s` in your '
                                          'trajectory. I will not copy it.' % full_name)
-                    continue
-
-                comment = node.v_comment
-                result_type = node.f_get_class_name()
-                result_type = self._create_class(result_type)
-                self.f_add_result(result_type,full_name, comment=comment)
+                else:
+                    rename_dict[full_name] = full_name
+                    comment = node.v_comment
+                    result_type = node.f_get_class_name()
+                    result_type = self._create_class(result_type)
+                    self.f_add_result(result_type,full_name, comment=comment)
             else:
-                if full_name in self._groups:
-                    continue
-                self.f_add_result_group(full_name)
+                # If the group is annotated and unknown to the current trajectory we
+                # want to copy the annotations into the current trajectory
+                if not full_name in self:
+                    if not node.v_annotations.f_is_empty():
+                        new_group=self.f_add_result_group(full_name)
 
-            rename_dict[full_name] = full_name
+                        annotationdict = node.v_annotations.f_to_dict()
+                        new_group.f_set_annotations(**annotationdict)
+
+                        to_store_groups_with_annotations.append(new_group)
+
+        # If we have annotated groups, store them
+        if len(to_store_groups_with_annotations)>0:
+            self.f_store_items(to_store_groups_with_annotations)
+
 
 
     def _merge_single_runs(self, other_trajectory, used_runs, rename_dict):
@@ -2196,6 +2204,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         an empty instance is created in the current trajectory.
 
         Updates the `run_information` of the current trajectory.
+
+        Stores all group nodes with annotations that are not part of the current trajectory
+        to disk. Results are only created empty and not stored in order to try to
+        conduct faster merging and copying of results in the hdf5 file.
 
         :param used_runs:
 
@@ -2215,25 +2227,29 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         count = len(self) # Variable to count the increasing new run indices and create
         # new run names
 
-        runnames = other_trajectory.f_get_run_names()
+        run_names = other_trajectory.f_get_run_names()
 
-        for runname in runnames:
-            idx = other_trajectory.f_get_run_information(runname)['idx']
+        for run_name in run_names:
+            # Iterate through all used runs and store annotated groups and mark results and
+            # derived parameters for merging
+            idx = other_trajectory.f_get_run_information(run_name)['idx']
             if used_runs[idx]:
                 try:
-                    results_subtree_iterator = other_trajectory.f_get(
-                                                'results.' + runname).f_iter_nodes(recursive=True)
+                    other_result_nodes = other_trajectory.f_get(
+                        'results.' + run_name).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    results_subtree_iterator = []
+                    other_result_nodes = {}
 
                 try:
-                    derived_params_iterator = other_trajectory.f_get(
-                        'derived_parameters.' + runname).f_iter_nodes(recursive=True)
+                    other_derived_param_nodes = other_trajectory.f_get(
+                        'derived_parameters.' + run_name).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    derived_params_iterator = []
+                    other_derived_param_nodes = {}
+
+                nodes_iterator_list=[other_result_nodes, other_derived_param_nodes]
 
                 # Update the run information dict of the current trajectory
-                other_info_dict = other_trajectory.f_get_run_information(runname)
+                other_info_dict = other_trajectory.f_get_run_information(run_name)
                 time = other_info_dict['time']
                 timestamp = other_info_dict['timestamp']
                 completed = other_info_dict['completed']
@@ -2255,37 +2271,47 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 count += 1
 
-                # Create new empty result instance for every result in the other trajectory
-                # that is going to be merged into the current one
-                for node in results_subtree_iterator:
+                to_store_groups_with_annotations =[]
 
-                    node_name = node.v_full_name
-                    new_node_name = self._rename_key(node_name, 1, new_runname)
-                    rename_dict[node_name] = new_node_name
 
-                    if node.v_is_leaf:
-                        comment = node.v_comment
-                        result_type = node.f_get_class_name()
-                        result_type = self._create_class(result_type)
-                        self.f_add_result(result_type,new_node_name, comment=comment)
 
-                    else:
-                        self.f_add_result_group(new_node_name)
+                for node_iterator in nodes_iterator_list:
+                    for node in node_iterator:
+                        full_name = node.v_full_name
+                        new_full_name = self._rename_key(full_name, 1, new_runname)
 
-                # Create new empty derived parameter instance for every derived parameter
-                # in the other trajectory that is going to be merged into the current one
-                for node in derived_params_iterator:
-                    node_name = node.v_full_name
-                    new_node_name = self._rename_key(node_name, 1, new_runname)
-                    rename_dict[node_name] = new_node_name
+                        if node.v_is_leaf:
+                            # Create new empty result/derived param instance
+                            # for every result/ derived param
+                            # in the other trajectory
+                            # that is going to be merged into the current one
+                            rename_dict[full_name] = new_full_name
+                            comment = node.v_comment
+                            leaf_type =node.f_get_class_name()
+                            leaf_type = self._create_class(leaf_type)
+                            if full_name.startswith('results.'):
+                                self.f_add_result(leaf_type,new_full_name, comment=comment)
+                            else:
+                                self.f_add_derived_parameter(leaf_type, new_full_name,
+                                                             comment=comment)
+                        else:
+                            if not node.v_annotations.f_is_empty():
+                                # Store all group nodes that are annotated
+                                if full_name.startswith('results.'):
+                                    new_group=self.f_add_result_group(new_full_name)
+                                else:
+                                    new_group=self.f_add_derived_parameter_group(new_full_name)
 
-                    if node.v_is_leaf:
-                        comment = node.v_comment
-                        dpar_type = node.f_get_class_name()
-                        dpar_type = self._create_class(dpar_type)
-                        self.f_add_derived_parameter(dpar_type, new_node_name, comment=comment)
-                    else:
-                        self.f_add_derived_parameter_group(new_node_name)
+                                annotationdict = node.v_annotations.f_to_dict()
+                                new_group.f_set_annotations(**annotationdict)
+
+
+                                to_store_groups_with_annotations.append(new_group)
+
+        # If we have annotated groups, store them
+        if len(to_store_groups_with_annotations)>0:
+            self.f_store_items(to_store_groups_with_annotations)
+
 
     @staticmethod
     def _rename_key(key, pos, new_name):

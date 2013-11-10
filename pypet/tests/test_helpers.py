@@ -200,7 +200,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_get('DictsNFrame').f_set(myframe)
 
         traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
-        traj.f_add_derived_parameter('mega',33, comment='It is huuuuge!')
+        traj.f_add_derived_parameter('super.mega',33, comment='It is huuuuge!')
+        traj.super.f_set_annotations(AgainATestAnnotations='I am a string!111elf')
 
         traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1)
         traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2)
@@ -213,7 +214,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         myobjtab = ObjectTable(data={'strings':['a','abc','qwertt'], 'ints':[1,2,3]})
 
-        traj.f_add_result('object_table', myobjtab)
+        traj.f_add_result('object.table', myobjtab).v_annotations.f_set(test=42)
+        traj.object.f_set_annotations(test2=42.42)
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'
@@ -239,8 +241,6 @@ class TrajectoryComparator(unittest.TestCase):
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
             old_item = old_items[key]
-            if key.startswith('config'):
-                continue
 
             if isinstance(item, BaseParameter):
                 self.assertTrue(parameters_equal(item,old_item),
@@ -253,4 +253,10 @@ class TrajectoryComparator(unittest.TestCase):
 
             self.assertTrue(nested_equal(item.v_annotations,old_item.v_annotations),'%s != %s' %
                         (item.v_annotations.f_ann_to_str(),old_item.v_annotations.f_ann_to_str()))
+
+        # Check the annotations
+        for node in traj1.f_iter_nodes(recursive=True):
+            if not node.v_annotations.f_is_empty():
+                second_anns = traj2.f_get(node.v_full_name).v_annotations
+                self.assertTrue(nested_equal(node.v_annotations, second_anns))
 

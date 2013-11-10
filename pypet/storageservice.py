@@ -1200,10 +1200,6 @@ class HDF5StorageService(StorageService):
                 old_group = self._hdf5file.getNode(old_location)
 
 
-            if self._all_get_from_attrs(old_group, HDF5StorageService.LEAF):
-                recursive=True
-            else:
-                recursive=False
 
             for node in old_group:
 
@@ -1218,11 +1214,11 @@ class HDF5StorageService(StorageService):
                     try:
                         self._hdf5file.copy_node(where=old_location, newparent=new_location,
                                               name=node._v_name, createparents=True,
-                                              recursive=recursive)
+                                              recursive=True)
                     except AttributeError:
                         self._hdf5file.copyNode(where=old_location, newparent=new_location,
                                               name=node._v_name, createparents=True,
-                                              recursive=recursive)
+                                              recursive=True)
 
             try:
                 old_group._v_attrs._f_copy(where = self._hdf5file.get_node(new_location))
