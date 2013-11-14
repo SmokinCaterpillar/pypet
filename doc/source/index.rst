@@ -67,7 +67,24 @@ Contents:
    code
 
 
+=====================
+Publications
+=====================
 
+There is a poster about *pypet* that was shown at the `Berlin Brain Days`_.
+
+.. image:: bbd_2013_poster/meyer_bbd_2013.png
+           :width: 210
+           :height: 289
+
+Download:
+
+* :download:`CLICK ME for PDF <./bbd_2013_poster/meyer_bbd_2013.pdf>`
+
+* :download:`CLICK ME for PNG <./bbd_2013_poster/meyer_bbd_2013.png>`
+
+
+.. _`Berlin Brain Days`: http://www.neuroscience-berlin.de/bbd/
 
 =====================
 Contact

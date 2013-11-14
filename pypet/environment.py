@@ -467,6 +467,15 @@ class Environment(object):
             else:
                 self._filename=filename
 
+        head, tail = os.path.split(self._filename)
+        if not head:
+            # If the filename contains no path information,
+            # we put it into the current working directory
+            self._filename = os.path.join(os.getcwd(),self._filename)
+
+        if not tail:
+            raise ValueError('You need to specify a filename not just a path.')
+
         self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
         # Check if the user wants to use the hdf5 storage service. If yes,

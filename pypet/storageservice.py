@@ -1273,8 +1273,11 @@ class HDF5StorageService(StorageService):
 
 
             traj._set_explored_parameters_to_idx(idx)
+
+            create_run_group = ('results.%s' % run_name) in traj
+
             run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
-                                                      add_table)
+                                                      add_table, create_run_group=create_run_group)
 
 
             run_info['parameter_summary'] = run_summary
@@ -2018,7 +2021,7 @@ class HDF5StorageService(StorageService):
 
         # For better readability and if desired add the explored parameters to the results
         # Also collect some summary information about the explored parameters
-        # So we cann add this to the `run` table
+        # So we can add this to the `run` table
         run_summary = self._srn_add_explored_params(single_run.v_name,
                                                     single_run._explored_parameters.values(),
                                                     add_table)
@@ -2038,13 +2041,20 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _srn_add_explored_params(self, run_name, paramlist, add_table):
+    def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
         """ If desired adds an explored parameter overview table to the results in each
         single run and summarizes the parameter settings.
 
         :param run_name: Name of the single run
+
         :param paramlist: List of explored parameters
+
         :param add_table: Whether to add the overview table
+
+        :param create_run_group:
+
+            If a group with the particular name should be created if it does not exist.
+            Might be necessary when trajectories are merged.
 
         """
 
@@ -2054,9 +2064,20 @@ class HDF5StorageService(StorageService):
 
         where = 'results.'+run_name
 
-
         where = where.replace('.','/')
-        add_table = add_table and where in self._trajectory_group
+
+        if not where in self._trajectory_group:
+            if create_run_group:
+                try:
+                    self._hdf5file.create_group(where =
+                                                self._trajectory_group._f_get_child('results'),
+                                                name = run_name)
+                except AttributeError:
+                    self._hdf5file.createGroup(where =
+                                                self._trajectory_group._f_getChild('results'),
+                                               name = run_name)
+            else:
+                add_table = False
 
         if add_table:
             rungroup = getattr(self._trajectory_group,where)
@@ -2118,7 +2139,11 @@ class HDF5StorageService(StorageService):
     ################# Methods used across Storing and Loading different Items #####################
 
     def _all_find_param_or_result_entry_and_return_iterator(self, param_or_result, table):
+        """Searches for a particular entry in `table` based on the name and location
+        of `param_or_result` and returns an iterator over the found rows
+        (should contain only a single one).
 
+        """
         location = param_or_result.v_location
         name = param_or_result.v_name
 
@@ -2133,6 +2158,19 @@ class HDF5StorageService(StorageService):
 
     @staticmethod
     def _all_get_table_name(where, creator_name):
+        """Returns an overview table name for a given subtree name
+
+        :param where:
+
+            Either `parameters`, `config`, `derived_parameters`, or `results`
+
+        :param creator_name:
+
+            Either `trajectory` or `run_XXXXXXXXX`
+
+        :return: Name of overview table
+
+        """
         if where in ['config','parameters']:
                 return where
         else:
@@ -2144,21 +2182,37 @@ class HDF5StorageService(StorageService):
 
     def _all_store_param_or_result_table_entry(self,param_or_result,table, flags,
                                                additional_info=None):
-        """ Stores a single overview table.
+        """Stores a single row into an overview table
 
-        Called from _trj_store_meta_data and store_single_run
+        :param param_or_result: A parameter or result instance
+
+        :param table: Table where row will be inserted
+
+        :param flags:
+
+            Flags how to insert into the table. Potential Flags are
+            `ADD_ROW`, `REMOVE_ROW`, `MODIFY_ROW`
+
+        :param additional_info:
+
+            Dictionary containing information that cannot be extracted from
+            `param_or_result`, but needs to be inserted, too.
+
+
         """
         #assert isinstance(table, pt.Table)
 
-        #check if the instance is already in the table
         location = param_or_result.v_location
         name = param_or_result.v_name
         fullname = param_or_result.v_full_name
-        # If we are sure we only want to add a row we do not need to search!
+
+
         if flags==(HDF5StorageService.ADD_ROW,):
+            # If we are sure we only want to add a row we do not need to search!
             condvars = None
             condition = None
         else:
+            # Condition to search for an entry
             condvars = {'namecol' : table.cols.name, 'locationcol' : table.cols.location,
                         'name' : name, 'location': location}
 
@@ -2168,16 +2222,19 @@ class HDF5StorageService(StorageService):
         colnames = set(table.colnames)
 
         if HDF5StorageService.REMOVE_ROW in flags:
+            # If we want to remove a row, we don't need to extract information
             insert_dict={}
         else:
+            # Extract information to insert from the instance and the additional info dict
             insert_dict = self._all_extract_insert_dict(param_or_result,colnames,additional_info)
 
+        # Write the table entry
         self._all_add_or_modify_row(fullname,insert_dict,table,condition=condition,
                                     condvars=condvars,flags=flags)
 
 
     def _all_get_or_create_table(self,where,tablename,description,expectedrows=None):
-
+        """Creates a new table, or if the table already exists, returns it."""
         where_node = self._hdf5file.getNode(where)
 
         if not tablename in where_node:
@@ -2206,6 +2263,7 @@ class HDF5StorageService(StorageService):
         return table
 
     def _all_get_node_by_name(self,name):
+        """Returns an HDF5 node by the path specified in `name`"""
         path_name = name.replace('.','/')
         where = '/%s/%s' %(self._trajectory_name,path_name)
 

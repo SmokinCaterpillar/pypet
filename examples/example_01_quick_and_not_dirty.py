@@ -6,8 +6,16 @@ from pypet.utils.explore import cartesian_product
 
 
 def multiply(traj):
+    """Sophisticated numerical simulation that involves multiplying two real values.
+
+    :param traj:
+
+        The trajectory containing a particular parameter combination.
+        It also serves as a container for the results.
+
+    """
     z=traj.x*traj.y
-    traj.f_add_result('z',z, comment='Im the product of two reals!')
+    traj.f_add_result('z',z, comment='Result of our simulation!')
 
 
 
@@ -16,7 +24,7 @@ env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='experim
                   file_title='Example1_Quick_And_Not_So_Dirty', log_folder='experiments/example_01/LOGS/',
                   comment='The first example!')
 
-# Get the trajectory from the environment
+# The environment has created a trajectory container for us
 traj = env.v_trajectory
 
 # Add both parameters
