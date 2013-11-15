@@ -16,20 +16,17 @@ and data storage into HDF5_ files for you.
 IMPORTANT!
 ===========================
 
+The program is currently under development,
+please keep that in mind and use it very carefully.
 
-The current program is currently still under development,
-please treat it as such and use very carefully.
-
-
-Note that there still might be changes to the API. Yet, i will try to keep it as stable as possible.
-
-I decided to integrate pypet first in my own research project before publishing the
-official 0.1.0 release. Thus, I have a more profound testing environment than only using
-unittests. The official 0.1.0 release is postponed to beginning of next year or end of
-this year.
-However, feel free to use this beta version and feel free to give feedback,
+Before publishing the official 0.1.0 release I will integrate *pypet* first in my own research
+project. Thus, I have a more profound testing environment than only using
+unittests. Accordingly, you still have to deal with the naming `0.1b.X` probably until beginning
+of next year.
+However, unless it is really, really, really necessary I do not plan to change the API anymore.
+So feel free to use this beta version and feel free to give feedback,
 suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
-or preferably use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
+or preferably use **github** (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
 Thanks!
 
@@ -49,8 +46,9 @@ Python 2.6 or 2.7
 
 For git integration you additionally need
 
-* GitPython
+* GitPython_
 
+.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 ==========================
 ToC
@@ -71,7 +69,7 @@ Contents:
 Publications
 =====================
 
-There is a poster about *pypet* that was shown at the `Berlin Brain Days`_.
+There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_.
 
 .. image:: bbd_2013_poster/meyer_bbd_2013.png
            :width: 210
@@ -79,12 +77,12 @@ There is a poster about *pypet* that was shown at the `Berlin Brain Days`_.
 
 Download:
 
-* :download:`CLICK ME for PDF <./bbd_2013_poster/meyer_bbd_2013.pdf>`
+* :download:`CLICK ME for PDF DOWNLOAD <./bbd_2013_poster/meyer_bbd_2013.pdf>`
 
-* :download:`CLICK ME for PNG <./bbd_2013_poster/meyer_bbd_2013.png>`
+* :download:`CLICK ME for PNG DOWNLOAD <./bbd_2013_poster/meyer_bbd_2013.png>`
 
 
-.. _`Berlin Brain Days`: http://www.neuroscience-berlin.de/bbd/
+.. _`Berlin Brain Days 2013`: http://www.neuroscience-berlin.de/bbd/
 
 =====================
 Contact
@@ -132,23 +130,23 @@ Tests
 ====================
 
 Tests can be found in `pypet/tests`.
-Note that they involve heavy file IO and it might not be the case
-that you have privileges on your system to write files to a temporary folder.
+Note that they involve heavy file IO and you need privileges
+to write files to a temporary folder.
 The tests suite will make use of the `tempfile.gettempdir()` function to
-access a temporary folder.
+create such a temporary folder.
 
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/` with
-`-k` to keep the hdf5 files created by the tests (if you want to inspect them, otherwise
-they will be deleted after the completed tests)
-and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
+`-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
+they will be deleted after the completed tests),
+and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
-If you do not want to browse to your installation folder, you can also download
-:download:`all_tests.py <../../pypet/tests/all_tests.py>`.
+If you do not want to browse to your installation folder, you can also download the
+:download:`all_tests.py <../../pypet/tests/all_tests.py>` script.
 
-Running all tests can take up to 10 minutes. The test suite encompasses more than **300** tests
+Running all tests can take up to 15 minutes. The test suite encompasses more than **300** tests
 (including the BRIAN based tests) and has a code coverage of more than **90%**!
 
 ===================

@@ -7,11 +7,12 @@ More about the Environment
 In most use cases you will interact with the :class:`~pypet.environment.Envrionemnt` to
 do your numerical simulations.
 The environment is your handyman for your numerical experiments, it sets up new trajectories,
-keeps log
-files and can be used to distribute your simulations onto several cpus.
+keeps log files and can be used to distribute your simulations onto several cpus.
 
-Note in case you use the environment there is no need to call :func:`~pypet.trajectory.SingleRun.f_store`
-for data storage, this will always be called before the runs and at the end of a single run automatically.
+Note in case you use the environment there is no need to call
+:func:`~pypet.trajectory.SingleRun.f_store`
+for data storage, this will always be called before the runs and at the end of a
+single run automatically.
 
 You start your simulations by creating an environment object:
 
@@ -63,7 +64,7 @@ You can pass the following arguments:
     The trajectory needs to know your custom classes in case you want to load a custom class
     from disk and the trajectory needs to know how they are built.
 
-    It is VERY important, that every class name is UNIQUE. So you should not have
+    It is **VERY important**, that every class name is **UNIQUE**. So you should not have
     two classes named `'MyCustomParameterClass'` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
@@ -71,18 +72,20 @@ You can pass the following arguments:
 
     `multiproc` specifies whether or not to use multiprocessing
     (take a look at :ref:`more-on-multiprocessing`). Default is 0 (False). If you use
-    multiprocessing, all your data and the tasks you compute must be pickable!
+    multiprocessing, all your data and the tasks you compute must be picklable!
+    If you never heard about pickling or object serialization, you might want to take a loot at the
+    pickle_ module.
 
 * `ncores`
 
-    If multiproc is 1 (True), this specifies the number of processes that will be spawned
+    If `multiproc` is 1 (True), this specifies the number of processes that will be spawned
     to run your experiment. Note if you use `'QUEUE'` mode (see below) the queue process
     is not included in this number and will add another extra process for storing.
 
 * `wrap_mode`
 
-     If multiproc is 1 (True), specifies how storage to disk is handled via
-     the storage service. Since hdf5 is not thread safe, the hdf5 storage service
+     If `multiproc` is 1 (True), specifies how storage to disk is handled via
+     the storage service. Since HDF5 is not thread safe, the HDF5 storage service
      needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
      There are two options:
@@ -91,7 +94,7 @@ You can pass the following arguments:
 
      Another process for storing the trajectory is spawned. The sub processes
      running the individual single runs will add their results to a
-     multiprocessing queue that is handled by an additional process
+     multiprocessing queue that is handled by an additional process.
 
 
      :const:`pypet.pypetconstants.MULTIPROC_MODE_LOCK`: ('LOCK')
@@ -109,8 +112,8 @@ You can pass the following arguments:
 
     Whether the environment should take special care to allow to resume or continue
     crashed trajectories. Default is 1 (True).
-    Everything must be pickable in order to allow
-    continuing of trajectories (take a look at :ref:`more-on-continuing`)
+    Everything must be picklable in order to allow
+    continuing of trajectories (take a look at :ref:`more-on-continuing`).
     In order to resume trajectories use
     :func:`~pypet.environment.Environment.f_continue_run`.
 
@@ -129,10 +132,10 @@ You can pass the following arguments:
 
 * `use_hdf5`:
 
-    If you want to use the standard hdf5 storage service provided with this package, set
-    `use_hdf5=True`. You can specify the name of the hdf5 file and, if it has to be created new,
+    If you want to use the standard HDF5 storage service provided with this package, set
+    `use_hdf5=True`. You can specify the name of the HDF5 file and, if it has to be created new,
     the file title. If you want to use your own storage service (You don't have an SQL one do you?),
-    set `use_hdf5=False` and add your custom storage service to the trajectory:
+    set `use_hdf5=False` and add your custom storage service directly to the trajectory:
 
     >>> env.v_trajectory.v_storage_service = MyCustomService(...)
 
@@ -143,7 +146,7 @@ You can pass the following arguments:
     you set a comment, normally that comment would be attached to each and every instance.
     This can produce a lot of unnecessary overhead if the comment is the same for every
     result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
-    first result or derived parameter instance created is stored or comments
+    first result or derived parameter instance created is stored, or comments
     that differ from this first comment. You might want to take a look at
     :ref:`more-on-duplicate-comments`.
 
@@ -154,17 +157,16 @@ You can pass the following arguments:
     'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
     You might want to check out :ref:`more-on-overview`.
 
-
 * `large_overview_tables`
 
     Whether to add large overview tables. This encompasses information about every derived
     parameter and result and the explored parameters in every single run.
-    If you want small hdf5 files, this is the first option to set to False.
+    If you want small HDF5 files, this is the first option to set to False.
 
 * `results_per_run`
 
     Expected results you store per run. If you give a good/correct estimate
-    storage to hdf5 file is much faster in case you store LARGE overview tables.
+    storage to HDF5 file is much faster in case you store LARGE overview tables.
 
     Default is 0, i.e. the number of results is not estimated!
 
@@ -178,7 +180,6 @@ You can pass the following arguments:
     (relative or absolute) to
     the folder containing the `.git` directory. See also :ref:`more-on-git`.
 
-
 * `git_message`
 
     Message passed onto git command.
@@ -190,6 +191,7 @@ You can pass the following arguments:
 
 .. _multiprocessing: http://docs.python.org/2/library/multiprocessing.html
 
+
 .. _config-added-by-environment:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,9 +199,8 @@ Config Data added by the Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Environment will automatically add some config settings to your trajectory.
-Thus, you can always look up how your trajectory was run. This encompasses all above named
-parameters as
-well as some information about the environment. This additional information includes
+Thus, you can always look up how your trajectory was run. This encompasses many of the above named
+parameters as well as some information about the environment. This additional information includes
 a timestamp and a SHA-1 hash code that uniquely identifies your environment.
 If you use git integration (:ref:`more-on-git`), the SHA-1 hash code will be the one from your git commit.
 Otherwise the code will be calculated from the trajectory name, the current time, and your
@@ -223,10 +224,9 @@ Overview Tables
 
 Overview tables give you a nice summary about all *parameters* and *results* you needed and
 computed during your simulations. They will be placed under the subgroup
-`overview` at the top-level in your trajectory group in the hdf5 file.
+`overview` at the top-level in your trajectory group in the HDF5 file.
 In addition, for every single run there will be a small overview
-table about the explored parameter values of that run
-(see also :ref:`more-on-storage`).
+table about the explored parameter values of that run.
 
 The following tables are created:
 
@@ -253,15 +253,15 @@ The following tables are created:
     `results_runs_summary`
 
         Only the very first result with a particular name is listed. For instance
-        if you create the result 'my_result' in all runs only the result of run_00000000
+        if you create the result 'my_result' in all runs only the result of `run_00000000`
         is listed with detailed information.
 
-        If you use this table, you can purge duplicate comments, see :ref:`more-on-duplicate-comments`.
-
+        If you use this table, you can purge duplicate comments,
+        see :ref:`more-on-duplicate-comments`.
 
     `results_trajectroy`
 
-        All results created directly with the trajectory and not within single runs are listed.
+        All results created directly with the trajectory and not within single runs
 
     `derived_parameters_trajectory`
 
@@ -269,9 +269,9 @@ The following tables are created:
 
     `derived_parameters_runs_summary`
 
-        All three are analogous to the result overviews above.
+        All three are analogous to the result overviews above
 
-* The `explored_parameters` overview about your parameters explored in the single runs.
+* The `explored_parameters` overview about your parameters explored in the single runs
 
 * In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
   the values in each run.
@@ -281,6 +281,7 @@ I would advice you to switch of the result, derived parameter
 and explored parameter overview in each single run. These tables are switched off if you
 pass `large_overview_tables=False` as a parameter at environment construction (see above).
 
+
 .. _more-on-duplicate-comments:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -288,11 +289,11 @@ Purging duplicate Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you added a result with the same name and same comment in every single run, this would create
-a lot of overhead. Since the very same comment would be stored in every node in the hdf5 file.
+a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
 For instance,
-during a single run you call `traj.f_add_result('my_result',42, comment='Mostly harmless!')`
+during a single run you call `traj.f_add_result('my_result', 42, comment='Mostly harmless!')`
 and the result will be renamed to `results.run_00000000.my_result`. After storage
-in the node associated with this result in your hdf5 file, you will find the comment
+in the node associated with this result in your HDF5 file, you will find the comment
 `'Mostly harmless!'`.
 If you call `traj.f_add_result('my_result',-55, comment='Mostly harmless!')`
 in another run again, let's say run_00000001, the name will be mapped to
@@ -302,7 +303,6 @@ Note that comments will be compared and storage will only be discarded if the st
 are exactly the same. Moreover, the comment will only be compared to the comment of the very
 first result, if all comments are equal except for the very first one, all of these equal comments
 will be stored!
-
 
 In order to allow the purge of duplicate comments you need the `summary` overview tables.
 
@@ -315,11 +315,12 @@ the result or derived parameter with the lowest run index will be considered, re
 of the order of the finishing of your runs. Note that this only works properly if all
 comments are the same. Otherwise the comment in the overview table might not be the one
 with the lowest run index. Moreover, if you merge trajectories (see ref:`more-on-merging`)
-there is no support for purging comments in the other trajectory. All comments of the other trajectory's
-results and derived parameters will be kept and merged into your current one.
+there is no support for purging comments in the other trajectory.
+All comments of the other trajectory's results and derived parameters will be kept and
+merged into your current one.
 
 If you do not want to purge duplicate comments, set the config parameter
-`'purge_duplicate_comments'` to 0 or False.
+`'purge_duplicate_comments'` to 0 or `False`.
 
 
 .. _more-on-multiprocessing:
@@ -346,24 +347,24 @@ The following code snippet shows how to enable multiprocessing with 4 cpus and a
                  wrap_mode='QUEUE')
 
 
-Note that hdf5 is not thread safe, so you cannot use the standard hdf5 storage service out of the
+Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
-classes for the hdf5 storage service to allow safe data storage.
+classes for the HDF5 storage service to allow safe data storage.
 
 There are two different modes that are supported. You can choose between them via setting
 `wrap_mode`. You can choose between `'QUEUE'` and `'LOCK'`. If you
 have your own service that is already thread safe you can also choose `'NONE'` to skip wrapping.
 
 If you chose the `'QUEUE'` mode, there will be an additional process spawned that is the only
-one writing to the hdf5 file. Everything that is supposed to be stored is send over a queue to
+one writing to the HDF5 file. Everything that is supposed to be stored is send over a queue to
 the process. This has the advantage that your worker processes are only busy with your simulation
-and are not
-bothered with writing data to a file. More important, they don't spend time waiting for other
+and are not bothered with writing data to a file.
+More important, they don't spend time waiting for other
 processes to release a thread lock to allow file writing.
 The disadvantage is that this storage relies a lot on pickling of data, so often your entire
 trajectory is send over the queue.
 
-If you chose the `'LOCK'` mode, every process will pace a lock before it opens the hdf5 file
+If you chose the `'LOCK'` mode, every process will pace a lock before it opens the HDF5 file
 for writing data. Thus, only one process at a time stores data. The advantage is that your data
 does not need to be send over a queue over and over again. Yet, your simulations might take longer
 since processes have to wait for each other to release locks quite often.
@@ -373,6 +374,7 @@ to be serialized with pickle_.
 But don't worry, most of the python stuff you use is automatically picklable.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
+
 
 .. _more-on-git:
 
@@ -395,18 +397,18 @@ The commit SHA-1 hash and some other information about the commit will be added 
 config subtree of your trajectory, so you can easily recall that commit from git later on.
 
 The automatic commit will only commit changes in files that are currently tracked by
-your git repository, it will NOT add new files.
+your git repository, it will **NOT** add new files.
 So make sure that if you create new files you put them into your repository before running
 an experiment.
 
-The autocommit function is similar to calling `$ git add -u` and `$ git commit -m 'Some Message``
+The autocommit function is similar to calling `$ git add -u` and `$ git commit -m 'Some Message'`
 in your linux console!
-
 
 
 .. _git: http://git-scm.com/
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
 
 .. _more-on-running:
 
@@ -416,9 +418,9 @@ Running an Experiment
 
 In order to run an experiment, you need to define a job or a top level function that specifies
 your simulation. This function gets as first positional argument the *trajectory*, or to be
-more precise a *single run* (:class:`~pypet.trajectory.SingleRun`), and
-optionally other positional
-and keyword arguments of your choice.
+more precise a *single run*
+(see :ref:`more-on-trajectories` and :class:`~pypet.trajectory.SingleRun`),
+and optionally other positional and keyword arguments of your choice.
 
 .. code-block:: python
 
@@ -433,13 +435,13 @@ where you can also specify the additional arguments and keyword arguments using
 
 .. code-block:: python
 
-    env.f_run(myjobfunc,*args,**kwargs)
+    env.f_run(myjobfunc, *args, **kwargs)
 
 The argument list `args` and keyword dictionary `kwargs` are directly handed over to the
 `myjobfunc` during runtime.
 
 Note that the first postional argument used by `myjobfunc` is not a
-full :func:`pypet.trajectory.Trajectory` but only
+full :class:`pypet.trajectory.Trajectory` but only
 a `~pypet.trajectory.SingleRun` (also see :ref:`more-on-single-runs`). There is not much
 difference to a full *trajectory*. You have slightly less functionality and usually no access
 to the fully explored parameters but only to a single parameter space point.
@@ -450,23 +452,22 @@ to the fully explored parameters but only to a single parameter space point.
 Resuming an Experiment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If all of your data is picklable, you can use the config parameter `continuable=1`.
+If all of your data is picklable, you can use the config parameter `continuable=1` passed
+to the :class:`~pypet.environment.Environment` constructor.
 This will create a '.cnt' file with the name of your trajectory in the
-folder where your final hdf5 file will be placed. The `.cnt` file is your safety net
+folder where your final HDF5 file will be placed. The `.cnt` file is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
 lasting simulation was interrupted, you can resume it
 without recomputing already obtained results. Note that this works only if the
-hdf5 file is not corrupted and with interruptions due
+hdf5 file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
 
 You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue_run`
 with the name of the corresponding '.cnt' file.
 
-
 .. code-block:: python
 
     env = Environment()
-
 
     env.f_continue_run('./experiments/my_traj_2015_10_21_04h29m00s.cnt')

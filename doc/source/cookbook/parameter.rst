@@ -22,7 +22,7 @@ Parameter containers follow these two principles:
     strings, only numpy arrays, etc.
 
     Exploration is initiated via the trajectory, see :ref:`parameter-exploration`.
-    The individual values in the exploration array can be accessed one after the other
+    The individual values in the exploration range can be accessed one after the other
     for distinct simulations.
     How the exploration range is implemented depends on the parameter.
 
@@ -31,9 +31,7 @@ Parameter containers follow these two principles:
     it cannot be changed any longer (except after being explicitly unlocked).
     This prevents the nasty error of having a particular parameter value
     at the beginning of a simulation but changing it during runtime for whatever reason. This
-    can make your simulations impossible to understand by other people running them.
-    Or you might run simulations with different parameter settings but observing the
-    very same results, since your parameter is changed later on in your simulations!
+    can make your simulations really buggy and impossible to understand by other people.
     In fact, I ran into this problem during my PhD using someone else's simulations.
     Thus, debugging took ages. As a consequence, this project was born.
 
@@ -41,6 +39,7 @@ Parameter containers follow these two principles:
     An exception to this rule is solely the *exploration*
     of the parameter space (see :ref:`parameter-exploration`), but this
     requires to run a number of distinct simulations anyway.
+
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Values supported by Parameters
@@ -56,17 +55,17 @@ data they except. The :class:`~pypet.parameter.Parameter` excepts only:
 
     * python homogeneous non-nested tuples
 
-And by *only*, I mean they handle exactly these types and nothing else, not even objects
+And by *only* I mean they handle exactly these types and nothing else, not even objects
 that are derived from these data types.
 
-Why so very restrictive again? Well, the reason is that we store these values to disk into
-hdf5 later on. We want to recall them occasionally, and maybe even rerun our experiments.
-However, as soon as you store data into an hdf5 files, most often information about the exact type
+Why so very restrictive? Well, the reason is that we store these values to disk into
+HDF5 later on. We want to recall them occasionally, and maybe even rerun our experiments.
+However, as soon as you store data into an HDF5 files, most often information about the exact type
 is lost. So if you store, for instance, a numpy matrix via pytables and recall it, you will get
 a numpy array instead.
 
 The storage service that comes with this package will take care
-that the exact type of an instance is NOT lost. However, this guarantee of type conservations
+that the exact type of an instance is **NOT** lost. However, this guarantee of type conservations
 comes with the cost that types are restricted.
 
 However, that does not mean that data which is not supported cannot be used as a parameter at all.
@@ -74,7 +73,7 @@ You have two possibilities if your data is not supported. First, write your own 
 that converts your data to the basic types supported by the storage service. This is rather easy,
 the API :class:`~pypet.parameter.BaseParameter` is really small. Or second of all,
 simply put your data into the :class:`~pypet.parameter.PickleParameter` and it can be stored later
-on to hdf5 as the pickle string.
+on to HDF5 as the pickle string.
 
 Note that as soon as you add data or explore data it will immediately be checked if the data
 is supported and if not a TypeError is thrown.
@@ -84,22 +83,20 @@ Types of Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 So far, the following parameters exist:
 
- *  :class:`~pypet.parameter.Parameter`:
+ *  :class:`~pypet.parameter.Parameter`
 
     Container for native python data: int, long, float, str, bool, complex; and
     Numpy data: np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str.
     Numpy arrays and matrices are allowed as well.
 
     However, for larger numpy arrays, the ArrayParameter
-    is recommended. The array parameter will keep a large array only once,
-    even if it is used several
-    times during exploration, see below.
+    is recommended, see below.
 
  *  :class:`~pypet.parameter.ArrayParameter`
 
     Container for native python data as well as tuples and numpy arrays and matrices.
     The array parameter is the method of choice for large numpy arrays or python tuples.
-    These are kept only once (and by the hdf5 storage service stored only once to disk)
+    Individual arrays are kept only once (and by the HDF5 storage service stored only once to disk).
     In the exploration range you can find references to these arrays. This is particularly
     useful if you reuse an array many times in distinct simulation, for example, by exploring
     the parameter space in form of a cartesian product.
@@ -117,15 +114,14 @@ So far, the following parameters exist:
 
     Subclasses the standard Parameter and, therefore, supports also native python data.
 
+ * :class:`~pypet.parameter.SparseParameter`
 
- * :class:`~pypet.parameter.SparseParameter`:
-
-    Container for SciPy_ sparse matrices. Supported formats are csr, csc, bsr, and dia.
+    Container for Scipy_ sparse matrices. Supported formats are csr, csc, bsr, and dia.
     Subclasses the ArrayParameter, and handles memory management similarly.
 
-    .. _SciPy: http://docs.scipy.org/doc/scipy/reference/sparse.html
+    .. _Scipy: http://docs.scipy.org/doc/scipy/reference/sparse.html
 
- *  :class:`~pypet.parameter.PickleParameter`:
+ *  :class:`~pypet.parameter.PickleParameter`
 
     Container for all the data that can be pickled. Like the array parameter, distinct objects
     are kept only once and are referred to in the exploration range.
@@ -142,7 +138,7 @@ For people using BRIAN_ quantities, there also exists a
 Results
 ------------------------------------
 
-Results are less restrictive in their acceptance of values. And they can handle more than a
+Results are less restrictive in their acceptance of values and they can handle more than a
 single data item.
 
 They support a constructor and a getter and setter that have positional and keyword arguments.
@@ -151,7 +147,7 @@ And, of course, results support natural naming as well.
 For example:
 
     >>> res = Result('supergroup.subgroup.myresult', comment='I am a neat example!')
-    >>> res.f_set(333, mystring='String!')
+    >>> res.f_set(333, mystring = 'String!', test = 42)
     >>> res.f_get('myresult')
     333
     >>> res.f_get('mystring')
@@ -160,6 +156,8 @@ For example:
     'String!'
     >>> res.myresult
     333
+    >>> res.test
+    42
 
 If you use `f_set(*args)` the first positional argument is added to the result having the name
 of the result, here 'myresult'. Subsequent positional arguments are added with 'name_X' where *X*
@@ -184,17 +182,17 @@ Types of Results
 
 The following results exist:
 
-* :class:`~pypet.parameter.Result`:
+* :class:`~pypet.parameter.Result`
 
     Light Container that stores python native data and numpy arrays.
 
     Note that no sanity checks on individual data is made in case your data is a container.
-    For instance, if you hand a python list over to the result it is not checked if the individual
+    For instance, if you hand over a python list to the result it is not checked if the individual
     elements of the list are valid data items supported by the storage service.
     You have to take care, that your data is understood by the storage service.
     It is assumed that results tend to be large and therefore sanity checks would be too expensive.
 
-    Data that can safely be stored into a Result are:
+    Data that can safely be stored into a *Result* are:
 
         * python natives (int,long,str,bool,float,complex),
 
@@ -209,13 +207,12 @@ The following results exist:
             previously listed types (including numpy arrays and matrices) and
             can be heterogeneous.
 
-        * pandas_ data frames
+        * pandas_ DataFrames
 
         * :class:`~pypet.parameter.ObjectTable`
 
-                Object tables are special pandas_ data frames with `dtype=object`, i.e. everything
+                Object tables are special pandas_ DataFrames with `dtype=object`, i.e. everything
                 you keep in object tables will keep its type and won't be auto-converted py pandas.
-
 
 * :class:`~pypet.parameter.SparseResult`
 
@@ -231,7 +228,7 @@ The following results exist:
 
 For those of you using BRIAN_, there exists also the
 :class:`pypet.brian.parameter.BrianMonitorResult` for monitor data and the
-:class:`pypet.brian.parameter.BrianResult` to handle brian quantities as results.
+:class:`pypet.brian.parameter.BrianResult` to handle brian quantities.
 
 
 .. _BRIAN: http://briansimulator.org/

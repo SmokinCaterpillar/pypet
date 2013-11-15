@@ -2,24 +2,22 @@
 pypet
 =========
 
-The new python parameter exploration toolkit. pypet manages exploration of the parameter space and
-data storage into HDF5 files for you.
+The new python parameter exploration toolkit. *pypet* manages exploration of the parameter space
+and data storage into HDF5 files for you.
 
 ===========================
 IMPORTANT!
 ===========================
 
-The current program is currently still under development,
-please treat it as such and use very carefully.
+The program is currently under development,
+please keep that in mind and use it very carefully.
 
-
-Note that there still might be changes to the API. Yet, i will try to keep it as stable as possible.
-
-I decided to integrate pypet first in my own research project before publishing the
-official 0.1.0 release. Thus, I have a more profound testing environment than only using
-unittests. The official 0.1.0 release is postponed to beginning of next year or end of
-this year.
-However, feel free to use this beta version and feel free to give feedback,
+Before publishing the official 0.1.0 release I will integrate *pypet* first in my own research
+project. Thus, I have a more profound testing environment than only using
+unittests. Accordingly, you still have to deal with the naming `0.1b.X` probably until beginning
+of next year.
+However, unless it is really, really, really necessary I do not plan to change the API anymore.
+So feel free to use this beta version and feel free to give feedback,
 suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
 or preferably use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
@@ -49,7 +47,7 @@ What is pypet all about?
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
-In order to accomplish both you write some hacky IO functionality to get it done the quick and
+In order to accomplish both you write some hacky I/O functionality to get it done the quick and
 dirty way. This means storing stuff into text files, as MATLAB m-files, or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
@@ -58,10 +56,10 @@ unforeseen circumstances, you changed a lot of your code. As a consequence, you 
 use your old data, but you need to write a hacky converter to format your previous results
 to your new needs.
 The more complexity you add to your simulations, the worse it gets, and you spend way
-too much time handling your data and results than doing science.
+too much time formatting your data than doing science.
 
 Indeed, this was a situation I was confronted with pretty soon during my PhD.
-So this project was born. I wanted to tackle the IO problems more generally and produce code
+So this project was born. I wanted to tackle the I/O problems more generally and produce code
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
@@ -70,7 +68,9 @@ you need to run your simulations.
 You can actively explore these by following a *trajectory* through the space spanned
 by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
-Currently the storage method of choice is HDF5 (http://www.hdfgroup.org/HDF5/).
+Currently the storage method of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
+(http://www.pytables.org/).
+
 
 ---------------------------
 Package Organization
@@ -89,6 +89,7 @@ This project encompasses these core modules:
 
 *  The `pypet.storageservice` for saving your data to disk.
 
+
 ---------------------------
 Install
 ---------------------------
@@ -100,11 +101,11 @@ Or
 Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
 and `python setup.py install` it.
 
-pypet has been tested for python 2.6 and python 2.7 for Linux using
+*pypet* has been tested for python 2.6 and python 2.7 for Linux using
 *Travis-CI* (https://www.travis-ci.org/). However, so far there was only limited testing under
 Windows.
 
-In principle, pypet should work for **Windows** out of the box if you have installed
+In principle, *pypet* should work for **Windows** out of the box if you have installed
 all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
 pip is not possible. You have to download the tar file from https://pypi.python.org/pypi/pypet and
 unzip it (using WinRaR, 7zip, etc. You might need to unpack it twice, first
@@ -112,7 +113,8 @@ the `tar.gz` file and then the remaining `tar` file in the subfolder). Next, ope
 terminal and navigate to your unpacked pypet files to the folder containing the `setup.py` file.
 As above run from the terminal `python setup.py install`.
 
-By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet.
+By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet/.
+
 
 ---------------------------
 Documentation
@@ -122,10 +124,10 @@ Documentation can be found on http://pypet.readthedocs.org/.
 
 If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**
 
+
 ---------------------------
 Acknowledgements
 ---------------------------
-
 
 *   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions.
 
@@ -141,6 +143,7 @@ Acknowledgements
     the Research Training Group GRK 1589/1, and the
     Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support.
 
+
 --------------
 Main Features
 --------------
@@ -148,9 +151,11 @@ Main Features
 * **Novel tree container** `Trajectory`, for handling and managing of
   parameters and results of numerical simulations
 
-* **Grouping** of parameters and results
+* **Group** your parameters and results into meaningful categories
 
-* Accessing handled items via **natural naming**, e.g. `traj.parameters.traffic.ncars`
+* Access data via **natural naming**, e.g. `traj.parameters.traffic.ncars`
+
+* Automatic **storage** of simulation data into HDF5 files via PyTables
 
 * Support for many different **data formats**
 
@@ -164,29 +169,24 @@ Main Features
 
     * pandas DataFrames (http://pandas.pydata.org/)
 
-    * BRIAN Quantities (http://briansimulator.org/)
+    * BRIAN quantities and monitors (http://briansimulator.org/)
 
-    * BRIAN Monitors
-
-* Easily **extendible** to other data formats!
+* Easily **extendable** to other data formats!
 
 * **Exploration** of the parameter space of your simulations
 
 * **Merging** of *trajectories* residing in the same space
 
-* Support for **multiprocessing**, distribute your individual simulation runs to several
-  processes.
+* Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
-* **Storage** of simulation data, i.e. the *trajectory*, *parameters*, and *results* into
-  **HDF5** files
+* **Dynamic Loading**, load only the parts of your data you currently need
 
-* **Dynamic Loading**, load only the data you need at the moment and free it afterwards
+* **Resume** a crashed or halted simulation (maybe due to power shut down)
 
-* **Resuming** a crashed simulation (maybe due to power shut down) after the latest completed run
+* **Annotate** your parameters, results and groups
 
-* **Annotations** of parameters, results and groups, these annotations are stored as HDF5 node attributes
+* **Git Integration**, let *pypet* make automatic commits of your codebase
 
-* **Git Integration**, make automatic commits of your source code every time you run an experiment
 
 ======================
 Quick Working Example
@@ -209,7 +209,7 @@ Let's take a look at the snippet at once:
 
     def multiply(traj):
         z=traj.x*traj.y
-        traj.f_add_result('z',z=z, comment='I am the product of two reals!')
+        traj.f_add_result('z',z, comment='I am the product of two values!')
 
     # Create an environment that handles running
     env = Environment(trajectory='Example1_No1',filename='./HDF/example_01.hdf5',
@@ -222,25 +222,25 @@ Let's take a look at the snippet at once:
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
     traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
-    # Explore the parameters with a cartesian product:
+    # Explore the parameters with a cartesian product
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation
     env.f_run(multiply)
 
-And now let's go through it one by one. At first we have a job to do, that is multiplying two real
-values:
+And now let's go through it one by one. At first we have a job to do, that is multiplying two
+values.
 
 ::
 
     def multiply(traj):
         z=traj.x * traj.y
-        traj.f_add_result('z',z)
+        traj.f_add_result('z',z, comment='I am the product of two values!')
 
 
-This is our function multiply. The function uses a so called `Trajectory`
+This is our function `multiply`. The function uses a so called `Trajectory`
 container which manages our parameters. We can access the parameters simply by natural naming,
-as seen above via `traj.x` and `traj.y`. The result `z` is simply added as a result with name `'z'`
+as seen above via `traj.x` and `traj.y`. The value of `z` is simply added as a result
 to the `traj` object.
 
 After the definition of the job that we want to simulate, we create an environment which
@@ -257,7 +257,7 @@ will run the simulation.
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
 store the trajectory into, the title of the file, a folder for the log files, and a
 comment that is added to the trajectory. There are more options available like
-the number of processors for multiprocessing or how verbose the final hdf5 file is supposed to be.
+the number of processors for multiprocessing or how verbose the final HDF5 file is supposed to be.
 Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
@@ -267,7 +267,7 @@ The environment will automatically generate a trajectory for us which we can acc
     traj = env.v_trajectory
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
-of `x=y=1.0`:
+of `x=y=1.0`.
 
 ::
 
@@ -275,17 +275,18 @@ of `x=y=1.0`:
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
     traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
-Well, calculating `1.0*1.0` is quite boring, we want to figure out more products, that is
+Well, calculating `1.0 * 1.0` is quite boring, we want to figure out more products, that is
 the results of the cartesian product set `{1.0,2.0,3.0,4.0} x {6.0,7.0,8.0}`.
 Therefore, we use `f_explore` in combination with the builder function
-`cartesian_product`:
+`cartesian_product`.
 
 ::
 
-    # Explore the parameters with a cartesian product:
+    # Explore the parameters with a cartesian product
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
-Finally, we need to tell the environment to run our job `multiply`:
+Finally, we need to tell the environment to run our job `multiply` with all parameter
+combinations.
 
 ::
 
@@ -309,21 +310,21 @@ Tests
 --------------------------------
 
 Tests can be found in `pypet/tests`.
-Note that they involve heavy file IO and it might not be the case
-that you have privileges on your system to write files to a temporary folder.
+Note that they involve heavy file I/O and you need privileges
+to write files to a temporary folder.
 The tests suite will make use of the `tempfile.gettempdir()` function to
-access a temporary folder.
+create such a temporary folder.
 
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/` with
-`-k` to keep the hdf5 files created by the tests (if you want to inspect them, otherwise
+`-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
 they will be deleted after the completed tests)
-and `--folder=` to specify a folder where to store the hdf5 files instead of the temporary one.
+and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 10 minutes. The test suite encompasses more than 300 tests
-(including the BRIAN based tests) and has a code coverage of more than 90%!
+Running all tests can take up to 15 minutes. The test suite encompasses more than **300** tests
+(including the BRIAN based tests) and has a code coverage of more than **90%**!
 
 ------------------------------------
 License
@@ -335,7 +336,7 @@ BSD, please read LICENSE file.
 Legal Notice
 ------------------------------------
 
-pypet was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
+*pypet* was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
 
 ------------------------------------
