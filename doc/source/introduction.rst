@@ -107,13 +107,8 @@ extra service to store the *trajectory* into an
 HDF5_ file on your hard drive. Probably other formats like SQL will come soon (or maybe you
 want to contribute some code, and write an SQL storage service?).
 
-An example (way less sophisticated than traffic simulations)
+An example code snippet (way less sophisticated than traffic simulations)
 of a numerical simulation handled by *pypet* is given below.
-
-
-.. _HDF5: http://www.hdfgroup.org/HDF5/
-
-.. _pandas: http://pandas.pydata.org/
 
 
 
@@ -281,6 +276,29 @@ Instead `2` means we want to load the parameters and results including the data 
 If you want to know more about how to load trajectories take a look at :ref:`more-on-loading` and
 the :class:`~pypet.trajectory.Trajectory` documentation.
 
+
+------------------
+Basic Work Flow
+------------------
+
+Basic workflow is summarized in the image you can find below.
+Usually you use an :class:`~pypet.environment.Environment` for handling the execution and running
+of your simulation.
+As in the example code snippet from before the environment will provide a
+:class:`~pypet.trajectory.Trajectory` container for you to fill in (groups of) parameters.
+During the execution of your simulation with individual parameter combinations
+a so called :class:`~pypet.trajectory.SingleRun` container (a reduced version of the
+*trajectory* containing only one particular parameter combination)  can be used to store results.
+All data that you hand over to a *trajectory* or *single run* is automatically
+stored into an HDF5 file by a :class:`~pypet.storageservice.HDF5StorageService`.
+
+.. image:: figures/layout.png
+    :width: 940
+
+
+.. _HDF5: http://www.hdfgroup.org/HDF5/
+
+.. _pandas: http://pandas.pydata.org/
 
 ------------------------------
 Main Features

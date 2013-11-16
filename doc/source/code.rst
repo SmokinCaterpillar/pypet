@@ -4,9 +4,9 @@ Library Reference
 
 
 .. toctree::
-    pypetdoc/parameterdoc
-    pypetdoc/trajectorydoc
     pypetdoc/environmentdoc
+    pypetdoc/trajectorydoc
+    pypetdoc/parameterdoc
     pypetdoc/annotationsdoc
     pypetdoc/utilsdoc
     pypetdoc/pypetexceptionsdoc

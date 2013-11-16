@@ -71,9 +71,7 @@ Publications
 
 There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_.
 
-.. image:: bbd_2013_poster/meyer_bbd_2013.png
-           :width: 210
-           :height: 289
+.. image:: bbd_2013_poster/meyer_bbd_2013_small.png
 
 Download:
 
@@ -84,19 +82,6 @@ Download:
 
 .. _`Berlin Brain Days 2013`: http://www.neuroscience-berlin.de/bbd/
 
-=====================
-Contact
-=====================
-
-Robert Meyer
-
-robert.meyer (at) ni.tu-berlin.de
-
-Marchstr. 23
-
-MAR 5.046
-
-D-10587 Berlin
 
 ===================
 Acknowledgments
@@ -148,6 +133,20 @@ If you do not want to browse to your installation folder, you can also download 
 
 Running all tests can take up to 15 minutes. The test suite encompasses more than **300** tests
 (including the BRIAN based tests) and has a code coverage of more than **90%**!
+
+=====================
+Contact
+=====================
+
+Robert Meyer
+
+robert.meyer (at) ni.tu-berlin.de
+
+Marchstr. 23
+
+MAR 5.046
+
+D-10587 Berlin
 
 ===================
 Indices and Tables

@@ -530,7 +530,7 @@ Loading
 Sometimes you start your session not running an experiment, but loading an old trajectory.
 The first step in order to do that is to create a new empty trajectory - in case
 you have stored stuff into an HDF5 file, you can pass a `filename` to the
- :class:`~pypet.trajectory.Trajectory` constructor - and call
+:class:`~pypet.trajectory.Trajectory` constructor - and call
 `~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
 you want to select within the HDF5 file. For the index you can also count backwards, so
 `-1` would yield the last or newest trajectory in an HDF5 file.
