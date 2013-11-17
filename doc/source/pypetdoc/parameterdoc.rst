@@ -56,23 +56,31 @@ PickleResult
 .. autoclass:: pypet.parameter.PickleResult
     :members:
 
-
----------------------------------------------
-For Completeness: The Abstract Base Classes
----------------------------------------------
-
-.. autoclass:: pypet.parameter.BaseParameter
-    :members:
-    :inherited-members:
-
-.. autoclass:: pypet.parameter.BaseResult
-    :members:
-    :inherited-members:
-
 -----------------------------
 Object Table
 -----------------------------
 
 .. autoclass:: pypet.parameter.ObjectTable
     :members:
+
+-----------------------------------------------------------------------
+The Abstract Base Classes of Parameters and Results
+-----------------------------------------------------------------------
+
+These classes serve as a reference if you want to implement your own parameter or result.
+Therefore, also private functions are listed.
+
+.. autoclass:: pypet.parameter.BaseParameter
+    :members:
+    :inherited-members:
+    :private-members:
+    :undoc-members:
+
+.. autoclass:: pypet.parameter.BaseResult
+    :members:
+    :inherited-members:
+    :private-members:
+    :undoc-members:
+
+
 

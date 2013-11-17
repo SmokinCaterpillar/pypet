@@ -116,18 +116,6 @@ as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true f
     than the other way round.
 
 
---------------------
-Naming Convention
---------------------
-
-To avoid confusion with natural naming scheme (see below) and the functionality provided
-by the trajectory and parameters, I followed the idea by PyTables to use the prefix
-`f_` for functions and `v_` for python variables/attributes/properties.
-
-For instance, given the result `res`, `res.v_comment` is the object's comment attribute,
-whereas `res.mydata` might refer to a data item named `mydata` added by the user.
-
-
 .. _more-on-adding:
 
 -----------------------------------------------------------

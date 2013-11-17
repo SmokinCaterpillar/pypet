@@ -6,12 +6,13 @@ from pypet.utils.explore import cartesian_product
 
 
 def multiply(traj):
-    """Sophisticated numerical simulation that involves multiplying two real values.
+    """Example of a sophisticated simulation that involves multiplying two values.
 
     :param traj:
 
-        The trajectory containing a particular parameter combination.
-        It also serves as a container for the results.
+        Trajectory - or more precisely a SingleRun - containing
+        the parameters in a particular combination,
+        it also serves as a container for results.
 
     """
     z=traj.x*traj.y
@@ -20,9 +21,9 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-env = Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
+env = Environment(trajectory='Multiplication',
                   filename='experiments/example_01/HDF5/example_01.hdf5',
-                  file_title='Example1_Quick_And_Not_So_Dirty',
+                  file_title='Example_01_First_Steps',
                   log_folder='experiments/example_01/LOGS/',
                   comment='The first example!')
 

@@ -7,7 +7,7 @@
 Welcome to pypet's documentation!
 ==================================
 
-The new python parameter exploration toolbox. *pypet* manages exploration of the parameter space
+The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/

@@ -1,39 +1,58 @@
+
+====================
+Naming Convention
+====================
+
+To avoid confusion with natural naming scheme of the :class:`~pypet.trajectory.Trajectory`
+and the functionality provided by the trajectory, parameters, and so on,
+I followed the idea by PyTables to use prefixes.
+`f_` for functions and `v_` for python variables/attributes/properties.
+
+For instance, given a result instance `res`, `res.v_comment` is the object's comment attribute and
+`res.f_set(mydata=42)` is the function for adding data to the result container.
+Whereas `res.mydata` might refer to a data item named `mydata` added by the user.
+
+
 .. _more-on-environment:
 
 ============================
 More about the Environment
 ============================
 
-In most use cases you will interact with the :class:`~pypet.environment.Envrionemnt` to
+-----------------------------
+Constructing an Environment
+-----------------------------
+
+In most use cases you will interact with the :class:`~pypet.environment.Environment` to
 do your numerical simulations.
 The environment is your handyman for your numerical experiments, it sets up new trajectories,
 keeps log files and can be used to distribute your simulations onto several cpus.
 
 Note in case you use the environment there is no need to call
-:func:`~pypet.trajectory.SingleRun.f_store`
+:func:`~pypet.trajectory.Trajectory.f_store`
 for data storage, this will always be called before the runs and at the end of a
 single run automatically.
 
 You start your simulations by creating an environment object:
 
->>> env = Environment(trajectory='trajectory',\
-                 add_time=True,\
-                 comment='',\
-                 dynamically_imported_classes=None,\
-                 log_folder=None,\
-                 multiproc=False,\
-                 ncores=1,\
-                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,\
-                 continuable=1,\
-                 use_hdf5=True,\
-                 filename=None,\
-                 file_title=None,\
-                 purge_duplicate_comments=True,\
-                 small_overview_tables=True,\
-                 large_overview_tables=True,\
-                 results_per_run=0,\
-                 derived_parameters_per_run=0,\
-                 git_repository = None,\
+>>> env = Environment(trajectory='trajectory',
+                 add_time=True,
+                 comment='',
+                 dynamically_imported_classes=None,
+                 log_folder=None,
+                 multiproc=False,
+                 ncores=1,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 continuable=1,
+                 use_hdf5=True,
+                 filename=None,
+                 file_title=None,
+                 purge_duplicate_comments=True,
+                 small_overview_tables=True,
+                 large_overview_tables=True,
+                 results_per_run=0,
+                 derived_parameters_per_run=0,
+                 git_repository = None,
                  git_message=''):
 
 You can pass the following arguments:
@@ -378,9 +397,9 @@ But don't worry, most of the python stuff you use is automatically picklable.
 
 .. _more-on-git:
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 Git Integration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 The environment can make use of version control. If you manage your code with
 git_ you can trigger automatic commits with the environment to get a proper snapshot

@@ -2,7 +2,7 @@
 pypet
 =========
 
-The new python parameter exploration toolkit. *pypet* manages exploration of the parameter space
+The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5 files for you.
 
 ===========================
@@ -51,10 +51,9 @@ In order to accomplish both you write some hacky I/O functionality to get it don
 dirty way. This means storing stuff into text files, as MATLAB m-files, or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
-first results. But because of
-unforeseen circumstances, you changed a lot of your code. As a consequence, you can no longer
-use your old data, but you need to write a hacky converter to format your previous results
-to your new needs.
+first results. But because of unforeseen circumstances, you changed a lot of your code.
+As a consequence, you can no longer use your old data, but you need to write a hacky
+converter to format your previous results to your new needs.
 The more complexity you add to your simulations, the worse it gets, and you spend way
 too much time formatting your data than doing science.
 
@@ -63,12 +62,11 @@ So this project was born. I wanted to tackle the I/O problems more generally and
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
 
-The python parameter exploration toolkit (*pypet*) provides a framework to define *parameters* that
-you need to run your simulations.
-You can actively explore these by following a *trajectory* through the space spanned
-by the parameters.
+The python parameter exploration toolkit (*pypet*) provides a framework to define *parameters*
+that you need to run your simulations. You can actively explore these by following a
+*trajectory* through the space spanned by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
-Currently the storage method of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
+The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
 (http://www.pytables.org/).
 
 
@@ -94,12 +92,13 @@ This project encompasses these core modules:
 Install
 ---------------------------
 
-Simply install via `pip install --pre pypet`
+Simply install via `pip install --pre pypet` (`--pre` since the current version is still *beta*)
 
 Or
 
 Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
 and `python setup.py install` it.
+
 
 *pypet* has been tested for python 2.6 and python 2.7 for Linux using
 *Travis-CI* (https://www.travis-ci.org/). However, so far there was only limited testing under
@@ -134,10 +133,8 @@ Acknowledgements
     You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
     tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
 
-
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project.
-
 
 *   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
     the Research Training Group GRK 1589/1, and the
@@ -181,7 +178,7 @@ Main Features
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
-* **Resume** a crashed or halted simulation (maybe due to power shut down)
+* **Resume** a crashed or halted simulation
 
 * **Annotate** your parameters, results and groups
 
@@ -208,12 +205,20 @@ Let's take a look at the snippet at once:
     from pypet.utils.explore import cartesian_product
 
     def multiply(traj):
-        z=traj.x*traj.y
+        """Example of a sophisticated simulation that involves multiplying two values.
+
+        :param traj:
+
+            Trajectory containing the parameters in a particular combination,
+            it also serves as a container for results.
+
+        """
+        z=traj.x * traj.y
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
-    # Create an environment that handles running
-    env = Environment(trajectory='Example1_No1',filename='./HDF/example_01.hdf5',
-                      file_title='ExampleNo1', log_folder='./LOGS/')
+    # Create an environment that handles running our simulation
+    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
+                      file_title='Example_01', log_folder='./LOGS/')
 
     # Get the trajectory from the environment
     traj = env.v_trajectory
@@ -225,7 +230,7 @@ Let's take a look at the snippet at once:
     # Explore the parameters with a cartesian product
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
-    # Run the simulation
+    # Run the simulation with all parameter combinations
     env.f_run(multiply)
 
 And now let's go through it one by one. At first we have a job to do, that is multiplying two
@@ -234,11 +239,19 @@ values.
 ::
 
     def multiply(traj):
+        """Example of a sophisticated simulation that involves multiplying two values.
+
+        :param traj:
+
+            Trajectory containing the parameters in a particular combination,
+            it also serves as a container for results.
+
+        """
         z=traj.x * traj.y
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
 
-This is our function `multiply`. The function uses a so called `Trajectory`
+This is our simulation function `multiply`. The function uses a so called `Trajectory`
 container which manages our parameters. We can access the parameters simply by natural naming,
 as seen above via `traj.x` and `traj.y`. The value of `z` is simply added as a result
 to the `traj` object.
@@ -248,8 +261,8 @@ will run the simulation.
 
 ::
 
-    # Create an environment that handles running
-    env = Environment(trajectory='Example1_01',filename='./HDF/example_01.hdf5',
+    # Create an environment that handles running our simulation
+    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
                       comment = 'I am the first example!')
 
@@ -290,11 +303,14 @@ combinations.
 
 ::
 
-    # Run the simulation
+    # Run the simulation with all parameter combinations
     env.f_run(multiply)
 
-And that's it. The environment and the storage service will have taken care about the storage
-of our trajectory and the results we have computed.
+And that's it. The environment will evoke the function `multiply` now 12 times with
+all parameter combinations. Every time it will pass a `traj` container with another one of these
+12 combinations of different `x` and `y` values to calculate the value of `z`.
+Moreover, the environment and the storage service will have taken care about the storage
+of our trajectory  - including the results we have computed - into an HDF5 file.
 
 So have fun using this tool!
 
