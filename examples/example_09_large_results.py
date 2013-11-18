@@ -7,19 +7,21 @@ import numpy as np
 # Here I show how to store and load results in parts if they are quite large.
 # I will skip using an environment and only work with a trajectory.
 
-# We can create a trajectory and hand it a filename directly and it will create an HDF5Storage
-# Service for us:
+# We can create a trajectory and hand it a filename directly and it will create an
+# HDF5StorageService for us:
 traj = Trajectory(name='example_09_huge_data',
                   filename='experiments/example_09/HDF5/example_09.hdf5')
 
-# Now we directly add a huge result. Note that  we could do the exact same procedure during
-# a single run, there is not syntactical difference.
+# Now we directly add a huge result. Note that we could do the exact same procedure during
+# a single run, there is no syntactical difference.
 # However, the sub branch now is different, the result will be found under `traj.results.trajectory`
 # instead of `traj.results.run_XXXXXXXX` (where XXXXXXX is the current run index, e.g. 00000007).
 # We will add two large matrices a 100 by 100 by 100 one and 1000 by 1000 one, both containing
 # random numbers. They are called `mat1` and `mat2` and are handled by the same result object
 # called `huge_matrices`:
-traj.f_add_result('huge_matrices', mat1 = np.random.rand(100,100,100), mat2 = np.random.rand(1000,1000))
+traj.f_add_result('huge_matrices',
+                  mat1 = np.random.rand(100,100,100),
+                  mat2 = np.random.rand(1000,1000))
 
 # Note that the result will not support fast access since it contains more than a single
 # data item. Even if there was only `mat1`, because the name is `mat1` instead of `huge_matrices`
@@ -52,10 +54,11 @@ traj.huge_matrices.f_set(monty='Always look on the bright side of life!')
 traj.f_store_item('huge_matrices')
 
 # Neat, hu? Ok now let's load some of it back, for educational purposes let's start with a fresh
-# trajectory. Let's keep the old trajectory name in mind. Since the current time is added to the
-# trajectory name on creation (if you do not want this, say `add_time=False`),
-# the name is not `example_09_huge_data`, but `example_09_huge_data_XXXX_XX_XX_XXhXXmXXs`:
+# trajectory. Let's keep the old trajectory name in mind. The current time is added to the
+# trajectory name on creation (if you do not want this, just say `add_time=False`).
+# Thus, the name is not `example_09_huge_data`, but `example_09_huge_data_XXXX_XX_XX_XXhXXmXXs`:
 old_traj_name = traj.v_name
+del traj
 traj = Trajectory(filename='experiments/example_09/HDF5/example_09.hdf5')
 
 # We only want to load the skeleton but not the data:
@@ -82,4 +85,4 @@ if ('monty' in traj.huge_matrices and
 else:
     print 'That\'s it, I quit! I cannot work like this!'
 
-# And that's it, thanks for your attention!
+# Thanks for your attention!

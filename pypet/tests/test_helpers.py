@@ -40,8 +40,6 @@ def make_temp_file(filename):
     try:
 
         if not (user_tempdir == '' or user_tempdir is None) and actual_tempdir=='':
-        #     actual_tempdir=TEMPDIR
-        #  elif actual_tempdir=='':
             actual_tempdir=user_tempdir
 
         if not os.path.isdir(actual_tempdir):
@@ -49,8 +47,9 @@ def make_temp_file(filename):
 
         return os.path.join(actual_tempdir,filename)
     except OSError:
-        logging.getLogger('').warning('Cannot create a temp file in the specified folder will'
-                                    ' use pythons gettempdir method!')
+        logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
+                                    actual_tempdir +
+                                    ' I will use pythons gettempdir method instead.')
         actual_tempdir = os.path.join(tempfile.gettempdir(),TEMPDIR)
         return os.path.join(actual_tempdir,filename)
     except:

@@ -8,6 +8,7 @@ from pypet import pypetconstants
 
 
 def multiply(traj):
+    """Sophisticated simulation of multiplication"""
     z=traj.x*traj.y
     traj.f_add_result('z',z, comment='Im the product of two reals!')
 
@@ -31,7 +32,7 @@ traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
 # Run the simulation
 env.f_run(multiply)
 
-#We load all the results
+# We load all results
 traj.f_load(load_results=pypetconstants.LOAD_DATA)
 
 # And now we want to find som particular results, the ones where x was 2 or y was 8.
@@ -41,12 +42,12 @@ my_filter_predicate= lambda x,y: x==2 or y==8
 # We can now use this lambda function to search for the run indexes associated with x==2 OR y==8.
 # We need a list specifying the names of the parameters and the predicate to do this.
 # Note that names need to be in the order as listed in the lambda function, here 'x' and 'y':
-idx_iterator = traj.f_find_idx(['x','y'],my_filter_predicate)
+idx_iterator = traj.f_find_idx(['x','y'], my_filter_predicate)
 
 # Now we can print the corresponding results:
 print 'The run names and results for parameter combinations with x==2 or y==8:'
 for idx in idx_iterator:
-    # We focus on one particular run
+    # We focus on one particular run. This is equivalent to calling `traj.f_as_run(idx)`.
     traj.v_idx=idx
     run_name = traj.v_as_run
     # and print everything nicely

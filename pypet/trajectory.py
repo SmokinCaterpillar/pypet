@@ -36,7 +36,8 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     """ Constitutes one specific parameter combination in a whole trajectory
     with parameter exploration.
 
-    A SingleRun instance is accessed during the actual run phase of a trajectory.
+    A SingleRun instance is accessed during the actual run phase of a trajectory
+    (see also :class:`~pypet.trajectory.Trajectory`).
     There exists a SingleRun object for each point in the parameter space.
 
     Parameters can no longer be added, the parameter set is supposed to be complete before

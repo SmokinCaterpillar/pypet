@@ -12,7 +12,18 @@ import itertools as it
 
 
 def results_equal(a,b):
-    """Compares two result instances"""
+    """Compares two result instances
+
+    Checks full name and all data. Does not consider the comment.
+
+    :return: True or False
+
+    :raises: ValueError if both inputs are no result instances
+
+    """
+    if not isinstance(a, pypet.parameter.Result) and not isinstance(b, pypet.parameter.Result):
+        raise ValueError('Both inputs are not results.')
+
     if not isinstance(a, pypet.parameter.Result) or not isinstance(b, pypet.parameter.Result):
         return False
 
@@ -24,7 +35,6 @@ def results_equal(a,b):
 
     if not a.v_full_name == b.v_full_name:
         return False
-
 
 
     akeyset = set(a._data.keys())
@@ -43,7 +53,18 @@ def results_equal(a,b):
     return True
 
 def parameters_equal(a,b):
-    '''Compares two parameter instances'''
+    """Compares two parameter instances
+
+    Checks full name, data, and ranges. Does not consider the comment.
+
+    :return: True or False
+
+    :raises: ValueError if both inputs are no parameter instances
+
+    """
+    if not isinstance(b, pypet.parameter.BaseParameter) and not isinstance(a, pypet.parameter.BaseParameter):
+        raise ValueError('Both inputs are not parameters')
+
     if not isinstance(b, pypet.parameter.BaseParameter) or not isinstance(a, pypet.parameter.BaseParameter):
         return False
 

@@ -239,6 +239,7 @@ class BrianResult(Result):
 
     FLOAT_MODE = 'FLOAT'
     '''Float storage mode'''
+
     STRING_MODE = 'STRING'
     '''String storage mode'''
 
@@ -360,7 +361,10 @@ class BrianMonitorResult(Result):
 
     Example:
 
-    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor', monitor=SpikeMonitor(...), storage_mode='TABLE', comment='Im a SpikeMonitor Example!')
+    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor',
+                                            monitor=SpikeMonitor(...),
+                                            storage_mode='TABLE',
+                                            comment='Im a SpikeMonitor Example!')
     >>> brian_result.nspikes
     1337
 
@@ -451,7 +455,7 @@ class BrianMonitorResult(Result):
             if you recorded the membrane potential named 'vm' you would get a field named
             'vm_unit'.
 
-        If you use v_storage_mode=:const:`~pbrian_testbrian.parameter.BrianMonitorResult.TABLE_MODE`
+        If you use v_storage_mode = :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`
 
             * spikes
 
@@ -463,7 +467,7 @@ class BrianMonitorResult(Result):
 
                 'variablename': values of the recorded variables
 
-        If you use v_storage_mode=:const:`~pbrian_testbrian.parameter.BrianMonitorResult.ARRAY_MODE`
+        If you use v_storage_mode = :const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`
 
             * spiketimes_XXX
 
@@ -534,7 +538,7 @@ class BrianMonitorResult(Result):
 
             'second'
 
-        If you use v_storage_mode=:const:`~pbrian_testbrian.parameter.BrianMonitorResult.TABLE_MODE`
+        If you use v_storage_mode = :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`
 
             * spikes
 
@@ -544,7 +548,7 @@ class BrianMonitorResult(Result):
 
                 'spiketimes': times of spiking
 
-        If you use v_storage_mode=:const:`~pbrian_testbrian.parameter.BrianMonitorResult.ARRAY_MODE`
+        If you use v_storage_mode = :const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`
 
             * spiketimes_XXX
 
@@ -612,6 +616,7 @@ class BrianMonitorResult(Result):
 
     TABLE_MODE = 'TABLE'
     '''Table storage mode for SpikeMonitor and StateSpikeMonitor'''
+
     ARRAY_MODE = 'ARRAY'
     '''Array storage mode, not recommended if you have many neurons!'''
 
@@ -651,7 +656,7 @@ class BrianMonitorResult(Result):
 
         There are two storage modes:
 
-        * :const:`~pbrian_testbrian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
+        * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
 
             Default, information is stored into a single table where
             the first column is the neuron index,
@@ -659,7 +664,7 @@ class BrianMonitorResult(Result):
             following columns contain variable values (in case of the StateSpikeMonitor)
             This is a very compact storage form.
 
-        * :const:`~pbrian_testbrian.parameter.BrianParameter.ARRAY_MODE`: ('ARRAY')
+        * :const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`: ('ARRAY')
 
             For each neuron there will be a new hdf5 array,
             i.e. if you have many neurons your result node will have many entries.

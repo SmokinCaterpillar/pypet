@@ -49,6 +49,62 @@ class MergeTest(TrajectoryComparator):
         self.envs.append(env)
         self.trajs.append( env.v_trajectory)
 
+    def test_merging_trajectories_in_different_subspace(self):
+        self.filenames = [make_temp_file('experiments/tests/HDF5/merge_diff_subspace.hdf5'), 0, 0]
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self.param_dict={}
+        create_param_dict(self.param_dict)
+
+        for irun in [0,1,2]:
+            add_params(self.trajs[irun], self.param_dict)
+
+
+        self.explore(self.trajs[0])
+        self.explore2(self.trajs[1])
+        self.compare_explore_diff_subspace(self.trajs[2])
+
+        for irun in [0,1,2]:
+            self.make_run(self.envs[irun])
+
+        for irun in [0,1,2]:
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
+
+
+        self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].f_store_item('rrororo33o333o3o3oo3')
+        self.trajs[2].f_add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[2].f_store_item('rrororo33o333o3o3oo3')
+
+        ##f_merge without destroying the original trajectory
+        merged_traj = self.trajs[0]
+
+        # We cannot copy nodes and delete the other trajectory
+        with self.assertRaises(ValueError):
+            merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=True,
+                                trial_parameter='trial')
+
+
+
+        merged_traj.f_merge(self.trajs[1], move_nodes=True,
+                            delete_other_trajectory=True)
+
+        merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA)
+
+        self.compare_trajectories(merged_traj,self.trajs[2])
+
     def test_merging_errors_if_trajs_do_not_match(self):
 
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge_errors.hdf5'), 0]
@@ -339,25 +395,38 @@ class MergeTest(TrajectoryComparator):
 
         self.compare_trajectories(merged_traj,self.trajs[1])
 
-
     def explore(self, traj):
         self.explored ={'Normal.trial': [0,1],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
-
-
-
         traj.f_explore(cartesian_product(self.explored))
+
+
+    def explore2(self, traj):
+        self.explored2 ={'Normal.trial': [0,1],
+            'Normal.int': [44, 45]}
+
+        traj.f_explore(cartesian_product(self.explored2,  ('Normal.int','Normal.trial') ))
 
     def explore_trials_differently(self, traj):
         self.explored ={'Normal.trial': [0,1],
             'Numpy.double': [np.array([-1.0,2.0,3.0,5.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
+        traj.f_explore(cartesian_product(self.explored, ('Numpy.double','Normal.trial')))
 
+    def compare_explore_diff_subspace(self,traj):
+        self.explored ={'Normal.trial': [0,1,0,1,0,1,0,1],
+            'Numpy.double': [np.array([1.0,2.0,3.0,4.0]),
+                             np.array([1.0,2.0,3.0,4.0]),
+                             np.array([-1.0,3.0,5.0,7.0]),
+                             np.array([-1.0,3.0,5.0,7.0]),
+                             np.array([1.0,2.0,3.0,4.0]),
+                             np.array([1.0,2.0,3.0,4.0]),
+                             np.array([1.0,2.0,3.0,4.0]),
+                             np.array([1.0,2.0,3.0,4.0])],
+            'Normal.int' : [42, 42, 42, 42, 44, 44, 45, 45]}
 
-
-        traj.f_explore(cartesian_product(self.explored))
-
+        traj.f_explore(self.explored)
 
     def compare_explore_more_trials_with_removing_duplicates(self,traj):
         self.explored ={'Normal.trial': [0,1,0,1,0,1],

@@ -128,15 +128,15 @@ tree structure will be mapped one to one in the HDF5 file when you store data to
 But more on that later.
 
 As said before a *trajectory* contains *parameters*, the basic building blocks that
-completely define the initial conditions of your numerical simulations. Usually these are
+completely define the initial conditions of your numerical simulations. Usually, these are
 very basic data types, like integers, floats or maybe a bit more complex numpy arrays.
 
-For example, you have written a set functions that simulate traffic
+For example, you have written a set functions that simulates traffic
 jam in Rome. Your simulation takes a lot of *parameters*, the amount of
 cars (integer), their potential destinations (numpy array of strings),
 number of pedestrians (integer),
 random number generator seeds (numpy integer array), open parking spots in Rome
-(Your *parameter* value is probably 0 here), and all other sorts of things.
+(your *parameter* value is probably 0 here), and all other sorts of things.
 These values are added to your *trajectory* container and can be retrieved from there
 during the runtime of your simulation.
 
@@ -165,13 +165,13 @@ Basic Work Flow
 Basic workflow is summarized in the image you can find below.
 Usually you use an :class:`~pypet.environment.Environment` for handling the execution and running
 of your simulation.
-As in the example code snippet - you are about to encounter below - the environment will provide a
-:class:`~pypet.trajectory.Trajectory` container for you to fill in (potentially many groups of) parameters.
+As in the example code snippet in the next subsection the environment will provide a
+:class:`~pypet.trajectory.Trajectory` container for you to fill in your parameters.
 During the execution of your simulation with individual parameter combinations
 a so called :class:`~pypet.trajectory.SingleRun` container (a reduced version of the
 *trajectory* containing only one particular parameter combination) can be used to store results.
 All data that you hand over to a *trajectory* or *single run* is automatically
-stored into an HDF5 file by a :class:`~pypet.storageservice.HDF5StorageService`.
+stored into an HDF5 file by the :class:`~pypet.storageservice.HDF5StorageService`.
 
 .. image:: figures/layout.png
     :width: 850
@@ -231,7 +231,7 @@ Let's take a look at the snippet at once:
 
 
 
-And now let's go through it one by one. At first we have a job to do, that is multiplying
+And now let's go through it one by one. At first, we have a job to do, that is multiplying
 two values:
 
 .. code-block:: python
@@ -252,14 +252,14 @@ two values:
 This is our simulation function `multiply`. The function makes use of a
 :class:`~pypet.trajectory.Trajectory` container which manages our parameters.
 To be precise here, `traj` is in fact
-a :class:`~pypet.trajectory.SingleRun` container and not a full `Trajectory`.
-The full `Trajectory` contains all parameter combinations for which we want to evaluate
+a :class:`~pypet.trajectory.SingleRun` container and not a full *trajectory*.
+The full *trajectory* contains all parameter combinations for which we want to evaluate
 our simulation. This concept of parameter exploration will be introduced soon below.
-Yet, a `SingleRun` is a reduced version of a full `Trajectory` that usually only
+Yet, a *single run* is a reduced version of a full *trajectory* that usually only
 contains one particular parameter combination and not the full explored parameter ranges.
-But for convenience, over the course of this documentation I also use the variable
-`traj` in the individual runs to refer to a `SingleRun` container. You can treat a `SingleRun` and
-operate with this container almost in the same way as a `Trajectory` apart from slightly reduced
+But for convenience over the course of this documentation, I also use the variable
+`traj` in the individual runs to refer to a *single run* container. You can treat a *single run* and
+operate with this container almost in the same way as a *trajectory*, apart from slightly reduced
 functionality.
 
 We can access the parameters simply by natural naming,
@@ -283,7 +283,8 @@ descriptive comment that is attached to the trajectory. You can pass many more (
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
-the property `v_trajectory`. This time we work with a full :class:`~pypet.trajectory.Trajectory`.
+the property `v_trajectory`. This time we work with a full :class:`~pypet.trajectory.Trajectory`
+and with a :class:`~pypet.trajectory.SingleRun`.
 
 .. code-block::python
 
@@ -300,10 +301,16 @@ of :math:`x=y=1.0`.
     traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
 Well, calculating :math:`1.0 * 1.0` is quite boring, we want to figure out more products. Let's
-find the results of the cartesian product set :math:`\{1.0,2.0,3.0,4.0\} \times \{6.0,7.0,8.0\}`.
-Therefore we use :func:`~pypet.trajectory.Trajectory.f_explore` in combination with the builder function
-:func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both
-parameter ranges.
+find the results of the cartesian product set :math:`\{1.0, 2.0, 3.0, 4.0\} \times \{6.0, 7.0, 8.0\}`.
+Therefore we use :func:`~pypet.trajectory.Trajectory.f_explore` in combination with the builder
+function :func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both
+parameter ranges. You don't have to explore a cartesian product all the time. You can
+explore arbitrary trajectories through your space. You only need to pass
+a dictionary of lists (or other iterables) of the same length with arbitrary entries to
+:func:`~pypet.trajectory.Trajectory.f_explore`. In fact,
+:func:`~pypet.utils.explore.cartesian_product` turns the dictionary
+`{'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}` into a new one where the values of 'x' and 'y'
+are two lists of length 12 containing all pairings of points.
 
 .. code-block:: python
 
@@ -319,8 +326,9 @@ combinations.
     env.f_run(multiply)
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
-all parameter combinations. Every time it will pass a `SingleRun` container with another one of these
-12 combinations of different :math:`x` and :math:`y` values to calculate the value of :math:`z`.
+all parameter combinations. Every time it will pass a :class:`~pypet.trajectory.SingleRun`
+container with another one of these 12 combinations of different :math:`x` and :math:`y` values
+to calculate the value of :math:`z`.
 And all of this is automatically stored to disk in HDF5 format.
 
 If we now inspect the new HDF5 file in `examples/HDF/example_01.hdf5`,
@@ -367,9 +375,10 @@ Above `index` specifies that we want to load the trajectory with that particular
 within the HDF5 file. We could instead also specify a `name`.
 Counting works also backwards, so `-1` yields the last or newest trajectory in the file.
 
-Next we need to specify how the data is loaded.
-Therefore, we have to set the keyword arguments `load_parameters` and `load_results`,
-here we chose both to be `2`.
+Next, we need to specify how the data is loaded.
+Therefore, we have to set the keyword arguments `load_parameters` and `load_results`.
+Here we chose both to be `2`.
+
 `0` would mean we do not want to load anything at all.
 `1` would mean we only want to load the empty hulls or skeletons of our parameters
 or results. Accordingly, we would add parameters or results to our trajectory

@@ -1,6 +1,6 @@
 from pypet.utils.comparisons import nested_equal
 
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 import sys

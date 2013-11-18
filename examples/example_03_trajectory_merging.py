@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 from pypet.environment import Environment
@@ -7,12 +7,13 @@ from pypet.utils.explore import cartesian_product
 
 # Let's reuse the simple multiplication example
 def multiply(traj):
+    """Sophisticated simulation of multiplication"""
     z=traj.x*traj.y
     traj.f_add_result('z',z=z, comment='Im the product of two reals!',)
 
 
 
-# Create 2 environments that handles running
+# Create 2 environments that handle running
 env1 = Environment(trajectory='Traj1',filename='experiments/example_03/HDF5/example_03.hdf5',
                   file_title='Example_03', log_folder='experiments/example_03/LOGS/',
                   comment='I will be increased!')
@@ -37,15 +38,15 @@ traj1.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 traj2.f_explore(cartesian_product({'x':[3.0,4.0,5.0,6.0], 'y':[7.0,8.0,9.0]}))
 
 
-# Run the simulation
+# Run the simulations with all parameter combinations
 env1.f_run(multiply)
 env2.f_run(multiply)
 
 # Now we merge them together into traj1
 # We want to remove duplicate entries
-# like the parameter space point x=3.0, y=7.0
+# like the parameter space point x=3.0, y=7.0.
 # Several points have been explored by both trajectories and we need them only once.
-# Therefore, we set remove_duplicates=True (Note this takes O(N1*N2)!)
+# Therefore, we set remove_duplicates=True (Note this takes O(N1*N2)!).
 # We also want to backup both trajectories, but we let the system choose the filename.
 # Accordingly we choose backup_filename=True instead of providing a filename.
 # We want to move the hdf5 nodes from one trajectory to the other.
@@ -54,22 +55,27 @@ env2.f_run(multiply)
 traj1.f_merge(traj2,remove_duplicates=True,backup_filename=True,
               move_nodes=True, delete_other_trajectory=True)
 
-# And that's it, now we can take a look at the new trajectory and print all x,y,z triplets:
+# And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.
 # But before that we need to load the data we computed during the runs from disk.
+# We choose load_parameters=-2 and load_results=-2. We use `-2` instead of just `2`
+# to only load data that is currently not part of the trajectory and leave all data
+# currently in RAM untouched. Hence, one can understand the minus sign as `update` the
+# trajectory.
 traj1.f_load(load_parameters=-2,load_results=-2)
+
 for run_name in traj1.f_get_run_names():
     # We can make the trajectory belief it is a single run and it will blind out all other
-    # runs and will only look for results for the current index, also all parameters will
-    # be treated as they were in the specific run:
+    # runs and will only look for results for the current index. Also all parameters will
+    # be treated as they were in the specific run.
     traj1.f_as_run(run_name)
     x=traj1.x
     y=traj1.y
     # We can rely on fast access here, because the result only contains a single value with name 'z'
     z=traj1.z
-    print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
+    print '%s: x=%f, y=%f, z=%f' % (run_name, x, y, z)
 
 # Don't forget to reset you trajectory to the default settings, to release its belief to
-# be the last run:
+# be the last run.
 traj1.f_restore_default()
 
 # As you can see duplicate parameter space points have been removed.

@@ -40,7 +40,7 @@ Contains the following classes:
 
 """
 
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 import inspect
 import itertools as itools

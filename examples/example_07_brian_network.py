@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter,BrianMonitorResult
@@ -7,13 +7,15 @@ from pypet.utils.explore import cartesian_product
 from brian import *
 import logging
 
-# Again we define a function to set all parameter
+# "e define a function to set all parameter
 def add_params(traj):
+    """Adds all necessary parameters to `traj`."""
 
-    # We set the Brian Parameter to be the standard parameter
+    # We set the BrianParameter to be the standard parameter
     traj.v_standard_parameter=BrianParameter
     traj.v_fast_access=True
 
+    # Add parameters we need for our network
     traj.f_add_parameter('Sim.defaultclock', 0.01*ms)
     traj.f_add_parameter('Net.C',281*pF)
     traj.f_add_parameter('Net.gL',30*nS)
@@ -27,23 +29,24 @@ def add_params(traj):
     traj.f_add_parameter('Net.Vcut',traj.VT+5*traj.DeltaT) # practical threshold condition
     traj.f_add_parameter('Net.N',100)
 
-    eqs="""
+    eqs='''
     dvm/dt=(gL*(EL-vm)+gL*DeltaT*exp((vm-VT)/DeltaT)+I-w)/C : volt
     dw/dt=(a*(vm-EL)-w)/tauw : amp
     Vr:volt
-    """
-
+    '''
     traj.f_add_parameter('Net.eqs', eqs)
     traj.f_add_parameter('reset', 'vm=Vr;w+=b')
 
 # This is our job that we will execute
 def run_net(traj):
+    """Creates and runs BRIAN network based on the parameters in `traj`."""
+
     # We want to give every network a fresh start
     clear(True, True)
 
     defaultclock.dt=traj.defaultclock
 
-    # We let briantests grasp the stuff from the local namespace,
+    # We let BRIAN grasp the parameters from the local namespace
     C=traj.C
     gL=traj.gL
     EL=traj.EL
@@ -53,35 +56,33 @@ def run_net(traj):
     a=traj.a
     b=traj.b
     I=traj.I
-    Vcut=traj.Vcut# practical threshold condition
+    Vcut=traj.Vcut
     N=traj.N
 
     eqs=traj.eqs
 
-    #Create the Neuron Group
+    # Create the Neuron Group
     neuron=NeuronGroup(N,model=eqs,threshold=Vcut,reset=traj.reset)
     neuron.vm=EL
     neuron.w=a*(neuron.vm-EL)
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,N) # bifurcation parameter
 
-    #Run the briantests stuff initially for 100 milliseconds
+    # Run the network initially for 100 milliseconds
     run(100*msecond,report='text') # we discard the first spikes
 
     # Create a Spike Monitor
-    MSpike=SpikeMonitor(neuron, delay = 1*ms) # record Vr and w at spike times
-    #Create a State Monitor for the membrane voltage, record from neurons 1-3
+    MSpike=SpikeMonitor(neuron, delay = 1*ms)
+    # Create a State Monitor for the membrane voltage, record from neurons 1-3
     MStateV = StateMonitor(neuron,'vm',record=[1,2,3])
 
 
-    # Now record for real for 250 milliseconds
-    run(250*msecond,report='text')
+    # Now record for 500 milliseconds
+    run(500*msecond,report='text')
 
-    # Add the briantests monitor
+    # Add the BRAIN monitors
     traj.v_standard_result = BrianMonitorResult
     traj.f_add_result('SpikeMonitor',MSpike)
     traj.f_add_result('StateMonitorV', MStateV)
-
-
 
 
 def main():
@@ -89,7 +90,7 @@ def main():
     logging.basicConfig(level = logging.DEBUG)
 
 
-    # Let's to multiprocessing this time with a lock (which is default)
+    # Let's do multiprocessing this time with a lock (which is default)
     env = Environment(trajectory='Example_07_BRIAN',
                       filename='experiments/example_07/HDF5/example_07.hdf5',
                       file_title='Example_07_Euler_Integration',
@@ -111,7 +112,7 @@ def main():
     # 3rd let's run our experiment
     env.f_run(run_net)
 
-    #You can take a look at the results in the hdf5 file if you want!
+    # You can take a look at the results in the hdf5 file if you want!
 
 
 if __name__ == '__main__':
