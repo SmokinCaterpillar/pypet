@@ -991,7 +991,7 @@ class HDF5StorageService(StorageService):
 
     ########################### MERGING ###########################################################
 
-    def _trj_backup_trajectory(self,traj, backup_filename=None):
+    def _trj_backup_trajectory(self, traj, backup_filename=None):
 
         self._logger.info('Storing backup of %s.' % traj.v_name)
 
@@ -1012,9 +1012,14 @@ class HDF5StorageService(StorageService):
 
         backup_root = backup_hdf5file.root
 
-        self._trajectory_group._f_copy(newparent=backup_root,recursive=True)
+        self._trajectory_group._f_copy(newparent=backup_root, recursive=True)
+
+        backup_hdf5file.flush()
+        backup_hdf5file.close()
 
         self._logger.info('Finished backup of %s.' % traj.v_name)
+
+
 
     def _trj_copy_table_entries(self,rename_dict,other_trajectory_name):
 
