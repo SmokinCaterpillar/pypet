@@ -903,7 +903,6 @@ class Parameter(BaseParameter):
         return val
 
 
-    @copydoc(BaseParameter.f_get_range)
     def f_get_range(self):
         """Returns a python tuple containing the exploration range.
 

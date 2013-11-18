@@ -1,5 +1,5 @@
 =================================
-Environment
+The Environment
 =================================
 
 .. automodule:: pypet.environment
