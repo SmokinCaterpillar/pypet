@@ -992,7 +992,16 @@ class HDF5StorageService(StorageService):
     ########################### MERGING ###########################################################
 
     def _trj_backup_trajectory(self, traj, backup_filename=None):
+        """Backs up a trajectory.
 
+        :param traj: Trajectory that should be backed up
+
+        :param backup_filename:
+
+            Path and filename of backup file. If None is specified the storage service
+            defaults to `path_to_trajectory_hdf5_file/backup_trajectory_name.hdf`.
+
+        """
         self._logger.info('Storing backup of %s.' % traj.v_name)
 
         mypath, filename = os.path.split(self._filename)
@@ -1019,10 +1028,18 @@ class HDF5StorageService(StorageService):
 
         self._logger.info('Finished backup of %s.' % traj.v_name)
 
+    def _trj_copy_table_entries(self, rename_dict, other_trajectory_name):
+        """Copy the overview table entries from another trajectory into the current one.
 
+        :param rename_dict:
 
-    def _trj_copy_table_entries(self,rename_dict,other_trajectory_name):
+            Dictionary with old names (keys) and new names (values).
 
+        :param other_trajectory_name:
+
+            Name of other trajectory
+
+        """
         self._trj_copy_table_entries_from_table_name('derived_parameters_runs',rename_dict,other_trajectory_name)
         self._trj_copy_table_entries_from_table_name('results_trajectory',rename_dict,other_trajectory_name)
         self._trj_copy_table_entries_from_table_name('results_runs',rename_dict,other_trajectory_name)
@@ -1030,13 +1047,28 @@ class HDF5StorageService(StorageService):
         self._trj_copy_summary_table_entries_from_table_name('results_runs_summary', rename_dict, other_trajectory_name)
         self._trj_copy_summary_table_entries_from_table_name('derived_parameters_runs_summary', rename_dict, other_trajectory_name)
 
-
     def _trj_copy_summary_table_entries_from_table_name(self, tablename, rename_dict, other_trajectory_name):
+        """Copy a the summary table entries from another trajectory into the current one
 
-        count_dict = {}
+        :param tablename:
+
+            Name of overview table
+
+        :param rename_dict:
+
+            Dictionary with old names (keys) and new names (values).
+
+        :param other_trajectory_name:
+
+            Name of other trajectory
+
+        """
+        count_dict = {} # Dictionary containing the number of items that are merged for
+                        # a particular result summary
 
         for old_name in rename_dict:
-
+            # Check for the summary entry in the other trajectory
+            # In the overview table location literally contains `run_XXXXXXXX`
             run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
 
             old_split_name = old_name.split('.')
@@ -1051,40 +1083,49 @@ class HDF5StorageService(StorageService):
 
 
         try:
+            # get the other table
             try:
                 other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
             except AttributeError:
                 other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/overview/'+tablename)
 
-            new_row_dict={}
+            new_row_dict={} # Dictionary with full names as keys and summary row dicts as values
+
 
             for row in other_table:
+                # Iterate through the rows of the overview table
                 location = row['location']
                 name = row['name']
                 full_name = location+'.'+name
 
+                # If we need the overview entry mark it for merging
                 if full_name in count_dict:
                     new_row_dict[full_name] = self._trj_read_out_row(other_table.colnames, row)
 
+            # Get the summary table in the current trajectory
             try:
                 table= self._hdf5file.get_node('/'+self._trajectory_name+'/overview/'+tablename)
             except AttributeError:
                 table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
 
             for row in table:
+                # Iterate through the current rows
                 location = row['location']
                 name = row['name']
                 full_name = location+'.'+name
 
+                # Update the number of items according to the number or merged items
                 if full_name in new_row_dict:
                     row['number_of_items'] = row['number_of_items'] + count_dict[full_name]
+                    # Delete used row dicts
                     del new_row_dict[full_name]
                     row.update()
 
             table.flush()
             self._hdf5file.flush()
 
-
+            # Finally we need to create new rows for results that are part of the other
+            # trajectory but which could not be found in the current one
             for key in sorted(new_row_dict.keys()):
                 not_inserted_row = new_row_dict[key]
                 new_row = table.row
@@ -1096,6 +1137,7 @@ class HDF5StorageService(StorageService):
                         continue
 
                     if col_name == 'example_item_run_name':
+                        # The example item run name has changed due to merging
                         old_run_idx = not_inserted_row[col_name]
                         old_run_name = pypetconstants.FORMATTED_RUN_NAME % old_run_idx
                         new_run_name = rename_dict[old_run_name]
@@ -1113,18 +1155,37 @@ class HDF5StorageService(StorageService):
             self._logger.warning('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
-
-
     @staticmethod
     def _trj_read_out_row(colnames,row):
+        """Reads out a row and returns a dictionary containing the row content.
+
+        :param colnames: List of column names
+        :param row:  A pytables table row
+        :return: A dictionary with colnames as keys and content as values
+
+        """
         result_dict= {}
         for colname in colnames:
             result_dict[colname]=row[colname]
 
         return result_dict
 
-
     def _trj_copy_table_entries_from_table_name(self,tablename, rename_dict,other_trajectory_name):
+        """Copy overview tables (not summary) from other trajectory into the current one.
+
+        :param tablename:
+
+            Name of overview table
+
+        :param rename_dict:
+
+            Dictionary with old names (keys) and new names (values).
+
+        :param other_trajectory_name:
+
+            Name of other trajectory
+
+        """
         try:
             try:
                 other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
@@ -1134,11 +1195,14 @@ class HDF5StorageService(StorageService):
             new_row_dict={}
 
             for row in other_table.iterrows():
+                # Iterate through the summary table
                 location = row['location']
                 name = row['name']
                 full_name = location+'.'+name
 
+
                 if full_name in rename_dict:
+                    # If the item is marked for merge we need to copy its overview info
                     read_out_row = self._trj_read_out_row(other_table.colnames,row)
                     new_location = rename_dict[full_name].split('.')
                     new_location = '.'.join(new_location[0:-1])
@@ -1150,6 +1214,7 @@ class HDF5StorageService(StorageService):
             except AttributeError:
                 table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
 
+            # Insert data into the current overview table
             for row in table.iterrows():
                 location = row['location']
                 name = row['name']
@@ -1165,6 +1230,7 @@ class HDF5StorageService(StorageService):
             table.flush()
             self._hdf5file.flush()
 
+            # It may be the case that the we need to insert a new row
             for key in sorted(new_row_dict.keys()):
                 not_inserted_row = new_row_dict[key]
                 new_row = table.row
@@ -1181,17 +1247,22 @@ class HDF5StorageService(StorageService):
             self._logger.warning('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
-
     def _trj_merge_trajectories(self,other_trajectory_name,rename_dict,move_nodes=False,
                                 delete_trajectory=False):
+        """Merges another trajectory into the current trajectory (as in self._trajectory_name).
 
-        # other_trajectory_name = other_trajectory.v_full_name
+        :param other_trajectory_name: Name of other trajectory
+        :param rename_dict: Dictionary with old names (keys) and new names (values).
+        :param move_nodes: Whether to move hdf5 nodes or copy them
+        :param delete_trajectory: Whether to delete the other trajectory
+
+        """
         if not ('/'+other_trajectory_name) in self._hdf5file:
             raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
                              'be found in my file.')
 
         for old_name, new_name in rename_dict.iteritems():
-
+            # Iterate over all items that need to be merged
             split_name = old_name.split('.')
             old_location = '/'+other_trajectory_name+'/'+'/'.join(split_name)
 
@@ -1199,15 +1270,14 @@ class HDF5StorageService(StorageService):
             split_name = new_name.split('.')
             new_location = '/'+self._trajectory_name+'/'+'/'.join(split_name)
 
+            # Get the data from the other trajectory
             try:
                 old_group = self._hdf5file.get_node(old_location)
             except AttributeError:
                 old_group = self._hdf5file.getNode(old_location)
 
-
-
             for node in old_group:
-
+                # Now move or copy the data
                 if move_nodes:
                     try:
                         self._hdf5file.move_node(where=old_location, newparent=new_location,
@@ -1225,11 +1295,13 @@ class HDF5StorageService(StorageService):
                                               name=node._v_name, createparents=True,
                                               recursive=True)
 
+            # And finally copy the attributes of leaf nodes
+            # Attributes of group nodes are NOT copied, this has to be done
+            # by the trajectory
             try:
                 old_group._v_attrs._f_copy(where = self._hdf5file.get_node(new_location))
             except AttributeError:
                 old_group._v_attrs._f_copy(where = self._hdf5file.getNode(new_location))
-
 
         self._trj_copy_table_entries(rename_dict, other_trajectory_name)
 
@@ -1241,26 +1313,28 @@ class HDF5StorageService(StorageService):
 
 
     def _trj_prepare_merge(self, traj, changed_parameters):
+        """Prepares a trajectory for merging.
 
-        # changed_parameters = kwargs.pop('changed_parameters')
-        # new_results = kwargs.pop('new_results')
-        # changed_groups = kwargs.pop('changed_nodes')
+        This function will already store extended parameters.
 
+        :param traj: Target of merge
+        :param changed_parameters: List of extended parameters (i.e. their names).
+
+        """
+
+        # Update meta information
         infotable = getattr(self._overview_group,'info')
         insert_dict = self._all_extract_insert_dict(traj,infotable.colnames)
         self._all_add_or_modify_row(traj.v_name,insert_dict,infotable,index=0,
                                     flags=(HDF5StorageService.MODIFY_ROW,))
 
 
-        ### Store the parameters
+        # Store extended parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
             self.store(pypetconstants.UPDATE_LEAF,param)
 
-        # ### Store the changed groups
-        # for group_node in changed_groups:
-        #     self.store(pypetconstants.GROUP,group_node)
-
+        # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group,'runs')
         actual_rows = run_table.nrows
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
@@ -1271,6 +1345,8 @@ class HDF5StorageService(StorageService):
         except AttributeError:
             add_table=True
 
+        # Extract parameter summary and if necessary create new explored parameter tables
+        # in the result groups
         for run_name in traj.f_get_run_names():
             run_info = traj.f_get_run_information(run_name)
             run_info['name'] = run_name
@@ -1294,16 +1370,16 @@ class HDF5StorageService(StorageService):
 
 
     def _trj_remove_incomplete_runs(self,traj):
-
+        """Deletes all data related to incompleted runs."""
         self._logger.info('Removing incomplete runs.')
         count = 0
+
+        dparams_group = self._trajectory_group.derived_parameters
+        result_group = self._trajectory_group.results
+
         for run_name, info_dict in traj._run_information.iteritems():
-
-
             completed = info_dict['completed']
 
-            dparams_group = self._trajectory_group.derived_parameters
-            result_group = self._trajectory_group.results
             if completed == 0:
                 if run_name in dparams_group or run_name in result_group:
                     self._logger.info('Removing run %s.' % run_name)
@@ -1322,7 +1398,6 @@ class HDF5StorageService(StorageService):
                         result_group._f_getChild(run_name)._f_remove(recursive=True)
 
         self._logger.info('Finished removal of incomplete runs, removed %d runs.' % count)
-
 
 
     ######################## LOADING A TRAJECTORY #################################################
@@ -2047,7 +2122,7 @@ class HDF5StorageService(StorageService):
 
 
     def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
-        """ If desired adds an explored parameter overview table to the results in each
+        """If desired adds an explored parameter overview table to the results in each
         single run and summarizes the parameter settings.
 
         :param run_name: Name of the single run
@@ -2146,7 +2221,7 @@ class HDF5StorageService(StorageService):
     def _all_find_param_or_result_entry_and_return_iterator(self, param_or_result, table):
         """Searches for a particular entry in `table` based on the name and location
         of `param_or_result` and returns an iterator over the found rows
-        (should contain only a single one).
+        (should contain only a single row).
 
         """
         location = param_or_result.v_location
@@ -2278,33 +2353,49 @@ class HDF5StorageService(StorageService):
             return self._hdf5file.getNode(where=where)
 
     @staticmethod
-    def _all_attr_equals(ptitem,name,value):
+    def _all_attr_equals(ptitem, name,value):
+        """Checks if a given hdf5 node attribute exists and if so if it matches the `value`."""
         return name in ptitem._v_attrs and ptitem._v_attrs[name] == value
 
     @staticmethod
     def _all_get_from_attrs(ptitem,name):
+        """Gets an attribute `name` from `ptitem`, returns None if attribute does not exist."""
         if name in ptitem._v_attrs:
             return ptitem._v_attrs[name]
         else:
             return None
 
+    def _all_recall_native_type(self,data, ptitem, prefix):
+            """Checks if loaded data has the type it was stored in. If not converts it.
 
+            :param data: Data item to be checked and converted
+            :param ptitem: HDf5 Node or Leaf from where data was loaded
+            :param prefix: Prefix for recalling the data type from the hdf5 node attributes
 
-    def _all_recall_native_type(self,data,ptitem,prefix):
-            ## Numpy Scalars are converted to numpy arrays, but we want to retrieve tha numpy scalar
-            # as it was
+            :return:
+
+                Tuple, first item is the (converted) `data` item, second boolean whether
+                item was converted or not.
+
+            """
             typestr = self._all_get_from_attrs(ptitem,prefix+HDF5StorageService.SCALAR_TYPE)
             type_changed = False
 
+            # Check what the original data type was from the hdf5 node attributes
             if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
                                      HDF5StorageService.COLL_SCALAR):
+                # Here data item was a scalar
 
-                if isinstance(data,np.ndarray):
+                if isinstance(data, np.ndarray):
+                    # If we recall a numpy scalar, pytables loads a 1d array :-/
+                    # So we have to change it to a real scalar value
                     data = np.array([data])[0]
                     type_changed = True
 
 
                 if not typestr is None:
+                    # Check if current type and stored type match
+                    # if not convert the data
                     if not typestr == repr(type(data)):
                         data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
                         type_changed = True
@@ -2314,11 +2405,12 @@ class HDF5StorageService(StorageService):
                                          HDF5StorageService.COLL_TUPLE) or
                     self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
                                            HDF5StorageService.COLL_LIST)):
+                # Here data item was originally a tuple or a list
 
                 if not isinstance(data,(list,tuple)):
+                    # If the original type cannot be recalled, first convert it to a list
                     type_changed=True
-
-                data = list(data)
+                    data = list(data)
 
                 if len(data)>0:
                     first_item = data[0]
@@ -2326,21 +2418,28 @@ class HDF5StorageService(StorageService):
                     first_item = None
 
                 if not first_item is None:
-                    if not typestr == repr(type(data)):
+                    # Check if the type of the first item was conserved
+                    if not typestr == repr(type(first_item)):
+
+                        if not isinstance(data, list):
+                            data = list(data)
+
+                        # If type was not conserved we need to convert all items
+                        # in the list or tuple
                         for idx,item in enumerate(data):
                             data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
                             type_changed = True
 
-
-
                 if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
                                           HDF5StorageService.COLL_TUPLE):
-                    data = tuple(data)
-                    type_changed = True
+                    # If it was originally a tuple we need to convert it back to tuple
+                    if not isinstance(data, tuple):
+                        data = tuple(data)
+                        type_changed = True
 
             elif self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
                                           HDF5StorageService.COLL_MATRIX):
-
+                    # Here data item was originally a matrix
                     data = np.matrix(data)
                     type_changed = True
 
@@ -2642,7 +2741,8 @@ class HDF5StorageService(StorageService):
 
                     try:
                         row_iterator.next()
-                        raise RuntimeError('There is something completely wrong, found `%s` twice in a table!' %
+                        raise RuntimeError('There is something completely wrong, found '
+                                           '`%s` twice in a table!' %
                                         instance.v_full_name)
                     except StopIteration:
                         pass
@@ -2666,6 +2766,7 @@ class HDF5StorageService(StorageService):
 
         Also moves comments upwards in the hierarchy if purge all comments and a lower index
         run has completed, only necessary for multiprocessing.
+
         """
         definitely_store_comment=True
 
@@ -2743,14 +2844,14 @@ class HDF5StorageService(StorageService):
                                                     self._logger)
                             else:
                                 self._logger.warning('Your example value and comment in the overview'
-                                                     ' table cannot be set to the lowest index'
-                                                     ' item because results or derived parameters'
-                                                     ' with lower indices have '
-                                                     ' a different comment! The comment of `%s` '
-                                                     ' in run `%s'
-                                                     ' differs from the current result or'
-                                                     ' derived parameter in run `%s`.' %
-                                                       (instance.v_name, creator_name, example_item_run_name))
+                                         ' table cannot be set to the lowest index'
+                                         ' item because results or derived parameters'
+                                         ' with lower indices have '
+                                         ' a different comment! The comment of `%s` '
+                                         ' in run `%s'
+                                         ' differs from the current result or'
+                                         ' derived parameter in run `%s`.' %
+                                           (instance.v_name, creator_name, example_item_run_name))
 
 
                         row['number_of_items'] = nitems
@@ -2758,7 +2859,8 @@ class HDF5StorageService(StorageService):
 
                         try:
                             row_iterator.next()
-                            raise RuntimeError('There is something completely wrong, found `%s` twice in a table!' %
+                            raise RuntimeError('There is something completely wrong, '
+                                               'found `%s` twice in a table!' %
                                             instance.v_full_name)
                         except StopIteration:
                             pass
