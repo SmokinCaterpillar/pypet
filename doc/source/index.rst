@@ -149,11 +149,11 @@ MAR 5.046
 D-10587 Berlin
 
 ===================
-Indices and Tables
+Indices
 ===================
 
 * :ref:`genindex`
-* :ref:`search`
+
 
 ===================
 License
