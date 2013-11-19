@@ -14,7 +14,7 @@ converter to format your previous results to your new needs.
 The more complexity you add to your simulations, the worse it gets, and you spend way
 too much time formatting your data than doing science.
 
-Indeed, this was a situation I was confronted with pretty quickly during my PhD.
+Indeed, this was a situation I was confronted with pretty soon at the beginning of my PhD.
 So this project was born. I wanted to tackle the I/O problems more generally and produce code
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.

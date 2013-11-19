@@ -48,7 +48,7 @@ What is pypet all about?
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
 In order to accomplish both you write some hacky I/O functionality to get it done the quick and
-dirty way. This means storing stuff into text files, as MATLAB m-files, or whatever comes in handy.
+dirty way. This means storing stuff into text files, as *MATLAB* *m*-files, or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
 first results. But because of unforeseen circumstances, you changed a lot of your code.
@@ -57,7 +57,7 @@ converter to format your previous results to your new needs.
 The more complexity you add to your simulations, the worse it gets, and you spend way
 too much time formatting your data than doing science.
 
-Indeed, this was a situation I was confronted with pretty soon during my PhD.
+Indeed, this was a situation I was confronted with pretty soon at the beginning of my PhD.
 So this project was born. I wanted to tackle the I/O problems more generally and produce code
 that was not specific to my current simulations, but I could also use for future scientific
 projects right out of the box.
@@ -76,16 +76,16 @@ Package Organization
 
 This project encompasses these core modules:
 
-*  The `pypet.parameters` module including  containers for parameters and results.
+*  The `pypet.environment` module for handling the running of simulations
 
 *  The `pypet.trajectory` module for managing the parameters and results,
    and providing a way to *explore* your parameter space. Somewhat related is also the
    `pypet.naturalnaming` module, that provides functionality to access and put data into
    the *trajectory*.
 
-*  The `pypet.environment` module for handling the running of simulations.
+*  The `pypet.parameters` module including containers for parameters and results
 
-*  The `pypet.storageservice` for saving your data to disk.
+*  The `pypet.storageservice` for saving your data to disk
 
 
 ---------------------------
@@ -109,7 +109,7 @@ all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
 pip is not possible. You have to download the tar file from https://pypi.python.org/pypi/pypet and
 unzip it (using WinRaR, 7zip, etc. You might need to unpack it twice, first
 the `tar.gz` file and then the remaining `tar` file in the subfolder). Next, open a windows
-terminal and navigate to your unpacked pypet files to the folder containing the `setup.py` file.
+terminal and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
 As above run from the terminal `python setup.py install`.
 
 By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet/.
@@ -121,7 +121,7 @@ Documentation
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
-If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**
+If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
 ---------------------------
@@ -234,7 +234,7 @@ Let's take a look at the snippet at once:
     env.f_run(multiply)
 
 And now let's go through it one by one. At first we have a job to do, that is multiplying two
-values.
+values:
 
 ::
 
@@ -251,7 +251,7 @@ values.
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
 
-This is our simulation function `multiply`. The function uses a so called `Trajectory`
+This is our simulation function `multiply`. The function uses a so called *trajectory*
 container which manages our parameters. We can access the parameters simply by natural naming,
 as seen above via `traj.x` and `traj.y`. The value of `z` is simply added as a result
 to the `traj` object.
@@ -335,7 +335,7 @@ You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/` with
 `-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
-they will be deleted after the completed tests)
+they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
