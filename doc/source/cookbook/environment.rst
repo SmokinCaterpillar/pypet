@@ -3,9 +3,8 @@
 Naming Convention
 ====================
 
-To avoid confusion with natural naming scheme of the :class:`~pypet.trajectory.Trajectory`
-and the functionality provided by the trajectory, parameters, and so on,
-I followed the idea by PyTables to use prefixes.
+To avoid confusion with natural naming scheme and the functionality provided by the trajectory,
+parameters, and so on, I followed the idea by PyTables to use prefixes:
 `f_` for functions and `v_` for python variables/attributes/properties.
 
 For instance, given a result instance `res`, `res.v_comment` is the object's comment attribute and
