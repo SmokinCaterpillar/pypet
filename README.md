@@ -124,23 +124,6 @@ Documentation can be found on http://pypet.readthedocs.org/.
 If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
----------------------------
-Acknowledgements
----------------------------
-
-*   Thanks to Robert Pröpper and Philipp Meier for answering all my python questions
-
-    You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
-    tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
-
-*   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
-    for this project
-
-*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
-    the Research Training Group GRK 1589/1, and the
-    Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
-
-
 --------------
 Main Features
 --------------
@@ -320,6 +303,22 @@ Cheers,
 ================================
 Miscellaneous
 ================================
+
+---------------------------
+Acknowledgements
+---------------------------
+
+*   Thanks to Robert Pröpper and Philipp Meier for answering all my python questions
+
+    You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
+    tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
+
+*   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
+    for this project
+
+*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
+    the Research Training Group GRK 1589/1, and the
+    Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
 
 --------------------------------
 Tests
