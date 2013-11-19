@@ -87,7 +87,7 @@ Download:
 Acknowledgments
 ===================
 
-* Thanks to Robert Pröpper and Philipp Meier for answering all my Python Questions.
+* Thanks to Robert Pröpper and Philipp Meier for answering all my python questions
 
     You might wanna check out their SpykeViewer_ tool for visualization of
     MEA recordings and NEO_ data
