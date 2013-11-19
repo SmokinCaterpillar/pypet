@@ -156,7 +156,7 @@ record time series data of traffic densities at major sites in Rome. This time s
 In the end everything will be stored to disk. The storage is handled by an
 extra service to store the *trajectory* into an
 HDF5_ file on your hard drive. Probably other formats like SQL will come soon (or maybe you
-want to contribute some code, and write an SQL storage service?).
+want to contribute some code and write an SQL storage service?).
 
 ------------------
 Basic Work Flow
@@ -165,7 +165,7 @@ Basic Work Flow
 Basic workflow is summarized in the image you can find below.
 Usually you use an :class:`~pypet.environment.Environment` for handling the execution and running
 of your simulation.
-As in the example code snippet in the next subsection the environment will provide a
+As in the example code snippet in the next subsection, the environment will provide a
 :class:`~pypet.trajectory.Trajectory` container for you to fill in your parameters.
 During the execution of your simulation with individual parameter combinations
 a so called :class:`~pypet.trajectory.SingleRun` container (a reduced version of the
@@ -284,7 +284,7 @@ if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
 the property `v_trajectory`. This time we work with a full :class:`~pypet.trajectory.Trajectory`
-and with a :class:`~pypet.trajectory.SingleRun`.
+and not with a :class:`~pypet.trajectory.SingleRun`.
 
 .. code-block::python
 
@@ -302,7 +302,7 @@ of :math:`x=y=1.0`.
 
 Well, calculating :math:`1.0 * 1.0` is quite boring, we want to figure out more products. Let's
 find the results of the cartesian product set :math:`\{1.0, 2.0, 3.0, 4.0\} \times \{6.0, 7.0, 8.0\}`.
-Therefore we use :func:`~pypet.trajectory.Trajectory.f_explore` in combination with the builder
+Therefore, we use :func:`~pypet.trajectory.Trajectory.f_explore` in combination with the builder
 function :func:`~pypet.utils.explore.cartesian_product` that yields the cartesian product of both
 parameter ranges. You don't have to explore a cartesian product all the time. You can
 explore arbitrary trajectories through your space. You only need to pass
@@ -386,7 +386,7 @@ but they would not contain any data.
 Instead, `2` means we want to load the parameters and results including the data they contain.
 
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
-a look at the :ref:`cookbook`. However, if you are not the type of guy who reads manuals but wants
+a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants
 hands-on experience, check out the :ref:`theexamples`.
 
 Cheers,
