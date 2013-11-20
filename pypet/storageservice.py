@@ -2365,91 +2365,207 @@ class HDF5StorageService(StorageService):
         else:
             return None
 
-    def _all_recall_native_type(self,data, ptitem, prefix):
-            """Checks if loaded data has the type it was stored in. If not converts it.
+    def _all_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
+        """Stores original data type to hdf5 node attributes for preserving the data type.
 
-            :param data: Data item to be checked and converted
-            :param ptitem: HDf5 Node or Leaf from where data was loaded
-            :param prefix: Prefix for recalling the data type from the hdf5 node attributes
+        :param data:
 
-            :return:
+            Data to be stored
 
-                Tuple, first item is the (converted) `data` item, second boolean whether
-                item was converted or not.
+        :param ptitem_or_dict:
+
+            HDF5 node to store data types as attributes. Can also be just a dictionary.
+
+        :param prefix:
+
+            String prefix to label and name data in HDF5 attributes
+
+        """
+
+        def _set_attribute_to_item_or_dict(item_or_dict, name,val):
+            """Stores `val` with `name` into `item_or_dict`.
+
+            `item_or_dict` is either and HDF5 node or a python dictionary.
 
             """
-            typestr = self._all_get_from_attrs(ptitem,prefix+HDF5StorageService.SCALAR_TYPE)
-            type_changed = False
+            try:
+                try:
+                    item_or_dict._f_setattr(name,val)
+                except AttributeError:
+                    item_or_dict._f_setAttr(name,val)
+            except AttributeError:
+                item_or_dict[name]=val
 
-            # Check what the original data type was from the hdf5 node attributes
+        # If `data` is a container, remember the container type
+        if type(data) is tuple:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                            HDF5StorageService.COLL_TUPLE)
+
+        elif type(data) is list:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                            HDF5StorageService.COLL_LIST)
+
+        elif type(data) is np.ndarray:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                            HDF5StorageService.COLL_NDARRAY)
+
+        elif type(data) is np.matrix:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                                           HDF5StorageService.COLL_MATRIX)
+
+        elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                            HDF5StorageService.COLL_SCALAR)
+
+            strtype = repr(type(data))
+
+            if not strtype in pypetconstants.PARAMETERTYPEDICT:
+                raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
+                               (str(data),repr(type(data))))
+
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
+
+        elif type(data) is dict:
+            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+                            HDF5StorageService.COLL_DICT)
+
+        else:
+            raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
+                               (str(data),repr(type(data))))
+
+        if type(data) in (list,tuple):
+            # If data is a list or tuple we need to remember the data type of the elements
+            # in the list or tuple.
+            # We do NOT need to remember the elements of `dict` explicitly, though.
+            # `dict` is stored
+            # as an `ObjectTable` and thus types are already conserved.
+            if len(data) > 0:
+                strtype = repr(type(data[0]))
+
+                if not strtype in pypetconstants.PARAMETERTYPEDICT:
+                    raise TypeError('I do not know how to handel `%s` its type is '
+                                       '`%s`.' % (str(data),strtype))
+
+                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
+                                                    HDF5StorageService.SCALAR_TYPE,strtype)
+
+
+    def _all_recall_native_type(self,data, ptitem, prefix):
+        """Checks if loaded data has the type it was stored in. If not converts it.
+
+        :param data: Data item to be checked and converted
+        :param ptitem: HDf5 Node or Leaf from where data was loaded
+        :param prefix: Prefix for recalling the data type from the hdf5 node attributes
+
+        :return:
+
+            Tuple, first item is the (converted) `data` item, second boolean whether
+            item was converted or not.
+
+        """
+        typestr = self._all_get_from_attrs(ptitem,prefix+HDF5StorageService.SCALAR_TYPE)
+        type_changed = False
+
+        # Check what the original data type was from the hdf5 node attributes
+        if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
+                                 HDF5StorageService.COLL_SCALAR):
+            # Here data item was a scalar
+
+            if isinstance(data, np.ndarray):
+                # If we recall a numpy scalar, pytables loads a 1d array :-/
+                # So we have to change it to a real scalar value
+                data = np.array([data])[0]
+                type_changed = True
+
+
+            if not typestr is None:
+                # Check if current type and stored type match
+                # if not convert the data
+                if not typestr == repr(type(data)):
+                    data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
+                    type_changed = True
+
+
+        elif (self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
+                                     HDF5StorageService.COLL_TUPLE) or
+                self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
+                                       HDF5StorageService.COLL_LIST)):
+            # Here data item was originally a tuple or a list
+
+            if not isinstance(data,(list,tuple)):
+                # If the original type cannot be recalled, first convert it to a list
+                type_changed=True
+                data = list(data)
+
+            if len(data)>0:
+                first_item = data[0]
+            else:
+                first_item = None
+
+            if not first_item is None:
+                # Check if the type of the first item was conserved
+                if not typestr == repr(type(first_item)):
+
+                    if not isinstance(data, list):
+                        data = list(data)
+
+                    # If type was not conserved we need to convert all items
+                    # in the list or tuple
+                    for idx,item in enumerate(data):
+                        data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
+                        type_changed = True
+
             if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                     HDF5StorageService.COLL_SCALAR):
-                # Here data item was a scalar
-
-                if isinstance(data, np.ndarray):
-                    # If we recall a numpy scalar, pytables loads a 1d array :-/
-                    # So we have to change it to a real scalar value
-                    data = np.array([data])[0]
+                                      HDF5StorageService.COLL_TUPLE):
+                # If it was originally a tuple we need to convert it back to tuple
+                if not isinstance(data, tuple):
+                    data = tuple(data)
                     type_changed = True
 
+        elif self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
+                                      HDF5StorageService.COLL_MATRIX):
+                # Here data item was originally a matrix
+                data = np.matrix(data)
+                type_changed = True
 
-                if not typestr is None:
-                    # Check if current type and stored type match
-                    # if not convert the data
-                    if not typestr == repr(type(data)):
-                        data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
-                        type_changed = True
-
-
-            elif (self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                         HDF5StorageService.COLL_TUPLE) or
-                    self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                           HDF5StorageService.COLL_LIST)):
-                # Here data item was originally a tuple or a list
-
-                if not isinstance(data,(list,tuple)):
-                    # If the original type cannot be recalled, first convert it to a list
-                    type_changed=True
-                    data = list(data)
-
-                if len(data)>0:
-                    first_item = data[0]
-                else:
-                    first_item = None
-
-                if not first_item is None:
-                    # Check if the type of the first item was conserved
-                    if not typestr == repr(type(first_item)):
-
-                        if not isinstance(data, list):
-                            data = list(data)
-
-                        # If type was not conserved we need to convert all items
-                        # in the list or tuple
-                        for idx,item in enumerate(data):
-                            data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
-                            type_changed = True
-
-                if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                          HDF5StorageService.COLL_TUPLE):
-                    # If it was originally a tuple we need to convert it back to tuple
-                    if not isinstance(data, tuple):
-                        data = tuple(data)
-                        type_changed = True
-
-            elif self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                          HDF5StorageService.COLL_MATRIX):
-                    # Here data item was originally a matrix
-                    data = np.matrix(data)
-                    type_changed = True
-
-            return data, type_changed
+        return data, type_changed
 
     def _all_add_or_modify_row(self, item_name, insert_dict, table,index=None, condition=None,
-                               condvars=None, flags=(ADD_ROW,MODIFY_ROW,)):
+                               condvars=None,
+                               flags=(ADD_ROW,MODIFY_ROW,)):
+        """Adds or changes a row in a pytable.
+
+        :param item_name: Name of item, the row is about, only important for throwing errors.
+
+        :param insert_dict:
+
+            Dictionary of data that is about to be inserted into the pytables row.
+
+        :param table:
+
+            The table to insert or modify a row in
+
+        :param index:
+
+            Index of row to be modified. Instead of an index a search condition can be
+            used as well, see below.
+
+        :param condition:
+
+            Condition to search for in the table
+
+        :param condvars:
+
+            Variables for the search condition
+
+        :param flags:
+
+            Flags whether to add, modify, or remove a row in the table
 
 
-        # A row index can be 0 so we have to add this annoying line
+        """
+
+        # You can only specify either an index or a condition not both
         if not index is None and not condition is None:
             raise ValueError('Please give either a condition or an index or none!')
         elif not condition is None:
@@ -2469,9 +2585,11 @@ class HDF5StorageService(StorageService):
 
         if ((HDF5StorageService.MODIFY_ROW in flags or HDF5StorageService.ADD_ROW in flags) and
                 HDF5StorageService.REMOVE_ROW in flags):
+            # You cannot remove and modify or add at the same time
             raise ValueError('You cannot add or modify and remove a row at the same time.')
 
         if row is None and HDF5StorageService.ADD_ROW in flags:
+            # Here we add a new row
 
             row = table.row
 
@@ -2480,12 +2598,15 @@ class HDF5StorageService(StorageService):
             row.append()
 
         elif row is not None and HDF5StorageService.MODIFY_ROW in flags:
+            # Here we modify an existing row
 
             self._all_insert_into_row(row,insert_dict)
 
             row.update()
 
         elif row is not None and HDF5StorageService.REMOVE_ROW in flags:
+            # Here we delete an existing row
+
             rownumber = row.nrow
             multiple_entries = False
 
@@ -2523,7 +2644,8 @@ class HDF5StorageService(StorageService):
                                 'appears more than once in table %s.'
                                 %(item_name,table._v_name))
 
-        ## Check if we added something
+        # Check if we added something. Note that row is also not None in case REMOVE_ROW,
+        # then it refers to the deleted row
         if row is None:
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' %(item_name,table._v_name))
@@ -2531,7 +2653,7 @@ class HDF5StorageService(StorageService):
 
 
     def _all_insert_into_row(self, row, insert_dict):
-
+        """Copies data from `insert_dict` into a pytables `row`."""
         for key, val in insert_dict.items():
             try:
                 row[key] = val
@@ -2540,6 +2662,23 @@ class HDF5StorageService(StorageService):
 
 
     def _all_extract_insert_dict(self,item, colnames, additional_info=None):
+        """Extracts information from a given item to be stored into a pytable row.
+
+        Items can be a variety of things here, trajectories, single runs, group node,
+        parameters, results.
+
+        :param item: Item from which data should be extracted
+
+        :param colnames: Names of the columns in the pytable
+
+        :param additional_info: (dict)
+
+            Additional information that should be stored into the pytable row that cannot be
+            read out from `item`.
+
+        :return: Dictionary containing the data to be inserted into a row
+
+        """
         insert_dict={}
 
         if 'length' in colnames:
@@ -2604,11 +2743,20 @@ class HDF5StorageService(StorageService):
             insert_dict['short_environment_hexsha'] = item.v_environment_hexsha[0:7]
 
 
-
         return insert_dict
 
     @staticmethod
     def _all_cut_string(string, max_length, logger):
+        """Cuts string data to the maximum length allowed in a pytables column
+        if string is too long.
+
+        :param string: String to be cut
+        :param max_length: Maximum allowed string length
+        :param logger: Logger where messages about truncating should be written
+
+        :return: String, cut if too long
+
+        """
         if len(string) > max_length:
             logger.debug('The string `%s` was too long I truncated it to'
                                  ' %d characters' %
@@ -2618,6 +2766,17 @@ class HDF5StorageService(StorageService):
         return string
 
     def _all_create_or_get_groups(self, key):
+        """Creates new or follows existing group nodes along a given colon separated `key`.
+
+        :param key:
+
+            Colon separated path along hdf5 file, e.g. `parameters.mobiles.cars`.
+
+        :return:
+
+            Final group node, e.g. group node with name `cars`.
+
+        """
         newhdf5group = self._trajectory_group
         split_key = key.split('.')
         created = False
@@ -2634,18 +2793,18 @@ class HDF5StorageService(StorageService):
                 except AttributeError:
                     newhdf5group=newhdf5group._f_getChild(name)
 
-
         return newhdf5group, created
+
 
     ################# Storing and loading Annotations ###########################################
 
     def _ann_store_annotations(self,item_with_annotations,node):
+        """Stores annotations into an hdf5 file."""
+
+        # Only store annotations if the item has some
         if not item_with_annotations.v_annotations.f_is_empty():
 
             anno_dict = item_with_annotations.v_annotations.__dict__
-
-            # if node is None:
-            #     node = self._all_get_node_by_name(item_with_annotations.v_full_name)
 
             current_attrs = node._v_attrs
 
@@ -2654,6 +2813,7 @@ class HDF5StorageService(StorageService):
             for field_name, val in anno_dict.iteritems():
                 field_name_with_prefix = HDF5StorageService.ANNOTATION_PREFIX+field_name
                 if not field_name_with_prefix in current_attrs:
+                    # Only store *new* annotations, if they already exist on disk, skip storage
                     setattr(current_attrs,field_name_with_prefix,val)
                     changed = True
 
@@ -2663,9 +2823,7 @@ class HDF5StorageService(StorageService):
 
 
     def _ann_load_annotations(self,item_with_annotations,node):
-
-        # if node is None:
-        #     node = self._all_get_node_by_name(item_with_annotations.v_full_name)
+        """Loads annotations from disk."""
 
         annotated = self._all_get_from_attrs(node,HDF5StorageService.ANNOTATED)
 
@@ -2673,6 +2831,7 @@ class HDF5StorageService(StorageService):
 
             annotations =item_with_annotations.v_annotations
 
+            # You can only load into non-empty annotations, to prevent overwriting data in RAM
             if not annotations.f_is_empty():
                 raise TypeError('Loading into non-empty annotations!')
 
@@ -2688,12 +2847,14 @@ class HDF5StorageService(StorageService):
                     setattr(annotations,key,data)
 
 
-
     ############################################## Storing Groups ################################
 
     def _grp_store_group(self,node_in_traj, _hdf5_group = None):
+        """Stores a group node.
 
+        For group nodes only annotations need to be stored.
 
+        """
         if _hdf5_group is None:
             _hdf5_group,_ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
@@ -2703,6 +2864,13 @@ class HDF5StorageService(StorageService):
     ################# Storing and Loading Parameters ############################################
 
     def _prm_extract_missing_flags(self,data_dict, flags_dict):
+        """Extracts storage flags for data in `data_dict`
+        if they were not specified in `flags_dict`.
+
+        See :const:`~pypet.storageservice.HDF5StorageService.TYPE_FLAG_MAPPING`
+        for how to store different types of data per default.
+
+        """
         for key,data in data_dict.items():
             if not key in flags_dict:
                 dtype = type(data)
@@ -2714,11 +2882,18 @@ class HDF5StorageService(StorageService):
 
 
     def _prm_meta_remove_summary(self, instance):
+        """Changes a summary table entry if the current `instance` is removed from the trajectory
+        and from disk.
 
+        The number of items represented by a summary is decreased, if the
+        number of items shrinks to zero the whole row is deleted.
+
+        """
         split_name = instance.v_full_name.split('.')
         where = split_name[0]
 
         if where in['derived_parameters','results']:
+            # There are only summaries for derived parameters and results
             creator_name = instance.v_creator_name
             if creator_name.startswith(pypetconstants.RUN_NAME):
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
@@ -2735,6 +2910,7 @@ class HDF5StorageService(StorageService):
 
                     row = row_iterator.next()
 
+                    # Decrease the number of items represented by the summary
                     nitems = row['number_of_items']-1
                     row['number_of_items'] = nitems
                     row.update()
@@ -2751,6 +2927,7 @@ class HDF5StorageService(StorageService):
                     table.flush()
 
                     if nitems == 0:
+                        # Here the summary became obsolete
                         self._all_store_param_or_result_table_entry(instance,table,
                                                     flags=(HDF5StorageService.REMOVE_ROW,))
 
@@ -2762,10 +2939,16 @@ class HDF5StorageService(StorageService):
                     instance._rename(old_full_name)
 
     def _prm_meta_add_summary(self,instance):
-        """Add data to the summary tables and returns if comment has to be stored.
+        """Adds data to the summary tables and returns if `instance`s comment has to be stored.
 
-        Also moves comments upwards in the hierarchy if purge all comments and a lower index
-        run has completed, only necessary for multiprocessing.
+        Also moves comments upwards in the hierarchy if purge_duplicate_comments is true
+        and a lower index run has completed. Only necessary for *multiprocessing*.
+
+        :return: Tuple
+
+            * String specifying the subtree
+
+            * Boolean whether to store the comment to `instance`s hdf5 node
 
         """
         definitely_store_comment=True
@@ -2891,21 +3074,28 @@ class HDF5StorageService(StorageService):
         return where, definitely_store_comment
 
     def _prm_add_meta_info(self,instance,group,msg):
+        """Adds information to overview tables and meta information to the `instance`s hdf5 `group`.
 
+        :param instance: Instance to store meta info about
+        :param group: HDF5 group of instance
+        :param msg: Whether to update leaf (we need to modify a row) or just store it
+
+        """
         if msg == pypetconstants.UPDATE_LEAF:
             flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW)
         else:
             flags=(HDF5StorageService.ADD_ROW,)
 
-
+        # Check if we need to store the comment. Maybe update the overview tables
+        # accordingly if the current run index is lower than the one in the table.
         where, definitely_store_comment = self._prm_meta_add_summary(instance)
 
 
         try:
+            # Update the summary overview table
             table_name = self._all_get_table_name(where,instance.v_creator_name)
 
             table = getattr(self._overview_group,table_name)
-
 
             self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=flags)
@@ -2914,13 +3104,16 @@ class HDF5StorageService(StorageService):
 
 
         if not self._purge_duplicate_comments or definitely_store_comment:
+            # Only add the comment if necessary
             setattr(group._v_attrs, HDF5StorageService.COMMENT, instance.v_comment)
 
+        # Add class name and whether node is a leaf to the HDF5 attributes
         setattr(group._v_attrs, HDF5StorageService.CLASS_NAME, instance.f_get_class_name())
         setattr(group._v_attrs,HDF5StorageService.LEAF,1)
 
-
         if instance.v_is_parameter and instance.f_has_range():
+            # If the stored parameter was an explored one we need to mark this in the
+            # explored overview table
             setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
             try:
                 tablename = 'explored_parameters'
@@ -2931,37 +3124,70 @@ class HDF5StorageService(StorageService):
                 pass
 
     def _prm_store_parameter_or_result(self, msg, instance,store_flags=None,_hdf5_group=None):
+        """Stores a parameter or result to hdf5.
 
+        :param msg:
+
+            Either :const:`~pypet.pypetconstants.LEAF` for storing a new parameter or result
+
+            Or :const:`~pypet.pypetconstants.UPDATE_LEAF` in case an existing parameter was
+            extended.
+
+        :param instance:
+
+            The instance to be stored
+
+        :param store_flags:
+
+            Dictionary containing how to store individual data, usually empty.
+
+        :param _hdf5_group:
+
+            The hdf5 group for storing the parameter or result
+
+        """
         fullname = instance.v_full_name
         self._logger.debug('Storing %s.' % fullname)
 
 
         if _hdf5_group is None:
+            # If no group is provided we might need to create one
             _hdf5_group, newly_created = self._all_create_or_get_groups(fullname)
         else:
             newly_created = False
 
         if msg == pypetconstants.UPDATE_LEAF or newly_created:
+            # If we created a new group or the parameter was extended we need to
+            # update the meta information and summary tables
             self._prm_add_meta_info(instance,_hdf5_group,msg)
 
-        ## Store annotations
+        # Store annotations
         self._ann_store_annotations(instance,_hdf5_group)
 
-
+        # Get the data to store from the instance
         store_dict = instance._store()
 
-
+        # If the user did not supply storage flags, we need to set it to the empty dictionary
         if store_flags is None:
-            try:
-                store_flags = instance._store_flags()
-            except AttributeError:
-                store_flags = {}
+            store_flags = {}
 
+        try:
+            # Ask the instance for storage flags
+            instance_flags = instance._store_flags()
+        except AttributeError:
+            # If it does not provide any, set it to the empty dictionary
+            instance_flags = {}
 
+        # User specified flags have priority over the flags from the instance
+        instance_flags.update(store_flags)
+        store_flags=instance_flags
+
+        # If we still have data in `store_dict` about which we do not know how to store
+        # it, pick default storage flags
         self._prm_extract_missing_flags(store_dict,store_flags)
 
-
         for key, data_to_store in store_dict.items():
+            # Iterate through the data and store according to the storage flags
             if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
                 self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
                                    (key, fullname))
@@ -2985,22 +3211,44 @@ class HDF5StorageService(StorageService):
                 raise RuntimeError('You shall not pass!')
 
     def _prm_store_dict_as_table(self, msg, key, data_to_store, group, fullname):
+        """Stores a python dictionary as pytable
 
+        :param msg:
+
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+
+        :param key:
+
+            Name of data item to store
+
+        :param data_to_store:
+
+            Dictionary to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
         if key in group:
             raise ValueError('Dictionary `%s` already exists in `%s`. Appending is not supported (yet).')
-
-
-        #assert isinstance(data_to_store,dict)
 
         if key in group:
             raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
 
+        # Create a temp_dict in order not to modify the original data
         temp_dict={}
         for innerkey, val in data_to_store.iteritems():
             temp_dict[innerkey] =[val]
 
+        # Convert dictionary to object table
         objtable = ObjectTable(data=temp_dict)
 
+        # Then store the object table
         self._prm_store_into_pytable(msg,key,objtable,group,fullname)
 
         try:
@@ -3008,6 +3256,7 @@ class HDF5StorageService(StorageService):
         except AttributeError:
             new_table = group._f_getChild(key)
 
+        # Remember that the Object Table represents a dictionary
         self._all_set_attributes_to_recall_natives(temp_dict,new_table,
                                                    HDF5StorageService.DATA_PREFIX)
 
@@ -3018,8 +3267,30 @@ class HDF5StorageService(StorageService):
 
 
 
-    def _prm_store_data_frame(self, msg,  key, data_to_store, group, fullname):
+    def _prm_store_data_frame(self, msg,  key, data, group, fullname):
+        """Stores a pandas DataFrame into hdf5.
 
+        :param msg:
+
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            DataFrame to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
         try:
 
             if key in group:
@@ -3027,7 +3298,7 @@ class HDF5StorageService(StorageService):
 
 
             name = group._v_pathname+'/' +key
-            data_to_store.to_hdf(self._filename, name, append=True,data_columns=True)
+            data.to_hdf(self._filename, name, append=True,data_columns=True)
 
             try:
                 frame_group = group._f_get_child(key)
@@ -3040,11 +3311,31 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing DataFrame `%s` of `%s`.' %(key,fullname))
             raise
 
-
-
-
     def _prm_store_into_carray(self, msg, key, data, group, fullname):
+        """Stores data as carray.
 
+        :param msg:
+
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
+            Not needed here.
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            Data to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
         try:
             if key in group:
                 raise ValueError('CArray `%s` already exists in `%s`. Appending is not supported (yet).')
@@ -3071,6 +3362,7 @@ class HDF5StorageService(StorageService):
                                                    shape=data.shape)
                 carray[:]=data[:]
 
+            # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data,carray,HDF5StorageService.DATA_PREFIX)
             setattr(carray._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
             self._hdf5file.flush()
@@ -3078,11 +3370,31 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
-
     def _prm_store_into_array(self, msg, key, data, group, fullname):
+        """Stores data as array.
 
-        #append_mode = kwargs.f_get('append_mode',None)
+        :param msg:
 
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
+            Not needed here.
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            Data to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
         try:
             if key in group:
                 raise ValueError('Array `%s` already exists in `%s`. Appending is not supported (yet).')
@@ -3101,6 +3413,7 @@ class HDF5StorageService(StorageService):
             except AttributeError:
                 array=self._hdf5file.createArray(where=group, name=key,object=data)
 
+            # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data,array,HDF5StorageService.DATA_PREFIX)
             setattr(array._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.ARRAY)
             self._hdf5file.flush()
@@ -3108,73 +3421,17 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
-
-
-    def _all_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
-
-            def _set_attribute_to_item_or_dict(item_or_dict, name,val):
-                try:
-                    try:
-                        item_or_dict._f_setattr(name,val)
-                    except AttributeError:
-                        item_or_dict._f_setAttr(name,val)
-                except AttributeError:
-                    item_or_dict[name]=val
-
-            if type(data) is tuple:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                HDF5StorageService.COLL_TUPLE)
-
-            elif type(data) is list:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                HDF5StorageService.COLL_LIST)
-
-            elif type(data) is np.ndarray:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                HDF5StorageService.COLL_NDARRAY)
-
-            elif type(data) is np.matrix:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                               HDF5StorageService.COLL_MATRIX)
-
-            elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                HDF5StorageService.COLL_SCALAR)
-
-                strtype = repr(type(data))
-
-                if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                    raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
-                                   (str(data),repr(type(data))))
-
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
-
-            elif type(data) is dict:
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
-                                HDF5StorageService.COLL_DICT)
-
-            else:
-                raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
-                                   (str(data),repr(type(data))))
-
-            if type(data) in (list,tuple):
-                if len(data) > 0:
-                    strtype = repr(type(data[0]))
-
-                    if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                        raise TypeError('I do not know how to handel `%s` its type is '
-                                           '`%s`.' % (str(data),strtype))
-
-                    _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
-                                                        HDF5StorageService.SCALAR_TYPE,strtype)
-
-
-
     def _all_remove_parameter_or_result_or_group(self, instance,remove_empty_groups=False):
+        """Removes a parameter or result or group from the hdf5 file.
 
+        :param instance: Instance to be removed
+        :param remove_empty_groups: Whether to delete groups that might become empty due to deletion
+
+        """
         split_name = instance.v_full_name.split('.')
 
         if instance.v_is_leaf:
+            # If we delete a leaf we need to take care about overview tables
             base_group = split_name[0]
 
             tablename = self._all_get_table_name(base_group,instance.v_creator_name)
@@ -3182,7 +3439,6 @@ class HDF5StorageService(StorageService):
 
             self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=(HDF5StorageService.REMOVE_ROW,))
-
 
             self._prm_meta_remove_summary(instance)
 
@@ -3201,11 +3457,6 @@ class HDF5StorageService(StorageService):
                 raise TypeError('You cannot remove a group that is not empty!')
 
         the_node._f_remove(recursive=True)
-        #self._hdf5file.remove_node(where=where,name=node_name,recursive=True)
-
-
-
-
 
         if remove_empty_groups:
             for irun in reversed(range(len(split_name))):
@@ -3223,13 +3474,34 @@ class HDF5StorageService(StorageService):
                 else:
                     break
 
+    def _prm_store_into_pytable(self, msg, tablename, data, hdf5group, fullname):
+        """Stores data as pytable.
 
+        :param msg:
 
-    def _prm_store_into_pytable(self,msg, tablename,data,hdf5group,fullname):
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
 
+        :param tablename:
 
+            Name of the data table
+
+        :param data:
+
+            Data to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
         try:
             if hasattr(hdf5group,tablename):
+                # If table already exists, check if we want to `UPDATE_LEAF`, i.e. if a
+                # parameter got extended
                 table = getattr(hdf5group,tablename)
 
                 if msg == pypetconstants.UPDATE_LEAF:
@@ -3254,11 +3526,8 @@ class HDF5StorageService(StorageService):
                 ## If the table exists, it already knows what the original data of the input was:
                 data_type_dict = {}
             else:
-                # if msg == pypetconstants.UPDATE_LEAF:
-                    # self._logger.debug('Table `%s` of `%s` does not exist, '
-                    #                    'I will create it!' % (tablename,fullname))
-
-                description_dict, data_type_dict = self._prm_make_description(data,fullname)
+                # Get a new pytables description from the data and create a new table
+                description_dict, data_type_dict = self._prm_make_description(data, fullname)
 
                 try:
                     table = self._hdf5file.create_table(where=hdf5group, name=tablename,
@@ -3270,10 +3539,6 @@ class HDF5StorageService(StorageService):
                                                        title=tablename)
                 nstart = 0
 
-            #assert isinstance(table,pt.Table)
-            #assert isinstance(data, ObjectTable)
-
-
             row = table.row
 
             datasize = data.shape[0]
@@ -3281,6 +3546,7 @@ class HDF5StorageService(StorageService):
 
             cols = data.columns.tolist()
             for n in range(nstart, datasize):
+                # Fill the columns with data, note if the parameter was extended nstart!=0
 
                 for key in cols:
 
@@ -3288,9 +3554,9 @@ class HDF5StorageService(StorageService):
 
                 row.append()
 
+            # Remember the original types of the data for perfect recall
             for field_name, type_description in data_type_dict.iteritems():
                 table._f_setAttr(field_name,type_description)
-
 
             setattr(table._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
             table.flush()
@@ -3299,46 +3565,41 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing table `%s` of `%s`.' %(tablename,fullname))
             raise
 
-
-
     def _prm_make_description(self, data, fullname):
-        """ Returns a dictionary that describes a pytbales row.
-        """
-        def _convert_lists_and_tuples(series_of_data):
-            ## If the first data item is a list, the rest must be as well, since
-            # data has to be homogeneous
+        """ Returns a description dictionary for pytables table creation"""
 
+        def _convert_lists_and_tuples(series_of_data):
+            """Converts lists and tuples to numpy arrays"""
             if not isinstance(series_of_data[0],np.ndarray):
+                 # If the first data item is a list, the rest must be as well, since
+                # data has to be homogeneous
                 for idx,item in enumerate(series_of_data):
                     series_of_data[idx] = np.array(item)
 
-
-
-        descriptiondict={}
-        original_data_type_dict={}
+        descriptiondict={} # dictionary containing the description to build a pytables table
+        original_data_type_dict={} # dictionary containing the original data types
 
         for key, val in data.iteritems():
 
+            # remeber the original data types
             self._all_set_attributes_to_recall_natives(val[0],original_data_type_dict,
                             HDF5StorageService.FORMATTED_COLUMN_PREFIX % key)
 
-
             _convert_lists_and_tuples(val)
 
+            # get a pytables column from the data
             col = self._prm_get_table_col(key, val, fullname)
-
-            # if col is None:
-            #     raise TypeError('Entry %s of %s cannot be translated into pytables column' % (table_name,fullname))
 
             descriptiondict[key]=col
 
         return descriptiondict, original_data_type_dict
 
-
     def _prm_get_table_col(self, key, column, fullname):
         """ Creates a pytables column instance.
 
-        The type of column depends on the type of parameter entry.
+        The type of column depends on the type of `column[0]`.
+        Note that data in `column` must be homogeneous!
+
         """
         val = column[0]
 
@@ -3365,12 +3626,9 @@ class HDF5StorageService(StorageService):
                                ' Its type was `%s`.' % (key,fullname,repr(type(val))))
             raise
 
-
-
     @staticmethod
-    def _prm_get_longest_stringsize( string_list):
-        """ Returns the longest stringsize for a string entry across data.
-        """
+    def _prm_get_longest_stringsize(string_list):
+        """ Returns the longest string size for a string entry across data."""
         maxlength = 1
 
         for stringar in string_list:
@@ -3380,14 +3638,27 @@ class HDF5StorageService(StorageService):
             for string in stringar:
                 maxlength = max(len(string),maxlength)
 
-        # Make the string Col longer than needed in order to allow later on slightly large strings
+        # Make the string Col longer than needed in order to allow later on slightly larger strings
         return maxlength*1.5
 
-
-
     def _prm_load_parameter_or_result(self, param, load_only=None,_hdf5_group=None):
+        """Loads a parameter or result from disk.
 
+        :param param:
 
+            Empty parameter or result instance
+
+        :param load_only:
+
+            List of data keys if only parts of a result should be loaded
+
+        :param _hdf5_group:
+
+            The corresponding hdf5 group of the instance
+
+        """
+
+        # If load onyl is just a name and not a list of names, turn it into a 1 element list
         if isinstance(load_only,basestring):
             load_only=[load_only]
 
@@ -3401,15 +3672,13 @@ class HDF5StorageService(StorageService):
         if _hdf5_group is None:
             _hdf5_group = self._all_get_node_by_name(param.v_full_name)
 
-        #self._ann_load_annotations(param,_hdf5_group)
-
-
         full_name = param.v_full_name
 
         self._logger.debug('Loading %s' % full_name)
 
+        load_dict = {} # Dict that will be used to keep all data for loading the parameter or
+                       # result
 
-        load_dict = {}
         for node in _hdf5_group:
             if not load_only is None:
 
@@ -3418,8 +3687,7 @@ class HDF5StorageService(StorageService):
                 else:
                     loaded.append(node._v_name)
 
-
-
+            # Recall from the hdf5 node attributes how the data was stored and reload accordingly
             load_type = self._all_get_from_attrs(node,HDF5StorageService.STORAGE_TYPE)
 
             if load_type == HDF5StorageService.DICT:
@@ -3435,24 +3703,46 @@ class HDF5StorageService(StorageService):
                                              'structure of %s [%s].' %
                                              (full_name, str(node),str(load_type)) )
 
+
         if load_only is not None:
+            # Check if all data in `load_only` was actually found in the hdf5 file
             if not set(loaded) == set(load_only):
                 raise ValueError('You marked %s for load only, but I cannot find these for `%s`' %
                                  (str(set(load_only)-set(loaded)),full_name))
 
+        # Finally tell the parameter or result to load the data
         param._load(load_dict)
 
 
     def _prm_read_dictionary(self, leaf, load_dict, full_name):
+        """Loads data that was originally a dictionary when stored
+
+        :param leaf:
+
+            PyTables table containing the dictionary data
+
+        :param load_dict:
+
+            Dictionary to keep the loaded data in
+
+        :param full_name:
+
+            Full name of the parameter or result whose data is to be loaded
+
+        """
         try:
             temp_dict={}
+            # Load as Pbject Table
             self._prm_read_table(leaf,temp_dict,full_name)
             key =leaf._v_name
             temp_table = temp_dict[key]
+            # Turn the ObjectTable into a dictionary of lists (with length 1).
             temp_dict = temp_table.to_dict('list')
 
             innder_dict = {}
             load_dict[key] = innder_dict
+
+            # Turn the dictionary of lists into a normal dictionary
             for innerkey, vallist in temp_dict.items():
                 innder_dict[innerkey] = vallist[0]
         except:
@@ -3461,6 +3751,21 @@ class HDF5StorageService(StorageService):
 
 
     def _prm_read_frame(self,pd_node,load_dict, full_name):
+        """Reads a DataFrame from dis.
+
+        :param pd_node:
+
+            hdf5 node stroing the pandas DataFrame
+
+        :param load_dict:
+
+            Dictionary to keep the loaded data in
+
+        :param full_name:
+
+            Full name of the parameter or result whose data is to be loaded
+
+        """
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
@@ -3471,27 +3776,40 @@ class HDF5StorageService(StorageService):
             raise
 
     def _prm_read_table(self,table,load_dict, full_name):
-        """ Reads a non-nested Pytables table column by column.
+        """Reads a non-nested PyTables table column by column and created a new ObjectTable for
+        the loaded data.
 
-        :type table: pt.Table
-        :type load_dict:
-        :return:
+        :param table:
+
+            PyTables table to read from
+
+        :param load_dict:
+
+            Dictionary where the loaded ObjectTable will be kept
+
+        :param full_name:
+
+            Full name of the parameter or result whose data is to be loaded
+
         """
         try:
             table_name = table._v_name
 
             for colname in table.colnames:
+                # Read Data column by column
                 col = table.col(colname)
                 data_list=list(col)
 
                 prefix = HDF5StorageService.FORMATTED_COLUMN_PREFIX % colname
                 for idx,data in enumerate(data_list):
+                    # Recall original type of data
                     data,type_changed = self._all_recall_native_type(data,table,prefix)
                     if type_changed:
                         data_list[idx] = data
                     else:
                         break
 
+                # Construct or insert into an ObjectTable
                 if table_name in load_dict:
                     load_dict[table_name][colname] = data_list
                 else:
@@ -3502,21 +3820,26 @@ class HDF5StorageService(StorageService):
 
 
     def _prm_read_array(self, array, load_dict, full_name):
+        """Reads data from an array or carray
 
+        :param array:
+
+            PyTables array or carray to read from
+
+        :param load_dict:
+
+            Dictionary where the loaded ObjectTable will be kept
+
+        :param full_name:
+
+            Full name of the parameter or result whose data is to be loaded
+        """
         try:
             result = array.read()
+            # Recall original data types
             result, dummy = self._all_recall_native_type(result,array,HDF5StorageService.DATA_PREFIX)
 
             load_dict[array._v_name]=result
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (array._v_name,full_name))
             raise
-
-
-
-
-
-
-
-
-
