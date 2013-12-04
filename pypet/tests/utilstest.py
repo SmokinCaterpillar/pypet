@@ -9,7 +9,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.utils.explore import cartesian_product, frange
+from pypet.utils.explore import cartesian_product
 
 
 class CartesianTest(unittest.TestCase):
