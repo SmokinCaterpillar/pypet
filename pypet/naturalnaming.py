@@ -1135,6 +1135,7 @@ class NaturalNamingInterface(object):
         try:
             act_node = start_node
             last_idx = len(split_name)-1
+            last_name = start_node.v_name
             for idx, name in enumerate(split_name):
 
                 if not name in act_node._children:
@@ -1178,10 +1179,11 @@ class NaturalNamingInterface(object):
                 else:
                     if idx == last_idx:
                         raise AttributeError('You already have a group/instance `%s` under '
-                                             '`%s`' % (name,start_node.v_full_name))
+                                             '`%s`' % (name,  last_name))
 
 
                 act_node = act_node._children[name]
+                last_name = name
 
             return act_node
         except:
