@@ -68,4 +68,8 @@ Well, that's it, so thanks for using *pypet*,
     Robert
 
 
+PS: If you use *pypet* for your research, I would be grateful if you
+follow the :ref:`citation_policy`.
+
+
 .. _BRIAN: http://briansimulator.org/

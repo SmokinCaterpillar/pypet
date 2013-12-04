@@ -157,6 +157,17 @@ You can pass the following arguments:
 
     >>> env.v_trajectory.v_storage_service = MyCustomService(...)
 
+* `filename`
+
+    The name of the hdf5 file. If none is specified the default
+    `./hdf5/the_name_of_your_trajectory.hdf5` is chosen. If `filename` contains only a path
+    like `filename='./myfolder/', it is changed to
+    `filename='./myfolder/the_name_of_your_trajectory.hdf5'`.
+
+* `file_title`
+
+    Title of the hdf5 file (only important if file is created new)
+
 * `purge_duplicate_comments`
 
     If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
@@ -201,6 +212,15 @@ You can pass the following arguments:
 * `git_message`
 
     Message passed onto git command.
+
+* `lazy_debug`
+
+    If `lazy_debug=True` and in case you debug your code (aka the built-in variable `__debug__`
+    is set to `True` by python), the environment will use the
+    :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
+    Accordingly, no files are created and your trajectory and results are not saved.
+    This allows faster debugging and prevents *pypet* from blowing up your hard drive with
+    trajectories that you probably not want to use anyway since you just debug your code.
 
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html

@@ -74,7 +74,7 @@ from pandas import DataFrame
 
 from pypet import pypetconstants
 from pypet.naturalnaming import NNLeafNode
-import pypet.utils.comparisons as comp
+import pypet.utils as utils
 from pypet.utils.decorators import deprecated, copydoc
 import pypetexceptions as pex
 
@@ -299,7 +299,7 @@ class BaseParameter(NNLeafNode):
         if not self._values_of_same_type(val1,val2):
             return False
 
-        return comp.nested_equal(val1,val2)
+        return utils.comparisons.nested_equal(val1,val2)
 
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.

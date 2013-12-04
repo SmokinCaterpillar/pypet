@@ -1426,6 +1426,44 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         >>> traj.explore({'groupA.param1' : [1,2,3,4,5], 'groupA.param2':['a','b','c','d','e']})
 
+
+        NOTE:
+
+        Since parameters are very conservative regarding the data they accept
+        (see :ref:`type_conservation`), you sometimes won't be able to use Numpy arrays
+        for exploration as iterables.
+
+        For instance, the following code snippet won't work:
+
+        ::
+
+            import numpy a np
+            from pypet.trajectory import Trajectory
+            traj = Trajectory()
+            traj.f_add_parameter('my_float_parameter', 42.4,
+                                 comment='My value is a standard python float')
+
+            traj.f_explore( { 'my_float_parameter': np.arange(42.0, 44.876, 0.23) } )
+
+
+        This will result in a `TypeError` because your exploration iterable
+        `np.arange(42.0, 44.876, 0.23)` contains `numpy.float64` values
+        whereas you parameter is supposed to use standard python floats.
+
+        Yet, you can use Numpys `tolist()` function to overcome this problem:
+
+        ::
+
+            traj.f_explore( { 'my_float_parameter': np.arange(42.0, 44.876, 0.23).tolist() } )
+
+
+        Or you could specify your parameter directly as a numpy float:
+
+        ::
+
+            traj.f_add_parameter('my_float_parameter', np.float64(42.4),
+                                   comment='My value is a numpy 64 bit float')
+
         """
 
         if self._stored:

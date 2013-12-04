@@ -1,14 +1,12 @@
+__author__ = 'Robert Meyer'
+
 from collections import Sequence, Mapping, Set
 import numpy as np
 import pandas as pd
-from pypet import pypetconstants
-
-__author__ = 'Robert Meyer'
-
-
 
 import pypet.parameter
 import itertools as it
+import pypet.pypetconstants as pypetconstants
 
 
 def results_equal(a,b):

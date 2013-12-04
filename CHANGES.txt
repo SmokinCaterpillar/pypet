@@ -1,3 +1,12 @@
+pypet 0.1b.3
+
+*   You can enforce a type convert for exploration
+
+*   Added lazy_debug option for the environment
+
+*   If you don't specify a filename, the environment defaults to a file with the name of
+    the trajectory
+
 pypet 0.1b.2
 
 *   DefaultReplacementError is now called PresettingError

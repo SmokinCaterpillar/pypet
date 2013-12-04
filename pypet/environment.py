@@ -31,7 +31,7 @@ import datetime
 from pypet.utils.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
-    QueueStorageServiceWriter, LockWrapper
+    QueueStorageServiceWriter, LockWrapper, LazyStorageService
 from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
 from pypet import __version__ as VERSION
@@ -262,8 +262,10 @@ class Environment(object):
 
     :param filename:
 
-        The name of the hdf5 file. If none is specified the default './hdf5/experiment.hdf5'
-        is chosen.
+        The name of the hdf5 file. If none is specified the default
+        `./hdf5/the_name_of_your_trajectory.hdf5` is chosen. If `filename` contains only a path
+        like `filename='./myfolder/', it is changed to
+        `filename='./myfolder/the_name_of_your_trajectory.hdf5'`.
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
@@ -353,6 +355,15 @@ class Environment(object):
 
     .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
+    :param lazy_debug:
+
+        If `lazy_debug=True` and in case you debug your code (aka the built-in variable `__debug__`
+        is set to `True` by python), the environment will use the
+        :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
+        Accordingly, no files are created and your trajectory and results are not saved.
+        This allows faster debugging and prevents *pypet* from blowing up your hard drive with
+        trajectories that you probably not want to use anyway since you just debug your code.
+
 
     The Environment will automatically add some config settings to your trajectory.
     Thus, you can always look up how your trajectory was run. This encompasses most of the above
@@ -412,7 +423,8 @@ class Environment(object):
                  results_per_run=0,
                  derived_parameters_per_run=0,
                  git_repository = None,
-                 git_message=''):
+                 git_message='',
+                 lazy_debug=False):
 
 
         # First check if purge settings are valid
@@ -463,7 +475,7 @@ class Environment(object):
             if filename is None:
                 # If no filename is supplied and the filename cannot be extracted from the
                 # trajectory, create the default filename
-                self._filename = os.path.join(os.getcwd(),'hdf5','experiment.hdf5')
+                self._filename = os.path.join(os.getcwd(),'hdf5', self._traj.v_name+'.hdf5')
             else:
                 self._filename=filename
 
@@ -473,15 +485,19 @@ class Environment(object):
             # we put it into the current working directory
             self._filename = os.path.join(os.getcwd(),self._filename)
 
+
         if not tail:
-            raise ValueError('You need to specify a filename not just a path.')
+            self._filename =  os.path.join(self._filename, self._traj.v_name+'.hdf5')
+
+
+
 
         self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
         # Check if the user wants to use the hdf5 storage service. If yes,
         # add a service to the trajectory
         if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
-            self._add_hdf5_storage_service()
+            self._add_hdf5_storage_service(lazy_debug)
 
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit
@@ -563,6 +579,10 @@ class Environment(object):
 
         # Add HDF5 config in case the user wants the standard service
         if self._use_hdf5 and not self.v_trajectory.v_stored:
+
+            # Print which file we use for storage
+            self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
+
             for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
 
                 self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
@@ -598,6 +618,9 @@ class Environment(object):
             if not large_overview_tables:
                 self.f_switch_off_large_overview()
 
+        # Notify that in case of lazy debuggin we won't record anythin
+        if lazy_debug and __debug__:
+            self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
         self._logger.info('Environment initialized.')
 
@@ -752,13 +775,17 @@ class Environment(object):
         return self._name
 
 
-    def _add_hdf5_storage_service(self):
+    def _add_hdf5_storage_service(self, lazy_debug=False):
         """ Adds the standard HDF5 storage service to the trajectory.
 
         See also :class:`~pypet.storageservice.HDF5StorageService`.
 
         """
-        self._storage_service = HDF5StorageService(self._filename,
+
+        if lazy_debug and __debug__:
+            self._storage_service = LazyStorageService()
+        else:
+            self._storage_service = HDF5StorageService(self._filename,
                                                  self._file_title )
 
         self._traj.v_storage_service=self._storage_service
@@ -805,6 +832,7 @@ class Environment(object):
                                     comment ='Added if trajectory was explored normally and not continued.')
 
         # Make some preparations (locking of parameters etc) and store the trajectory
+        self._logger.info('I am preparing the Trajectory for the experiment and store it.')
         self._traj._prepare_experiment()
         self._traj.f_store()
 

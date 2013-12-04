@@ -41,6 +41,8 @@ Parameter containers follow these two principles:
     requires to run a number of distinct simulations anyway.
 
 
+.. _type_conservation:
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Values supported by Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -64,6 +64,29 @@ def cartesian_product(parameter_dict, combined_parameters = ()):
     return result_dict
 
 
+# def frange(start, stop, step=1.0):
+#     """*pypet* analog to numpy arange for floating point numbers.
+#
+#     Note that frange returns a generator not a list.
+#
+#     :param start: Start value
+#     :param stop: Stop value
+#     :param step: Stepsize
+#
+#     :return: Generator returning the floating point numbers
+#
+#     >>> frange(42.0, 43.6, 0.4)
+#     [42.0, 42.4, 42.8, 43.2]
+#
+#     """
+#     if start >= stop:
+#         raise ValueError('Your start value cannot be larger or equal to the stop value.')
+#
+#     return_list = []
+#     x=start
+#     while x < stop:
+#         yield x
+#         x+=step
 
 
 # def cartesian_product_old(param_dict, combined_parameter_list=[]):

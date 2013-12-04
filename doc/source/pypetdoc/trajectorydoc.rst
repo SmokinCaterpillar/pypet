@@ -2,6 +2,12 @@
 The Trajectory, Single Runs and Group Nodes
 ============================================
 
+.. currentmodule:: pypet.trajectory
+
+.. autosummary::
+
+    Trajectory
+
 --------------------
 Trajectory
 --------------------

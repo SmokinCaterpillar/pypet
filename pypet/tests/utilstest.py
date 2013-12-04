@@ -9,7 +9,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.utils.explore import cartesian_product
+from pypet.utils.explore import cartesian_product, frange
 
 
 class CartesianTest(unittest.TestCase):
@@ -32,6 +32,7 @@ class CartesianTest(unittest.TestCase):
 
         self.assertTrue(nested_equal(cartesian_dict,result_dict), '%s != %s' %
                                                     (str(cartesian_dict),str(result_dict)))
+
 
 
 

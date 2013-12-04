@@ -69,6 +69,37 @@ Contents:
 Publications
 =====================
 
+
+.. _citation_policy:
+
+---------------------
+Citation Policy
+---------------------
+
+If you use *pypet*, it would be very kind of you to cite this in your amazing research article.
+For *bibtex* you can use:
+
+::
+
+    @misc{rmeyer2014,
+        author = {Robert Meyer and Klaus Obermayer},
+        year = {2014},
+        title = {pypet: {T}he {P}ython {P}arameter {E}xploration {T}oolkit},
+        note = {\url{http://pypet.readthedocs.org/}},
+        institution = {Technische Universität Berlin, Neural Information Processing Group}
+    }
+
+
+Otherwise you can cite it as:
+
+*   Robert Meyer and Klaus Obermayer. pypet: The Python Parameter
+    Exploration Toolkit, 2014. http://pypet.readthedocs.org/.
+
+
+---------------------
+BBD2013 Poster
+---------------------
+
 There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_.
 
 .. image:: bbd_2013_poster/meyer_bbd_2013_small.png
