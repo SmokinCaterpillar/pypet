@@ -221,6 +221,35 @@ class BrianParameter(Parameter):
 
         self._default = self._data
 
+class BrianDurationParameter(BrianParameter):
+    """Special brian parameter to specify orders of subruns.
+
+    Important for the :class:~pypet.brian.network.NetworkRunner
+
+    """
+    def __init__(self, full_name, data=None, order=0, comment='',storage_mode=BrianParameter.FLOAT_MODE):
+        self._order = order
+        super(BrianDurationParameter, self).__init__(full_name, data, comment, storage_mode)
+
+    @property
+    def v_order(self):
+        """The order in which the subrun with a particular duration will be run
+        by the network runner"""
+        return self._order
+
+    @v_order.setter
+    def v_order(self, order):
+        self._order=order
+
+    def _store(self):
+        store_dict=super(BrianDurationParameter, self)._store()
+        store_dict['order'] = self._order
+
+        return store_dict
+
+    def _load(self,load_dict):
+        self._order=load_dict['order']
+        super(BrianDurationParameter, self)._load(load_dict)
 
 class BrianResult(Result):
     ''' A result class that can handle BRIAN quantities.

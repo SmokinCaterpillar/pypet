@@ -519,6 +519,7 @@ class Environment(object):
         # The trajectory should know the hexsha of the current environment.
         # Thus, for all runs, one can identify by which environment they were run.
         self._traj._environment_hexsha=self._hexsha
+        self._traj._environment_name=self._name
 
         # If no log folder is provided, create the default log folder
         if log_folder is None:

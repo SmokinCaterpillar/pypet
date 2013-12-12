@@ -106,6 +106,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._annotations = None
 
         self._environment_hexsha = parent_trajectory.v_environment_hexsha
+        self._environment_name = parent_trajectory.v_environment_name
 
         # Only needed in parent trajectory.
         # But if we keep it here, we can have a simpler generic addition of elements
@@ -244,6 +245,13 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         """
         return self._environment_hexsha
+
+    def v_environment_name(self):
+        """If the trajectory is used with an environment this returns
+        the name of the environment.
+
+        """
+        return self._environment_name
 
     @property
     def v_storage_service(self):
@@ -711,6 +719,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._search_strategy=pypetconstants.BFS
 
         self._environment_hexsha = None
+        self._environment_name = None
 
         if filename is None:
             self._storage_service=None

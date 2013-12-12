@@ -2,7 +2,9 @@ __author__ = 'Robert Meyer'
 
 
 import logging
-from brian import Network
+import copy
+
+from brian import Network, clear
 from brian.units import second
 
 from pypet.brian.parameter import BrianParameter
@@ -12,119 +14,119 @@ from pypet.brian.parameter import BrianParameter
 class NetworkComponent(object):
 
     def add_parameters(self, traj):
-        raise NotImplementedError('You have to implement this')
+        pass
 
     def pre_build(self, traj, network_dict, misc_dict):
-        raise NotImplementedError('You have to implement this')
+        pass
 
     def build(self, traj, network_dict, misc_dict):
-        raise NotImplementedError('You have to implement this')
+        pass
+
+    def add_to_network(self, network, current_subrun):
+        pass
+
+    def remove_from_network(self, network, current_subrun):
+        pass
 
 
 class NetworkAnalyser(NetworkComponent):
 
-    def analyse(self, traj, network_dict, misc_dict):
-        raise NotImplementedError('You have to implement this')
-
-    def add_to_network(self, traj, network_dict, misc_dict, network)
+    def analyse(self, traj, network, current_subrun, network_dict, misc_dict, subruns):
+        pass
 
 
+class NetworkRunner(object):
 
-class SubRunAnalyser
-
-
-class NetworkRunner(NetworkComponent):
-
-    def run_network(self, traj, network_dict, misc_dict, analyser_list):
-        raise NotImplementedError('You have to implement this')
-
-
-class SimpleNetworkRunner(NetworkRunner):
-
-    def __init__(self, duration, report=None, report_period=10 * second):
-        self._duration = duration
-        self._report=report
-        self._report_period=report_period
-
-    def add_parameters(self, traj):
-        old_standard_param = traj.v_standard_parameter
-        traj.f_add_parameter('simulation.duration' ,
-                                 self._duration,
-                                 comment = 'Duration of simulation')
-
-        traj.v_standard_parameter = old_standard_param
-
-    def pre_build(self, traj, network_dict, misc_dict):
-
-        if 'parameters.simulation.pre_build_network' in traj:
-            if traj.parameters.simulation.f_get('pre_build_network').f_get():
-                self._network=Network(**network_dict)
-
-    def build(self, traj, network_dict, misc_dict):
-
-        if 'parameters.simulation.pre_build_network' in traj:
-            if traj.parameters.simulation.f_get('pre_build_network').f_get():
-                return
-
-
-        self._network = Network(**network_dict)
-
-
-    def run_network(self, traj, network_dict, misc_dict, analyser_list):
-
-        duration = traj.parameters.simulation.f_get('duration').f_get()
-        self._network.run(duration,
-                          report = self._report,
-                          report_period=self._report_period)
-
-        for analyser in analyser_list:
-            analyser.analyse(traj, network_dict, misc_dict)
-
-
-
-class GeneralNetworkRunner(SimpleNetworkRunner):
-
-    def __init__(self, durations_dict, report=None, report_period=10 * second):
-        self._durations_dict=durations_dict
+    def __init__(self, report='text', report_period=10 * second):
         self._report = report
         self._report_period = report_period
+        self._set_logger()
 
-    def add_parameters(self, traj):
-        """Adds durations to the trajectory.
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['_logger'] #pickling does not work with loggers
+        return result
+
+    def __setstate__(self, statedict):
+        self.__dict__.update( statedict)
+        self._set_logger()
+
+    def _set_logger(self):
+        self._logger = logging.getLogger('pypet.brian.parameter.NetworkRunner')
+
+    def pre_run_network(self, traj, network,  network_dict, misc_dict, component_list, analyser_list):
+        self._run_network(traj, network, network_dict, misc_dict, component_list, analyser_list,
+                          pre_run=True)
+
+    def run_network(self, traj, network,  network_dict, misc_dict, component_list, analyser_list):
+
+        if ('pre_run' in traj.parameters.simulation and
+                traj.parameters.simulation.f_get('pre_run', fast_access=True)):
+
+            if not traj.config.f_get(traj.v_environment_name+'.multiproc', fast_access=True):
+                # We need to remember the old network to get back the original state
+                copied_items = copy.deepcopy(
+                    [network, network_dict, misc_dict, component_list, analyser_list])
+
+                self._run_network(*copied_items)
+                return
+
+        self._run_network(traj, network, network_dict, misc_dict, component_list, analyser_list,
+                          pre_run=False)
+
+    def _extract_subruns(self, traj, pre_run=False):
+
+        if pre_run:
+            durations = traj.parameters.simulation.pre_durations
+        else:
+            durations = traj.parameters.simulation.durations
+
+        subruns = {}
+        orders = []
+        for duration_param in durations.f_iter_leaves():
+            order = duration_param.v_order
+            if order in subruns:
+                raise RuntimeError('Your durations must differ in their order, there are two '
+                                   'with order %d.' % order)
+            else:
+                subruns[order]=duration_param
+                orders.append(order)
+
+        return [subruns[order] for order in sorted(orders)]
+
+    def _run_network(self, traj, network, network_dict, misc_dict, component_list,
+                     analyser_list, pre_run=False):
 
 
-        Under traj.parameters.durations.name_of_subrun
-        """
-        old_standard_param = traj.v_standard_parameter
+        subruns = self._extract_subruns(traj, pre_run=pre_run)
 
-        if traj.v_standard_parameter is not BrianParameter:
-            traj.v_standard_parameter = BrianParameter
+        while len(subruns)>0:
 
-        for subrun_name in self._durations_dict:
-            duration = self._durations_dict[subrun_name]
+            current_subrun= subruns.pop(0)
 
-            traj.f_add_parameter('simulation.durations.%s' % subrun_name,
-                                 duration,
-                                 comment = 'Duration of run %s.' % subrun_name)
+            for component in component_list:
+                component.add_to_network(network, current_subrun)
 
-        traj.v_standard_parameter = old_standard_param
+            for analyser in analyser_list:
+                analyser.add_to_network(network, current_subrun)
 
+            network.run(duration=current_subrun.f_get(), report=self._report,
+                              report_period=self._report_period)
 
-    def run_network(self, traj, network_dict, misc_dict, analyser_list):
+            for analyser in analyser_list:
+                analyser.analyse(self, traj, network, current_subrun,
+                                 network_dict, misc_dict, subruns)
 
-        duration = traj.parameters.simulation.f_get('duration').f_get()
-        self._network.run(duration,
-                          report = self._report,
-                          report_period=self._report_period)
+            for component in component_list:
+                component.remove_from_network(network, current_subrun)
 
-        for analyser in analyser_list:
-            analyser.analyse(traj, network_dict, misc_dict)
+            for analyser in self.analyser_list:
+                analyser.remove_from_network(network, current_subrun)
+
 
 
 def run_network(traj, network_manager):
     network_manager.run_network(traj)
-
-
 
 
 class NetworkManager(object):
@@ -158,11 +160,6 @@ class NetworkManager(object):
             component.add_parameters(traj)
 
 
-        self._logger.info('Adding Parameters of Network Runner')
-
-        self._network_runner.add_parameters(traj)
-
-
         if self._analyser_list:
             self._logger.info('Adding Parameters of Analysers')
 
@@ -176,9 +173,6 @@ class NetworkManager(object):
         for component in self._component_list:
             component.pre_build(traj, self._network_dict, self._misc_dict)
 
-        self._logger('Pre-Building Network Runner')
-        self._network_runner.pre_build(traj, self._network_dict, self._misc_dict)
-
 
         if self._analyser_list:
 
@@ -186,6 +180,8 @@ class NetworkManager(object):
 
             for analyser in self._analyser_list:
                 analyser.pre_build(traj, self._network_dict, self._misc_dict)
+
+        self._network = Network(**self._network_dict)
 
 
     def build(self, traj):
@@ -197,7 +193,10 @@ class NetworkManager(object):
 
         self._logger('Building NetworkRunner')
 
-        self._network_runner.build(traj, self._network_dict, self._misc_dict)
+        if (not 'pre_build' in traj.parameters.simulation or
+            traj.parameters.simulation.f_get('pre_build', fast_access=True)):
+            self._network = Network(**self._network_dict)
+
 
         if self._analyser_list:
 
@@ -205,6 +204,23 @@ class NetworkManager(object):
 
             for analyser in self._analyser_list:
                 analyser.build(traj, self._network_dict, self._misc_dict)
+
+
+    def pre_run_network(self, traj):
+
+        self.pre_build(traj)
+
+        self._logger('------------------------\n'
+                     'Pre-Running the Network\n'
+                     '------------------------')
+
+        self._network_runner.pre_run_network(traj, self._network_dict, self._misc_dict,
+                                         self._analyser_list)
+
+        self._logger('-----------------------------\n'
+                     'Network Simulation successful\n'
+                     '-----------------------------')
+
 
 
     def run_network(self, traj):
