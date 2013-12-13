@@ -4,6 +4,36 @@ Parameters and Results
 
 .. automodule:: pypet.parameter
 
+-------------------------
+Parameter Quicklinks
+-------------------------
+
+.. currentmodule:: pypet.parameter
+
+
+.. autosummary::
+    :nosignatures:
+
+    ~Parameter.f_set
+    ~Parameter.f_get
+    ~Parameter.f_empty
+    ~Parameter.f_get_range
+    ~Parameter.f_has_range
+    ~Parameter.f_supports
+
+
+-------------------------
+Result Quicklinks
+-------------------------
+
+.. autosummary::
+    :nosignatures:
+
+    ~Result.f_set
+    ~Result.f_get
+    ~Result.f_empty
+    ~Result.f_to_dict
+
 --------------------
 Parameter
 --------------------

@@ -1148,9 +1148,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._preset(config_name,args, kwargs)
 
     def f_preset_parameter(self, param_name, *args, **kwargs):
-        """Can be called before parameters are added to the Trajectory in order to change the
-        values that are stored into the parameter on creation.
+        """Presets parameter value before a parameter is added.
 
+        Can be called before parameters are added to the Trajectory in order to change the
+        values that are stored into the parameter on creation.
 
         After creation of a parameter, the instance of the parameter is called
         with `param.f_set(*args,**kwargs)` with `*args`, and `**kwargs` provided by the user

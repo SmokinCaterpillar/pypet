@@ -1935,7 +1935,7 @@ class NNGroupNode(NNTreeNode):
 
     def f_get(self, name, fast_access=False, check_uniqueness=False,
               search_strategy=pypetconstants.BFS):
-        """Searches for an item (parameter/result/group node) with the given `name`.
+        """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
 

@@ -1908,7 +1908,7 @@ class Result(BaseResult):
         self._set_logger()
 
     def f_to_dict(self, copy = True):
-        """Returns all handled data as a dictionary
+        """Returns all handled data as a dictionary.
 
         :param copy:
 
