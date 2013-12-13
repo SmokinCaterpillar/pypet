@@ -293,6 +293,7 @@ class EnvironmentTest(TrajectoryComparator):
 
 
     def test_expand(self):
+
         ###Explore
         self.traj.f_add_parameter('TEST', 'test_expand')
         self.explore(self.traj)

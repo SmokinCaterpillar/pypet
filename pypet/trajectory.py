@@ -246,6 +246,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         """
         return self._environment_hexsha
 
+    @property
     def v_environment_name(self):
         """If the trajectory is used with an environment this returns
         the name of the environment.
