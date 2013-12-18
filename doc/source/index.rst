@@ -62,6 +62,7 @@ Contents:
    introduction
    cookbook
    examples
+   faqs
    code
 
 

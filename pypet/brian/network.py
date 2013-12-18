@@ -6,9 +6,11 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+from multiprocessing import Process
 
 from brian import Network, clear, reinit
 from brian.units import second
+
 
 from pypet.brian.parameter import BrianParameter
 
@@ -101,7 +103,7 @@ class NetworkRunner(NetworkComponent):
                 analyser.add_to_network(traj, network, current_subrun,  subruns,
                                  network_dict)
 
-            self._logger.info('Starting run `%s`' % current_subrun.v_name)
+            self._logger.info('Starting subrun `%s`' % current_subrun.v_name)
             network.run(duration=current_subrun.f_get(), report=self._report,
                               report_period=self._report_period)
 
@@ -122,10 +124,12 @@ class NetworkRunner(NetworkComponent):
 def run_network(traj, network_manager):
     network_manager.run_network(traj)
 
+def _run_network(traj, network_manager):
+    network_manager._run_network(traj)
 
 class NetworkManager(object):
 
-    def __init__(self, network_runner, component_list, analyser_list=()):
+    def __init__(self, network_runner, component_list, analyser_list=(), spawn_process=True):
         self._component_list = component_list
         self._network_runner = network_runner
         self._analyser_list = analyser_list
@@ -134,6 +138,7 @@ class NetworkManager(object):
         self._set_logger()
         self._pre_built=False
         self._network = None
+        self._spawn_process = spawn_process
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -184,27 +189,6 @@ class NetworkManager(object):
                 analyser.pre_build(traj, self._brian_list, self._network_dict)
 
         self._pre_built = True
-        self._make_snapshot()
-
-    def _make_snapshot(self):
-        snapshot_list = [self._network, self._analyser_list, self._component_list,
-                               self._network_runner, self._brian_list, self._network_dict]
-
-        self._snapshot_dump = pickle.dumps(snapshot_list, protocol=0)
-
-
-    def restore_snapshot(self):
-
-        snapshot_list = pickle.loads(self._snapshot_dump)
-
-        self._network = snapshot_list[0]
-        self._analyser_list = snapshot_list[1]
-        self._component_list = snapshot_list[2]
-        self._network_runner = snapshot_list[3]
-        self._brian_list = snapshot_list[4]
-        self._network_dict[5]
-
-        self._pre_built = False
 
 
     def build(self, traj):
@@ -246,14 +230,21 @@ class NetworkManager(object):
                      '-----------------------------')
 
 
-
     def run_network(self, traj):
 
         if self._pre_built:
-            self._restore_snapshot()
+            if self._spawn_process:
+                proc = Process(target=_run_network, args=(traj, self))
+                proc.start()
+                proc.join()
+            else:
+                self._run_network(traj)
         else:
-            clear(True, True)
+            clear(True,True)
             reinit()
+            self._run_network(traj)
+
+    def _run_network(self, traj):
 
         self.build(traj)
 

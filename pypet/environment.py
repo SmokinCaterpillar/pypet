@@ -78,7 +78,7 @@ def _single_run(args):
         idx = traj.v_idx
 
         if multiproc:
-            
+
             # In case of multiprocessing we want to have a log file for each individual process.
             pid = os.getpid()
             filename = 'process_%s.txt' % str(pid)
@@ -830,7 +830,8 @@ class Environment(object):
         config_name='environment.%s.normal_runs' % self.v_name
         if not config_name in self._traj:
             self._traj.f_add_config(config_name, count,
-                                    comment ='Added if trajectory was explored normally and not continued.')
+                                    comment ='Added if trajectory was explored normally and not '
+                                             'continued.')
 
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and store it.')
