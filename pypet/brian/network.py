@@ -2,9 +2,12 @@ __author__ = 'Robert Meyer'
 
 
 import logging
-import copy
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
-from brian import Network, clear
+from brian import Network, clear, reinit
 from brian.units import second
 
 from pypet.brian.parameter import BrianParameter
@@ -27,7 +30,6 @@ class NetworkComponent(object):
 
     def remove_from_network(self, traj, network, current_subrun, subruns, network_dict):
         pass
-
 
 class NetworkAnalyser(NetworkComponent):
 
@@ -59,18 +61,6 @@ class NetworkRunner(NetworkComponent):
                           pre_run=True)
 
     def run_network(self, traj, network,  network_dict, component_list, analyser_list):
-
-        if ('pre_run' in traj.parameters.simulation and
-                traj.parameters.simulation.f_get('pre_run', fast_access=True)):
-
-            if not traj.config.f_get(traj.v_environment_name+'.multiproc', fast_access=True):
-                # We need to remember the old network to get back the original state
-                copied_items = copy.deepcopy(
-                    [network, network_dict, component_list, analyser_list])
-
-                self._run_network(traj, *copied_items)
-                return
-
         self._run_network(traj, network, network_dict, component_list, analyser_list,
                           pre_run=False)
 
@@ -97,7 +87,6 @@ class NetworkRunner(NetworkComponent):
     def _run_network(self, traj, network, network_dict, component_list,
                      analyser_list, pre_run=False):
 
-
         subruns = self._extract_subruns(traj, pre_run=pre_run)
 
         while len(subruns)>0:
@@ -105,26 +94,27 @@ class NetworkRunner(NetworkComponent):
             current_subrun= subruns.pop(0)
 
             for component in component_list:
-                component.add_to_network(self, traj, network, current_subrun,  subruns,
+                component.add_to_network(traj, network, current_subrun,  subruns,
                                  network_dict)
 
             for analyser in analyser_list:
-                analyser.add_to_network(self, traj, network, current_subrun,  subruns,
+                analyser.add_to_network(traj, network, current_subrun,  subruns,
                                  network_dict)
 
+            self._logger.info('Starting run `%s`' % current_subrun.v_name)
             network.run(duration=current_subrun.f_get(), report=self._report,
                               report_period=self._report_period)
 
             for analyser in analyser_list:
-                analyser.analyse(self, traj, network, current_subrun,  subruns,
+                analyser.analyse( traj, network, current_subrun,  subruns,
                                  network_dict)
 
             for component in component_list:
-                component.remove_from_network(self, traj, network, current_subrun,  subruns,
+                component.remove_from_network(traj, network, current_subrun,  subruns,
                                  network_dict)
 
-            for analyser in self.analyser_list:
-                analyser.remove_from_network(self, traj, network, current_subrun,  subruns,
+            for analyser in analyser_list:
+                analyser.remove_from_network( traj, network, current_subrun,  subruns,
                                  network_dict)
 
 
@@ -142,6 +132,8 @@ class NetworkManager(object):
         self._network_dict = {}
         self._brian_list = []
         self._set_logger()
+        self._pre_built=False
+        self._network = None
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -158,12 +150,14 @@ class NetworkManager(object):
 
     def add_parameters(self, traj):
 
+        self._logger.info('Adding Parameters of Runner')
+
+        self._network_runner.add_parameters(traj)
+
         self._logger.info('Adding Parameters of Components')
 
         for component in self._component_list:
             component.add_parameters(traj)
-
-        self._network_runner.add_parameters(traj)
 
         if self._analyser_list:
             self._logger.info('Adding Parameters of Analysers')
@@ -173,12 +167,12 @@ class NetworkManager(object):
 
     def pre_build(self, traj):
 
-        self._logger('Pre-Building Components')
+        self._logger.info('Pre-Building Components')
 
         for component in self._component_list:
             component.pre_build(traj, self._brian_list, self._network_dict)
 
-        self._logger('Pre-Building NetworkRunner')
+        self._logger.info('Pre-Building NetworkRunner')
         self._network_runner.pre_build(traj, self._brian_list, self._network_dict)
 
 
@@ -189,42 +183,65 @@ class NetworkManager(object):
             for analyser in self._analyser_list:
                 analyser.pre_build(traj, self._brian_list, self._network_dict)
 
-        self._network = Network(**self._network_dict)
+        self._pre_built = True
+        self._make_snapshot()
+
+    def _make_snapshot(self):
+        snapshot_list = [self._network, self._analyser_list, self._component_list,
+                               self._network_runner, self._brian_list, self._network_dict]
+
+        self._snapshot_dump = pickle.dumps(snapshot_list, protocol=0)
+
+
+    def restore_snapshot(self):
+
+        snapshot_list = pickle.loads(self._snapshot_dump)
+
+        self._network = snapshot_list[0]
+        self._analyser_list = snapshot_list[1]
+        self._component_list = snapshot_list[2]
+        self._network_runner = snapshot_list[3]
+        self._brian_list = snapshot_list[4]
+        self._network_dict[5]
+
+        self._pre_built = False
 
 
     def build(self, traj):
 
-        self._logger('Building Components')
+        self._logger.info('Building Components')
 
         for component in self._component_list:
             component.build(traj, self._brian_list, self._network_dict)
 
-        self._logger('Building NetworkRunner')
+        self._logger.info('Building NetworkRunner')
         self._network_runner.build(traj, self._brian_list, self._network_dict)
-
-
 
         if self._analyser_list:
 
-            self._logger.info('Pre-Building Analysers')
+            self._logger.info('Building Analysers')
 
             for analyser in self._analyser_list:
                 analyser.build(traj, self._brian_list, self._network_dict)
+
+
+
 
 
     def pre_run_network(self, traj):
 
         self.pre_build(traj)
 
-        self._logger('------------------------\n'
+        self._logger.info('\n------------------------\n'
                      'Pre-Running the Network\n'
                      '------------------------')
 
+
         self._network = Network(*self._brian_list)
-        self._network_runner.pre_run_network(self, traj, self._network,  self._network_dict,
+        self._network_runner.pre_run_network( traj, self._network,  self._network_dict,
                                              self._component_list, self._analyser_list)
 
-        self._logger('-----------------------------\n'
+        self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'
                      '-----------------------------')
 
@@ -232,20 +249,31 @@ class NetworkManager(object):
 
     def run_network(self, traj):
 
+        if self._pre_built:
+            self._restore_snapshot()
+        else:
+            clear(True, True)
+            reinit()
+
         self.build(traj)
 
-        self._logger('-------------------\n'
+        self._logger.info('\n-------------------\n'
                      'Running the Network\n'
                      '-------------------')
 
+
+
         if (not 'pre_run' in traj.parameters.simulation or
             traj.parameters.simulation.f_get('pre_run', fast_access=True)):
+
             self._network = Network(*self._brian_list)
 
-        self._network_runner.run_network(self, traj, self._network,  self._network_dict,
+
+
+        self._network_runner.run_network( traj, self._network,  self._network_dict,
                                              self._component_list, self._analyser_list)
 
-        self._logger('-----------------------------\n'
+        self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'
                      '-----------------------------')
 
