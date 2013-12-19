@@ -2,17 +2,11 @@ __author__ = 'Robert Meyer'
 
 
 import logging
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 from multiprocessing import Process
 
 from brian import Network, clear, reinit
 from brian.units import second
 
-
-from pypet.brian.parameter import BrianParameter
 
 
 
@@ -209,9 +203,6 @@ class NetworkManager(object):
                 analyser.build(traj, self._brian_list, self._network_dict)
 
 
-
-
-
     def pre_run_network(self, traj):
 
         self.pre_build(traj)
@@ -251,8 +242,6 @@ class NetworkManager(object):
         self._logger.info('\n-------------------\n'
                      'Running the Network\n'
                      '-------------------')
-
-
 
         if (not 'pre_run' in traj.parameters.simulation or
             traj.parameters.simulation.f_get('pre_run', fast_access=True)):

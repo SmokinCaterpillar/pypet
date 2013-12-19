@@ -413,6 +413,7 @@ class Environment(object):
                  multiproc=False,
                  ncores=1,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 use_pool=True,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
@@ -531,6 +532,8 @@ class Environment(object):
 
         # Create the loggers
         self._make_logger(log_path)
+
+        self._use_pool = use_pool
 
 
         # Add config values to the trajectory
@@ -837,6 +840,7 @@ class Environment(object):
         self._logger.info('I am preparing the Trajectory for the experiment and store it.')
         self._traj._prepare_experiment()
         self._traj.f_store()
+        self._logger.info('Trajectory successfully stored.')
 
         # Make the trajectory continuable in case the user wants that
         continuable = self._traj.f_get('config.environment.continuable').f_get()
@@ -929,9 +933,10 @@ class Environment(object):
                                     %(mode,pypetconstants.WRAP_MODE_QUEUE,
                                       pypetconstants.WRAP_MODE_LOCK))
 
+
             # Create a pool of `ncores` processes
             ncores =  self._traj.f_get('config.ncores').f_get()
-            mpool = multip.Pool(ncores)
+
 
             self._logger.info('\n************************************************************\n'
                               '************************************************************\n'
@@ -946,12 +951,47 @@ class Environment(object):
                                                             if not self._traj.f_is_completed(n))
 
 
-            # Let the pool workers do their jobs provided by the generator
-            results = mpool.imap(_single_run,iterator)
+            if self._use_pool:
+                mpool = multip.Pool(ncores)
+                # Let the pool workers do their jobs provided by the generator
+                results = mpool.map(_single_run,iterator)
 
-            # Everything is done
-            mpool.close()
-            mpool.join()
+                # Everything is done
+                mpool.close()
+                mpool.join()
+
+                # That's about it!
+                mpool.terminate()
+            else:
+                results=None
+                keep_running=True
+                process_list = []
+
+                while len(process_list)>0 or keep_running:
+
+                    terminated_procs = []
+                    for idx, proc in enumerate(process_list):
+
+                        if not proc.is_alive():
+                            terminated_procs.append(idx)
+
+                    for terminated_proc in terminated_procs:
+                        process_list.pop(terminated_proc)
+
+                    if len(process_list) < ncores:
+                        if keep_running:
+                            try:
+                                task = iterator.next()
+                                proc = multip.Process(target=_single_run,
+                                                                   args=(task,))
+
+                                proc.start()
+                                process_list.append(proc)
+                            except StopIteration:
+                                keep_running=False
+
+
+                    time.sleep(0.1)
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
@@ -959,8 +999,7 @@ class Environment(object):
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
-            # That's about it!
-            mpool.terminate()
+
 
             # Replace the wrapped storage service with the original one and do some finalization
             self._traj.v_storage_service=self._storage_service
@@ -974,6 +1013,8 @@ class Environment(object):
                               (self._traj.v_name, ncores))
 
             return results
+
+
         else:
             # Single Processing
             self._logger.info('\n************************************************************\n'
