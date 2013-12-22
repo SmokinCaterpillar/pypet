@@ -15,8 +15,6 @@ pypet 0.1b.3
 
 *   New Brian Network Manager and Duration Parameter
 
-*   Multiprocessing Parameters are only added to the trajectory if `multiproc=True`
-
 
 pypet 0.1b.2
 
