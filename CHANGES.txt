@@ -1,11 +1,22 @@
 pypet 0.1b.3
 
+*   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results
+    produced by `runfunc`
+
 *   You can enforce a type convert for exploration
 
 *   Added lazy_debug option for the environment
 
 *   If you don't specify a filename, the environment defaults to a file with the name of
     the trajectory
+
+*   New mulriprocessing mode (`use_pool=False` for environment) to spawn individual processes
+    for each run. Useful if data cannot be pickled.
+
+*   New Brian Network Manager and Duration Parameter
+
+*   Multiprocessing Parameters are only added to the trajectory if `multiproc=True`
+
 
 pypet 0.1b.2
 
@@ -60,6 +71,7 @@ pypet 0.1b.2
 
 *   v_parameter changed to v_is_parameter
 
+
 pypet 0.1b.1
 
 *   Support for `long` types
@@ -68,6 +80,7 @@ pypet 0.1b.1
 
 *   The parameters `trajectory_name` and `trajectory_index` in f_load have been renamed to
     `name` and `index`
+
 
 pypet 0.1b.0
 
@@ -106,22 +119,27 @@ pypet 0.1b.0
 *   New trajectory function `f_as_run` that makes the trajectory belief it is a particular
     single run and results and derived parameters of other runs are blinded out.
 
+
 pypet 0.1a.6
 
 *   BUG FIX: (HDF5StorageService): storing a trajectory several times increased run and info table
+
 
 pypet 0.1a.5
 
 *   Removed unnecessary imports
 *   Better documentation
 
+
 pypet 0.1a.4
 
 *   Adding positional results will add them with the result name
 
+
 pypet 0.1a.3
 
 *   Better handling of filenames, now relative paths are considered
+
 
 pypet 0.1a.2
 

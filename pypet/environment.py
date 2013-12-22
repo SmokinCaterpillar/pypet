@@ -28,6 +28,7 @@ import hashlib
 import time
 import datetime
 
+
 from pypet.utils.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
@@ -53,11 +54,13 @@ def _single_run(args):
 
         4. Number of total runs (int)
 
-        5. Whether to use multiprocessing or not (bool)
+        5. Whether to use multiprocessing
 
-        6. The arguments handed to the user's job function (as *args)
+        6. A queue object to store results into in case a pool is used, otherwise None
 
-        7. The keyword arguments handed to the user's job function (as **kwargs)
+        7. The arguments handed to the user's job function (as *args)
+
+        8. The keyword arguments handed to the user's job function (as **kwargs)
 
     :return: Results computed by the user's job function which are not stored into the trajectory
 
@@ -70,10 +73,12 @@ def _single_run(args):
         runfunc=args[3] 
         total_runs = args[4]
         multiproc = args[5]
-        runparams = args[6]
-        kwrunparams = args[7]
-    
-        assert isinstance(traj, SingleRun)
+        result_queue = args[6]
+        runparams = args[7]
+        kwrunparams = args[8]
+
+        use_pool = result_queue is not None
+
         root = logging.getLogger()
         idx = traj.v_idx
 
@@ -81,7 +86,14 @@ def _single_run(args):
 
             # In case of multiprocessing we want to have a log file for each individual process.
             pid = os.getpid()
-            filename = 'process_%s.txt' % str(pid)
+            if use_pool:
+                filename = 'process_%s.txt' % str(pid)
+                pid_to_run_file = 'process_%s_runs.txt' % str(pid)
+                pid_to_run_file = log_path+'/'+pid_to_run_file
+            else:
+                filename = '%s.txt' % traj.v_name
+
+
             filename=log_path+'/'+filename
             exists = os.path.isfile(filename)
 
@@ -100,6 +112,15 @@ def _single_run(args):
 
                 errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
                 sys.stderr = errstl
+
+            if use_pool:
+                pid_file=open(pid_to_run_file, 'a+')
+                outstr = traj.v_time + ': ' + traj.v_name +'\n'
+                pid_file.write(outstr)
+                pid_file.flush()
+                pid_file.close()
+
+
 
 
         ## Add the queue for storage in case of multiprocessing in queue mode.
@@ -131,7 +152,10 @@ def _single_run(args):
                   'Finished single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
 
-        return result
+        if use_pool:
+            result_queue.put(result)
+        else:
+            return result
 
     except:
         errstr = "\n\n############## ERROR ##############\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
@@ -202,14 +226,31 @@ class Environment(object):
 
     :param multiproc:
 
-        Whether or not to use multiprocessing. Default is 0 (False). If you use
-        multiprocessing, all your data and the tasks you compute must be picklable!
+        Whether or not to use multiprocessing. Default is `False`.
+        Besides the wrap_mode (see below) that deals with how
+        storage to disk is carried out in case of multiprocessing, there
+        are two ways to do multiprocessing. By using a fixed pool of
+        processes (choose `use_pool=True`, default option) or by spawning an
+        individual process for every run and parameter combination (`use_pool=False`).
+        The former will only spawn *ncores* processes and all simulation runs are
+        sent over to to the pool one after the other.
+        This requires all your data to be pickled.
+        If your data cannot be pickled (which could be the case for some
+        BRIAN networks, for instance) choose `use_pool=False`. This will also spawn
+        at most *ncores* processes at a time, but as soon as a process terminates
+        a new one is spawned with the next parameter combination. Be aware that you will
+        have as many logfiles in your logfolder as processes were spawned.
 
     :param ncores:
 
-        If multiproc is 1 (True), this specifies the number of processes that will be spawned
+        If multiproc is `True`, this specifies the number of processes that will be spawned
         to run your experiment. Note if you use QUEUE mode (see below) the queue process
         is not included in this number and will add another extra process for storing.
+
+    :param use_pool:
+
+        Whether to use a fixed pool of processes or whether to spawn a new process
+        for every run. Use the latter if your data cannot be pickled.
 
     :param wrap_mode:
 
@@ -357,8 +398,8 @@ class Environment(object):
 
     :param lazy_debug:
 
-        If `lazy_debug=True` and in case you debug your code (aka the built-in variable `__debug__`
-        is set to `True` by python), the environment will use the
+        If `lazy_debug=True` and in case you debug your code (aka you use pydevd and
+        the expression `'pydevd' in sys.modules` is `True`), the environment will use the
         :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
         Accordingly, no files are created and your trajectory and results are not saved.
         This allows faster debugging and prevents *pypet* from blowing up your hard drive with
@@ -412,8 +453,8 @@ class Environment(object):
                  log_folder=None,
                  multiproc=False,
                  ncores=1,
-                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  use_pool=True,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
@@ -530,28 +571,35 @@ class Environment(object):
         log_path = os.path.join(log_folder,self._traj.v_name)
         self._log_path = log_path
 
-        # Create the loggers
-        self._make_logger(log_path)
 
+        # Whether to use a pool of processes
         self._use_pool = use_pool
 
-
-        # Add config values to the trajectory
-        config_name='environment.%s.ncores' % self.v_name
-        self._traj.f_add_config(config_name,ncores,
-                                comment='Number of processors in case of multiprocessing')
+        # Create the loggers
+        self._make_logger(log_path)
 
         config_name='environment.%s.multiproc' % self.v_name
         self._traj.f_add_config(config_name, multiproc,
                                 comment= 'Whether or not to use multiprocessing. If yes'
                                          ' than everything must be pickable.')
 
-        config_name='environment.%s.wrap_mode' % self.v_name
-        self._traj.f_add_config(config_name,wrap_mode,
-                                    comment ='Multiprocessing mode (if multiproc),'
-                                             ' i.e. whether to use QUEUE'
-                                             ' or LOCK or NONE'
-                                             ' for thread/process safe storing')
+        if multiproc:
+            config_name='environment.%s.use_pool' % self.v_name
+            self._traj.f_add_config(config_name,use_pool,
+                                    comment='Whether to use a pool of processes or '
+                                            'spawning individual processes for each run.')
+
+            config_name='environment.%s.ncores' % self.v_name
+            self._traj.f_add_config(config_name,ncores,
+                                    comment='Number of processors in case of multiprocessing')
+
+
+            config_name='environment.%s.wrap_mode' % self.v_name
+            self._traj.f_add_config(config_name,wrap_mode,
+                                        comment ='Multiprocessing mode (if multiproc),'
+                                                 ' i.e. whether to use QUEUE'
+                                                 ' or LOCK or NONE'
+                                                 ' for thread/process safe storing')
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_timestamp,
@@ -623,7 +671,7 @@ class Environment(object):
                 self.f_switch_off_large_overview()
 
         # Notify that in case of lazy debuggin we won't record anythin
-        if lazy_debug and __debug__:
+        if lazy_debug and 'pydevd' in sys.modules:
             self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
         self._logger.info('Environment initialized.')
@@ -652,6 +700,7 @@ class Environment(object):
         root = logging.getLogger()
         root.addHandler(h)
 
+
         # Also copy standard out and error to the log files
         outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
         sys.stdout = outstl
@@ -662,6 +711,7 @@ class Environment(object):
         for handler in root.handlers:
             handler.setFormatter(f)
         self._logger = logging.getLogger('pypet.environment.Environment=%s' % self.v_name)
+
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
@@ -709,7 +759,20 @@ class Environment(object):
 
 
     def f_continue_run(self, continue_file):
-        """ Resumes crashed trajectories by supplying the '.cnt' file."""
+        """Resumes crashed trajectories by supplying the '.cnt' file.
+
+        :return:
+
+            List of the individual results returned by `runfunc`. These are not
+            necessarily in the order of the runs but in the order the completion of runs,
+
+            Does not contain results stored in the trajectory!
+            In order to access these simply interact with the trajectory object,
+            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            and loading all results at once with :func:`~pypet.trajectory.f_load`
+            or loading manually with :func:`~pypet.trajectory.f_load_items`.
+
+        """
 
         # Unpack the stored data
         continue_dict = pickle.load(open(continue_file,'rb'))
@@ -744,7 +807,7 @@ class Environment(object):
                                     comment ='Added if a crashed trajectory was continued.')
 
         # Resume the experiment
-        self._do_runs(runfunc,*args,**kwargs)
+        return self._do_runs(runfunc,*args,**kwargs)
 
 
 
@@ -786,7 +849,7 @@ class Environment(object):
 
         """
 
-        if lazy_debug and __debug__:
+        if lazy_debug and 'pydevd' in sys.modules:
             self._storage_service = LazyStorageService()
         else:
             self._storage_service = HDF5StorageService(self._filename,
@@ -799,19 +862,22 @@ class Environment(object):
 
         :param runfunc: The task or job to do
 
-        :param args: Additional arguments (not the ones in the trajectory) passed to runfunc
+        :param args: Additional arguments (not the ones in the trajectory) passed to `runfunc`
 
-        :param kwargs: Additional keyword arguments (not the ones in the trajectory) passed to runfunc
+        :param kwargs:
+
+            Additional keyword arguments (not the ones in the trajectory) passed to `runfunc`
 
         :return:
 
-                Iterable over the results returned by runfunc.
+            List of the individual results returned by `runfunc`. These are not
+            necessarily in the order of the runs but in the order the completion of runs,
 
-                Does not iterate over results stored in the trajectory!
-                In order to do that simply interact with the trajectory object, potentially after
-                calling`~pypet.trajectory.Trajectory.f_update_skeleton` and loading all results
-                at once with :func:`~pypet.trajectory.f_load` or loading manually with
-                :func:`~pypet.trajectory.f_load_items`.
+            Does not contain results stored in the trajectory!
+            In order to access these simply interact with the trajectory object,
+            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            and loading all results at once with :func:`~pypet.trajectory.f_load`
+            or loading manually with :func:`~pypet.trajectory.f_load_items`.
 
         """
 
@@ -870,7 +936,7 @@ class Environment(object):
             self._traj.v_full_copy=prev_full_copy
 
         # Start the runs
-        self._do_runs(runfunc,*args,**kwargs)
+        return self._do_runs(runfunc,*args,**kwargs)
 
 
     def _do_runs(self, runfunc, *args, **kwargs):
@@ -886,18 +952,28 @@ class Environment(object):
 
         """
         log_path = self._log_path
-        multiproc = self._traj.f_get('config.environment.multiproc').f_get()
-        mode = self._traj.f_get('config.environment.wrap_mode').f_get()
+
+        multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
+
+        result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
 
         self._storage_service = self._traj.v_storage_service
 
-        if multiproc and mode != pypetconstants.WRAP_MODE_NONE:
+        if multiproc:
+
+            manager = multip.Manager()
+
+            use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
+            mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
+
+            if not use_pool:
+                result_queue = manager.Queue(maxsize=len(self._traj))
+
             # Prepare Multiprocessing
             if mode == pypetconstants.WRAP_MODE_QUEUE:
                 # For queue mode we need to have a queue in a block of shared memory.
-                # Accordingly wee need a Multiprocessing Manager.
-                manager = multip.Manager()
                 queue = manager.Queue()
+
                 self._logger.info('Starting the Storage Queue!')
 
                 # Wrap a queue writer around the storage service
@@ -917,9 +993,8 @@ class Environment(object):
 
             elif mode == pypetconstants.WRAP_MODE_LOCK:
                 # We need a lock that is shared by all processes.
-                # Accordingly, we use the Multiprocessing Manager.
-                manager = multip.Manager()
                 lock = manager.Lock()
+
                 queue = None
 
                 # Wrap around the storage service to allow the placement of locks around
@@ -927,6 +1002,9 @@ class Environment(object):
                 lock_wrapper = LockWrapper(self._storage_service,lock)
                 self._traj.v_storage_service=lock_wrapper
 
+            elif mode == pypetconstants.WRAP_MODE_NONE:
+                # We assume that storage and loading is multiprocessing safe
+                pass
             else:
                 raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                    'not supported, use `%s` or `%s`.'
@@ -934,7 +1012,7 @@ class Environment(object):
                                       pypetconstants.WRAP_MODE_LOCK))
 
 
-            # Create a pool of `ncores` processes
+            # Number of processes to be started
             ncores =  self._traj.f_get('config.ncores').f_get()
 
 
@@ -947,11 +1025,11 @@ class Environment(object):
 
             # Create a generator to generate the tasks for the mp-pool
             iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
-                         multiproc, args, kwargs) for n in xrange(len(self._traj))
+                         multiproc, result_queue,  args, kwargs) for n in xrange(len(self._traj))
                                                             if not self._traj.f_is_completed(n))
 
 
-            if self._use_pool:
+            if use_pool:
                 mpool = multip.Pool(ncores)
                 # Let the pool workers do their jobs provided by the generator
                 results = mpool.map(_single_run,iterator)
@@ -960,38 +1038,41 @@ class Environment(object):
                 mpool.close()
                 mpool.join()
 
-                # That's about it!
-                mpool.terminate()
             else:
-                results=None
                 keep_running=True
-                process_list = []
+                process_dict = {}
 
-                while len(process_list)>0 or keep_running:
+                while len(process_dict)>0 or keep_running:
 
-                    terminated_procs = []
-                    for idx, proc in enumerate(process_list):
+                    terminated_procs_pids = []
+                    for pid, proc in process_dict.iteritems():
 
                         if not proc.is_alive():
-                            terminated_procs.append(idx)
+                            terminated_procs_pids.append(pid)
 
-                    for terminated_proc in terminated_procs:
-                        process_list.pop(terminated_proc)
+                    for terminated_proc in terminated_procs_pids:
+                        process_dict.pop(terminated_proc)
 
-                    if len(process_list) < ncores:
-                        if keep_running:
-                            try:
-                                task = iterator.next()
-                                proc = multip.Process(target=_single_run,
-                                                                   args=(task,))
+                    if len(process_dict) < ncores and keep_running:
+                        try:
+                            task = iterator.next()
+                            proc = multip.Process(target=_single_run,
+                                                               args=(task,))
 
-                                proc.start()
-                                process_list.append(proc)
-                            except StopIteration:
-                                keep_running=False
+                            proc.start()
+                            process_dict[proc.pid]=proc
+                        except StopIteration:
+                            keep_running=False
 
 
                     time.sleep(0.1)
+
+
+                results = []
+                while not result_queue.empty():
+                    result = result_queue.get()
+                    results.append(result)
+
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
@@ -1026,7 +1107,7 @@ class Environment(object):
 
             # Sequentially run all single runs and append the results to a queue
             results = [_single_run((self._traj._make_single_run(n),log_path,None,runfunc,
-                                    len(self._traj),multiproc,args,kwargs)) for n in xrange(len(self._traj))
+                                    len(self._traj),multiproc, result_queue, args,kwargs)) for n in xrange(len(self._traj))
                                     if not self._traj.f_is_completed(n)]
 
             # Do some finalization

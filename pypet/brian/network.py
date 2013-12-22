@@ -114,16 +114,14 @@ class NetworkRunner(NetworkComponent):
                                  network_dict)
 
 
-
 def run_network(traj, network_manager):
     network_manager.run_network(traj)
 
-def _run_network(traj, network_manager):
-    network_manager._run_network(traj)
 
 class NetworkManager(object):
 
-    def __init__(self, network_runner, component_list, analyser_list=(), spawn_process=True):
+    def __init__(self, network_runner, component_list, analyser_list=(),
+                 force_single_core=False):
         self._component_list = component_list
         self._network_runner = network_runner
         self._analyser_list = analyser_list
@@ -132,7 +130,7 @@ class NetworkManager(object):
         self._set_logger()
         self._pre_built=False
         self._network = None
-        self._spawn_process = spawn_process
+        self._force_single_core =force_single_core
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -224,12 +222,25 @@ class NetworkManager(object):
     def run_network(self, traj):
 
         if self._pre_built:
-            if self._spawn_process:
-                proc = Process(target=_run_network, args=(traj, self))
-                proc.start()
-                proc.join()
-            else:
+            multiproc = traj.f_get('config.environment.%s.multiproc' % traj.v_environment_name).f_get()
+            if multiproc:
                 self._run_network(traj)
+            else:
+                if self._force_single_core:
+                    self._logger.warning('Running Single Core Mode. Be aware that the network '
+                                         'evolves over ALL your runs and is not reset. '
+                                         'Use this setting only for debugging purposes '
+                                         'because your results will be not correct in case '
+                                         'your trajectory contains more than a single run. ')
+                    self._run_network(traj)
+                else:
+                    raise RuntimeError('You cannot run a pre-built network without multiprocessing.\n'
+                                       'The network configuration must be copied either by '
+                                       'pickling (using a `multiproc=True` and `use_pool=True` in '
+                                       'your environemnt) or by forking ( multiprocessing with '
+                                       '`use_pool=False`).\n If your network cannot be pickled use '
+                                       'the latter. In order to come close to iterative processing '
+                                       'you could use multiprocessing with `ncores=1`.')
         else:
             clear(True,True)
             reinit()
@@ -256,4 +267,5 @@ class NetworkManager(object):
         self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'
                      '-----------------------------')
+
 
