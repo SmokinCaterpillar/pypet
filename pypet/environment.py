@@ -583,23 +583,23 @@ class Environment(object):
                                 comment= 'Whether or not to use multiprocessing. If yes'
                                          ' than everything must be pickable.')
 
-        if multiproc:
-            config_name='environment.%s.use_pool' % self.v_name
-            self._traj.f_add_config(config_name,use_pool,
-                                    comment='Whether to use a pool of processes or '
-                                            'spawning individual processes for each run.')
 
-            config_name='environment.%s.ncores' % self.v_name
-            self._traj.f_add_config(config_name,ncores,
-                                    comment='Number of processors in case of multiprocessing')
+        config_name='environment.%s.use_pool' % self.v_name
+        self._traj.f_add_config(config_name,use_pool,
+                                comment='Whether to use a pool of processes or '
+                                        'spawning individual processes for each run.')
+
+        config_name='environment.%s.ncores' % self.v_name
+        self._traj.f_add_config(config_name,ncores,
+                                comment='Number of processors in case of multiprocessing')
 
 
-            config_name='environment.%s.wrap_mode' % self.v_name
-            self._traj.f_add_config(config_name,wrap_mode,
-                                        comment ='Multiprocessing mode (if multiproc),'
-                                                 ' i.e. whether to use QUEUE'
-                                                 ' or LOCK or NONE'
-                                                 ' for thread/process safe storing')
+        config_name='environment.%s.wrap_mode' % self.v_name
+        self._traj.f_add_config(config_name,wrap_mode,
+                                    comment ='Multiprocessing mode (if multiproc),'
+                                             ' i.e. whether to use QUEUE'
+                                             ' or LOCK or NONE'
+                                             ' for thread/process safe storing')
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_timestamp,

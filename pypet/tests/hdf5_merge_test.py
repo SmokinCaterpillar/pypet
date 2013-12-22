@@ -467,8 +467,9 @@ class TestMergeResultsSort(ResultSortTest):
         traj2 = env2.v_trajectory
 
         traj2.multiproc = self.multiproc
-        traj2.wrap_mode = self.mode
-        traj2.ncores = self.ncores
+        if self.multiproc:
+            traj2.wrap_mode = self.mode
+            traj2.ncores = self.ncores
 
         traj2.v_standard_parameter=Parameter
 
