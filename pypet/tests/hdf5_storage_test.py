@@ -133,6 +133,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.mode = 'LOCK'
         self.multiproc = False
         self.ncores = 1
+        self.use_pool=True
 
 
     def explore_complex_params(self, traj):
@@ -223,7 +224,8 @@ class EnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           results_per_run=5,
-                          derived_parameters_per_run=5)
+                          derived_parameters_per_run=5,
+                          use_pool=self.use_pool)
 
         traj = env.v_trajectory
 
@@ -549,6 +551,7 @@ class ResultSortTest(TrajectoryComparator):
         self.mode = 'LOCK'
         self.multiproc = False
         self.ncores = 1
+        self.use_pool=True
 
     def setUp(self):
         self.set_mode()
@@ -559,7 +562,8 @@ class ResultSortTest(TrajectoryComparator):
         self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          use_pool=self.use_pool)
 
         traj = env.v_trajectory
 
@@ -618,7 +622,7 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(multipy)
+        print self.env.f_run(multipy)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 

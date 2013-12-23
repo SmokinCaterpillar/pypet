@@ -25,6 +25,7 @@ env = Environment(trajectory='Example_04_MP',
                   comment = 'Multiprocessing example!',
                   multiproc=True,
                   ncores=2,
+                  use_pool=True,
                   wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
                   large_overview_tables=False)
 

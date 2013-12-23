@@ -89,16 +89,27 @@ You can pass the following arguments:
 * `multiproc`
 
     `multiproc` specifies whether or not to use multiprocessing
-    (take a look at :ref:`more-on-multiprocessing`). Default is 0 (False). If you use
-    multiprocessing, all your data and the tasks you compute must be picklable!
-    If you never heard about pickling or object serialization, you might want to take a loot at the
-    pickle_ module.
+    (take a look at :ref:`more-on-multiprocessing`). Default is 0 (False).
 
 * `ncores`
 
     If `multiproc` is 1 (True), this specifies the number of processes that will be spawned
     to run your experiment. Note if you use `'QUEUE'` mode (see below) the queue process
     is not included in this number and will add another extra process for storing.
+
+* `use_pool`
+
+    If you choose multiprocessing you can specify whether you want to spawn a new
+    process for every run or if you want a fixed pool of processes to carry out your
+    computation.
+
+    If you use a pool, all your data and the tasks you compute must be picklable!
+    If you never heard about pickling or object serialization, you might want to take a loot at the
+    pickle_ module.
+
+    Thus, if your simulation data cannot be pickled (which is the case for some BRIAN networks,
+    for instance), choose `use_pool=False` and continuable=`False` (see below).
+    Be aware that you will have an individual logfile for every process you spawn.
 
 * `wrap_mode`
 
@@ -143,9 +154,17 @@ You can pass the following arguments:
     The environment will create a major logfile (*main.txt*) incorporating all messages of the
     current log level and beyond and
     a log file that only contains warnings and errors *warnings_and_errors.txt*.
-    Moreover, if you use multiprocessing,
+
+    Moreover, if you use multiprocessing and a pool,
     there will be a log file for every process named *proces_XXXX.txt* with *XXXX* the process
-    id. If you don't set a log level elsewhere before, the standard level will be *INFO*
+    id containing all log messages produced by the corresponding process. Moreover,
+    you will find a *process_XXXX_runs.txt* file where you can see which individual runs were
+    actually carried out by the process.
+
+    In case you want multiprocessing without a pool of workers, there will be a logfile
+    for each individual run called *run_XXXXXXXX.txt*.
+
+    If you don't set a log level elsewhere before, the standard level will be *INFO*
     (if you have no clue what I am talking about, take a look at the logging_ module).
 
 * `use_hdf5`:
@@ -369,7 +388,7 @@ Multiprocessing
 
 For an  example on multiprocessing see :ref:`example-04`.
 
-The following code snippet shows how to enable multiprocessing with 4 cpus and a queue.
+The following code snippet shows how to enable multiprocessing with 4 cpus, a pool, and a queue.
 
 .. code-block:: python
 
@@ -382,8 +401,21 @@ The following code snippet shows how to enable multiprocessing with 4 cpus and a
                  file_title='experiment',
                  multiproc=True,
                  ncores=4,
+                 use_pool=True,
                  wrap_mode='QUEUE')
 
+Setting `use_pool=True` will create a pool of `ncores` worker processes which perform your
+simulation runs.
+
+IMPORTANT: In order to allow multiprocessing with a pool, all your data and objects of your
+simulation need to be serialized with pickle_.
+But don't worry, most of the python stuff you use is automatically *picklable*.
+
+If you come across the situation that your data cannot be pickled (which is the case
+for some BRIAN networks, for example), don't worry either. Set `use_pool=False`
+(and also `continuable=False`) and for every simulation run
+*pypet* will spawn an entirely new subprocess.
+The data is than passed to the subprocess by inheritance and not by pickling.
 
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
@@ -407,9 +439,6 @@ for writing data. Thus, only one process at a time stores data. The advantage is
 does not need to be send over a queue over and over again. Yet, your simulations might take longer
 since processes have to wait for each other to release locks quite often.
 
-IMPORTANT: In order to allow multiprocessing, all your data and objects of your simulation need
-to be serialized with pickle_.
-But don't worry, most of the python stuff you use is automatically picklable.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
 

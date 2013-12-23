@@ -232,14 +232,18 @@ class Environment(object):
         are two ways to do multiprocessing. By using a fixed pool of
         processes (choose `use_pool=True`, default option) or by spawning an
         individual process for every run and parameter combination (`use_pool=False`).
-        The former will only spawn *ncores* processes and all simulation runs are
+        The former will only spawn not more than *ncores* processes and all simulation runs are
         sent over to to the pool one after the other.
         This requires all your data to be pickled.
+
         If your data cannot be pickled (which could be the case for some
-        BRIAN networks, for instance) choose `use_pool=False`. This will also spawn
+        BRIAN networks, for instance) choose `use_pool=False` (also make sure to set
+        `continuable=False`). This will also spawn
         at most *ncores* processes at a time, but as soon as a process terminates
         a new one is spawned with the next parameter combination. Be aware that you will
         have as many logfiles in your logfolder as processes were spawned.
+        If your simulation returns results besides storing results directly into the trajectory,
+        these returned results still need to be pickled.
 
     :param ncores:
 
@@ -275,8 +279,8 @@ class Environment(object):
              waiting until the lock is released.
              Yet, single runs do not need to be pickled before storage!
 
-         If you don't want wrapping at all use :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
-
+         If you don't want wrapping at all use
+         :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
 
     :param continuable:
 
@@ -583,7 +587,6 @@ class Environment(object):
                                 comment= 'Whether or not to use multiprocessing. If yes'
                                          ' than everything must be pickable.')
 
-
         config_name='environment.%s.use_pool' % self.v_name
         self._traj.f_add_config(config_name,use_pool,
                                 comment='Whether to use a pool of processes or '
@@ -763,14 +766,16 @@ class Environment(object):
 
         :return:
 
-            List of the individual results returned by `runfunc`. These are not
-            necessarily in the order of the runs but in the order the completion of runs,
+            List of the individual results returned by `runfunc`.
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
             potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
             and loading all results at once with :func:`~pypet.trajectory.f_load`
             or loading manually with :func:`~pypet.trajectory.f_load_items`.
+
+            If you use multiprocessing without a pool the results returned by
+            `runfunc` still need to be pickled.
 
         """
 
@@ -807,10 +812,7 @@ class Environment(object):
                                     comment ='Added if a crashed trajectory was continued.')
 
         # Resume the experiment
-        return self._do_runs(runfunc,*args,**kwargs)
-
-
-
+        return self._do_runs(runfunc,args,kwargs)
 
     @ property
     def v_trajectory(self):
@@ -870,14 +872,16 @@ class Environment(object):
 
         :return:
 
-            List of the individual results returned by `runfunc`. These are not
-            necessarily in the order of the runs but in the order the completion of runs,
+            List of the individual results returned by `runfunc`.
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
             potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
             and loading all results at once with :func:`~pypet.trajectory.f_load`
             or loading manually with :func:`~pypet.trajectory.f_load_items`.
+
+            If you use multiprocessing without a pool the results returned by
+            `runfunc` still need to be pickled.
 
         """
 
@@ -936,10 +940,10 @@ class Environment(object):
             self._traj.v_full_copy=prev_full_copy
 
         # Start the runs
-        return self._do_runs(runfunc,*args,**kwargs)
+        return self._do_runs(runfunc,args,kwargs)
 
 
-    def _do_runs(self, runfunc, *args, **kwargs):
+    def _do_runs(self, runfunc, args, kwargs):
         """ Starts the individual single runs.
 
         Starts runs sequentially or initiates multiprocessing.
@@ -967,6 +971,8 @@ class Environment(object):
             mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
 
             if not use_pool:
+                # If we spawn a single process for each run, we need an additional queue
+                # for the results of `runfunc`
                 result_queue = manager.Queue(maxsize=len(self._traj))
 
             # Prepare Multiprocessing
@@ -1024,19 +1030,21 @@ class Environment(object):
                               (self._traj.v_name, ncores))
 
             # Create a generator to generate the tasks for the mp-pool
-            iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
+            iterator = ((self._traj._make_single_run(n, True), log_path, queue, runfunc, len(self._traj),
                          multiproc, result_queue,  args, kwargs) for n in xrange(len(self._traj))
-                                                            if not self._traj.f_is_completed(n))
+                                if not self._traj.f_is_completed(n))
 
 
             if use_pool:
                 mpool = multip.Pool(ncores)
                 # Let the pool workers do their jobs provided by the generator
-                results = mpool.map(_single_run,iterator)
+                results = mpool.imap(_single_run,iterator)
 
                 # Everything is done
                 mpool.close()
                 mpool.join()
+
+                results = [result for result in results]
 
             else:
                 keep_running=True

@@ -162,7 +162,9 @@ def add_params(traj,param_dict):
 
 def multipy(traj):
     z=traj.x*traj.y
+    print 'z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y)
     traj.f_add_result('z',z)
+    return z
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
@@ -218,6 +220,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'
+
+        return 42
 
 
 def to_dict_wo_config(traj):
