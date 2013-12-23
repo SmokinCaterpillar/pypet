@@ -120,9 +120,6 @@ def _single_run(args):
                 pid_file.flush()
                 pid_file.close()
 
-
-
-
         ## Add the queue for storage in case of multiprocessing in queue mode.
         if queue is not None:
             traj.v_storage_service.queue = queue
@@ -1030,7 +1027,7 @@ class Environment(object):
                               (self._traj.v_name, ncores))
 
             # Create a generator to generate the tasks for the mp-pool
-            iterator = ((self._traj._make_single_run(n, True), log_path, queue, runfunc, len(self._traj),
+            iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
                          multiproc, result_queue,  args, kwargs) for n in xrange(len(self._traj))
                                 if not self._traj.f_is_completed(n))
 
@@ -1044,43 +1041,47 @@ class Environment(object):
                 mpool.close()
                 mpool.join()
 
+                # We want to consistently return a list of results not an iterator
                 results = [result for result in results]
 
             else:
                 keep_running=True
-                process_dict = {}
+                process_dict = {} # Dict containing all subprocees
 
                 while len(process_dict)>0 or keep_running:
 
                     terminated_procs_pids = []
+                    # First check if some processes did finish their job
                     for pid, proc in process_dict.iteritems():
 
+                        # Remember the terminated processes
                         if not proc.is_alive():
                             terminated_procs_pids.append(pid)
 
+                    # And delete these from the process dict
                     for terminated_proc in terminated_procs_pids:
                         process_dict.pop(terminated_proc)
 
+                    # If we have less active processes than ncores and there is still
+                    # a job to do, add another process
                     if len(process_dict) < ncores and keep_running:
                         try:
                             task = iterator.next()
                             proc = multip.Process(target=_single_run,
                                                                args=(task,))
-
                             proc.start()
                             process_dict[proc.pid]=proc
                         except StopIteration:
+                            # All simulation runs have been started
                             keep_running=False
-
 
                     time.sleep(0.1)
 
-
+                # Get all results from the result queue
                 results = []
                 while not result_queue.empty():
                     result = result_queue.get()
                     results.append(result)
-
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue

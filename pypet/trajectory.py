@@ -19,7 +19,7 @@ import hashlib
 import importlib
 import itertools as itools
 import inspect
-
+import copy
 import numpy as np
 
 import pypet.pypetexceptions as pex
@@ -2630,15 +2630,33 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for param in self._explored_parameters.itervalues():
             param._set_parameter_access(idx)
 
-    def _make_single_run(self, idx):
+    def _make_single_run(self, idx, copy_trajectory=False):
         """Creates a SingleRun object for parameter exploration with run index `idx`.
 
-        Note that this changes the root node of the trajectory tree to the novel SingleRun
-        instance. Accordingly, until switching the root node back to the current trajectory,
+        If `copy_trajectory=False` the root node of the trajectory tree changes
+        to the novel SingleRun instance.
+        Accordingly, until switching the root node back to the current trajectory,
         you cannot interact with the tree via the trajectory but only through the SingleRun
         instance.
 
+        If you choose `copy_trajectory=True` the entire current trajectory is copied before
+        a new SingleRun object is created. Accordingly the original trajectory is left
+        untouched and the root node is not changed.
+
         """
-        self._set_explored_parameters_to_idx(idx)
-        name = self.f_idx_to_run(idx)
-        return SingleRun(name, idx, self)
+        if copy_trajectory:
+            old_copy_mode = self.v_full_copy
+            self.v_full_copy=True
+            storage_service = self._storage_service
+            self._storage_service = None
+            traj=copy.deepcopy(self)
+            self._storage_service=storage_service
+            traj._storage_service=storage_service
+            self.v_full_copy=old_copy_mode
+            traj.v_full_copy=old_copy_mode
+        else:
+            traj=self
+
+        traj._set_explored_parameters_to_idx(idx)
+        name = traj.f_idx_to_run(idx)
+        return SingleRun(name, idx, traj)
