@@ -995,8 +995,12 @@ class Environment(object):
                 self._traj.v_storage_service=queue_sender
 
             elif mode == pypetconstants.WRAP_MODE_LOCK:
-                # We need a lock that is shared by all processes.
-                lock = manager.Lock()
+
+                if use_pool:
+                    # We need a lock that is shared by all processes.
+                    lock = manager.Lock()
+                else:
+                    lock = multip.Lock()
 
                 queue = None
 

@@ -21,6 +21,7 @@ import itertools as itools
 import inspect
 import copy
 import numpy as np
+from collections import OrderedDict
 
 import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
@@ -1218,6 +1219,91 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for node_name in self.derived_parameters._children.keys():
             if node_name.startswith(pypetconstants.RUN_NAME):
                 self.derived_parameters.f_remove_child(node_name,recursive=True)
+
+    def f_find_in_all_runs(self, name, where='results', use_indices=False,
+                           fast_access=False, check_uniqueness=False,
+                           search_strategy=pypetconstants.BFS):
+        """Searches for all occurrences of `name` in each run.
+
+        Generates an ordered dictionary with the run names or indices as keys and
+        found items as values.
+
+        Example:
+
+        >>> traj.f_find_in_all_runs(self, 'deep.universal_answer', use_indices=True, fast_access=True)
+        OrderedDict([(0, 42), (1, 42), (2, 'fortytwo), (4, 43)])
+
+
+        :param name: String description of the item(s) to find
+
+        :param where:
+
+            Either `'results'` (short 'r' works, too) or 'derived_parameters' (short 'd' works,
+            too)
+
+        :param use_indices:
+
+            If `True` the keys of the resulting dictionary are the run indices
+            (e.g. 0,1,2,3), otherwise the keys are run names (e.g. `run_00000000`,
+            `run_000000001`)
+
+
+        :param fast_access:
+
+            Whether to return parameter or result instances or the values handled by these.
+
+        :param check_uniqueness:
+
+            If `True` it is checked if `name` refers only to a single
+            item in every run.
+
+        :param search_strategy:
+
+            BFS or DFS
+
+        :return:
+
+            Ordered dictionary with run_names as keys and found items as values.
+            Will only contain runs as keys where an item was actually found.
+
+        """
+
+        if where in ['results', 'r']:
+            search_group = self.results
+        elif where in ['derived_parameters', 'd']:
+            search_group = self.derived_parameters
+        else:
+            raise ValueError('Subtree `%s` unknown or not supported, please use '
+                             '`where=` `results`, `derived_parameters` or short forms '
+                             ' `r` or `d`.' % where)
+
+        result_dict = OrderedDict()
+
+        child_dict = search_group.f_get_children(copy=False)
+
+        for run_name in self.f_get_run_names():
+            # Iterate over all runs
+            if run_name in child_dict:
+                run_group = child_dict[run_name]
+
+                try:
+                    value = run_group.f_get(name, fast_access, check_uniqueness)
+                except pex.NotUniqueNodeError:
+                    raise
+                except AttributeError:
+                    # In case the item cannot found in a run we do not add the run
+                    # to the dictionary
+                    continue
+
+                if use_indices:
+                    key = self.f_idx_to_run(run_name)
+                else:
+                    key = run_name
+
+                result_dict[key] = value
+
+        return result_dict
+
 
     def f_find_idx(self, name_list, predicate):
         """Finds a single run index given a particular condition on parameters.

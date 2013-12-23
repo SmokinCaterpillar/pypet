@@ -17,7 +17,6 @@ from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import LazyStorageService
 import pickle
 import logging
-import cProfile
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import multiprocessing as multip
@@ -40,7 +39,7 @@ class TrajectoryTest(unittest.TestCase):
         name = 'Moop'
 
         self.traj = Trajectory(name,dynamically_imported_classes=[ImAParameterInDisguise,
-                                                                  'pypet.tests.test_helpers.ImAResultInDisguise'])
+                                                'pypet.tests.test_helpers.ImAResultInDisguise'])
 
         self.assertTrue(self.traj.f_is_empty())
 
@@ -341,12 +340,48 @@ class TrajectoryTest(unittest.TestCase):
             prev_node = node
 
 
+    def test_find_in_all_runs(self):
 
 
+        self.traj.f_add_result('results.run_00000000.sub.resulttest', 42)
+        self.traj.f_add_result('results.run_00000001.sub.resulttest', 43)
+        self.traj.f_add_result('results.run_00000002.sub.resulttest', 44)
 
+        self.traj.f_add_result('results.run_00000002.sub.resulttest2', 42)
+        self.traj.f_add_result('results.run_00000003.sub.resulttest2', 43)
+
+        self.traj.f_add_derived_parameter('derived_parameters.run_00000002.testing', 44)
+
+        res_dict = self.traj.f_find_in_all_runs('kkkkkkdjfoiuref')
+
+        self.assertTrue(len(res_dict)==0)
+
+        res_dict = self.traj.f_find_in_all_runs('resulttest', fast_access=True)
+
+        self.assertTrue(len(res_dict)==3)
+        self.assertTrue(res_dict['run_00000001']==43)
+        self.assertTrue('run_00000003' not in res_dict)
+
+        res_dict = self.traj.f_find_in_all_runs(name='sub.resulttest2', use_indices=True)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(res_dict[3]is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(1 not in res_dict)
+
+        res_dict = self.traj.f_find_in_all_runs(name='testing', where='derived_parameters')
+
+        self.assertTrue(len(res_dict)==1)
+
+        self.traj.f_add_result('results.run_00000002.sub.sub.resulttest2', 444)
+
+        with self.assertRaises(pex.NotUniqueNodeError):
+            self.traj.f_find_in_all_runs('resulttest2', check_uniqueness=True)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_find_in_all_runs('test', where='Portland')
 
     def test_illegal_namings(self):
-        self.traj=Trajectory()
+        self.traj=Trajectory('resulttest2')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('f_get')
