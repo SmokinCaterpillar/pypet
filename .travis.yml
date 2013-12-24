@@ -5,6 +5,7 @@ python:
 env:
   global:
     - PANDAS_VERSION=0.12.0
+    - ORDERED_DICT_VERSION=1.1
 
   matrix:
     - TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.9.0
@@ -13,6 +14,7 @@ env:
 # Install dependencies for PyTables
 # command to install dependencies
 install:
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then echo "+++++++++++  Installing Ordered Dict +++++++++++++"; pip install ordereddict=$ORDERED_DICT_VERSION
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
   - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"

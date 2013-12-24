@@ -21,7 +21,11 @@ import itertools as itools
 import inspect
 import copy
 import numpy as np
-from collections import OrderedDict
+import sys
+if (sys.version_info < (2, 7, 0)):
+    from ordereddict import OrderedDict
+else:
+    from collections import OrderedDict
 
 import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
