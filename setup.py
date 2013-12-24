@@ -29,9 +29,6 @@ install_requires=[
         'numpy >= 1.6.1',
         'scipy >= 0.9.0']
 
-# For Python 2.6 we additionally need ordereddict
-if (sys.version_info < (2, 7, 0)):
-    install_requires.append('ordereddict >= 1.1')
 
 # check if importlib exists, if not (aka python 2.6) install it
 try:
@@ -43,6 +40,8 @@ except ImportError:
 import sys
 if (sys.version_info < (2, 7, 0)):
     install_requires.append(['unittest2'])
+    # For Python 2.6 we additionally need ordereddict
+    install_requires.append('ordereddict >= 1.1')
 
 
 setup(
