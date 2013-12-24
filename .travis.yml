@@ -15,7 +15,8 @@ env:
 # command to install dependencies
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6.9 ]]; then echo "+++++++++++  Installing Ordered Dict +++++++++++++"; pip install ordereddict; fi
+  - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
   - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
