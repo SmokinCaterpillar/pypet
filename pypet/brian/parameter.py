@@ -1,8 +1,4 @@
-'''
-Created on 10.06.2013
-
-@author: robert
-'''
+___author__='Robert Meyer'
 
 
 from pypet.parameter import Parameter,Result,ObjectTable
@@ -15,7 +11,7 @@ try:
 except TypeError:
     pass
 
-from brian.fundamentalunits import Unit, Quantity, get_unit, get_unit_fast
+from brian.fundamentalunits import Quantity, get_unit_fast
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
     MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
@@ -26,7 +22,7 @@ import pandas as pd
 
 
 class BrianParameter(Parameter):
-    ''' A Parameter class that supports BRIAN Quantities.
+    """A Parameter class that supports BRIAN Quantities.
 
     Note that only scalar BRIAN quantities are supported, lists, tuples or dictionaries
     of BRIAN quantities cannot be handled.
@@ -49,7 +45,7 @@ class BrianParameter(Parameter):
 
     Supports data for the standard :class:`~pypet.parameter.Parameter`, too.
 
-    '''
+    """
 
     IDENTIFIER = '__brn__'
     ''' Identification string stored into column title of hdf5 table'''
@@ -68,7 +64,7 @@ class BrianParameter(Parameter):
 
     @property
     def v_storage_mode(self):
-        '''
+        """
         There are two storage modes:
 
 
@@ -84,7 +80,7 @@ class BrianParameter(Parameter):
 
             i.e. `12 mV` is stored as `'12.0 * mV'`
 
-        '''
+        """
         return self._storage_mode
 
     @v_storage_mode.setter
@@ -98,7 +94,7 @@ class BrianParameter(Parameter):
 
 
     def f_supports(self, data):
-        ''' Simply checks if data is supported '''
+        """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
         if super(BrianParameter,self).f_supports(data):
@@ -222,9 +218,14 @@ class BrianParameter(Parameter):
         self._default = self._data
 
 class BrianDurationParameter(BrianParameter):
-    """Special brian parameter to specify orders of subruns.
+    """Special BRIAN parameter to specify orders and durations of subruns.
 
-    Important for the :class:~pypet.brian.network.NetworkRunner
+    The class:`~pypet.brian.network.NetworkRunner` extracts the individual subruns
+    for a given network from such duration parameters.
+    The order of execution is defined by the property `v_order`.
+    The exact values do not matter only the rank ordering.
+
+    A Duration Parameter should be in time units (ms or s, for instance).
 
     """
     def __init__(self, full_name, data=None, order=0, comment='',storage_mode=BrianParameter.FLOAT_MODE):
@@ -252,7 +253,7 @@ class BrianDurationParameter(BrianParameter):
         super(BrianDurationParameter, self)._load(load_dict)
 
 class BrianResult(Result):
-    ''' A result class that can handle BRIAN quantities.
+    """ A result class that can handle BRIAN quantities.
 
     Note that only scalar BRIAN quantities are supported, lists, tuples or dictionaries
     of BRIAN quantities cannot be handled.
@@ -261,7 +262,7 @@ class BrianResult(Result):
 
     Storage mode works as for :class:`~pypet.brian.parameter.BrianParameter`.
 
-    '''
+    """
 
     IDENTIFIER=BrianParameter.IDENTIFIER
     ''' Identifier String to label brian data '''
@@ -281,7 +282,7 @@ class BrianResult(Result):
 
     @property
     def v_storage_mode(self):
-        '''
+        """
         There are two storage modes:
 
 
@@ -297,7 +298,7 @@ class BrianResult(Result):
 
             i.e. `12 mV` is stored as `'12.0 * mV'`
 
-        '''
+        """
         return self._storage_mode
 
     @v_storage_mode.setter
@@ -373,7 +374,7 @@ class BrianResult(Result):
                 self._data[key]=load_dict[key]
 
 class BrianMonitorResult(Result):
-    ''' A Result class that supports brian monitors.
+    """ A Result class that supports brian monitors.
 
     Subclasses :class:`~pypet.parameter.Result`, NOT :class:`~pypet.brian.parameter.BrianResult`.
     The storage mode here works slightly different than in
@@ -641,7 +642,7 @@ class BrianMonitorResult(Result):
         'varname_values' and 'varname_unit',
         where 'varname' is the name of the recorded variable.
 
-    '''
+    """
 
     TABLE_MODE = 'TABLE'
     '''Table storage mode for SpikeMonitor and StateSpikeMonitor'''
@@ -681,7 +682,7 @@ class BrianMonitorResult(Result):
 
     @property
     def v_storage_mode(self):
-        '''The storage mode for SpikeMonitor and StateSpikeMonitor
+        """The storage mode for SpikeMonitor and StateSpikeMonitor
 
         There are two storage modes:
 
@@ -701,13 +702,13 @@ class BrianMonitorResult(Result):
             reading and writing of data might take muuuuuch longer compared to
             the other mode.
 
-        '''
+        """
         return self._storage_mode
 
     @property
     def v_monitor_type(self):
-        ''' The type of the stored monitor. Each MonitorResult can only manage a single Monitor.
-        '''
+        """ The type of the stored monitor. Each MonitorResult can only manage a single Monitor.
+        """
         return self._monitor_type
 
     @v_storage_mode.setter
@@ -720,10 +721,10 @@ class BrianMonitorResult(Result):
         self._storage_mode = storage_mode
 
     def f_set_single(self, name, item):
-        ''' To add a monitor use `f_set_single('monitor', brian_monitor)`.
+        """ To add a monitor use `f_set_single('monitor', brian_monitor)`.
 
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
-        '''
+        """
 
         if isinstance(item, (Monitor, MultiStateMonitor)):
             self._extract_monitor_data(item)
@@ -850,7 +851,7 @@ class BrianMonitorResult(Result):
 
                     nounit_list = [np.float64(var) for var in var_list]
                     spike_dict[varname] = nounit_list
-                    count = count +1
+                    count += 1
 
                 self.f_set(spikes=pd.DataFrame(data=spike_dict))
 

@@ -50,6 +50,12 @@ For git integration you additionally need
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
+If you use Python 2.6 you also need
+
+* ordereddict_
+
+.. _ordereddict: https://pypi.python.org/pypi/ordereddict
+
 ==========================
 ToC
 ==========================

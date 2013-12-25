@@ -41,6 +41,10 @@ For git integration you additionally need
 
 * GitPython
 
+If you use Python 2.6 you need
+
+* ordereddict
+
 =========================
 What is pypet all about?
 =========================
