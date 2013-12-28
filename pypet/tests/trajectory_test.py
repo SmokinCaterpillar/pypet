@@ -352,33 +352,33 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_derived_parameter('derived_parameters.run_00000002.testing', 44)
 
-        res_dict = self.traj.f_find_in_all_runs('kkkkkkdjfoiuref')
+        res_dict = self.traj.f_get_from_runs('kkkkkkdjfoiuref')
 
         self.assertTrue(len(res_dict)==0)
 
-        res_dict = self.traj.f_find_in_all_runs('resulttest', fast_access=True)
+        res_dict = self.traj.f_get_from_runs('resulttest', fast_access=True)
 
         self.assertTrue(len(res_dict)==3)
         self.assertTrue(res_dict['run_00000001']==43)
         self.assertTrue('run_00000003' not in res_dict)
 
-        res_dict = self.traj.f_find_in_all_runs(name='sub.resulttest2', use_indices=True)
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
 
         self.assertTrue(len(res_dict)==2)
         self.assertTrue(res_dict[3]is self.traj.f_get('run_00000003.resulttest2'))
         self.assertTrue(1 not in res_dict)
 
-        res_dict = self.traj.f_find_in_all_runs(name='testing', where='derived_parameters')
+        res_dict = self.traj.f_get_from_runs(name='testing', where='derived_parameters')
 
         self.assertTrue(len(res_dict)==1)
 
         self.traj.f_add_result('results.run_00000002.sub.sub.resulttest2', 444)
 
         with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_find_in_all_runs('resulttest2', check_uniqueness=True)
+            self.traj.f_get_from_runs('resulttest2', check_uniqueness=True)
 
         with self.assertRaises(ValueError):
-            self.traj.f_find_in_all_runs('test', where='Portland')
+            self.traj.f_get_from_runs('test', where='Portland')
 
     def test_illegal_namings(self):
         self.traj=Trajectory('resulttest2')

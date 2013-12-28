@@ -13,4 +13,5 @@ Library Reference
     pypetdoc/pypetconstantsdoc
     pypetdoc/storageservicedoc
     pypetdoc/brianparameterdoc
+    pypetdoc/briannetworkdoc
 

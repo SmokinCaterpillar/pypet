@@ -28,6 +28,7 @@ Here are some links to important functions:
     ~trajectory.Trajectory.f_remove_items
     ~trajectory.Trajectory.f_update_skeleton
     ~trajectory.Trajectory.f_preset_parameter
+    ~trajectory.Trajectory.f_get_from_runs
     ~trajectory.Trajectory.v_idx
     ~trajectory.SingleRun.v_standard_parameter
     ~trajectory.SingleRun.v_standard_result

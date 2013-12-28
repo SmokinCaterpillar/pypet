@@ -1,4 +1,4 @@
-""" Module containing the trajectory containers.
+"""Module containing the trajectory containers.
 
 :class:`~pypet.trajectory.Trajectory` is the basic container class to manage results and
 parameters (see also :mod:`pypet.parameters`).
@@ -1224,7 +1224,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if node_name.startswith(pypetconstants.RUN_NAME):
                 self.derived_parameters.f_remove_child(node_name,recursive=True)
 
-    def f_find_in_all_runs(self, name, where='results', use_indices=False,
+    def f_get_from_runs(self, name, where='results', use_indices=False,
                            fast_access=False, check_uniqueness=False,
                            search_strategy=pypetconstants.BFS):
         """Searches for all occurrences of `name` in each run.
@@ -1234,7 +1234,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         Example:
 
-        >>> traj.f_find_in_all_runs(self, 'deep.universal_answer', use_indices=True, fast_access=True)
+        >>> traj.f_get_from_runs(self, 'deep.universal_answer', use_indices=True, fast_access=True)
         OrderedDict([(0, 42), (1, 42), (2, 'fortytwo), (4, 43)])
 
 

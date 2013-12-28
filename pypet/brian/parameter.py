@@ -1,8 +1,24 @@
+"""Module containing results and parameters that can be used to store `BRIAN data`_.
+
+Parameters handling BRIAN data are the
+:class:`~pypet.brian.parameter.BrianParameter` for any BRIAN Quantity and the
+:class:`~pypet.brian.parameter.BrianDurationParameter` that can be combined
+with the experimental framework in `pypet.brian.network` to allow
+fast setup of large scale BRIAN experiments.
+
+The :class:`~pypet.brian.parameter.BrianResult` can store BRIAN Quantities
+and the :class:`~pypet.brian.parameter.BrianMonitorResult` extracts data from
+BRIAN Monitors.
+
+.. _`BRIAN data`: http://briansimulator.org/
+
+"""
+
 ___author__='Robert Meyer'
 
 
 from pypet.parameter import Parameter,Result,ObjectTable
-## Unfortunatley I have to do this for read the docs to be able to mock brian
+# Unfortunately I have to do this for read the docs to be able to mock brian
 from pypet.utils.decorators import copydoc
 
 try:
@@ -220,7 +236,7 @@ class BrianParameter(Parameter):
 class BrianDurationParameter(BrianParameter):
     """Special BRIAN parameter to specify orders and durations of subruns.
 
-    The class:`~pypet.brian.network.NetworkRunner` extracts the individual subruns
+    The :class:`~pypet.brian.network.NetworkRunner` extracts the individual subruns
     for a given network from such duration parameters.
     The order of execution is defined by the property `v_order`.
     The exact values do not matter only the rank ordering.

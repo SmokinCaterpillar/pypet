@@ -218,13 +218,17 @@ class NetworkRunner(NetworkComponent):
 
     :param report_period:
 
-        How often progress is reported.
+        How often progress is reported. If not specified 10 seconds is chosen.
 
     Can log messages with the attribute `logger` which is initialised in
     :func:`~pypet.brian.network.NetworkRunner.set_logger`.
 
     """
-    def __init__(self, report='text', report_period=10 * second):
+    def __init__(self, report='text', report_period=None):
+
+        if report_period is None:
+            report_period=10 * second
+
         self._report = report
         self._report_period = report_period
         self.set_logger()
@@ -498,8 +502,11 @@ class NetworkManager(object):
 
         If you are not bothered by not starting every experimental run with the very same
         network you can set `force_single_core=True`. The NetworkManager will
-        do iterative single processing and ignore the ongoing modifcation of the network
+        do iterative single processing and ignore the ongoing modification of the network
         throughout all runs.
+
+        In case `multiproc=True` for your environment, the setting of `force_single_core`
+        is irrelevant and has no effect.
 
     """
     def __init__(self, network_runner, component_list, analyser_list=(),
@@ -670,11 +677,11 @@ class NetworkManager(object):
 
 
     def run_network(self, traj):
-        """Runs an individual network run during parameter exploration.
+        """Performs an individual network run during parameter exploration.
 
         `run_network` does not need to be called by the user. If the top-level
         `~pypet.brian.network.run_network` method (not this one of the NetworkManager)
-        is passed to an :class:`~pypet.environment.Environment` with this Network manager,
+        is passed to an :class:`~pypet.environment.Environment` with this NetworkManager,
         `run_network` and :func:`~pypet.brian.network.NetworkManager.build`
         are automatically called for each individual experimental run.
 
@@ -696,11 +703,8 @@ class NetworkManager(object):
             if multiproc:
                 self._run_network(traj)
             else:
-                if traj.v_idx == 0 or self._force_single_core:
-                    # We allows allow a the very first run since this by definition
-                    # cannot have altered the network configuration
-                    if traj.v_idx > 0:
-                        self._logger.warning('Running Single Core Mode. Be aware that the network '
+                if self._force_single_core:
+                    self._logger.warning('Running Single Core Mode. Be aware that the network '
                                          'evolves over ALL your runs and is not reset. '
                                          'Use this setting only for debugging purposes '
                                          'because your results will be not correct in case '
