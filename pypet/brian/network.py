@@ -80,7 +80,11 @@ class NetworkComponent(object):
         :param brian_list:
 
             Add BRIAN network objects like NeuronGroups or Connections to this list.
-            These objects will be automatically added at the instantiation of the network.
+            These objects will be automatically added at the instantiation of the network
+            via `Network(*brian_list)` (see the `BRIAN network class`_).
+
+            .. _`BRIAN network class`: http://briansimulator.org/docs/reference-network.html#brian.Network
+
 
         :param network_dict:
 
@@ -88,6 +92,35 @@ class NetworkComponent(object):
             your components and which are not part of the trajectory container.
             It is recommended to also put all items from the `brian_list` into
             the dictionary for completeness.
+
+
+        For convenience I would recommend documenting the implementation of `build` and
+        `pre-build` and so on in the subclass like the following. Use statements like `Adds`
+        for items that are added to the list and the dict and statements like `Expects`
+        for what is needed to be part of the `network_dict` in order to build the
+        current component.
+
+            brian_list:
+
+                Adds
+                ----
+
+                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
+
+            network_dict:
+
+                Expects
+                --------
+
+                'neurons_i': Inhibitory neuron group
+
+                'neurons_e': Excitatory neuron group
+
+
+                Adds
+                -----
+
+                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
 
         """
         pass
@@ -102,7 +135,11 @@ class NetworkComponent(object):
 
             Add BRIAN network objects like NeuronGroups or Connections to this list.
             These objects will be automatically added at the instantiation of the network
-            in case the network was not pre-run.
+            in case the network was not pre-run
+            via `Network(*brian_list)` (see the `BRIAN network class`_).
+
+            .. _`BRIAN network class`: http://briansimulator.org/docs/reference-network.html#brian.Network
+
 
         :param network_dict:
 
@@ -110,6 +147,36 @@ class NetworkComponent(object):
             your components and which are not part of the trajectory container.
             It is recommended to also put all items from the `brian_list` into
             the dictionary for completeness.
+
+
+        For convenience I would recommend documenting the implementation of `build` and
+        `pre-build` and so on in the subclass like the following. Use statements like `Adds`
+        for items that are added to the list and the dict and statements like `Expects`
+        for what is needed to be part of the `network_dict` in order to build the
+        current component.
+
+            brian_list:
+
+                Adds
+                ----
+
+                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
+
+            network_dict:
+
+                Expects
+                --------
+
+                'neurons_i': Inhibitory neuron group
+
+                'neurons_e': Excitatory neuron group
+
+
+                Adds
+                -----
+
+                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
+                'conn_ee`, 'conn_ie', 'conn_ei', 'conn_ii'.
 
         """
         pass
@@ -513,7 +580,6 @@ class NetworkManager(object):
     This division allows to create compartmental network models where one can easily
     replace parts of a network simulation.
 
-
     :param force_single_core:
 
         In case you :func:`~pypet.brian.network.NetworkManager.pre_build` or even
@@ -608,7 +674,7 @@ class NetworkManager(object):
 
         This function does not create a `BRIAN network`_, but only it's components.
 
-         .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
+        .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
 
 
         :param traj: Trajectory container

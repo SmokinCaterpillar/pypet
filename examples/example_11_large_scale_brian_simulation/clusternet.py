@@ -1,7 +1,10 @@
-"""Module to run the clustered Neural Network Simulations as in Litwin-Kumar & Soiron 2012"""
-from cmath import sqrt
+"""Module to run the clustered Neural Network Simulations as in Litwin-Kumar & Doiron 2012"""
 
 __author__ = 'Robert Meyer'
+
+import os
+import numpy as np
+import matplotlib.pyplot as plt
 
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult, BrianDurationParameter
@@ -11,36 +14,39 @@ from brian.stdunits import ms
 from brian import NeuronGroup, rand, Connection, Equations, Network, SpikeMonitor, second, \
     raster_plot, show, StateMonitor, clear, reinit_default_clock
 
-
-
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-
-
 def run_network(traj, clustered_net):
     """Top-level function for running the network
 
-    :param traj: Container for parameters and results (see http://pypet.readthedocs.org/)
+    :param traj: Container for parameters and results
 
-    :param clustered_net: CNNetworkMaker
+    :param clustered_net: *pypet* NetworkManager
 
     """
     clustered_net.run_network(traj)
 
 
-def check_explored_parameters(traj, group_node):
-    not_in_group = True
+def _explored_parameters_in_group(traj, group_node):
+    """Checks if one the parametes in `group_node` is explored.
 
+    :param traj: Trajectory container
+    :param group_node: Group node
+    :return: `True` or `False`
+
+    """
+    explored = False
     for param in traj.f_get_explored_parameters():
             if param in group_node:
-                not_in_group = False
+                explored = True
                 break
 
-    return not_in_group
+    return explored
 
 class CNNeuronGroup(NetworkComponent):
-    """Class to create neuron groups"""
+    """Class to create neuron groups.
+
+    Creates two groups of excitatory and inhibitory neurons.
+
+    """
 
     @staticmethod
     def add_parameters(traj):
@@ -66,9 +72,9 @@ class CNNeuronGroup(NetworkComponent):
                            comment='The differential equation for the neuron model')
 
         traj.f_add_parameter('model.synaptic.eqs', conn_eqs,
-                           comment='The differential equation for the synapses')
-
-
+                           comment='The differential equation for the synapses. '
+                                   'PRE will be replaced by `i` or `e` depending '
+                                   'on the source population')
 
         traj.f_add_parameter('model.synaptic.tau1', 1*ms, comment = 'The decay time')
         traj.f_add_parameter('model.synaptic.tau2_e', 3*ms, comment = 'The rise time, excitatory')
@@ -95,6 +101,10 @@ class CNNeuronGroup(NetworkComponent):
     @staticmethod
     def _build_model_eqs(traj):
         """Computes model equations for the excitatory and inhibitory population.
+
+        Equation objects are created by fusing `model.eqs` and `model.synaptic.eqs`
+        and replacing `PRE` by `i` (for inhibitory) or `e` (for excitatory) depending
+        on the type of population.
 
         :return: Dictionary with 'i' equation object for inhibitory neurons and 'e' for excitatory
 
@@ -127,16 +137,73 @@ class CNNeuronGroup(NetworkComponent):
         return post_eqs
 
     def pre_build(self, traj, brian_list, network_dict):
+        """Pre-builds the neuron groups.
 
-        self._pre_build = check_explored_parameters(traj, traj.parameters.model)
+        Pre-build is only performed if none of the
+        relevant parameters is explored.
 
+        :param traj: Trajectory container
+
+        :param brian_list:
+
+            List of objects passed to BRIAN network constructor.
+
+            Adds
+            -----
+
+            Inhibitory neuron group
+
+            Excitatory neuron group
+
+        :param network_dict:
+
+            Dictionary of elements shared among the components
+
+            Adds
+            ----
+
+            'neurons_i': Inhibitory neuron group
+
+            'neurons_e': Excitatory neuron group
+
+        """
+        self._pre_build = not _explored_parameters_in_group(traj, traj.parameters.model)
 
         if self._pre_build:
             self._build_model(traj, brian_list, network_dict)
 
 
     def build(self, traj, brian_list, network_dict):
+        """Builds the neuron groups.
 
+        Build is only performed if neuron group was not
+        pre-build before.
+
+        :param traj: Trajectory container
+
+        :param brian_list:
+
+            List of objects passed to BRIAN network constructor.
+
+            Adds
+            -----
+
+            Inhibitory neuron group
+
+            Excitatory neuron group
+
+        :param network_dict:
+
+            Dictionary of elements shared among the components
+
+            Adds
+            ----
+
+            'neurons_i': Inhibitory neuron group
+
+            'neurons_e': Excitatory neuron group
+
+        """
         if not hasattr(self, '_pre_build') or not self._pre_build:
             self._build_model(traj, brian_list, network_dict)
 
@@ -144,21 +211,18 @@ class CNNeuronGroup(NetworkComponent):
     def _build_model(self, traj, brian_list, network_dict):
         """Builds the neuron groups from `traj`.
 
-        :return:
-
-            1. Inhibitory neuron group of size `N_i`
-
-            2. Excitatory neuron group of size `N_e`
+        Adds the neuron groups to `brian_list` and `network_dict`.
 
         """
         assert(isinstance(traj,SingleRun))
 
         model = traj.parameters.model
 
+        # Create the equations for both models
         eqs_dict = self._build_model_eqs(traj)
 
+        # Create inhibitory neurons
         eqs_i = eqs_dict['i']
-
         neurons_i = NeuronGroup(N=model.N_i,
                               model = eqs_i,
                               threshold=model.V_th,
@@ -168,7 +232,7 @@ class CNNeuronGroup(NetworkComponent):
                               compile=True,
                               method='Euler')
 
-
+        # Create excitatory neurons
         eqs_e = eqs_dict['e']
         neurons_e = NeuronGroup(N=model.N_e,
                               model = eqs_e,
@@ -184,19 +248,27 @@ class CNNeuronGroup(NetworkComponent):
         neurons_e.mu =rand(model.N_e) * (model.mu_e_max - model.mu_e_min) + model.mu_e_min
         neurons_i.mu =rand(model.N_i) * (model.mu_i_max - model.mu_i_min) + model.mu_i_min
 
+        # Set initial membrane potentials
         neurons_e.V = rand(model.N_e)
         neurons_i.V = rand(model.N_i)
 
+        # Add both groups to the `brian_list` and the `network_dict`
         brian_list.append(neurons_i)
         brian_list.append(neurons_e)
-
         network_dict['neurons_e']=neurons_e
         network_dict['neurons_i']=neurons_i
 
 
 
 class CNConnections(NetworkComponent):
-    """Class to connect neuron groups"""
+    """Class to connect neuron groups.
+
+    In case of no clustering `R_ee=1,0` there are 4 connection instances (i->i, i->e, e->i, e->e).
+
+    Otherwise there are 3 + 3*N_c-2 connections with N_c the number of clusters
+    (i->i, i->e, e->i, N_c conns within cluster, 2*N_c-2 connections from cluster to outside).
+
+    """
 
     @staticmethod
     def add_parameters(traj):
@@ -232,8 +304,41 @@ class CNConnections(NetworkComponent):
 
 
     def pre_build(self, traj, brian_list, network_dict):
+        """Pre-builds the connections.
 
-        self._pre_build = check_explored_parameters(traj, traj.parameters.connections)
+        Pre-build is only performed if none of the
+        relevant parameters is explored and the relevant neuron groups
+        exist.
+
+        :param traj: Trajectory container
+
+        :param brian_list:
+
+            List of objects passed to BRIAN network constructor.
+
+            Adds
+            -----
+
+            Connections, amount depends on clustering
+
+        :param network_dict:
+
+            Dictionary of elements shared among the components
+
+            Expects
+            --------
+
+            'neurons_i': Inhibitory neuron group
+
+            'neurons_e': Excitatory neuron group
+
+            Adds
+            -----
+
+            Connections, amount depends on clustering
+
+        """
+        self._pre_build = not _explored_parameters_in_group(traj, traj.parameters.connections)
 
         self._pre_build = (self._pre_build and 'neurons_i' in network_dict and
                            'neurons_e' in network_dict)
@@ -243,15 +348,48 @@ class CNConnections(NetworkComponent):
 
 
     def build(self, traj, brian_list, network_dict):
+        """Builds the connections.
 
-         if not hasattr(self, '_pre_build') or not self._pre_build:
+        Build is only performed if connections have not
+        been pre-build.
+
+        :param traj: Trajectory container
+
+        :param brian_list:
+
+            List of objects passed to BRIAN network constructor.
+
+            Adds
+            -----
+
+            Connections, amount depends on clustering
+
+        :param network_dict:
+
+            Dictionary of elements shared among the components
+
+            Expects
+            --------
+
+            'neurons_i': Inhibitory neuron group
+
+            'neurons_e': Excitatory neuron group
+
+            Adds
+            -----
+
+            Connections, amount depends on clustering
+
+        """
+        if not hasattr(self, '_pre_build') or not self._pre_build:
             self._build_connections(traj, brian_list, network_dict)
 
 
     def _build_connections(self, traj, brian_list, network_dict):
-        """Connects neuron groups `neurons_i` and `neurons_e`
+        """Connects neuron groups `neurons_i` and `neurons_e`.
 
-        :return: List of brian connection objects
+        Adds all connections to `brian_list` and adds a list of connections
+        with the key 'connections' to the `network_dict`.
 
         """
 
@@ -289,15 +427,16 @@ class CNConnections(NetworkComponent):
             clusters = model.N_e/connections.clustersize_e
             traj.f_add_derived_parameter('connections.clusters', clusters, comment='Number of clusters')
 
-
+            # Compute outgoing connection probability
             p_out = (connections.p_ee*model.N_e) / \
                     (connections.R_ee*connections.clustersize_e+model.N_e- connections.clustersize_e)
 
+            # Compute within cluster connection probability
             p_in = p_out * connections.R_ee
 
+            # We keep these derived parameters
             traj.f_add_derived_parameter('connections.p_ee_in', p_in ,
                                          comment='Connection prob within cluster')
-
             traj.f_add_derived_parameter('connections.p_ee_out', p_out ,
                                          comment='Connection prob to outside of cluster')
 
@@ -321,7 +460,7 @@ class CNConnections(NetworkComponent):
                 # A cluster consists of `clustersize_e` neurons with consecutive indices.
                 # So usually the outside world consists of two groups, neurons with lower
                 # indices than the cluster indices, and neurons with higher indices.
-                # Only the clusters at the index boundaries project to neurons with either
+                # Only the clusters at the index boundaries project to neurons with only either
                 # lower or higher indices
                 if low_index > 0:
                     rest_low = neurons_e[0:low_index]
@@ -356,7 +495,8 @@ class CNConnections(NetworkComponent):
             conns_list.append(self.conn_ee)
 
 
-        brian_list += conns_list
+        # Add the connections to the `brian_list` and the network dict
+        brian_list += conns_list #TODO, is that right?
         network_dict['connections'] = conns_list
 
 
@@ -481,7 +621,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
     def pre_build(self, traj, brian_list, network_dict):
 
-        self._pre_build = check_explored_parameters(traj, traj.parameters.analysis)
+        self._pre_build = not _explored_parameters_in_group(traj, traj.parameters.analysis)
 
         self._pre_build = (self._pre_build and 'neurons_i' in network_dict and
                            'neurons_e' in network_dict)
