@@ -1,3 +1,29 @@
+"""Module for easy compartmental implementation of a `BRIAN network`_.
+
+Build parts of a network via subclassing :class:`~pypet.brian.network.NetworkComponent` and
+:class:`~pypet.brian.network.NetworkAnalyser` for recording and statistical analysis.
+
+Specify a :class:`~pypet.brian.network.NetworkRunner` (subclassing optionally) that handles
+the execution of your experiment in different subruns. Subruns can be defined
+as :class:`~pypet.brian.parameter.BrianDurationParameter` instances added to
+`traj.parameters.simulation.durations` or `traj.parameters.simulation.pre_durations` for
+pre runs, respectively.
+
+The creation and management of a `BRIAN network`_ is handled by the
+:class:`~pypet.brian.network.NetworkManager` (no need for subclassing). Pass your
+components, analyser and your runner to the manager.
+
+Pass the ;func:`~pypet.brian.network.run_network` function together with a
+:class:`~pypet.brian.network.NetworkManager` to your main environment function
+:func:`~pypet.environment.Environment.f_run` to start a simulation and parallel
+parameter exploration. Be aware that successful parameter exploration
+requires parallel processing (see :class:`~pypet.brian.network.NetworkManager`).
+
+
+.. _`BRIAN network`: http://briansimulator.org/docs/reference-network.html
+
+"""
+
 __author__ = 'Robert Meyer'
 
 import logging
@@ -157,13 +183,13 @@ class NetworkComponent(object):
         pass
 
 class NetworkAnalyser(NetworkComponent):
-    """Specific Network Component that analysis a network experiment.
+    """Specific NetworkComponent that analysis a network experiment.
 
     Can be subclassed to create components for statistical analysis of a network
     and network monitors.
 
     """
-    def analyse_network(self, traj, network, current_subrun, subruns, network_dict):
+    def analyse(self, traj, network, current_subrun, subruns, network_dict):
         """Can perform statistical analysis on a given network.
 
         Called by a :class:`~pypet.brian.network.NetworkRunner` directly after a
@@ -319,7 +345,7 @@ class NetworkRunner(NetworkComponent):
 
             .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
 
-        5.  Calling :func:`~pypet.brian.network.NetworkAnalyser.analyse_network` for every
+        5.  Calling :func:`~pypet.brian.network.NetworkAnalyser.analyse` for every
             every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
             they were passed to the :class:`pypet.brian.network.NetworkManager`.
 
@@ -337,7 +363,7 @@ class NetworkRunner(NetworkComponent):
 
 
         These 8 steps are repeated for every subrun in the `subruns` list.
-        The the list `subruns` passed to all `add_to_network`, `analyse_network` and
+        The the list `subruns` passed to all `add_to_network`, `analyse` and
         `remove_from_network` methods can be modified
         within these functions to potentially alter the order of execution or
         even erase or add upcoming subruns if necessary.
@@ -432,7 +458,7 @@ class NetworkRunner(NetworkComponent):
 
             # 5. Call `analyse` of all analyser components
             for analyser in analyser_list:
-                analyser.analyse_network( traj, network, current_subrun,  subruns,
+                analyser.analyse( traj, network, current_subrun,  subruns,
                                  network_dict)
 
             # 6. Call `remove? of the network runner itself
@@ -550,7 +576,7 @@ class NetworkManager(object):
         """Adds parameters for a network simulation.
 
         Calls :func:`~pypet.brian.network.NetworkComponent.add_parameters` for all components,
-        analyser, and the network runner
+        analyser, and the network runner (in this order).
 
         :param traj:  Trajectory container
 
