@@ -102,23 +102,20 @@ class NetworkComponent(object):
 
             brian_list:
 
-                Adds
-                ----
+                Adds:
 
                 4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
 
             network_dict:
 
-                Expects
-                --------
+                Expects:
 
                 'neurons_i': Inhibitory neuron group
 
                 'neurons_e': Excitatory neuron group
 
 
-                Adds
-                -----
+                Adds:
 
                 4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
 
@@ -157,23 +154,20 @@ class NetworkComponent(object):
 
             brian_list:
 
-                Adds
-                ----
+                Adds:
 
                 4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
 
             network_dict:
 
-                Expects
-                --------
+                Expects:
 
                 'neurons_i': Inhibitory neuron group
 
                 'neurons_e': Excitatory neuron group
 
 
-                Adds
-                -----
+                Adds:
 
                 4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
                 'conn_ee`, 'conn_ie', 'conn_ei', 'conn_ii'.

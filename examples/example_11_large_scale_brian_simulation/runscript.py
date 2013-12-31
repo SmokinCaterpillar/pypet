@@ -21,8 +21,8 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
     env = Environment(trajectory='Clustered_Network',
-                      filename='../experiments/example_11/HDF5/',
-                      log_folder='../experiments/example_11/LOGS/',
+                      filename='experiments/example_11/HDF5/',
+                      log_folder='experiments/example_11/LOGS/',
                       continuable=False,
                       lazy_debug=False,
                       multiproc=True,
@@ -59,7 +59,7 @@ def main():
 
     # We need `tolist` here sinc our parameter is a python float and not a
     # numpy.float.
-    explore_list = np.arange(1.0, 2.5, 0.1).tolist()
+    explore_list = np.arange(1.0, 2.5, 0.5).tolist()
     # Explore different values of `R_ee`
     traj.f_explore({'R_ee' : explore_list})
 

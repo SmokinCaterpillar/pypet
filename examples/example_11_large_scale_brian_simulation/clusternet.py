@@ -148,8 +148,7 @@ class CNNeuronGroup(NetworkComponent):
 
             List of objects passed to BRIAN network constructor.
 
-            Adds
-            -----
+            Adds:
 
             Inhibitory neuron group
 
@@ -159,8 +158,7 @@ class CNNeuronGroup(NetworkComponent):
 
             Dictionary of elements shared among the components
 
-            Adds
-            ----
+            Adds:
 
             'neurons_i': Inhibitory neuron group
 
@@ -185,8 +183,7 @@ class CNNeuronGroup(NetworkComponent):
 
             List of objects passed to BRIAN network constructor.
 
-            Adds
-            -----
+            Adds:
 
             Inhibitory neuron group
 
@@ -196,8 +193,7 @@ class CNNeuronGroup(NetworkComponent):
 
             Dictionary of elements shared among the components
 
-            Adds
-            ----
+            Adds:
 
             'neurons_i': Inhibitory neuron group
 
@@ -316,8 +312,7 @@ class CNConnections(NetworkComponent):
 
             List of objects passed to BRIAN network constructor.
 
-            Adds
-            -----
+            Adds:
 
             Connections, amount depends on clustering
 
@@ -325,15 +320,13 @@ class CNConnections(NetworkComponent):
 
             Dictionary of elements shared among the components
 
-            Expects
-            --------
+            Expects:
 
             'neurons_i': Inhibitory neuron group
 
             'neurons_e': Excitatory neuron group
 
-            Adds
-            -----
+            Adds:
 
             Connections, amount depends on clustering
 
@@ -359,8 +352,7 @@ class CNConnections(NetworkComponent):
 
             List of objects passed to BRIAN network constructor.
 
-            Adds
-            -----
+            Adds:
 
             Connections, amount depends on clustering
 
@@ -368,15 +360,13 @@ class CNConnections(NetworkComponent):
 
             Dictionary of elements shared among the components
 
-            Expects
-            --------
+            Expects:
 
             'neurons_i': Inhibitory neuron group
 
             'neurons_e': Excitatory neuron group
 
-            Adds
-            -----
+            Adds:
 
             Connections, amount depends on clustering
 
@@ -496,21 +486,15 @@ class CNConnections(NetworkComponent):
 
 
         # Add the connections to the `brian_list` and the network dict
-        brian_list += conns_list #TODO, is that right?
+        brian_list.extend(conns_list)
         network_dict['connections'] = conns_list
 
 
 class CNNetworkRunner(NetworkRunner):
-    """Class to create neurons.
+    """Runs the network experiments.
 
-    :param size_scale:
-
-        Meta parameter to quickly scale the network size. Scales number of neurons linearly
-        and connection strength with `np.sqrt(size_scale)`.
-        Clustersize is NOT scaled!
-
-        Apparently using the original network size of the paper does not work as good as
-        using `size_scale=0.5`.
+    Adds two BrianDurationParameters, one for an initial run, and one for a run
+    that is actually measured.
 
     """
 
@@ -518,9 +502,11 @@ class CNNetworkRunner(NetworkRunner):
     def add_parameters(self, traj):
         """Adds all necessary parameters to `traj` container."""
         traj.f_add_parameter(BrianDurationParameter,'simulation.durations.initial_run', 1000*ms,
-                             order = 0, comment='Runtime of  the simulation')
-        traj.f_add_parameter(BrianDurationParameter,'simulation.durations.measurement_run', 20000*ms,
-                             order = 1, comment='Runtime of  the simulation')
+                             order = 0, comment='Initialisation run for more realistic '
+                                                'measurement conditions.')
+        traj.f_add_parameter(BrianDurationParameter,'simulation.durations.measurement_run', 5000*ms,
+                             order = 1, comment='Measurement run that is considered for '
+                                                'statistical evaluation')
 
 
 
@@ -534,26 +520,57 @@ class CNFanoFactorComputer(NetworkAnalyser):
 
     @staticmethod
     def _compute_fano_factor(spike_table, neuron_id, time_window, start_time, end_time):
+        """Computes Fano Factor for one neuron.
 
+        :param spike_table:
+
+            DataFrame containing the spiketimes of all neurons
+
+        :param neuron_id:
+
+            Index of neuron for which FF is computed
+
+        :param time_window:
+
+            Length of the consecutive time windows to compute the FF
+
+        :param start_time:
+
+            Start time of measurement to consider
+
+        :param end_time:
+
+            End time of measurement to consider
+
+        :return:
+
+            Fano Factor (float) or
+            returns 0 if mean firing activity is 0.
+
+        """
         assert(end_time >= start_time+time_window)
 
+        # Number of time bins
         bins = (end_time-start_time)/float(time_window)
         bins = int(np.floor(bins))
-        binned_spikes = np.zeros(bins)
-        binned_times = np.zeros(bins)
 
+        # Arrays for binning of spike counts
+        binned_spikes = np.zeros(bins)
+
+        # DataFrame only containing spikes of the particular neuron
         spike_table_neuron = spike_table[spike_table.neuron==neuron_id]
 
         for bin in range(bins):
+            # We iterate over the bins to calculate the spike counts
             lower_time = start_time+time_window*bin
             upper_time = start_time+time_window*(bin+1)
 
+            # Filter the spikes
             spike_table_interval = spike_table_neuron[spike_table_neuron.spiketimes >= lower_time]
             spike_table_interval = spike_table_interval[spike_table_interval.spiketimes < upper_time]
 
+            # Add count to bins
             spikes = len(spike_table_interval)
-
-            binned_times[bin]=lower_time
             binned_spikes[bin]=spikes
 
 
@@ -567,7 +584,33 @@ class CNFanoFactorComputer(NetworkAnalyser):
 
     @staticmethod
     def _compute_mean_fano_factor( neuron_ids, spike_table, time_window, start_time, end_time):
+        """Computes average Fano Factor over many neurons.
 
+        :param neuron_ids:
+
+            List of neuron indices to average over
+
+        :param spike_table:
+
+            DataFrame containing the spiketimes of all neurons
+
+        :param time_window:
+
+            Length of the consecutive time windows to compute the FF
+
+        :param start_time:
+
+            Start time of measurement to consider
+
+        :param end_time:
+
+            End time of measurement to consider
+
+        :return:
+
+            Average fano factor
+
+        """
         ffs = np.zeros(len(neuron_ids))
 
         for idx, neuron_id in enumerate(neuron_ids):
@@ -579,11 +622,41 @@ class CNFanoFactorComputer(NetworkAnalyser):
         return mean_ff
 
     def analyse(self, traj, network, current_subrun, subruns, network_dict):
+        """Calculates average Fano Factor of a network.
 
+        :param traj:
+
+            Trajectory container
+
+            Expects:
+
+            `results.monitors.spikes_e`: Data from SpikeMonitor for excitatory neurons
+
+            Adds:
+
+            `results.statistics.mean_fano_factor`: Average Fano Factor
+
+        :param network:
+
+            The BRIAN network
+
+        :param current_subrun:
+
+            BrianDurationParameter
+
+        :param subruns:
+
+            Upcoming subruns, analysis is only performed if subruns is empty,
+            aka the final subrun has finished.
+
+        :param network_dict:
+
+            Dictionary of items shared among componetns
+
+        """
         #Check if we finished all subruns
         if len(subruns)==0:
             spikes_e = traj.results.monitors.spikes_e
-            exc_neurons = traj.parameters.model.N_e
 
             time_window = traj.parameters.analysis.statistics.time_window
             start_time = float(traj.parameters.simulation.durations.initial_run)
@@ -600,74 +673,91 @@ class CNFanoFactorComputer(NetworkAnalyser):
             print 'R_ee: %f, Mean FF: %f' % (traj.R_ee, mean_ff)
 
 
-
-
 class CNMonitorAnalysis(NetworkAnalyser):
-    """Helps analysing (ok so far only plots some stuff) a completed network run"""
+    """Adds monitors for recoding and plots the monitor output."""
 
     @staticmethod
     def add_parameters( traj):
-        """Adds a tuple of neuron indices to record from, a folder to plot to
-        and whether to show the plots.
-
-        """
         traj.f_add_parameter('analysis.neuron_records',(0,1,100,101),
                              comment='Neuron indices to record from.')
-        traj.f_add_parameter('analysis.plot_folder', '../PLOTS/', comment='Folder for plots')
+        traj.f_add_parameter('analysis.plot_folder', 'experiments/example_11/PLOTS/',
+                             comment='Folder for plots')
         traj.f_add_parameter('analysis.show_plots', 0, comment='Whether to show plots.')
         traj.f_add_parameter('analysis.make_plots', 1, comment='Whether to make plots.')
-        pass
-
-
-    def pre_build(self, traj, brian_list, network_dict):
-
-        self._pre_build = not _explored_parameters_in_group(traj, traj.parameters.analysis)
-
-        self._pre_build = (self._pre_build and 'neurons_i' in network_dict and
-                           'neurons_e' in network_dict)
-
-
 
     def add_to_network(self, traj, network, current_subrun, subruns, network_dict):
+        """Adds monitors to the network if the measurement run is carried out.
 
-         if current_subrun.v_order == 1:
+        :param traj: Trajectory container
+
+        :param network: The BRIAN network
+
+        :param current_subrun: BrianDurationParameter
+
+        :param subruns: List of coming subruns
+
+        :param network_dict:
+
+            Dictionary of items shared among the components
+
+            Expects:
+
+            'neurons_e': Excitatory neuron group
+
+            Adds:
+
+            'monitors': List of monitors
+
+                0. SpikeMonitor of excitatory neurons
+
+                1. StateMonitor of membrane potential of some excitatory neurons
+                (specified in `neuron_records`)
+
+                2. StateMonitor of excitatory synaptic currents of some excitatory neurons
+
+                3. State monitor of inhibitory currents of some excitatory neurons
+
+        """
+        if current_subrun.v_order == 1:
             self._add_monitors(traj, network, network_dict)
 
     def _add_monitors(self, traj,  network, network_dict):
         """Adds monitors to the network"""
 
         neurons_e = network_dict['neurons_e']
-        neurons_i = network_dict['neurons_i']
 
         monitor_list = []
 
+        # Spiketimes
         self.spike_monitor = SpikeMonitor(neurons_e, delay=0*ms)
         monitor_list.append(self.spike_monitor)
 
+        # Membrane Potential
         self.V_monitor = StateMonitor(neurons_e,'V',
                                               record=list(traj.neuron_records))
 
         monitor_list.append(self.V_monitor)
 
+        # Exc. syn .Current
         self.I_syn_e_monitor = StateMonitor(neurons_e, 'I_syn_e',
                                             record=list(traj.neuron_records))
         monitor_list.append(self.I_syn_e_monitor)
 
+        # Inh. syn. Current
         self.I_syn_i_monitor = StateMonitor(neurons_e, 'I_syn_i',
                                             record=list(traj.neuron_records))
         monitor_list.append(self.I_syn_i_monitor)
 
-
+        # Add monitors to network and dictionary
         network.add(*monitor_list)
         network_dict['monitors'] = monitor_list
 
     def _make_folder(self, traj):
-        """Makes a subfolder for plots
+        """Makes a subfolder for plots.
 
-        :return: Pathname to print folder
+        :return: Path name to print folder
 
         """
-
         sub_folder = '%s/%s/' % (traj.v_trajectory_name, traj.v_name)
         print_folder = os.path.join(traj.analysis.plot_folder, sub_folder )
         print_folder = os.path.abspath(print_folder)
@@ -675,7 +765,6 @@ class CNMonitorAnalysis(NetworkAnalyser):
             os.makedirs(print_folder)
 
         return print_folder
-
 
     def _plot_result(self, traj, result_name):
         """Plots a state variable graph for several neurons into one figure"""
@@ -697,49 +786,39 @@ class CNMonitorAnalysis(NetworkAnalyser):
             if idx == len(record)-1:
                 plt.xlabel('t/ms')
 
-
-
-
     def _print_graphs(self, traj):
         """Makes some plots and stores them into subfolders"""
         print_folder = self._make_folder(traj)
 
-        # plt.figure()
-        # #filename=os.path.join(print_folder,'testfig.png')
-        # filename = 'testfig.png'
-        # plt.subplot(111)
-        # plt.plot([1,2,3],[3,4,5],'o')
-        # print 'Test'
-        # plt.savefig(filename)
-        # plt.close()
-
+        # If we use BRIAN's own raster_plot functionality we
+        # need to sue the SpikeMonitor directly
         raster_plot(self.spike_monitor, newfigure=True, xlabel='t', ylabel='Exc. Neurons',
                     title='Spike Raster Plot')
 
         filename=os.path.join(print_folder,'spike.png')
 
-        print filename
+        print 'Current plot: %s ' % filename
         plt.savefig(filename)
         plt.close()
 
         fig=plt.figure()
         self._plot_result(traj, 'monitors.V')
         filename=os.path.join(print_folder,'V.png')
-        print filename
+        print 'Current plot: %s ' % filename
         fig.savefig(filename)
         plt.close()
 
         plt.figure()
         self._plot_result(traj, 'monitors.I_syn_e')
         filename=os.path.join(print_folder,'I_syn_e.png')
-        print filename
+        print 'Current plot: %s ' % filename
         plt.savefig(filename)
         plt.close()
 
         plt.figure()
         self._plot_result(traj, 'monitors.I_syn_i')
         filename=os.path.join(print_folder,'I_syn_i.png')
-        print filename
+        print 'Current plot: %s ' % filename
         plt.savefig(filename)
         plt.close()
 
@@ -750,34 +829,50 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
 
     def analyse(self, traj, network, current_subrun, subruns, network_dict):
-        if len(subruns)==0:
-            self._add_results(traj)
+        """Extracts monitor data and plots.
 
-    def _add_results(self, traj):
-        """Performs analysis, aka Plotting
+        Data extraction is done if all subruns have been completed,
+        i.e. `len(subruns)==0`
 
         First, extracts results from the monitors and stores them into `traj`.
 
         Next, uses the extracted data for plots.
 
+        :param traj:
+
+            Trajectory container
+
+            Adds:
+
+            Data from monitors
+
+        :param network: The BRIAN network
+
+        :param current_subrun: BrianDurationParameter
+
+        :param subruns: List of coming subruns
+
+        :param network_dict: Dictionary of items shared among all components
+
         """
+        if len(subruns)==0:
 
-        traj.f_add_result(BrianMonitorResult, 'monitors.spikes_e', self.spike_monitor,
-                          comment = 'The spiketimes of the excitatory population')
+            traj.f_add_result(BrianMonitorResult, 'monitors.spikes_e', self.spike_monitor,
+                              comment = 'The spiketimes of the excitatory population')
 
-        traj.f_add_result(BrianMonitorResult, 'monitors.V', self.V_monitor,
-                          comment = 'Membrane voltage of four neurons from 2 clusters')
+            traj.f_add_result(BrianMonitorResult, 'monitors.V', self.V_monitor,
+                              comment = 'Membrane voltage of four neurons from 2 clusters')
 
-        traj.f_add_result(BrianMonitorResult, 'monitors.I_syn_e', self.I_syn_e_monitor,
-                          comment = 'I_syn_e of four neurons from 2 clusters')
+            traj.f_add_result(BrianMonitorResult, 'monitors.I_syn_e', self.I_syn_e_monitor,
+                              comment = 'I_syn_e of four neurons from 2 clusters')
 
-        traj.f_add_result(BrianMonitorResult, 'monitors.I_syn_i', self.I_syn_i_monitor,
-                          comment = 'I_syn_i of four neurons from 2 clusters')
+            traj.f_add_result(BrianMonitorResult, 'monitors.I_syn_i', self.I_syn_i_monitor,
+                              comment = 'I_syn_i of four neurons from 2 clusters')
 
-        print 'Plotting'
+            print 'Plotting'
 
-        if traj.parameters.analysis.make_plots:
-            self._print_graphs(traj)
+            if traj.parameters.analysis.make_plots:
+                self._print_graphs(traj)
 
 
 

@@ -1267,8 +1267,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :return:
 
-            Ordered dictionary with run_names as keys and found items as values.
-            Will only contain runs as keys where an item was actually found.
+            Ordered dictionary with run names or indices as keys and found items as values.
+            Will only include runs where an item was actually found.
 
         """
 

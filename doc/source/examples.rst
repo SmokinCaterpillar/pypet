@@ -17,3 +17,4 @@ Here you can find some example code how to use the *pypet*.
     examplesdoc/example_07
     examplesdoc/example_08
     examplesdoc/example_09
+    examplesdoc/example_10
