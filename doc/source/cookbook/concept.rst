@@ -67,11 +67,11 @@ Well, that's it, so thanks for using *pypet*,
 
     Robert
 
+..
+    PS: If you use *pypet* for your research, I would be grateful if you
+    follow the :ref:`citation_policy`.
 
-PS: If you use *pypet* for your research, I would be grateful if you
-follow the :ref:`citation_policy`.
-
-PPS: If you use *pypet* for BRIAN_ simulations, also check out the
+PS: If you use *pypet* for BRIAN_ simulations, also check out
 :ref:`brian-framework`.
 
 

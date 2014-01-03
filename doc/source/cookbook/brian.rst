@@ -456,7 +456,7 @@ In every subrun the :class:`~pypet.brian.network.NetworkRunner` will call
 The workflow of network simulation run is also depicted in the figure below.
 
 .. image:: ../figures/network_run.png
-    :width: 860
+    :width: 870
 
 I recommend taking a look at the source code in the `pypet.brian.network` python file
 for a better understanding how the *pypet* BRIAN framework can be used.

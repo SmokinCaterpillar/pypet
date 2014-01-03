@@ -58,7 +58,7 @@ def main():
 
     # We need `tolist` here since our parameter is a python float and not a
     # numpy.float.
-    explore_list = np.arange(1.0, 2.5, 0.1).tolist()
+    explore_list = np.arange(1.0, 2.6, 0.1).tolist()
     # Explore different values of `R_ee`
     traj.f_explore({'R_ee' : explore_list})
 

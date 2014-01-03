@@ -16,8 +16,8 @@ from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurat
 def main():
 
     folder = 'experiments/example_11/HDF5/'
-    filename = 'Clustered_Network_2013_12_25_08h28m02s.hdf5' # Change this to the name of your
-    # hdf5 file, note that the very first trajectory of this file is loaded.
+    filename = 'Clustered_Network_2014_01_03_21h35m49s.hdf5' # Change this to the name of your
+    # hdf5 file. The very first trajectory in this file is loaded.
 
     filename = os.path.join(folder, filename)
     # If we pass a filename to the trajectory a new HDF5StorageService will

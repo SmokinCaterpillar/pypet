@@ -7,7 +7,7 @@ FAQs and Known Issues
 when I use *pypet* in multiprocessing mode
 in combination with *matplotlib* and *savefig*!?
 
-    **A:** *Matlpotlib* uses *numpy* for linear algebra operations,
+    **A:** *Matplotlib* uses *numpy* for linear algebra operations,
     these operations are often necessary when plotting.
     So, to solve the issues take a look at the next question.
 
