@@ -14,19 +14,9 @@ from brian.stdunits import ms
 from brian import NeuronGroup, rand, Connection, Equations, Network, SpikeMonitor, second, \
     raster_plot, show, StateMonitor, clear, reinit_default_clock
 
-def run_network(traj, clustered_net):
-    """Top-level function for running the network
-
-    :param traj: Container for parameters and results
-
-    :param clustered_net: *pypet* NetworkManager
-
-    """
-    clustered_net.run_network(traj)
-
 
 def _explored_parameters_in_group(traj, group_node):
-    """Checks if one the parametes in `group_node` is explored.
+    """Checks if one the parameters in `group_node` is explored.
 
     :param traj: Trajectory container
     :param group_node: Group node
@@ -621,7 +611,7 @@ class CNFanoFactorComputer(NetworkAnalyser):
         mean_ff = np.mean(ffs)
         return mean_ff
 
-    def analyse(self, traj, network, current_subrun, subruns, network_dict):
+    def analyse(self, traj, network, current_subrun, subrun_list, network_dict):
         """Calculates average Fano Factor of a network.
 
         :param traj:
@@ -644,7 +634,7 @@ class CNFanoFactorComputer(NetworkAnalyser):
 
             BrianDurationParameter
 
-        :param subruns:
+        :param subrun_list:
 
             Upcoming subruns, analysis is only performed if subruns is empty,
             aka the final subrun has finished.
@@ -655,7 +645,7 @@ class CNFanoFactorComputer(NetworkAnalyser):
 
         """
         #Check if we finished all subruns
-        if len(subruns)==0:
+        if len(subrun_list)==0:
             spikes_e = traj.results.monitors.spikes_e
 
             time_window = traj.parameters.analysis.statistics.time_window
@@ -685,7 +675,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
         traj.f_add_parameter('analysis.show_plots', 0, comment='Whether to show plots.')
         traj.f_add_parameter('analysis.make_plots', 1, comment='Whether to make plots.')
 
-    def add_to_network(self, traj, network, current_subrun, subruns, network_dict):
+    def add_to_network(self, traj, network, current_subrun, subrun_list, network_dict):
         """Adds monitors to the network if the measurement run is carried out.
 
         :param traj: Trajectory container
@@ -694,7 +684,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         :param current_subrun: BrianDurationParameter
 
-        :param subruns: List of coming subruns
+        :param subrun_list: List of coming subrun_list
 
         :param network_dict:
 
@@ -828,11 +818,11 @@ class CNMonitorAnalysis(NetworkAnalyser):
             plt.show()
 
 
-    def analyse(self, traj, network, current_subrun, subruns, network_dict):
+    def analyse(self, traj, network, current_subrun, subrun_list, network_dict):
         """Extracts monitor data and plots.
 
         Data extraction is done if all subruns have been completed,
-        i.e. `len(subruns)==0`
+        i.e. `len(subrun_list)==0`
 
         First, extracts results from the monitors and stores them into `traj`.
 
@@ -850,12 +840,12 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         :param current_subrun: BrianDurationParameter
 
-        :param subruns: List of coming subruns
+        :param subrun_list: List of coming subruns
 
         :param network_dict: Dictionary of items shared among all components
 
         """
-        if len(subruns)==0:
+        if len(subrun_list)==0:
 
             traj.f_add_result(BrianMonitorResult, 'monitors.spikes_e', self.spike_monitor,
                               comment = 'The spiketimes of the excitatory population')

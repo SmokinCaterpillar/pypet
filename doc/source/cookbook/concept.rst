@@ -71,5 +71,8 @@ Well, that's it, so thanks for using *pypet*,
 PS: If you use *pypet* for your research, I would be grateful if you
 follow the :ref:`citation_policy`.
 
+PPS: If you use *pypet* for BRIAN_ simulations, also check out the
+:ref:`brian-framework`.
+
 
 .. _BRIAN: http://briansimulator.org/

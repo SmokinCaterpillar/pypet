@@ -22,6 +22,8 @@ These function can directly be called or used by the user.
     NetworkManager.pre_run_network
     NetworkManager.pre_build
 
+The private functions of the runner and the manager are also listed below
+to allow fast browsing of the source code.
 
 ------------------------------------------------
 Functions that can be implemented by a Subclass
@@ -54,6 +56,8 @@ NetworkManager
 
 .. autoclass:: pypet.brian.network.NetworkManager
     :members:
+    :private-members:
+    :special-members:
 
 -----------------------
 NetworkRunner
@@ -61,6 +65,8 @@ NetworkRunner
 
 .. autoclass:: pypet.brian.network.NetworkRunner
     :members:
+    :private-members:
+    :special-members:
 
 -----------------------
 NetworkComponent

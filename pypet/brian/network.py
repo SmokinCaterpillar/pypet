@@ -5,9 +5,8 @@ Build parts of a network via subclassing :class:`~pypet.brian.network.NetworkCom
 
 Specify a :class:`~pypet.brian.network.NetworkRunner` (subclassing optionally) that handles
 the execution of your experiment in different subruns. Subruns can be defined
-as :class:`~pypet.brian.parameter.BrianDurationParameter` instances added to
-`traj.parameters.simulation.durations` or `traj.parameters.simulation.pre_durations` for
-pre runs, respectively.
+as :class:`~pypet.brian.parameter.BrianDurationParameter` instances in a particular
+trajectory group.
 
 The creation and management of a `BRIAN network`_ is handled by the
 :class:`~pypet.brian.network.NetworkManager` (no need for subclassing). Pass your
@@ -16,9 +15,9 @@ components, analyser and your runner to the manager.
 Pass the ;func:`~pypet.brian.network.run_network` function together with a
 :class:`~pypet.brian.network.NetworkManager` to your main environment function
 :func:`~pypet.environment.Environment.f_run` to start a simulation and parallel
-parameter exploration. Be aware that successful parameter exploration
+parameter exploration. Be aware that in case of a *pre-built* network,
+successful parameter exploration
 requires parallel processing (see :class:`~pypet.brian.network.NetworkManager`).
-
 
 .. _`BRIAN network`: http://briansimulator.org/docs/reference-network.html
 
@@ -54,8 +53,12 @@ def run_network(traj, network_manager):
 class NetworkComponent(object):
     """Abstract class to define a component of a BRIAN network.
 
-    Can be subclassed to define the construction of NeuronGroups or
-    Connections, for instance.
+    Can be subclassed to define the construction of NeuronGroups_ or
+    Connections_, for instance.
+
+    .. _NeuronGroups: http://briansimulator.org/docs/reference-models-and-groups.html
+
+    .. _Connections: http://briansimulator.org/docs/reference-connections.html
 
     """
 
@@ -63,7 +66,7 @@ class NetworkComponent(object):
         """Adds parameters to `traj`.
 
         Function called from the :class:`~pypet.brian.network.NetworkManager` to
-        define and add parameters to `traj` the trajectory container.
+        define and add parameters to the trajectory container.
 
         """
         pass
@@ -75,49 +78,8 @@ class NetworkComponent(object):
         components can be built before the actual experimental runs or in
         case the network is pre-run.
 
-        :param traj: Trajectory container
-
-        :param brian_list:
-
-            Add BRIAN network objects like NeuronGroups or Connections to this list.
-            These objects will be automatically added at the instantiation of the network
-            via `Network(*brian_list)` (see the `BRIAN network class`_).
-
-            .. _`BRIAN network class`: http://briansimulator.org/docs/reference-network.html#brian.Network
-
-
-        :param network_dict:
-
-            Add any item to this dictionary that should be shared or accessed by all
-            your components and which are not part of the trajectory container.
-            It is recommended to also put all items from the `brian_list` into
-            the dictionary for completeness.
-
-
-        For convenience I would recommend documenting the implementation of `build` and
-        `pre-build` and so on in the subclass like the following. Use statements like `Adds`
-        for items that are added to the list and the dict and statements like `Expects`
-        for what is needed to be part of the `network_dict` in order to build the
-        current component.
-
-            brian_list:
-
-                Adds:
-
-                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
-
-            network_dict:
-
-                Expects:
-
-                'neurons_i': Inhibitory neuron group
-
-                'neurons_e': Excitatory neuron group
-
-
-                Adds:
-
-                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
+        Parameters are the same as for the :func:`~pypet.brian.network.NetworkComponent.build`
+        method.
 
         """
         pass
@@ -128,12 +90,20 @@ class NetworkComponent(object):
         Function called from the :class:`~pypet.brian.network.NetworkManager`
         at the beginning of every experimental run,
 
+        :param traj:
+
+            Trajectory container
+
         :param brian_list:
 
-            Add BRIAN network objects like NeuronGroups or Connections to this list.
+            Add BRIAN network objects like NeuronGroups_ or Connections_ to this list.
             These objects will be automatically added at the instantiation of the network
             in case the network was not pre-run
             via `Network(*brian_list)` (see the `BRIAN network class`_).
+
+            .. _NeuronGroups: http://briansimulator.org/docs/reference-models-and-groups.html
+
+            .. _Connections: http://briansimulator.org/docs/reference-connections.html
 
             .. _`BRIAN network class`: http://briansimulator.org/docs/reference-network.html#brian.Network
 
@@ -146,7 +116,7 @@ class NetworkComponent(object):
             the dictionary for completeness.
 
 
-        For convenience I would recommend documenting the implementation of `build` and
+        For convenience I recommend documenting the implementation of `build` and
         `pre-build` and so on in the subclass like the following. Use statements like `Adds`
         for items that are added to the list and the dict and statements like `Expects`
         for what is needed to be part of the `network_dict` in order to build the
@@ -169,13 +139,13 @@ class NetworkComponent(object):
 
                 Adds:
 
-                4 Connections, between all types of neurons (e->e, e->i, i->e, i->i)
-                'conn_ee`, 'conn_ie', 'conn_ei', 'conn_ii'.
+                'connections':  List of 4 Connections,
+                                between all types of neurons (e->e, e->i, i->e, i->i)
 
         """
         pass
 
-    def add_to_network(self, traj, network, current_subrun, subruns, network_dict):
+    def add_to_network(self, traj, network, current_subrun, subrun_list, network_dict):
         """Can add network objects before a specific `subrun`.
 
         Called by a :class:`~pypet.brian.network.NetworkRunner` before a the
@@ -199,10 +169,10 @@ class NetworkComponent(object):
             :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the very next
             subrun to be simulated.
 
-        :param subruns:
+        :param subrun_list:
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to be run
-            after the current subrun.
+            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            be run after the current subrun.
 
         :param network_dict:
 
@@ -211,7 +181,7 @@ class NetworkComponent(object):
         """
         pass
 
-    def remove_from_network(self, traj, network, current_subrun, subruns, network_dict):
+    def remove_from_network(self, traj, network, current_subrun, subrun_list, network_dict):
         """Can remove network objects before a specific `subrun`.
 
         Called by a :class:`~pypet.brian.network.NetworkRunner` after a
@@ -228,13 +198,13 @@ class NetworkComponent(object):
 
         :param current_subrun:
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying current subrun that
-            was executed shortly before.
+            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the current subrun
+            that was executed shortly before.
 
-        :param subruns:
+        :param subrun_list:
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to be run
-            after the current subrun.
+            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            be run after the current subrun.
 
         :param network_dict:
 
@@ -250,7 +220,7 @@ class NetworkAnalyser(NetworkComponent):
     and network monitors.
 
     """
-    def analyse(self, traj, network, current_subrun, subruns, network_dict):
+    def analyse(self, traj, network, current_subrun, subrun_list, network_dict):
         """Can perform statistical analysis on a given network.
 
         Called by a :class:`~pypet.brian.network.NetworkRunner` directly after a
@@ -264,10 +234,10 @@ class NetworkAnalyser(NetworkComponent):
 
         :param current_subrun:
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying current subrun that
-            was executed shortly before.
+            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the current subrun
+            that was executed shortly before.
 
-        :param subruns:
+        :param subrun_list:
 
             List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
             be run after the current subrun. Can be deleted or added to change the actual course
@@ -291,8 +261,10 @@ class NetworkRunner(NetworkComponent):
     :func:`~pypet.brian.network.NetworkComponent.add_parameters`. These parameters
     should specify an experimental run with a :class:~pypet.brian.parameter.BrianDurationParameter`
     to define the order and duration of network subruns. For the actual experimental runs,
-    all subruns must be stored in `traj.parameters.simulation.durations`. For a pre-run
-    the subruns must be stored in `traj.parameters.simulation.pre_durations`.
+    all subruns must be stored in a particular trajectory group.
+    By default this `traj.parameters.simulation.durations`. For a pre-run
+    the default is `traj.parameters.simulation.pre_durations`. These default group names
+    can be changed at runner initialisation (see below).
 
     :param report:
 
@@ -307,18 +279,41 @@ class NetworkRunner(NetworkComponent):
 
         How often progress is reported. If not specified 10 seconds is chosen.
 
-    Can log messages with the attribute `logger` which is initialised in
-    :func:`~pypet.brian.network.NetworkRunner.set_logger`.
+    :param durations_group_name:
+
+        Name where to look for :class:`~pypet.brian.parameter.BrianDurationParameter` instances
+        in the trajectory which specify the order and durations of subruns.
+
+    :param pre_durations_group_name:
+
+        As above, but for pre running a network.
+
+    :param check_uniqueness:
+
+        Whether to check if the parameter group names specified in the two parameters
+        above match a unique group in the trajectory.
+
+    Moreover, in your subclass you can log messages with the attribute `logger`
+    which is initialised in :func:`~pypet.brian.network.NetworkRunner.set_logger`.
 
     """
-    def __init__(self, report='text', report_period=None):
+    def __init__(self, report='text', report_period=None,
+                 durations_group_name = 'parameters.simulation.durations',
+                 pre_durations_group_name = 'parameters.simulation.pre_durations',
+                 check_uniqueness=True):
 
         if report_period is None:
             report_period=10 * second
 
         self._report = report
         self._report_period = report_period
+
+        self._durations_group_name = durations_group_name
+        self._pre_durations_group_name = pre_durations_group_name
+        self._check_uniqueness=check_uniqueness
+
         self.set_logger()
+
 
     def __getstate__(self):
         """Called for pickling.
@@ -343,7 +338,7 @@ class NetworkRunner(NetworkComponent):
         """Adds a logger with the name `'pypet.brian.parameter.NetworkRunner'`."""
         self.logger = logging.getLogger('pypet.brian.parameter.NetworkRunner')
 
-    def pre_run_network(self, traj, network,  network_dict, component_list, analyser_list):
+    def execute_network_pre_run(self, traj, network,  network_dict, component_list, analyser_list):
         """Runs a network before the actual experiment.
 
         Called by a :class:`~pypet.brian.network.NetworkManager`.
@@ -351,7 +346,9 @@ class NetworkRunner(NetworkComponent):
 
         Subruns and their durations are extracted from the trajectory. All
         :class:`~pypet.brian.parameter.BrianDurationParameter` instances found under
-        `traj.parameters.simulation.pre_durations`. The order is determined from
+        `traj.parameters.simulation.pre_durations` (default, you can change the
+        name of the group where to search for durations at runner initialisation).
+        The order is determined from
         the `v_order` attributes. There must be at least one subrun in the trajectory,
         otherwise an AttributeError is thrown. If two subruns equal in their order
         property a RuntimeError is thrown.
@@ -369,10 +366,10 @@ class NetworkRunner(NetworkComponent):
         :param analyser_list: List of :class:`~pypet.brian.network.NetworkAnalyser` objects
 
         """
-        self._run_network(traj, network, network_dict, component_list, analyser_list,
+        self._execute_network_run(traj, network, network_dict, component_list, analyser_list,
                           pre_run=True)
 
-    def run_network(self, traj, network,  network_dict, component_list, analyser_list):
+    def execute_network_run(self, traj, network,  network_dict, component_list, analyser_list):
         """Runs a network in an experimental run.
 
         Called by a :class:`~pypet.brian.network.NetworkManager`.
@@ -382,7 +379,9 @@ class NetworkRunner(NetworkComponent):
 
         These subruns are extracted from the trajectory. All
         :class:`~pypet.brian.parameter.BrianDurationParameter` instances found under
-        `traj.parameters.simulation.pre_durations`. The order is determined from
+        `traj.parameters.simulation.durations` (default, you can change the
+        name of the group where to search for durations at runner initialisation).
+        The order is determined from
         the `v_order` attributes. There must be at least one subrun in the trajectory,
         otherwise an AttributeError is thrown. If two subruns equal in their order
         property a RuntimeError is thrown.
@@ -415,16 +414,16 @@ class NetworkRunner(NetworkComponent):
             anything from the network, but this step is executed for completeness).
 
         7.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` for every
+            every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
+            they were passed to the :class:`pypet.brian.network.NetworkManager`
+
+        8.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` for every
             every :class:`~pypet.brian.network.NetworkComponent` in the order as
             they were passed to the :class:`pypet.brian.network.NetworkManager`.
 
-        8.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` for every
-            every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`.
 
-
-        These 8 steps are repeated for every subrun in the `subruns` list.
-        The the list `subruns` passed to all `add_to_network`, `analyse` and
+        These 8 steps are repeated for every subrun in the `subrun_list`.
+        The `subrun_list` passed to all `add_to_network`, `analyse` and
         `remove_from_network` methods can be modified
         within these functions to potentially alter the order of execution or
         even erase or add upcoming subruns if necessary.
@@ -446,15 +445,11 @@ class NetworkRunner(NetworkComponent):
         .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
 
         """
-        self._run_network(traj, network, network_dict, component_list, analyser_list,
+        self._execute_network_run(traj, network, network_dict, component_list, analyser_list,
                           pre_run=False)
 
     def _extract_subruns(self, traj, pre_run=False):
         """Extracts subruns from the trajectory.
-
-        All :class:`~pypet.brian.parameter.BrianDurationParameters` must be added below
-        `traj.parameters.simulation.durations` for experimental runs and
-        `traj.parameters.simulation.pre_durations` for the pre-run.
 
         :param traj: Trajectory container
 
@@ -462,9 +457,11 @@ class NetworkRunner(NetworkComponent):
 
         """
         if pre_run:
-            durations = traj.parameters.simulation.pre_durations
+            durations = traj.f_get(self._pre_durations_group_name,
+                                   check_uniqueness=self._check_uniqueness)
         else:
-            durations = traj.parameters.simulation.durations
+            durations = traj.f_get(self._durations_group_name,
+                                   check_uniqueness=self._check_uniqueness)
 
 
         subruns = {}
@@ -480,36 +477,36 @@ class NetworkRunner(NetworkComponent):
 
         return [subruns[order] for order in sorted(orders)]
 
-    def _run_network(self, traj, network, network_dict, component_list,
+    def _execute_network_run(self, traj, network, network_dict, component_list,
                      analyser_list, pre_run=False):
-        """Generic `run_network` function, handles normal experimental runs as well as pre-runs.
+        """Generic `execute_network_run` function, handles experimental runs as well as pre-runs.
 
-        See also :func:`~pypet.brian.network.NetworkRunner.run_network` and
-         :func:`~pypet.brian.network.NetworkRunner.pre_run_network`.
+        See also :func:`~pypet.brian.network.NetworkRunner.execute_network_run` and
+         :func:`~pypet.brian.network.NetworkRunner.execute_network_pre_run`.
 
         """
 
-        # Initially extract the `subruns` list
-        subruns = self._extract_subruns(traj, pre_run=pre_run)
+        # Initially extract the `subrun_list`
+        subrun_list = self._extract_subruns(traj, pre_run=pre_run)
 
         # Execute all subruns in order
-        while len(subruns)>0:
+        while len(subrun_list)>0:
 
             # Get the next subrun
-            current_subrun= subruns.pop(0)
+            current_subrun= subrun_list.pop(0)
 
             # 1. Call `add` of all normal components
             for component in component_list:
-                component.add_to_network(traj, network, current_subrun,  subruns,
+                component.add_to_network(traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
             # 2. Call `add` of all analyser components
             for analyser in analyser_list:
-                analyser.add_to_network(traj, network, current_subrun,  subruns,
+                analyser.add_to_network(traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
             # 3. Call `add` of the network runner itself
-            self.add_to_network(traj, network, current_subrun,  subruns,
+            self.add_to_network(traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
             # 4. Run the network
@@ -519,24 +516,22 @@ class NetworkRunner(NetworkComponent):
 
             # 5. Call `analyse` of all analyser components
             for analyser in analyser_list:
-                analyser.analyse( traj, network, current_subrun,  subruns,
+                analyser.analyse( traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
-            # 6. Call `remove? of the network runner itself
-            self.remove_from_network(traj, network, current_subrun,  subruns,
+            # 6. Call `remove` of the network runner itself
+            self.remove_from_network(traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
-            # 7. Call `remove` for all normal components
-            for component in component_list:
-                component.remove_from_network(traj, network, current_subrun,  subruns,
-                                 network_dict)
-
-            # 8. Call `remove` for all analyser components
+            # 7. Call `remove` for all analyser components
             for analyser in analyser_list:
-                analyser.remove_from_network( traj, network, current_subrun,  subruns,
+                analyser.remove_from_network( traj, network, current_subrun,  subrun_list,
                                  network_dict)
 
-
+            # 8. Call `remove` for all normal components
+            for component in component_list:
+                component.remove_from_network(traj, network, current_subrun,  subrun_list,
+                                 network_dict)
 
 
 class NetworkManager(object):
@@ -546,8 +541,8 @@ class NetworkManager(object):
 
     :param network_runnner:  A :class:`~pypet.brian.network.NetworkRunner`
 
-        Special component that handles the execution of maybe several subruns.
-        A NetworkRunner ids usually subclassed and one implements the
+        Special component that handles the execution of several subruns.
+        A NetworkRunner can be subclassed to implement the
         :func:`~pypet.brian.network.NetworkComponent.add_parameters` method to add
         :class:`~pypet.brian.parameter.BrianDurationParameter` instances defining the
         order and duration of subruns.
@@ -560,10 +555,14 @@ class NetworkManager(object):
 
         :class:`~pypet.brian.network.NetworkComponent` always needs to be sublcassed and
         defines only an abstract interface. For instance, one could create her or his
-        own subclass called NeuronGroupComponent that creates NeuronGroups, Whereas
-        a SynapseComponent creates Synapses between the before built NeuronGroups.
+        own subclass called NeuronGroupComponent that creates NeuronGroups_, Whereas
+        a SynapseComponent creates Synapses_ between the before built NeuronGroups_.
         Accordingly, the SynapseComponent instance is listed after
         the NeuronGroupComponent.
+
+        .. _NeuronGroups: http://briansimulator.org/docs/reference-models-and-groups.html
+
+        .. _Synapses: http://briansimulator.org/docs/reference-synapses.html
 
     :param analyser_list:
 
@@ -587,7 +586,7 @@ class NetworkManager(object):
         BRIAN environment.
 
         If you are not bothered by not starting every experimental run with the very same
-        network you can set `force_single_core=True`. The NetworkManager will
+        network, you can set `force_single_core=True`. The NetworkManager will
         do iterative single processing and ignore the ongoing modification of the network
         throughout all runs.
 
@@ -660,7 +659,7 @@ class NetworkManager(object):
         """Pre-builds network components.
 
         Calls :func:`~pypet.brian.network.NetworkComponent.pre_build` for all components,
-        analysers and the network runner.
+        analysers, and the network runner.
 
         `pre_build` is not automatically called but either needs to be executed manually
         by the user, either calling it directly or by using
@@ -670,7 +669,6 @@ class NetworkManager(object):
 
         .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
 
-
         :param traj: Trajectory container
 
         """
@@ -678,7 +676,6 @@ class NetworkManager(object):
 
         for component in self._component_list:
             component.pre_build(traj, self._brian_list, self._network_dict)
-
 
         if self._analyser_list:
 
@@ -711,15 +708,15 @@ class NetworkManager(object):
         for component in self._component_list:
             component.build(traj, self._brian_list, self._network_dict)
 
-        self._logger.info('Building NetworkRunner')
-        self._network_runner.build(traj, self._brian_list, self._network_dict)
-
         if self._analyser_list:
 
             self._logger.info('Building Analysers')
 
             for analyser in self._analyser_list:
                 analyser.build(traj, self._brian_list, self._network_dict)
+
+        self._logger.info('Building NetworkRunner')
+        self._network_runner.build(traj, self._brian_list, self._network_dict)
 
 
     def pre_run_network(self, traj):
@@ -734,7 +731,7 @@ class NetworkManager(object):
 
         This function will create a new `BRIAN network`_ which is run by
         the :class:`~pypet.brian.network.NetworkRunner` and it's
-        :func:`~pypet.brian.network.NetworkRunner.pre_run_network`.
+        :func:`~pypet.brian.network.NetworkRunner.execute_network_pre_run`.
 
         To see how a network run is structured also take a look at
         :func:`~pypet.brian.network.NetworkRunner.run_network`.
@@ -752,7 +749,7 @@ class NetworkManager(object):
 
 
         self._network = Network(*self._brian_list)
-        self._network_runner.pre_run_network( traj, self._network,  self._network_dict,
+        self._network_runner.execute_network_pre_run( traj, self._network,  self._network_dict,
                                              self._component_list, self._analyser_list)
 
         self._logger.info('\n-----------------------------\n'
@@ -774,7 +771,7 @@ class NetworkManager(object):
         This function will create a new `BRIAN network`_ in case one was not pre-run.
         The execution of the network run is carried out by
         the :class:`~pypet.brian.network.NetworkRunner` and it's
-        :func:`~pypet.brian.network.NetworkRunner.run_network` (also take
+        :func:`~pypet.brian.network.NetworkRunner.execute_network_run` (also take
         a look at this function's documentation to see the structure of a network run).
 
         .. `BRIAN network`_: http://briansimulator.org/docs/reference-network.html#brian.Network
@@ -829,11 +826,9 @@ class NetworkManager(object):
             self._network = Network(*self._brian_list)
 
         # Start the experimental run
-        self._network_runner.run_network( traj, self._network,  self._network_dict,
+        self._network_runner.execute_network_run( traj, self._network,  self._network_dict,
                                              self._component_list, self._analyser_list)
 
         self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'
                      '-----------------------------')
-
-

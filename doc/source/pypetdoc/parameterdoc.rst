@@ -104,12 +104,14 @@ Therefore, also private functions are listed.
     :members:
     :inherited-members:
     :private-members:
+    :special-members:
     :undoc-members:
 
 .. autoclass:: pypet.parameter.BaseResult
     :members:
     :inherited-members:
     :private-members:
+    :special-members:
     :undoc-members:
 
 
