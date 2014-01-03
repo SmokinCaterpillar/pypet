@@ -31,8 +31,8 @@ env = Environment(trajectory='Multiplication',
 traj = env.v_trajectory
 
 # Add both parameters
-traj.f_add_parameter('x', 1, comment='Im the first dimension!')
-traj.f_add_parameter('y', 1, comment='Im the second dimension!')
+traj.f_add_parameter('x', 1, comment='I am the first dimension!')
+traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 
 # Explore the parameters with a cartesian product
 traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))

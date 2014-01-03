@@ -10,7 +10,7 @@ from pypet import pypetconstants
 def multiply(traj):
     """Sophisticated simulation of multiplication"""
     z=traj.x*traj.y
-    traj.f_add_result('z',z=z, comment='Im the product of two reals!')
+    traj.f_add_result('z',z=z, comment='I am the product of two reals!')
 
 
 
@@ -33,12 +33,12 @@ env = Environment(trajectory='Example_04_MP',
 traj = env.v_trajectory
 
 # Add both parameters
-traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+traj.f_add_parameter('x', 1.0, comment='I am the first dimension!')
+traj.f_add_parameter('y', 1.0, comment='I am the second dimension!')
 
 # Explore the parameters with a cartesian product, but we want to explore a bit more
-traj.f_explore(cartesian_product({'x':[float(x) for x in range(25)],
-                                  'y':[float(y) for y in range(25)]}))
+traj.f_explore(cartesian_product({'x':[float(x) for x in range(15)],
+                                  'y':[float(y) for y in range(15)]}))
 
 # Run the simulation
 env.f_run(multiply)

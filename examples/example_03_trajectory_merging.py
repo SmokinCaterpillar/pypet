@@ -9,7 +9,7 @@ from pypet.utils.explore import cartesian_product
 def multiply(traj):
     """Sophisticated simulation of multiplication"""
     z=traj.x*traj.y
-    traj.f_add_result('z',z=z, comment='Im the product of two reals!',)
+    traj.f_add_result('z',z=z, comment='I am the product of two reals!',)
 
 
 
@@ -27,10 +27,10 @@ traj1 = env1.v_trajectory
 traj2 = env2.v_trajectory
 
 # Add both parameters
-traj1.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-traj1.f_add_parameter('y', 1.0, comment='Im the second dimension!')
-traj2.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-traj2.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+traj1.f_add_parameter('x', 1.0, comment='I am the first dimension!')
+traj1.f_add_parameter('y', 1.0, comment='I am the second dimension!')
+traj2.f_add_parameter('x', 1.0, comment='I am the first dimension!')
+traj2.f_add_parameter('y', 1.0, comment='I am the second dimension!')
 
 # Explore the parameters with a cartesian product for the first trajectory:
 traj1.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))

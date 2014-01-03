@@ -48,7 +48,13 @@ in order to add :class:`~pypet.brian.parameter.BrianDurationParameter` instances
 to define the length and order of individual subruns.
 
 For a description of the structure and different phases of an individual simulation run see
-:func:`pypeet.brian.network.NetworkManager.run_network`.
+:func:`~pypet.brian.network.NetworkManager.run_network`.
+
+------------------------------
+Top-Level run_network Function
+------------------------------
+
+.. autofunction:: pypet.brian.network.run_network
 
 -----------------------
 NetworkManager

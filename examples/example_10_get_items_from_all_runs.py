@@ -12,7 +12,7 @@ from pypet import pypetconstants
 def multiply(traj):
     """Sophisticated simulation of multiplication"""
     z=traj.x*traj.y
-    traj.f_add_result('z',z, comment='Im the product of two reals!')
+    traj.f_add_result('z',z, comment='I am the product of two reals!')
 
 
 # Create an environment that handles running
@@ -24,8 +24,8 @@ env = Environment(trajectory='Example10',filename='experiments/example_08/HDF5/e
 traj = env.v_trajectory
 
 # Add both parameters
-traj.f_add_parameter('x', 1, comment='Im the first dimension!')
-traj.f_add_parameter('y', 1, comment='Im the second dimension!')
+traj.f_add_parameter('x', 1, comment='I am the first dimension!')
+traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 
 # Explore the parameters with a cartesian product:
 x_length = 15

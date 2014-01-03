@@ -12,7 +12,7 @@ The creation and management of a `BRIAN network`_ is handled by the
 :class:`~pypet.brian.network.NetworkManager` (no need for subclassing). Pass your
 components, analyser and your runner to the manager.
 
-Pass the ;func:`~pypet.brian.network.run_network` function together with a
+Pass the :func:`~pypet.brian.network.run_network` function together with a
 :class:`~pypet.brian.network.NetworkManager` to your main environment function
 :func:`~pypet.environment.Environment.f_run` to start a simulation and parallel
 parameter exploration. Be aware that in case of a *pre-built* network,
@@ -390,11 +390,11 @@ class NetworkRunner(NetworkComponent):
 
         1.  Calling :func:`~pypet.brian.network.NetworkComponent.add_to_network` for every
             every :class:`~pypet.brian.network.NetworkComponent` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`.
+            they were passed to the :class:`~pypet.brian.network.NetworkManager`.
 
         2.  Calling :func:`~pypet.brian.network.NetworkComponent.add_to_network` for every
             every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`.
+            they were passed to the :class:`~pypet.brian.network.NetworkManager`.
 
         3.  Calling :func:`~pypet.brian.network.NetworkComponent.add_to_network` of the
             NetworkRunner itself (usually the network runner should not add or remove
@@ -407,7 +407,7 @@ class NetworkRunner(NetworkComponent):
 
         5.  Calling :func:`~pypet.brian.network.NetworkAnalyser.analyse` for every
             every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`.
+            they were passed to the :class:`~pypet.brian.network.NetworkManager`.
 
         6.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` of the
             NetworkRunner itself (usually the network runner should not add or remove
@@ -415,11 +415,11 @@ class NetworkRunner(NetworkComponent):
 
         7.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` for every
             every :class:`~pypet.brian.network.NetworkAnalyser` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`
+            they were passed to the :class:`~pypet.brian.network.NetworkManager`
 
         8.  Calling :func:`~pypet.brian.network.NetworkComponent.remove_from_network` for every
             every :class:`~pypet.brian.network.NetworkComponent` in the order as
-            they were passed to the :class:`pypet.brian.network.NetworkManager`.
+            they were passed to the :class:`~pypet.brian.network.NetworkManager`.
 
 
         These 8 steps are repeated for every subrun in the `subrun_list`.
