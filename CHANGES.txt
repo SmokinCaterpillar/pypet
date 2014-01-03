@@ -10,10 +10,11 @@ pypet 0.1b.3
 *   If you don't specify a filename, the environment defaults to a file with the name of
     the trajectory
 
-*   New mulriprocessing mode (`use_pool=False` for environment) to spawn individual processes
+*   New multiprocessing mode (`use_pool=False` for environment) to spawn individual processes
     for each run. Useful if data cannot be pickled.
 
-*   New Brian Network Manager and Duration Parameter
+*   New Brian framework with NetworkManager, NetworkComponent, NetworkAnalyser,
+    NetworkRunner and DurationParameter
 
 
 pypet 0.1b.2
