@@ -1,4 +1,4 @@
-.. P37 documentation master file, created by
+.. pypet documentation master file, created by
    sphinx-quickstart on Wed Sep  4 12:12:59 2013.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
@@ -9,6 +9,9 @@ Welcome to pypet's documentation!
 
 The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
+
+Latest version: 0.1b.3
+
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
