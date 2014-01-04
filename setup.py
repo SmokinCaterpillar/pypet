@@ -1,17 +1,31 @@
 __author__ = 'Robert Meyer'
 
 import re
+import sys
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
+install_requires=[
+        'tables >= 2.3.1',
+        'pandas >= 0.12.0',
+        'numpy >= 1.6.1',
+        'scipy >= 0.9.0']
 
-verstr = "unknown"
+# check if importlib exists, if not (aka python 2.6) install it
+try:
+    import importlib
+except ImportError:
+    install_requires.append('importlib')
+
+if (sys.version_info < (2, 7, 0)):
+    install_requires.append(['unittest2'])
+    # For Python 2.6 we additionally need ordereddict
+    install_requires.append('ordereddict >= 1.1')
 
 # For versioning, Version found in pypet._version.py
-
 verstrline = open('pypet/_version.py', "rt").read()
 
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
@@ -20,29 +34,6 @@ if mo:
     verstr = mo.group(1)
 else:
     raise RuntimeError('Unable to find version in pypet/_version.py')
-
-
-
-install_requires=[
-        'tables >= 2.3.1',
-        'pandas >= 0.12.0',
-        'numpy >= 1.6.1',
-        'scipy >= 0.9.0']
-
-
-# check if importlib exists, if not (aka python 2.6) install it
-try:
-    import importlib
-except ImportError:
-    install_requires.append('importlib')
-
-
-import sys
-if (sys.version_info < (2, 7, 0)):
-    install_requires.append(['unittest2'])
-    # For Python 2.6 we additionally need ordereddict
-    install_requires.append('ordereddict >= 1.1')
-
 
 setup(
     name='pypet',
