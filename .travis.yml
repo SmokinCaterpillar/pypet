@@ -50,8 +50,8 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: if $COVERAGE == ON; then export PYTHONPATH=$PYTHONPATH:./pypet; coverage run --parallel-mode --source=pypet ./pypet/tests/all_tests.py; else python ./pypet/tests/all_tests.py; fi
-after_success: if $COVERAGE == ON; then coveralls; fi
+script: if [[ $COVERAGE == ON ]]; then export PYTHONPATH=$PYTHONPATH:./pypet; coverage run --parallel-mode --source=pypet ./pypet/tests/all_tests.py; else python ./pypet/tests/all_tests.py; fi
+after_success: if [[ $COVERAGE == ON ]]; then coveralls; fi
 branches:
   only:
     - develop

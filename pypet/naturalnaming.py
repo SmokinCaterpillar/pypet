@@ -81,12 +81,26 @@ FAST_UPPER_BOUND = 2
 
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
-    def __init__(self,full_name,leaf):
+    def __init__(self, full_name, comment, leaf):
         super(NNTreeNode,self).__init__()
 
         self._rename(full_name)
 
         self._leaf=leaf # Whether or not a node is a leaf, aka terminal node.
+
+        self._comment=''
+        self.v_comment=comment
+
+    @property
+    def v_comment(self):
+        """Should be a nice descriptive comment"""
+        return self._comment
+
+    @v_comment.setter
+    def v_comment(self, comment):
+        """Changes the comment"""
+        comment = str(comment)
+        self._comment=comment
 
     @property
     def v_depth(self):
@@ -189,25 +203,9 @@ class NNTreeNode(WithAnnotations):
 class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
 
-    def __init__(self,full_name,comment,parameter):
-        super(NNLeafNode,self).__init__(full_name=full_name,leaf=True)
+    def __init__(self,full_name, comment, parameter):
+        super(NNLeafNode,self).__init__(full_name=full_name, comment=comment, leaf=True)
         self._parameter=parameter
-
-        self._comment=''
-        self.v_comment=comment
-
-
-    @property
-    def v_comment(self):
-        """Should be a nice descriptive comment"""
-        return self._comment
-
-    @v_comment.setter
-    def v_comment(self, comment):
-        """Changes the comment"""
-        comment = str(comment)
-        self._comment=comment
-
 
     def f_supports_fast_access(self):
         """Whether or not fast access can be supported by the parameter or result.
@@ -943,7 +941,7 @@ class NaturalNamingInterface(object):
         return self._add_generic(start_node,type_name,group_type_name,[instance],{})
 
 
-    def _add_from_group_name(self,start_node,name):
+    def _add_from_group_name(self,start_node, name, comment):
         """Adds a new group node to the tree based on the group's name.
 
         Checks to which subtree the group belongs and calls
@@ -978,7 +976,7 @@ class NaturalNamingInterface(object):
         else:
             raise RuntimeError('You shall not pass!')
 
-        return self._add_generic(start_node,group_type_name,group_type_name,[name],{})
+        return self._add_generic(start_node,group_type_name,group_type_name,[name,comment],{})
 
 
 
@@ -1027,7 +1025,8 @@ class NaturalNamingInterface(object):
         """
         if type_name == group_type_name:
             # Wee add a group node, this can be only done by name:
-            name = args[0]
+            args=list(args)
+            name = args.pop(0)
             instance = None
             constructor = None
 
@@ -1067,7 +1066,7 @@ class NaturalNamingInterface(object):
 
 
         return self._add_to_tree(start_node,name, type_name, group_type_name, instance,
-                                            constructor, args,kwargs)
+                                            constructor, args, kwargs)
 
 
     def _add_to_tree(self, start_node, name, type_name, group_type_name,
@@ -1152,7 +1151,13 @@ class NaturalNamingInterface(object):
 
                     else:
                         # We add a group node, can also be intermediate on the fly
-                        new_node = self._create_any_group(act_node.v_full_name,name,
+                        if idx == last_idx:
+                            # We add a group as desired
+                            new_node = self._create_any_group(act_node.v_full_name, name,
+                                                          group_type_name, args, kwargs)
+                        else:
+                            # We add a group on the fly
+                            new_node = self._create_any_group(act_node.v_full_name, name,
                                                           group_type_name)
 
                     act_node._children[name] = new_node
@@ -1236,25 +1241,30 @@ class NaturalNamingInterface(object):
 
 
 
-    def _create_any_group(self, location, name, type_name):
+    def _create_any_group(self, location, name, type_name, args=None, kwargs=None):
         """Generically creates a new group inferring from the `type_name`."""
         if location:
             full_name = '%s.%s' % (location, name)
         else:
             full_name = name
 
+        if args is None:
+            args=[]
+
+        if kwargs is None:
+            kwargs={}
 
         if type_name == RESULT_GROUP:
-            instance= ResultGroup(self,full_name=full_name)
+            instance= ResultGroup(self,full_name, *args, **kwargs)
 
         elif type_name == PARAMETER_GROUP:
-            instance= ParameterGroup(self,full_name=full_name)
+            instance= ParameterGroup(self, full_name, *args, **kwargs)
 
         elif type_name == CONFIG_GROUP:
-            instance= ConfigGroup(self,full_name=full_name)
+            instance= ConfigGroup(self, full_name, *args, **kwargs)
 
         elif type_name == DERIVED_PARAMETER_GROUP:
-            instance= DerivedParameterGroup(self,full_name=full_name)
+            instance= DerivedParameterGroup(self,full_name, *args, **kwargs)
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -1741,8 +1751,8 @@ class NNGroupNode(NNTreeNode):
     You can add other groups or parameters/results to it.
 
     """
-    def __init__(self, nn_interface=None, full_name=''):
-        super(NNGroupNode,self).__init__(full_name,leaf=False)
+    def __init__(self, nn_interface=None, full_name='', comment=''):
+        super(NNGroupNode,self).__init__(full_name, comment=comment, leaf=False)
         self._children={}
         self._nn_interface=nn_interface
 
@@ -2043,7 +2053,7 @@ class ParameterGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
-    def f_add_parameter_group(self,name):
+    def f_add_parameter_group(self, name, comment=''):
         """Adds an empty parameter group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -2057,9 +2067,9 @@ class ParameterGroup(NNGroupNode):
         """
         return self._nn_interface._add_generic(self,type_name = PARAMETER_GROUP,
                                                group_type_name = PARAMETER_GROUP,
-                                               args = (name,), kwargs={})
+                                               args = (name, comment), kwargs={})
 
-    def f_add_parameter(self,*args,**kwargs):
+    def f_add_parameter(self, *args, **kwargs):
         """ Adds a parameter under the current node.
 
         There are two ways to add a new parameter either by adding a parameter instance:
@@ -2092,7 +2102,7 @@ class ResultGroup(NNGroupNode):
     You can add other groups or results to it.
 
     """
-    def f_add_result_group(self,name):
+    def f_add_result_group(self,name, comment=''):
         """Adds an empty result group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -2110,7 +2120,7 @@ class ResultGroup(NNGroupNode):
 
         return self._nn_interface._add_generic(self,type_name = RESULT_GROUP,
                                                group_type_name = RESULT_GROUP,
-                                               args = (name,), kwargs={})
+                                               args = (name, comment), kwargs={})
 
     def f_add_result(self,*args,**kwargs):
         """Adds a result under the current node.
@@ -2154,7 +2164,7 @@ class DerivedParameterGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
-    def f_add_derived_parameter_group(self,name):
+    def f_add_derived_parameter_group(self,name, comment=''):
         """Adds an empty derived parameter group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -2171,7 +2181,7 @@ class DerivedParameterGroup(NNGroupNode):
 
         return self._nn_interface._add_generic(self,type_name = DERIVED_PARAMETER_GROUP,
                                                group_type_name = DERIVED_PARAMETER_GROUP,
-                                               args = (name,), kwargs={})
+                                               args = (name, comment), kwargs={})
 
     def f_add_derived_parameter(self,*args,**kwargs):
         """Adds a derived parameter under the current group.
@@ -2195,7 +2205,7 @@ class ConfigGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
-    def f_add_config_group(self,name):
+    def f_add_config_group(self,name, comment=''):
         """Adds an empty config group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -2208,7 +2218,7 @@ class ConfigGroup(NNGroupNode):
         """
         return self._nn_interface._add_generic(self,type_name = CONFIG_GROUP,
                                                group_type_name = CONFIG_GROUP,
-                                               args = (name,), kwargs={})
+                                               args = (name, comment), kwargs={})
 
     def f_add_config(self,*args,**kwargs):
         """Adds a config parameter under the current group.

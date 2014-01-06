@@ -528,12 +528,8 @@ class Environment(object):
             # we put it into the current working directory
             self._filename = os.path.join(os.getcwd(),self._filename)
 
-
         if not tail:
             self._filename =  os.path.join(self._filename, self._traj.v_name+'.hdf5')
-
-
-
 
         self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
@@ -629,6 +625,9 @@ class Environment(object):
         self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
                                     comment ='Timestamp of trajectory')
 
+        self._traj.config.environment.v_comment='Settings for the different environments '\
+                                              'used to run the experiments'
+
         # Add HDF5 config in case the user wants the standard service
         if self._use_hdf5 and not self.v_trajectory.v_stored:
 
@@ -664,6 +663,7 @@ class Environment(object):
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance')
 
+            self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
 
             if not small_overview_tables:
                 self.f_switch_off_small_overview()

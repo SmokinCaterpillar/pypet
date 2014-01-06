@@ -259,6 +259,13 @@ class TrajectoryComparator(unittest.TestCase):
 
         # Check the annotations
         for node in traj1.f_iter_nodes(recursive=True):
+
+            if (not 'run' in node.v_full_name) or 'run_00000000' in node.v_full_name:
+                if node.v_comment != '' and node.v_full_name in traj2:
+                    second_comment = traj2.f_get(node.v_full_name).v_comment
+                    self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %
+                                                                     (node.v_comment, second_comment, node.v_full_name))
+
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations
                 self.assertTrue(nested_equal(node.v_annotations, second_anns))

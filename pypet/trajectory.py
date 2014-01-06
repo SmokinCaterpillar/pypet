@@ -2073,6 +2073,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.f_add_config(config_name, len(self),
                                     comment ='Length of trajectory before merge')
 
+        self.config.merge.v_comment='Settings and information of the different merges'
+
         if self.v_version != VERSION:
             config_name='merge.%s.version' % merge_name
             self.f_add_config(config_name, self.v_version,

@@ -1991,7 +1991,11 @@ class HDF5StorageService(StorageService):
             if not in_trajectory or load_data==pypetconstants.LOAD_DATA:
 
                 class_name = self._all_get_from_attrs(hdf5group,HDF5StorageService.CLASS_NAME)
+
                 comment = self._all_get_from_attrs(hdf5group,HDF5StorageService.COMMENT)
+                if comment is None:
+                    comment = ''
+
                 range_length = self._all_get_from_attrs(hdf5group,HDF5StorageService.LENGTH)
 
                 if not range_length is None and range_length >1 and range_length != len(traj):
@@ -2021,8 +2025,16 @@ class HDF5StorageService(StorageService):
             # Else we are dealing with a group node
             if not name in parent_traj_node._children:
                 # If the group does not exist create it
+
+
+                comment = self._all_get_from_attrs(hdf5group,HDF5StorageService.COMMENT)
+                if comment is None:
+                    comment = ''
+
                 new_traj_node = parent_traj_node._nn_interface._add_from_group_name(
-                                                                        parent_traj_node, name)
+                                                                        parent_traj_node, name,
+                                                                        comment = comment)
+
             else:
                 new_traj_node = parent_traj_node._children[name]
 
@@ -2858,6 +2870,9 @@ class HDF5StorageService(StorageService):
         if _hdf5_group is None:
             _hdf5_group,_ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
+        if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
+            setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
+
         self._ann_store_annotations(node_in_traj,_hdf5_group)
 
 
@@ -3007,7 +3022,9 @@ class HDF5StorageService(StorageService):
                                                                                   name = instance.v_name)
 
                         # Check if comment is obsolete
-                        example_comment = str(example_item_node._v_attrs[HDF5StorageService.COMMENT])
+                        example_comment = ''
+                        if HDF5StorageService.COMMENT in example_item_node._v_attrs:
+                            example_comment = str(example_item_node._v_attrs[HDF5StorageService.COMMENT])
                         definitely_store_comment=instance.v_comment != example_comment
 
                         # We can rely on lexicographic comparisons with run indices
@@ -3103,7 +3120,7 @@ class HDF5StorageService(StorageService):
                 pass
 
 
-        if not self._purge_duplicate_comments or definitely_store_comment:
+        if ((not self._purge_duplicate_comments or definitely_store_comment) and instance.v_comment != ''):
             # Only add the comment if necessary
             setattr(group._v_attrs, HDF5StorageService.COMMENT, instance.v_comment)
 
