@@ -120,12 +120,6 @@ class StorageTest(TrajectoryComparator):
         self.compare_trajectories(traj,traj2)
 
 
-
-
-
-
-
-
 class EnvironmentTest(TrajectoryComparator):
 
 

@@ -3068,7 +3068,8 @@ class HDF5StorageService(StorageService):
 
                         table.flush()
 
-                        if self._purge_duplicate_comments and erase_old_comment:
+                        if (self._purge_duplicate_comments and erase_old_comment and
+                                HDF5StorageService.COMMENT in example_item_node._v_attrs):
                             del example_item_node._v_attrs[HDF5StorageService.COMMENT]
 
                         self._hdf5file.flush()

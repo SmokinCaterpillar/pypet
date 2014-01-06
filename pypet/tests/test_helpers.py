@@ -142,11 +142,11 @@ def add_params(traj,param_dict):
 
     for key, val in flat_dict.items():
         if isinstance(val, (np.ndarray,tuple)):
-            traj.f_add_parameter(ArrayParameter,key,val )
+            traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
         elif isinstance(val, (int,str,bool,long,float)):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
-            traj.f_add_parameter(SparseParameter,key,val).v_annotations.f_set(
+            traj.f_add_parameter(SparseParameter,key,val, comment='comment').v_annotations.f_set(
                 **{'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
                                  'Second_Fav':np.array([43.0,43.0])})
         elif isinstance(val,list):
@@ -157,7 +157,7 @@ def add_params(traj,param_dict):
             raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
 
-    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?')
+    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
 
 def multipy(traj):
@@ -191,31 +191,31 @@ def simple_calculations(traj, arg1, simple_kwarg):
         for idx,key in enumerate(keys):
             keys[idx] = key.replace('.','_')
 
-        traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2)
+        traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
-        traj.f_add_result('ResMatrix',np.array([1.2,2.3]))
+        traj.f_add_result('ResMatrix',np.array([1.2,2.3]), comment='ResMatrix')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
         traj.f_get('DictsNFrame').f_set(myframe)
 
-        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
+        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2).v_comment='test'
         traj.f_add_derived_parameter('super.mega',33, comment='It is huuuuge!')
         traj.super.f_set_annotations(AgainATestAnnotations='I am a string!111elf')
 
-        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1)
-        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2)
-        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0)
+        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1, comment='p1')
+        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2, comment='p2')
+        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0, comment='p0')
 
-        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42)
-        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52)
-        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62)
-        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72)
+        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72).v_comment='sdsa'
 
         myobjtab = ObjectTable(data={'strings':['a','abc','qwertt'], 'ints':[1,2,3]})
 
-        traj.f_add_result('object.table', myobjtab).v_annotations.f_set(test=42)
+        traj.f_add_result('object.table', myobjtab, comment='k').v_annotations.f_set(test=42)
         traj.object.f_set_annotations(test2=42.42)
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
