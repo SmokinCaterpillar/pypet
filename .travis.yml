@@ -46,7 +46,7 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: coverage run --parallel-mode ./pypet/tests/all_tests.py
+script: coverage run --parallel-mode -L --include=pypet ./pypet/tests/all_tests.py
 after_success: coveralls
 branches:
   only:
