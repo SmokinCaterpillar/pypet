@@ -50,7 +50,7 @@ class AnnotationsTest(unittest.TestCase):
 
 
     def add_annotations(self, traj):
-        funcs = 4
+        funcs = 5
 
         for idx,node in enumerate(traj.f_iter_nodes(recursive=True)):
             for name in self.annotations:
@@ -66,6 +66,8 @@ class AnnotationsTest(unittest.TestCase):
                     node.v_annotations.f_set_single(name,anno)
                 elif idx % funcs == 3:
                     setattr(node.v_annotations,name, anno)
+                elif idx % funcs == 4:
+                    node.v_annotations[name]=anno
 
 
     def test_annotations_insert(self):

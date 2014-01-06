@@ -610,9 +610,13 @@ class ResultTest(unittest.TestCase):
         self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',**self.data)
         self.results['test.res.args']=self.Constructor('test.res.args')
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
+        self.results['test.res.setitem']=self.Constructor('test.res.setitem')
 
         self.results['test.res.args'].f_set(self.data.values())
         self.results['test.res.kwargs'].f_set(**self.data)
+
+        for key, value in self.data.items():
+            self.results['test.res.setitem'][key]=value
 
     def make_constructor(self):
         self.Constructor=Result

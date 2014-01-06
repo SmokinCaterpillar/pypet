@@ -1975,8 +1975,23 @@ class Result(BaseResult):
 
 
     def __getitem__(self, name):
-        """ Equivalent to calling `f_get(name)` (see :func:`~pypet.parameter.BaseResult.f_get`)."""
+        """ Equivalent to calling `f_get`"""
         return self.f_get(name)
+
+
+    def __setitem__(self, key, value):
+        """Almost equivalent to calling __setattr__.
+
+        Treats integer values as `f_get`.
+
+        """
+        if isinstance(key, int):
+            if key == 0:
+                name = self.v_name
+            else:
+                name = self.v_name+'_%d' % key
+
+        setattr(self, key, value)
 
     def __iter__(self):
         """Equivalent to iterating over the keys of the data dictionary."""
@@ -2024,13 +2039,11 @@ class Result(BaseResult):
 
         result_list = []
         for name in args:
-            if name == 0:
-                name = self.v_name
-            else:
-                try:
+            if isinstance(name, int):
+                if name == 0:
+                    name = self.v_name
+                else:
                     name = self.v_name+'_%d' % name
-                except TypeError:
-                    pass
 
             if not name in self._data:
                 raise  AttributeError('`%s` is not part of your result `%s`.' %

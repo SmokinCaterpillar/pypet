@@ -45,7 +45,22 @@ class Annotations(object):
         return self.__dict__.__iter__()
 
     def __getitem__(self, item):
+        """Equivalent to calling f_get()"""
         return self.f_get(item)
+
+    def __setitem__(self, key, value):
+        """Almost equivalent to calling __setattr__.
+
+        Treats integer values as `f_get`.
+
+        """
+        if isinstance(key, int):
+            if key == 0:
+                key = 'annotation'
+            else:
+                key = 'annotation_%d' % key
+
+        setattr(self, key, value)
 
     def f_to_dict(self, copy=True):
         """Returns annotations as dictionary.

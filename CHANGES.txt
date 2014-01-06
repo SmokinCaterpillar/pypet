@@ -1,3 +1,8 @@
+pypet 0.1b.4
+
+*   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`
+
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

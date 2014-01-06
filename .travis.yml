@@ -7,8 +7,14 @@ env:
     - PANDAS_VERSION=0.12.0
 
   matrix:
-    - TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.9.0
-    - TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0
+    - TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.9.0, COVERAGE=OFF
+    - TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=OFF
+
+matrix:
+    include:
+    - python: 2.7
+      TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=ON
+
 
 
 # Install dependencies for PyTables
@@ -46,8 +52,8 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: coverage run --parallel-mode -L --include=pypet ./pypet/tests/all_tests.py
-after_success: coveralls
+script: if $COVERAGE == ON; then export PYTHONPATH=$PYTHONPATH:./pypet; coverage run --parallel-mode --source=pypet ./pypet/tests/all_tests.py; else python ./pypet/tests/all_tests.py; fi
+after_success: if $COVERAGE == ON; then coveralls; fi
 branches:
   only:
     - develop

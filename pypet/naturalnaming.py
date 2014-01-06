@@ -1764,19 +1764,6 @@ class NNGroupNode(NNTreeNode):
         """Checks if node has children or not"""
         return len(self._children) == 0
 
-    def __getattr__(self, name):
-        if (not '_nn_interface' in self.__dict__ or
-                not '_full_name' in self.__dict__ or
-                not '_children' in self.__dict__ or
-                not 'f_get' in self.__class__.__dict__ or
-                    name[0] == '_'):
-            raise AttributeError('Wrong attribute %s. (And you this statement prevents pickling '
-                                 'problems)' % name)
-
-        return self.f_get(name, self._nn_interface._get_fast_access(),
-                            self._nn_interface._get_check_uniqueness(),
-                            self._nn_interface._get_search_strategy())
-
     def __contains__(self, item):
         return self.f_contains(item)
 
@@ -1902,6 +1889,7 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self.f_get(item)
+
 
     def __getattr__(self, name):
         if name.startswith('_'):
