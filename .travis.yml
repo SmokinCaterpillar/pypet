@@ -14,7 +14,7 @@ env:
 # Install dependencies for PyTables
 # command to install dependencies
 install:
-  - echo "Installing Coveralls
+  - echo "Installing Coveralls"
   - pip install coveralls
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
