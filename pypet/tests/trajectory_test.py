@@ -387,13 +387,10 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('f_get')
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
-                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
-                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri')
+            self.traj.f_add_parameter('e'*129)
+
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
-                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
-                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri.test')
+            self.traj.f_add_parameter('e'*120+'.j'*120+'.k'*40)
 
 
         with self.assertRaises(ValueError):
