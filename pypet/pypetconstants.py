@@ -65,9 +65,10 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
 
 ################### HDF5 Naming and Comments ##########################
 
-HDF5_STRCOL_MAX_NAME_LENGTH = 64
+
+HDF5_STRCOL_MAX_NAME_LENGTH = 128
 """Maximum length of a (short) name"""
-HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
+HDF5_STRCOL_MAX_LOCATION_LENGTH = 256
 """Maximum length of the location string"""
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
 """Maximum length of a value string"""

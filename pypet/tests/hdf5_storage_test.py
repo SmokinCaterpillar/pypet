@@ -21,11 +21,13 @@ else:
 import scipy.sparse as spsp
 import random
 import tables
+import inspect
 
 import tables as pt
 
 from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multipy
+    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
+
 
 
 class StorageTest(TrajectoryComparator):
@@ -213,7 +215,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.logfolder = make_temp_file('experiments/tests/Log')
 
         random.seed()
-        self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
+        self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
@@ -282,57 +284,61 @@ class EnvironmentTest(TrajectoryComparator):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
-        newtraj.f_load(name=trajectory_name, load_derived_parameters=2,load_results=2,
+        newtraj.f_load(name=trajectory_name, load_parameters=2,
+                       load_derived_parameters=2,load_results=2,
                        index=trajectory_index, as_new=as_new)
         return newtraj
 
 
-
-    def test_expand(self):
-
-        ###Explore
-        self.traj.f_add_parameter('TEST', 'test_expand')
-        self.explore(self.traj)
-
-        self.make_run()
-
-        self.expand()
-
-        self.make_run()
-
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
-        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-
-        self.compare_trajectories(self.traj,newtraj)
-
-    def test_expand_after_reload(self):
-        self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
-        ###Explore
-        self.explore(self.traj)
-
-        self.make_run()
-
-        traj_name = self.traj.v_name
-
-        traj_name = self.traj.v_name
-        del self.env
-        self.env = Environment(trajectory=self.traj,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
-
-        self.traj = self.env.v_trajectory
-
-        self.traj.f_load(name=traj_name)
-
-        self.expand()
-
-        self.make_run()
-
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
-        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-
-        self.compare_trajectories(self.traj,newtraj)
+    # def test_expand(self):
+    #
+    #     ###Explore
+    #     self.traj.f_add_parameter('TEST', 'test_expand')
+    #     self.explore(self.traj)
+    #
+    #     self.make_run()
+    #
+    #     self.expand()
+    #
+    #     print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
+    #     self.make_run()
+    #
+    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+    #     self.traj.f_update_skeleton()
+    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+    #
+    #     self.compare_trajectories(self.traj,newtraj)
+    #
+    # def test_expand_after_reload(self):
+    #
+    #     self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
+    #     ###Explore
+    #     self.explore(self.traj)
+    #
+    #     self.make_run()
+    #
+    #     traj_name = self.traj.v_name
+    #
+    #     traj_name = self.traj.v_name
+    #
+    #
+    #     self.env = Environment(trajectory=self.traj,filename=self.filename,
+    #                       file_title=self.trajname, log_folder=self.logfolder)
+    #
+    #     self.traj = self.env.v_trajectory
+    #
+    #     self.traj.f_load(name=traj_name)
+    #
+    #     self.expand()
+    #
+    #     print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
+    #     self.make_run()
+    #
+    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+    #     self.traj.f_update_skeleton()
+    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+    #
+    #     self.compare_trajectories(self.traj, newtraj)
 
 
     def expand(self):
@@ -362,6 +368,11 @@ class EnvironmentTest(TrajectoryComparator):
         for name in should_not:
             self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
         hdf5file.close()
+
+        self.traj.f_load(load_parameters=-2, load_derived_parameters=-2, load_results=-2)
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name)
+
+        self.compare_trajectories(newtraj,self.traj)
 
     def test_switch_off_all_tables(self):
         ###Explore
@@ -474,7 +485,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.openFile(self.filename, mode='a')
 
         try:
             traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
@@ -514,7 +525,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.openFile(self.filename, mode='a')
 
         try:
             traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
@@ -554,7 +565,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         self.logfolder = make_temp_file('experiments/tests/Log')
-        self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
+        self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,

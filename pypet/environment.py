@@ -77,7 +77,7 @@ def _single_run(args):
         runparams = args[7]
         kwrunparams = args[8]
 
-        use_pool = result_queue is not None
+        use_pool = result_queue is None
 
         root = logging.getLogger()
         idx = traj.v_idx
@@ -149,7 +149,7 @@ def _single_run(args):
                   'Finished single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
 
-        if use_pool:
+        if not use_pool:
             result_queue.put(result)
         else:
             return result
@@ -1022,7 +1022,7 @@ class Environment(object):
 
 
             # Number of processes to be started
-            ncores =  self._traj.f_get('config.ncores').f_get()
+            ncores =  self._traj.f_get('config.environment.%s.ncores'  % self.v_name).f_get()
 
 
             self._logger.info('\n************************************************************\n'

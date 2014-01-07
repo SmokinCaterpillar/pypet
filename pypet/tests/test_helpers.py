@@ -4,9 +4,11 @@ from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
 from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
     BaseParameter, SparseParameter, SparseResult, ObjectTable
+import pypet.pypetconstants
 import scipy.sparse as spsp
 import os
 import logging
+import random
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -20,6 +22,7 @@ import pandas as pd
 
 
 import tempfile
+
 
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
@@ -70,6 +73,19 @@ def make_run(remove=None, folder=None):
     finally:
         if remove:
             shutil.rmtree(actual_tempdir,True)
+
+def make_trajectory_name(testcase):
+    """Creates a trajectory name best on the current `testcase`"""
+    name = testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
+    maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
+
+    if len(name) > maxlen:
+        name = name[len(name)-maxlen:]
+
+        while name.startswith('_'):
+            name = name[1:]
+
+    return name
 
 def create_param_dict(param_dict):
     '''Fills a dictionary with some parameters that can be put into a trajectory.
@@ -239,6 +255,11 @@ def to_dict_wo_config(traj):
 class TrajectoryComparator(unittest.TestCase):
 
     def compare_trajectories(self,traj1,traj2):
+
+        trajlength = len(traj1)
+        rungroups = traj1.results.f_children()-1
+
+        self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
 
         old_items = to_dict_wo_config(traj1)
         new_items = to_dict_wo_config(traj2)

@@ -18,7 +18,7 @@ from pypet import pypetconstants
 import logging
 
 from test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
-    make_temp_file, TrajectoryComparator, multipy
+    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
 from hdf5_storage_test import ResultSortTest
 
 
@@ -41,7 +41,7 @@ class MergeTest(TrajectoryComparator):
 
         #self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         logfolder = make_temp_file('experiments/tests/Log')
-        trajname = 'Test%d' % idx
+        trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
         env = Environment(trajectory=trajname,filename=filename,file_title=trajname, log_folder=logfolder)
 

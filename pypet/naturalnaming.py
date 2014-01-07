@@ -1232,6 +1232,8 @@ class NaturalNamingInterface(object):
             faulty_names = '%s %s is too long the name can only have %d characters but it has %d,' % \
                            (faulty_names,name,len(name),pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
 
+
+
         if len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
             faulty_names = '%s %s is too long the location can only have %d characters but it has %d,' % \
                            (faulty_names,name,len(location),pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
@@ -2198,6 +2200,16 @@ class DerivedParameterGroup(NNGroupNode):
                                                args=args,kwargs=kwargs)
 
 
+class Group(NNGroupNode):
+    """Generic group that you can use to add items arbitrarily in your trajectory.
+
+    These generic groups can be used if you do not want to follow the strict
+    division into the four sub-branches `config`, `parameters`,
+    `derived_parameters`, `results`.
+
+    Be aware that you cannot add such a generic group under one of these groups.
+
+    """
 
 class ConfigGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.config`.
