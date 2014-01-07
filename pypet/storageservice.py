@@ -2275,11 +2275,11 @@ class HDF5StorageService(StorageService):
                 return '%s_runs' % where
 
 
-    def _all_store_param_result_or_commented_group_table_entry(self,param_or_result,table, flags,
+    def _all_store_param_result_or_commented_group_table_entry(self,instance,table, flags,
                                                additional_info=None):
         """Stores a single row into an overview table
 
-        :param param_or_result: A parameter or result instance
+        :param instance: A parameter or result or group instance
 
         :param table: Table where row will be inserted
 
@@ -2291,15 +2291,15 @@ class HDF5StorageService(StorageService):
         :param additional_info:
 
             Dictionary containing information that cannot be extracted from
-            `param_or_result`, but needs to be inserted, too.
+            `instance`, but needs to be inserted, too.
 
 
         """
         #assert isinstance(table, pt.Table)
 
-        location = param_or_result.v_location
-        name = param_or_result.v_name
-        fullname = param_or_result.v_full_name
+        location = instance.v_location
+        name = instance.v_name
+        fullname = instance.v_full_name
 
 
         if flags==(HDF5StorageService.ADD_ROW,):
@@ -2321,10 +2321,10 @@ class HDF5StorageService(StorageService):
             insert_dict={}
         else:
             # Extract information to insert from the instance and the additional info dict
-            insert_dict = self._all_extract_insert_dict(param_or_result,colnames,additional_info)
+            insert_dict = self._all_extract_insert_dict(instance, colnames, additional_info)
 
         # Write the table entry
-        self._all_add_or_modify_row(fullname,insert_dict,table,condition=condition,
+        self._all_add_or_modify_row(fullname, insert_dict, table, condition=condition,
                                     condvars=condvars,flags=flags)
 
 
@@ -2608,7 +2608,8 @@ class HDF5StorageService(StorageService):
 
             row = table.row
 
-            self._all_insert_into_row(row,insert_dict)
+
+            self._all_insert_into_row(row, insert_dict)
 
             row.append()
 
@@ -2665,6 +2666,8 @@ class HDF5StorageService(StorageService):
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' %(item_name,table._v_name))
         table.flush()
+
+        print '************HERE 2670b*******************'
 
 
     def _all_insert_into_row(self, row, insert_dict):
@@ -2867,13 +2870,14 @@ class HDF5StorageService(StorageService):
     def _grp_store_group(self,node_in_traj, _hdf5_group = None):
         """Stores a group node.
 
-        For group nodes only annotations need to be stored.
+        For group nodes only annotations and comments need to be stored.
 
         """
         if _hdf5_group is None:
             _hdf5_group,_ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
         if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
+
 
             # Store the comment in one of the overview tables
             if node_in_traj.v_creator_name == 'trajectory':
@@ -2888,6 +2892,9 @@ class HDF5StorageService(StorageService):
 
             if store_comment:
                 setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
+
+
+
 
 
         self._ann_store_annotations(node_in_traj,_hdf5_group)
