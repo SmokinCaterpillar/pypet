@@ -481,7 +481,8 @@ class EnvironmentTest(TrajectoryComparator):
 
 
             for node in traj_group._f_walkGroups():
-                if 'SRVC_LEAF' in node._v_attrs:
+                if 'SRVC_LEAF' in node._v_attrs or node._v_name == 'sparse' or node._v_name=='List':
+                    #We now that the `List` and `traj` group contain a comment
                     if 'run_' in node._v_pathname:
                         #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
                         comment_run_name = 'run_00000000'
@@ -521,7 +522,7 @@ class EnvironmentTest(TrajectoryComparator):
 
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
-                    if 'run_' in node._v_pathname:
+                    if 'run_' in node._v_pathname or node._v_name == 'sparse' or node._v_name=='List':
                         #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
                         comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:

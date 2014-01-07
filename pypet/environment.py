@@ -756,6 +756,8 @@ class Environment(object):
         self._traj.config.hdf5.overview.results_trajectory=0
         self._traj.config.hdf5.overview.results_runs_summary=0
         self._traj.config.hdf5.purge_duplicate_comments=0
+        self._traj.config.hdf5.overview.commented_groups_trajectory=0
+        self._traj.config.hdf5.overview.commented_groups_runs_summary=0
 
 
     def f_continue_run(self, continue_file):

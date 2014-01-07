@@ -24,7 +24,7 @@ import tempfile
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
 
-REMOVE=True
+REMOVE=False
 ''' Whether or not to remove the temporary directory after the tests'''
 
 actual_tempdir=''
@@ -189,7 +189,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):
-            keys[idx] = key.replace('.','_')
+            keys[idx] = key.replace('.', '_')
+
+        traj.f_add_result_group('List', comment='Im a result group')
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
@@ -212,6 +214,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52).v_comment='sdsa'
         traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62).v_comment='sdsa'
         traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72).v_comment='sdsa'
+
+        traj.sparse.v_comment = 'I contain sparse data!'
 
         myobjtab = ObjectTable(data={'strings':['a','abc','qwertt'], 'ints':[1,2,3]})
 

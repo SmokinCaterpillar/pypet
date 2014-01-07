@@ -50,7 +50,7 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: if [[ $COVERAGE == ON ]]; then export PYTHONPATH=$PYTHONPATH:./pypet; coverage run --parallel-mode --source=./pypet/* ./pypet/tests/all_tests.py; else python ./pypet/tests/all_tests.py; fi
+script: if [[ $COVERAG == ON ]] then cp ./pypet/tests/all_test.py ./;  coverage run --source=pypet ./all_tests.py; else python ./pypet/tests/all_tests.py
 after_success: if [[ $COVERAGE == ON ]]; then coveralls; fi
 branches:
   only:

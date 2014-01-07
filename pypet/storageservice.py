@@ -255,10 +255,12 @@ class HDF5StorageService(StorageService):
            'config.hdf5.overview.derived_parameters_trajectory':'derived_parameters_trajectory',
            'config.hdf5.overview.derived_parameters_runs':'derived_parameters_runs',
            'config.hdf5.overview.results_trajectory':'results_trajectory',
-           'config.hdf5.overview.results_runs':'results_runs',
-           'config.hdf5.overview.explored_parameters' : 'explored_parameters',
+           'config.hdf5.overview.results_runs': 'results_runs',
+           'config.hdf5.overview.explored_parameters': 'explored_parameters',
            'config.hdf5.overview.derived_parameters_runs_summary':'derived_parameters_runs_summary',
            'config.hdf5.overview.results_runs_summary':'results_runs_summary',
+           'config.hdf5.overview.commented_groups_trajectory': 'commented_groups_trajectory',
+           'config.hdf5.overview.commented_groups_runs_summary': 'commented_groups_runs_summary'
     }
     ''' Mapping of trajectory config names to the tables'''
 
@@ -1714,7 +1716,7 @@ class HDF5StorageService(StorageService):
                                                            pos=1)
             paramdescriptiondict['name']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,
                                                        pos=0)
-            if not table_name == 'explored_parameters':
+            if not table_name == 'explored_parameters' and not 'groups' in table_name:
                 paramdescriptiondict['value']=pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
             if table_name == 'config':
@@ -1735,7 +1737,8 @@ class HDF5StorageService(StorageService):
 
             if table_name in ['derived_parameters_trajectory','results_trajectory',
                                   'derived_parameters_runs_summary', 'results_runs_summary',
-                                  'config', 'parameters', 'explored_parameters']:
+                                  'config', 'parameters', 'explored_parameters',
+                                  'commented_groups_trajectory', 'commented_groups_runs_summary']:
                 if table_name.startswith('derived') or table_name.endswith('parameters'):
                     paramdescriptiondict['length']= pt.IntCol()
 
@@ -2221,7 +2224,7 @@ class HDF5StorageService(StorageService):
 
             # If Add the explored parameter overview table if dersired and necessary
             if add_table:
-                self._all_store_param_or_result_table_entry(expparam, paramtable,
+                self._all_store_param_result_or_commented_group_table_entry(expparam, paramtable,
                                                         (HDF5StorageService.ADD_ROW,))
 
         return runsummary
@@ -2272,7 +2275,7 @@ class HDF5StorageService(StorageService):
                 return '%s_runs' % where
 
 
-    def _all_store_param_or_result_table_entry(self,param_or_result,table, flags,
+    def _all_store_param_result_or_commented_group_table_entry(self,param_or_result,table, flags,
                                                additional_info=None):
         """Stores a single row into an overview table
 
@@ -2871,7 +2874,21 @@ class HDF5StorageService(StorageService):
             _hdf5_group,_ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
         if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
-            setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
+
+            # Store the comment in one of the overview tables
+            if node_in_traj.v_creator_name == 'trajectory':
+                if 'commented_groups_trajectory' in self._overview_group:
+                    group_table = getattr(self._overview_group, 'commented_groups_trajectory')
+                    self._all_store_param_result_or_commented_group_table_entry(node_in_traj,
+                                            group_table,
+                                            flags = (HDF5StorageService.ADD_ROW,))
+                store_comment=True
+            else:
+                _, store_comment = self._all_meta_add_summary(node_in_traj)
+
+            if store_comment:
+                setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
+
 
         self._ann_store_annotations(node_in_traj,_hdf5_group)
 
@@ -2943,7 +2960,7 @@ class HDF5StorageService(StorageService):
 
                     if nitems == 0:
                         # Here the summary became obsolete
-                        self._all_store_param_or_result_table_entry(instance,table,
+                        self._all_store_param_result_or_commented_group_table_entry(instance,table,
                                                     flags=(HDF5StorageService.REMOVE_ROW,))
 
 
@@ -2953,7 +2970,7 @@ class HDF5StorageService(StorageService):
                     # Get the old name back
                     instance._rename(old_full_name)
 
-    def _prm_meta_add_summary(self,instance):
+    def _all_meta_add_summary(self, instance):
         """Adds data to the summary tables and returns if `instance`s comment has to be stored.
 
         Also moves comments upwards in the hierarchy if purge_duplicate_comments is true
@@ -2972,7 +2989,9 @@ class HDF5StorageService(StorageService):
         where = split_name[0]
 
         # Check if we are in the subtree that has runs overview tables
-        if where in['derived_parameters','results']:
+        if ((where in['derived_parameters', 'results']) and
+                    instance.v_comment != ''):
+
             creator_name = instance.v_creator_name
 
             # Check sub-subtree
@@ -2986,8 +3005,17 @@ class HDF5StorageService(StorageService):
                 instance._rename(new_full_name)
                 try:
                     # Get the overview table
-                    table_name = where+'_runs_summary'
-                    table = getattr(self._overview_group,table_name)
+                    if instance.v_is_leaf:
+                        table_name = where+'_runs_summary'
+                    else:
+                        table_name = 'commented_groups_runs_summary'
+
+                    # Check if the overview table exists, otherwise skip the rest of
+                    # the meda adding
+                    if table_name in self._overview_group:
+                        table = getattr(self._overview_group, table_name)
+                    else:
+                        return where, definitely_store_comment
 
                     # True if comment must be moved upwards to lower index
                     erase_old_comment=False
@@ -3039,7 +3067,8 @@ class HDF5StorageService(StorageService):
                                 definitely_store_comment=True
 
                                 row['example_item_run_name']=creator_name
-                                row['value'] = self._all_cut_string(instance.f_val_to_str(),
+                                if instance.v_is_leaf:
+                                    row['value'] = self._all_cut_string(instance.f_val_to_str(),
                                                     pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
                                                     self._logger)
                             else:
@@ -3075,7 +3104,7 @@ class HDF5StorageService(StorageService):
                         self._hdf5file.flush()
 
                     else:
-                        self._all_store_param_or_result_table_entry(instance,table,
+                        self._all_store_param_result_or_commented_group_table_entry(instance,table,
                                             flags=(HDF5StorageService.ADD_ROW,),
                                             additional_info={'example_item_run_name':creator_name})
 
@@ -3106,7 +3135,7 @@ class HDF5StorageService(StorageService):
 
         # Check if we need to store the comment. Maybe update the overview tables
         # accordingly if the current run index is lower than the one in the table.
-        where, definitely_store_comment = self._prm_meta_add_summary(instance)
+        where, definitely_store_comment = self._all_meta_add_summary(instance)
 
 
         try:
@@ -3115,7 +3144,7 @@ class HDF5StorageService(StorageService):
 
             table = getattr(self._overview_group,table_name)
 
-            self._all_store_param_or_result_table_entry(instance,table,
+            self._all_store_param_result_or_commented_group_table_entry(instance,table,
                                                         flags=flags)
         except pt.NoSuchNodeError:
                 pass
@@ -3136,7 +3165,7 @@ class HDF5StorageService(StorageService):
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group,tablename)
-                self._all_store_param_or_result_table_entry(instance,table,
+                self._all_store_param_result_or_commented_group_table_entry(instance,table,
                                                         flags=flags)
             except pt.NoSuchNodeError:
                 pass
@@ -3455,7 +3484,7 @@ class HDF5StorageService(StorageService):
             tablename = self._all_get_table_name(base_group,instance.v_creator_name)
             table = getattr(self._overview_group,tablename)
 
-            self._all_store_param_or_result_table_entry(instance,table,
+            self._all_store_param_result_or_commented_group_table_entry(instance,table,
                                                         flags=(HDF5StorageService.REMOVE_ROW,))
 
             self._prm_meta_remove_summary(instance)
