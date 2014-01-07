@@ -2437,15 +2437,19 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                 self.f_add_derived_parameter(leaf_type, new_full_name,
                                                              comment=comment)
                         else:
-                            if not node.v_annotations.f_is_empty():
+                            if not node.v_annotations.f_is_empty() or node.v_comment != '':
                                 # Store all group nodes that are annotated
                                 if full_name.startswith('results.'):
                                     new_group=self.f_add_result_group(new_full_name)
                                 else:
                                     new_group=self.f_add_derived_parameter_group(new_full_name)
 
-                                annotationdict = node.v_annotations.f_to_dict()
-                                new_group.f_set_annotations(**annotationdict)
+                                if not node.v_annotations.f_is_empty():
+                                    annotationdict = node.v_annotations.f_to_dict()
+                                    new_group.f_set_annotations(**annotationdict)
+
+                                if node.v_comment != '':
+                                    new_group.v_comment = node.v_comment
 
 
                                 to_store_groups_with_annotations.append(new_group)

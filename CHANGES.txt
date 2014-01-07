@@ -6,6 +6,8 @@ pypet 0.1b.4
 
 *   Comments are only stored to HDF5 if they are not the empty string
 
+*   Large Overview Tables are off by default
+
 
 pypet 0.1b.3
 

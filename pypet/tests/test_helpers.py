@@ -27,7 +27,7 @@ import tempfile
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
 
-REMOVE=False
+REMOVE=True
 ''' Whether or not to remove the temporary directory after the tests'''
 
 actual_tempdir=''
@@ -257,7 +257,10 @@ class TrajectoryComparator(unittest.TestCase):
     def compare_trajectories(self,traj1,traj2):
 
         trajlength = len(traj1)
-        rungroups = traj1.results.f_children()-1
+        rungroups = traj1.results.f_children()
+
+        if 'trajectory' in traj1.results.f_get_children(copy=False):
+            rungroups -= 1
 
         self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
 

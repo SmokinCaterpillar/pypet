@@ -15,7 +15,10 @@ class MultiprocQueueTest(EnvironmentTest):
 
 class MultiprocLockTest(EnvironmentTest):
 
-     def set_mode(self):
+    # def test_run(self):
+    #     super(MultiprocLockTest, self).test_run()
+
+    def set_mode(self):
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 3
@@ -50,6 +53,7 @@ class MultiprocNoPoolQueueTest(EnvironmentTest):
 
 
 class MultiprocNoPoolLockTest(EnvironmentTest):
+
 
      def set_mode(self):
         self.mode = pypetconstants.WRAP_MODE_LOCK

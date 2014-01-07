@@ -101,7 +101,7 @@ Moreover, a trajectory contains 4 major branches of its tree.
     `results.trajectory` and `results.run_XXXXXXXX` according to whether they were added
     before the parameter exploration or during a single run.
 
-Note that all *leaf* nodes provide the field 'v_comment', which can be filled manually or on
+Note that all nodes provide the field 'v_comment', which can be filled manually or on
 construction via `'comment='`. To allow others to understand your simulations it is very
 helpful to provide such a comment and explain what your parameter is good for. For *parameters*
 this comment will actually be shown in the parameter overview table (to reduce file size

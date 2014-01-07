@@ -69,6 +69,8 @@ DERIVED_PARAMETER = 'DERIVED_PARAMETER'
 DERIVED_PARAMETER_GROUP = 'DERIVED_PARAMETER_GROUP'
 CONFIG = 'CONFIG'
 CONFIG_GROUP = 'CONFIG_GROUP'
+GROUP = 'GROUP'
+LEAF = 'LEAF'
 
 # For fast searching of nodes in the tree:
 # If there are more candidate solutions found by the fast search
@@ -2199,17 +2201,6 @@ class DerivedParameterGroup(NNGroupNode):
                                                group_type_name = DERIVED_PARAMETER_GROUP,
                                                args=args,kwargs=kwargs)
 
-
-class Group(NNGroupNode):
-    """Generic group that you can use to add items arbitrarily in your trajectory.
-
-    These generic groups can be used if you do not want to follow the strict
-    division into the four sub-branches `config`, `parameters`,
-    `derived_parameters`, `results`.
-
-    Be aware that you cannot add such a generic group under one of these groups.
-
-    """
 
 class ConfigGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.config`.

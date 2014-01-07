@@ -376,6 +376,11 @@ there is no support for purging comments in the other trajectory.
 All comments of the other trajectory's results and derived parameters will be kept and
 merged into your current one.
 
+**IMPORTANT** Purging of duplicate comments rqeuires overview tables. Since there are no
+overview tables for *group* nodes, this feature does not work for comments in *group* nodes,
+only in *leaf* nodes (aka results and parameters)!
+So try to avoid to add comments in *group* nodes within single runs.
+
 If you do not want to purge duplicate comments, set the config parameter
 `'purge_duplicate_comments'` to 0 or `False`.
 

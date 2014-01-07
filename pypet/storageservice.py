@@ -258,9 +258,7 @@ class HDF5StorageService(StorageService):
            'config.hdf5.overview.results_runs': 'results_runs',
            'config.hdf5.overview.explored_parameters': 'explored_parameters',
            'config.hdf5.overview.derived_parameters_runs_summary':'derived_parameters_runs_summary',
-           'config.hdf5.overview.results_runs_summary':'results_runs_summary',
-           'config.hdf5.overview.commented_groups_trajectory': 'commented_groups_trajectory',
-           'config.hdf5.overview.commented_groups_runs_summary': 'commented_groups_runs_summary'
+           'config.hdf5.overview.results_runs_summary':'results_runs_summary'
     }
     ''' Mapping of trajectory config names to the tables'''
 
@@ -1737,8 +1735,7 @@ class HDF5StorageService(StorageService):
 
             if table_name in ['derived_parameters_trajectory','results_trajectory',
                                   'derived_parameters_runs_summary', 'results_runs_summary',
-                                  'config', 'parameters', 'explored_parameters',
-                                  'commented_groups_trajectory', 'commented_groups_runs_summary']:
+                                  'config', 'parameters', 'explored_parameters']:
                 if table_name.startswith('derived') or table_name.endswith('parameters'):
                     paramdescriptiondict['length']= pt.IntCol()
 
@@ -2224,7 +2221,7 @@ class HDF5StorageService(StorageService):
 
             # If Add the explored parameter overview table if dersired and necessary
             if add_table:
-                self._all_store_param_result_or_commented_group_table_entry(expparam, paramtable,
+                self._all_store_param_or_result_table_entry(expparam, paramtable,
                                                         (HDF5StorageService.ADD_ROW,))
 
         return runsummary
@@ -2275,11 +2272,11 @@ class HDF5StorageService(StorageService):
                 return '%s_runs' % where
 
 
-    def _all_store_param_result_or_commented_group_table_entry(self,instance,table, flags,
+    def _all_store_param_or_result_table_entry(self,instance,table, flags,
                                                additional_info=None):
         """Stores a single row into an overview table
 
-        :param instance: A parameter or result or group instance
+        :param instance: A parameter or result instance
 
         :param table: Table where row will be inserted
 
@@ -2667,7 +2664,7 @@ class HDF5StorageService(StorageService):
                                'table %s' %(item_name,table._v_name))
         table.flush()
 
-        print '************HERE 2670b*******************'
+
 
 
     def _all_insert_into_row(self, row, insert_dict):
@@ -2877,25 +2874,7 @@ class HDF5StorageService(StorageService):
             _hdf5_group,_ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
         if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
-
-
-            # Store the comment in one of the overview tables
-            if node_in_traj.v_creator_name == 'trajectory':
-                if 'commented_groups_trajectory' in self._overview_group:
-                    group_table = getattr(self._overview_group, 'commented_groups_trajectory')
-                    self._all_store_param_result_or_commented_group_table_entry(node_in_traj,
-                                            group_table,
-                                            flags = (HDF5StorageService.ADD_ROW,))
-                store_comment=True
-            else:
-                _, store_comment = self._all_meta_add_summary(node_in_traj)
-
-            if store_comment:
-                setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
-
-
-
-
+            setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
 
         self._ann_store_annotations(node_in_traj,_hdf5_group)
 
@@ -2967,7 +2946,7 @@ class HDF5StorageService(StorageService):
 
                     if nitems == 0:
                         # Here the summary became obsolete
-                        self._all_store_param_result_or_commented_group_table_entry(instance,table,
+                        self._all_store_param_or_result_table_entry(instance,table,
                                                     flags=(HDF5StorageService.REMOVE_ROW,))
 
 
@@ -3012,10 +2991,7 @@ class HDF5StorageService(StorageService):
                 instance._rename(new_full_name)
                 try:
                     # Get the overview table
-                    if instance.v_is_leaf:
-                        table_name = where+'_runs_summary'
-                    else:
-                        table_name = 'commented_groups_runs_summary'
+                    table_name = where+'_runs_summary'
 
                     # Check if the overview table exists, otherwise skip the rest of
                     # the meda adding
@@ -3028,8 +3004,10 @@ class HDF5StorageService(StorageService):
                     erase_old_comment=False
 
                     # Find the overview table entry
+
                     row_iterator = \
-                        self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+                         self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+
 
                     row = None
                     try:
@@ -3074,8 +3052,8 @@ class HDF5StorageService(StorageService):
                                 definitely_store_comment=True
 
                                 row['example_item_run_name']=creator_name
-                                if instance.v_is_leaf:
-                                    row['value'] = self._all_cut_string(instance.f_val_to_str(),
+
+                                row['value'] = self._all_cut_string(instance.f_val_to_str(),
                                                     pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
                                                     self._logger)
                             else:
@@ -3109,11 +3087,11 @@ class HDF5StorageService(StorageService):
                             del example_item_node._v_attrs[HDF5StorageService.COMMENT]
 
                         self._hdf5file.flush()
-
+                        pass
                     else:
-                        self._all_store_param_result_or_commented_group_table_entry(instance,table,
+                        self._all_store_param_or_result_table_entry(instance,table,
                                             flags=(HDF5StorageService.ADD_ROW,),
-                                            additional_info={'example_item_run_name':creator_name})
+                                            additional_info={'example_item_run_name': creator_name})
 
                         definitely_store_comment=True
 
@@ -3151,7 +3129,7 @@ class HDF5StorageService(StorageService):
 
             table = getattr(self._overview_group,table_name)
 
-            self._all_store_param_result_or_commented_group_table_entry(instance,table,
+            self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=flags)
         except pt.NoSuchNodeError:
                 pass
@@ -3172,7 +3150,7 @@ class HDF5StorageService(StorageService):
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group,tablename)
-                self._all_store_param_result_or_commented_group_table_entry(instance,table,
+                self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=flags)
             except pt.NoSuchNodeError:
                 pass
@@ -3491,7 +3469,7 @@ class HDF5StorageService(StorageService):
             tablename = self._all_get_table_name(base_group,instance.v_creator_name)
             table = getattr(self._overview_group,tablename)
 
-            self._all_store_param_result_or_commented_group_table_entry(instance,table,
+            self._all_store_param_or_result_table_entry(instance,table,
                                                         flags=(HDF5StorageService.REMOVE_ROW,))
 
             self._prm_meta_remove_summary(instance)

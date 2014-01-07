@@ -290,55 +290,55 @@ class EnvironmentTest(TrajectoryComparator):
         return newtraj
 
 
-    # def test_expand(self):
-    #
-    #     ###Explore
-    #     self.traj.f_add_parameter('TEST', 'test_expand')
-    #     self.explore(self.traj)
-    #
-    #     self.make_run()
-    #
-    #     self.expand()
-    #
-    #     print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
-    #     self.make_run()
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj,newtraj)
-    #
-    # def test_expand_after_reload(self):
-    #
-    #     self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
-    #     ###Explore
-    #     self.explore(self.traj)
-    #
-    #     self.make_run()
-    #
-    #     traj_name = self.traj.v_name
-    #
-    #     traj_name = self.traj.v_name
-    #
-    #
-    #     self.env = Environment(trajectory=self.traj,filename=self.filename,
-    #                       file_title=self.trajname, log_folder=self.logfolder)
-    #
-    #     self.traj = self.env.v_trajectory
-    #
-    #     self.traj.f_load(name=traj_name)
-    #
-    #     self.expand()
-    #
-    #     print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
-    #     self.make_run()
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj, newtraj)
+    def test_expand(self):
+
+        ###Explore
+        self.traj.f_add_parameter('TEST', 'test_expand')
+        self.explore(self.traj)
+
+        self.make_run()
+
+        self.expand()
+
+        print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_expand_after_reload(self):
+
+        self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
+        ###Explore
+        self.explore(self.traj)
+
+        self.make_run()
+
+        traj_name = self.traj.v_name
+
+        traj_name = self.traj.v_name
+
+
+        self.env = Environment(trajectory=self.traj,filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder)
+
+        self.traj = self.env.v_trajectory
+
+        self.traj.f_load(name=traj_name)
+
+        self.expand()
+
+        print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
 
 
     def expand(self):
@@ -354,19 +354,19 @@ class EnvironmentTest(TrajectoryComparator):
 
     ################## Overview TESTS #############################
 
-    def test_switch_off_large_tables(self):
+    def test_switch_ON_large_tables(self):
         self.traj.f_add_parameter('TEST', 'test_switch_off_LARGE_tables')
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_switch_off_large_overview()
+        self.env.f_set_large_overview(True)
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should_not = ['derived_parameters_runs', 'results_runs']
         for name in should_not:
-            self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
+            self.assertTrue(name in overview_group, '%s in overviews but should not!' % name)
         hdf5file.close()
 
         self.traj.f_load(load_parameters=-2, load_derived_parameters=-2, load_results=-2)
@@ -492,8 +492,7 @@ class EnvironmentTest(TrajectoryComparator):
 
 
             for node in traj_group._f_walkGroups():
-                if 'SRVC_LEAF' in node._v_attrs or node._v_name == 'sparse' or node._v_name=='List':
-                    #We now that the `List` and `traj` group contain a comment
+                if 'SRVC_LEAF' in node._v_attrs:
                     if 'run_' in node._v_pathname:
                         #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
                         comment_run_name = 'run_00000000'
@@ -533,8 +532,7 @@ class EnvironmentTest(TrajectoryComparator):
 
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
-                    if 'run_' in node._v_pathname or node._v_name == 'sparse' or node._v_name=='List':
-                        #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
+                    if 'run_' in node._v_pathname:
                         comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:
                             self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
