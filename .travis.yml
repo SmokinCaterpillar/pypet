@@ -50,7 +50,7 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: if [[ $COVERAGE == ON ]]; then coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_tests; else python ./pypet/tests/all_tests.py; fi
+script: if [[ $COVERAGE == ON ]]; then coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_tests; coverage combine; else python ./pypet/tests/all_tests.py; fi
 after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
 branches:
   only:
