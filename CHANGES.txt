@@ -8,6 +8,9 @@ pypet 0.1b.4
 
 *   Large Overview Tables are off by default
 
+*   BrianDurationParameter was removed and the annotations are used instead.
+    Use a normal BrianParameter and instead of `v_order` use `v_annotations.order`
+
 
 pypet 0.1b.3
 

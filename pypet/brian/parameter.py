@@ -1,14 +1,14 @@
 """Module containing results and parameters that can be used to store `BRIAN data`_.
 
-Parameters handling BRIAN data are the
-:class:`~pypet.brian.parameter.BrianParameter` for any BRIAN Quantity and the
-:class:`~pypet.brian.parameter.BrianDurationParameter` that can be combined
-with the experimental framework in `pypet.brian.network` to allow
-fast setup of large scale BRIAN experiments.
+Parameters handling BRIAN data are instantiated by the
+:class:`~pypet.brian.parameter.BrianParameter` class for any BRIAN Quantity.
 
 The :class:`~pypet.brian.parameter.BrianResult` can store BRIAN Quantities
 and the :class:`~pypet.brian.parameter.BrianMonitorResult` extracts data from
 BRIAN Monitors.
+
+All these can be combined with the experimental framework in `pypet.brian.network` to allow
+fast setup of large scale BRIAN experiments.
 
 .. _`BRIAN data`: http://briansimulator.org/
 
@@ -243,30 +243,37 @@ class BrianDurationParameter(BrianParameter):
 
     A Duration Parameter should be in time units (ms or s, for instance).
 
+    DEPRECATED: Please use a normal :class:`~pypet.brian.BrianParameter` instead and
+    add the property `order` to it's :class:`~pypet.annotations.Annotations`.
+    No longer use:
+
+        >>> subrun = BrianDurationParameter('mysubrun', 10*s, order=42)
+
+    But use:
+
+        >>> subrun = BrianParameter('mysubrun', 10*s)
+        >>> subrun.v_annotations.order=42
+
     """
     def __init__(self, full_name, data=None, order=0, comment='',storage_mode=BrianParameter.FLOAT_MODE):
-        self._order = order
         super(BrianDurationParameter, self).__init__(full_name, data, comment, storage_mode)
+        self.v_annotations.order=order
 
     @property
     def v_order(self):
         """The order in which the subrun with a particular duration will be run
         by the network runner"""
-        return self._order
+        return self.v_annotations.order
 
     @v_order.setter
     def v_order(self, order):
-        self._order=order
-
-    def _store(self):
-        store_dict=super(BrianDurationParameter, self)._store()
-        store_dict['order'] = self._order
-
-        return store_dict
+        self.v_annotations.order=order
 
     def _load(self,load_dict):
-        self._order=load_dict['order']
+        if 'order' in load_dict:
+            self.v_annotations.order=load_dict['order']
         super(BrianDurationParameter, self)._load(load_dict)
+
 
 class BrianResult(Result):
     """ A result class that can handle BRIAN quantities.

@@ -14,10 +14,11 @@ BRIAN_ networks.
 All of this can be found in `pypet.brian` sub-package.
 The package contains a `parameter.py` file that includes specialized containers
 for BRIAN_ data, like the :class:`~pypet.brian.parameter.BrianParameter`,
-the :class:`~pypet.brian.parameter.BrianResult` (both for BRIAN Quantities),
+the :class:`~pypet.brian.parameter.BrianResult` (both for BRIAN Quantities), and
 the :class:`~pypet.brian.parameter.BrianMonitorResult` (extracts data from any kind of
-BRIAN Monitor_), and finally
-the :class:`~pypet.brian.parameter.BrianDurationParameter`. The latter can be used
+BRIAN Monitor_).
+
+These can be used
 in conjunction with the network management system in the `network.py` file within
 the `pypet.brian` package.
 
@@ -333,12 +334,12 @@ Every component can implement these 5 methods:
 
         - `current_subrun`
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the very next
+            :class:`~pypet.brian.parameter.BrianParameter` specifying the very next
             *subrun* to be simulated. See next section for *subruns*.
 
         - `subrun_list`
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            List of :class:`~pypet.brian.parameter.BrianParameter` objects that are to
             be simulated after the current *subrun*.
 
         - `network_dict`
@@ -379,7 +380,7 @@ provides functionality to execute a network experiment.
 There's no need for creating your own subclass. Yet, I still suggest subclassing the
 :class:`~pypet.brian.network.NetworkRunner`, but just implement the
 :func:`~pypet.brian.network.NetworkComponent.add_parameters` method. There you can add
-:class:`~pypet.brian.parameter.BrianDurationParameter` instances to your trajectory
+:class:`~pypet.brian.parameter.BrianParameter` instances to your trajectory
 to define how long a network simulation lasts and in how many *subruns* it is divided.
 
 
@@ -397,27 +398,44 @@ for an initial phase (subrun) of 500 milliseconds. Then one of your analyser com
 pathological activity like too high firing rates. If this activity is detected, you
 cancel all further subruns and skip the rest of the single run. You can do this by simply
 removing all *subruns* from the `subrun_list`. You could also add further
-:class:`~pypet.brian.parameter.BrianDurationParameter` instances to the list to make your
+:class:`~pypet.brian.parameter.BrianParameter` instances to the list to make your
 simulations last longer.
 
 The `subrun_list` (as it is passed to :func:`~pypet.brian.network.NetworkComponent.add_to_network`,
 :func:`~pypet.brian.network.NetworkComponent.remove_from_network`, or
 :func:`~pypet.brian.network.NetworkAnalyser.analyse`) is populated by your network runner
 at the beginning of every single run (or *pre-run*) in your parameter exploration.
-The network runner searches for :class:`~pypet.brian.parameter.BrianDurationParameter` instances
+The network runner searches for :class:`~pypet.brian.parameter.BrianParameter` instances
 in a specific group in your trajectory. By default this group is
 `traj.parameters.simulation.durations`
 (or `traj.parameters.simulation.pre_durations` for a *pre-run*),
 but you can pick another group name when you create a :class:`~pypet.brian.network.NetworkRunner`
-instance. The order of the subruns is inferred from the `v_order` attribute of
-the :class:`~pypet.brian.parameter.BrianDurationParameter` instances. The subruns are
+instance. The order of the subruns is inferred from the `v_annotations.order` attribute of
+the :class:`~pypet.brian.parameter.BrianParameter` instances. The subruns are
 executed in increasing order. The orders do not need to be consecutive, but a RuntimeError
-is thrown in case two subruns have the same order.
+is thrown in case two subruns have the same order. There is also an Error raised if there exists a
+parameter where `order` cannot be found in it's `v_annotations` property.
+
+In previous versions of *pypet.brian* there was a so called `BrianDurationParameter` that
+possessed a special attribute `v_order`. This was basically a normal
+:class:`~pypet.brian.parameter.BrianParameter` with a little bit of overhead. Thus,
+the `BrianDurationParameter` became a victim of refactoring. There is still an implementation
+left for backwards-compatibility. Please, do *NOT* use the old `BrianDurationParameter`,
+but a normal :class:`~pypet.brian.parameter.BrianParameter` and replace calls to
+`v_order` with `v_annotations.order`.
 
 For instance, in `traj.parameter.simulation.durations` there are three
-:class:`~pypet.brian.parameter.BrianDurationParameter` instances.
-One is called `init_run`, has order 0 and lasts 500 milliseconds (this is not cpu runtime
-but BRIAN simulation time).
+:class:`~pypet.brian.parameter.BrianParameter` instances.
+
+    >>> init_run = traj.parameter.simulation.durations.f_add_parameter('init_run', 500 * ms)
+    >>> init_run.v_annotations.order=0
+    >>> third_run = traj.parameter.simulation.durations.f_add_parameter('third_run', 1.25 * second)
+    >>> third_run.v_annotations.order=42
+    >>> measurement_run = traj.parameter.simulation.durations.f_add_parameter('measurement_run', 15 * second)
+    >>> measurement_run.v_annotations.order=1
+
+One is called `init_run`, has `v_annotations.order=0` and lasts 500 milliseconds
+(this is not cpu runtime but BRIAN simulation time).
 Another one is called `third_run` lasts 1.25 seconds and has order 42.
 The third one is named `measurement_run` lasts 5 seconds and has order 1.
 Thus, a single run involves three *subruns*. They are executed in the order:
@@ -425,7 +443,8 @@ Thus, a single run involves three *subruns*. They are executed in the order:
 0.5 seconds, `measurement_run` for 5 seconds, and finally `third_run` for 1.25 seconds,
 because 0 < 1 < 42.
 
-The `current_subrun` :class:`~pypet.brian.parameter.BrianDurationParameter`
+
+The `current_subrun` :class:`~pypet.brian.parameter.BrianParameter`
 is taken from the 'subrun_list`.
 In every subrun the :class:`~pypet.brian.network.NetworkRunner` will call
 
@@ -440,7 +459,7 @@ In every subrun the :class:`~pypet.brian.network.NetworkRunner` will call
     2. `run(duration)` from the `BRIAN network`_ created by the manager.
 
         Where the `duration` is simply the data handled by the `current_subrun`
-        which is a :class:`~pypet.brian.parameter.BrianDurationParameter`.
+        which is a :class:`~pypet.brian.parameter.BrianParameter`.
 
     3. :func:`~pypet.brian.network.NetworkAnalyser.analyse` for all analysers
 

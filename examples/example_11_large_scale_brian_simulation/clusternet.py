@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pypet.trajectory import Trajectory, SingleRun
-from pypet.brian.parameter import BrianParameter, BrianMonitorResult, BrianDurationParameter
+from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 from pypet.brian.network import NetworkComponent, NetworkRunner, NetworkAnalyser
 from brian.stdunits import ms
 
@@ -379,7 +379,7 @@ class CNConnections(NetworkComponent):
         neurons_e = network_dict['neurons_e']
 
         print 'Connecting ii'
-        self.conn_ii = Connection(neurons_i,neurons_i,state='y_i',
+        self.conn_ii = Connection(neurons_i,neurons_i, state='y_i',
                                   weight=connections.J_ii,
                                   sparseness=connections.p_ii)
 
@@ -483,7 +483,7 @@ class CNConnections(NetworkComponent):
 class CNNetworkRunner(NetworkRunner):
     """Runs the network experiments.
 
-    Adds two BrianDurationParameters, one for an initial run, and one for a run
+    Adds two BrianParameters, one for an initial run, and one for a run
     that is actually measured.
 
     """
@@ -491,12 +491,15 @@ class CNNetworkRunner(NetworkRunner):
 
     def add_parameters(self, traj):
         """Adds all necessary parameters to `traj` container."""
-        traj.f_add_parameter(BrianDurationParameter,'simulation.durations.initial_run', 1000*ms,
-                             order = 0, comment='Initialisation run for more realistic '
-                                                'measurement conditions.')
-        traj.f_add_parameter(BrianDurationParameter,'simulation.durations.measurement_run', 5000*ms,
-                             order = 1, comment='Measurement run that is considered for '
+        par= traj.f_add_parameter(BrianParameter,'simulation.durations.initial_run', 1000*ms,
+                             comment='Initialisation run for more realistic '
+                                            'measurement conditions.')
+
+        par.v_annotations.order=0
+        par=traj.f_add_parameter(BrianParameter,'simulation.durations.measurement_run', 5000*ms,
+                             comment='Measurement run that is considered for '
                                                 'statistical evaluation')
+        par.v_annotations.order=1
 
 
 
@@ -632,7 +635,7 @@ class CNFanoFactorComputer(NetworkAnalyser):
 
         :param current_subrun:
 
-            BrianDurationParameter
+            BrianParameter
 
         :param subrun_list:
 
@@ -682,7 +685,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         :param network: The BRIAN network
 
-        :param current_subrun: BrianDurationParameter
+        :param current_subrun: BrianParameter
 
         :param subrun_list: List of coming subrun_list
 
@@ -708,7 +711,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
                 3. State monitor of inhibitory currents of some excitatory neurons
 
         """
-        if current_subrun.v_order == 1:
+        if current_subrun.v_annotations.order == 1:
             self._add_monitors(traj, network, network_dict)
 
     def _add_monitors(self, traj,  network, network_dict):
@@ -838,7 +841,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         :param network: The BRIAN network
 
-        :param current_subrun: BrianDurationParameter
+        :param current_subrun: BrianParameter
 
         :param subrun_list: List of coming subruns
 

@@ -5,8 +5,10 @@ Build parts of a network via subclassing :class:`~pypet.brian.network.NetworkCom
 
 Specify a :class:`~pypet.brian.network.NetworkRunner` (subclassing optionally) that handles
 the execution of your experiment in different subruns. Subruns can be defined
-as :class:`~pypet.brian.parameter.BrianDurationParameter` instances in a particular
-trajectory group.
+as :class:`~pypet.brian.parameter.BrianParameter` instances in a particular
+trajectory group. You must add to every parameter's :class:`~pypet.annotations.Annotations` the
+attribute `order`. This order must be an integer specifying the index or order
+the subrun should about to be executed in.
 
 The creation and management of a `BRIAN network`_ is handled by the
 :class:`~pypet.brian.network.NetworkManager` (no need for subclassing). Pass your
@@ -29,6 +31,8 @@ import logging
 
 from brian import Network, clear, reinit
 from brian.units import second
+
+from pypet.brian.parameter import BrianDurationParameter
 
 
 def run_network(traj, network_manager):
@@ -166,12 +170,12 @@ class NetworkComponent(object):
 
         :param current_subrun:
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the very next
+            :class:`~pypet.brian.parameter.BrianParameter` specifying the very next
             subrun to be simulated.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            List of :class:`~pypet.brian.parameter.BrianParameter` objects that are to
             be run after the current subrun.
 
         :param network_dict:
@@ -198,12 +202,12 @@ class NetworkComponent(object):
 
         :param current_subrun:
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the current subrun
+            :class:`~pypet.brian.parameter.BrianParameter` specifying the current subrun
             that was executed shortly before.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            List of :class:`~pypet.brian.parameter.BrianParameter` objects that are to
             be run after the current subrun.
 
         :param network_dict:
@@ -234,12 +238,12 @@ class NetworkAnalyser(NetworkComponent):
 
         :param current_subrun:
 
-            :class:`~pypet.brian.parameter.BrianDurationParameter` specifying the current subrun
+            :class:`~pypet.brian.parameter.BrianParameter` specifying the current subrun
             that was executed shortly before.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian.parameter.BrianDurationParameter` objects that are to
+            List of :class:`~pypet.brian.parameter.BrianParameter` objects that are to
             be run after the current subrun. Can be deleted or added to change the actual course
             of the experiment.
 
@@ -259,12 +263,16 @@ class NetworkRunner(NetworkComponent):
 
     Can potentially be subclassed to allow the adding of parameters via
     :func:`~pypet.brian.network.NetworkComponent.add_parameters`. These parameters
-    should specify an experimental run with a :class:~pypet.brian.parameter.BrianDurationParameter`
+    should specify an experimental run with a :class:~pypet.brian.parameter.BrianParameter`
     to define the order and duration of network subruns. For the actual experimental runs,
     all subruns must be stored in a particular trajectory group.
     By default this `traj.parameters.simulation.durations`. For a pre-run
     the default is `traj.parameters.simulation.pre_durations`. These default group names
     can be changed at runner initialisation (see below).
+
+    The network runner will look in the `v_annotations` property of each parameter
+    in the specified trajectory group. It searches for the entry `order`
+    to determine the order of subruns.
 
     :param report:
 
@@ -281,7 +289,7 @@ class NetworkRunner(NetworkComponent):
 
     :param durations_group_name:
 
-        Name where to look for :class:`~pypet.brian.parameter.BrianDurationParameter` instances
+        Name where to look for :class:`~pypet.brian.parameter.BrianParameter` instances
         in the trajectory which specify the order and durations of subruns.
 
     :param pre_durations_group_name:
@@ -345,11 +353,11 @@ class NetworkRunner(NetworkComponent):
         Similar to :func:`~pypet.brian.network.NetworkRunner.run_network`.
 
         Subruns and their durations are extracted from the trajectory. All
-        :class:`~pypet.brian.parameter.BrianDurationParameter` instances found under
+        :class:`~pypet.brian.parameter.BrianParameter` instances found under
         `traj.parameters.simulation.pre_durations` (default, you can change the
         name of the group where to search for durations at runner initialisation).
         The order is determined from
-        the `v_order` attributes. There must be at least one subrun in the trajectory,
+        the `v_annotations.order` attributes. There must be at least one subrun in the trajectory,
         otherwise an AttributeError is thrown. If two subruns equal in their order
         property a RuntimeError is thrown.
 
@@ -375,14 +383,17 @@ class NetworkRunner(NetworkComponent):
         Called by a :class:`~pypet.brian.network.NetworkManager`.
 
         A network run is divided into several subruns which are defined as
-        :class:`~pypet.brian.parameter.BrianDurationParameter` instances.
+        :class:`~pypet.brian.parameter.BrianParameter` instances.
 
         These subruns are extracted from the trajectory. All
-        :class:`~pypet.brian.parameter.BrianDurationParameter` instances found under
+        :class:`~pypet.brian.parameter.BrianParameter` instances found under
         `traj.parameters.simulation.durations` (default, you can change the
         name of the group where to search for durations at runner initialisation).
         The order is determined from
-        the `v_order` attributes. There must be at least one subrun in the trajectory,
+        the `v_annotations.order` attributes. An error is thrown if no orders attribute
+        can be found or if two parameters have the same order.
+
+        There must be at least one subrun in the trajectory,
         otherwise an AttributeError is thrown. If two subruns equal in their order
         property a RuntimeError is thrown.
 
@@ -455,6 +466,8 @@ class NetworkRunner(NetworkComponent):
 
         :param pre_run: Boolean whether current run is regular or a pre-run
 
+        :raises: RuntimeError if orders are duplicates or even missing
+
         """
         if pre_run:
             durations = traj.f_get(self._pre_durations_group_name,
@@ -467,7 +480,17 @@ class NetworkRunner(NetworkComponent):
         subruns = {}
         orders = []
         for duration_param in durations.f_iter_leaves():
-            order = duration_param.v_order
+
+            if isinstance(duration_param, BrianDurationParameter):
+                self.logger.warning('BrianDurationParameters are deprecated. Please use a normal '
+                                    'BrianParameter and specify the order in `v_annotations.order`!')
+
+            if 'order' in duration_param.v_annotations:
+                order= duration_param.v_annotations.order
+            else:
+                raise RuntimeError('Your duration parameter %s has no order. Please add '
+                                   'an order in `v_annotations.order`.' % duration_param.v_full_name)
+
             if order in subruns:
                 raise RuntimeError('Your durations must differ in their order, there are two '
                                    'with order %d.' % order)
@@ -544,7 +567,7 @@ class NetworkManager(object):
         Special component that handles the execution of several subruns.
         A NetworkRunner can be subclassed to implement the
         :func:`~pypet.brian.network.NetworkComponent.add_parameters` method to add
-        :class:`~pypet.brian.parameter.BrianDurationParameter` instances defining the
+        :class:`~pypet.brian.parameter.BrianParameter` instances defining the
         order and duration of subruns.
 
     :param component_list:
