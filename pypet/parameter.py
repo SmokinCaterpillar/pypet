@@ -871,7 +871,7 @@ class Parameter(BaseParameter):
     def f_set(self,data):
 
         if self.v_locked:
-            raise pex.ParameterLockedException('Parameter >>' + self._name + '<< is locked!')
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self._full_name)
 
         if self.f_has_range():
             raise AttributeError('Your Parameter is an explored array can no longer change values!')
