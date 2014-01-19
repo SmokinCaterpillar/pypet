@@ -11,6 +11,10 @@ pypet 0.1b.4
 *   BrianDurationParameter was removed and the annotations are used instead.
     Use a normal BrianParameter and instead of `v_order` use `v_annotations.order`
 
+*   The user is advised to use `environment.f_run(manager.run_network)`, instead of
+    `environment.f_run(run_network, manager)`
+
+
 
 pypet 0.1b.3
 

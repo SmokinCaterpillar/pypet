@@ -9,17 +9,17 @@ and data storage into HDF5 files for you.
 IMPORTANT!
 ===========================
 
+
 The program is currently under development,
 please keep that in mind and use it very carefully.
 
 Before publishing the official *0.1.0* release I will integrate *pypet* first in my own research
 project. Thus, I have a more profound testing environment than only using
-unittests. Accordingly, you still have to deal with the naming *0.1b.X* probably until beginning
-of next year.
+unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
 However, unless it is really, really, really necessary I do not plan to change the API anymore.
 So feel free to use this beta version and feel free to give feedback,
 suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
-or preferably use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
+or preferably use **github** (https://github.com/SmokinCaterpillar/pypet) issues :-)
 
 Thanks!
 

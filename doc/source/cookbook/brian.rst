@@ -132,7 +132,7 @@ you also need to include these following steps.
         for every stimulus, you can perform it once as a *pre run* and use the network after
         the *pre run* for every stimulus input.
 
-    *   Pass the :func:`~pypet.brian.network.run_network` and your manager function to
+    *   Pass the :func:`~pypet.brian.network.NetworkManger.run_network` to
         your environment's :func:`~pypet.environment.f_run` to start parameter exploration.
         This will automatically initiate the `build(traj)` method for all your components,
         analysers and your runner in every single run. Subsequently, your network will be
@@ -176,7 +176,7 @@ An example *main script* might look like the following:
     my_manager.pre_build(traj)
 
     # Run the network simulation
-    env.f_run(run_network, my_manager)
+    env.f_run(my_manager.run_network)
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

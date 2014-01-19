@@ -33,10 +33,14 @@ from brian import Network, clear, reinit
 from brian.units import second
 
 from pypet.brian.parameter import BrianDurationParameter
+from pypet.utils.decorators import deprecated
 
-
+@deprecated('Please use `environment.f_run(manager.run_network)` instead of '
+            '`environment.f_run(run_network, manager)`.')
 def run_network(traj, network_manager):
     """Top-level simulation function, pass this together with a NetworkManager to the environment.
+
+    DEPRECATED: Please pass `network_manager.run_network` to the environment's `f_run` function
 
     :param traj: Trajectory container
 
@@ -783,7 +787,9 @@ class NetworkManager(object):
 
 
     def run_network(self, traj):
-        """Performs an individual network run during parameter exploration.
+        """Top-level simulation function, pass this to the environment
+
+        Performs an individual network run during parameter exploration.
 
         `run_network` does not need to be called by the user. If the top-level
         `~pypet.brian.network.run_network` method (not this one of the NetworkManager)

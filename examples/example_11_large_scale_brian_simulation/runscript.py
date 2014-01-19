@@ -66,7 +66,7 @@ def main():
     clustered_network_manager.pre_build(traj)
 
     # Run the network simulation
-    env.f_run(run_network, clustered_network_manager)
+    env.f_run(clustered_network_manager.run_network)
 
 
 if __name__=='__main__':
