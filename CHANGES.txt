@@ -34,6 +34,11 @@ pypet 0.1b.3
 *   New Brian framework with NetworkManager, NetworkComponent, NetworkAnalyser,
     NetworkRunner and DurationParameter
 
+*   Components, Analysers and the network runner of the manager are now publicly available
+
+*   Every component now provides the function `set_logger` to enable logging and instantiate a
+    logger for `self.logger`
+
 
 pypet 0.1b.2
 

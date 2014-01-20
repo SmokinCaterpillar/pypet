@@ -70,6 +70,41 @@ class NetworkComponent(object):
 
     """
 
+    def __getstate__(self):
+        """Called for pickling.
+
+        Removes the logger to allow pickling and returns a copy of `__dict__`.
+
+        """
+        result = self.__dict__.copy()
+        if 'logger' in result:
+            # Pickling does not work with loggers objects, so we just keep the logger's name:
+            result['logger'] = self.logger.name
+        return result
+
+    def __setstate__(self, statedict):
+        """Called after loading a pickle dump.
+
+        Restores `__dict__` from `statedict` and adds a new logger.
+
+        """
+        self.__dict__.update( statedict)
+        if 'logger' in statedict:
+            # If we re-instantiate the component the logger attribute only contains a name,
+            # so we also need to re-create the logger:
+            self.set_logger(statedict['logger'])
+
+    def set_logger(self, name=None):
+        """Adds a logger with a given `name`.
+
+        If no name is given, name is constructed as
+        `module_name.class_name`.
+
+        """
+        if name is None:
+            name = self.__module__ + '.' + self.__class__.__name__
+        self.logger = logging.getLogger(name)
+
     def add_parameters(self, traj):
         """Adds parameters to `traj`.
 
@@ -326,29 +361,6 @@ class NetworkRunner(NetworkComponent):
 
         self.set_logger()
 
-
-    def __getstate__(self):
-        """Called for pickling.
-
-        Removes the logger to allow pickling and returns a copy of `__dict__`.
-
-        """
-        result = self.__dict__.copy()
-        del result['logger'] #pickling does not work with loggers
-        return result
-
-    def __setstate__(self, statedict):
-        """Called after loading a pickle dump.
-
-        Restores `__dict__` from `statedict` and adds a new logger.
-
-        """
-        self.__dict__.update( statedict)
-        self.set_logger()
-
-    def set_logger(self):
-        """Adds a logger with the name `'pypet.brian.parameter.NetworkRunner'`."""
-        self.logger = logging.getLogger('pypet.brian.parameter.NetworkRunner')
 
     def execute_network_pre_run(self, traj, network,  network_dict, component_list, analyser_list):
         """Runs a network before the actual experiment.
@@ -623,9 +635,9 @@ class NetworkManager(object):
     """
     def __init__(self, network_runner, component_list, analyser_list=(),
                  force_single_core=False):
-        self._component_list = component_list
-        self._network_runner = network_runner
-        self._analyser_list = analyser_list
+        self.components = component_list
+        self.network_runner = network_runner
+        self.analysers = analyser_list
         self._network_dict = {}
         self._brian_list = []
         self._set_logger()
@@ -669,18 +681,18 @@ class NetworkManager(object):
         """
         self._logger.info('Adding Parameters of Components')
 
-        for component in self._component_list:
+        for component in self.components:
             component.add_parameters(traj)
 
-        if self._analyser_list:
+        if self.analysers:
             self._logger.info('Adding Parameters of Analysers')
 
-            for analyser in self._analyser_list:
+            for analyser in self.analysers:
                 analyser.add_parameters(traj)
 
         self._logger.info('Adding Parameters of Runner')
 
-        self._network_runner.add_parameters(traj)
+        self.network_runner.add_parameters(traj)
 
     def pre_build(self, traj):
         """Pre-builds network components.
@@ -701,18 +713,18 @@ class NetworkManager(object):
         """
         self._logger.info('Pre-Building Components')
 
-        for component in self._component_list:
+        for component in self.components:
             component.pre_build(traj, self._brian_list, self._network_dict)
 
-        if self._analyser_list:
+        if self.analysers:
 
             self._logger.info('Pre-Building Analysers')
 
-            for analyser in self._analyser_list:
+            for analyser in self.analysers:
                 analyser.pre_build(traj, self._brian_list, self._network_dict)
 
         self._logger.info('Pre-Building NetworkRunner')
-        self._network_runner.pre_build(traj, self._brian_list, self._network_dict)
+        self.network_runner.pre_build(traj, self._brian_list, self._network_dict)
 
         self._pre_built = True
 
@@ -732,18 +744,18 @@ class NetworkManager(object):
         """
         self._logger.info('Building Components')
 
-        for component in self._component_list:
+        for component in self.components:
             component.build(traj, self._brian_list, self._network_dict)
 
-        if self._analyser_list:
+        if self.analysers:
 
             self._logger.info('Building Analysers')
 
-            for analyser in self._analyser_list:
+            for analyser in self.analysers:
                 analyser.build(traj, self._brian_list, self._network_dict)
 
         self._logger.info('Building NetworkRunner')
-        self._network_runner.build(traj, self._brian_list, self._network_dict)
+        self.network_runner.build(traj, self._brian_list, self._network_dict)
 
 
     def pre_run_network(self, traj):
@@ -776,8 +788,8 @@ class NetworkManager(object):
 
 
         self._network = Network(*self._brian_list)
-        self._network_runner.execute_network_pre_run( traj, self._network,  self._network_dict,
-                                             self._component_list, self._analyser_list)
+        self.network_runner.execute_network_pre_run( traj, self._network,  self._network_dict,
+                                             self.components, self.analysers)
 
         self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'
@@ -829,7 +841,10 @@ class NetworkManager(object):
                                        'your environemnt) or by forking ( multiprocessing with '
                                        '`use_pool=False`).\n If your network cannot be pickled use '
                                        'the latter. In order to come close to iterative processing '
-                                       'you could use multiprocessing with `ncores=1`.')
+                                       'you could use multiprocessing with `ncores=1`. \n'
+                                       'If you do not care about messing up initial conditions '
+                                       '(i.e. you are debugging) use `force_single_core=True` '
+                                       'in your network manager.')
         else:
             clear(True,True)
             reinit()
@@ -855,8 +870,8 @@ class NetworkManager(object):
             self._network = Network(*self._brian_list)
 
         # Start the experimental run
-        self._network_runner.execute_network_run( traj, self._network,  self._network_dict,
-                                             self._component_list, self._analyser_list)
+        self.network_runner.execute_network_run( traj, self._network,  self._network_dict,
+                                             self.components, self.analysers)
 
         self._logger.info('\n-----------------------------\n'
                      'Network Simulation successful\n'

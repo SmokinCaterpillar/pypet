@@ -32,6 +32,27 @@ def nest_dictionary(flat_dict, separator):
     return nested_dict
 
 
+def progressbar(logger, index, total, percentage_step = 20):
+    """Plots a progress bar to the given `logger` for large for loops.
+
+    To be used inside a for-loop.
+
+    :param logger: Logger to write to
+    :param index: Current index of for-loop
+    :param total: Total size of for-loop
+    :param percentage_step: Steps with which the bar should be plotted
+
+    :return: Progress bar string
+
+    """
+    point = total/100
+    increment = total/(100/percentage_step)
+    factor = percentage_step
+    index += 1
+    if (index % (factor*point) == 0):
+        logger.info('\r[' + '=' * (index / increment) +
+                     ' '  * ((total - index)/ increment) + ']' +  str(index / point) + '%')
+
 
 @deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
 def nested_equal(a, b):

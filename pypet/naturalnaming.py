@@ -1186,7 +1186,7 @@ class NaturalNamingInterface(object):
                 else:
                     if idx == last_idx:
                         raise AttributeError('You already have a group/instance `%s` under '
-                                             '`%s`' % (name,  last_name))
+                                             '`%s`' % (name,  act_node.v_full_name))
 
 
                 act_node = act_node._children[name]
@@ -1464,7 +1464,7 @@ class NaturalNamingInterface(object):
                 new_key = val.v_full_name
 
             if new_key in result_dict:
-                raise ValueError('Your short names are not unique!')
+                raise ValueError('Your short names are not unique. Duplicate key `%s`!' % new_key)
 
             new_val = self._apply_fast_access(val,fast_access)
             result_dict[new_key]=new_val
