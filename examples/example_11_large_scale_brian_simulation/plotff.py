@@ -16,7 +16,7 @@ from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurat
 def main():
 
     folder = 'experiments/example_11/HDF5/'
-    filename = 'Clustered_Network_2014_01_03_21h35m49s.hdf5' # Change this to the name of your
+    filename = 'Clustered_Network_2014_01_22_10h02m01s.hdf5' # Change this to the name of your
     # hdf5 file. The very first trajectory in this file is loaded.
 
     filename = os.path.join(folder, filename)

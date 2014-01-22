@@ -53,8 +53,8 @@ class CNNeuronGroup(NetworkComponent):
                        I_syn =  - I_syn_i + I_syn_e : Hz
                     '''
 
-        conn_eqs = '''I_syn_PRE = x_PRE*invtau2_PRE/2.0 : Hz
-                      dx_PRE/dt = (invpeak_PRE*y_PRE-x_PRE)*invtau1_PRE : 1
+        conn_eqs = '''I_syn_PRE = x_PRE/(tau2_PRE-tau1_PRE) : Hz
+                      dx_PRE/dt = -(normalization_PRE*y_PRE+x_PRE)*invtau1_PRE : 1
                       dy_PRE/dt = -y_PRE*invtau2_PRE : 1
                    '''
 
@@ -112,13 +112,15 @@ class CNNeuronGroup(NetworkComponent):
                 tau1 = traj.model.synaptic['tau1'].f_get()
                 tau2 = traj.model.synaptic['tau2_'+name_pre].f_get()
 
-                invpeak = (tau2/tau1) ** (tau1 / (tau2 - tau1))
+                normalization = (tau1-tau2) / tau2
                 invtau1=1.0/tau1
                 invtau2 = 1.0/tau2
 
                 variables_dict['invtau1_'+name_pre] = invtau1
                 variables_dict['invtau2_'+name_pre] = invtau2
-                variables_dict['invpeak_'+name_pre] = invpeak
+                variables_dict['normalization_'+name_pre] = normalization
+                variables_dict['tau1_'+name_pre] = tau1
+                variables_dict['tau2_'+name_pre] = tau2
 
             variables_dict['tau_'+name_post] = traj.model['tau_'+name_post].f_get()
 
