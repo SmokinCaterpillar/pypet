@@ -13,8 +13,8 @@ IMPORTANT
 
 Although the general *pypet* API is supposed to remain stable, this promise excludes the BRIAN
 part. The *pypet* BRIAN subpackage is still considered to be **alpha**. I probably won't
-change much within the `pypet.brian.parameter` module, but expect the `pypet.brian.network` module
-to undergo many changes and updates.
+change too much within the `pypet.brian.parameter` module, but expect the `pypet.brian.network`
+module to undergo many changes and updates.
 
 -----------------
 pypet and BRIAN
