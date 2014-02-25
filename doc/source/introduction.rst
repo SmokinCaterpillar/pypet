@@ -79,7 +79,7 @@ Getting Started!
 Install
 ---------------------------
 
-Simply install via `pip install --pre pypet` (`--pre` since the current version is still *beta*)
+Simply install via ``pip install --pre pypet`` (``--pre`` since the current version is still *beta*)
 
 Or
 
