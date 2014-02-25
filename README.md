@@ -72,7 +72,6 @@ And finally, you can get your *results* together and store everything appropriat
 The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
 (http://www.pytables.org/).
 
-
 ---------------------------
 Package Organization
 ---------------------------
