@@ -1,9 +1,24 @@
 
 .. _brian-framework:
 
+
+
 ======================
 Using BRIAN with pypet
 ======================
+
+-------------------
+IMPORTANT
+-------------------
+
+Although the general *pypet* API is supposed to remain stable, this promise excludes the BRIAN
+part. The *pypet* BRIAN subpackage is still considered to be **alpha**. I probably won't
+change much within the `pypet.brian.parameter` module, but expect the `pypet.brian.network` module
+to undergo many changes and updates.
+
+-----------------
+pypet and BRIAN
+-----------------
 
 BRIAN_ as it comes is nice for small scripts and quick simulations, but it can
 be really hard to manage and maintain large scale projects based on
