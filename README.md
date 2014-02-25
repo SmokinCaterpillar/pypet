@@ -9,7 +9,6 @@ and data storage into HDF5 files for you.
 IMPORTANT!
 ===========================
 
-
 The program is currently under development,
 please keep that in mind and use it very carefully.
 
@@ -18,8 +17,8 @@ project. Thus, I have a more profound testing environment than only using
 unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
 However, unless it is really, really, really necessary I do not plan to change the API anymore.
 So feel free to use this beta version and feel free to give feedback,
-suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
-or preferably use **github** (https://github.com/SmokinCaterpillar/pypet) issues :-)
+suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
+write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet) :-)
 
 Thanks!
 
@@ -120,12 +119,14 @@ By the way, the source code is available at https://github.com/SmokinCaterpillar
 
 
 ---------------------------
-Documentation
+Documentation and Support
 ---------------------------
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
-If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
+There is a Google Groups mailing list for support: https://groups.google.com/forum/?hl=de#!forum/pypet
+
+If you have any further questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
 --------------
@@ -342,8 +343,7 @@ they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 15 minutes and might temporarily take up to
-8 GB of disk space. The test suite encompasses more than **300** tests
+Running all tests can take up to 15 minutes. The test suite encompasses more than **300** tests
 (including the BRIAN based tests) and has a code coverage of more than **90%**!
 
 ------------------------------------
