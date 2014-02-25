@@ -14,12 +14,11 @@ please keep that in mind and use it very carefully.
 
 Before publishing the official *0.1.0* release I will integrate *pypet* first in my own research
 project. Thus, I have a more profound testing environment than only using
-unittests. Accordingly, you still have to deal with the naming *0.1b.X* probably until beginning
-of next year.
+unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
 However, unless it is really, really, really necessary I do not plan to change the API anymore.
 So feel free to use this beta version and feel free to give feedback,
-suggestions, and report bugs. Either write my an email (robert.meyer (at) ni.tu-berlin.de)
-or preferably use github (https://github.com/SmokinCaterpillar/pypet) issues :-)
+suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
+write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet) :-)
 
 Thanks!
 
@@ -120,12 +119,14 @@ By the way, the source code is available at https://github.com/SmokinCaterpillar
 
 
 ---------------------------
-Documentation
+Documentation and Support
 ---------------------------
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
-If you have questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
+There is a Google Groups mailing list for support: https://groups.google.com/forum/?hl=de#!forum/pypet
+
+If you have any further questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
 --------------

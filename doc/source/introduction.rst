@@ -116,6 +116,16 @@ By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`
     In case you forgot how, you open a terminal by pressing *Windows Button* + *R*.
     Then type *cmd* into the dialog box and press *OK*.
 
+^^^^^^^^^^^^^^^^
+Support
+^^^^^^^^^^^^^^^^
+
+Checkout the `pypet Google Group`_.
+
+To report bugs please use the issue functionality on **github**
+(https://github.com/SmokinCaterpillar/pypet).
+
+.. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
 ---------------------------------
 What to do with pypet?
