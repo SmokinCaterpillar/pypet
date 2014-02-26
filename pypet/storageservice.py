@@ -2975,13 +2975,26 @@ class HDF5StorageService(StorageService):
         where = split_name[0]
 
         # Check if we are in the subtree that has runs overview tables
-        if ((where in['derived_parameters', 'results']) and
-                    instance.v_comment != ''):
+        if where in['derived_parameters', 'results']:
 
             creator_name = instance.v_creator_name
 
             # Check sub-subtree
             if creator_name.startswith(pypetconstants.RUN_NAME):
+
+                try:
+                    # Get the overview table
+                    table_name = where+'_runs_summary'
+
+                    # Check if the overview table exists, otherwise skip the rest of
+                    # the meta adding
+                    if table_name in self._overview_group:
+                        table = getattr(self._overview_group, table_name)
+                    else:
+                        return where, definitely_store_comment
+                except  pt.NoSuchNodeError:
+                    return where, definitely_store_comment
+
                 # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
                 split_name[1]=run_mask
@@ -2990,15 +3003,6 @@ class HDF5StorageService(StorageService):
                 # Rename the item for easier storage
                 instance._rename(new_full_name)
                 try:
-                    # Get the overview table
-                    table_name = where+'_runs_summary'
-
-                    # Check if the overview table exists, otherwise skip the rest of
-                    # the meda adding
-                    if table_name in self._overview_group:
-                        table = getattr(self._overview_group, table_name)
-                    else:
-                        return where, definitely_store_comment
 
                     # True if comment must be moved upwards to lower index
                     erase_old_comment=False
