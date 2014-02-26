@@ -345,15 +345,10 @@ class Environment(object):
         This feature only works for comments in *leaf* nodes (aka Results and Parameters).
         So try to avoid to add comments in *group* nodes within single runs.
 
-    :param small_overview_tables:
+    :param summary_tables:
 
-        Whether the small overview tables should be created.
-        Small tables are giving overview about 'config','parameters',
-        'derived_parameters_trajectory', 'derived_parameters_runs_summary',
-        'results_trajectory','results_runs_summary'.
-
-        Note that these tables create some overhead. If you want very small hdf5 files set
-        `small_overview_tables` to False.
+        Whether the summary tables should be created, i.e. the 'derived_parameters_runs_summary',
+        and the `results_runs_summary`.
 
         The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
         It is assumed that results and derived parameters with equal names in individual runs
@@ -362,6 +357,16 @@ class Environment(object):
 
         The summary table can be used in combination with `purge_duplicate_comments` to only store
         a single comment for every result with the same name in each run, see above.
+
+    :param small_overview_tables:
+
+        Whether the small overview tables should be created.
+        Small tables are giving overview about 'config','parameters',
+        'derived_parameters_trajectory', ,
+        'results_trajectory','results_runs_summary'.
+
+        Note that these tables create some overhead. If you want very small hdf5 files set
+        `small_overview_tables` to False.
 
     :param large_overview_tables:
 
@@ -464,6 +469,7 @@ class Environment(object):
                  filename=None,
                  file_title=None,
                  purge_duplicate_comments=True,
+                 summary_tables = True,
                  small_overview_tables=True,
                  large_overview_tables=False,
                  results_per_run=0,
@@ -474,7 +480,7 @@ class Environment(object):
 
 
         # First check if purge settings are valid
-        if purge_duplicate_comments and not small_overview_tables:
+        if purge_duplicate_comments and not summary_tables:
             raise RuntimeError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
@@ -668,10 +674,10 @@ class Environment(object):
 
             self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
 
-            if not small_overview_tables:
-                self.f_switch_off_small_overview()
-            if not large_overview_tables:
-                self.f_switch_off_large_overview()
+            self.f_set_summary(summary_tables)
+            self.f_set_small_overview(small_overview_tables)
+            self.f_set_large_overview(large_overview_tables)
+
 
         # Notify that in case of lazy debuggin we won't record anythin
         if lazy_debug and 'pydevd' in sys.modules:
@@ -739,8 +745,9 @@ class Environment(object):
         DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
         """
-        self.f_switch_off_small_overview()
-        self.f_switch_off_large_overview()
+        self.f_set_summary(0)
+        self.f_set_small_overview(0)
+        self.f_set_large_overview(0)
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_small_overview(self):
@@ -754,23 +761,26 @@ class Environment(object):
     def f_set_large_overview(self, switch):
         """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
         switch = int(switch)
-
         self._traj.config.hdf5.overview.results_runs=switch
         self._traj.config.hdf5.overview.derived_parameters_runs = switch
         self._traj.config.hdf5.overview.explored_parameters_runs = switch
 
+    def f_set_summary(self, switch):
+        """Switches summary tables on (`switch=True`) or off (`switch=False`). """
+        switch = int(switch)
+        self._traj.config.hdf5.overview.derived_parameters_runs_summary=switch
+        self._traj.config.hdf5.overview.results_runs_summary=switch
+        self._traj.config.hdf5.purge_duplicate_comments=switch
+
     def f_set_small_overview(self, switch):
         """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
         switch = int(switch)
-
         self._traj.config.hdf5.overview.parameters = switch
         self._traj.config.hdf5.overview.config=switch
         self._traj.config.hdf5.overview.explored_parameters=switch
         self._traj.config.hdf5.overview.derived_parameters_trajectory=switch
-        self._traj.config.hdf5.overview.derived_parameters_runs_summary=switch
         self._traj.config.hdf5.overview.results_trajectory=switch
-        self._traj.config.hdf5.overview.results_runs_summary=switch
-        self._traj.config.hdf5.purge_duplicate_comments=switch
+
 
 
     def f_continue_run(self, continue_file):

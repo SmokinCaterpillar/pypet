@@ -386,6 +386,7 @@ class EnvironmentTest(TrajectoryComparator):
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
+            name = name.split('.')[-1] # Get only the name of the table, no the full name
             self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
 
         hdf5file.close()

@@ -47,6 +47,7 @@ You start your simulations by creating an environment object:
                  filename=None,
                  file_title=None,
                  purge_duplicate_comments=True,
+                 summary_tables=True,
                  small_overview_tables=True,
                  large_overview_tables=True,
                  results_per_run=0,
@@ -198,12 +199,19 @@ You can pass the following arguments:
     that differ from this first comment. You might want to take a look at
     :ref:`more-on-duplicate-comments`.
 
+* `summary_tables`
+
+    Whether summary tables should be created.
+    These give overview about 'derived_parameters_runs_summary', and 'results_runs_summary'.
+    They give an example about your results by listing the very first computed result.
+    If you want to `purge_duplicate_comments` you will need the `summary_tables`.
+    You might want to check out :ref:`more-on-overview`.
+
 * `small_overview_tables`
 
     Whether the small overview tables should be created.
     Small tables are giving overview about 'config','parameters','derived_parameters_trajectory',
-    'derived_parameters_runs_summary', 'results_trajectory','results_runs_summary'.
-    You might want to check out :ref:`more-on-overview`.
+    'results_trajectory'.
 
 * `large_overview_tables`
 
