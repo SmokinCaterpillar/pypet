@@ -528,6 +528,10 @@ class NetworkRunner(NetworkComponent):
         # Initially extract the `subrun_list`
         subrun_list = self._extract_subruns(traj, pre_run=pre_run)
 
+
+        # counter for subruns
+        subrun_number = 0
+
         # Execute all subruns in order
         while len(subrun_list)>0:
 
@@ -549,7 +553,8 @@ class NetworkRunner(NetworkComponent):
                                  network_dict)
 
             # 4. Run the network
-            self.logger.info('Starting subrun `%s`' % current_subrun.v_name)
+            self.logger.info('STARTING subrun `%s` (#%d) lasting %s.' %
+                             (current_subrun.v_name, subrun_number, str(current_subrun.f_get())))
             network.run(duration=current_subrun.f_get(), report=self._report,
                               report_period=self._report_period)
 
@@ -571,6 +576,9 @@ class NetworkRunner(NetworkComponent):
             for component in component_list:
                 component.remove_from_network(traj, network, current_subrun,  subrun_list,
                                  network_dict)
+
+
+            subrun_number+=1
 
 
 class NetworkManager(object):

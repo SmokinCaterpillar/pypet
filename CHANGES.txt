@@ -16,7 +16,9 @@ pypet 0.1b.4
 
 *   Now there is the distinction between `small`, `large`, and `summary` tables
 
-
+*   BrianMonitorResult: Mean and variance values of State and MultiState Monitors are only
+    extracted if they were recorded (which for newer BRIAN versions is only the case if you
+    do NOT record traces)
 
 pypet 0.1b.3
 

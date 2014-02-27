@@ -641,11 +641,14 @@ class BrianMonitorResult(Result):
 
         * mean
 
-            Mean value of the state variable for every neuron in the group.
+            Mean value of the state variable for every neuron in the group. Only extracted if
+            mean values are calculated by BRIAN. Note that for newer versions of BRIAN, means
+            and variances are no longer extracted if `record` is NOT set to `False`.
 
         * var
 
-            Unbiased estimated of variances of state variable for each neuron.
+            Unbiased estimated of variances of state variable for each neuron. Only extracted if
+            variance values are calculated by BRIAN.
 
         * values
 
@@ -1022,9 +1025,9 @@ class BrianMonitorResult(Result):
 
                 self.f_set(source = str(monitor.P))
 
-
-            self.f_set(**{varname+'_mean':monitor.mean})
-            self.f_set(**{varname+'_var' : monitor.var})
+            if np.mean(monitor.mean) != 0.0:
+                self.f_set(**{varname+'_mean':monitor.mean})
+                self.f_set(**{varname+'_var' : monitor.var})
             if len(monitors.times)>0:
                 self.f_set(**{varname+'_values' : monitor.values})
             self.f_set (**{varname+'_unit' : repr(monitor.unit)})
@@ -1045,9 +1048,9 @@ class BrianMonitorResult(Result):
         self.f_set(source = str(monitor.P))
         self.f_set(times_unit = 'second')
 
-
-        self.f_set(mean = monitor.mean)
-        self.f_set(var = monitor.var)
+        if np.mean(monitor.mean) != 0.0:
+            self.f_set(mean = monitor.mean)
+            self.f_set(var = monitor.var)
         if len(monitor.times)>0:
             self.f_set(times = monitor.times)
             self.f_set(values = monitor.values)
