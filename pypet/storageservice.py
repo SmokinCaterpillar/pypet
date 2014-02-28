@@ -371,7 +371,13 @@ class HDF5StorageService(StorageService):
         self._trajectory_group = None # link to the top group in hdf5 file which is the start
         # node of a trajectory
         self._purge_duplicate_comments = None # remembers whether to purge duplicate comments
-        self._logger = logging.getLogger('pypet.storageservice_HDF5StorageService')
+        self._logger = logging.getLogger('pypet.storagesrvice_HDF5StorageService')
+        self._complevel = 9
+        self._complib='zlib'
+        self._fletcher32 = True
+        self._filters = pt.Filters(complevel=self._complevel,
+                                   complib=self._complib,
+                                   fletcher32=self._fletcher32)
 
     @property
     def _overview_group(self):
@@ -1649,6 +1655,9 @@ class HDF5StorageService(StorageService):
         Also prepares the desired overview tables and fills the `run` table with dummies.
 
         """
+
+
+
         # Description of the `info` table
         descriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH, pos=0),
                          'time': pt.StringCol(len(traj.v_time), pos=1),
@@ -1814,6 +1823,20 @@ class HDF5StorageService(StorageService):
             self._purge_duplicate_comments = traj.f_get('config.hdf5.purge_duplicate_comments').f_get()
         else:
             self._purge_duplicate_comments=True
+
+        new_filters = False
+        if 'config.hdf5.complevel' in traj:
+            self._complevel = traj.f_get('config.hdf5.complevel').f_get()
+            new_filters = True
+
+        if 'config.hdf5.complib' in traj:
+            self._complib = traj.f_get('config.hdf5.complib').f_get()
+            new_filters = True
+
+        if new_filters:
+            self._filters = pt.Filters(complevel=self._complevel,
+                                   complib=self._complib,
+                                   fletcher32=self._fletcher32)
 
         # Store meta information
         self._trj_store_meta_data(traj)
@@ -2196,12 +2219,14 @@ class HDF5StorageService(StorageService):
                     paramtable = self._hdf5file.create_table(where=rungroup,
                                                             name='explored_parameters',
                                                             description=paramdescriptiondict,
-                                                            title='explored_parameters')
+                                                            title='explored_parameters',
+                                                            filters=self._filters)
                 except AttributeError:
                     paramtable = self._hdf5file.createTable(where=rungroup,
                                                             name='explored_parameters',
                                                             description=paramdescriptiondict,
-                                                            title='explored_parameters')
+                                                            title='explored_parameters',
+                                                            filters=self._filters)
 
         runsummary = ''
         paramlist = sorted(paramlist, key= lambda name: name.v_name + name.v_location)
@@ -2334,18 +2359,22 @@ class HDF5StorageService(StorageService):
                 try:
                     table = self._hdf5file.create_table(where=where_node, name=tablename,
                                                    description=description, title=tablename,
-                                                   expectedrows=expectedrows)
+                                                   expectedrows=expectedrows,
+                                                   filters=self._filters)
                 except AttributeError:
                     table = self._hdf5file.createTable(where=where_node, name=tablename,
                                                    description=description, title=tablename,
-                                                   expectedrows=expectedrows)
+                                                   expectedrows=expectedrows,
+                                                   filters=self._filters)
             else:
                 try:
                     table = self._hdf5file.create_table(where=where_node, name=tablename,
-                                                   description=description, title=tablename)
+                                                   description=description, title=tablename,
+                                                   filters=self._filters)
                 except AttributeError:
                     table = self._hdf5file.createTable(where=where_node, name=tablename,
-                                                   description=description, title=tablename)
+                                                   description=description, title=tablename,
+                                                   filters=self._filters)
         else:
             try:
                 table = where_node._f_get_child(tablename)
@@ -3334,7 +3363,9 @@ class HDF5StorageService(StorageService):
 
 
             name = group._v_pathname+'/' +key
-            data.to_hdf(self._filename, name, append=True,data_columns=True)
+            data.to_hdf(self._filename, name, append=True,data_columns=True,
+                        expected_rows=data.shape[0], complevel=self._complevel,
+                        complib=self._complib)
 
             try:
                 frame_group = group._f_get_child(key)
@@ -3390,12 +3421,12 @@ class HDF5StorageService(StorageService):
 
             #try using pytables 3.0.0 API
             try:
-                carray=self._hdf5file.create_carray(where=group, name=key,obj=data)
+                carray=self._hdf5file.create_carray(where=group, name=key,obj=data, filters=self._filters)
             except AttributeError:
                 #if it does not work, create carray with old api
                 atom = pt.Atom.from_dtype(data.dtype)
                 carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
-                                                   shape=data.shape)
+                                                   shape=data.shape, filters=self._filters)
                 carray[:]=data[:]
 
             # Remember the types of the original data to recall them on loading
@@ -3534,6 +3565,9 @@ class HDF5StorageService(StorageService):
             Full name of the `data_to_store`s original container, only needed for throwing errors.
 
         """
+
+        datasize = data.shape[0]
+
         try:
             if hasattr(hdf5group,tablename):
                 # If table already exists, check if we want to `UPDATE_LEAF`, i.e. if a
@@ -3565,19 +3599,22 @@ class HDF5StorageService(StorageService):
                 # Get a new pytables description from the data and create a new table
                 description_dict, data_type_dict = self._prm_make_description(data, fullname)
 
+
                 try:
                     table = self._hdf5file.create_table(where=hdf5group, name=tablename,
                                                        description=description_dict,
-                                                       title=tablename)
+                                                       title=tablename,
+                                                       expectedrows=datasize,
+                                                       filters=self._filters)
                 except AttributeError:
                     table = self._hdf5file.createTable(where=hdf5group, name=tablename,
                                                        description=description_dict,
-                                                       title=tablename)
+                                                       title=tablename,
+                                                       expectedrows=datasize,
+                                                       filters=self._filters)
                 nstart = 0
 
             row = table.row
-
-            datasize = data.shape[0]
 
 
             cols = data.columns.tolist()

@@ -188,6 +188,17 @@ You can pass the following arguments:
 
     Title of the hdf5 file (only important if file is created new)
 
+* `complevel`
+
+    If you use HDF5, you can specify your compression level. 0 means no compression
+    and 9 is the highest compression level. By default the level is set to 9 to reduce the
+    size of the resulting HDF5 file.
+    See `PyTables Compression`_ for a detailed explanation.
+
+* `complib`
+
+    The library used for compression
+
 * `purge_duplicate_comments`
 
     If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
@@ -256,6 +267,7 @@ You can pass the following arguments:
 
 .. _multiprocessing: http://docs.python.org/2/library/multiprocessing.html
 
+.. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
 
 .. _config-added-by-environment:
 

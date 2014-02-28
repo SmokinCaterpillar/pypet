@@ -311,6 +311,18 @@ class Environment(object):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
+    :param complevel:
+
+        If you use HDF5, you can specify your compression level. 0 means no compression
+        and 9 is the highest compression level. See `PyTables Compression`_ for a detailed
+        description.
+
+        .. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
+
+    :param complib:
+
+        The library used for compression.
+
     :param purge_duplicate_comments:
 
         If you add a result via :func:`~pypet.trajectory.SingleRun.f_add_result` or a derived
@@ -399,11 +411,11 @@ class Environment(object):
 
         This will also add information about the revision to the trajectory, see below.
 
+        .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
     :param git_message:
 
         Message passed onto git command.
-
-    .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
     :param lazy_debug:
 
@@ -468,6 +480,8 @@ class Environment(object):
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 complevel=9,
+                 complib='zlib',
                  purge_duplicate_comments=True,
                  summary_tables = True,
                  small_overview_tables=True,
@@ -671,6 +685,13 @@ class Environment(object):
             self._traj.f_add_config('hdf5.derived_parameters_per_run', int(derived_parameters_per_run),
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance')
+
+            self._traj.f_add_config('hdf5.complevel',complevel,
+                                        comment='Compression Level (0 no compression '
+                                                'to 9 highest compression)')
+
+            self._traj.f_add_config('hdf5.complib',complib,
+                                        comment='Compression Algorithm')
 
             self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
 
