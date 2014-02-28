@@ -984,7 +984,7 @@ class BrianMonitorResult(Result):
 
     def _extract_spike_counter(self,monitor):
 
-        self.f_set(nspikes = monitor.nspikes)
+        self.f_set(nspikes =monitor.nspikes)
         self.f_set(source = str(monitor.source))
         self.f_set(count=monitor.count)
         self.f_set(delay=monitor.delay)

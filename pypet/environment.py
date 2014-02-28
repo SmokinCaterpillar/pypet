@@ -221,6 +221,10 @@ class Environment(object):
         `./logs/` is chosen. The log files will be added to a
         sub-folder with the name of the trajectory.
 
+    :param log_level:
+
+        The log level, default is `logging.INFO`,
+
     :param multiproc:
 
         Whether or not to use multiprocessing. Default is `False`.
@@ -472,6 +476,7 @@ class Environment(object):
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
+                 log_level=logging.INFO,
                  multiproc=False,
                  ncores=1,
                  use_pool=True,
@@ -596,7 +601,7 @@ class Environment(object):
         self._use_pool = use_pool
 
         # Create the loggers
-        self._make_logger(log_path)
+        self._make_logger(log_path, log_level)
 
         config_name='environment.%s.multiproc' % self.v_name
         self._traj.f_add_config(config_name, multiproc,
@@ -707,7 +712,7 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-    def _make_logger(self,log_path):
+    def _make_logger(self,log_path, log_level):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
@@ -716,7 +721,7 @@ class Environment(object):
         # Check if there already exist logging handlers, if so, we assume the user
         # has already set a log  level. If not, we set the log level to INFO
         if len(logging.getLogger().handlers)==0:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(level=log_level)
 
         # Add a handler for storing everything to a text file
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')

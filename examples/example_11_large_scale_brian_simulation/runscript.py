@@ -57,8 +57,8 @@ def main():
     clustered_network_manager.add_parameters(traj)
 
     # We need `tolist` here since our parameter is a python float and not a
-    # numpy.float.
-    explore_list = np.arange(1.0, 2.6, 0.5).tolist()
+    # numpy float.
+    explore_list = np.arange(1.0, 2.6, 0.25).tolist()
     # Explore different values of `R_ee`
     traj.f_explore({'R_ee' : explore_list})
 

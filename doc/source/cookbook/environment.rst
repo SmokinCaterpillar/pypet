@@ -39,6 +39,7 @@ You start your simulations by creating an environment object:
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
+                 log_level=logging.DEBUG,
                  multiproc=False,
                  ncores=1,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
@@ -46,6 +47,8 @@ You start your simulations by creating an environment object:
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 complevel=9,
+                 complib='zlib',
                  purge_duplicate_comments=True,
                  summary_tables=True,
                  small_overview_tables=True,
@@ -168,7 +171,13 @@ You can pass the following arguments:
     If you don't set a log level elsewhere before, the standard level will be *INFO*
     (if you have no clue what I am talking about, take a look at the logging_ module).
 
-* `use_hdf5`:
+* `log_level`
+
+    Which log level message should be logged, default is `logging.INFO`. If you choose
+    `logging.DEBUG` more verbose statements about storing parameters and results will be
+    displayed.
+
+* `use_hdf5`
 
     If you want to use the standard HDF5 storage service provided with this package, set
     `use_hdf5=True`. You can specify the name of the HDF5 file and, if it has to be created new,

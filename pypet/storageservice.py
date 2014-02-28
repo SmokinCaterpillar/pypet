@@ -374,7 +374,7 @@ class HDF5StorageService(StorageService):
         self._logger = logging.getLogger('pypet.storagesrvice_HDF5StorageService')
         self._complevel = 9
         self._complib='zlib'
-        self._fletcher32 = True
+        self._fletcher32 = False
         self._filters = pt.Filters(complevel=self._complevel,
                                    complib=self._complib,
                                    fletcher32=self._fletcher32)

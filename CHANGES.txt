@@ -20,6 +20,8 @@ pypet 0.1b.4
     extracted if they were recorded (which for newer BRIAN versions is only the case if you
     do NOT record traces)
 
+*   Log Level can be passed to environment
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results
