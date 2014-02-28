@@ -603,6 +603,11 @@ class Environment(object):
         # Create the loggers
         self._make_logger(log_path, log_level)
 
+        # Drop a message if we made a commit. We cannot drop the message directly after the
+        # commit, because the logger does not exist at this point, yet.
+        if self._git_repository is not None:
+            self._logger.info('Made GIT commit `%s`.' % str(self._hexsha))
+
         config_name='environment.%s.multiproc' % self.v_name
         self._traj.f_add_config(config_name, multiproc,
                                 comment= 'Whether or not to use multiprocessing. If yes'
