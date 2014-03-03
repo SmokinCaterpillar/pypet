@@ -11,6 +11,7 @@ __author__ = 'Robert Meyer'
 import logging
 import tables as pt
 import os
+import collections
 
 import numpy as np
 from pandas import DataFrame, read_hdf
@@ -3643,7 +3644,7 @@ class HDF5StorageService(StorageService):
 
         def _convert_lists_and_tuples(series_of_data):
             """Converts lists and tuples to numpy arrays"""
-            if not isinstance(series_of_data[0],np.ndarray):
+            if isinstance(series_of_data[0], collections.Sequence):# and not isinstance(series_of_data[0], np.ndarray):
                  # If the first data item is a list, the rest must be as well, since
                 # data has to be homogeneous
                 for idx,item in enumerate(series_of_data):

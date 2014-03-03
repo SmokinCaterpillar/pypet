@@ -22,6 +22,8 @@ pypet 0.1b.4
 
 *   Log Level can be passed to environment
 
+*   BUG FIX: Scalars are no longer autoconverted by the storage service to zero-length numpy arrays
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

@@ -609,12 +609,12 @@ class Environment(object):
             self._logger.info('Made GIT commit `%s`.' % str(self._hexsha))
 
         config_name='environment.%s.multiproc' % self.v_name
-        self._traj.f_add_config(config_name, multiproc,
+        self._traj.f_add_config(config_name, int(multiproc),
                                 comment= 'Whether or not to use multiprocessing. If yes'
                                          ' than everything must be pickable.')
 
         config_name='environment.%s.use_pool' % self.v_name
-        self._traj.f_add_config(config_name,use_pool,
+        self._traj.f_add_config(config_name, int(use_pool),
                                 comment='Whether to use a pool of processes or '
                                         'spawning individual processes for each run.')
 
@@ -639,7 +639,7 @@ class Environment(object):
                                     comment ='SHA-1 identifier of the environment')
 
         config_name='environment.%s.continuable' % self._name
-        self._traj.f_add_config(config_name, continuable,
+        self._traj.f_add_config(config_name, int(continuable),
                                 comment='Whether or not a continue file should'
                                         ' be created. If yes, everything must be'
                                         ' picklable.')
