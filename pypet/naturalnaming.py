@@ -362,7 +362,7 @@ class NaturalNamingInterface(object):
 
         self._run_or_traj_name= root_instance.v_name
 
-        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
+        self._logger = logging.getLogger('NNTree=' +
                                          self._root_instance.v_name)
 
         # Dictionary containing ALL leaves. Keys are the full names and values the parameter
@@ -416,7 +416,7 @@ class NaturalNamingInterface(object):
         self._root_instance = new_root
         self._run_or_traj_name= self._root_instance.v_name
 
-        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
+        self._logger = logging.getLogger('NNTree=' +
                                          self._root_instance.v_name)
 
     def _get_fast_access(self):
@@ -1364,7 +1364,7 @@ class NaturalNamingInterface(object):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.trajectory.NNTree=' +
+        self._logger = logging.getLogger('NNTree=' +
                                          self._run_or_traj_name)
 
     @staticmethod

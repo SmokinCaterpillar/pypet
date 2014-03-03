@@ -676,7 +676,7 @@ class NetworkManager(object):
 
     def _set_logger(self):
         """Creates a logger"""
-        self._logger = logging.getLogger('pypet.brian.parameter.NetworkManager')
+        self._logger = logging.getLogger('NetworkManager')
 
     def add_parameters(self, traj):
         """Adds parameters for a network simulation.

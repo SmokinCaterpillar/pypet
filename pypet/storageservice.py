@@ -46,12 +46,12 @@ class QueueStorageServiceSender(MultiprocWrapper):
     """
     def __init__(self):
         self.queue = None
-        self._logger = logging.getLogger('pypet.storageservice.StorageServiceQueueWrapper')
+        self._logger = logging.getLogger('StorageServiceQueueWrapper')
         '''The queue'''
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.storageservice.StorageServiceQueueWrapper')
+        self._logger = logging.getLogger('StorageServiceQueueWrapper')
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -115,7 +115,7 @@ class LockWrapper(MultiprocWrapper):
     def __init__(self,storage_service, lock):
         self._storage_service = storage_service
         self._lock = lock
-        self._logger = logging.getLogger('pypet.storageservice.StorageServiceLockWrapper')
+        self._logger = logging.getLogger('StorageServiceLockWrapper')
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -124,7 +124,7 @@ class LockWrapper(MultiprocWrapper):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.storageservice.StorageServiceLockWrapper')
+        self._logger = logging.getLogger('StorageServiceLockWrapper')
 
     def store(self,*args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
@@ -372,7 +372,7 @@ class HDF5StorageService(StorageService):
         self._trajectory_group = None # link to the top group in hdf5 file which is the start
         # node of a trajectory
         self._purge_duplicate_comments = None # remembers whether to purge duplicate comments
-        self._logger = logging.getLogger('pypet.storagesrvice_HDF5StorageService')
+        self._logger = logging.getLogger('HDF5StorageService')
         self._complevel = 9
         self._complib='zlib'
         self._fletcher32 = False
@@ -993,7 +993,7 @@ class HDF5StorageService(StorageService):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.storageservice_HDF5StorageService')
+        self._logger = logging.getLogger('HDF5StorageService')
 
 
     ########################### MERGING ###########################################################

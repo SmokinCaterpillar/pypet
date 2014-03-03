@@ -750,7 +750,7 @@ class Environment(object):
 
         for handler in root.handlers:
             handler.setFormatter(f)
-        self._logger = logging.getLogger('pypet.environment.Environment=%s' % self.v_name)
+        self._logger = logging.getLogger('Environment=%s' % self.v_name)
 
 
     @deprecated('Please use assignment in environment constructor.')

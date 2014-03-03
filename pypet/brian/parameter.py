@@ -106,7 +106,7 @@ class BrianParameter(Parameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.brian.parameter.BrianParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('BrianParameter=' + self.v_full_name)
 
 
     def f_supports(self, data):

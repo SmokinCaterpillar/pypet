@@ -717,7 +717,7 @@ class Parameter(BaseParameter):
             self.f_set(data)
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.Parameter=' + self.v_full_name)
+        self._logger = logging.getLogger('Parameter=' + self.v_full_name)
 
     def _restore_default(self):
         """Restores the default data that was set with the
@@ -1112,7 +1112,7 @@ class ArrayParameter(Parameter):
     """Identifier to mark stored data as an array"""
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.ArrayParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('ArrayParameter=' + self.v_full_name)
 
 
     def _store(self):
@@ -1376,7 +1376,7 @@ class SparseParameter(ArrayParameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.SparseParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('SparseParameter=' + self.v_full_name)
 
     @staticmethod
     def _get_name_list(is_dia):
@@ -1588,7 +1588,7 @@ class PickleParameter(Parameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.PickleParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('PickleParameter=' + self.v_full_name)
 
     def f_supports(self, data):
         """There is no straightforward check if an object can be pickled and this function will
@@ -1894,7 +1894,7 @@ class Result(BaseResult):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.Result=' + self.v_full_name)
+        self._logger = logging.getLogger('Result=' + self.v_full_name)
 
 
     def __getstate__(self):
@@ -2322,7 +2322,7 @@ class PickleResult(Result):
         self._data[name] = item
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.PickleResult=' + self.v_full_name)
+        self._logger = logging.getLogger('PickleResult=' + self.v_full_name)
 
     def _store(self):
         """Returns a dictionary containing pickle dumps"""
