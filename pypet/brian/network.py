@@ -892,7 +892,6 @@ class NetworkManager(object):
         self.build(traj)
 
         self._pretty_print_explored_parameters()
-        self._logger.info()
 
         # We need to construct a network object in case one was not pre-run
         if not self._pre_run:
