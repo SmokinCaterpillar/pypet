@@ -3843,7 +3843,7 @@ class HDF5StorageService(StorageService):
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
-            dataframe = read_hdf(self._filename,pathname,mode='r')
+            dataframe = read_hdf(self._filename,pathname,mode='a')
             load_dict[name] = dataframe
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))
