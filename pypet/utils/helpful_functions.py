@@ -50,7 +50,7 @@ def progressbar(logger, index, total, percentage_step = 20):
     factor = percentage_step
     index += 1
     if (index % (factor*point) == 0):
-        logger.info('\r[' + '=' * (index / increment) +
+        logger.info('[' + '=' * (index / increment) +
                      ' '  * ((total - index)/ increment) + ']' +  str(index / point) + '%')
 
 
