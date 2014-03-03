@@ -168,6 +168,7 @@ class NetworkTest(TrajectoryComparator):
     def test_multiprocessing(self):
         self.traj.multiproc = True
         self.traj.ncores = 3
+        self.traj.use_pool = False
         self.env.f_run(run_net)
 
         self.traj.f_load(load_derived_parameters=-2, load_results=-2)
