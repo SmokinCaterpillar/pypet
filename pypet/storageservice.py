@@ -1681,7 +1681,7 @@ class HDF5StorageService(StorageService):
                          'timestamp' : pt.FloatCol(pos=3),
                          'idx' : pt.IntCol(pos=0),
                          'completed' : pt.IntCol(pos=8),
-                         'parameter_summary' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                         'parameter_summary' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
                                                             pos=6),
                          'short_environment_hexsha' : pt.StringCol(7,pos=7),
                          'finish_timestamp' : pt.FloatCol(pos=4),
@@ -2239,11 +2239,16 @@ class HDF5StorageService(StorageService):
 
             valstr = expparam.f_val_to_str()
 
-            if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
-                valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH-3]
+            if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH-3]
                 valstr+='...'
 
-            runsummary = runsummary + expparam.v_name + ': ' +valstr
+            if expparam.v_name in runsummary:
+                param_name = expparam.v_full_name
+            else:
+                param_name = expparam.v_name
+
+            runsummary = runsummary + param_name + ': ' +valstr
 
             # If Add the explored parameter overview table if dersired and necessary
             if add_table:
