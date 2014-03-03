@@ -15,6 +15,7 @@ Here are some links to important functions:
     :nosignatures:
 
     ~trajectory.Trajectory
+    ~trakectory.SingleRun
     ~naturalnaming.ParameterGroup.f_add_parameter
     ~naturalnaming.DerivedParameterGroup.f_add_derived_parameter
     ~naturalnaming.ResultGroup.f_add_result
@@ -23,12 +24,13 @@ Here are some links to important functions:
     ~naturalnaming.NNGroupNode.f_get
     ~trajectory.Trajectory.f_explore
     ~trajectory.Trajectory.f_load
-    ~trajectory.Trajectory.f_load_items
-    ~trajectory.SingleRun.f_store_items
-    ~trajectory.Trajectory.f_remove_items
     ~trajectory.Trajectory.f_update_skeleton
     ~trajectory.Trajectory.f_preset_parameter
     ~trajectory.Trajectory.f_get_from_runs
+    ~trajectory.SingleRun.f_load_items
+    ~trajectory.SingleRun.f_store_items
+    ~trajectory.SingleRun.f_remove_items
+    ~trajectory.SingleRun.f_delete_items
     ~trajectory.Trajectory.v_idx
     ~trajectory.SingleRun.v_standard_parameter
     ~trajectory.SingleRun.v_standard_result

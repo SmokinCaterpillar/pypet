@@ -156,6 +156,57 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         """ Length of a single run can only be 1 and nothing else!"""
         return 1
 
+
+    def _create_class(self, class_name):
+        """Dynamically creates a class.
+
+        It is tried if the class can be created by the already given imports.
+        If not the list of the dynamically loaded classes is used.
+
+        """
+        try:
+            new_class = eval(class_name)
+
+            if not inspect.isclass(new_class):
+                raise TypeError('Not a class!')
+
+            return new_class
+        except (NameError, TypeError) as exc:
+            for dynamic_class in self._dynamic_imports:
+                # Dynamic classes can be provided directly as a Class instance,
+                # for example as `MyCustomParameter`,
+                # or as a string describing where to import the class from,
+                # for instance as `'mypackage.mymodule.MyCustomParameter'`.
+                if inspect.isclass(dynamic_class):
+                    if class_name == dynamic_class.__name__:
+                        return dynamic_class
+                else:
+                    # The class name is always the last in an import string,
+                    # e.g. `'mypackage.mymodule.MyCustomParameter'`
+                    class_name_to_test = dynamic_class.split('.')[-1]
+                    if class_name == class_name_to_test:
+                        new_class = self._load_class(dynamic_class)
+                        return new_class
+            raise ImportError('Could not create the class named `%s`.' % class_name)
+
+    @staticmethod
+    def _load_class(full_class_string):
+        """Loads a class from a string naming the module and class name.
+
+        For example:
+        >>> Trajectory._load_class(full_class_string = 'pypet.brian.parameter.BrianParameter')
+        <BrianParameter>
+
+        """
+
+        class_data = full_class_string.split(".")
+        module_path = ".".join(class_data[:-1])
+        class_str = class_data[-1]
+        module = importlib.import_module(module_path)
+
+        # We retrieve the Class from the module
+        return getattr(module, class_str)
+
     @property
     def v_stored(self):
         """Whether or not the trajectory or run has been stored to disk before."""
@@ -437,7 +488,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
          or the parameter data items as values.
 
 
-         :param fast_access:
+        :param fast_access:
 
             Determines whether the parameter objects or their values are returned
             in the dictionary.
@@ -551,6 +602,161 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
             raise ValueError('Your storage was not successful, could not find a single item '
                                  'to store.')
 
+    def f_load_item(self,item, *args, **kwargs):
+        """Loads a single item, see also :func:`~pypet.trajectory.SingleRun.f_load_items`"""
+        self.f_load_items([item],*args,**kwargs)
+
+    def f_load_items(self, iterator, *args, **kwargs):
+        """Loads parameters and results specified in `iterator`.
+
+        You can directly list the Parameter objects or just their names.
+
+        If names are given the `~pypet.trajectory.SingleRun.f_get` method is applied to find the
+        parameters or results in the trajectory. Accordingly, the parameters and results
+        you want to load must already exist in your trajectory (in RAM), probably they
+        are just empty skeletons waiting desperately to handle data.
+        If they do not exist in RAM yet, but have been stored to disk before,
+        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
+        bring your trajectory tree skeleton up to date. In case of a single run you can
+        use the :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` method to recursively
+        load a subtree without any data.
+        Then you can load the data of individual results or parameters one by one.
+
+        If want to load the whole trajectory at once or ALL results and parameters that are
+        still empty take a look at :func:`~pypet.trajectory.Trajectory.f_load`.
+        As mentioned before, to load subtrees of your trajectory you might want to check out
+        :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
+
+        To load a list of parameters or results with `f_load_items` you can pass
+        the following arguments:
+
+        :param iterator: A list with parameters or results to be loaded.
+
+        :param only_empties:
+
+            Optional keyword argument (boolean),
+            if `True` only empty parameters or results are passed
+            to the storage service to get loaded. Non-empty parameters or results found in
+            `iterator` are simply ignored.
+
+        :param args: Additional arguments directly passed to the storage service
+
+        :param kwargs:
+
+            Additional keyword arguments directly passed to the storage service
+            (except the kwarg `only_empties`)
+
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param load_only:
+
+                If you load a result, you can partially load it and ignore the rest of data items.
+                Just specify the name of the data you want to load. You can also provide a list,
+                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`
+
+                Throws a ValueError if data cannot be found.
+
+        """
+
+        if not self._stored:
+            raise TypeError(
+                'Cannot load stuff from disk for a trajectory that has never been stored.')
+
+        fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
+        if fetched_items:
+            self._storage_service.load(pypetconstants.LIST, fetched_items,
+                                      trajectory_name=self.v_trajectory_name)
+        else:
+            self._logger.warning('Your loading was not successful, could not find a single item '
+                                 'to load.')
+
+    def f_remove_item(self, item, remove_empty_groups=False):
+        """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
+        self.f_remove_items([item], remove_empty_groups)
+
+    def f_remove_items(self, iterable, remove_empty_groups=False):
+        """Removes parameters, results or groups from the trajectory.
+
+        This function ONLY removes items from your current trajectory and does not delete
+        data stored to disk. If you want to delete data from disk, take a look at
+        :func:`~pypet.trajectory.SingleRun.f_delete_items`.
+
+        :param iterable:
+
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the items.
+
+        :param remove_empty_groups:
+
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too.
+
+        """
+
+        # Will format the request in a form that is understood by the storage service
+        # aka (msg, item, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, (), {})
+
+        if fetched_items:
+
+            for msg, item, dummy1, dummy2 in fetched_items:
+                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+
+        else:
+            self._logger.warning('Your removal was not successful, could not find a single '
+                                 'item to remove.')
+
+
+    def f_delete_item(self, item,*args,**kwargs):
+        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.delete_items`"""
+        self.f_delete_items([item],*args,**kwargs)
+
+    def f_delete_items(self, iterable, *args, **kwargs):
+        """Deletes items from trajectory AND from data stored to disk.
+
+        :param iterable:
+
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the items.
+
+        :param remove_empty_groups:
+
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too.
+
+
+        :param args: Additional arguments passed to the storage service
+
+        :param kwargs: Additional keyword arguments passed to the storage service
+
+        Note if you use the standard hdf5 storage service, there are no additional arguments
+        or keyword arguments to pass!
+
+        """
+
+        remove_empty_groups = kwargs.get('remove_empty_groups', False)
+
+        # Will format the request in a form that is understood by the storage service
+        # aka (msg, item, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, args, kwargs)
+
+        if fetched_items:
+            if self._stored:
+                try:
+                    self._storage_service.store(pypetconstants.LIST, fetched_items,
+                                               trajectory_name=self.v_trajectory_name)
+                except:
+                    self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
+                                       ' item(s) was/were never stored to disk.')
+                    raise
+
+            for msg, item, dummy1, dummy2 in fetched_items:
+                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+
+        else:
+            self._logger.warning('Your removal was not successful, could not find a single '
+                                 'item to remove.')
 
 class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     """The trajectory manages results and parameters.
@@ -1049,92 +1255,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             else:
                 return self._run_information[name_or_idx]
 
-    def f_remove_item(self, item, remove_empty_groups=False):
-        """Removes a single item, see :func:`remove_items`"""
-        self.f_remove_items([item], remove_empty_groups)
-
-    def f_remove_items(self, iterable, remove_empty_groups=False):
-        """Removes parameters, results or groups from the trajectory.
-
-        This function ONLY removes items from your current trajectory and does not delete
-        data stored to disk. If you want to delete data from disk, take a look at
-        :func:`~pypet.trajectory.Trajectory.f_delete_items`.
-
-        :param iterable:
-
-            A sequence of items you want to remove. Either the instances themselves
-            or strings with the names of the items.
-
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too.
-
-        """
-
-        # Will format the request in a form that is understood by the storage service
-        # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, (), {})
-
-        if fetched_items:
-
-            for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
-
-        else:
-            self._logger.warning('Your removal was not successful, could not find a single '
-                                 'item to remove.')
-
-    def f_delete_item(self, item,*args,**kwargs):
-        """Deletes a single item, see :func:`delete_items`"""
-        self.f_delete_items([item],*args,**kwargs)
-
-    def f_delete_items(self, iterable, *args, **kwargs):
-        """Deletes items from trajectory AND from data stored to disk.
-
-        :param iterable:
-
-            A sequence of items you want to remove. Either the instances themselves
-            or strings with the names of the items.
-
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too.
-
-
-        :param args: Additional arguments passed to the storage service
-
-        :param kwargs: Additional keyword arguments passed to the storage service
-
-        Note if you use the standard hdf5 storage service, there are no additional arguments
-        or keyword arguments to pass!
-
-        """
-
-        remove_empty_groups = kwargs.get('remove_empty_groups', False)
-
-        # Will format the request in a form that is understood by the storage service
-        # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, args, kwargs)
-
-        if fetched_items:
-            if self._stored:
-                try:
-                    self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                               trajectory_name=self.v_name)
-                except:
-                    self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
-                                       ' item(s) was/were never stored to disk.')
-                    raise
-
-            for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
-
-        else:
-            self._logger.warning('Your removal was not successful, could not find a single '
-                                 'item to remove.')
-
 
 
     def _remove_incomplete_runs(self):
@@ -1413,55 +1533,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.__dict__.update(statedict)
         self._logger = logging.getLogger('Trajectory')
 
-    def _create_class(self, class_name):
-        """Dynamically creates a class.
-
-        It is tried if the class can be created by the already given imports.
-        If not the list of the dynamically loaded classes is used.
-
-        """
-        try:
-            new_class = eval(class_name)
-
-            if not inspect.isclass(new_class):
-                raise TypeError('Not a class!')
-
-            return new_class
-        except (NameError, TypeError) as exc:
-            for dynamic_class in self._dynamic_imports:
-                # Dynamic classes can be provided directly as a Class instance,
-                # for example as `MyCustomParameter`,
-                # or as a string describing where to import the class from,
-                # for instance as `'mypackage.mymodule.MyCustomParameter'`.
-                if inspect.isclass(dynamic_class):
-                    if class_name == dynamic_class.__name__:
-                        return dynamic_class
-                else:
-                    # The class name is always the last in an import string,
-                    # e.g. `'mypackage.mymodule.MyCustomParameter'`
-                    class_name_to_test = dynamic_class.split('.')[-1]
-                    if class_name == class_name_to_test:
-                        new_class = self._load_class(dynamic_class)
-                        return new_class
-            raise ImportError('Could not create the class named `%s`.' % class_name)
-
-    @staticmethod
-    def _load_class(full_class_string):
-        """Loads a class from a string naming the module and class name.
-
-        For example:
-        >>> Trajectory._load_class(full_class_string = 'pypet.brian.parameter.BrianParameter')
-        <BrianParameter>
-
-        """
-
-        class_data = full_class_string.split(".")
-        module_path = ".".join(class_data[:-1])
-        class_str = class_data[-1]
-        module = importlib.import_module(module_path)
-
-        # We retrieve the Class from the module
-        return getattr(module, class_str)
 
     def f_is_completed(self, name_or_id=None):
         """Whether or not a given run is completed.
@@ -1695,72 +1766,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.f_load(self.v_name,None, False, pypetconstants.UPDATE_SKELETON, pypetconstants.UPDATE_SKELETON,
                   pypetconstants.UPDATE_SKELETON)
 
-    def f_load_item(self,item, *args, **kwargs):
-        """Loads a single item, see also :func:`~pypet.trajectory.Trajectory.f_load_items`"""
-        self.f_load_items([item],*args,**kwargs)
-
-    def f_load_items(self, iterator, *args, **kwargs):
-        """Loads parameters and results specified in `iterator`.
-
-        You can directly list the Parameter objects or just their names.
-
-        If names are given the `~pypet.trajectory.Trajectory.f_get` method is applied to find the
-        parameters or results in the trajectory. Accordingly, the parameters and results
-        you want to load must already exist in your trajectory (in RAM), probably they
-        are just empty skeletons waiting desperately to handle data.
-        If they do not exist in RAM yet, but have been stored to disk before,
-        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
-        bring your trajectory tree skeleton up to date.
-        Then you can load the data of individual results or parameters one by one.
-
-        If want to load the whole trajectory at once or ALL results and parameters that are
-        still empty take a look at :func:`~pypet.trajectory.Trajectory.f_load`.
-        To load subtrees of your trajectory you might want to check out
-        :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
-
-        To load a list of parameters or results with `f_load_items` you can pass
-        the following arguments:
-
-        :param iterator: A list with parameters or results to be loaded.
-
-        :param only_empties:
-
-            Optional keyword argument (boolean),
-            if `True` only empty parameters or results are passed
-            to the storage service to get loaded. Non-empty parameters or results found in
-            `iterator` are simply ignored.
-
-        :param args: Additional arguments directly passed to the storage service
-
-        :param kwargs:
-
-            Additional keyword arguments directly passed to the storage service
-            (except the kwarg `only_empties`)
-
-            If you use the standard hdf5 storage service, you can pass the following additional
-            keyword argument:
-
-            :param load_only:
-
-                If you load a result, you can partially load it and ignore the rest of data items.
-                Just specify the name of the data you want to load. You can also provide a list,
-                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`
-
-                Throws a ValueError if data cannot be found.
-
-        """
-
-        if not self._stored:
-            raise TypeError(
-                'Cannot load stuff from disk for a trajectory that has never been stored.')
-
-        fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
-        if fetched_items:
-            self._storage_service.load(pypetconstants.LIST, fetched_items,
-                                      trajectory_name=self.v_name)
-        else:
-            self._logger.warning('Your loading was not successful, could not find a single item '
-                                 'to load.')
 
     def f_load(self,
              name=None,

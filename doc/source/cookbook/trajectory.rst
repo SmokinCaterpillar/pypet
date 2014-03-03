@@ -170,13 +170,13 @@ you will find this parameter also in the group `traj.parameters.traffic.ncycles`
 Besides *leaves* you can also add empty *groups* to the trajectory
 (and to all subgroups, of course) via:
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_config_group`
+* :func:`~pypet.naturalnaming.ConfigGroup.f_add_config_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter_group`
+* :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_derived_parameter_group`
+* :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_result_group`
+* :func:`~pypet.naturalnaming.ResultGroup.f_add_result_group`
 
 As before, if you create the group `groupA.groupB.groupC` and
 if group A and B were non-existent before, they will be created on the way.
@@ -607,10 +607,10 @@ If you choose tha latter load mode, you can specify how the individual subtrees 
 
 
 Compared to manual storage, you can also load single items manually via
-:func:`~pypet.trajectory.Trajectory.f_load_item`. If you load a large result with many entries
-you might consider loading only parts of it (see :func:`~pypet.trajectory.Trajectory.f_load_items`)
+:func:`~pypet.trajectory.SingleRun.f_load_item`. If you load a large result with many entries
+you might consider loading only parts of it (see :func:`~pypet.trajectory.SinleRun.f_load_items`)
 Note in order to load a parameter, result or group, with
-:func:`~pypet.trajectory.Trajectory.f_load_item` it must exist in the current trajectory in RAM,
+:func:`~pypet.trajectory.SingleRun.f_load_item` it must exist in the current trajectory in RAM,
 if it does not you can always bring your skeleton of your trajectory tree up to date
 with :`func:`~pypet.trajectory.Trajectory.f_update_skeleton`. This will load all items stored
 to disk and create empty instances. After a simulation is completed, you need to call this function

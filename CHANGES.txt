@@ -29,6 +29,8 @@ pypet 0.1b.4
 *   The trajectory now contains the functions `f_delete_item` and `f_delete_items` to erase stuff
     from disk. `f_remove_items` and `f_remove_item` no longer delete data from disk.
 
+*   Loading and deletions of items can now be made with SingleRuns as well.
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

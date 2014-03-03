@@ -2025,7 +2025,8 @@ class NNGroupNode(NNTreeNode):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.store(pypetconstants.TREE, self._children[name], trajectory_name=traj.v_name,
+        storage_service.store(pypetconstants.TREE, self._children[name],
+                              trajectory_name=traj.v_trajectory_name,
                               recursive=recursive)
 
 
@@ -2047,7 +2048,8 @@ class NNGroupNode(NNTreeNode):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.load(pypetconstants.TREE, self,child_name=name, trajectory_name=traj.v_name,
+        storage_service.load(pypetconstants.TREE, self,child_name=name,
+                             trajectory_name=traj.v_trajectory_name,
                              recursive=recursive, load_data=load_data, trajectory=traj)
 
 

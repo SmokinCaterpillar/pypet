@@ -59,6 +59,11 @@ class QueueStorageServiceSender(MultiprocWrapper):
         del result['_logger']
         return result
 
+    def load(self, *args, **kwargs):
+        raise NotImplementedError('Queue wrapping does not support loading. If you want to '
+                                  'load data in a multiprocessing environment, use the Lock '
+                                  'wrapping.')
+
     def store(self,*args,**kwargs):
         """Puts data to store on queue."""
         try:

@@ -441,7 +441,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.assertTrue(self.traj.new.group.v_annotations.annotation, 42)
 
-        self.traj.f_remove_item('new.test.group', remove_from_storage=True, remove_empty_groups=True)
+        self.traj.f_delete_item('new.test.group', remove_empty_groups=True)
 
         with self.assertRaises(tables.NoSuchNodeError):
             self.traj.parameters.f_load_child('new', recursive=True, load_data=pypetconstants.LOAD_SKELETON)

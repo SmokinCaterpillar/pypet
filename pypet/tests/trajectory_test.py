@@ -421,7 +421,7 @@ class TrajectoryTest(unittest.TestCase):
 
         #self.assertTrue(len(self.traj)==1)
 
-        self.traj.f_remove_item('FortyTwo',remove_empyt_groups=True)
+        self.traj.f_remove_item('FortyTwo',remove_empty_groups=True)
 
         self.traj.f_remove_item('SparseParam')
         self.traj.f_remove_item('IntParam')
