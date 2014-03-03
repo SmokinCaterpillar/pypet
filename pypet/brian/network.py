@@ -495,6 +495,9 @@ class NetworkRunner(NetworkComponent):
 
         subruns = {}
         orders = []
+
+
+
         for duration_param in durations.f_iter_leaves():
 
             if isinstance(duration_param, BrianDurationParameter):
@@ -653,6 +656,19 @@ class NetworkManager(object):
         self._pre_run=False
         self._network = None
         self._force_single_core =force_single_core
+
+
+    def _pretty_print_explored_parameters(self, traj):
+        print_statement = '\n################### Explored Parameters ################### \n'
+
+        explore_dict = traj.f_get_explored_parameters(copy=False)
+        for full_name in explore_dict:
+            parameter = explore_dict[full_name]
+
+            print_statement += '%s: %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
+
+        print_statement += '###########################################################'
+        self._logger.info(print_statement)
 
     def __getstate__(self):
         """Called for pickling.
@@ -828,6 +844,9 @@ class NetworkManager(object):
         :param traj: Trajectory container
 
         """
+
+        self._pretty_print_explored_parameters(traj)
+
         # Check if the network was pre-built
         if self._pre_built:
             # If yes check for multiprocessing or if a single core processing is forced
