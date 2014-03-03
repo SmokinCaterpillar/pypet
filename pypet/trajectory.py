@@ -101,7 +101,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._dynamic_imports = parent_trajectory._dynamic_imports
 
-        self._logger = logging.getLogger('pypet.trajectory.SingleRun=' + self.v_name)
+        self._logger = logging.getLogger('SingleRun')
 
         self._is_run = True
 
@@ -149,7 +149,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.trajectory.SingleRun=' + self.v_name)
+        self._logger = logging.getLogger('SingleRun')
 
 
     def __len__(self):
@@ -771,7 +771,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                  % (name, faulty_names))
 
 
-        self._logger = logging.getLogger('pypet.trajectory.Trajectory=' + self.v_name)
+        self._logger = logging.getLogger('Trajectory')
 
         self._comment=''
         self.v_comment=comment
@@ -1379,7 +1379,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('pypet.trajectory.Trajectory=' + self.v_name)
+        self._logger = logging.getLogger('Trajectory')
 
     def _create_class(self, class_name):
         """Dynamically creates a class.
