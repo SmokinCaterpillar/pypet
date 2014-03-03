@@ -156,7 +156,7 @@ class ContinueTest(TrajectoryComparator):
 
         self.trajs[0].f_update_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
-        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'), remove_from_storage=True,
+        self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
                                         remove_empty_groups=True)
 
         self.trajs[0].f_update_skeleton()

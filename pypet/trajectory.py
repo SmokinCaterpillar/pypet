@@ -1049,28 +1049,59 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             else:
                 return self._run_information[name_or_idx]
 
-    def f_remove_item(self, item,*args,**kwargs):
+    def f_remove_item(self, item, remove_empty_groups=False):
         """Removes a single item, see :func:`remove_items`"""
-        self.f_remove_items([item],*args,**kwargs)
+        self.f_remove_items([item], remove_empty_groups)
 
-    def f_remove_items(self, iterable, *args, **kwargs):
+    def f_remove_items(self, iterable, remove_empty_groups=False):
         """Removes parameters, results or groups from the trajectory.
 
-        This function can also be used to **erase** data from disk via the storage service.
+        This function ONLY removes items from your current trajectory and does not delete
+        data stored to disk. If you want to delete data from disk, take a look at
+        :func:`~pypet.trajectory.Trajectory.f_delete_items`.
 
         :param iterable:
 
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
 
-        :param remove_from_storage:
+        :param remove_empty_groups:
 
-            Boolean whether you want to also delete the item from your storage.
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too.
+
+        """
+
+        # Will format the request in a form that is understood by the storage service
+        # aka (msg, item, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, (), {})
+
+        if fetched_items:
+
+            for msg, item, dummy1, dummy2 in fetched_items:
+                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+
+        else:
+            self._logger.warning('Your removal was not successful, could not find a single '
+                                 'item to remove.')
+
+    def f_delete_item(self, item,*args,**kwargs):
+        """Deletes a single item, see :func:`delete_items`"""
+        self.f_delete_items([item],*args,**kwargs)
+
+    def f_delete_items(self, iterable, *args, **kwargs):
+        """Deletes items from trajectory AND from data stored to disk.
+
+        :param iterable:
+
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the items.
 
         :param remove_empty_groups:
 
             If your deletion of the instance leads to empty groups,
             these will be deleted, too.
+
 
         :param args: Additional arguments passed to the storage service
 
@@ -1081,15 +1112,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        remove_from_storage = kwargs.pop('remove_from_storage',False)
-        remove_empty_groups = kwargs.get('remove_empty_groups',False)
+        remove_empty_groups = kwargs.get('remove_empty_groups', False)
 
         # Will format the request in a form that is understood by the storage service
         # aka (msg, item, args, kwargs)
         fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, args, kwargs)
 
         if fetched_items:
-            if self._stored and remove_from_storage:
+            if self._stored:
                 try:
                     self._storage_service.store(pypetconstants.LIST, fetched_items,
                                                trajectory_name=self.v_name)
@@ -1104,6 +1134,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
                                  'item to remove.')
+
+
 
     def _remove_incomplete_runs(self):
         """Requests the storage service to delete incomplete runs.

@@ -632,10 +632,9 @@ the :func:`f_empty()` function of a result or parameter. This will leave the act
 of the trajectory untouched.
 
 Although I made it pretty clear that in general what is stored to disk is set in stone,
-there are a functions to remove items not only from RAM but also from disk:
-`~pypet.trajectory.f_remove_item` and `~pypet.trajectory.f_remove_items` and calling them
-with `remove_from_storage=True`.
-Note that you cannot erase explored parameters.
+there are a functions to delete items not only from RAM but also from disk:
+`~pypet.trajectory.f_delete_item` and `~pypet.trajectory.f_delete_items`.
+Note that you cannot delete explored parameters.
 
 
 .. _more-on-merging:

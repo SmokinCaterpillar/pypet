@@ -1789,7 +1789,7 @@ class NNGroupNode(NNTreeNode):
         can be only be used to free RAM memory!
 
         If you want to free memory on disk via your storage service,
-        use :func:`~pypet.trajectory.Trajectory.f_remove_items` of your trajectory.
+        use :func:`~pypet.trajectory.Trajectory.f_delete_items` of your trajectory.
 
         :param name: Name of child
 
