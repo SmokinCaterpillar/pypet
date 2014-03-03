@@ -24,6 +24,8 @@ pypet 0.1b.4
 
 *   BUG FIX: Scalars are no longer autoconverted by the storage service to zero-length numpy arrays
 
+*   Names of loggers have been shortened
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

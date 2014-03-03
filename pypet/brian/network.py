@@ -102,7 +102,7 @@ class NetworkComponent(object):
 
         """
         if name is None:
-            name = self.__module__ + '.' + self.__class__.__name__
+            name = self.__class__.__name__
         self.logger = logging.getLogger(name)
 
     def add_parameters(self, traj):
