@@ -658,17 +658,7 @@ class NetworkManager(object):
         self._force_single_core =force_single_core
 
 
-    def _pretty_print_explored_parameters(self, traj):
-        print_statement = '\n################### Explored Parameters ################### \n'
 
-        explore_dict = traj.f_get_explored_parameters(copy=False)
-        for full_name in explore_dict:
-            parameter = explore_dict[full_name]
-
-            print_statement += '%s: %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
-
-        print_statement += '###########################################################'
-        self._logger.info(print_statement)
 
     def __getstate__(self):
         """Called for pickling.
@@ -845,8 +835,6 @@ class NetworkManager(object):
 
         """
 
-        self._pretty_print_explored_parameters(traj)
-
         # Check if the network was pre-built
         if self._pre_built:
             # If yes check for multiprocessing or if a single core processing is forced
@@ -877,6 +865,22 @@ class NetworkManager(object):
             reinit()
             self._run_network(traj)
 
+    def _pretty_print_explored_parameters(self, traj):
+        print_statement = '\n-------------------\n' +\
+                     'Running the Network\n' +\
+                     '-------------------\n' +\
+                     '     with '
+
+        explore_dict = traj.f_get_explored_parameters(copy=False)
+        for full_name in explore_dict:
+            parameter = explore_dict[full_name]
+
+            print_statement += '%s: %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
+
+        print_statement+='-------------------'
+
+        self._logger.info(print_statement)
+
     def _run_network(self, traj):
         """Starts a single run carried out by a NetworkRunner.
 
@@ -887,9 +891,8 @@ class NetworkManager(object):
         """
         self.build(traj)
 
-        self._logger.info('\n-------------------\n'
-                     'Running the Network\n'
-                     '-------------------')
+        self._pretty_print_explored_parameters()
+        self._logger.info()
 
         # We need to construct a network object in case one was not pre-run
         if not self._pre_run:
