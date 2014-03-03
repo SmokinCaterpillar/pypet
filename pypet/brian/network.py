@@ -869,13 +869,13 @@ class NetworkManager(object):
         print_statement = '\n-------------------\n' +\
                      'Running the Network\n' +\
                      '-------------------\n' +\
-                     '     with '
+                     '      with\n'
 
         explore_dict = traj.f_get_explored_parameters(copy=False)
         for full_name in explore_dict:
             parameter = explore_dict[full_name]
 
-            print_statement += '%s: %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
+            print_statement += '%s = %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
 
         print_statement+='-------------------'
 
