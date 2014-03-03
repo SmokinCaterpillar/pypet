@@ -2462,7 +2462,7 @@ class HDF5StorageService(StorageService):
             strtype = repr(type(data))
 
             if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
+                raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                                (str(data),repr(type(data))))
 
             _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
@@ -2472,7 +2472,7 @@ class HDF5StorageService(StorageService):
                             HDF5StorageService.COLL_DICT)
 
         else:
-            raise TypeError('I do not know how to handel `%s` its type is `%s`.' %
+            raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                                (str(data),repr(type(data))))
 
         if type(data) in (list,tuple):
@@ -2485,7 +2485,7 @@ class HDF5StorageService(StorageService):
                 strtype = repr(type(data[0]))
 
                 if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                    raise TypeError('I do not know how to handel `%s` its type is '
+                    raise TypeError('I do not know how to handle `%s` its type is '
                                        '`%s`.' % (str(data),strtype))
 
                 _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
