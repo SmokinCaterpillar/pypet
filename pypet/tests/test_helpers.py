@@ -200,6 +200,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__NPINT'] = np.int_(55)
         my_dict['__INTaRRAy'] = np.array([1,2,3])
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
+        my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
         my_dict['__LONG'] = long(42)
 
