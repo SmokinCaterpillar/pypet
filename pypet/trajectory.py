@@ -2721,8 +2721,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return use_runs, params_to_change.keys()
 
-    def f_store(self):
+    def f_store(self, filename=None):
         """Stores the trajectory to disk.
+
+        :param filename:
+
+            You can give another filename here if you want to store the trajectory somewhere
+            else than in the filename you have specified on trajectory creation.
 
         If you use the HDF5 Storage Service only novel data is stored to disk.
 
@@ -2738,7 +2743,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         at least once before.
 
         """
-        self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
+        if filename is not None:
+            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
+        else:
+            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
+                                        filename=filename)
         self._stored = True
 
     def f_is_empty(self):

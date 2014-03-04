@@ -973,7 +973,7 @@ class HDF5StorageService(StorageService):
             return False
 
     def _srvc_extract_file_information(self,kwargs):
-        """Extracts file informmation from kwargs.
+        """Extracts file information from kwargs.
 
         Note that `kwargs` is not passed as `**kwargs` in order to also
         `pop` the elements on the level of the function calling `_srvc_extract_file_information`.
