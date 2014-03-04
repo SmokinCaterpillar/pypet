@@ -1770,6 +1770,31 @@ class NNGroupNode(NNTreeNode):
                                  str([(key,str(type(val)))
                                       for key,val in self._children.iteritems()]))
 
+    def f_to_debug_tree(self):
+        """Creates a dummy object containing the whole tree to make unfolding easier.
+
+        This method is only useful for debugging purposes.
+        If you use an IDE and want to unfold the trajectory tree, you always need to
+        open the private attribute `_children`. Use to this function to create a new
+        object that contains the tree structure in its attributes.
+
+        Manipulating the returned object does not change the original tree!
+
+        """
+        class Bunch:
+            def __init__(self, **kwds):
+                self.__dict__.update(kwds)
+
+        debug_tree = Bunch()
+        for child_name in self._children:
+            child = self._children[child_name]
+            if child.v_is_leaf:
+                setattr(debug_tree, child_name, child)
+            else:
+                setattr(debug_tree, child_name, child.f_to_debug_tree())
+
+        return debug_tree
+
     def f_children(self):
         """Returns the number of children of the group"""
         return len(self._children)

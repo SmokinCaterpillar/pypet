@@ -2802,3 +2802,4 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         traj._set_explored_parameters_to_idx(idx)
         name = traj.f_idx_to_run(idx)
         return SingleRun(name, idx, traj)
+
