@@ -1095,7 +1095,7 @@ class Parameter(BaseParameter):
 
 
 class ArrayParameter(Parameter):
-    """Similar to the :class:`:func:`~pypet.parameter.Parameter`, but recommended for
+    """Similar to the :class:`~pypet.parameter.Parameter`, but recommended for
     large numpy arrays and python tuples.
 
     The array parameter is a bit smarter in memory management than the parameter.
@@ -1242,7 +1242,7 @@ class ArrayParameter(Parameter):
 class SparseParameter(ArrayParameter):
     """Parameter that handles Scipy csr, csc, bsr and dia sparse matrices.
 
-    Sparse Parameter inherits from :class:`pypet.parameter.ArrayParameter` and supports
+    Sparse Parameter inherits from :class:`~pypet.parameter.ArrayParameter` and supports
     arrays and native python data as well.
 
     Uses similar memory management as its parent class.

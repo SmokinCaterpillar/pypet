@@ -1521,8 +1521,11 @@ class HDF5StorageService(StorageService):
         else:
             traj._comment = str(metarow['comment'])
             traj._timestamp = float(metarow['timestamp'])
+            traj._trajectory_timestamp = traj._timestamp
             traj._time = str(metarow['time'])
+            traj._trajectory_time = traj._time
             traj._name = str(metarow['name'])
+            traj._trajectory_name = traj._name
             traj._version = str(metarow['version'])
 
             single_run_table = self._overview_group.runs
