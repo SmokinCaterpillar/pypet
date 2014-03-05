@@ -72,6 +72,12 @@ CONFIG_GROUP = 'CONFIG_GROUP'
 GROUP = 'GROUP'
 LEAF = 'LEAF'
 
+#SUBTREE Mapping
+SUBTREE_MAPPING = {'config' : (CONFIG_GROUP, CONFIG),
+                   'parameters' : (PARAMETER_GROUP, PARAMETER),
+                   'derived_parameters' : (DERIVED_PARAMETER_GROUP, DERIVED_PARAMETER),
+                   'results' : (RESULT_GROUP, RESULT)}
+
 # For fast searching of nodes in the tree:
 # If there are more candidate solutions found by the fast search
 # (that need to be checked sequentially) than this number
@@ -171,6 +177,15 @@ class NNTreeNode(WithAnnotations):
         """
         return self._creator_name
 
+    @property
+    def v_subtree(self):
+        """The name of the subtree, i.e. the first node below the root.
+
+        The empty string in case of root itself.
+
+        """
+        return self._subtree
+
     def _rename(self, full_name):
         """ Renames the parameter or result."""
         split_name = full_name.split('.')
@@ -184,9 +199,15 @@ class NNTreeNode(WithAnnotations):
         self._full_name=full_name
         self._name=split_name[-1]
 
+        if self.v_is_root:
+            self._subtree = ''
+        else:
+            self._subtree = split_name[0]
+
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
-        if self._depth>1 and split_name[0] in ['results', 'derived_parameters']:
+        if ( self._depth>1 and split_name[0] in ['results', 'derived_parameters'] and
+                 split_name[1].startswith(pypetconstants.RUN_NAME) ):
             self._creator_name = split_name[1]
         else:
             self._creator_name = 'trajectory'
@@ -401,6 +422,8 @@ class NaturalNamingInterface(object):
             return root._derived_parameters
         elif type_name == CONFIG:
             return root._config
+        elif type_name == LEAF:
+            return root._other_leaves
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -674,6 +697,9 @@ class NaturalNamingInterface(object):
             elif full_name in root._results:
                 del root._results[full_name]
 
+            elif full_name in root._other_leaves:
+                del root._other_leaves[full_name]
+
             if full_name in root._explored_parameters:
                 del root._explored_parameters[full_name]
 
@@ -815,7 +841,7 @@ class NaturalNamingInterface(object):
         return expanded
 
 
-    def _add_prefix( self,name, start_node, group_type_name):
+    def _add_prefix( self, name, start_node, group_type_name):
         """Adds the correct sub branch prefix to a given name.
 
         Usually the prefix is the full name of the parent node. In case items are added
@@ -842,11 +868,23 @@ class NaturalNamingInterface(object):
 
         """
 
+
+
         ## If we add an instance with a correct full name at root, we do not need to add the prefix
+        # in case of parameters and config, in case of results and derived parameters
+        # we need to check the rest of the name
         if start_node.v_is_root:
-            for prefix in ('results','parameters','derived_parameters','config'):
+            if name in ('parameters', 'config', 'derived_parameters', 'results'):
+                return name
+            for prefix in ('parameters.','config.', 'results.trajectory','derived_parameters.trajectory',
+                'results.'+pypetconstants.RUN_NAME,'derived_parameters.'+pypetconstants.RUN_NAME):
                 if name.startswith(prefix):
                     return name
+            # for prefix in ('results.','derived_parameters.'):
+            #     if name.startswith(prefix):
+            #         reduced_split_name = name.split('.')[1:]
+            #         name = '.'.join(reduced_split_name)
+
 
         root=self._root_instance
 
@@ -859,17 +897,18 @@ class NaturalNamingInterface(object):
 
                 add=''
 
-                if (not ((name.startswith(pypetconstants.RUN_NAME) and
-                                  len(name) ==len(pypetconstants.RUN_NAME)+pypetconstants.FORMAT_ZEROS) or
+                if (not ( name.startswith(pypetconstants.RUN_NAME) or
                                   name == 'trajectory') ):
 
                     if root._is_run:
-                        add= start_node.v_name + '.'
+                        add= root.v_name + '.'
                     else:
                         add= 'trajectory.'
 
+
                 if start_node.v_depth== 0:
                     add = 'derived_parameters.' + add
+
 
                 return add+name
 
@@ -878,12 +917,10 @@ class NaturalNamingInterface(object):
 
                 add = ''
 
-                if (not ((name.startswith(pypetconstants.RUN_NAME) and
-                                  len(name) ==len(pypetconstants.RUN_NAME)+pypetconstants.FORMAT_ZEROS) or
+                if (not (name.startswith(pypetconstants.RUN_NAME) or
                                   name == 'trajectory') ):
-
                     if root._is_run:
-                        add= start_node.v_name + '.'
+                        add= root.v_name + '.'
                     else:
                         add= 'trajectory.'
 
@@ -905,82 +942,102 @@ class NaturalNamingInterface(object):
         return name
 
 
-    def _add_from_leaf_instance(self, start_node, instance):
-        """Adds a given parameter or result instance to the tree.
+    # def _add_from_leaf_instance(self, start_node, instance):
+    #     """Adds a given parameter or result instance to the tree.
+    #
+    #     Checks to which subtree the instances belongs and calls
+    #     :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
+    #     matching arguments
+    #
+    #     :param start_node: The parent node that was called to add the instance to
+    #
+    #     :param instance: The instance to add
+    #
+    #     :return: The added parameter or result
+    #
+    #     """
+    #     full_name = start_node.v_full_name
+    #
+    #     if full_name.startswith('results'):
+    #         group_type_name = RESULT_GROUP
+    #         type_name = RESULT
+    #
+    #     elif full_name.startswith('parameters'):
+    #         group_type_name = PARAMETER_GROUP
+    #         type_name = PARAMETER
+    #
+    #     elif full_name.startswith('derived_parameters'):
+    #         group_type_name = DERIVED_PARAMETER_GROUP
+    #         type_name = DERIVED_PARAMETER
+    #
+    #     elif full_name.startswith('config'):
+    #         group_type_name = CONFIG_GROUP
+    #         type_name = CONFIG
+    #
+    #     else:
+    #         raise RuntimeError('You shall not pass!')
+    #
+    #     return self._add_generic(start_node,type_name,group_type_name,[instance],{})
+    #
+    #
+    # def _add_from_group_name(self,start_node, name, comment):
+    #     """Adds a new group node to the tree based on the group's name.
+    #
+    #     Checks to which subtree the group belongs and calls
+    #     :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
+    #     matching arguments.
+    #
+    #     :param start_node: The parent node that was called to add the group to
+    #
+    #     :param instance: The name of the new group
+    #
+    #     :return: The new added group
+    #
+    #     """
+    #     full_name = start_node.v_full_name
+    #
+    #     if full_name.startswith('results'):
+    #         group_type_name = RESULT_GROUP
+    #
+    #
+    #     elif full_name.startswith('parameters'):
+    #         group_type_name = PARAMETER_GROUP
+    #
+    #
+    #     elif full_name.startswith('derived_parameters'):
+    #         group_type_name = DERIVED_PARAMETER_GROUP
+    #
+    #
+    #     elif full_name.startswith('config'):
+    #         group_type_name = CONFIG_GROUP
+    #
+    #
+    #     else:
+    #         raise RuntimeError('You shall not pass!')
+    #
+    #     return self._add_generic(start_node,group_type_name,group_type_name,[name,comment],{})
 
-        Checks to which subtree the instances belongs and calls
-        :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
-        matching arguments
 
-        :param start_node: The parent node that was called to add the instance to
-
-        :param instance: The instance to add
-
-        :return: The added parameter or result
-
-        """
-        full_name = start_node.v_full_name
-
-        if full_name.startswith('results'):
-            group_type_name = RESULT_GROUP
-            type_name = RESULT
-
-        elif full_name.startswith('parameters'):
-            group_type_name = PARAMETER_GROUP
-            type_name = PARAMETER
-
-        elif full_name.startswith('derived_parameters'):
-            group_type_name = DERIVED_PARAMETER_GROUP
-            type_name = DERIVED_PARAMETER
-
-        elif full_name.startswith('config'):
-            group_type_name = CONFIG_GROUP
-            type_name = CONFIG
-
+    @staticmethod
+    def _determine_types(start_node, name, add_leaf):
+        """Determines types for generic additions"""
+        if start_node.v_is_root:
+            where = name.split('.')[0]
+            if where == 'overview':
+                raise ValueError('Sorry, you are not allowd to have an `overview` subtree directly under '
+                                 'the root node.')
         else:
-            raise RuntimeError('You shall not pass!')
+            where = start_node._subtree
 
-        return self._add_generic(start_node,type_name,group_type_name,[instance],{})
-
-
-    def _add_from_group_name(self,start_node, name, comment):
-        """Adds a new group node to the tree based on the group's name.
-
-        Checks to which subtree the group belongs and calls
-        :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
-        matching arguments.
-
-        :param start_node: The parent node that was called to add the group to
-
-        :param instance: The name of the new group
-
-        :return: The new added group
-
-        """
-        full_name = start_node.v_full_name
-
-        if full_name.startswith('results'):
-            group_type_name = RESULT_GROUP
-
-
-        elif full_name.startswith('parameters'):
-            group_type_name = PARAMETER_GROUP
-
-
-        elif full_name.startswith('derived_parameters'):
-            group_type_name = DERIVED_PARAMETER_GROUP
-
-
-        elif full_name.startswith('config'):
-            group_type_name = CONFIG_GROUP
-
-
+        if where in SUBTREE_MAPPING:
+            type_tuple = SUBTREE_MAPPING[where]
         else:
-            raise RuntimeError('You shall not pass!')
+            type_tuple = (GROUP, LEAF)
 
-        return self._add_generic(start_node,group_type_name,group_type_name,[name,comment],{})
-
-
+        if add_leaf:
+            return type_tuple
+        else:
+            return (type_tuple[0], type_tuple[0])
 
     def _add_generic(self,start_node, type_name, group_type_name, args, kwargs):
         """Adds a given item to the tree irrespective of the subtree.
@@ -1032,11 +1089,17 @@ class NaturalNamingInterface(object):
             instance = None
             constructor = None
 
+            if group_type_name == GROUP:
+                group_type_name, type_name = self._determine_types(start_node, name, False)
+
         else:
             ## We add a leaf node in the end:
             args = list(args)
 
             create_new = True
+            name=''
+            instance = None
+            constructor = None
 
             # First check if the item is already a given instance
             if len(args) == 1 and len(kwargs)==0:
@@ -1044,7 +1107,7 @@ class NaturalNamingInterface(object):
                 try:
                     name = item.v_full_name
                     instance = item
-                    constructor = None
+                    #constructor = None
 
                     create_new = False
                 except AttributeError:
@@ -1056,12 +1119,15 @@ class NaturalNamingInterface(object):
             if create_new:
                 if inspect.isclass(args[0]):
                     constructor = args.pop(0)
-                else:
-                    constructor = None
+                # else:
+                #     constructor = None
 
-                instance = None
+                # instance = None
 
                 name = args.pop(0)
+
+            if group_type_name == GROUP:
+                    group_type_name, type_name = self._determine_types(start_node, name, True)
 
         # Check if the name fulfils the prefix conditions, if not change the name accordingly.
         name = self._add_prefix(name,start_node,group_type_name)
@@ -1269,6 +1335,8 @@ class NaturalNamingInterface(object):
 
         elif type_name == DERIVED_PARAMETER_GROUP:
             instance= DerivedParameterGroup(self,full_name, *args, **kwargs)
+        elif type_name == GROUP:
+            instance = NNGroupNode(self, full_name, *args, **kwargs)
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -1328,10 +1396,10 @@ class NaturalNamingInterface(object):
             if constructor is None:
                 if type_name == RESULT:
                     constructor=root._standard_result
-                else:
+                elif type_name in [PARAMETER, CONFIG, DERIVED_PARAMETER]:
                     constructor=root._standard_parameter
-
-
+                else:
+                    constructor=root._standard_leaf
 
             instance = constructor(full_name, *args, **kwargs)
         else:
@@ -1770,7 +1838,11 @@ class NNGroupNode(NNTreeNode):
                                  str([(key,str(type(val)))
                                       for key,val in self._children.iteritems()]))
 
-    def f_to_debug_tree(self):
+    def __iter__(self):
+        """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes(recursive=False)`."""
+        self.f_iter_nodes(recursive=False)
+
+    def f_debug_tree(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
 
         This method is only useful for debugging purposes.
@@ -1791,9 +1863,52 @@ class NNGroupNode(NNTreeNode):
             if child.v_is_leaf:
                 setattr(debug_tree, child_name, child)
             else:
-                setattr(debug_tree, child_name, child.f_to_debug_tree())
+                setattr(debug_tree, child_name, child.f_debug_tree())
 
         return debug_tree
+
+
+    def f_add_group(self, name, comment=''):
+        """Adds an empty generic group under the current node.
+
+        You can add to a generic group anywhere you want. So you are free to build
+        your parameter tree with any structure. You do not necessarily have to follow the
+        four subtrees `config`, `parameters`, `derived_parameters`, `results`.
+
+        If you are operating within these subtrees this simply calls the corresponding adding
+        function.
+
+        Be aware that if you are within a single run and you add items not below
+        `derived_parameters.run_XXXXXXXX` or `results.run_XXXXXXXXX` that you have to manually
+        save the items. Otherwise they will be lost after the single run is completed.
+
+        """
+
+
+
+        return self._nn_interface._add_generic(self, type_name = GROUP,
+                                               group_type_name = GROUP,
+                                               args = (name, comment), kwargs={})
+
+    def f_add_leaf(self,*args,**kwargs):
+        """Adds an empty generic leaf under the current node.
+
+        You can add to a generic leaves anywhere you want. So you are free to build
+        your trajectory tree with any structure. You do not necessarily have to follow the
+        four subtrees `config`, `parameters`, `derived_parameters`, `results`.
+
+        If you are operating within these subtrees this simply calls the corresponding adding
+        function.
+
+        Be aware that if you are within a single run and you add items not below
+        `derived_parameters.run_XXXXXXXX` or `results.run_XXXXXXXXX` that you have to manually
+        save the items. Otherwise they will be lost after the single run is completed.
+
+        """
+
+        return self._nn_interface._add_generic(self, type_name = LEAF,
+                                               group_type_name = GROUP,
+                                               args=args,kwargs=kwargs)
 
     def f_children(self):
         """Returns the number of children of the group"""
@@ -1941,8 +2056,8 @@ class NNGroupNode(NNTreeNode):
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        search_strategy=self._nn_interface._get_search_strategy())
 
-    def f_iter_nodes(self, recursive=False, search_strategy=pypetconstants.BFS):
-        """Iterates over nodes hanging below this group.
+    def f_iter_nodes(self, recursive=True, search_strategy=pypetconstants.BFS):
+        """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 

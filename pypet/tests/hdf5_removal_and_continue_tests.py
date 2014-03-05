@@ -111,7 +111,8 @@ class ContinueTest(TrajectoryComparator):
             self.trajs[irun].f_update_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA)
+                                    load_results=pypetconstants.UPDATE_DATA,
+                                    load_other_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
@@ -209,7 +210,8 @@ class ContinueTest(TrajectoryComparator):
 
         self.trajs[0] = Trajectory()
         self.trajs[0].v_storage_service=temp_sservice
-        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2)
+        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2,
+                             load_other_data=2)
         #self.trajs[0].f_load(trajectory_name=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
 
         self.trajs[1].f_update_skeleton()

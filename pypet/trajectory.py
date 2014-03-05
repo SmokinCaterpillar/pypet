@@ -81,6 +81,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._explored_parameters = parent_trajectory._explored_parameters
         self._config = parent_trajectory._config
         self._groups=parent_trajectory._groups
+        self._other_leaves = parent_trajectory._other_leaves
 
         # The single run takes over the nn_interface of the parent trajectory and
         # changes the root. This alters the nn_interface of the parent trajectory.
@@ -93,6 +94,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._standard_parameter = parent_trajectory.v_standard_parameter
         self._standard_result = parent_trajectory.v_standard_result
+        self._standard_leaf = parent_trajectory.v_standard_leaf
         self._search_strategy = parent_trajectory.v_search_strategy
         self._check_uniqueness = parent_trajectory.v_check_uniqueness
         self._fast_access = parent_trajectory.v_fast_access
@@ -260,6 +262,21 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def v_standard_result(self, result):
         """Sets standard result"""
         self._standard_result = result
+
+    @property
+    def v_standard_leaf(self):
+        """The standard constructor used if you add a generic leaf.
+
+        The constructor is only used if you do not add items under the usual four subtrees
+        (`parameters`, `derived_parameters`, `config`, `results`).
+
+        """
+        return self._standard_leaf
+
+    @v_standard_leaf.setter
+    def v_standard_leaf(self, leaf):
+        """Sets standard result"""
+        self._standard_leaf = leaf
 
     @property
     def v_fast_access(self):
@@ -910,6 +927,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._explored_parameters = {} # Contains all explored parameters
         self._config = {} # Contains all config parameters
         self._groups={} # Contains ALL groups regardless in which subtree they are
+        self._other_leaves={}
 
         self._changed_default_parameters = {} # Needed for paremeter presetting
 
@@ -948,6 +966,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._standard_parameter = Parameter
         self._standard_result = Result
+        self._standard_leaf = Result
 
         self._stored = False
         self._full_copy = False
@@ -983,10 +1002,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.v_comment=comment
 
         # We add the four major subtrees
-        self.f_add_parameter_group('parameters')
-        self.f_add_config_group('config')
-        self.f_add_result_group('results')
-        self.f_add_derived_parameter_group('derived_parameters')
+        # self.f_add_parameter_group('parameters')
+        # self.f_add_config_group('config')
+        # self.f_add_result_group('results')
+        # self.f_add_derived_parameter_group('derived_parameters')
 
 
 
@@ -1369,12 +1388,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # If the trajectory is ought to be expanded we remove the subtrees of previous results
         # since they won't be used during an experiment
-        for node_name in self.results._children.keys():
-            if node_name.startswith(pypetconstants.RUN_NAME):
-                self.results.f_remove_child(node_name,recursive=True)
-        for node_name in self.derived_parameters._children.keys():
-            if node_name.startswith(pypetconstants.RUN_NAME):
-                self.derived_parameters.f_remove_child(node_name,recursive=True)
+        if 'results' in self._children:
+            for node_name in self.results._children.keys():
+                if node_name.startswith(pypetconstants.RUN_NAME):
+                    self.results.f_remove_child(node_name,recursive=True)
+        if 'derived_parameters' in self._children:
+            for node_name in self.derived_parameters._children.keys():
+                if node_name.startswith(pypetconstants.RUN_NAME):
+                    self.derived_parameters.f_remove_child(node_name,recursive=True)
 
     def f_get_from_runs(self, name, where='results', use_indices=False,
                            fast_access=False, check_uniqueness=False,
@@ -1774,6 +1795,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
              load_parameters=None,
              load_derived_parameters=None,
              load_results=None,
+             load_other_data=None,
              force=False):
         """Loads a trajectory via the storage service.
 
@@ -1883,11 +1905,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         elif load_results is None:
             load_results = pypetconstants.LOAD_SKELETON
 
+        if as_new and load_other_data is None:
+            load_other_data = pypetconstants.LOAD_NOTHING
+        elif load_results is None:
+            load_other_data = pypetconstants.LOAD_SKELETON
+
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,
                                   as_new=as_new, load_parameters=load_parameters,
                                   load_derived_parameters=load_derived_parameters,
                                   load_results=load_results,
+                                  load_other_data=load_other_data,
                                   force=force)
 
         # If a trajectory is newly loaded, all parameters are unlocked.
@@ -2743,7 +2771,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         at least once before.
 
         """
-        if filename is not None:
+        if filename is None:
             self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
         else:
             self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,

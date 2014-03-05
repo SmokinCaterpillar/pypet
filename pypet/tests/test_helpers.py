@@ -176,6 +176,19 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
 
+    traj.results.f_add_leaf('Test', 42, comment='NC')
+    traj.f_add_group('derived_parameters.uo', comment='Yeah, this is unsuals')
+    traj.dpar.f_add_leaf('uo.adsad', 3333, comment='Yo')
+    traj.derived_parameters.f_add_leaf('Test2', 42, comment='sfsdf')
+    traj.par.f_add_leaf('er.Test3', 42, comment='sdfds')
+
+    traj.f_add_leaf('hddhshdsds', 42, comment='f')
+
+    traj.par.f_add_group('Empty', comment='Notting!')
+
+    traj.f_add_group('imgeneric.bitch', comment='Generic_Group')
+    traj.imgeneric.f_add_leaf('gentest', 'fortytwo', comment='Oh yeah!')
+
 def multipy(traj):
     z=traj.x*traj.y
     print 'z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y)
@@ -247,9 +260,18 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
 def to_dict_wo_config(traj):
         res_dict={}
-        res_dict.update(traj.parameters.f_to_dict(fast_access=False))
-        res_dict.update(traj.derived_parameters.f_to_dict(fast_access=False))
-        res_dict.update(traj.results.f_to_dict(fast_access=False))
+
+        for child_name in traj._children:
+
+            child = traj._children[child_name]
+            if child_name == 'config':
+                continue
+
+            if child.v_is_leaf:
+                res_dict[child_name] = child
+            else:
+                res_dict.update(child.f_to_dict(fast_access=False))
+
 
         return res_dict
 

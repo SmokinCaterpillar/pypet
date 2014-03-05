@@ -580,6 +580,10 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_parameter('test', 42)
 
+        self.traj.f_add_config('tefffst', 42)
+
+        self.traj.f_add_derived_parameter('dtest', 42)
+
         self.traj.f_add_result('safd', 42)
 
         self.traj.f_explore({'test':[1,2,3,4]})

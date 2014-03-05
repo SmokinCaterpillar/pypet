@@ -31,6 +31,10 @@ pypet 0.1b.4
 
 *   Loading and deletions of items can now be made with SingleRuns as well.
 
+*   f_iter_nodes now iterates by default recursively all nodes
+
+*   A group node now supports __iter__ which simply calls f_iter_nodes NON recursively
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

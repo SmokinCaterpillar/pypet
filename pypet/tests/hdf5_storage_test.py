@@ -286,6 +286,7 @@ class EnvironmentTest(TrajectoryComparator):
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
         newtraj.f_load(name=trajectory_name, load_parameters=2,
                        load_derived_parameters=2,load_results=2,
+                       load_other_data=2,
                        index=trajectory_index, as_new=as_new)
         return newtraj
 

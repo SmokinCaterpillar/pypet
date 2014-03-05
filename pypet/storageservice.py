@@ -1415,7 +1415,7 @@ class HDF5StorageService(StorageService):
     ######################## LOADING A TRAJECTORY #################################################
 
     def _trj_load_trajectory(self,msg, traj, as_new, load_parameters,load_derived_parameters,
-                             load_results, force):
+                             load_results, load_other_data, force):
         """Loads a single trajectory from a given file.
 
 
@@ -1428,6 +1428,8 @@ class HDF5StorageService(StorageService):
         :param load_derived_parameters: How to load derived parameters
 
         :param load_results: How to load results
+
+        :param load_other_data: How to load anything not within the four subbranches
 
         :param force: Force load in case there is a pypet version mismatch
 
@@ -1486,18 +1488,41 @@ class HDF5StorageService(StorageService):
         if traj.v_annotations.f_is_empty():
             self._ann_load_annotations(traj, self._trajectory_group)
 
-        for what,loading in ( ('config',load_parameters),
-                             ('parameters',load_parameters),
-                             ('derived_parameters',load_derived_parameters),
-                             ('results',load_results) ):
-            # If the trajectory is loaded as new, we don't care about old config stuff
-            # and only load the parameters
-            if as_new and what == 'config':
-                loading=pypetconstants.LOAD_NOTHING
+        try:
+            nodes_iterator = self._trajectory_group._f_iter_nodes()
+        except AttributeError:
+            nodes_iterator = self._trajectory_group._f_iterNodes()
 
-            # Load the subbranches recursively
-            if loading != pypetconstants.LOAD_NOTHING:
-                self._trj_load_sub_branch(traj,traj,what,self._trajectory_group,loading)
+        for hdf5group in nodes_iterator:
+
+            what = hdf5group._v_name
+
+            load_subbranch = True
+            if what == 'config':
+                loading = load_parameters
+            elif what == 'parameters':
+                loading = load_parameters
+            elif what == 'results':
+                loading = load_results
+            elif what == 'derived_parameters':
+                loading = load_derived_parameters
+            elif what == 'overview':
+                continue
+            else:
+                load_subbranch = False
+
+            if load_subbranch:
+                # If the trajectory is loaded as new, we don't care about old config stuff
+                # and only load the parameters
+                if as_new and what == 'config':
+                    loading=pypetconstants.LOAD_NOTHING
+
+                # Load the subbranches recursively
+                if loading != pypetconstants.LOAD_NOTHING:
+                    self._trj_load_sub_branch(traj, traj, what, self._trajectory_group, loading)
+            else:
+
+                self._tree_load_recursively(traj, traj, hdf5group, load_other_data)
 
     def _trj_load_meta_data(self,traj, as_new, force):
         """Loads meta information about the trajectory
@@ -1598,7 +1623,7 @@ class HDF5StorageService(StorageService):
             hdf5_group = getattr(hdf5_group,name)
 
             if not name in traj:
-                traj_node=traj_node._nn_interface._add_from_group_name(traj_node, name)
+                traj_node=traj_node.f_add_group(name)
 
             else:
                 traj_node=traj_node._children[name]
@@ -1609,7 +1634,7 @@ class HDF5StorageService(StorageService):
 
         # Then load recursively all data in the last group and below
         hdf5_group = getattr(hdf5_group,final_group_name)
-        self._tree_load_recursively(traj,traj_node,hdf5_group,load_data)
+        self._tree_load_recursively(traj,traj_node, hdf5_group, load_data)
 
     def _trj_check_version( self, version, force):
         """Checks for version mismatch
@@ -1850,8 +1875,8 @@ class HDF5StorageService(StorageService):
         # Store meta information
         self._trj_store_meta_data(traj)
 
-        # Store recursively the config subtree
-        self._tree_store_recursively(pypetconstants.LEAF,traj.config,self._trajectory_group)
+        # # Store recursively the config subtree
+        # self._tree_store_recursively(pypetconstants.LEAF,traj.config,self._trajectory_group)
 
         # If we restore a trajectory it could be the case that it was expanded,
         # so we need to choose the appropriate message to update enlarged parameters
@@ -1860,15 +1885,17 @@ class HDF5StorageService(StorageService):
         else:
             msg = pypetconstants.LEAF
 
-        # Store recursively the parameters subtree
-        self._tree_store_recursively(msg,traj.parameters,self._trajectory_group)
+        for child_name in traj._children:
 
-        # Store recursively the derived parameters subtree
-        self._tree_store_recursively(pypetconstants.LEAF,traj.derived_parameters,
-                                     self._trajectory_group)
+            if child_name == 'parameters':
+                # Store recursively the parameters subtree
+                self._tree_store_recursively(msg, traj.parameters, self._trajectory_group)
 
-        # Store recursively the results subtree
-        self._tree_store_recursively(pypetconstants.LEAF,traj.results,self._trajectory_group)
+            else:
+
+                # Store recursively the derived parameters subtree
+                self._tree_store_recursively(pypetconstants.LEAF, traj._children[child_name],
+                                             self._trajectory_group)
 
         self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
 
@@ -2041,7 +2068,7 @@ class HDF5StorageService(StorageService):
                 instance = class_constructor(name, comment=comment)
 
                 # Add the instance to the trajectory tree
-                parent_traj_node._nn_interface._add_from_leaf_instance(parent_traj_node,instance)
+                parent_traj_node.f_add_leaf(instance)
 
                 # If it has a range we add it to the explored parameters
                 if range_length:
@@ -2063,9 +2090,7 @@ class HDF5StorageService(StorageService):
                 if comment is None:
                     comment = ''
 
-                new_traj_node = parent_traj_node._nn_interface._add_from_group_name(
-                                                                        parent_traj_node, name,
-                                                                        comment = comment)
+                new_traj_node = parent_traj_node.f_add_group( name, comment = comment)
 
             else:
                 new_traj_node = parent_traj_node._children[name]
