@@ -1474,7 +1474,7 @@ class HDF5StorageService(StorageService):
                                    pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA)
 
         if not (load_parameters in loadconstants and load_derived_parameters in loadconstants and
-                load_results in loadconstants or load_other_data in loadconstants):
+                load_results in loadconstants and load_other_data in loadconstants):
             raise ValueError('Please give a valid option on how to load data. Options for '
                              '`load_parameter`, `load_derived_parameters`, `load_results`, '
                              'and `load_other_data` are %s. See function documentation for '
