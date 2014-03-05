@@ -98,7 +98,8 @@ class AnnotationsTest(unittest.TestCase):
 
         self.traj = Trajectory(filename=self.filename)
 
-        self.traj.f_load(name=traj_name, load_results=2, load_parameters=2, load_derived_parameters=2)
+        self.traj.f_load(name=traj_name, load_results=2, load_parameters=2, load_derived_parameters=2,
+                         load_other_data=None)
 
         self.test_annotations_insert()
 

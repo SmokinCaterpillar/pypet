@@ -1907,7 +1907,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if as_new and load_other_data is None:
             load_other_data = pypetconstants.LOAD_NOTHING
-        elif load_results is None:
+        elif load_other_data is None:
             load_other_data = pypetconstants.LOAD_SKELETON
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
