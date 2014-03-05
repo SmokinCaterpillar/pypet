@@ -429,30 +429,26 @@ class HDF5StorageService(StorageService):
                 You can specify how to load the parameters, derived parameters and results
                 as follows:
 
-                :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
+                 :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
 
                     Nothing is loaded
 
                 :const:`pypet.pypetconstants.LOAD_SKELETON`: (1)
 
                     The skeleton including annotations are loaded, i.e. the items are empty.
-                    Note that if the items already exist in your trajectory an AttributeError
-                    is thrown. If this is the case use -1 instead.
+                    Non-empty items in RAM are left untouched.
 
                 :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
                     The whole data is loaded.
-                    Note that if the items already exist in your trajectory an AttributeError
-                    is thrown. If this is the case use -2 instead.
+                    Only empty or in RAM non-existing instance are filled with the
+                    data found on disk.
 
-                :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
+                :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
 
-                    The skeleton and annotations are updated, i.e. only items that are not
-                    currently part of your trajectory are loaded empty.
-
-                :const:`pypet.pypetconstants.UPDATE_DATA`: (-2) Like (2)
-
-                    Only items that are currently not in your trajectory are loaded with data.
+                    The whole data is loaded.
+                    If items that are to be loaded are already in RAM and not empty,
+                    they are emptied and new data is loaded from disk.
 
             * :const:`pypet.pypetconstants.LEAF` ('LEAF')
 
@@ -1443,23 +1439,19 @@ class HDF5StorageService(StorageService):
         :const:`pypet.pypetconstants.LOAD_SKELETON`: (1)
 
             The skeleton including annotations are loaded, i.e. the items are empty.
-            Note that if the items already exist in your trajectory an AttributeError
-            is thrown. If this is the case use -1 instead.
+            Non-empty items in RAM are left untouched.
 
         :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
             The whole data is loaded.
-            Note that if the items already exist in your trajectory an AttributeError
-            is thrown. If this is the case use -2 instead.
+            Only empty or in RAM non-existing instance are filled with the
+            data found on disk.
 
-        :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
+        :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
 
-            The skeleton and annotations are updated, i.e. only items that are not
-            currently part of your trajectory are loaded empty.
-
-        :const:`pypet.pypetconstants.UPDATE_DATA`: (-2) Like (2)
-
-            Only items that are currently not in your trajectory are loaded with data.
+            The whole data is loaded.
+            If items that are to be loaded are already in RAM and not empty,
+            they are emptied and new data is loaded from disk.
 
 
         If `as_new=True` the old trajectory is loaded into the new one, only parameters can be
@@ -2033,21 +2025,25 @@ class HDF5StorageService(StorageService):
             if in_trajectory:
                 instance=parent_traj_node._children[name]
 
+                # If we want to update data and the item already contains some we're good
+                if load_data == pypetconstants.OVERWRITE_DATA:
+                    instance.f_empty()
+                    instance.v_annotations.f_empty()
+
                 # Load annotations if they are empty
                 if instance.v_annotations.f_is_empty():
                     self._ann_load_annotations(instance, hdf5group)
 
                 # If we want to update the skeleton and the item exists we're good
-                if load_data == pypetconstants.UPDATE_SKELETON :
+                if load_data == pypetconstants.UPDATE_SKELETON:
                     return
 
-                # If we want to update data and the item already contains some we're good
-                if (not instance.f_is_empty()
-                    and load_data == pypetconstants.UPDATE_DATA):
+                # If the instance is non-empty we do not need to load it
+                if not instance.f_is_empty():
                     return
 
             # Otherwise we need to create a new instance
-            if not in_trajectory or load_data==pypetconstants.LOAD_DATA:
+            if not in_trajectory:
 
                 class_name = self._all_get_from_attrs(hdf5group,HDF5StorageService.CLASS_NAME)
 
@@ -2076,7 +2072,7 @@ class HDF5StorageService(StorageService):
 
                 self._ann_load_annotations(instance, node=hdf5group)
 
-            if load_data in [pypetconstants.LOAD_DATA, pypetconstants.UPDATE_DATA]:
+            if load_data in (pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA):
                 # Load data into the instance
                 self._prm_load_parameter_or_result(instance, _hdf5_group=hdf5group)
 
@@ -2094,6 +2090,9 @@ class HDF5StorageService(StorageService):
 
             else:
                 new_traj_node = parent_traj_node._children[name]
+
+                if load_data == pypetconstants.OVERWRITE_DATA:
+                    new_traj_node.v_annotations.f_empty()
 
             # Load annotations if they are empty
             if new_traj_node.v_annotations.f_is_empty():

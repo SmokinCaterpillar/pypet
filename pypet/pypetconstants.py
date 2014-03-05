@@ -101,10 +101,12 @@ LOAD_DATA = 2
 """ Loads skeleton and data."""
 LOAD_NOTHING = 0
 """ Loads nothing """
-UPDATE_SKELETON = -1
-""" Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
-UPDATE_DATA = -2
-""" Updates skeleton and data, adds only items that are not part of your current trajectory."""
+OVERWRITE_DATA = 3
+"""Overwrites all data in RAM with data from disk"""
+UPDATE_SKELETON = 1
+""" DEPRECATED: Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
+UPDATE_DATA = 2
+""" DEPRECATED: Updates skeleton and data, adds only items that are not part of your current trajectory."""
 
 
 ##################### STORING Message Constants ################################

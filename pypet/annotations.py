@@ -77,6 +77,10 @@ class Annotations(object):
         """Checks if annotations are empty"""
         return len(self.__dict__) == 0
 
+    def f_empty(self):
+        """REmoves all annotiations from RAM """
+        self.__dict__ = {}
+
     def f_get(self, *args):
         """Returns annotations
 
