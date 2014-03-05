@@ -153,7 +153,7 @@ class NetworkTest(TrajectoryComparator):
     def test_singleprocessing(self):
         self.env.f_run(run_net)
 
-        self.traj.f_load(load_derived_parameters=-2, load_results=-2)
+        self.traj.f_load(load_derived_parameters=2, load_results=2)
 
         traj2 = Trajectory(name = self.traj.v_name, add_time=False,
                            filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
@@ -171,7 +171,7 @@ class NetworkTest(TrajectoryComparator):
         self.traj.use_pool = False
         self.env.f_run(run_net)
 
-        self.traj.f_load(load_derived_parameters=-2, load_results=-2)
+        self.traj.f_load(load_derived_parameters=2, load_results=2)
 
         traj2 = Trajectory(name = self.traj.v_name, add_time=False,
                            filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),

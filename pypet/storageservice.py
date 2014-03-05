@@ -1470,6 +1470,16 @@ class HDF5StorageService(StorageService):
             raise ValueError('You cannot load the trajectory as new and not load the data of '
                                  'the parameters.')
 
+        loadconstants= (pypetconstants.LOAD_NOTHING, pypetconstants.LOAD_SKELETON,
+                                   pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA)
+
+        if not (load_parameters in loadconstants and load_derived_parameters in loadconstants and
+                load_results in loadconstants or load_other_data in loadconstants):
+            raise ValueError('Please give a valid option on how to load data. Options for '
+                             '`load_parameter`, `load_derived_parameters`, `load_results`, '
+                             'and `load_other_data` are %s. See function documentation for '
+                             'the semantics of the values.' % str(loadconstants))
+
         if not as_new:
             traj._stored=True
 

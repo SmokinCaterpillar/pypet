@@ -2052,9 +2052,14 @@ class NNGroupNode(NNTreeNode):
         if not '_nn_interface' in self.__dict__:
             raise AttributeError('This is to avoid pickling issues')
 
-        return self._nn_interface._get(self,name,fast_access=self._nn_interface._get_fast_access(),
+        return self._nn_interface._get(self, name, fast_access=self._nn_interface._get_fast_access(),
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        search_strategy=self._nn_interface._get_search_strategy())
+
+    def __call__(self, name, fast_access=True, check_uniqueness=False,
+              search_strategy=pypetconstants.BFS):
+
+        return self.f_get(name, fast_access, check_uniqueness, search_strategy)
 
     def f_iter_nodes(self, recursive=True, search_strategy=pypetconstants.BFS):
         """Iterates recursively (default) over nodes hanging below this group.

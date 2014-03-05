@@ -209,6 +209,17 @@ the group names `parameters`, `config`, `derived_parameters.trajectory`,
 `results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generic Addition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You do not have to stick to the given trajectory structure with its four subtrees:
+`config`, `parameters`, `derived_parameters`, `results`. If you just want to use a trajectory
+as a simple tree container and store groups and leaves wherever you like, you can use the
+generic functions :func:`~pypet.naturalnaming.NNGroupNode.f_add_group` and
+:func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf`. Note however, that the four subtrees are
+reserved. Thus, if you add anything below one of the four, the corresponding
+speciality functions from above are called instead of the generic ones.
 
 .. _more-on-access:
 
@@ -218,22 +229,24 @@ Accessing Data in the Trajectory
 
 To access data that you have put into your trajectory you can use
 
-*
+*   :func:`~pypet.trajectory.Trajectory.f_get` method. You might want to take a look at the function
+    definition to check out the other arguments you can pass to
+    :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
+    but for any group node in your tree.
 
-  :func:`~pypet.trajectory.Trajectory.f_get` method. You might want to take a look at the function
-  definition to check out the other arguments you can pass to
-  :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
-  but for any group node in your tree.
-
-*
-
-    Use the square brackets - as you do with dictionaries - like `traj['nrebras']` which is
+*   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
     equivalent to calling `traj.f_get('nzebras')`.
 
-*
+*   Use natural naming dot notation like  `traj.nzebras`.
+    This natural naming scheme supports some special features see below.
 
-    Use natural naming dot notation like  `traj.nzebras`.
-    The latter supports some special features see below.
+*   Use round brackets `traj.parameters('nzebras')` which is equivalent to `traj.parameters.nzebras`.
+    In addition, you can use this scheme to quickly access a group or parameter by a name stored
+    into a variable. For instance with `x='nzebras'`, `traj(x)` is equivalent to `traj.nzebras`.
+    (Which is in fact equivalent to :func:`~pypet.trajectory.Trajectory.f_get` with different
+    default values for the additional parameters, including fast access turned on).
+
+
 
 
 ^^^^^^^^^^^^^^^
@@ -594,16 +607,14 @@ If you choose tha latter load mode, you can specify how the individual subtrees 
 
 * :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
-    The whole data is loaded.
+    The whole data is loaded. Note in case you have non-empty leaves already in RAM,
+    these are left untouched.
 
-* :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
+* :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
 
-    The skeleton is updated, i.e. only items that are not currently part of your trajectory
-    in RAM are loaded empty.
+    As before, but non-empty leaves are emptied and reloaded.
 
-* :const:`pypet.pypetconstants.UPDATE_DATA`: (-2)
 
-     Like (2) but only items that are currently not in your trajectory are loaded.
 
 
 Compared to manual storage, you can also load single items manually via
