@@ -370,7 +370,7 @@ class EnvironmentTest(TrajectoryComparator):
             self.assertTrue(name in overview_group, '%s in overviews but should not!' % name)
         hdf5file.close()
 
-        self.traj.f_load(load_parameters=-2, load_derived_parameters=-2, load_results=-2)
+        self.traj.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name)
 
         self.compare_trajectories(newtraj,self.traj)
