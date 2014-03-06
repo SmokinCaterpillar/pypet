@@ -1855,7 +1855,7 @@ class NNGroupNode(NNTreeNode):
         """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes(recursive=False)`."""
         self.f_iter_nodes(recursive=False)
 
-    def f_debug_tree(self):
+    def _debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
 
         This method is only useful for debugging purposes.
@@ -1871,12 +1871,14 @@ class NNGroupNode(NNTreeNode):
                 self.__dict__.update(kwds)
 
         debug_tree = Bunch()
+        setattr(debug_tree).v_annotations = self.v_annotations
+        setattr(debug_tree).v_comment = self.v_comment
         for child_name in self._children:
             child = self._children[child_name]
             if child.v_is_leaf:
                 setattr(debug_tree, child_name, child)
             else:
-                setattr(debug_tree, child_name, child.f_debug_tree())
+                setattr(debug_tree, child_name, child._debug())
 
         return debug_tree
 
@@ -2055,7 +2057,7 @@ class NNGroupNode(NNTreeNode):
         Per default the item is returned and fast access is not applied.
 
         """
-        self.__getattr__(item)
+        return self.__getattr__(item)
 
 
     def __getattr__(self, name):
