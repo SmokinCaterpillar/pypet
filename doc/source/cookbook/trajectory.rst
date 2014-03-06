@@ -234,17 +234,15 @@ To access data that you have put into your trajectory you can use
     :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
     but for any group node in your tree.
 
-*   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
-    equivalent to calling `traj.f_get('nzebras')`.
+*   Use round brackets `traj.parameters('nzebras')` which is equivalent to calling
+    `traj.f_get('nzebras')`. This direct calling of a group node allows the same
+    arguments as `f_get`.
 
 *   Use natural naming dot notation like  `traj.nzebras`.
     This natural naming scheme supports some special features see below.
 
-*   Use round brackets `traj.parameters('nzebras')` which is equivalent to `traj.parameters.nzebras`.
-    In addition, you can use this scheme to quickly access a group or parameter by a name stored
-    into a variable. For instance with `x='nzebras'`, `traj(x)` is equivalent to `traj.nzebras`.
-    (Which is in fact equivalent to :func:`~pypet.trajectory.Trajectory.f_get` with different
-    default values for the additional parameters, including fast access turned on).
+*   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
+    equivalent to calling `traj.nzebras`.
 
 
 

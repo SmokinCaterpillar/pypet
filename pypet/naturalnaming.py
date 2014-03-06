@@ -2050,12 +2050,12 @@ class NNGroupNode(NNTreeNode):
             instance.f_set(value)
 
     def __getitem__(self, item):
-        """Equivalent to calling `f_get(item)`.
+        """Equivalent to calling `__getattr__`.
 
         Per default the item is returned and fast access is not applied.
 
         """
-        return self.f_get(item)
+        self.__getattr__(item)
 
 
     def __getattr__(self, name):
@@ -2069,7 +2069,7 @@ class NNGroupNode(NNTreeNode):
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        search_strategy=self._nn_interface._get_search_strategy())
 
-    def __call__(self, name, fast_access=True, check_uniqueness=False,
+    def __call__(self, name, fast_access=False, check_uniqueness=False,
               search_strategy=pypetconstants.BFS):
 
         return self.f_get(name, fast_access, check_uniqueness, search_strategy)
@@ -2209,6 +2209,9 @@ class NNGroupNode(NNTreeNode):
         storage_service.load(pypetconstants.TREE, self,child_name=name,
                              trajectory_name=traj.v_trajectory_name,
                              recursive=recursive, load_data=load_data, trajectory=traj)
+
+        if name in self._children:
+            return self._children[name]
 
 
 class ParameterGroup(NNGroupNode):
