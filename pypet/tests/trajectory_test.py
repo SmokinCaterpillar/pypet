@@ -269,6 +269,8 @@ class TrajectoryTest(unittest.TestCase):
             if not item.v_is_leaf:
                 if as_run in item._children:
                     bfs_queue.append(item._children[as_run])
+                    if 'trajectory' in item._children:
+                        bfs_queue.append(item._children['trajectory'])
                 else:
                     for child in item._children.itervalues():
                         bfs_queue.append(child)
@@ -401,7 +403,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('tr',22)
+            self.traj.f_add_parameter('crun',22)
 
 
 
@@ -596,27 +598,27 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_explore({'test':[1,2,3,4]})
 
         self.assertEqual(id(self.traj.par), id(self.traj.parameters))
-        self.assertEqual(id(self.traj.param), id(self.traj.parameters))
+        #self.assertEqual(id(self.traj.param), id(self.traj.parameters))
 
 
         self.assertEqual(id(self.traj.dpar), id(self.traj.derived_parameters))
-        self.assertEqual(id(self.traj.dparam), id(self.traj.derived_parameters))
+        #self.assertEqual(id(self.traj.dparam), id(self.traj.derived_parameters))
 
         self.assertEqual(id(self.traj.conf), id(self.traj.config))
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
         self.assertEqual(id(self.traj.results.traj), id(self.traj.results.trajectory))
-        self.assertEqual(id(self.traj.results.tr), id(self.traj.results.trajectory))
+        # self.assertEqual(id(self.traj.results.tr), id(self.traj.results.trajectory))
 
         srun = self.traj._make_single_run(3)
 
         srun.f_add_result('sdffds',42)
 
 
-        self.assertEqual(id(srun.results.cr), id(srun.results.f_get(srun.v_name)))
-        self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
-        self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
+        self.assertEqual(id(srun.results.crun), id(srun.results.f_get(srun.v_name)))
+        # self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
+        # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
 
 

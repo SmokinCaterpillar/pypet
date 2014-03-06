@@ -827,8 +827,7 @@ class NaturalNamingInterface(object):
                 elif self._root_instance.v_as_run is not None:
                     return self._root_instance.v_as_run
                 else:
-                    raise AttributeError('Using crun not within a single run '
-                                         'or within a trajectory not via `v_as_run` is not possible.')
+                    return name
 
             if name == 'par':
                 return 'parameters'
