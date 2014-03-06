@@ -807,7 +807,7 @@ class SingleRunTest(unittest.TestCase):
         self.assertTrue(self.single_run.Nice.Yo == value)
 
         self.single_run.f_add_result('Puberty.Hacks', val=value)
-        resval= self.single_run.f_get('Hacks').f_get('val')
+        resval= self.single_run.res.crun.f_get('Hacks').f_get('val')
         self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
 
 

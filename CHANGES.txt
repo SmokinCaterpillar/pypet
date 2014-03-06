@@ -61,6 +61,8 @@ pypet 0.1b.3
 *   Now Pypet allows compression of HDF5 files, these can yield a massive reduction in
     memory space.
 
+*   `tr`, `cr`, `current_run`, `param`, `dparam` are no longer supported as a shortcuts
+
 pypet 0.1b.2
 
 *   DefaultReplacementError is now called PresettingError

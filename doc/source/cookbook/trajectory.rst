@@ -340,20 +340,20 @@ There also exit nice naming shortcuts for already present groups:
 
 *
 
-    `'par'` and `'param'` is mapped to `'parameters'`, i.e. `traj.parameters` is the same
+    `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same
     group as `traj.par`
 
-* `'dpar'` and `'dparam'` is mapped to `derived_parameters`
+* `'dpar'` is mapped to `derived_parameters`
 
 * `'res'` is mapped to `'results'`
 
 * `'conf'` is mapped to `'config'`
 
-* `'traj'` and `'tr'` are mapped to `'trajectory'`
+* `'traj'` are mapped to `'trajectory'`
 
 *
 
-    `'cr'`, `'current_run'`, `'current_run'` are mapped to the name of the current
+    `'crun'` is mapped to the name of the current
     run (for example `'run_00000002'`)
 
 *

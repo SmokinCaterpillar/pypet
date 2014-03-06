@@ -84,7 +84,7 @@ SUBTREE_MAPPING = {'config' : (CONFIG_GROUP, CONFIG),
 # a slow search with a full tree traversal is initiated.
 FAST_UPPER_BOUND = 2
 
-
+SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res', 'traj'])
 
 
 class NNTreeNode(WithAnnotations):
@@ -794,51 +794,58 @@ class NaturalNamingInterface(object):
 
         * 'run_X' or 'r_X' to 'run_XXXXXXXXX'
 
-        * 'cr' or 'currentrun' or 'current_run' to the current run name in case of a
-          single run instance
+        * 'crun' to the current run name in case of a
+          single run instance if trajectory is used via `v_as_run`
 
-        * 'par' or 'param' to 'parameters'
+        * 'par' 'parameters'
 
-        * 'dpar' or 'dparam' to 'derived_parameters'
+        * 'dpar' to 'derived_parameters'
 
         * 'res' to 'results'
 
         * 'conf' to 'config'
 
-        * 'tr' or 'traj' to 'trajectory'
+        * 'traj' to 'trajectory'
 
         :return: The mapped name or None if no shortcut is matched.
 
         """
-        expanded = None
 
-        if name.startswith('run_') or name.startswith('r_'):
-            split_name = name.split('_')
-            if len(split_name) == 2:
-                index = split_name[1]
-                if index.isdigit():
-                    if len(index) < pypetconstants.FORMAT_ZEROS:
-                        expanded = pypetconstants.FORMATTED_RUN_NAME % int(index)
+        if name.startswith('r'):
+            if name.startswith('run_') or name.startswith('r_'):
+                split_name = name.split('_')
+                if len(split_name) == 2:
+                    index = split_name[1]
+                    if index.isdigit():
+                        if len(index) < pypetconstants.FORMAT_ZEROS:
+                            return pypetconstants.FORMATTED_RUN_NAME % int(index)
 
-        if name in ['cr', 'currentrun', 'current_run']:
-            expanded = self._root_instance.v_name
+        if name in SHORTCUT_SET:
+            if name == 'crun':
+                if self._root_instance._is_run:
+                    return self._root_instance.v_name
+                elif self._root_instance.v_as_run is not None:
+                    return self._root_instance.v_as_run
+                else:
+                    raise AttributeError('Using crun not within a single run '
+                                         'or within a trajectory not via `v_as_run` is not possible.')
 
-        if name in ['par', 'param']:
-            expanded = 'parameters'
+            if name == 'par':
+                return 'parameters'
 
-        if name in ['dpar', 'dparam']:
-            expanded = 'derived_parameters'
+            if name == 'dpar':
+                return 'derived_parameters'
 
-        if name in ['res']:
-            expanded = 'results'
+            if name == 'res':
+                return 'results'
 
-        if name in ['conf']:
-            expanded = 'config'
+            if name == 'conf':
+                return 'config'
 
-        if name in ['traj', 'tr']:
-            expanded = 'trajectory'
+            if name == 'traj':
+                return 'trajectory'
 
-        return expanded
+        return None
 
 
     def _add_prefix( self, name, start_node, group_type_name):
@@ -1549,8 +1556,12 @@ class NaturalNamingInterface(object):
 
         """
         if run_name is not None and node.v_depth == 1 and run_name in node._children:
-            # Only consider one particular run and blind out the rest
-            return [node._children[run_name]]
+            # Only consider one particular run and blind out the rest, but include the trajectory
+            # subbranch
+            node_list =  [node._children[run_name]]
+            if 'trajectory' in node._children:
+                node_list.append(node._children['trajectory'])
+            return node_list
         else:
             return node._children.itervalues()
 
@@ -1778,8 +1789,10 @@ class NaturalNamingInterface(object):
                 raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
 
         ## Check in O(1) if the item is one of the start node's children
-        if len(split_name)==1 and not check_uniqueness:
-            result = node._children.get(key,None)
+        first = split_name[0]
+        if not check_uniqueness and first in node._children:
+            result = node._children[first]
+            del split_name[0]
         else:
             result = None
 
@@ -1801,11 +1814,12 @@ class NaturalNamingInterface(object):
             if new_name in self._root_instance._groups:
                 return self._root_instance._groups[new_name]
 
+            result = node
+
         # Check in O(N) with `N` number of groups and nodes
         # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].
         # If `check_uniqueness=True`, search is slower since the full tree
         # is searched and we always need O(N).
-        result = node
         for key in split_name:
             result = self._search(result,key, check_uniqueness, search_strategy)
 
