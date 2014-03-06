@@ -1823,7 +1823,8 @@ class NaturalNamingInterface(object):
             result = self._search(result,key, check_uniqueness, search_strategy)
 
         if result is None:
-            raise AttributeError('The node or param/result `%s`, cannot be found.' % name)
+            raise AttributeError('The node or param/result `%s`, cannot be found under `%s`' %
+                                 (name, node.v_full_name))
         if result.v_is_leaf:
             return self._apply_fast_access(result, fast_access)
         else:

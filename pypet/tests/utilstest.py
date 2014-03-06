@@ -1,4 +1,4 @@
-from pypet.utils.comparisons import nested_equal
+
 
 __author__ = 'Robert Meyer'
 
@@ -10,6 +10,10 @@ else:
     import unittest
 
 from pypet.utils.explore import cartesian_product
+
+from pypet.utils.helpful_functions import progressbar
+
+from pypet.utils.comparisons import nested_equal
 
 
 class CartesianTest(unittest.TestCase):
@@ -34,6 +38,16 @@ class CartesianTest(unittest.TestCase):
                                                     (str(cartesian_dict),str(result_dict)))
 
 
+
+class ProgressBarTest(unittest.TestCase):
+
+    def test_progressbar(self):
+
+        total = 55
+        percentage_step = 17
+
+        for irun in range(total):
+            progressbar(irun, total)
 
 
 if __name__ == '__main__':

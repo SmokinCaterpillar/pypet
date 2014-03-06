@@ -953,9 +953,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if filename is None:
             self._storage_service=None
+            self._filename = None
         else:
             if file_title is None:
                 file_title = filename
+            self._filename = filename
             self._storage_service = HDF5StorageService(filename=filename, file_title=file_title)
 
 
@@ -1007,7 +1009,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # self.f_add_result_group('results')
         # self.f_add_derived_parameter_group('derived_parameters')
 
-
+    @property
+    def v_filename(self):
+        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
+        return self._filename
 
     @property
     def v_version(self):
@@ -2749,13 +2754,69 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return use_runs, params_to_change.keys()
 
-    def f_store(self, filename=None):
+    def f_migrate(self, new_name=None, new_filename=None, in_store=False):
+        """Can be called to rename and relocate the trajectory.
+
+        Choosing a new filename only works with the original HDF5StorageService.
+        In case the trajectory has no storage service, a new HDF5StorageService is created
+
+        :param new_name: New name of the trajectory, None if you do not want to change the name.
+
+        :param new_filename:
+
+            New file_name of the trajectory, None if you do not want to change the filename.
+
+        :param in_store:
+
+            Set this to True if the trajectory has been stored with the new name at the new file before
+            and you just want to "switch back" to the location. If you migrate to a store used
+            before and you do not set `in_store=True`, the storage service will throw a RuntimeError
+            because it will assume that you try to store a new trajectory that accidentally has
+            the very same name as another trajectory.
+
+        """
+
+        if new_name is None and new_filename is None:
+            raise ValueError('Calling `f_migrate` without changing at least one thing makes no sense.')
+
+        if new_name is not None and new_name == self._name:
+            raise ValueError('New name must differ from old one.')
+
+        if new_filename is not None and new_filename == self._filename:
+            raise ValueError('New filename must differ from old one.')
+
+        if new_name is not None:
+            self._name = new_name
+            self._trajectory_name = self._name
+
+        if new_filename is not None:
+            if self._storage_service is None:
+                self._storage_service = HDF5StorageService(filename=new_filename, file_title=new_filename)
+            else:
+                self._storage_service.filename = new_filename
+            self._filename = new_filename
+
+        self._stored = in_store
+
+    def f_store(self, new_name=None, new_filename=None, only_init=False):
         """Stores the trajectory to disk.
 
         :param filename:
 
             You can give another filename here if you want to store the trajectory somewhere
             else than in the filename you have specified on trajectory creation.
+            This will change the file for good. Calling `f_store` again will keep the
+            new file location.
+
+        :param new_name:
+
+            If you want to store the trajectory under a new name. If name is changed, name
+            remains for good and the trajectory keeps the new name.
+
+        :param only_init
+
+            If you just want to initialise the store. If yes, only meta information about
+            the trajectory is stored and none of the nodes/leaves within the trajectory.
 
         If you use the HDF5 Storage Service only novel data is stored to disk.
 
@@ -2771,11 +2832,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         at least once before.
 
         """
-        if filename is None:
-            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name)
-        else:
-            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
-                                        filename=filename)
+
+        if new_filename is not None or new_name is not None:
+            self.f_migrate(new_name, new_filename)
+
+        self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
+                                        only_init = only_init)
         self._stored = True
 
     def f_is_empty(self):
