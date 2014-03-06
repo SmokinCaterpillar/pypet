@@ -1871,8 +1871,10 @@ class NNGroupNode(NNTreeNode):
                 self.__dict__.update(kwds)
 
         debug_tree = Bunch()
-        setattr(debug_tree).v_annotations = self.v_annotations
-        setattr(debug_tree).v_comment = self.v_comment
+        if not self.v_annotations.f_is_empty():
+            debug_tree.v_annotations = self.v_annotations
+        if not self.v_comment == '' :
+            debug_tree.v_comment = self.v_comment
         for child_name in self._children:
             child = self._children[child_name]
             if child.v_is_leaf:
