@@ -83,11 +83,11 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     Derived parameters can be introduced at any time during your simulation. If you add
     a derived parameter before starting individual runs that explore the parameter space,
-    they will be sorted into the subbranches `derived_parameters.trajectory`. If you
-    introduce a derived parameter within a single run, they are sorted into:
-    `derived_parameters.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
+    they will be directly put into the subbranch `derived_parameters`. If you
+    introduce a derived parameter within a single run, they are sorted into the subbranch
+    `derived_parameters.runs.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
     For example adding a derived parameter in the second run will add it to the subbranch
-    `derived_parameters.run_00000001`.
+    `derived_parameters.runs.run_00000001`.
 
     Any leaf added under *derived_parameters*
     is a :class:`~pypet.parameter.Parameter` object (or descendant of the corresponding
@@ -97,9 +97,8 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     I guess results are rather self explanatory. Any leaf added under *results*
     is a :class:`~pypet.parameters.Results` object (or descendant of the corresponding
-    base class :class:`~pypet.parameter.BaseResult`). Results are sorted under the subtrees
-    `results.trajectory` and `results.run_XXXXXXXX` according to whether they were added
-    before the parameter exploration or during a single run.
+    base class :class:`~pypet.parameter.BaseResult`). Results added during a single run
+    are sorted into `results.runs.run_XXXXXXXX`.
 
 Note that all nodes provide the field 'v_comment', which can be filled manually or on
 construction via `'comment='`. To allow others to understand your simulations it is very
@@ -114,7 +113,6 @@ as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true f
     As a side remark, programming-wise the :class:`~pypet.trajectory.Trajectory` class
     inherits from the :class:`~pypet.trajectory.SingleRun` class. This yields a cleaner implementation
     than the other way round.
-
 
 .. _more-on-adding:
 
@@ -204,9 +202,9 @@ the full name will be extended by the *full name* of the group you added it to:
 
 The *full name* of the new parameter is going to be `parameters.traffic.street.nzebras`.
 If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
-the group names `parameters`, `config`, `derived_parameters.trajectory`,
-`derived_parameters.run_XXXXXXX`,
-`results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
+the group names `parameters`, `config`, `derived_parameters`,
+`derived_parameters.runs.run_XXXXXXX`,
+`results`, or  `results.runs.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -336,10 +334,7 @@ to check for uniqueness (default `False`) can be passed as parameters.
 
 There also exit nice naming shortcuts for already present groups:
 
-*
-
-    `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same
-    group as `traj.par`
+* `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same group as `traj.par`
 
 * `'dpar'` is mapped to `derived_parameters`
 
@@ -347,17 +342,11 @@ There also exit nice naming shortcuts for already present groups:
 
 * `'conf'` is mapped to `'config'`
 
-* `'traj'` are mapped to `'trajectory'`
+* `'crun'` is mapped to the name of the current
+  run (for example `'run_00000002'`)
 
-*
-
-    `'crun'` is mapped to the name of the current
-    run (for example `'run_00000002'`)
-
-*
-
-    `'r_X'` and `'run_X'` are mapped to the corresponding run name, e.g. `'r_3'` is
-    mapped to `'run_00000003'`
+* `'r_X'` and `'run_X'` are mapped to the corresponding run name, e.g. `'r_3'` is
+  mapped to `'run_00000003'`
 
 
 For instance, `traj.par.traffic.street.nzebras` is equivalent to
@@ -724,7 +713,7 @@ Iterating over Loaded Data in a Trajectory
 The trajectory offers a way to iteratively look into the data you have obtained from several runs.
 Assume you have computed the value `z` with `z=traj.x*traj.x` and added `z` to the trajectory/single run
 in each run via `traj.f_add_result('z', z)`. Accordingly, you can find a couple of
-`traj.results.run_XXXXXXXX.z` in your trajectory (where `XXXXXXXX` is the index
+`traj.results.runs.run_XXXXXXXX.z` in your trajectory (where `XXXXXXXX` is the index
 of a particular run like `00000003`). To access these one after the other it
 is quite tedious to write `run_XXXXXXXX` each time.
 
@@ -756,7 +745,7 @@ code snippet will iterate over all four runs and print the result of each run:
         z=traj.z
         print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
 
-    # Don't forget to reset you trajectory to the default settings, to release its belief to
+    # Don't forget to reset your trajectory to the default settings, to release its belief to
     # be the last run:
     traj.f_restore_default()
 

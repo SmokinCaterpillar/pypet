@@ -35,6 +35,13 @@ pypet 0.1b.4
 
 *   A group node now supports __iter__ which simply calls f_iter_nodes NON recursively
 
+*   The structure of the trees are slightly changed. Results and derived parameters added
+    with the trajectory are no longer assigned the prefix `trajectory`.
+    Results and derived parameters added during single runs are now sorted into
+    `runs.run_XXXXXXXXX`.
+
+*   Useless shortcuts have been removed.
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results

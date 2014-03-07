@@ -33,7 +33,7 @@ class AnnotationsTest(unittest.TestCase):
 
         self.add_annotations(self.traj)
 
-        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 6)
+        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 5)
 
 
     def make_annotations(self):

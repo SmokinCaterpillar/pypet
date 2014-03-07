@@ -280,11 +280,11 @@ class TrajectoryComparator(unittest.TestCase):
     def compare_trajectories(self,traj1,traj2):
 
         trajlength = len(traj1)
-        rungroups = traj1.results.f_children()
 
-        child_dict = traj1.results.f_get_children(copy=False)
-        if 'trajectory' in child_dict and 'run_00000000' in child_dict:
-            rungroups -= 1
+        if 'results.runs' in traj1:
+            rungroups = traj1.results.runs.f_children()
+        else:
+            rungroups = 1
 
         self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
 

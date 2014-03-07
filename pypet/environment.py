@@ -609,12 +609,12 @@ class Environment(object):
             self._logger.info('Made GIT commit `%s`.' % str(self._hexsha))
 
         config_name='environment.%s.multiproc' % self.v_name
-        self._traj.f_add_config(config_name, int(multiproc),
+        self._traj.f_add_config(config_name, multiproc,
                                 comment= 'Whether or not to use multiprocessing. If yes'
                                          ' than everything must be pickable.')
 
         config_name='environment.%s.use_pool' % self.v_name
-        self._traj.f_add_config(config_name, int(use_pool),
+        self._traj.f_add_config(config_name, use_pool,
                                 comment='Whether to use a pool of processes or '
                                         'spawning individual processes for each run.')
 
@@ -639,7 +639,7 @@ class Environment(object):
                                     comment ='SHA-1 identifier of the environment')
 
         config_name='environment.%s.continuable' % self._name
-        self._traj.f_add_config(config_name, int(continuable),
+        self._traj.f_add_config(config_name, continuable,
                                 comment='Whether or not a continue file should'
                                         ' be created. If yes, everything must be'
                                         ' picklable.')
@@ -678,7 +678,7 @@ class Environment(object):
                                                 'explored parameters in each run')
 
 
-            self._traj.f_add_config('hdf5.purge_duplicate_comments',int(purge_duplicate_comments),
+            self._traj.f_add_config('hdf5.purge_duplicate_comments',purge_duplicate_comments,
                                                 comment='Whether comments of results and'
                                                         ' derived parameters should only'
                                                         ' be stored for the very first instance.'
@@ -687,12 +687,12 @@ class Environment(object):
 
 
 
-            self._traj.f_add_config('hdf5.results_per_run', int(results_per_run),
+            self._traj.f_add_config('hdf5.results_per_run', results_per_run,
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance')
 
 
-            self._traj.f_add_config('hdf5.derived_parameters_per_run', int(derived_parameters_per_run),
+            self._traj.f_add_config('hdf5.derived_parameters_per_run', derived_parameters_per_run,
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance')
 
@@ -791,21 +791,21 @@ class Environment(object):
 
     def f_set_large_overview(self, switch):
         """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
-        switch = int(switch)
+        switch = switch
         self._traj.config.hdf5.overview.results_runs=switch
         self._traj.config.hdf5.overview.derived_parameters_runs = switch
         self._traj.config.hdf5.overview.explored_parameters_runs = switch
 
     def f_set_summary(self, switch):
         """Switches summary tables on (`switch=True`) or off (`switch=False`). """
-        switch = int(switch)
+        switch = switch
         self._traj.config.hdf5.overview.derived_parameters_runs_summary=switch
         self._traj.config.hdf5.overview.results_runs_summary=switch
         self._traj.config.hdf5.purge_duplicate_comments=switch
 
     def f_set_small_overview(self, switch):
         """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
-        switch = int(switch)
+        switch = switch
         self._traj.config.hdf5.overview.parameters = switch
         self._traj.config.hdf5.overview.config=switch
         self._traj.config.hdf5.overview.explored_parameters=switch

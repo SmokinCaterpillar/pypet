@@ -403,11 +403,11 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.traj.f_store_item((pypetconstants.LEAF, self.traj.TestResItem))
 
-        self.traj.results.traj.f_remove_child('TestResItem')
+        self.traj.results.f_remove_child('TestResItem')
 
         self.assertTrue('TestResItem' not in self.traj)
 
-        self.traj.results.traj.f_load_child('TestResItem', load_data=pypetconstants.LOAD_SKELETON)
+        self.traj.results.f_load_child('TestResItem', load_data=pypetconstants.LOAD_SKELETON)
 
         self.traj.f_load_item((pypetconstants.LEAF,self.traj.TestResItem,(),{'load_only': 'TestResItem'}))
 

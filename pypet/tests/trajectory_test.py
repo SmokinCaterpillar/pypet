@@ -608,8 +608,6 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
-        self.assertEqual(id(self.traj.results.traj), id(self.traj.results.trajectory))
-        # self.assertEqual(id(self.traj.results.tr), id(self.traj.results.trajectory))
 
         srun = self.traj._make_single_run(3)
 

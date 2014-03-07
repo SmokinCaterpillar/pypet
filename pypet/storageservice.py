@@ -20,6 +20,7 @@ from pypet import pypetconstants
 import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
 from pypet.parameter import ObjectTable
+import pypet.naturalnaming as nn
 
 
 class MultiprocWrapper(object):
@@ -873,11 +874,11 @@ class HDF5StorageService(StorageService):
                     try:
                         # PyTables 3 API
                         self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
+                                                 title=self._file_title, filters=self._filters)
                     except AttributeError:
                         #PyTables 2 API
                         self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
+                                                 title=self._file_title,  filters=self._filters)
 
 
                     if not ('/'+self._trajectory_name) in self._hdf5file:
@@ -1094,14 +1095,15 @@ class HDF5StorageService(StorageService):
             run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
 
             old_split_name = old_name.split('.')
-            old_split_name[1]=run_mask
-            old_mask_name = '.'.join(old_split_name)
+            if len(old_split_name)>2 and old_split_name[2].startswith(pypetconstants.RUN_NAME):
+                old_split_name[2]=run_mask
+                old_mask_name = '.'.join(old_split_name)
 
 
-            if not old_mask_name in count_dict:
-                count_dict[old_mask_name]=0
+                if not old_mask_name in count_dict:
+                    count_dict[old_mask_name]=0
 
-            count_dict[old_mask_name] += 1
+                count_dict[old_mask_name] += 1
 
 
         try:
@@ -2102,10 +2104,16 @@ class HDF5StorageService(StorageService):
 
                 # Create the instance with the appropriate constructor
                 class_constructor = traj._create_class(class_name)
-                instance = class_constructor(name, comment=comment)
+
+                instance = class_constructor(name,
+                                             comment=comment)
 
                 # Add the instance to the trajectory tree
-                parent_traj_node.f_add_leaf(instance)
+                parent_traj_node._nn_interface._add_generic(parent_traj_node,
+                                                            type_name = nn.LEAF,
+                                                            group_type_name = nn.GROUP,
+                                                            args=(instance,), kwargs={},
+                                                            add_prefix=False)
 
                 # If it has a range we add it to the explored parameters
                 if range_length:
@@ -2127,7 +2135,13 @@ class HDF5StorageService(StorageService):
                 if comment is None:
                     comment = ''
 
-                new_traj_node = parent_traj_node.f_add_group( name, comment = comment)
+                new_traj_node = parent_traj_node._nn_interface._add_generic(parent_traj_node,
+                                               type_name = nn.GROUP,
+                                               group_type_name = nn.GROUP,
+                                               args = (name,
+                                                       comment),
+                                               kwargs={},
+                                               add_prefix=False)
 
             else:
                 new_traj_node = parent_traj_node._children[name]
@@ -2193,9 +2207,9 @@ class HDF5StorageService(StorageService):
         idx = single_run.v_idx
         self._logger.info('Start storing run %d with name %s.' % (idx,single_run.v_name))
 
-        # Store the two subbranches `results.ru_XXXXXXXXX` and 'derived_parameters.run_XXXXXXXXX`
+        # Store the two subbranches `results.runs.run_XXXXXXXXX` and 'derived_parameters.runs.run_XXXXXXXXX`
         # created by the current run
-        for branch in ('results','derived_parameters'):
+        for branch in ('results.runs', 'derived_parameters.runs'):
             branch_name = branch +'.'+single_run.v_name
             if branch_name in single_run:
                 self._trj_store_sub_branch(pypetconstants.LEAF,single_run,
@@ -3023,7 +3037,7 @@ class HDF5StorageService(StorageService):
             creator_name = instance.v_creator_name
             if creator_name.startswith(pypetconstants.RUN_NAME):
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                split_name[1]=run_mask
+                split_name[2]=run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
                 instance._rename(new_full_name)
@@ -3083,7 +3097,7 @@ class HDF5StorageService(StorageService):
         where = split_name[0]
 
         # Check if we are in the subtree that has runs overview tables
-        if where in['derived_parameters', 'results']:
+        if where in['derived_parameters', 'results'] and len(split_name)>2:
 
             creator_name = instance.v_creator_name
 
@@ -3105,7 +3119,7 @@ class HDF5StorageService(StorageService):
 
                 # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                split_name[1]=run_mask
+                split_name[2]=run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
                 # Rename the item for easier storage

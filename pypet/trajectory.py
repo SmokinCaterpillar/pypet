@@ -392,11 +392,11 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         of all runs.
 
         """
-        if 'results.'+self.v_name in self:
-            self.results.f_remove_child(self.v_name,recursive=True)
+        if 'results.runs.'+self.v_name in self:
+            self.results.runs.f_remove_child(self.v_name,recursive=True)
 
-        if 'derived_parameters.' +self.v_name in self:
-            self.derived_parameters.f_remove_child(self.v_name,recursive=True)
+        if 'derived_parameters.runs.' +self.v_name in self:
+            self.derived_parameters.runs.f_remove_child(self.v_name,recursive=True)
 
 
     def f_to_dict(self,fast_access = False, short_names=False, copy = True):
@@ -831,8 +831,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter`.
 
         Derived parameters are put into the subtree `traj.derived_parameters`.
-        They are further sorted into `traj.derived_parameters.trajectory` if they were added
-        to the trajectory directly or `traj.derived_parameters.run_XXXXXXXX` if they were
+        They are further sorted into  `traj.derived_parameters.runs.run_XXXXXXXX` if they were
         added during a single run. `XXXXXXXX` is replaced by the index of the corresponding run,
         for example `run_00000001`.
 
@@ -840,8 +839,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         Result are added via the :func:`~pypet.naturalnaming.ResultGroup.f_add_result`.
         They are kept under the subtree `traj.results` and are further sorted into
-        `traj.results.trajectory` or `traj.results.run_XXXXXXXX` depending on when they were
-        added.
+        `traj.results.runs.run_XXXXXXXX` if they are added during a single run.
 
     There are several ways to access the parameters and results, to learn about these, fast access,
     and natural naming see :ref:`more-on-access`.
@@ -1394,13 +1392,19 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # If the trajectory is ought to be expanded we remove the subtrees of previous results
         # since they won't be used during an experiment
         if 'results' in self._children:
-            for node_name in self.results._children.keys():
-                if node_name.startswith(pypetconstants.RUN_NAME):
-                    self.results.f_remove_child(node_name,recursive=True)
+            results = self._children['results']
+            if 'runs' in results._children:
+                runs = results._children['runs']
+                for node_name in runs._children.keys():
+                    if node_name.startswith(pypetconstants.RUN_NAME):
+                        runs.f_remove_child(node_name,recursive=True)
         if 'derived_parameters' in self._children:
-            for node_name in self.derived_parameters._children.keys():
-                if node_name.startswith(pypetconstants.RUN_NAME):
-                    self.derived_parameters.f_remove_child(node_name,recursive=True)
+            dpars = self._children['derived_parameters']
+            if 'runs' in dpars._children:
+                runs = dpars._children['runs']
+                for node_name in runs._children.keys():
+                    if node_name.startswith(pypetconstants.RUN_NAME):
+                        runs.f_remove_child(node_name,recursive=True)
 
     def f_get_from_runs(self, name, where='results', use_indices=False,
                            fast_access=False, check_uniqueness=False,
@@ -1961,10 +1965,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         allotherparams = other_trajectory._parameters.copy()
 
         # If not ignored, add also the trajectory derived parameters to check for merging
-        if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
-            my_traj_dpars = self.f_get('derived_parameters.trajectory').f_to_dict()
+        if not ignore_trajectory_derived_parameters and 'derived_parameters' in self:
+            my_traj_dpars = self._get_traj_dpars_or_results(self, 'derived_parameters')
             allmyparams.update(my_traj_dpars)
-            other_traj_dpars = other_trajectory.f_get('derived_parameters.trajectory').f_to_dict()
+            other_traj_dpars = self._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
             allotherparams.update(other_traj_dpars)
 
 
@@ -2127,16 +2131,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
         config_name='merge.%s.remove_duplicates' % merge_name
-        self.f_add_config(config_name,int(remove_duplicates),
+        self.f_add_config(config_name,remove_duplicates,
                                     comment ='Option to remove duplicate entries')
 
         config_name='merge.%s.ignore_trajectory_derived_parameters' % merge_name
-        self.f_add_config(config_name, int(ignore_trajectory_derived_parameters),
+        self.f_add_config(config_name, ignore_trajectory_derived_parameters,
                                     comment ='Whether or not to ignore trajectory derived'
                                              ' parameters')
 
         config_name='merge.%s.ignore_trajectory_results' % merge_name
-        self.f_add_config(config_name, int(ignore_trajectory_results),
+        self.f_add_config(config_name, ignore_trajectory_results,
                                     comment ='Whether or not to ignore trajectory results')
 
         config_name='merge.%s.length_before_merge' % merge_name
@@ -2206,7 +2210,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Keep track of all trajectory results that should be merged and put
         # information into `rename_dict`
-        if not ignore_trajectory_results and 'results.trajectory' in other_trajectory:
+        if not ignore_trajectory_results and 'results' in other_trajectory:
             self._logger.info('Merging trajectory results skeletons')
             self._merge_trajectory_results(other_trajectory, rename_dict)
 
@@ -2373,7 +2377,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        other_result_nodes = other_trajectory.f_get('results.trajectory').f_iter_nodes(recursive=True)
+        other_result_nodes =  self._get_traj_dpars_or_results_node_iterator(other_trajectory,
+                                                                            'results')
 
         to_store_groups_with_annotations = []
 
@@ -2448,17 +2453,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if used_runs[idx]:
                 try:
                     other_result_nodes = other_trajectory.f_get(
-                        'results.' + run_name).f_iter_nodes(recursive=True)
+                        'results.runs.' + run_name).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    other_result_nodes = {}
+                    other_result_nodes = []
 
                 try:
                     other_derived_param_nodes = other_trajectory.f_get(
-                        'derived_parameters.' + run_name).f_iter_nodes(recursive=True)
+                        'derived_parameters.runs.' + run_name).f_iter_nodes(recursive=True)
                 except AttributeError:
-                    other_derived_param_nodes = {}
+                    other_derived_param_nodes = []
 
-                nodes_iterator_list=[other_result_nodes, other_derived_param_nodes]
+                nodes_iterator= itools.chain(other_result_nodes, other_derived_param_nodes)
 
                 # Update the run information dict of the current trajectory
                 other_info_dict = other_trajectory.f_get_run_information(run_name)
@@ -2485,44 +2490,41 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 to_store_groups_with_annotations =[]
 
+                for node in nodes_iterator:
+                    full_name = node.v_full_name
+                    new_full_name = self._rename_key(full_name, 2, new_runname)
 
-
-                for node_iterator in nodes_iterator_list:
-                    for node in node_iterator:
-                        full_name = node.v_full_name
-                        new_full_name = self._rename_key(full_name, 1, new_runname)
-
-                        if node.v_is_leaf:
-                            # Create new empty result/derived param instance
-                            # for every result/ derived param
-                            # in the other trajectory
-                            # that is going to be merged into the current one
-                            rename_dict[full_name] = new_full_name
-                            comment = node.v_comment
-                            leaf_type =node.f_get_class_name()
-                            leaf_type = self._create_class(leaf_type)
-                            if full_name.startswith('results.'):
-                                self.f_add_result(leaf_type,new_full_name, comment=comment)
-                            else:
-                                self.f_add_derived_parameter(leaf_type, new_full_name,
-                                                             comment=comment)
+                    if node.v_is_leaf:
+                        # Create new empty result/derived param instance
+                        # for every result/ derived param
+                        # in the other trajectory
+                        # that is going to be merged into the current one
+                        rename_dict[full_name] = new_full_name
+                        comment = node.v_comment
+                        leaf_type =node.f_get_class_name()
+                        leaf_type = self._create_class(leaf_type)
+                        if full_name.startswith('results.'):
+                            self.f_add_result(leaf_type,new_full_name, comment=comment)
                         else:
-                            if not node.v_annotations.f_is_empty() or node.v_comment != '':
-                                # Store all group nodes that are annotated
-                                if full_name.startswith('results.'):
-                                    new_group=self.f_add_result_group(new_full_name)
-                                else:
-                                    new_group=self.f_add_derived_parameter_group(new_full_name)
+                            self.f_add_derived_parameter(leaf_type, new_full_name,
+                                                         comment=comment)
+                    else:
+                        if not node.v_annotations.f_is_empty() or node.v_comment != '':
+                            # Store all group nodes that are annotated
+                            if full_name.startswith('results.'):
+                                new_group=self.f_add_result_group(new_full_name)
+                            else:
+                                new_group=self.f_add_derived_parameter_group(new_full_name)
 
-                                if not node.v_annotations.f_is_empty():
-                                    annotationdict = node.v_annotations.f_to_dict()
-                                    new_group.f_set_annotations(**annotationdict)
+                            if not node.v_annotations.f_is_empty():
+                                annotationdict = node.v_annotations.f_to_dict()
+                                new_group.f_set_annotations(**annotationdict)
 
-                                if node.v_comment != '':
-                                    new_group.v_comment = node.v_comment
+                            if node.v_comment != '':
+                                new_group.v_comment = node.v_comment
 
 
-                                to_store_groups_with_annotations.append(new_group)
+                            to_store_groups_with_annotations.append(new_group)
 
         # If we have annotated groups, store them
         if len(to_store_groups_with_annotations)>0:
@@ -2543,6 +2545,60 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         split_key[pos] = new_name
         renamed_key = '.'.join(split_key)
         return renamed_key
+
+    @staticmethod
+    def _get_traj_dpars_or_results(traj, where):
+        """Extracts all parameters or results that are not below XXXX.runs.run_XXXXXXX"""
+        result_dict = {}
+        if where not in ['results', 'derived_parameters']:
+            raise RuntimeError('You shall not pass!')
+
+        if where in traj._children:
+            outer_node = traj._children[where]
+            for inner_node in outer_node:
+                if inner_node.v_name != 'runs':
+                    if inner_node.v_is_leaf:
+                        result_dict[inner_node.v_full_name] = inner_node
+                    else:
+                        result_dict.update(inner_node.f_to_dict())
+
+            if 'runs' in outer_node._children:
+                inner_node = outer_node._children['runs']
+                for run_node in inner_node:
+                    if not run_node.v_name.startswith(pypetconstants.RUN_NAME):
+                        if run_node.v_is_leaf:
+                            result_dict[run_node.v_full_name] = run_node
+                        else:
+                            result_dict.update(run_node.f_to_dict())
+
+        return result_dict
+
+    @staticmethod
+    def _get_traj_dpars_or_results_node_iterator(traj, where):
+
+        iterlist = []
+        if where not in ['results', 'derived_parameters']:
+            raise RuntimeError('You shall not pass!')
+
+        if where in traj._children:
+            outer_node = traj._children[where]
+            for inner_node in outer_node:
+                if inner_node.v_name != 'runs':
+                    if inner_node.v_is_leaf:
+                        iterlist.append([inner_node])
+                    else:
+                        iterlist.append(inner_node.f_iter_nodes(recursive=True))
+
+            if 'runs' in outer_node._children:
+                inner_node = outer_node._children['runs']
+                for run_node in inner_node:
+                    if not run_node.v_name.startswith(pypetconstants.RUN_NAME):
+                        if run_node.v_is_leaf:
+                            iterlist.append([inner_node])
+                        else:
+                            iterlist.append(run_node.f_iter_nodes(recursive=True))
+
+        return itools.chain(*iterlist)
 
     def _merge_parameters(self, other_trajectory, remove_duplicates=False,
                           trial_parameter_name=None,
@@ -2643,9 +2699,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # to spot parameters that need to be enlarge or become new explored parameters
         params_to_merge = other_trajectory._parameters.copy()
 
-        if not ignore_trajectory_derived_parameters and 'derived_parameters.trajectory' in self:
-            trajectory_derived_parameters = other_trajectory.f_get(
-                'derived_parameters.trajectory').f_to_dict()
+        if not ignore_trajectory_derived_parameters and 'derived_parameters' in self:
+            trajectory_derived_parameters =\
+                self._get_traj_dpars_or_results(self, 'derived_parameters')
             params_to_merge.update(trajectory_derived_parameters)
 
         # Iterate through all parameters of the other trajectory

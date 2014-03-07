@@ -206,9 +206,11 @@ class NNTreeNode(WithAnnotations):
 
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
-        if ( self._depth>1 and split_name[0] in ['results', 'derived_parameters'] and
-                 split_name[1].startswith(pypetconstants.RUN_NAME) ):
-            self._creator_name = split_name[1]
+        if ( self._depth>2 and
+                 split_name[0] in ['results', 'derived_parameters'] and
+                 split_name[1] == 'runs' and
+                 split_name[2].startswith(pypetconstants.RUN_NAME) ):
+            self._creator_name = split_name[2]
         else:
             self._creator_name = 'trajectory'
 
@@ -805,8 +807,6 @@ class NaturalNamingInterface(object):
 
         * 'conf' to 'config'
 
-        * 'traj' to 'trajectory'
-
         :return: The mapped name or None if no shortcut is matched.
 
         """
@@ -841,9 +841,6 @@ class NaturalNamingInterface(object):
             if name == 'conf':
                 return 'config'
 
-            if name == 'traj':
-                return 'trajectory'
-
         return None
 
 
@@ -873,77 +870,51 @@ class NaturalNamingInterface(object):
         :return: The name with the added prefix.
 
         """
-
-
-
-        ## If we add an instance with a correct full name at root, we do not need to add the prefix
-        # in case of parameters and config, in case of results and derived parameters
-        # we need to check the rest of the name
-        if start_node.v_is_root:
-            if name in ('parameters', 'config', 'derived_parameters', 'results'):
-                return name
-            for prefix in ('parameters.','config.', 'results.trajectory','derived_parameters.trajectory',
-                'results.'+pypetconstants.RUN_NAME,'derived_parameters.'+pypetconstants.RUN_NAME):
-                if name.startswith(prefix):
-                    return name
-            # for prefix in ('results.','derived_parameters.'):
-            #     if name.startswith(prefix):
-            #         reduced_split_name = name.split('.')[1:]
-            #         name = '.'.join(reduced_split_name)
-
-
         root=self._root_instance
 
         # If the start node of our insertion is root or one below root we might need to add prefixes.
-        if start_node.v_depth<2:
-            # In case of derived parameters and results we also need to add prefixes containing the
-            # subbranch and the current run or trajectory.
-            # For instance, a prefix could be 'results.run_00000007'.
-            if group_type_name == DERIVED_PARAMETER_GROUP:
+        # In case of derived parameters and results we also need to add prefixes containing the
+        # subbranch and the current run in case of a single run.
+        # For instance, a prefix could be 'results.runs.run_00000007'.
 
-                add=''
+        add = ''
 
-                if (not ( name.startswith(pypetconstants.RUN_NAME) or
-                                  name == 'trajectory') ):
+        if start_node.v_depth < 3:
+            if start_node.v_depth == 0:
 
-                    if root._is_run:
-                        add= root.v_name + '.'
-                    else:
-                        add= 'trajectory.'
+                if group_type_name == DERIVED_PARAMETER_GROUP:
+                    if not name.startswith('derived_parameters.') and name != 'derived_parameters':
+                        add += 'derived_parameters.'
 
+                elif group_type_name == RESULT_GROUP and name != 'results':
+                    if not name.startswith('results.'):
+                        add += 'results.'
 
-                if start_node.v_depth== 0:
-                    add = 'derived_parameters.' + add
+                elif group_type_name == CONFIG_GROUP and name != 'config':
+                    if not name.startswith('config.'):
+                        add += 'config.'
 
+                elif group_type_name == PARAMETER_GROUP and name != 'parameters':
+                    if not name.startswith('parameters.'):
+                        add += 'parameters.'
+                elif group_type_name == GROUP:
+                    return name
+                else:
+                    raise RuntimeError('Why are you here?')
 
-                return add+name
+            if root._is_run:
 
+                if start_node.v_depth <= 1:
 
-            elif group_type_name == RESULT_GROUP:
+                    if not name.startswith('runs.') and name != 'runs':
+                        add += 'runs.'
 
-                add = ''
+                if start_node.v_depth <= 2:
 
-                if (not (name.startswith(pypetconstants.RUN_NAME) or
-                                  name == 'trajectory') ):
-                    if root._is_run:
-                        add= root.v_name + '.'
-                    else:
-                        add= 'trajectory.'
+                    if not name.startswith(pypetconstants.RUN_NAME):
+                        add += root.v_name + '.'
 
-                if start_node.v_depth== 0:
-                    add = 'results.' + add
-
-                return add+name
-
-        # If the start node is root and we have a config or parameter the prefixes are rather
-        # simple:
-        if start_node.v_is_root:
-
-            if group_type_name == PARAMETER_GROUP:
-                return 'parameters.'+name
-
-            if group_type_name == CONFIG_GROUP:
-                return 'config.'+name
+        name = add + name
 
         return name
 
@@ -1045,7 +1016,7 @@ class NaturalNamingInterface(object):
         else:
             return (type_tuple[0], type_tuple[0])
 
-    def _add_generic(self,start_node, type_name, group_type_name, args, kwargs):
+    def _add_generic(self, start_node, type_name, group_type_name, args, kwargs, add_prefix=True):
         """Adds a given item to the tree irrespective of the subtree.
 
         Infers the subtree from the arguments.
@@ -1136,7 +1107,8 @@ class NaturalNamingInterface(object):
                     group_type_name, type_name = self._determine_types(start_node, name, True)
 
         # Check if the name fulfils the prefix conditions, if not change the name accordingly.
-        name = self._add_prefix(name,start_node,group_type_name)
+        if add_prefix:
+            name = self._add_prefix(name,start_node,group_type_name)
 
 
         return self._add_to_tree(start_node,name, type_name, group_type_name, instance,
@@ -1208,7 +1180,7 @@ class NaturalNamingInterface(object):
         try:
             act_node = start_node
             last_idx = len(split_name)-1
-            last_name = start_node.v_name
+            #last_name = start_node.v_name
             for idx, name in enumerate(split_name):
 
                 if not name in act_node._children:
@@ -1262,7 +1234,7 @@ class NaturalNamingInterface(object):
 
 
                 act_node = act_node._children[name]
-                last_name = name
+                #last_name = name
 
             return act_node
         except:
@@ -1554,10 +1526,11 @@ class NaturalNamingInterface(object):
         that do not belong to the run are blinded out.
 
         """
-        if run_name is not None and node.v_depth == 1 and run_name in node._children:
+        if run_name is not None and node.v_depth in [1,2] and run_name in node._children:
             # Only consider one particular run and blind out the rest, but include the trajectory
             # subbranch
             node_list =  [node._children[run_name]]
+            # For backwards compatibility
             if 'trajectory' in node._children:
                 node_list.append(node._children['trajectory'])
             return node_list
@@ -1854,7 +1827,7 @@ class NNGroupNode(NNTreeNode):
 
     def __iter__(self):
         """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes(recursive=False)`."""
-        self.f_iter_nodes(recursive=False)
+        return self.f_iter_nodes(recursive=False)
 
     def _debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
@@ -2278,9 +2251,7 @@ class ResultGroup(NNGroupNode):
         """Adds an empty result group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
-        If current node is the trajectory (root) adds the prefix `'results.trajectory'` to the
-        full name.
-        If current node is a single run (root) adds the prefix `'results.run_08%d%'` to the
+        If current node is a single run (root) adds the prefix `'results.runs.run_08%d%'` to the
         full name where `'08%d'` is replaced by the index of the current run.
 
         The `name` can also contain subgroups separated via colons, for example:
@@ -2319,9 +2290,7 @@ class ResultGroup(NNGroupNode):
 
 
         Adds the full name of the current node as prefix to the name of the result.
-        If current node is the trajectory (root) adds the prefix `'results.trajectory'` to the
-        full name.
-        If current node is a single run (root) adds the prefix `'results.run_08%d%'` to the
+        If current node is a single run (root) adds the prefix `'results.runs.run_08%d%'` to the
         full name where `'08%d'` is replaced by the index of the current run.
 
         """
@@ -2340,9 +2309,7 @@ class DerivedParameterGroup(NNGroupNode):
         """Adds an empty derived parameter group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
-        If current node is the trajectory (root) adds the prefix `'derived_parameters.trajectory'`
-        to the full name.
-        If current node is a single run (root) adds the prefix `'derived_parameters.run_08%d%'`
+        If current node is a single run (root) adds the prefix `'derived_parameters.runs.run_08%d%'`
         to the full name where `'08%d'` is replaced by the index of the current run.
 
         The `name` can also contain subgroups separated via colons, for example:
