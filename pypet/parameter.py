@@ -1820,6 +1820,11 @@ class Result(BaseResult):
         self.f_set(*args,**kwargs)
         self._no_data_string = False
 
+    def __dir__(self):
+        """Adds all data to auto-completion"""
+        result = dir(type(self)) + self.__dict__.keys()
+        result.extend(self._data.keys())
+        return result
 
     @property
     def v_no_data_string(self):

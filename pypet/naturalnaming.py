@@ -1776,7 +1776,10 @@ class NaturalNamingInterface(object):
         if (not check_uniqueness or len(split_name)==1) and first in node._children:
             result = node._children[first]
             if len(split_name)==1:
-                return self._apply_fast_access(result, fast_access)
+                if result.v_is_leaf:
+                    return self._apply_fast_access(result, fast_access)
+                else:
+                    return result
             else:
                 del split_name[0]
         else:
@@ -1838,6 +1841,12 @@ class NNGroupNode(NNTreeNode):
         return '<%s>: %s: %s' % (self.f_get_class_name(),name,
                                  str([(key,str(type(val)))
                                       for key,val in self._children.iteritems()]))
+
+    def __dir__(self):
+        """Adds all children to auto-completion"""
+        result = dir(type(self)) + self.__dict__.keys()
+        result.extend(self._children.keys())
+        return result
 
     def __iter__(self):
         """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes(recursive=False)`."""
