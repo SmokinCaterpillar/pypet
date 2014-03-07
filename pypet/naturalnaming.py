@@ -1776,7 +1776,7 @@ class NaturalNamingInterface(object):
         if (not check_uniqueness or len(split_name)==1) and first in node._children:
             result = node._children[first]
             if len(split_name)==1:
-                return result
+                return self._apply_fast_access(result, fast_access)
             else:
                 del split_name[0]
         else:
