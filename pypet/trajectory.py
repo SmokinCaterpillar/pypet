@@ -2504,7 +2504,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         leaf_type =node.f_get_class_name()
                         leaf_type = self._create_class(leaf_type)
                         if full_name.startswith('results.'):
-                            self.f_add_result(leaf_type,new_full_name, comment=comment)
+                            self.f_add_result(leaf_type, new_full_name, comment=comment)
                         else:
                             self.f_add_derived_parameter(leaf_type, new_full_name,
                                                          comment=comment)

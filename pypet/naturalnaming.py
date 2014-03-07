@@ -879,40 +879,51 @@ class NaturalNamingInterface(object):
 
         add = ''
 
-        if start_node.v_depth < 3:
+
+        if start_node.v_depth < 3 and not group_type_name == GROUP:
             if start_node.v_depth == 0:
 
                 if group_type_name == DERIVED_PARAMETER_GROUP:
-                    if not name.startswith('derived_parameters.') and name != 'derived_parameters':
+                    if name == 'derived_parameters' or name.startswith('derived_parameters.'):
+                        return name
+                    else:
                         add += 'derived_parameters.'
 
-                elif group_type_name == RESULT_GROUP and name != 'results':
-                    if not name.startswith('results.'):
+                elif group_type_name == RESULT_GROUP:
+                    if name == 'results' or name.startswith('results.'):
+                        return name
+                    else:
                         add += 'results.'
 
-                elif group_type_name == CONFIG_GROUP and name != 'config':
-                    if not name.startswith('config.'):
+                elif group_type_name == CONFIG_GROUP:
+                    if name == 'config' or name.startswith('config.'):
+                        return name
+                    else:
                         add += 'config.'
 
-                elif group_type_name == PARAMETER_GROUP and name != 'parameters':
-                    if not name.startswith('parameters.'):
+                elif group_type_name == PARAMETER_GROUP:
+                    if name == 'parameters' or name.startswith('parameters.'):
+                        return name
+                    else:
                         add += 'parameters.'
-                elif group_type_name == GROUP:
-                    return name
                 else:
                     raise RuntimeError('Why are you here?')
 
-            if root._is_run:
+            if (root._is_run and (group_type_name == RESULT_GROUP or
+                                     group_type_name == DERIVED_PARAMETER_GROUP)):
 
-                if start_node.v_depth <= 1:
+                if start_node.v_depth==0:
+                     add = add + 'runs.' + root.v_name + '.'
 
-                    if not name.startswith('runs.') and name != 'runs':
-                        add += 'runs.'
+                elif start_node.v_depth==1:
 
-                if start_node.v_depth <= 2:
+                    if name == 'runs':
+                        return name
+                    else:
+                        add = add + 'runs.' + root.v_name + '.'
 
-                    if not name.startswith(pypetconstants.RUN_NAME):
-                        add += root.v_name + '.'
+                elif start_node.v_depth == 2 and start_node.v_name == 'runs':
+                    add += root.v_name + '.'
 
         name = add + name
 
@@ -1762,9 +1773,12 @@ class NaturalNamingInterface(object):
 
         ## Check in O(1) if the item is one of the start node's children
         first = split_name[0]
-        if not check_uniqueness and first in node._children:
+        if (not check_uniqueness or len(split_name)==1) and first in node._children:
             result = node._children[first]
-            del split_name[0]
+            if len(split_name)==1:
+                return result
+            else:
+                del split_name[0]
         else:
             result = None
 
@@ -2030,7 +2044,7 @@ class NNGroupNode(NNTreeNode):
     def __getitem__(self, item):
         """Equivalent to calling `__getattr__`.
 
-        Per default the item is returned and fast access is not applied.
+        Per default the item is returned and fast access is applied.
 
         """
         return self.__getattr__(item)

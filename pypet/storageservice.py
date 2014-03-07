@@ -257,15 +257,15 @@ class HDF5StorageService(StorageService):
 
 
     NAME_TABLE_MAPPING ={
-           'config.hdf5.overview.config':'config',
-           'config.hdf5.overview.parameters':'parameters',
-           'config.hdf5.overview.derived_parameters_trajectory':'derived_parameters_trajectory',
-           'config.hdf5.overview.derived_parameters_runs':'derived_parameters_runs',
-           'config.hdf5.overview.results_trajectory':'results_trajectory',
-           'config.hdf5.overview.results_runs': 'results_runs',
-           'config.hdf5.overview.explored_parameters': 'explored_parameters',
-           'config.hdf5.overview.derived_parameters_runs_summary':'derived_parameters_runs_summary',
-           'config.hdf5.overview.results_runs_summary':'results_runs_summary'
+           'hdf5.overview.config':'config',
+           'hdf5.overview.parameters':'parameters',
+           'hdf5.overview.derived_parameters_trajectory':'derived_parameters_trajectory',
+           'hdf5.overview.derived_parameters_runs':'derived_parameters_runs',
+           'hdf5.overview.results_trajectory':'results_trajectory',
+           'hdf5.overview.results_runs': 'results_runs',
+           'hdf5.overview.explored_parameters': 'explored_parameters',
+           'hdf5.overview.derived_parameters_runs_summary':'derived_parameters_runs_summary',
+           'hdf5.overview.results_runs_summary':'results_runs_summary'
     }
     ''' Mapping of trajectory config names to the tables'''
 
@@ -1759,7 +1759,7 @@ class HDF5StorageService(StorageService):
             # If the trajectory does not contain information about the table
             # we assume it should be created.
             try:
-                if traj.f_get(name).f_get():
+                if traj.config.f_get(name).f_get():
                     tostore_tables.append(table_name)
             except AttributeError:
                 tostore_tables.append(table_name)
@@ -2212,7 +2212,7 @@ class HDF5StorageService(StorageService):
         for branch in ('results.runs', 'derived_parameters.runs'):
             branch_name = branch +'.'+single_run.v_name
             if branch_name in single_run:
-                self._trj_store_sub_branch(pypetconstants.LEAF,single_run,
+                self._trj_store_sub_branch(pypetconstants.LEAF, single_run,
                                            branch_name,self._trajectory_group)
 
         # Check if we want explored parameters overview tables.

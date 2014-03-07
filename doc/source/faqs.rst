@@ -31,3 +31,7 @@ What should I do?
     **A:** You probably have an older version of GitPython (likely 0.1.7), install a newer one.
     If ``pip install GitPython`` still downloads the old version, try ``pip install --pre GitPython``
     or if you simply want to upgrade use ``pip install --upgrade --pre GitPython``.
+
+**Q:**  I am still using the old tree structure how can I update my hdf5files to the new one?
+
+    **A:** See :ref:`tree-migrating`

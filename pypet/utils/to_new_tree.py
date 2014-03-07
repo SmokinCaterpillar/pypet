@@ -114,7 +114,7 @@ class FileUpdater(object):
 
                         to_move_node = inner_traj_node._v_children[move_node_name]
 
-                        print '    Moving node %s' % node_name
+                        print '    Moving node %s' % move_node_name
 
                         self.hdf5file.moveNode(where=to_move_node, newparent=res_node)
 

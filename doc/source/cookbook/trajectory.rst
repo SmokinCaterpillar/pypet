@@ -86,7 +86,7 @@ Moreover, a trajectory contains 4 major branches of its tree.
     they will be directly put into the subbranch `derived_parameters`. If you
     introduce a derived parameter within a single run, they are sorted into the subbranch
     `derived_parameters.runs.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
-    For example adding a derived parameter in the second run will add it to the subbranch
+    For example adding, a derived parameter in the second run will add it to the subbranch
     `derived_parameters.runs.run_00000001`.
 
     Any leaf added under *derived_parameters*
@@ -107,6 +107,9 @@ this comment will actually be shown in the parameter overview table (to reduce f
 it is not shown in the result and derived parameter overview tables, see also
 :ref:`more-on-overview`). It can also be found
 as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true for all *leaves*).
+
+If you using an older version of pypet, your tree structure might be slightly different, to
+update your files to the new format, see :ref:`tree-migrating`.
 
 .. [#]
 
