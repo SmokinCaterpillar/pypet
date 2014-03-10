@@ -1774,11 +1774,13 @@ class NaturalNamingInterface(object):
         ## Check in O(1) if the item is one of the start node's children
         first = split_name[0]
         if first in node._children:
+            del split_name[0]
             result = node._children[first]
-            if result.v_is_leaf:
-                return self._apply_fast_access(result, fast_access)
-            else:
-                return result
+            if len(split_name) == 0:
+                if result.v_is_leaf:
+                    return self._apply_fast_access(result, fast_access)
+                else:
+                    return result
         else:
             result = None
 
