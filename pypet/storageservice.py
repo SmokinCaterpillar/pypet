@@ -3856,13 +3856,13 @@ class HDF5StorageService(StorageService):
                     loaded.append(node._v_name)
 
             # Recall from the hdf5 node attributes how the data was stored and reload accordingly
-            load_type = self._all_get_from_attrs(node,HDF5StorageService.STORAGE_TYPE)
+            load_type = self._all_get_from_attrs(node, HDF5StorageService.STORAGE_TYPE)
 
             if load_type == HDF5StorageService.DICT:
                 self._prm_read_dictionary(node, load_dict, full_name)
             elif load_type == HDF5StorageService.TABLE:
                 self._prm_read_table(node, load_dict, full_name)
-            elif load_type in [HDF5StorageService.ARRAY,HDF5StorageService.CARRAY]:
+            elif load_type in [HDF5StorageService.ARRAY, HDF5StorageService.CARRAY]:
                 self._prm_read_array(node, load_dict, full_name)
             elif load_type == HDF5StorageService.FRAME:
                 self._prm_read_frame(node, load_dict,full_name)

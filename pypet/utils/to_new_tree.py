@@ -43,6 +43,9 @@ class FileUpdater(object):
         for traj_node in root_node:
             self._update_traj(traj_node)
 
+        self.hdf5file.flush()
+        self.hdf5file.close()
+
 
 
     def _update_traj(self,traj_node):
@@ -136,6 +139,6 @@ if __name__ == '__main__':
 
         if opt == '--filename':
             filename = arg
-            print 'I will rework `%s`.' % file
+            print 'I will rework `%s`.' % filename
 
     FileUpdater(filename, backup).update_file()
