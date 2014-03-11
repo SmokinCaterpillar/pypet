@@ -98,6 +98,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._search_strategy = parent_trajectory.v_search_strategy
         self._check_uniqueness = parent_trajectory.v_check_uniqueness
         self._fast_access = parent_trajectory.v_fast_access
+        self._backwards_search = parent_trajectory.v_backwards_search
 
         self._stored = False
 
@@ -213,6 +214,17 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     def v_stored(self):
         """Whether or not the trajectory or run has been stored to disk before."""
         return self._stored
+
+    @property
+    def v_backwards_search(self):
+        """Whether to apply backwards search in the tree if one searches a branch
+        with the square brackets notation `[]`.
+        """
+        return self._backwards_search
+
+    @v_backwards_search.setter
+    def v_backwards_search(self, backwards_search):
+        self._backwards_search = bool(backwards_search)
 
     @property
     def v_search_strategy(self):
@@ -945,6 +957,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._fast_access=True
         self._check_uniqueness=False
         self._search_strategy=pypetconstants.BFS
+        self._backwards_search = True
 
         self._environment_hexsha = None
         self._environment_name = None

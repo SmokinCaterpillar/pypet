@@ -85,40 +85,24 @@ def _single_run(args):
         if multiproc:
 
             # In case of multiprocessing we want to have a log file for each individual process.
-            pid = os.getpid()
-            if use_pool:
-                filename = 'process_%s.txt' % str(pid)
-                pid_to_run_file = 'process_%s_runs.txt' % str(pid)
-                pid_to_run_file = log_path+'/'+pid_to_run_file
-            else:
-                filename = '%s.txt' % traj.v_name
+            process_name = multip.current_process().name.lower().replace('-','_')
 
+            filename = '%s_%s.txt' % (traj.v_name, process_name)
 
             filename=log_path+'/'+filename
-            exists = os.path.isfile(filename)
 
-            # If the file does not exist we need to create it and create a handler that logs
-            # all messages into the file.
-            if not exists:
+            handler=logging.FileHandler(filename=filename)
+            formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+            handler.setFormatter(formatter)
+            root.addHandler(handler)
 
-                h=logging.FileHandler(filename=filename)
-                f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-                h.setFormatter(f)
-                root.addHandler(h)
+            # Also copy standard out and error to the log files
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
 
-                # Also copy standard out and error to the log files
-                outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-                sys.stdout = outstl
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
 
-                errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-                sys.stderr = errstl
-
-            if use_pool:
-                pid_file=open(pid_to_run_file, 'a+')
-                outstr = traj.v_time + ': ' + traj.v_name +'\n'
-                pid_file.write(outstr)
-                pid_file.flush()
-                pid_file.close()
 
         ## Add the queue for storage in case of multiprocessing in queue mode.
         if queue is not None:
@@ -148,6 +132,9 @@ def _single_run(args):
         root.info('\n===================================\n '
                   'Finished single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
+
+        if multiproc:
+            root.removeHandler(handler)
 
         if not use_pool:
             result_queue.put(result)
@@ -735,7 +722,7 @@ class Environment(object):
         root.addHandler(h)
 
         # Add a handler for storing warnings and errors to a text file
-        h=logging.FileHandler(filename=log_path+'/warnings_and_errors.txt')
+        h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
         h.setLevel(logging.WARNING)
         root = logging.getLogger()
         root.addHandler(h)
@@ -966,7 +953,7 @@ class Environment(object):
         self._logger.info('Trajectory successfully stored.')
 
         # Make the trajectory continuable in case the user wants that
-        continuable = self._traj.f_get('config.environment.continuable').f_get()
+        continuable = self._traj.f_get('config.environment.%s.continuable' % self.v_name).f_get()
         if continuable:
 
             dump_dict ={}

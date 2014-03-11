@@ -243,9 +243,7 @@ To access data that you have put into your trajectory you can use
     This natural naming scheme supports some special features see below.
 
 *   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
-    equivalent to calling `traj.nzebras`.
-
-
+    similar to calling `traj.nzebras`.
 
 
 ^^^^^^^^^^^^^^^
@@ -281,8 +279,8 @@ If it is empty or contains more than one item you will always get in return the 
     >>> traj.f_add_result('z',42)`
     >>> traj.z
     42
-    >>> traj.f_add_result('tuple', 11, 12.0)
-    >>> traj.tuple
+    >>> traj.f_add_result('two_data_values', 11, 12.0)
+    >>> traj.two_data_values
     <Result object>
 
 
@@ -360,6 +358,74 @@ For instance, `traj.par.traffic.street.nzebras` is equivalent to
 
     The search strategy can be changed via the property `v_search_strategy` between
     breadth first search (`'BFS'`) and depth first search (`'DFS'`).
+
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Backwards search
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Finally, there exists the possibility to perform bottom up search within the tree.
+If you use the square bracket notation or
+:func:`~pypet.trajectory.Trajectory.f_get` and don't pass a single name but a grouped
+name separated via colons like `traj['groubA.groupB.paramC']` or
+`traj.f_get('groubA.groupB.paramC', backwards_search=True)` (`backwards_search` is `True` by default)
+you can make *pypet* search the tree bottom up.
+Thus, *pypet* won't look for *groupA* first and than start looking for *grougB* from there and
+finally search for *paramC*. But since it keeps internal indices it will directly locate
+all entries within the tree named *paramC* and climb up the tree back to the start node and
+check if it passes by *groupB* and *groupA* on the way to the top.
+Thus, the search complexity is
+:math:`O(kd)` with :math:`k` the number of occurrences of nodes named *paramC* and
+:math:`d` the depth of
+your search tree. By the way, this backwards search always checks if your search term yields a
+unique result irrespective of the setting of `check_uniqueness`.
+
+How is this backwards searching useful? Well, it will succeed in many more situations than
+simple breadth first forward traversal of the tree.
+For instance, let's assume you have the following tree structure.
+`traj.f_add_parameter('groupX.groupY.groupZ.paramA')` adds a parameter `paramA` to your trajectory,
+similarly does `traj.f_add_parameter('groupX.groupZ.paramB')`.
+However, note the difference between the location of `groupZ`. These are in fact two different
+groups that have different depths in the trajectory tree! Now calling `traj.groupZ.paramA` will
+fail with an error, whereas `traj['groupZ.paramA']` succeeds and will find `paramA` in your tree.
+
+Why? `traj.groupZ.paramA` will initiate a breadth first forward tree traversal. To be
+precise, it will do so twice: At first *pypet* finds
+the group `groupZ` directly below `groupX` and, next, it tries to locate `paramA` from there.
+However, in `groupX.groupZ` it can only find `paramB`.
+Yet, if you call `traj['groupZ.paramA']`, *pypet* directly looks for `paramA` and then moves
+up the tree back to the root note. It will find `groupZ` (the one below `groupY`) on the way and,
+therefore, knows that it has found the proper `paramA`.
+
+Phew, that is complicated. Why do you need such a complicated search mechanism, anyway?
+Well, there is a particular advantage when you use the same grouping within derived and
+regular parameters.
+For example, you have a derived parameter `lottery_numbers` that depends on a parameter
+`lottery_seed`, `nnumbers` and `highest_number` all of them grouped into a `lottery` group.
+
+::
+
+    import numpy as np
+
+    traj.f_add_parameter('lottery.lottery_seed', 42, comment='RNG seed')
+    traj.f_add_parameter('lottery.nnumbers', 6, comment='Amount of random numbers')
+    traj.f_add_parameter('lottery.highest_number', 49, comment='Largest number of distribution')
+
+    ...
+
+    #Sometime later you calculate the derived lottery numbers:
+    np.seed(traj.lottery_seed)
+    lottery_numbers = tuple(np.random.random_integers(traj.highest_number, size=(traj.nnumbers,)))
+    traj.f_add_derived_parameter('lottery.lottery_numbers', lottery_numbers,
+                        comment='Lottery numbers, drawn with numpy')
+
+
+
+Now calling `traj.lottery.lottery_numbers` does not work, since you have
+a `lottery` group under `traj.parameters` as well as `traj.derived_parameters`.
+However, you can make your life
+much easier and call `traj['lottery.lottery_numbers']` using backwards search
+instead of tediously typing `traj.derived_parameters.lottery.lottery_numbers` which is, of course,
+a unique forward path down the tree.
 
 .. _parameter-exploration:
 

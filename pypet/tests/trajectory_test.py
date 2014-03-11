@@ -82,6 +82,47 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
+    def test_get_all(self):
+        all_nodes = self.traj.f_get_all('peter')
+
+        self.assertTrue(len(all_nodes)==2)
+
+        all_nodes = self.traj.f_get_all('peter.yve')
+
+        self.assertTrue(len(all_nodes)==1)
+
+        all_nodes = self.traj.f_get_all('paul.yve')
+
+        self.assertTrue(len(all_nodes)==0)
+
+        self.traj.f_add_parameter('paul.paul')
+
+        all_nodes = self.traj.peter.f_get_all('paul')
+
+        self.assertTrue(len(all_nodes)==1)
+
+        self.traj.f_add_result('results.runs.run_00000000.x.y',10)
+
+        self.traj.f_add_result('results.runs.run_00000001.x.y',10)
+
+        self.traj.f_add_derived_parameter('hfhfhf.x.y')
+
+        self.traj.f_add_result('x.y.y')
+
+        self.traj.f_as_run(1)
+
+        all_nodes=self.traj.f_get_all('x.y')
+
+        self.assertTrue(len(all_nodes)==4)
+
+    def test_backwards_search(self):
+
+        x=self.traj.peter.f_get('paul.peter')
+
+        y=self.traj.f_get('peter.peter')
+
+        self.assertTrue(x is y)
+
     def test_value_error_on_search_strategy_assignment(self):
         with self.assertRaises(ValueError):
             self.traj.v_search_strategy = 'ewnforenfre'

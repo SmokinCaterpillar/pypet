@@ -23,12 +23,12 @@ class ChainMap(object):
     def __len__(self):
         length = 0
 
-        for map in self._maps:
-            length += len(map)
+        for mapping in self._maps:
+            length += len(mapping)
 
         return  length
 
     def iterkeys(self):
 
-        iter_list = [map.iterkeys() for map in self._maps]
+        iter_list = [mapping.iterkeys() for mapping in self._maps]
         return itools.chain(*iter_list)

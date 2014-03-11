@@ -157,16 +157,12 @@ You can pass the following arguments:
     all txt files will be put.
     The environment will create a major logfile (*main.txt*) incorporating all messages of the
     current log level and beyond and
-    a log file that only contains warnings and errors *warnings_and_errors.txt*.
+    a log file that only contains warnings and errors *errors_and_warnings.txt*.
 
-    Moreover, if you use multiprocessing and a pool,
-    there will be a log file for every process named *proces_XXXX.txt* with *XXXX* the process
-    id containing all log messages produced by the corresponding process. Moreover,
-    you will find a *process_XXXX_runs.txt* file where you can see which individual runs were
-    actually carried out by the process.
-
-    In case you want multiprocessing without a pool of workers, there will be a logfile
-    for each individual run called *run_XXXXXXXX.txt*.
+    Moreover, if you use multiprocessing,
+    there will be a log file for every single run and process named
+    *run_XXXXXXXX_proces_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
+    id. It contains all log messages produced by the corresponding process within the single run.
 
     If you don't set a log level elsewhere before, the standard level will be *INFO*
     (if you have no clue what I am talking about, take a look at the logging_ module).
