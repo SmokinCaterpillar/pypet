@@ -42,6 +42,11 @@ pypet 0.1b.4
 
 *   Useless shortcuts have been removed.
 
+*   New *Backwards* search functionality
+
+*   New `f_get_all` functionality to find all items in a tree matching a particular
+    search string
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results
