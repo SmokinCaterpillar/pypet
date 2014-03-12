@@ -287,12 +287,12 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(self.traj.markus.yve, self.traj['markus.yve'])
 
-    def test_round_brackets(self):
-        x='markus'
-
-        y='yve'
-
-        self.assertEqual(self.traj(x)(y), self.traj.markus.f_get('yve'))
+    # def test_round_brackets(self):
+    #     x='markus'
+    #
+    #     y='yve'
+    #
+    #     self.assertEqual(self.traj(x)(y), self.traj.markus.f_get('yve'))
 
     @staticmethod
     def get_depth_dict(traj, as_run=None):

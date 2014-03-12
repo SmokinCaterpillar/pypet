@@ -2173,10 +2173,10 @@ class NNGroupNode(NNTreeNode):
                                        backwards_search=self._nn_interface._get_backwards_search(),
                                        search_strategy=self._nn_interface._get_search_strategy())
 
-    def __call__(self, name, fast_access=False, check_uniqueness=False,
-                 search_strategy=pypetconstants.BFS):
-
-        return self.f_get(name, fast_access, check_uniqueness, search_strategy)
+    # def __call__(self, name, fast_access=False, check_uniqueness=False,
+    #              search_strategy=pypetconstants.BFS):
+    #
+    #     return self.f_get(name, fast_access, check_uniqueness, search_strategy)
 
     def f_iter_nodes(self, recursive=True, search_strategy=pypetconstants.BFS):
         """Iterates recursively (default) over nodes hanging below this group.
