@@ -235,15 +235,13 @@ To access data that you have put into your trajectory you can use
     :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
     but for any group node in your tree.
 
-*   Use round brackets `traj.parameters('nzebras')` which is equivalent to calling
-    `traj.f_get('nzebras')`. This direct calling of a group node allows the same
-    arguments as `f_get`.
-
 *   Use natural naming dot notation like  `traj.nzebras`.
     This natural naming scheme supports some special features see below.
 
 *   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
     similar to calling `traj.nzebras`.
+    Check out below what happens if you ask for `traj['zoo.nzebras']`, i.e. asking your trajectory
+    of any group node for a grouped variable.
 
 
 ^^^^^^^^^^^^^^^
@@ -370,8 +368,9 @@ name separated via colons like `traj['groubA.groupB.paramC']` or
 `traj.f_get('groubA.groupB.paramC', backwards_search=True)` (`backwards_search` is `True` by default)
 you can make *pypet* search the tree bottom up.
 Thus, *pypet* won't look for *groupA* first and than start looking for *grougB* from there and
-finally search for *paramC*. But since it keeps internal indices it will directly locate
-all entries within the tree named *paramC* and climb up the tree back to the start node and
+finally search for *paramC*. But since it keeps internal indices and links to all it's nodes
+it will directly locate all entries within the tree named *paramC* and climb up the tree back
+to the start node and
 check if it passes by *groupB* and *groupA* on the way to the top.
 Thus, the search complexity is
 :math:`O(kd)` with :math:`k` the number of occurrences of nodes named *paramC* and
