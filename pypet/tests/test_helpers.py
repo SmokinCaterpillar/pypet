@@ -230,6 +230,21 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
+        myseries = myframe['TC1']
+
+        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),'Item2' : pd.DataFrame(np.random.randn(4, 2))})
+
+        # p4d = pd.Panel4D(np.random.randn(2, 2, 5, 4),
+        #     labels=['Label1','Label2'],
+        #    items=['Item1', 'Item2'],
+        #    major_axis=pd.date_range('1/1/2000', periods=5),
+        #   minor_axis=['A', 'B', 'C', 'D'])
+
+
+        traj.f_add_result('myseries', myseries, comment='dd')
+        traj.f_add_result('mypanel', mypanel, comment='dd')
+        #traj.f_add_result('mypanel4d', p4d, comment='dd')
+
         traj.f_get('DictsNFrame').f_set(myframe)
 
         traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2).v_comment='test'

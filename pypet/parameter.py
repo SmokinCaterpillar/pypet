@@ -70,7 +70,7 @@ import pickletools
 
 import numpy as np
 import scipy.sparse as spsp
-from pandas import DataFrame
+from pandas import DataFrame, Series, Panel, Panel4D
 
 from pypet import pypetconstants
 from pypet.naturalnaming import NNLeafNode
@@ -2110,7 +2110,9 @@ class Result(BaseResult):
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
-        return type(item) in ((np.ndarray,ObjectTable,DataFrame,dict,tuple,list,np.matrix)+
+        return type(item) in ((np.ndarray, ObjectTable,
+                               DataFrame, Series, Panel, Panel4D,
+                               dict, tuple, list, np.matrix) +
                              pypetconstants.PARAMETER_SUPPORTED_DATA)
 
 

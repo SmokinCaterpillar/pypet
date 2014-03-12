@@ -14,7 +14,7 @@ import os
 import collections
 
 import numpy as np
-from pandas import DataFrame, read_hdf
+from pandas import DataFrame, read_hdf, Series, Panel, Panel4D
 
 from pypet import pypetconstants
 import pypet.pypetexceptions as pex
@@ -320,6 +320,13 @@ class HDF5StorageService(StorageService):
 
     '''
 
+    SERIES = 'SERIES'
+    ''' Store data as pandas Series '''
+
+    PANEL = 'PANEL'
+    ''' Store data as pandas Panel(4D) '''
+
+
     TYPE_FLAG_MAPPING = {
 
         ObjectTable : TABLE,
@@ -328,8 +335,10 @@ class HDF5StorageService(StorageService):
         dict: DICT,
         np.ndarray:CARRAY,
         np.matrix:CARRAY,
-        DataFrame : FRAME
-
+        DataFrame : FRAME,
+        Series : SERIES,
+        Panel : PANEL,
+        Panel4D : PANEL
     }
     ''' Mapping from object type to storage flag'''
 
@@ -3360,13 +3369,17 @@ class HDF5StorageService(StorageService):
                                    (key, fullname))
                 continue
             elif store_flags[key] == HDF5StorageService.DICT:
-                self._prm_store_dict_as_table(msg,key, data_to_store, _hdf5_group, fullname)
+                self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.ARRAY:
-                self._prm_store_into_array(msg,key, data_to_store, _hdf5_group, fullname)
+                self._prm_store_into_array(msg, key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.CARRAY:
-                self._prm_store_into_carray(msg,key, data_to_store, _hdf5_group, fullname)
+                self._prm_store_into_carray(msg, key, data_to_store, _hdf5_group, fullname)
             elif store_flags[key] == HDF5StorageService.FRAME:
-                self._prm_store_data_frame(msg,key, data_to_store, _hdf5_group, fullname)
+                self._prm_store_data_frame(msg, key, data_to_store, _hdf5_group, fullname)
+            elif store_flags[key] == HDF5StorageService.SERIES:
+                self._prm_store_series(msg ,key, data_to_store, _hdf5_group, fullname)
+            elif store_flags[key] == HDF5StorageService.PANEL:
+                self._prm_store_panel(msg ,key, data_to_store, _hdf5_group, fullname)
             else:
                 raise RuntimeError('You shall not pass!')
 
@@ -3426,6 +3439,99 @@ class HDF5StorageService(StorageService):
         self._hdf5file.flush()
 
 
+    def _prm_store_series(self, msg, key, data, group, fullname):
+        """Stores a pandas Series into hdf5.
+
+        :param msg:
+
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            DataFrame to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
+        try:
+
+            if key in group:
+                raise ValueError('Series `%s` already exists in `%s`. Appending is not supported (yet).')
+
+
+            name = group._v_pathname+'/' +key
+            data.to_hdf(self._filename, name,
+                        complevel=self._complevel,
+                        complib=self._complib)
+
+            try:
+                frame_group = group._f_get_child(key)
+            except AttributeError:
+                frame_group = group._f_getChild(key)
+
+            setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing Series `%s` of `%s`.' %(key,fullname))
+            raise
+
+    def _prm_store_panel(self, msg, key, data, group, fullname):
+        """Stores a pandas Panel into hdf5.
+
+        :param msg:
+
+            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            DataFrame to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
+        try:
+
+            if key in group:
+                raise ValueError('Series `%s` already exists in `%s`. Appending is not supported (yet).')
+
+
+            name = group._v_pathname+'/' +key
+            data.to_hdf(self._filename,
+                        name,
+                        append= True,
+                        complevel=self._complevel,
+                        complib=self._complib)
+
+            try:
+                frame_group = group._f_get_child(key)
+            except AttributeError:
+                frame_group = group._f_getChild(key)
+
+            setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing Series `%s` of `%s`.' %(key,fullname))
+            raise
 
     def _prm_store_data_frame(self, msg,  key, data, group, fullname):
         """Stores a pandas DataFrame into hdf5.
@@ -3458,7 +3564,7 @@ class HDF5StorageService(StorageService):
 
 
             name = group._v_pathname+'/' +key
-            data.to_hdf(self._filename, name, append=True,data_columns=True,
+            data.to_hdf(self._filename, name, append=True, data_columns=True,
                         expected_rows=data.shape[0], complevel=self._complevel,
                         complib=self._complib)
 
@@ -3864,8 +3970,10 @@ class HDF5StorageService(StorageService):
                 self._prm_read_table(node, load_dict, full_name)
             elif load_type in [HDF5StorageService.ARRAY, HDF5StorageService.CARRAY]:
                 self._prm_read_array(node, load_dict, full_name)
-            elif load_type == HDF5StorageService.FRAME:
-                self._prm_read_frame(node, load_dict,full_name)
+            elif load_type in [HDF5StorageService.FRAME,
+                               HDF5StorageService.SERIES,
+                               HDF5StorageService.PANEL]:
+                self._prm_read_pandas(node, load_dict,full_name)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
                                              'structure of %s [%s].' %
@@ -3919,7 +4027,7 @@ class HDF5StorageService(StorageService):
             raise
 
 
-    def _prm_read_frame(self,pd_node,load_dict, full_name):
+    def _prm_read_pandas(self,pd_node, load_dict, full_name):
         """Reads a DataFrame from dis.
 
         :param pd_node:
@@ -3938,8 +4046,8 @@ class HDF5StorageService(StorageService):
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
-            dataframe = read_hdf(self._filename,pathname,mode='a')
-            load_dict[name] = dataframe
+            pandas_data = read_hdf(self._filename, pathname, mode='a')
+            load_dict[name] = pandas_data
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))
             raise

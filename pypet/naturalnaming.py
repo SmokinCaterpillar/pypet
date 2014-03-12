@@ -1014,7 +1014,7 @@ class NaturalNamingInterface(object):
             where = name.split('.')[0]
             if where == 'overview':
                 raise ValueError(
-                    'Sorry, you are not allowd to have an `overview` subtree directly under '
+                    'Sorry, you are not allowed to have an `overview` subtree directly under '
                     'the root node.')
         else:
             where = start_node._subtree
@@ -1803,7 +1803,7 @@ class NaturalNamingInterface(object):
 
         return self._backwards_search(node, name.split('.'))
 
-    def _check_flat_dicts(self, node, split_name, fast_access):
+    def _check_flat_dicts(self, node, split_name):
 
         # Check in O(d) first if a full parameter/result name is given and
         # we might be able to find it in the flat storage dictionary or the group dictionary.
@@ -1859,7 +1859,6 @@ class NaturalNamingInterface(object):
         """
 
         split_name = name.split('.')
-        result = None
 
         ## Rename shortcuts and check keys:
         for idx, key in enumerate(split_name):
@@ -1882,7 +1881,7 @@ class NaturalNamingInterface(object):
 
         else:
 
-            result = self._check_flat_dicts(node, split_name, fast_access)
+            result = self._check_flat_dicts(node, split_name)
 
             if result is None:
 
@@ -1901,17 +1900,16 @@ class NaturalNamingInterface(object):
                                                      % (name, result_list[0].v_full_name,
                                                         result_list[1].v_full_name, len(result_list)))
                 else:
-                    # If first item is a child, we can skip one step of search
-                    if first in node._children:
-                        result = node._children[first]
-                        del split_name[0]
+                    # # If first item is a child, we can skip one step of search
+                    # if first in node._children:
+                    #     result = node._children[first]
+                    #     del split_name[0]
 
                     # Check in O(N) with `N` number of groups and nodes
                     # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].
                     # If `check_uniqueness=True`, search is slower since the full tree
                     # is searched and we always need O(N).
-                    if result is None:
-                        result = node
+                    result = node
                     for key in split_name:
                         result = self._search(result, key, check_uniqueness, search_strategy)
 
@@ -2005,7 +2003,7 @@ class NNGroupNode(NNTreeNode):
 
         return self._nn_interface._add_generic(self, type_name=GROUP,
                                                group_type_name=GROUP,
-                                               args=(name, comment), kwargs={})
+                                               args=(name, comment), kwargs={}, add_prefix=False)
 
     def f_add_leaf(self, *args, **kwargs):
         """Adds an empty generic leaf under the current node.
