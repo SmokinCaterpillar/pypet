@@ -1511,6 +1511,8 @@ class HDF5StorageService(StorageService):
         # Loads meta data like the name, timestamps etc.
         self._trj_load_meta_data(traj,as_new,force)
 
+        self._logger.info('Loading trajectory `%s`.' % traj.v_name)
+
         # Load the annotations in case they have not been loaded before
         if traj.v_annotations.f_is_empty():
             self._ann_load_annotations(traj, self._trajectory_group)
