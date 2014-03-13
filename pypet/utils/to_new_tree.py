@@ -135,7 +135,7 @@ if __name__ == '__main__':
     for opt, arg in opt_list:
         if opt == '-b':
             backup = True
-            print 'I will keep all files.'
+            print 'I will make a backup.'
 
         if opt == '--filename':
             filename = arg

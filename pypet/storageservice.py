@@ -1520,6 +1520,9 @@ class HDF5StorageService(StorageService):
         except AttributeError:
             nodes_iterator = self._trajectory_group._f_iterNodes()
 
+        maximum_display_other = 10
+        counter = 0
+
         for hdf5group in nodes_iterator:
 
             what = hdf5group._v_name
@@ -1536,6 +1539,7 @@ class HDF5StorageService(StorageService):
             elif what == 'overview':
                 continue
             else:
+                loading = load_other_data
                 load_subbranch = False
 
             if load_subbranch:
@@ -1546,10 +1550,21 @@ class HDF5StorageService(StorageService):
 
                 # Load the subbranches recursively
                 if loading != pypetconstants.LOAD_NOTHING:
+                    self._logger.info('Loading subtree `%s` in mode `%s`.' % (what, str(loading)))
                     self._trj_load_sub_branch(traj, traj, what, self._trajectory_group, loading)
             else:
 
-                self._tree_load_recursively(traj, traj, hdf5group, load_other_data)
+                if loading != pypetconstants.LOAD_NOTHING:
+                    counter += 1
+                    if counter <= maximum_display_other:
+                        self._logger.info('Loading subtree/node `%s`.' % (what, str(loading)))
+                        if counter == maximum_display_other:
+                            self._logger.info('To many subtrees or nodes at root for display. '
+                                              'I will not inform you about loading anymore. '
+                                              'Subtrees are loaded silently in the background.'
+                                              'Do not worry, I will not freeze! Pinky promise!!!')
+
+                    self._tree_load_recursively(traj, traj, hdf5group, loading)
 
     def _trj_load_meta_data(self,traj, as_new, force):
         """Loads meta information about the trajectory
@@ -2063,6 +2078,9 @@ class HDF5StorageService(StorageService):
         :param recursive: Whether loading recursively below hdf5group
 
         """
+        if load_data == pypetconstants.LOAD_NOTHING:
+            return
+
         path_name = parent_traj_node.v_full_name
         name = hdf5group._v_name
         is_leaf = self._all_get_from_attrs(hdf5group,HDF5StorageService.LEAF)
