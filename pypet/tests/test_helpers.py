@@ -182,7 +182,8 @@ def add_params(traj,param_dict):
     traj.derived_parameters.f_add_leaf('Test2', 42, comment='sfsdf')
     traj.par.f_add_leaf('er.Test3', 42, comment='sdfds')
 
-    traj.f_add_leaf('hddhshdsds', 42, comment='f')
+    for irun in range(13):
+        traj.f_add_leaf('testleaf%d' % irun, 42, comment='f')
 
     traj.par.f_add_group('Empty', comment='Notting!')
 

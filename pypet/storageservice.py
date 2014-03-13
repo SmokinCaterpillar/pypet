@@ -1559,7 +1559,7 @@ class HDF5StorageService(StorageService):
                 if loading != pypetconstants.LOAD_NOTHING:
                     counter += 1
                     if counter <= maximum_display_other:
-                        self._logger.info('Loading subtree/node `%s`.' % (what, str(loading)))
+                        self._logger.info('Loading subtree/node `%s` in mode `%s`.' % (what, str(loading)))
                         if counter == maximum_display_other:
                             self._logger.info('To many subtrees or nodes at root for display. '
                                               'I will not inform you about loading anymore. '
