@@ -2840,19 +2840,21 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             Set this to True if the trajectory has been stored with the new name at the new file before
             and you just want to "switch back" to the location. If you migrate to a store used
             before and you do not set `in_store=True`, the storage service will throw a RuntimeError
+            in case you store the Trajectory
             because it will assume that you try to store a new trajectory that accidentally has
-            the very same name as another trajectory.
+            the very same name as another trajectory. If set to `True` and trajectory is not found
+            in the file, the trajectory is simply stored to the file.
 
         """
 
-        if new_name is None and new_filename is None:
-            raise ValueError('Calling `f_migrate` without changing at least one thing makes no sense.')
-
-        if new_name is not None and new_name == self._name:
-            raise ValueError('New name must differ from old one.')
-
-        if new_filename is not None and new_filename == self._filename:
-            raise ValueError('New filename must differ from old one.')
+        # if new_name is None and new_filename is None:
+        #     raise ValueError('Calling `f_migrate` without changing at least one thing makes no sense.')
+        #
+        # if new_name is not None and new_name == self._name:
+        #     raise ValueError('New name must differ from old one.')
+        #
+        # if new_filename is not None and new_filename == self._filename:
+        #     raise ValueError('New filename must differ from old one.')
 
         if new_name is not None:
             self._name = new_name
