@@ -923,7 +923,7 @@ class HDF5StorageService(StorageService):
                     # supported, so we need to open in 'a' mode
                     mode = 'a'
                     if not os.path.isfile(self._filename):
-                        raise ValueError('Filename ' + self._filename + ' does not exist.')
+                        raise ValueError('File `' + self._filename + '` does not exist.')
 
                     try:
                         self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
