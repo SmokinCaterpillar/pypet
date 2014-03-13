@@ -1763,23 +1763,33 @@ class NaturalNamingInterface(object):
                     reduced_candidate_name = candidate_name[len(parent_full_name) + 1:]
                 else:
                     reduced_candidate_name = candidate_name
-                candidate_split_name = reduced_candidate_name.split('.')
-                count = 0
+
+
 
                 if len(split_name)==1:
                     result_list.append(candidate_dict[candidate_name])
                 else:
-                    candidate_length = len(candidate_split_name)
-                    for idx in xrange(candidate_length):
-
-                        if idx + split_length - count > candidate_length:
+                    candidate_split_name = reduced_candidate_name.split('.')
+                    candidate_set = set(candidate_split_name)
+                    climbing = True
+                    for name in split_name:
+                        if not name in candidate_set:
+                            climbing = False
                             break
 
-                        if  split_name[count] == candidate_split_name[idx]:
-                            count += 1
-                            if count == len(split_name):
-                                result_list.append(candidate_dict[candidate_name])
+                    if climbing:
+                        count = 0
+                        candidate_length = len(candidate_split_name)
+                        for idx in xrange(candidate_length):
+
+                            if idx + split_length - count > candidate_length:
                                 break
+
+                            if  split_name[count] == candidate_split_name[idx]:
+                                count += 1
+                                if count == len(split_name):
+                                    result_list.append(candidate_dict[candidate_name])
+                                    break
 
         return result_list
 
