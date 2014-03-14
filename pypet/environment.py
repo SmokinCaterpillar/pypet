@@ -600,7 +600,9 @@ class Environment(object):
         if log_level is not None:
             log_path = os.path.join(log_folder,self._traj.v_name)
             # Create the loggers
-            self._make_logger(log_path, log_level)
+            self._make_logging_handlers(log_path, log_level)
+
+        self._logger = logging.getLogger('Environment')
 
         self._log_path = log_path
 
@@ -731,7 +733,7 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-    def _make_logger(self, log_path, log_level):
+    def _make_logging_handlers(self, log_path, log_level):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
@@ -765,7 +767,8 @@ class Environment(object):
 
         for handler in root.handlers:
             handler.setFormatter(f)
-        self._logger = logging.getLogger('Environment')
+
+
 
 
     @deprecated('Please use assignment in environment constructor.')
