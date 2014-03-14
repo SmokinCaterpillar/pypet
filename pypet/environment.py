@@ -82,7 +82,7 @@ def _single_run(args):
         root = logging.getLogger()
         idx = traj.v_idx
 
-        if multiproc:
+        if multiproc and log_path is not None:
 
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-','_')
@@ -210,7 +210,8 @@ class Environment(object):
 
     :param log_level:
 
-        The log level, default is `logging.INFO`,
+        The log level, default is `logging.INFO`, If you want to disable logging, simply set
+        `log_level = None` and `log_folder=None`.
 
     :param multiproc:
 
@@ -584,11 +585,15 @@ class Environment(object):
         self._traj._environment_name=self._name
 
         # If no log folder is provided, create the default log folder
-        if log_folder is None:
-            log_folder = os.path.join(os.getcwd(), 'logs')
+        if log_level is not None:
+            if log_folder is None:
+                log_folder = os.path.join(os.getcwd(), 'logs')
+        else:
+            log_path = None
 
         # The actual log folder is a sub-folder with the trajectory name
-        log_path = os.path.join(log_folder,self._traj.v_name)
+        if log_level is not None:
+            log_path = os.path.join(log_folder,self._traj.v_name)
         self._log_path = log_path
 
 
@@ -723,7 +728,7 @@ class Environment(object):
     def _make_logger(self,log_path, log_level):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
-        if not os.path.isdir(log_path):
+        if log_path is not None and not os.path.isdir(log_path):
             os.makedirs(log_path)
 
         # Check if there already exist logging handlers, if so, we assume the user
@@ -731,25 +736,26 @@ class Environment(object):
         if len(logging.getLogger().handlers)==0:
             logging.basicConfig(level=log_level)
 
-        # Add a handler for storing everything to a text file
-        f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h=logging.FileHandler(filename=log_path+'/main.txt')
-        root = logging.getLogger()
-        root.addHandler(h)
+        if log_path is not None:
+            # Add a handler for storing everything to a text file
+            f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+            h=logging.FileHandler(filename=log_path+'/main.txt')
+            root = logging.getLogger()
+            root.addHandler(h)
 
-        # Add a handler for storing warnings and errors to a text file
-        h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
-        h.setLevel(logging.WARNING)
-        root = logging.getLogger()
-        root.addHandler(h)
+            # Add a handler for storing warnings and errors to a text file
+            h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
+            h.setLevel(logging.WARNING)
+            root = logging.getLogger()
+            root.addHandler(h)
 
 
-        # Also copy standard out and error to the log files
-        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-        sys.stdout = outstl
+            # Also copy standard out and error to the log files
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
 
-        errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-        sys.stderr = errstl
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
 
         for handler in root.handlers:
             handler.setFormatter(f)
