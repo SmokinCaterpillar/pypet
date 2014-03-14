@@ -35,3 +35,9 @@ What should I do?
 **Q:**  I am still using the old tree structure how can I update my hdf5files to the new one?
 
     **A:** See :ref:`tree-migrating`
+
+**Q:**  If I create and environment in an *IPython* console everything becomes gibberish!?
+
+    **A:** Pypet will redirect stdout and stderror to files. Unfortunately, this messes with
+    the *IPython* console. To avoid this simply disable logging by setting the
+    `log_level` to `None`: ``env = Environment( ..., log_level=None, ...)``.

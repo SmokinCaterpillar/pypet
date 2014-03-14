@@ -837,6 +837,7 @@ class HDF5StorageService(StorageService):
 
         """
         new_filters = False
+
         if 'config.hdf5.complevel' in traj:
             self._complevel = traj.f_get('config.hdf5.complevel').f_get()
             new_filters = True
@@ -1933,11 +1934,6 @@ class HDF5StorageService(StorageService):
             self._purge_duplicate_comments=True
 
         self._srcv_check_hdf_properties(traj)
-
-        if new_filters:
-            self._filters = pt.Filters(complevel=self._complevel,
-                                   complib=self._complib,
-                                   fletcher32=self._fletcher32)
 
         # Store meta information
         self._trj_store_meta_data(traj)
