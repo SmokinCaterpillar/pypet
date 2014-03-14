@@ -62,7 +62,10 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.FloatParam=4.0
 
-        self.traj.f_explore({'FloatParam':[1.0,1.1,1.2,1.3]})
+
+        self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
+
+        self.traj.f_explore(self.explore_dict)
 
         self.assertTrue(len(self.traj) == 4)
 
@@ -242,22 +245,22 @@ class TrajectoryTest(unittest.TestCase):
         ################### Explored Parameters #######################
 
 
-        #We need to unlock the parameter because we have accessed it above
-        self.traj.f_get('yve').f_unlock()
-        explore_dict = {'yve':[4,5,65,66]}
+        # #We need to unlock the parameter because we have accessed it above
+        # self.traj.f_get('yve').f_unlock()
+        # explore_dict = {'yve':[4,5,65,66]}
 
-        # We can add to existing explored parameters if we match the length
-        self.traj.f_explore(explore_dict)
+        # # We can add to existing explored parameters if we match the length
+        # self.traj.f_expand(explore_dict)
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=False)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=True)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
@@ -266,7 +269,7 @@ class TrajectoryTest(unittest.TestCase):
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=True, fast_access=True)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key,fast_access=True),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
@@ -447,6 +450,28 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('crun',22)
 
 
+    def test_max_depth(self):
+        self.traj.f_add_parameter('halo.this.is.a.depth.testrr')
+
+        contains = self.traj.f_contains('a.depth.testrr', max_depth=3)
+
+        self.assertFalse(contains)
+
+        contains = self.traj.par.f_contains('halo.this.is.a.depth.testrr', shortcuts=False)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('halo.this.depth.testrr', shortcuts=True)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('testrr', shortcuts=True)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('testrr', max_depth=5)
+
+        self.assertFalse(contains)
 
     def test_attribute_error_raises_when_leaf_and_group_with_same_name_are_added(self):
 

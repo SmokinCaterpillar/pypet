@@ -1432,7 +1432,7 @@ class NaturalNamingInterface(object):
             return data
 
 
-    def _iter_nodes(self, node, recursive=False, search_strategy=pypetconstants.BFS):
+    def _iter_nodes(self, node, recursive=False, search_strategy=pypetconstants.BFS, total_depth=float('inf')):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1447,6 +1447,10 @@ class NaturalNamingInterface(object):
 
             Breadth first search or depth first search
 
+        :param max_depth:
+
+            Maximum depth to search for
+
         :return: Iterator
 
         """
@@ -1454,9 +1458,9 @@ class NaturalNamingInterface(object):
 
         if recursive:
             if search_strategy == pypetconstants.BFS:
-                return NaturalNamingInterface._recursive_traversal_bfs(node, as_run)
+                return NaturalNamingInterface._recursive_traversal_bfs(node, as_run, total_depth)
             elif search_strategy == pypetconstants.DFS:
-                return NaturalNamingInterface._recursive_traversal_dfs(node, as_run)
+                return NaturalNamingInterface._recursive_traversal_dfs(node, as_run, total_depth)
             else:
                 raise ValueError('Your search method is not understood!')
         else:
@@ -1548,7 +1552,7 @@ class NaturalNamingInterface(object):
             return node._children.itervalues()
 
     @staticmethod
-    def _recursive_traversal_bfs(node, run_name=None):
+    def _recursive_traversal_bfs(node, run_name=None, total_depth=float('inf')):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
@@ -1566,7 +1570,7 @@ class NaturalNamingInterface(object):
                 else:
                     yield item
 
-                if not item._leaf:
+                if not item._leaf and item._depth < total_depth:
                     queue = itools.chain(queue,
                                          NaturalNamingInterface._make_child_iterator(item,
                                                                                      run_name))
@@ -1575,14 +1579,14 @@ class NaturalNamingInterface(object):
 
 
     @staticmethod
-    def _recursive_traversal_dfs(node, run_name=None):
+    def _recursive_traversal_dfs(node, run_name=None, total_depth=float('inf')):
         """Iterator function traversing the tree below `node` in depth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
         blinded out.
 
         """
-        if not node._leaf:
+        if not node._leaf and node._depth < total_depth:
             for child in NaturalNamingInterface._make_child_iterator(node, run_name):
                 yield child
                 for new_node in NaturalNamingInterface._recursive_traversal_dfs(child, run_name):
@@ -1609,7 +1613,7 @@ class NaturalNamingInterface(object):
             return ChainMap(temp_dict, temp_dict2)
 
 
-    def _very_fast_search(self, node, key, as_run):
+    def _very_fast_search(self, node, key, as_run, total_depth = float('inf')):
         """Fast search for a node in the tree.
 
         The tree is not traversed but the reference dictionaries are searched.
@@ -1662,7 +1666,9 @@ class NaturalNamingInterface(object):
                                                  'second `%s`'
                                                  % (key, goal_name, result_node.v_full_name))
 
-                result_node = candidate_dict[goal_name]
+                candidate = candidate_dict[goal_name]
+                if candidate._depth <= total_depth:
+                    result_node = candidate_dict[goal_name]
 
         return result_node
 
@@ -1673,7 +1679,7 @@ class NaturalNamingInterface(object):
         else:
             return None
 
-    def _search(self, node, key, check_uniqueness, search_strategy):
+    def _search(self, node, key, check_uniqueness, search_strategy, max_depth=float('inf')):
         """ Searches for an item in the tree below `node`
 
         :param node:
@@ -1692,14 +1698,21 @@ class NaturalNamingInterface(object):
 
             BFS or DFS
 
+        :param max_depth:
+
+            maximum search depth.
+
         :return: The found node
 
         """
         as_run = self._get_as_run()
 
+
+        total_depth = node._depth + max_depth
+
         # First the very fast search is tried that does not need tree traversal.
         try:
-            return self._very_fast_search(node, key, as_run)
+            return self._very_fast_search(node, key, as_run, total_depth)
         except pex.TooManyGroupsError:
             pass
         except pex.NotUniqueNodeError:
@@ -1710,7 +1723,8 @@ class NaturalNamingInterface(object):
 
         # Slowly traverse the entire tree
         nodes_iterator = self._iter_nodes(node, recursive=True,
-                                          search_strategy=search_strategy)
+                                          search_strategy=search_strategy,
+                                          total_depth = total_depth)
         result_node = None
         for child in nodes_iterator:
             if key == child.v_name:
@@ -1732,7 +1746,7 @@ class NaturalNamingInterface(object):
         return result_node
 
 
-    def _backwards_search(self, start_node, split_name):
+    def _backwards_search(self, start_node, split_name, max_depth = float('inf')):
         """ Performs a backwards search from the terminal node back to the start node
 
         :param start_node:
@@ -1743,6 +1757,10 @@ class NaturalNamingInterface(object):
         :param split_name:
 
             List of node names that must exist on the path from split_name[-1] back to start node.
+
+        :param max_depth:
+
+            Maximum search depth where to look for
 
         :return:
         """
@@ -1764,12 +1782,15 @@ class NaturalNamingInterface(object):
                 else:
                     reduced_candidate_name = candidate_name
 
+                candidate_split_name = reduced_candidate_name.split('.')
 
+                if len(candidate_split_name) > max_depth:
+                        break
 
                 if len(split_name)==1:
                     result_list.append(candidate_dict[candidate_name])
                 else:
-                    candidate_split_name = reduced_candidate_name.split('.')
+
                     candidate_set = set(candidate_split_name)
                     climbing = True
                     for name in split_name:
@@ -1793,7 +1814,7 @@ class NaturalNamingInterface(object):
 
         return result_list
 
-    def _get_all(self, node, name):
+    def _get_all(self, node, name, max_depth):
         """ Searches for all occurrences of `name` under `node`.
 
         :param node:
@@ -1805,13 +1826,20 @@ class NaturalNamingInterface(object):
             Name what to look for can be longer and separated by colons, i.e.
             `mygroupA.mygroupB.myparam`.
 
+        :param max_depth:
+
+            Maximum depth to search for relative to start node.
+
         :return:
 
             List of nodes that match the name, empty list if nothing was found.
 
         """
 
-        return self._backwards_search(node, name.split('.'))
+        if max_depth is None:
+            max_depth = float('inf')
+
+        return self._backwards_search(node, name.split('.'), max_depth)
 
     def _check_flat_dicts(self, node, split_name):
 
@@ -1833,7 +1861,8 @@ class NaturalNamingInterface(object):
 
         return None
 
-    def _get(self, node, name, fast_access, check_uniqueness, backwards_search, search_strategy):
+    def _get(self, node, name, fast_access, check_uniqueness, backwards_search, search_strategy,
+             max_depth=None):
         """Searches for an item (parameter/result/group node) with the given `name`.
 
         :param node: The node below which the search is performed
@@ -1857,6 +1886,10 @@ class NaturalNamingInterface(object):
 
         :param search_strategy: The search strategy (default and recommended is BFS)
 
+        :param max_depth:
+
+            Maximum search depth relative to start node.
+
         :return:
 
             The found instance (result/parameter/group node) or if fast access is True and you
@@ -1869,6 +1902,13 @@ class NaturalNamingInterface(object):
         """
 
         split_name = name.split('.')
+
+        if max_depth is None:
+            max_depth = float('inf')
+
+        if len(split_name)> max_depth:
+            raise ValueError('Name of node to search for (%s) is longer thant the maximum depth %d' %
+                             (name, max_depth))
 
         ## Rename shortcuts and check keys:
         for idx, key in enumerate(split_name):
@@ -1897,7 +1937,7 @@ class NaturalNamingInterface(object):
 
                 if backwards_search and len(split_name) > 1:
                     ## Do backwards search if we have a colon separated name
-                    result_list = self._backwards_search(node, split_name)
+                    result_list = self._backwards_search(node, split_name, max_depth)
 
                     if len(result_list) == 0:
                         result = None
@@ -1921,7 +1961,7 @@ class NaturalNamingInterface(object):
                     # is searched and we always need O(N).
                     result = node
                     for key in split_name:
-                        result = self._search(result, key, check_uniqueness, search_strategy)
+                        result = self._search(result, key, check_uniqueness, search_strategy, max_depth)
 
         if result is None:
             raise AttributeError('The node or param/result `%s`, cannot be found under `%s`' %
@@ -2084,7 +2124,7 @@ class NNGroupNode(NNTreeNode):
                 self._nn_interface._remove_subtree(self, name)
 
 
-    def f_contains(self, item, recursive=True):
+    def f_contains(self, item, shortcuts = True, max_depth=None):
         """Checks if the node contains a specific parameter or result.
 
         It is checked if the item can be found via the
@@ -2096,11 +2136,17 @@ class NNGroupNode(NNTreeNode):
             the provided item and the found item are exactly the same instance, i.e.
             `id(item)==id(found_item)`.
 
-        :param recursive:
+        :param shortcuts:
 
-            Whether the whole sub tree under the group should be checked or only
-            its immediate children. Default is the whole sub tree.
-            If `recursive=False` you must only specify the name not the full name.
+            Shortcuts is `False` the name you supply must
+            be found in the tree WITHOUT hopping over nodes in between. If `shortcuts=False` and you supply a
+            non colon separated (short) name, than the name must be found in the immediate children
+            of your current node.  Otherwise searching via shortcuts is allowed.
+
+        :param max_depth:
+
+            If shortcuts is `True` than the maximum search depth
+            can be specified. `None` means no limit.
 
         :return: True or False
 
@@ -2109,10 +2155,19 @@ class NNGroupNode(NNTreeNode):
         # Check if an instance or a name was supplied by the user
         try:
             search_string = item.v_full_name
-            name = item.v_name
+            parent_full_name = self.v_full_name
+
+            if not search_string.startswith(parent_full_name):
+                return False
+
+
+            if parent_full_name != '':
+                search_string = search_string[len(parent_full_name) + 1:]
+            else:
+                search_string = search_string
+
         except AttributeError:
             search_string = item
-            name = item
             item = None
 
         # # If the name to search for is the full name, we need to remove the name of the parent
@@ -2123,16 +2178,22 @@ class NNGroupNode(NNTreeNode):
         # except AttributeError:
         #     return False
 
-        if recursive:
+
+        if not shortcuts:
+            split_name = search_string.split('.')
+            result = self
+            for split in split_name:
+                if split in result._children:
+                    result = result._children[split]
+                else:
+                    return False
+
+        else:
             try:
-                result = self.f_get(search_string)
+                result = self.f_get(search_string, max_depth=max_depth)
             except AttributeError:
                 return False
-        else:
-            if name in self._children:
-                result = self._children[name]
-            else:
-                return False
+
 
         if item is not None:
             return id(item) == id(result)
@@ -2207,7 +2268,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._iter_leaves(self)
 
 
-    def f_get_all(self, name):
+    def f_get_all(self, name, max_depth = None):
         """ Searches for all occurrences of `name` under `node`.
 
         :param node:
@@ -2219,15 +2280,20 @@ class NNGroupNode(NNTreeNode):
             Name of what to look for, can be separated by colons, i.e.
             `mygroupA.mygroupB.myparam`.
 
+        :param max_depth:
+
+            Maximum search depth relative to start node.
+            `None` for no limit.
+
         :return:
 
             List of nodes that match the name, empty list if nothing was found.
 
         """
-        return self._nn_interface._get_all(self, name)
+        return self._nn_interface._get_all(self, name, max_depth = max_depth)
 
     def f_get(self, name, fast_access=False, check_uniqueness=False, backwards_search=True,
-              search_strategy=pypetconstants.BFS):
+              search_strategy=pypetconstants.BFS, max_depth=None):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
@@ -2253,6 +2319,11 @@ class NNGroupNode(NNTreeNode):
             The search strategy (default and recommended is BFS) if backwards search
             is not performed.
 
+        :param max_depth:
+
+            Maximum depth (relative to start node) how search should progress in tree.
+            `None` means no depth limit.
+
         :return:
 
             The found instance (result/parameter/group node) or if fast access is True and you
@@ -2274,7 +2345,8 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._get(self, name, fast_access=fast_access,
                                        check_uniqueness=check_uniqueness,
                                        backwards_search=backwards_search,
-                                       search_strategy=search_strategy)
+                                       search_strategy=search_strategy,
+                                       max_depth = max_depth)
 
     def f_get_children(self, copy=True):
         """Returns a children dictionary.

@@ -1713,9 +1713,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        if self._stored:
-            raise TypeError('Cannot explore an already stored trajectory, please use `f_expand` '
-                            ' instead.')
+        if len(self._explored_parameters)>0:
+            raise TypeError('Cannot explore an already explored trajectory, '
+                            'please use `f_expand` instead.')
 
         count = 0
         for key, builditerable in build_dict.items():
