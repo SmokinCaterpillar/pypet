@@ -2025,8 +2025,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 backup_filename = None,
                 move_nodes=False,
                 delete_other_trajectory=False,
-                merge_config=True,
                 keep_info = True,
+                merge_config=True,
                 keep_other_trajectory_info=True):
         """Merges another trajectory into the current trajectory.
 
@@ -2083,16 +2083,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             you have chosen to `move_nodes`. Why would do you want to expensively copy
             data before and than erase it?
 
-        :param merge_config:
-
-            Whether or not to merge all config parameters under `.config.git`,
-            `.config.environment`, and `.config.merge` of the other trajectory
-            into the current one.
-
         :param keep_info:
 
             If `True`, information about the merge is added to the trajectory `config` tree under
             `config.merge`.
+
+        :param merge_config:
+
+            Whether or not to merge all config parameters under `.config.git`,
+            `.config.environment`, and `.config.merge` of the other trajectory
+            into the current one. Setting onyl relevant if `keep_info=True`.
 
         :param keep_other_trajectory_info:
 
@@ -2219,10 +2219,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         used_runs, changed_parameters = self._merge_parameters(other_trajectory, remove_duplicates,
                                                                trial_parameter,
                                                                ignore_trajectory_derived_parameters)
-
-        config_name='merge.%s.merged_runs' % merge_name
-        self.f_add_config(config_name, int(np.sum(used_runs)),
-                              comment ='Number of merged runs')
+        if keep_info:
+            config_name='merge.%s.merged_runs' % merge_name
+            self.f_add_config(config_name, int(np.sum(used_runs)),
+                                  comment ='Number of merged runs')
 
         if np.all(used_runs == 0):
             raise ValueError('Your merge discards all runs of the other trajectory, maybe you '
@@ -2285,7 +2285,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
         # Finally we will merge the git commits and other config data
-        if merge_config:
+        if merge_config and keep_info:
             self._merge_config(other_trajectory)
 
         # Write the meta data about the merge to disk
