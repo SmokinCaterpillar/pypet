@@ -2026,6 +2026,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 move_nodes=False,
                 delete_other_trajectory=False,
                 merge_config=True,
+                keep_info = True,
                 keep_other_trajectory_info=True):
         """Merges another trajectory into the current trajectory.
 
@@ -2088,9 +2089,18 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             `.config.environment`, and `.config.merge` of the other trajectory
             into the current one.
 
+        :param keep_info:
+
+            If `True`, information about the merge is added to the trajectory `config` tree under
+            `config.merge`.
+
         :param keep_other_trajectory_info:
 
-            Whether to keep information like length, name, etc. of the other trajectory.
+            Whether to keep information like length, name, etc. of the other trajectory
+            in case you want to keep all the information. Setting of `keep_other_trajectory_info`
+            is irrelevant in case `keep_info=False`.
+
+
 
         If you cannot directly merge trajectories within one HDF5 file, a slow merging process
         is used. Results are loaded, stored, and emptied again one after the other. Might take
@@ -2132,75 +2142,76 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         short_hexsha= hexsha[0:7]
 
-        merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
+        if keep_info:
+            merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
 
-        config_name='merge.%s.timestamp' % merge_name
-        self.f_add_config(config_name,timestamp,
-                                    comment ='Timestamp of merge')
+            config_name='merge.%s.timestamp' % merge_name
+            self.f_add_config(config_name,timestamp,
+                                        comment ='Timestamp of merge')
 
-        config_name='merge.%s.hexsha' % merge_name
-        self.f_add_config(config_name,hexsha,
-                                    comment ='SHA-1 identifier of the merge')
-
-
-        config_name='merge.%s.remove_duplicates' % merge_name
-        self.f_add_config(config_name,remove_duplicates,
-                                    comment ='Option to remove duplicate entries')
-
-        config_name='merge.%s.ignore_trajectory_derived_parameters' % merge_name
-        self.f_add_config(config_name, ignore_trajectory_derived_parameters,
-                                    comment ='Whether or not to ignore trajectory derived'
-                                             ' parameters')
-
-        config_name='merge.%s.ignore_trajectory_results' % merge_name
-        self.f_add_config(config_name, ignore_trajectory_results,
-                                    comment ='Whether or not to ignore trajectory results')
-
-        config_name='merge.%s.length_before_merge' % merge_name
-        self.f_add_config(config_name, len(self),
-                                    comment ='Length of trajectory before merge')
-
-        self.config.merge.v_comment='Settings and information of the different merges'
-
-        if self.v_version != VERSION:
-            config_name='merge.%s.version' % merge_name
-            self.f_add_config(config_name, self.v_version,
-                                    comment ='Pypet version if it differs from the version'
-                                             ' of the trajectory')
-
-        if trial_parameter is not None:
-            config_name='merge.%s.trial_parameter' % merge_name
-            self.f_add_config(config_name,len(other_trajectory),
-                          comment ='Name of trial parameter')
-
-        if keep_other_trajectory_info:
-
-            if other_trajectory.v_version != self.v_version:
-
-                config_name='merge.%s.other_trajectory.version' % merge_name
-                self.f_add_config(config_name,other_trajectory.v_version,
-                                    comment ='The version of pypet you used to manage the other'
-                                    ' trajectory. Only added if other trajectory\'s'
-                                    ' version differs from current trajectory version.')
-
-            config_name='merge.%s.other_trajectory.name' % merge_name
-            self.f_add_config(config_name,other_trajectory.v_name,
-                              comment ='Name of other trajectory merged into the current one')
+            config_name='merge.%s.hexsha' % merge_name
+            self.f_add_config(config_name,hexsha,
+                                        comment ='SHA-1 identifier of the merge')
 
 
-            config_name='merge.%s.other_trajectory.timestamp' % merge_name
-            self.f_add_config(config_name,other_trajectory.v_timestamp,
-                              comment ='Timestamp of creation of other trajectory merged into the'
-                                       ' current one')
+            config_name='merge.%s.remove_duplicates' % merge_name
+            self.f_add_config(config_name,remove_duplicates,
+                                        comment ='Option to remove duplicate entries')
 
-            config_name='merge.%s.other_trajectory.length' % merge_name
-            self.f_add_config(config_name,len(other_trajectory),
-                              comment ='Length of other trajectory')
+            config_name='merge.%s.ignore_trajectory_derived_parameters' % merge_name
+            self.f_add_config(config_name, ignore_trajectory_derived_parameters,
+                                        comment ='Whether or not to ignore trajectory derived'
+                                                 ' parameters')
 
-            if other_trajectory.v_comment:
-                config_name='merge.%s.other_trajectory.comment' % merge_name
-                self.f_add_config(config_name,other_trajectory.v_comment,
-                                  comment ='Comment of other trajectory')
+            config_name='merge.%s.ignore_trajectory_results' % merge_name
+            self.f_add_config(config_name, ignore_trajectory_results,
+                                        comment ='Whether or not to ignore trajectory results')
+
+            config_name='merge.%s.length_before_merge' % merge_name
+            self.f_add_config(config_name, len(self),
+                                        comment ='Length of trajectory before merge')
+
+            self.config.merge.v_comment='Settings and information of the different merges'
+
+            if self.v_version != VERSION:
+                config_name='merge.%s.version' % merge_name
+                self.f_add_config(config_name, self.v_version,
+                                        comment ='Pypet version if it differs from the version'
+                                                 ' of the trajectory')
+
+            if trial_parameter is not None:
+                config_name='merge.%s.trial_parameter' % merge_name
+                self.f_add_config(config_name,len(other_trajectory),
+                              comment ='Name of trial parameter')
+
+            if keep_other_trajectory_info:
+
+                if other_trajectory.v_version != self.v_version:
+
+                    config_name='merge.%s.other_trajectory.version' % merge_name
+                    self.f_add_config(config_name,other_trajectory.v_version,
+                                        comment ='The version of pypet you used to manage the other'
+                                        ' trajectory. Only added if other trajectory\'s'
+                                        ' version differs from current trajectory version.')
+
+                config_name='merge.%s.other_trajectory.name' % merge_name
+                self.f_add_config(config_name,other_trajectory.v_name,
+                                  comment ='Name of other trajectory merged into the current one')
+
+
+                config_name='merge.%s.other_trajectory.timestamp' % merge_name
+                self.f_add_config(config_name,other_trajectory.v_timestamp,
+                                  comment ='Timestamp of creation of other trajectory merged into the'
+                                           ' current one')
+
+                config_name='merge.%s.other_trajectory.length' % merge_name
+                self.f_add_config(config_name,len(other_trajectory),
+                                  comment ='Length of other trajectory')
+
+                if other_trajectory.v_comment:
+                    config_name='merge.%s.other_trajectory.comment' % merge_name
+                    self.f_add_config(config_name,other_trajectory.v_comment,
+                                      comment ='Comment of other trajectory')
 
         # Merge parameters and keep track which runs where used and which parameters need
         # to be updated

@@ -408,6 +408,13 @@ class Environment(object):
 
         Message passed onto git command.
 
+    :param single_runs:
+
+        Whether you intend to actually make single runs with the trajectory.
+        If you do not intend to do single runs, than set to `False` and the
+        environment won't add config information like number of processors to the
+        trajectory.
+
     :param lazy_debug:
 
         If `lazy_debug=True` and in case you debug your code (aka you use pydevd and
@@ -482,6 +489,7 @@ class Environment(object):
                  derived_parameters_per_run=0,
                  git_repository = None,
                  git_message='',
+                 do_single_runs=True,
                  lazy_debug=False):
 
 
@@ -595,27 +603,45 @@ class Environment(object):
         if self._git_repository is not None:
             self._logger.info('Made GIT commit `%s`.' % str(self._hexsha))
 
-        config_name='environment.%s.multiproc' % self.v_name
-        self._traj.f_add_config(config_name, multiproc,
-                                comment= 'Whether or not to use multiprocessing. If yes'
-                                         ' than everything must be pickable.')
+        self._do_single_runs = do_single_runs
 
-        config_name='environment.%s.use_pool' % self.v_name
-        self._traj.f_add_config(config_name, use_pool,
-                                comment='Whether to use a pool of processes or '
-                                        'spawning individual processes for each run.')
+        if self._do_single_runs:
+            config_name='environment.%s.multiproc' % self.v_name
+            self._traj.f_add_config(config_name, multiproc,
+                                    comment= 'Whether or not to use multiprocessing. If yes'
+                                             ' than everything must be pickable.')
 
-        config_name='environment.%s.ncores' % self.v_name
-        self._traj.f_add_config(config_name,ncores,
-                                comment='Number of processors in case of multiprocessing')
+            config_name='environment.%s.use_pool' % self.v_name
+            self._traj.f_add_config(config_name, use_pool,
+                                    comment='Whether to use a pool of processes or '
+                                            'spawning individual processes for each run.')
+
+            config_name='environment.%s.ncores' % self.v_name
+            self._traj.f_add_config(config_name,ncores,
+                                    comment='Number of processors in case of multiprocessing')
 
 
-        config_name='environment.%s.wrap_mode' % self.v_name
-        self._traj.f_add_config(config_name,wrap_mode,
-                                    comment ='Multiprocessing mode (if multiproc),'
-                                             ' i.e. whether to use QUEUE'
-                                             ' or LOCK or NONE'
-                                             ' for thread/process safe storing')
+            config_name='environment.%s.wrap_mode' % self.v_name
+            self._traj.f_add_config(config_name,wrap_mode,
+                                        comment ='Multiprocessing mode (if multiproc),'
+                                                 ' i.e. whether to use QUEUE'
+                                                 ' or LOCK or NONE'
+                                                 ' for thread/process safe storing')
+
+            config_name='environment.%s.continuable' % self._name
+            self._traj.f_add_config(config_name, continuable,
+                                    comment='Whether or not a continue file should'
+                                            ' be created. If yes, everything must be'
+                                            ' picklable.')
+
+            config_name='environment.%s.trajectory.name' % self.v_name
+            self._traj.f_add_config(config_name,self.v_trajectory.v_name,
+                                        comment ='Name of trajectory')
+
+            config_name='environment.%s.trajectory.timestamp' % self.v_name
+            self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+                                        comment ='Timestamp of trajectory')
+
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name,self.v_timestamp,
@@ -625,11 +651,6 @@ class Environment(object):
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment')
 
-        config_name='environment.%s.continuable' % self._name
-        self._traj.f_add_config(config_name, continuable,
-                                comment='Whether or not a continue file should'
-                                        ' be created. If yes, everything must be'
-                                        ' picklable.')
 
         if self._traj.v_version != VERSION:
             config_name='environment.%s.version' % self.v_name
@@ -637,19 +658,14 @@ class Environment(object):
                                     comment ='Pypet version if it differs from the version'
                                              ' of the trajectory')
 
-        config_name='environment.%s.trajectory.name' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_name,
-                                    comment ='Name of trajectory')
 
-        config_name='environment.%s.trajectory.timestamp' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
-                                    comment ='Timestamp of trajectory')
 
         self._traj.config.environment.v_comment='Settings for the different environments '\
                                               'used to run the experiments'
 
         # Add HDF5 config in case the user wants the standard service
-        if self._use_hdf5 and not self.v_trajectory.v_stored:
+        if (self._use_hdf5 and not self.v_trajectory.v_stored and
+                not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False)):
 
             # Print which file we use for storage
             self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
@@ -819,6 +835,10 @@ class Environment(object):
 
         """
 
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot continue a run if you did create an environment '
+                               'with `do_single_runs=False`.')
+
         # Unpack the stored data
         continue_dict = pickle.load(open(continue_file,'rb'))
         # User's job function
@@ -924,6 +944,10 @@ class Environment(object):
             `runfunc` still need to be pickled.
 
         """
+
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot make a run if you did create an environment '
+                               'with `do_single_runs=False`.')
 
         # Make some sanity checks if the user wants the standard hdf5 service.
         if self._use_hdf5:
