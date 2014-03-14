@@ -211,7 +211,12 @@ class Environment(object):
     :param log_level:
 
         The log level, default is `logging.INFO`, If you want to disable logging, simply set
-        `log_level = None` and `log_folder=None`.
+        `log_level = None`.
+
+        Note if you configured the logging module somewhere else with
+        a different log-level, the value of this `log_level` is simply ignored. Logging handlers
+        to log into files in the `log_folder` will still be generated. To strictly forbid the
+        generation of these handlers you have to choose set `log_level=None`.
 
     :param multiproc:
 
@@ -594,14 +599,15 @@ class Environment(object):
         # The actual log folder is a sub-folder with the trajectory name
         if log_level is not None:
             log_path = os.path.join(log_folder,self._traj.v_name)
+            # Create the loggers
+            self._make_logger(log_path, log_level)
+
         self._log_path = log_path
 
 
         # Whether to use a pool of processes
         self._use_pool = use_pool
 
-        # Create the loggers
-        self._make_logger(log_path, log_level)
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
@@ -725,10 +731,10 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-    def _make_logger(self,log_path, log_level):
+    def _make_logger(self, log_path, log_level):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
-        if log_path is not None and not os.path.isdir(log_path):
+        if not os.path.isdir(log_path):
             os.makedirs(log_path)
 
         # Check if there already exist logging handlers, if so, we assume the user
@@ -736,26 +742,26 @@ class Environment(object):
         if len(logging.getLogger().handlers)==0:
             logging.basicConfig(level=log_level)
 
-        if log_path is not None:
-            # Add a handler for storing everything to a text file
-            f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-            h=logging.FileHandler(filename=log_path+'/main.txt')
-            root = logging.getLogger()
-            root.addHandler(h)
 
-            # Add a handler for storing warnings and errors to a text file
-            h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
-            h.setLevel(logging.WARNING)
-            root = logging.getLogger()
-            root.addHandler(h)
+        # Add a handler for storing everything to a text file
+        f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+        h=logging.FileHandler(filename=log_path+'/main.txt')
+        root = logging.getLogger()
+        root.addHandler(h)
+
+        # Add a handler for storing warnings and errors to a text file
+        h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
+        h.setLevel(logging.WARNING)
+        root = logging.getLogger()
+        root.addHandler(h)
 
 
-            # Also copy standard out and error to the log files
-            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-            sys.stdout = outstl
+        # Also copy standard out and error to the log files
+        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+        sys.stdout = outstl
 
-            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-            sys.stderr = errstl
+        errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+        sys.stderr = errstl
 
         for handler in root.handlers:
             handler.setFormatter(f)
