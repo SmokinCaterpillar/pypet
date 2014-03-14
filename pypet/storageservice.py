@@ -21,6 +21,7 @@ import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
 from pypet.parameter import ObjectTable
 import pypet.naturalnaming as nn
+import warnings
 
 
 class MultiprocWrapper(object):
@@ -394,6 +395,11 @@ class HDF5StorageService(StorageService):
         self._filters = pt.Filters(complevel=self._complevel,
                                    complib=self._complib,
                                    fletcher32=self._fletcher32)
+
+        # We don't want the NN warnings of pytables to display because they can be
+        # annoying as hell
+        warnings.simplefilter('ignore', pt.NaturalNameWarning)
+
     @property
     def filename(self):
         """The name and path of the underlying hdf5 file."""
