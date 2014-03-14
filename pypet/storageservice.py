@@ -822,6 +822,28 @@ class HDF5StorageService(StorageService):
 
             self.load(msg,item,*args,**kwargs)
 
+    def _srcv_check_hdf_properties(self, traj):
+        """Reads out the properties for stroring new data into the hdf5file
+
+        :param traj:
+
+            The trajectory
+
+        """
+        new_filters = False
+        if 'config.hdf5.complevel' in traj:
+            self._complevel = traj.f_get('config.hdf5.complevel').f_get()
+            new_filters = True
+
+        if 'config.hdf5.complib' in traj:
+            self._complib = traj.f_get('config.hdf5.complib').f_get()
+            new_filters = True
+
+        if new_filters:
+            self._filters = pt.Filters(complevel=self._complevel,
+                                   complib=self._complib,
+                                   fletcher32=self._fletcher32)
+
     def _srvc_store_several_items(self,iterable,*args,**kwargs):
         """Stores several items from an iterable
 
@@ -1568,6 +1590,8 @@ class HDF5StorageService(StorageService):
 
                     self._tree_load_recursively(traj, traj, hdf5group, loading)
 
+        self._srcv_check_hdf_properties(traj)
+
     def _trj_load_meta_data(self,traj, as_new, force):
         """Loads meta information about the trajectory
 
@@ -1902,14 +1926,7 @@ class HDF5StorageService(StorageService):
         else:
             self._purge_duplicate_comments=True
 
-        new_filters = False
-        if 'config.hdf5.complevel' in traj:
-            self._complevel = traj.f_get('config.hdf5.complevel').f_get()
-            new_filters = True
-
-        if 'config.hdf5.complib' in traj:
-            self._complib = traj.f_get('config.hdf5.complib').f_get()
-            new_filters = True
+        self._srcv_check_hdf_properties(traj)
 
         if new_filters:
             self._filters = pt.Filters(complevel=self._complevel,
