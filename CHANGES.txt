@@ -49,6 +49,24 @@ pypet 0.1b.4
 
 *   Pandas Series and Panels are now supported, too!
 
+*   Now Pypet allows compression of HDF5 files, this can yield a massive reduction in
+    memory space.
+
+*   `tr`, `cr`, `current_run`, `param`, `dparam` are no longer supported as a shortcuts
+
+*   __getitem__ is equivalent to __getattr__
+
+*   Now one can specify a maximum depth for accessing items.
+
+*   Now one can specify if shortcuts, i.e. hopping over parts of the tree, are allowed.
+
+*   New trajectroy attributes `v_backwards_search`, `v_max_depth`, `v_shortcuts` and
+    `v_iter_recursive`. `v_iter_recursive` specifies the behavior of `__iter__`.
+
+*   `__contains__` now greps is arguments from the attributes `v_max_depth` and `v_shortcuts`.
+
+
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results
@@ -72,14 +90,7 @@ pypet 0.1b.3
 *   Every component now provides the function `set_logger` to enable logging and instantiate a
     logger for `self.logger`
 
-*   Now Pypet allows compression of HDF5 files, these can yield a massive reduction in
-    memory space.
 
-*   `tr`, `cr`, `current_run`, `param`, `dparam` are no longer supported as a shortcuts
-
-*   __getitem__ is equivalent to __getattr__
-
-*   Now can specify a maximum depth for accessing items
 
 pypet 0.1b.2
 
@@ -133,6 +144,7 @@ pypet 0.1b.2
 *   v_fast_accessible renamed to f_supports_fast_access and changed to function
 
 *   v_parameter changed to v_is_parameter
+
 
 
 pypet 0.1b.1

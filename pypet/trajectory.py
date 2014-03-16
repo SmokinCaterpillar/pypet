@@ -99,6 +99,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._check_uniqueness = parent_trajectory.v_check_uniqueness
         self._fast_access = parent_trajectory.v_fast_access
         self._backwards_search = parent_trajectory.v_backwards_search
+        self._shortcuts = parent_trajectory.v_shortcuts
+        self._iter_recursive = parent_trajectory._iter_recursive
+        self._max_depth = parent_trajectory._max_depth
 
         self._stored = False
 
@@ -216,6 +219,16 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         return self._stored
 
     @property
+    def v_shortcuts(self):
+        """Whether shortcuts are allowed if accessing data via natural naming or squared bracket indexing."""
+        return self._shortcuts
+
+    @v_shortcuts.setter
+    def v_shortcuts(self, shortcuts):
+        self._shortcuts = bool(shortcuts)
+
+
+    @property
     def v_backwards_search(self):
         """Whether to apply backwards search in the tree if one searches a branch
         with the square brackets notation `[]`.
@@ -225,6 +238,28 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     @v_backwards_search.setter
     def v_backwards_search(self, backwards_search):
         self._backwards_search = bool(backwards_search)
+
+    @property
+    def v_max_depth(self):
+        """The maximum depth the tree should be searched if shortcuts are allowed.
+
+        Set to `None` if there should be no depth limit.
+        """
+        return self._max_depth
+
+    @v_max_depth.setter
+    def v_max_depth(self, max_depth):
+        self._max_depth = max_depth
+
+    @property
+    def v_iter_recursive(self):
+        """Whether using `__iter__` should iterate only immediate children or recursively all nodes.
+        """
+        return self._iter_recursive
+
+    @v_iter_recursive.setter
+    def v_iter_recursive(self, iter_recursive):
+        self._iter_recursive = bool(iter_recursive)
 
     @property
     def v_search_strategy(self):
@@ -239,9 +274,9 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     @v_search_strategy.setter
     def v_search_strategy(self,strategy):
         """Sets the search strategy, throws ValueError if strategy is unknown."""
-        if not strategy == pypetconstants.BFS or strategy == pypetconstants.DFS:
+        if not (strategy == pypetconstants.BFS or strategy == pypetconstants.DFS):
             raise ValueError('Please use strategies %s or %s others are not supported atm.' %
-                             (pypetconstants.BFS,pypetconstants.DFS))
+                             (pypetconstants.BFS, pypetconstants.DFS))
 
         self._search_strategy = strategy
 
@@ -958,6 +993,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._check_uniqueness=False
         self._search_strategy=pypetconstants.BFS
         self._backwards_search = True
+        self._shortcuts = True
+        self._iter_recursive = False
+        self._max_depth = None
 
         self._environment_hexsha = None
         self._environment_name = None
@@ -1191,6 +1229,46 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._set_explored_parameters_to_idx(self.v_idx)
 
 
+    def f_iter_runs(self):
+        """Makes the trajectory iterate over all runs.
+
+        Note that after a full iteration, the trajectory is set back to normal.
+
+        Thus, the following code snippet
+
+        ::
+
+            for run_name in traj.f_iter_runs():
+
+                 # Do some stuff here...
+
+
+        is equivalent to
+
+        ::
+
+            for run_name in traj.f_get_run_names(sort=True):
+                traj.f_as_run(run_name)
+
+                # Do some stuff here...
+
+            traj.f_as_run(None)
+
+
+        :return:
+
+            Iterator over runs. The iterator itself will return the run names but modify
+            the trajectory in each iteration and set it back do normal in the end.
+
+
+        """
+
+        for run_name in self.f_get_run_names(sort=True):
+            self.f_as_run(run_name)
+
+            yield run_name
+
+        self.f_as_run(None)
 
     def f_idx_to_run(self, name_or_idx):
         """Converts an integer idx to the corresponding single run name and vice versa.

@@ -457,6 +457,15 @@ class NaturalNamingInterface(object):
     def _get_check_uniqueness(self):
         return self._root_instance.v_check_uniqueness
 
+    def _get_shortcuts(self):
+        return self._root_instance.v_shortcuts
+
+    def _get_max_depth(self):
+        return self._root_instance.v_max_depth
+
+    def _get_iter_recursive(self):
+        return self._root_instance.v_iter_recursive
+
 
     def _fetch_from_string(self, store_load, name, args, kwargs):
         """Method used by f_store/load/remove_items to find a corresponding item in the tree.
@@ -1862,7 +1871,7 @@ class NaturalNamingInterface(object):
         return None
 
     def _get(self, node, name, fast_access, check_uniqueness, backwards_search, search_strategy,
-             max_depth=None):
+             shortcuts, max_depth):
         """Searches for an item (parameter/result/group node) with the given `name`.
 
         :param node: The node below which the search is performed
@@ -1906,7 +1915,7 @@ class NaturalNamingInterface(object):
         if max_depth is None:
             max_depth = float('inf')
 
-        if len(split_name)> max_depth:
+        if len(split_name)> max_depth and shortcuts:
             raise ValueError('Name of node to search for (%s) is longer thant the maximum depth %d' %
                              (name, max_depth))
 
@@ -1924,44 +1933,55 @@ class NaturalNamingInterface(object):
             if not key in self._nodes_and_leaves:
                 raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
 
-        first = split_name[0]
+        if shortcuts:
+            first = split_name[0]
 
-        if len(split_name)== 1 and first in node._children:
-            result = node._children[first]
+            if len(split_name)== 1 and first in node._children:
+                result = node._children[first]
 
-        else:
+            else:
 
-            result = self._check_flat_dicts(node, split_name)
+                result = self._check_flat_dicts(node, split_name)
 
-            if result is None:
+                if result is None:
 
-                if backwards_search and len(split_name) > 1:
-                    ## Do backwards search if we have a colon separated name
-                    result_list = self._backwards_search(node, split_name, max_depth)
+                    if backwards_search and len(split_name) > 1:
+                        ## Do backwards search if we have a colon separated name
+                        result_list = self._backwards_search(node, split_name, max_depth)
 
-                    if len(result_list) == 0:
-                        result = None
-                    elif len(result_list) == 1:
-                        result = result_list.pop()
+                        if len(result_list) == 0:
+                            result = None
+                        elif len(result_list) == 1:
+                            result = result_list.pop()
+                        else:
+                            raise pex.NotUniqueNodeError('Node `%s` has been found more than once. '
+                                                         'Full name of first occurrence is `%s` '
+                                                         'and of '
+                                                         'another `%s`. In total there are %d '
+                                                         'occurrences.'
+                                                         % (name, result_list[0].v_full_name,
+                                                            result_list[1].v_full_name, len(result_list)))
                     else:
-                        raise pex.NotUniqueNodeError('Node `%s` has been found more than once. '
-                                                     'Full name of first occurrence is `%s` and of '
-                                                     'another `%s`. In total there are %d occurrences.'
-                                                     % (name, result_list[0].v_full_name,
-                                                        result_list[1].v_full_name, len(result_list)))
-                else:
-                    # # If first item is a child, we can skip one step of search
-                    # if first in node._children:
-                    #     result = node._children[first]
-                    #     del split_name[0]
+                        # # If first item is a child, we can skip one step of search
+                        # if first in node._children:
+                        #     result = node._children[first]
+                        #     del split_name[0]
 
-                    # Check in O(N) with `N` number of groups and nodes
-                    # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].
-                    # If `check_uniqueness=True`, search is slower since the full tree
-                    # is searched and we always need O(N).
-                    result = node
-                    for key in split_name:
-                        result = self._search(result, key, check_uniqueness, search_strategy, max_depth)
+                        # Check in O(N) with `N` number of groups and nodes
+                        # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].
+                        # If `check_uniqueness=True`, search is slower since the full tree
+                        # is searched and we always need O(N).
+                        result = node
+                        for key in split_name:
+                            result = self._search(result, key, check_uniqueness, search_strategy,
+                                                  max_depth)
+        else:
+            result = node
+            for name in split_name:
+                if not name in result._children:
+                    raise AttributeError('You did not allow for shortcuts and `%s` was not directly '
+                                         'found  node `%s`.' % (name, result.v_full_name))
+                result = result._children[name]
 
         if result is None:
             raise AttributeError('The node or param/result `%s`, cannot be found under `%s`' %
@@ -2001,8 +2021,14 @@ class NNGroupNode(NNTreeNode):
         return result
 
     def __iter__(self):
-        """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes(recursive=False)`."""
-        return self.f_iter_nodes(recursive=False)
+        """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes`
+
+        Whether to iterate recursively is determined by `v_iter_recursive`.
+        Search strategy is taken from `v_search_strategy`.
+
+        """
+        return self.f_iter_nodes(recursive=self._nn_interface._get_iter_recursive(),
+                                 search_strategy=self._nn_interface._get_search_strategy())
 
     def _debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
@@ -2084,7 +2110,18 @@ class NNGroupNode(NNTreeNode):
         return len(self._children) == 0
 
     def __contains__(self, item):
-        return self.f_contains(item)
+        """Equivalent to calling :func:`~pypet.naturalnaming.NNGroupNode.f_contains`.
+
+        Whether to allow shortcuts is taken from `v_shortcuts`.
+        Whether to stop at a given depth is taken from `v_max_depth`.
+        Search strategies are taken from `v_backwards_search` and `v_search_strategy`
+
+        """
+        return self.f_contains(item,
+                               backwards_search=self._nn_interface._get_backwards_search(),
+                               search_strategy=self._nn_interface._get_search_strategy(),
+                               shortcuts=self._nn_interface._get_shortcuts(),
+                               max_depth=self._nn_interface._get_max_depth())
 
     def f_remove_child(self, name, recursive=False):
         """Removes a child of the group.
@@ -2124,7 +2161,9 @@ class NNGroupNode(NNTreeNode):
                 self._nn_interface._remove_subtree(self, name)
 
 
-    def f_contains(self, item, shortcuts = True, max_depth=None):
+    def f_contains(self, item, backwards_search = True,
+                   search_strategy = pypetconstants.BFS,
+                   shortcuts = True, max_depth=None):
         """Checks if the node contains a specific parameter or result.
 
         It is checked if the item can be found via the
@@ -2135,6 +2174,14 @@ class NNGroupNode(NNTreeNode):
             If a parameter or result instance is supplied it is also checked if
             the provided item and the found item are exactly the same instance, i.e.
             `id(item)==id(found_item)`.
+
+        :param backwards_search:
+
+            If backwards search should be allowed.
+
+        :param search_strategy:
+
+            Search strategy in case backwards search is not applied.
 
         :param shortcuts:
 
@@ -2170,29 +2217,12 @@ class NNGroupNode(NNTreeNode):
             search_string = item
             item = None
 
-        # # If the name to search for is the full name, we need to remove the name of the parent
-        # # node for faster search
-        # try:
-        #     if search_string.startswith(self.v_full_name) and self.v_full_name != '':
-        #         _, _, search_string = search_string.partition(self.v_full_name)
-        # except AttributeError:
-        #     return False
-
-
-        if not shortcuts:
-            split_name = search_string.split('.')
-            result = self
-            for split in split_name:
-                if split in result._children:
-                    result = result._children[split]
-                else:
-                    return False
-
-        else:
-            try:
-                result = self.f_get(search_string, max_depth=max_depth)
-            except AttributeError:
-                return False
+        try:
+            result = self.f_get(search_string,backwards_search=backwards_search,
+                                search_strategy=search_strategy,
+                                shortcuts=shortcuts, max_depth=max_depth)
+        except AttributeError:
+            return False
 
 
         if item is not None:
@@ -2242,7 +2272,9 @@ class NNGroupNode(NNTreeNode):
                                        fast_access=self._nn_interface._get_fast_access(),
                                        check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        backwards_search=self._nn_interface._get_backwards_search(),
-                                       search_strategy=self._nn_interface._get_search_strategy())
+                                       search_strategy=self._nn_interface._get_search_strategy(),
+                                       shortcuts=self._nn_interface._get_shortcuts(),
+                                       max_depth=self._nn_interface._get_max_depth())
 
     # def __call__(self, name, fast_access=False, check_uniqueness=False,
     #              search_strategy=pypetconstants.BFS):
@@ -2293,7 +2325,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._get_all(self, name, max_depth = max_depth)
 
     def f_get(self, name, fast_access=False, check_uniqueness=False, backwards_search=True,
-              search_strategy=pypetconstants.BFS, max_depth=None):
+              search_strategy=pypetconstants.BFS, shortcuts=True, max_depth=None):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
@@ -2303,7 +2335,7 @@ class NNGroupNode(NNTreeNode):
         :param check_uniqueness:
 
             Whether it should be checked if the name unambiguously yields
-            a single result.
+            a single result. Only relevant if `shortcuts` are allowed.
 
         :param backwards_search:
 
@@ -2312,17 +2344,22 @@ class NNGroupNode(NNTreeNode):
             The starting group will look for `valD` first and try to find a way back
             and check if it passes by `groupA` and `groupC`. If full path search is active,
             the choice of search strategy is ignored  and it is always checked if the result
-            is unique.
+            is unique. Only relevant if `shortcuts` are allowed.
 
         :param search_strategy:
 
             The search strategy (default and recommended is BFS) if backwards search
-            is not performed.
+            is not performed and `shortcuts` are allowed.
+
+        :param shortcuts:
+
+            If shortcuts are allowed and the trajectory can *hop* over nodes in the
+            path.
 
         :param max_depth:
 
             Maximum depth (relative to start node) how search should progress in tree.
-            `None` means no depth limit.
+            `None` means no depth limit.  Only relevant if `shortcuts` are allowed.
 
         :return:
 
@@ -2336,7 +2373,7 @@ class NNGroupNode(NNTreeNode):
             NotUniqueNodeError
 
                 If `check_uniqueness=True` or `backwards_search` and searching `name`
-                yields more than one node
+                yields more than one node.
 
 
 
@@ -2346,7 +2383,8 @@ class NNGroupNode(NNTreeNode):
                                        check_uniqueness=check_uniqueness,
                                        backwards_search=backwards_search,
                                        search_strategy=search_strategy,
-                                       max_depth = max_depth)
+                                       shortcuts=shortcuts,
+                                       max_depth=max_depth)
 
     def f_get_children(self, copy=True):
         """Returns a children dictionary.
@@ -2387,6 +2425,11 @@ class NNGroupNode(NNTreeNode):
     def f_store_child(self, name, recursive=False):
         """Stores a child or recursively a subtree to disk.
 
+        :param name:
+
+            Name of child to store. If grouped ('groupA.groupB.childC') the path along the way
+            to last node in the chain is stored. Shortcuts are NOT allowed!
+
         :param recursive:
 
             Whether recursively all children's children should be stored too.
@@ -2394,20 +2437,27 @@ class NNGroupNode(NNTreeNode):
         :raises: ValueError if the child does not exist.
 
         """
-        if not name in self._children:
-            raise ValueError('Your group `%s` does not contain the child `%s`.' %
+        if not self.f_contains(name, shortcuts=False):
+            raise ValueError('Your group `%s` does not (directly) contain the child `%s`. '
+                             'Please not that shortcuts are not allowed for `f_store_child`.' %
                              (self.v_full_name, name))
+
 
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.store(pypetconstants.TREE, self._children[name],
+        storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_trajectory_name,
                               recursive=recursive)
 
 
-    def f_load_child(self, name, recursive=False, load_data=pypetconstants.UPDATE_DATA):
+    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
         """Loads a child or recursively a subtree from disk.
+
+        :param name:
+
+            Name of child to load. If grouped ('groupA.groupB.childC') the path along the way
+            to last node in the chain is loaded. Shortcuts are NOT allowed!
 
         :param recursive:
 

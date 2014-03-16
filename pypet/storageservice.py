@@ -1582,7 +1582,7 @@ class HDF5StorageService(StorageService):
                 # Load the subbranches recursively
                 if loading != pypetconstants.LOAD_NOTHING:
                     self._logger.info('Loading subtree `%s` in mode `%s`.' % (what, str(loading)))
-                    self._trj_load_sub_branch(traj, traj, what, self._trajectory_group, loading)
+                    self._tree_load_sub_branch(traj, traj, what, self._trajectory_group, loading)
             else:
 
                 if loading != pypetconstants.LOAD_NOTHING:
@@ -1666,7 +1666,7 @@ class HDF5StorageService(StorageService):
 
                 traj._run_information[name] = info_dict
 
-    def _trj_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data):
+    def _tree_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data, recursive=True):
         """Loads data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -1697,19 +1697,14 @@ class HDF5StorageService(StorageService):
             # First load along the branch
             hdf5_group = getattr(hdf5_group,name)
 
-            if not name in traj:
-                traj_node=traj_node.f_add_group(name)
+            self._tree_load_recursively(traj,traj_node, hdf5_group, load_data, recursive=False)
 
-            else:
-                traj_node=traj_node._children[name]
+            traj_node = traj_node._children[name]
 
-            # Load annotations if they are empty
-            if traj_node.v_annotations.f_is_empty():
-                self._ann_load_annotations(traj_node, hdf5_group)
 
         # Then load recursively all data in the last group and below
         hdf5_group = getattr(hdf5_group,final_group_name)
-        self._tree_load_recursively(traj,traj_node, hdf5_group, load_data)
+        self._tree_load_recursively(traj,traj_node, hdf5_group, load_data, recursive=recursive)
 
     def _trj_check_version( self, version, force):
         """Checks for version mismatch
@@ -1966,7 +1961,7 @@ class HDF5StorageService(StorageService):
         else:
             self._logger.info('Finished initialising the storage for `%s`.' % self._trajectory_name)
 
-    def _trj_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True):
+    def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True):
         """Stores data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -1994,60 +1989,66 @@ class HDF5StorageService(StorageService):
             # Store along a branch
             traj_node = traj_node._children[name]
 
-            if not hasattr(hdf5_group,name):
-                try:
-                    hdf5_group=self._hdf5file.create_group(where=hdf5_group,name=name)
-                except AttributeError:
-                    hdf5_group=self._hdf5file.createGroup(where=hdf5_group,name=name)
-            else:
-                hdf5_group=getattr(hdf5_group,name)
+            self._tree_store_recursively(msg,traj_node,hdf5_group, recursive=False)
 
-            self._ann_store_annotations(traj_node,hdf5_group)
+            hdf5_group=getattr(hdf5_group, name)
 
         # Store final group and recursively everything below it
         traj_node = traj_node._children[leaf_name]
-        if recursive:
-            self._tree_store_recursively(msg,traj_node,hdf5_group)
+
+        self._tree_store_recursively(msg,traj_node,hdf5_group, recursive)
 
 
     ########################  Storing and Loading Sub Trees #######################################
 
-    def _tree_store_tree(self, traj_node, recursive):
+    def _tree_store_tree(self, traj_node, child_name, recursive):
         """Stores a node and potentially recursively all nodes below
 
-        :param traj_node: Node to store
+        :param traj_node: Parent node where storing starts
+
+        :param child_name: Name of child node
 
         :param recursive: Whether to store everything below `traj_node`.
 
         """
-        location = traj_node.v_location
+        location = traj_node.v_full_name
 
         # Get parent hdf5 node
         hdf5_location = location.replace('.','/')
         try:
-            try:
-                parent_hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,
-                                                          name=hdf5_location)
-            except AttributeError:
-                parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,
-                                                          name=hdf5_location)
+            if location=='':
+                parent_hdf5_node = self._trajectory_group
+            else:
+                try:
+                    parent_hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,
+                                                              name=hdf5_location)
+                except AttributeError:
+                    parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,
+                                                              name=hdf5_location)
 
             # Store node and potentially everything below it
-            self._tree_store_recursively(pypetconstants.LEAF, traj_node, parent_hdf5_node, recursive)
+            self._tree_store_sub_branch(pypetconstants.LEAF, traj_node, child_name, parent_hdf5_node,
+                                        recursive=recursive)
 
         except pt.NoSuchNodeError:
             self._logger.warning('Cannot store `%s` the parental hdf5 node with path `%s` does '
-                               'not exist on disk! If the child you want to store is a leaf, '
-                               'please store parental node first.' %
+                               'not exist on disk! Please store parental node first.' %
                                (traj_node.v_name,hdf5_location))
 
+
             if traj_node.v_is_leaf:
+                self._logger.error('Cannot store `%s` the parental hdf5 node with path `%s` does '
+                               'not exist on disk! The child you want to store is a leaf node,'
+                               'that cannot be stored without the parental node existing on '
+                               'disk.' %
+                               (traj_node.v_name,hdf5_location))
                 raise
             else:
                 self._logger.warning('I will try to store the path from trajectory root to '
                                      'the child now.')
-                self._trj_store_sub_branch(pypetconstants.LEAF, traj_node._nn_interface._root_instance,
-                                           traj_node.v_full_name, self._trajectory_group,
+                self._tree_store_sub_branch(pypetconstants.LEAF, traj_node._nn_interface._root_instance,
+                                           traj_node.v_full_name+'.'+child_name,
+                                           self._trajectory_group,
                                            recursive=recursive)
 
 
@@ -2066,27 +2067,25 @@ class HDF5StorageService(StorageService):
         :param trajectory: The trajectory object
 
         """
-        if parent_traj_node.v_is_root:
-            full_child_name = child_name
-        else:
-            full_child_name = parent_traj_node.v_full_name+'.'+child_name
-
-        hdf5_node_name =full_child_name.replace('.','/')
+        hdf5_node_name =parent_traj_node.v_full_name.replace('.','/')
 
         # Get child node to load
-        try:
+        if hdf5_node_name == '':
+                hdf5_node = self._trajectory_group
+        else:
             try:
-                 hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,name = hdf5_node_name)
-            except AttributeError:
-                hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
-        except pt.NoSuchNodeError:
-            self._logger.error('Cannot load `%s` the hdf5 node `%s` does not exist!'
-                                % (child_name,hdf5_node_name))
+                try:
+                    hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,name = hdf5_node_name)
+                except AttributeError:
+                    hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
+            except pt.NoSuchNodeError:
+                self._logger.error('Cannot load `%s` the hdf5 node `%s` does not exist!'
+                                    % (child_name, hdf5_node_name))
+                raise
 
-            raise
+        self._tree_load_sub_branch(trajectory, parent_traj_node, child_name, hdf5_node, load_data=load_data,
+                                   recursive = recursive)
 
-        # Load data of child and potentially everything below it
-        self._tree_load_recursively(trajectory,parent_traj_node,hdf5_node,load_data,recursive)
 
     def _tree_load_recursively(self, traj, parent_traj_node, hdf5group,
                               load_data=pypetconstants.UPDATE_SKELETON, recursive=True):
@@ -2260,7 +2259,7 @@ class HDF5StorageService(StorageService):
         for branch in ('results.runs', 'derived_parameters.runs'):
             branch_name = branch +'.'+single_run.v_name
             if branch_name in single_run:
-                self._trj_store_sub_branch(pypetconstants.LEAF, single_run,
+                self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
                                            branch_name,self._trajectory_group)
 
         # Check if we want explored parameters overview tables.

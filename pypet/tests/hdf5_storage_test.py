@@ -114,10 +114,19 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load_item('testres',load_only='not-exisiting')
 
+
+
         traj2 = Trajectory(name=traj.v_name, add_time=False,
                            filename=make_temp_file('teststoreitems.hdf5'))
 
         traj2.f_load(load_results=2,load_parameters=2)
+
+        traj.f_add_result('Im.stored.along.a.path', 43)
+        traj.Im.stored.along.v_annotations['wtf'] =4444
+        traj.res.f_store_child('Im.stored.along.a.path')
+
+
+        traj2.res.f_load_child('Im.stored.along.a.path', load_data=2)
 
         self.compare_trajectories(traj,traj2)
 
@@ -623,6 +632,40 @@ class ResultSortTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
+
+    def test_f_iter_runs(self):
+
+         ###Explore
+        self.explore(self.traj)
+
+
+        self.env.f_run(multipy)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        for idx, run_name in enumerate(self.traj.f_iter_runs()):
+            newtraj.v_as_run=run_name
+            self.traj.v_as_run == run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+
+            self.assertTrue('run_%08d' % (idx+1) not in traj)
+
+            self.assertTrue(newtraj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.z),str(traj.x),str(traj.y)))
+
+        self.assertTrue(traj.v_idx == -1)
+        self.assertTrue(traj.v_as_run is None)
+        self.assertTrue(newtraj.v_idx == idx)
+
 
     def test_expand(self):
         ###Explore

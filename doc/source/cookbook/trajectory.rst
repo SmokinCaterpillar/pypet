@@ -330,8 +330,12 @@ to check for uniqueness (default `False`) can be passed as parameters.
     >>> traj.parameters.f_get('mobiles.ncars', fast_access=True)
     42
 
+If you don't want to allow this shortcutting through the tree use `f_get(target, shortcuts=False)`
+or set the trajectory attribute `v_shortcuts=False` to forbid the shortcuts for natural naming
+and *getitem* access.
 
-There also exit nice naming shortcuts for already present groups:
+There also exit nice naming shortcuts for already present groups (these are always active and
+cannot be switched off):
 
 * `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same group as `traj.par`
 
@@ -597,7 +601,8 @@ than free the result and forget about it for the rest of your simulation:
 
 Note that in order to allow storage of single items, you need to have stored the trajectory at
 least once. If you operate during a single run, this has been done before, if not,
-simply call `traj.f_store()` once before.
+simply call `traj.f_store()` once before. If you do not want to store anything but initialise
+the storage, you can pass the argument `only_init=True`, i.e. `traj.f_store(only_init=True)`.
 
 Moreover, if you call `f_empty()` on a large result, only the reference to the giant data block within
 the result is deleted. So in order to make the python garbage collector free the memory, you must

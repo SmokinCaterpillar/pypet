@@ -337,6 +337,26 @@ class TrajectoryTest(unittest.TestCase):
 
             depth_dict[node.v_depth].remove(node)
 
+
+        depth_dict = self.get_depth_dict(self.traj)
+
+        depth_dict[0] =[]
+
+        prev_depth = 0
+
+        self.traj.v_search_strategy = 'BFS'
+        self.traj.v_iter_recursive = True
+
+        for node in self.traj:
+            if prev_depth != node.v_depth:
+                self.assertEqual(len(depth_dict[prev_depth]),0)
+                prev_depth = node.v_depth
+
+            depth_dict[node.v_depth].remove(node)
+
+
+
+
     def test_iter_dfs(self):
 
         prev_node = None
@@ -344,6 +364,22 @@ class TrajectoryTest(unittest.TestCase):
         x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
 
         for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+            if not prev_node is None:
+                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+                    self.assertTrue(node.v_name in prev_node._children)
+
+            prev_node = node
+
+        prev_node = None
+
+        self.traj.v_iter_recursive=True
+        self.traj.v_search_strategy='DFS'
+
+        y = [y for y in self.traj]
+
+        self.assertEqual(x,y)
+
+        for node in self.traj:
             if not prev_node is None:
                 if not prev_node.v_is_leaf and len(prev_node._children) > 0:
                     self.assertTrue(node.v_name in prev_node._children)
@@ -469,7 +505,17 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(contains)
 
+        contains = 'testrr' in self.traj
+
+        self.assertTrue(contains)
+
         contains = self.traj.par.f_contains('testrr', max_depth=5)
+
+        self.assertFalse(contains)
+
+        self.traj.v_max_depth = 5
+
+        contains = 'testrr' in self.traj
 
         self.assertFalse(contains)
 
