@@ -802,7 +802,7 @@ class NaturalNamingInterface(object):
 
         return False
 
-    def _shortcut(self, name):
+    def _translate_into_shortcut(self, name):
         """Maps a given shortcut to corresponding name
 
         * 'run_X' or 'r_X' to 'run_XXXXXXXXX'
@@ -1287,7 +1287,7 @@ class NaturalNamingInterface(object):
             if ' ' in split_name:
                 faulty_names = '%s %s f_contains white space(s),' % (faulty_names, split_name)
 
-            if not self._shortcut(split_name) is None:
+            if not self._translate_into_shortcut(split_name) is None:
                 faulty_names = '%s %s is already an important shortcut,' % (
                     faulty_names, split_name)
 
@@ -1921,9 +1921,9 @@ class NaturalNamingInterface(object):
 
         ## Rename shortcuts and check keys:
         for idx, key in enumerate(split_name):
-            shortcut = self._shortcut(key)
-            if shortcut:
-                key = shortcut
+            translated_shortcut = self._translate_into_shortcut(key)
+            if translated_shortcut:
+                key = translated_shortcut
                 split_name[idx] = key
 
             if key[0] == '_':
