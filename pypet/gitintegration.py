@@ -52,7 +52,7 @@ def add_commit_variables(traj, commit):
 
 
 def make_git_commit(environment, git_repository, user_message):
-    """ Makes a commit returns the SHA_1 code of the commit."""
+    """ Makes a commit returns if a new commit was triggered and the SHA_1 code of the commit."""
 
     # Import GitPython, we do it here to allow also users not having GitPython installed
     # to use the normal environment
@@ -85,12 +85,14 @@ def make_git_commit(environment, git_repository, user_message):
         # Make the commit
         repo.git.add('-u')
         commit = index.commit(message)
+        new_commit = True
 
     else:
         # Take old commit
         commit = repo.commit(None)
+        new_commit = False
 
     # Add the commit info to the trajectory
     add_commit_variables(traj, commit)
 
-    return commit.hexsha
+    return new_commit, commit.hexsha

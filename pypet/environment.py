@@ -594,8 +594,8 @@ class Environment(object):
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit
         if self._git_repository is not None:
-            self._hexsha=make_git_commit(self, self._git_repository, self._git_message) # Identifier
-            # hexsha
+            new_commit, self._hexsha=make_git_commit(self, self._git_repository, self._git_message)
+            # Identifier hexsha
         else:
             # Otherwise we need to create a novel hexsha
             self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
@@ -639,7 +639,11 @@ class Environment(object):
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
         if self._git_repository is not None:
-            self._logger.info('Made GIT commit `%s`.' % str(self._hexsha))
+            if new_commit:
+                self._logger.info('Triggered NEW GIT commit `%s`.' % str(self._hexsha))
+            else:
+                self._logger.info('No changes detected, added PREVIOUS GIT commit `%s`.' %
+                                  str(self._hexsha))
 
         self._do_single_runs = do_single_runs
 
