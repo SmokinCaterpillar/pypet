@@ -65,6 +65,9 @@ pypet 0.1b.4
 
 *   `__contains__` now greps is arguments from the attributes `v_max_depth` and `v_shortcuts`.
 
+*   `log_stdout` parameter of the Environment determines if STDOUT and STDERROR will be logged
+    to files. Can be disabled to allow better usage of pypet with interactive consoles.
+
 
 
 pypet 0.1b.3

@@ -1962,10 +1962,6 @@ class NaturalNamingInterface(object):
                                                          % (name, result_list[0].v_full_name,
                                                             result_list[1].v_full_name, len(result_list)))
                     else:
-                        # # If first item is a child, we can skip one step of search
-                        # if first in node._children:
-                        #     result = node._children[first]
-                        #     del split_name[0]
 
                         # Check in O(N) with `N` number of groups and nodes
                         # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].

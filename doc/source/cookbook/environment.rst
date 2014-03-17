@@ -161,7 +161,7 @@ You can pass the following arguments:
 
     Moreover, if you use multiprocessing,
     there will be a log file for every single run and process named
-    *run_XXXXXXXX_proces_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
+    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
     id. It contains all log messages produced by the corresponding process within the single run.
 
     If you don't set a log level elsewhere before, the standard level will be *INFO*
@@ -171,7 +171,14 @@ You can pass the following arguments:
 
     Which log level message should be logged, default is `logging.INFO`. If you choose
     `logging.DEBUG` more verbose statements about storing parameters and results will be
-    displayed.
+    displayed. Set to `None` if you want to disable logging.
+
+* `log_stdout`
+
+    Whether the output of STDOUT and STDERROR should be recorded into the log files.
+    Disable if only logging statement should be recorded. Note if you work with an
+    interactive console like IPython, it is a good idea to set `log_stdout=False`
+    to avoid messing up the console output.
 
 * `use_hdf5`
 

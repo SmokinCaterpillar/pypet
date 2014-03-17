@@ -48,19 +48,21 @@ def _single_run(args):
 
         1. Path to log files
 
-        2. A queue object, only necessary in case of multiprocessing in queue mode.
+        2. Boolean whether to log stdout
 
-        3. The user's job function
+        3. A queue object, only necessary in case of multiprocessing in queue mode.
 
-        4. Number of total runs (int)
+        4. The user's job function
 
-        5. Whether to use multiprocessing
+        5. Number of total runs (int)
 
-        6. A queue object to store results into in case a pool is used, otherwise None
+        6. Whether to use multiprocessing
 
-        7. The arguments handed to the user's job function (as *args)
+        7. A queue object to store results into in case a pool is used, otherwise None
 
-        8. The keyword arguments handed to the user's job function (as **kwargs)
+        8. The arguments handed to the user's job function (as *args)
+
+        9. The keyword arguments handed to the user's job function (as **kwargs)
 
     :return: Results computed by the user's job function which are not stored into the trajectory
 
@@ -68,14 +70,15 @@ def _single_run(args):
 
     try:
         traj=args[0] 
-        log_path=args[1] 
-        queue=args[2]
-        runfunc=args[3] 
-        total_runs = args[4]
-        multiproc = args[5]
-        result_queue = args[6]
-        runparams = args[7]
-        kwrunparams = args[8]
+        log_path=args[1]
+        log_stdout = args[2]
+        queue=args[3]
+        runfunc=args[4]
+        total_runs = args[5]
+        multiproc = args[6]
+        result_queue = args[7]
+        runparams = args[8]
+        kwrunparams = args[9]
 
         use_pool = result_queue is None
 
@@ -96,12 +99,13 @@ def _single_run(args):
             handler.setFormatter(formatter)
             root.addHandler(handler)
 
-            # Also copy standard out and error to the log files
-            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-            sys.stdout = outstl
+            if log_stdout:
+                # Also copy standard out and error to the log files
+                outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+                sys.stdout = outstl
 
-            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-            sys.stderr = errstl
+                errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+                sys.stderr = errstl
 
 
         ## Add the queue for storage in case of multiprocessing in queue mode.
@@ -217,6 +221,13 @@ class Environment(object):
         a different log-level, the value of this `log_level` is simply ignored. Logging handlers
         to log into files in the `log_folder` will still be generated. To strictly forbid the
         generation of these handlers you have to choose set `log_level=None`.
+
+    :param log_stdout:
+
+        Whether the output of STDOUT and STDERROR should be recorded into the log files.
+        Disable if only logging statement should be recorded. Note if you work with an
+        interactive console like IPython, it is a good idea to set `log_stdout=False`
+        to avoid messing up the console output.
 
     :param multiproc:
 
@@ -477,6 +488,7 @@ class Environment(object):
                  dynamically_imported_classes=None,
                  log_folder=None,
                  log_level=logging.INFO,
+                 log_stdout=True,
                  multiproc=False,
                  ncores=1,
                  use_pool=True,
@@ -600,11 +612,12 @@ class Environment(object):
         if log_level is not None:
             log_path = os.path.join(log_folder,self._traj.v_name)
             # Create the loggers
-            self._make_logging_handlers(log_path, log_level)
+            self._make_logging_handlers(log_path, log_level, log_stdout)
 
         self._logger = logging.getLogger('Environment')
 
         self._log_path = log_path
+        self._log_stdout = log_stdout
 
 
         # Whether to use a pool of processes
@@ -624,22 +637,23 @@ class Environment(object):
                                     comment= 'Whether or not to use multiprocessing. If yes'
                                              ' than everything must be pickable.')
 
-            config_name='environment.%s.use_pool' % self.v_name
-            self._traj.f_add_config(config_name, use_pool,
-                                    comment='Whether to use a pool of processes or '
-                                            'spawning individual processes for each run.')
+            if self._traj.f_get('config.environment.%s.multiproc' % self.v_name):
+                config_name='environment.%s.use_pool' % self.v_name
+                self._traj.f_add_config(config_name, use_pool,
+                                        comment='Whether to use a pool of processes or '
+                                                'spawning individual processes for each run.')
 
-            config_name='environment.%s.ncores' % self.v_name
-            self._traj.f_add_config(config_name,ncores,
-                                    comment='Number of processors in case of multiprocessing')
+                config_name='environment.%s.ncores' % self.v_name
+                self._traj.f_add_config(config_name,ncores,
+                                        comment='Number of processors in case of multiprocessing')
 
 
-            config_name='environment.%s.wrap_mode' % self.v_name
-            self._traj.f_add_config(config_name,wrap_mode,
-                                        comment ='Multiprocessing mode (if multiproc),'
-                                                 ' i.e. whether to use QUEUE'
-                                                 ' or LOCK or NONE'
-                                                 ' for thread/process safe storing')
+                config_name='environment.%s.wrap_mode' % self.v_name
+                self._traj.f_add_config(config_name,wrap_mode,
+                                            comment ='Multiprocessing mode (if multiproc),'
+                                                     ' i.e. whether to use QUEUE'
+                                                     ' or LOCK or NONE'
+                                                     ' for thread/process safe storing')
 
             config_name='environment.%s.continuable' % self._name
             self._traj.f_add_config(config_name, continuable,
@@ -647,13 +661,13 @@ class Environment(object):
                                             ' be created. If yes, everything must be'
                                             ' picklable.')
 
-            config_name='environment.%s.trajectory.name' % self.v_name
-            self._traj.f_add_config(config_name,self.v_trajectory.v_name,
-                                        comment ='Name of trajectory')
+        config_name='environment.%s.trajectory.name' % self.v_name
+        self._traj.f_add_config(config_name,self.v_trajectory.v_name,
+                                    comment ='Name of trajectory')
 
-            config_name='environment.%s.trajectory.timestamp' % self.v_name
-            self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
-                                        comment ='Timestamp of trajectory')
+        config_name='environment.%s.trajectory.timestamp' % self.v_name
+        self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+                                    comment ='Timestamp of trajectory')
 
 
         config_name='environment.%s.timestamp' % self.v_name
@@ -733,7 +747,7 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-    def _make_logging_handlers(self, log_path, log_level):
+    def _make_logging_handlers(self, log_path, log_level, log_stdout):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
@@ -757,13 +771,13 @@ class Environment(object):
         root = logging.getLogger()
         root.addHandler(h)
 
+        if log_stdout:
+            # Also copy standard out and error to the log files
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
 
-        # Also copy standard out and error to the log files
-        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-        sys.stdout = outstl
-
-        errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-        sys.stderr = errstl
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
 
         for handler in root.handlers:
             handler.setFormatter(f)
@@ -1035,6 +1049,7 @@ class Environment(object):
 
         """
         log_path = self._log_path
+        log_stdout = self._log_stdout
 
         multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
 
@@ -1113,15 +1128,16 @@ class Environment(object):
                               (self._traj.v_name, ncores))
 
             # Create a generator to generate the tasks for the mp-pool
-            iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
-                         multiproc, result_queue,  args, kwargs) for n in xrange(len(self._traj))
-                                if not self._traj.f_is_completed(n))
+            iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
+                         queue, runfunc, len(self._traj),
+                         multiproc, result_queue,  args, kwargs)
+                         for n in xrange(len(self._traj)) if not self._traj.f_is_completed(n))
 
 
             if use_pool:
                 mpool = multip.Pool(ncores)
                 # Let the pool workers do their jobs provided by the generator
-                results = mpool.imap(_single_run,iterator)
+                results = mpool.imap(_single_run, iterator)
 
                 # Everything is done
                 mpool.close()
@@ -1201,9 +1217,10 @@ class Environment(object):
                               self._traj.v_name)
 
             # Sequentially run all single runs and append the results to a queue
-            results = [_single_run((self._traj._make_single_run(n),log_path,None,runfunc,
-                                    len(self._traj),multiproc, result_queue, args,kwargs)) for n in xrange(len(self._traj))
-                                    if not self._traj.f_is_completed(n)]
+            results = [_single_run((self._traj._make_single_run(n), log_path, log_stdout,
+                                    None,runfunc,
+                                    len(self._traj),multiproc, result_queue, args,kwargs)) for
+                                    n in xrange(len(self._traj)) if not self._traj.f_is_completed(n)]
 
             # Do some finalization
             self._traj._finalize()

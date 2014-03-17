@@ -38,6 +38,6 @@ What should I do?
 
 **Q:**  If I create and environment in an *IPython* console everything becomes gibberish!?
 
-    **A:** Pypet will redirect stdout and stderror to files. Unfortunately, this messes with
-    the *IPython* console. To avoid this simply disable logging by setting the
-    `log_level` to `None`: ``env = Environment( ..., log_level=None, ...)``.
+    **A:** Pypet will redirect STDOUT and STDERROR to files. Unfortunately, this messes with
+    the *IPython* console. To avoid this simply disable logging of these two streams setting the
+    `log_stdout` to `False`: ``env = Environment( ..., log_stdout=False, ...)``.
