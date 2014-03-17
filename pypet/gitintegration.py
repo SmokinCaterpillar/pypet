@@ -12,36 +12,41 @@ __author__ = 'Robert Meyer'
 
 import time
 
-def add_commit_variables(traj, new_commit, message):
+def add_commit_variables(traj, commit):
     """Adds commit information to the trajectory."""
 
-    # Namings of the config variables
-    git_hexhsa= 'hexsha'
-    git_name_rev = 'name_rev'
-    git_committed_date = 'committed_date'
-    git_message = 'message'
+    git_time_value = time.strftime('%Y_%m_%d_%Hh%Mm%Ss', time.localtime(commit.committed_date))
 
-    git_time_value = time.strftime('%Y_%m_%d_%Hh%Mm%Ss', time.localtime(new_commit.committed_date))
-
-    git_short_name = str( new_commit.hexsha[0:7])
+    git_short_name = str( commit.hexsha[0:7])
     git_commit_name = 'commit_%s_' % git_short_name
-    git_commit_name = 'git.' + git_commit_name + git_time_value +'.'
+    git_commit_name = 'git.' + git_commit_name + git_time_value
 
-    # Add the hexsha
-    traj.f_add_config(git_commit_name+git_hexhsa, new_commit.hexsha,
-                          comment='SHA-1 hash of commit')
+    if not traj.f_contains('config.'+git_commit_name, shortcuts=False):
 
-    # Add the description string
-    traj.f_add_config(git_commit_name+git_name_rev, new_commit.name_rev,
-            comment='String describing the commits hex sha based on the closest Reference')
+        git_commit_name += '.'
+        # Add the hexsha
+        traj.f_add_config(git_commit_name+'hexsha', commit.hexsha,
+                              comment='SHA-1 hash of commit')
 
-    # Add unix epoch
-    traj.f_add_config(git_commit_name+git_committed_date,
-                           new_commit.committed_date, comment='Date of commit as unix epoch seconds')
+        # Add the description string
+        traj.f_add_config(git_commit_name+'name_rev', commit.name_rev,
+                comment='String describing the commits hex sha based on the closest Reference')
 
-    # Add commit message
-    traj.f_add_config(git_commit_name+git_message, message,
-                            comment='The commit message')
+        # Add unix epoch
+        traj.f_add_config(git_commit_name+'committed_date',
+                               commit.committed_date, comment='Date of commit as unix epoch seconds')
+
+        # Add commit message
+        traj.f_add_config(git_commit_name+'message', str(commit.message),
+                                comment='The commit message')
+
+        # Add commit author
+        traj.f_add_config(git_commit_name+'committer', str(commit.committer.name),
+                          comment='The committer of the commit')
+
+        # Add author's email
+        traj.f_add_config(git_commit_name+'committer_email', str(commit.committer.email),
+                          comment='Email of committer')
 
 
 
@@ -57,6 +62,8 @@ def make_git_commit(environment, git_repository, user_message):
     repo = git.Repo(git_repository)
     index = repo.index
 
+
+
     traj = environment.v_trajectory
 
     # Create the commit message and append the trajectory name and comment
@@ -71,12 +78,19 @@ def make_git_commit(environment, git_repository, user_message):
     message = '%sTrajectory: `%s`, Time: `%s`%s' % \
               (user_message, traj.v_name, traj.v_time, commentstr)
 
+    # Detect changes:
+    diff = index.diff(None)
 
-    # Make the commit
-    repo.git.add('-u')
-    new_commit = index.commit(message)
+    if diff:
+        # Make the commit
+        repo.git.add('-u')
+        commit = index.commit(message)
+
+    else:
+        # Take old commit
+        commit = repo.commit(None)
 
     # Add the commit info to the trajectory
-    add_commit_variables(traj, new_commit, message)
+    add_commit_variables(traj, commit)
 
-    return new_commit.hexsha
+    return commit.hexsha

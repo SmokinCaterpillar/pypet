@@ -416,6 +416,8 @@ class Environment(object):
         Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
         The user can specify the commit message, see below. Note that the message
         will be augmented by the name and the comment of the trajectory.
+        A commit will only be triggered if there are changes detected within your
+        working copy.
 
         This will also add information about the revision to the trajectory, see below.
 
@@ -423,7 +425,9 @@ class Environment(object):
 
     :param git_message:
 
-        Message passed onto git command.
+        Message passed onto git command. Only relevant if a new commit is triggered.
+        If no changes are detected, the information about the previous commit and the previous
+        commit message are added to the trajectory and this user passed message is discarded.
 
     :param single_runs:
 
@@ -479,6 +483,14 @@ class Environment(object):
     * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
 
         The commit message
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committer
+
+        The committer
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committer_email
+
+        Email address of committer
 
 
     """
@@ -582,7 +594,7 @@ class Environment(object):
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit
         if self._git_repository is not None:
-            self._hexsha=make_git_commit(self,self._git_repository, self._git_message) # Identifier
+            self._hexsha=make_git_commit(self, self._git_repository, self._git_message) # Identifier
             # hexsha
         else:
             # Otherwise we need to create a novel hexsha
@@ -662,16 +674,16 @@ class Environment(object):
                                             ' picklable.')
 
         config_name='environment.%s.trajectory.name' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_name,
+        self._traj.f_add_config(config_name, self.v_trajectory.v_name,
                                     comment ='Name of trajectory')
 
         config_name='environment.%s.trajectory.timestamp' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
+        self._traj.f_add_config(config_name, self.v_trajectory.v_timestamp,
                                     comment ='Timestamp of trajectory')
 
 
         config_name='environment.%s.timestamp' % self.v_name
-        self._traj.f_add_config(config_name,self.v_timestamp,
+        self._traj.f_add_config(config_name, self.v_timestamp,
                                     comment ='Timestamp of environment creation')
 
         config_name='environment.%s.hexsha' % self.v_name

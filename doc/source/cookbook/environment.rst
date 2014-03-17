@@ -502,8 +502,10 @@ config subtree of your trajectory, so you can easily recall that commit from git
 
 The automatic commit will only commit changes in files that are currently tracked by
 your git repository, it will **NOT** add new files.
-So make sure that if you create new files you put them into your repository before running
-an experiment.
+So make sure that if you create new files to put them into your repository before running
+an experiment. Moreover, a commit will only be triggered if your working copy contains
+changes. If there are no changes detected, information about the previous commit will be
+added to the trajectory.
 
 The autocommit function is similar to calling `$ git add -u` and `$ git commit -m 'Some Message'`
 in your linux console!
