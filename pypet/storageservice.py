@@ -3361,65 +3361,74 @@ class HDF5StorageService(StorageService):
         else:
             newly_created = False
 
-        if msg == pypetconstants.UPDATE_LEAF or newly_created:
-            # If we created a new group or the parameter was extended we need to
-            # update the meta information and summary tables
-            self._prm_add_meta_info(instance,_hdf5_group,msg)
-
-        # Store annotations
-        self._ann_store_annotations(instance,_hdf5_group)
-
-        # Get the data to store from the instance
-        if not instance.f_is_empty():
-            store_dict = instance._store()
-        else: store_dict = {}
-
-        # If the user did not supply storage flags, we need to set it to the empty dictionary
-        if store_flags is None:
-            store_flags = {}
-
         try:
-            # Ask the instance for storage flags
-            instance_flags = instance._store_flags()
-        except AttributeError:
-            # If it does not provide any, set it to the empty dictionary
-            instance_flags = {}
 
-        # User specified flags have priority over the flags from the instance
-        instance_flags.update(store_flags)
-        store_flags=instance_flags
+            # Get the data to store from the instance
+            if not instance.f_is_empty():
+                store_dict = instance._store()
+            else: store_dict = {}
 
-        # If we still have data in `store_dict` about which we do not know how to store
-        # it, pick default storage flags
-        self._prm_extract_missing_flags(store_dict,store_flags)
+            # If the user did not supply storage flags, we need to set it to the empty dictionary
+            if store_flags is None:
+                store_flags = {}
 
-        for key, data_to_store in store_dict.items():
-            # Iterate through the data and store according to the storage flags
-            if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
-                self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
-                                   (key, fullname))
+            try:
+                # Ask the instance for storage flags
+                instance_flags = instance._store_flags()
+            except AttributeError:
+                # If it does not provide any, set it to the empty dictionary
+                instance_flags = {}
 
-                continue
-            if store_flags[key] == HDF5StorageService.TABLE:
-                self._prm_store_into_pytable(msg,key, data_to_store, _hdf5_group, fullname)
-            elif key in _hdf5_group:
-                self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
-                                   (key, fullname))
-                continue
-            elif store_flags[key] == HDF5StorageService.DICT:
-                self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
-            elif store_flags[key] == HDF5StorageService.ARRAY:
-                self._prm_store_into_array(msg, key, data_to_store, _hdf5_group, fullname)
-            elif store_flags[key] == HDF5StorageService.CARRAY:
-                self._prm_store_into_carray(msg, key, data_to_store, _hdf5_group, fullname)
-            elif store_flags[key] == HDF5StorageService.FRAME:
-                self._prm_store_data_frame(msg, key, data_to_store, _hdf5_group, fullname)
-            elif store_flags[key] == HDF5StorageService.SERIES:
-                self._prm_store_series(msg ,key, data_to_store, _hdf5_group, fullname)
-            elif store_flags[key] == HDF5StorageService.PANEL:
-                self._prm_store_panel(msg ,key, data_to_store, _hdf5_group, fullname)
-            else:
-                raise RuntimeError('You shall not pass!')
+            # User specified flags have priority over the flags from the instance
+            instance_flags.update(store_flags)
+            store_flags=instance_flags
+
+            # If we still have data in `store_dict` about which we do not know how to store
+            # it, pick default storage flags
+            self._prm_extract_missing_flags(store_dict,store_flags)
+
+            for key, data_to_store in store_dict.items():
+                # Iterate through the data and store according to the storage flags
+                if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
+                    self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
+                                       (key, fullname))
+
+                    continue
+                if store_flags[key] == HDF5StorageService.TABLE:
+                    self._prm_store_into_pytable(msg,key, data_to_store, _hdf5_group, fullname)
+                elif key in _hdf5_group:
+                    self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
+                                       (key, fullname))
+                    continue
+                elif store_flags[key] == HDF5StorageService.DICT:
+                    self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
+                elif store_flags[key] == HDF5StorageService.ARRAY:
+                    self._prm_store_into_array(msg, key, data_to_store, _hdf5_group, fullname)
+                elif store_flags[key] == HDF5StorageService.CARRAY:
+                    self._prm_store_into_carray(msg, key, data_to_store, _hdf5_group, fullname)
+                elif store_flags[key] == HDF5StorageService.FRAME:
+                    self._prm_store_data_frame(msg, key, data_to_store, _hdf5_group, fullname)
+                elif store_flags[key] == HDF5StorageService.SERIES:
+                    self._prm_store_series(msg ,key, data_to_store, _hdf5_group, fullname)
+                elif store_flags[key] == HDF5StorageService.PANEL:
+                    self._prm_store_panel(msg ,key, data_to_store, _hdf5_group, fullname)
+                else:
+                    raise RuntimeError('You shall not pass!')
+
+            # Store annotations
+            self._ann_store_annotations(instance,_hdf5_group)
+
+            if msg == pypetconstants.UPDATE_LEAF or newly_created:
+                # If we created a new group or the parameter was extended we need to
+                # update the meta information and summary tables
+                self._prm_add_meta_info(instance, _hdf5_group, msg)
+        except:
+            # I anything fails, we want to remove the parameter again
+            self._logger('Failed storing leaf `%s`. I will remove the hdf5 node corresponding to '
+                         'the leaf again.' % fullname)
+            _hdf5_group._f_remove(recursive=True)
+            raise
+
 
     def _prm_store_dict_as_table(self, msg, key, data_to_store, group, fullname):
         """Stores a python dictionary as pytable
@@ -4011,7 +4020,7 @@ class HDF5StorageService(StorageService):
             elif load_type in [HDF5StorageService.FRAME,
                                HDF5StorageService.SERIES,
                                HDF5StorageService.PANEL]:
-                self._prm_read_pandas(node, load_dict,full_name)
+                self._prm_read_pandas(node, load_dict, full_name)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
                                              'structure of %s [%s].' %
@@ -4026,7 +4035,18 @@ class HDF5StorageService(StorageService):
 
         # Finally tell the parameter or result to load the data, if there was any ;-)
         if load_dict:
-            param._load(load_dict)
+            try:
+                param._load(load_dict)
+            except:
+                # If there happens to be any exception on loading, we want to empty the parameter
+                # again. This is especially important if the user hits Ctrl-C, otherwise he
+                # would end up with a half-loaded leaf which needs to be manually erased and
+                # reloaded.
+                self._logger('Error while reconstructing data of leaf `%s`. I will empty the '
+                             'leaf again!' % full_name)
+                param.f_empty()
+                # ...And be nice and reraise the error
+                raise
 
 
     def _prm_read_dictionary(self, leaf, load_dict, full_name):
