@@ -90,6 +90,36 @@ You can pass the following arguments:
     two classes named `'MyCustomParameterClass'` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
+* `log_folder`
+
+    The `log_folder` specifies where all log files will be stored.
+    The environment will create a sub-folder with the name of the trajectory and the name
+    of the environment where all txt files will be put.
+    The environment will create a major logfile (*main.txt*) incorporating all messages of the
+    current log level and beyond and
+    a log file that only contains warnings and errors *errors_and_warnings.txt*.
+
+    Moreover, if you use multiprocessing,
+    there will be a log file for every single run and process named
+    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
+    id. It contains all log messages produced by the corresponding process within the single run.
+
+    If you don't set a log level elsewhere before, the standard level will be *INFO*
+    (if you have no clue what I am talking about, take a look at the logging_ module).
+
+* `log_level`
+
+    Which log level message should be logged, default is `logging.INFO`. If you choose
+    `logging.DEBUG` more verbose statements about storing parameters and results will be
+    displayed. Set to `None` if you want to disable logging.
+
+* `log_stdout`
+
+    Whether the output of STDOUT and STDERROR should be recorded into the log files.
+    Disable if only logging statement should be recorded. Note if you work with an
+    interactive console like IPython, it is a good idea to set `log_stdout=False`
+    to avoid messing up the console output.
+
 * `multiproc`
 
     `multiproc` specifies whether or not to use multiprocessing
@@ -141,12 +171,12 @@ You can pass the following arguments:
     You need the psutil_ package to use this cap feature. If not installed, the cap
     values are simply ignored.
 
-`memory_cap`
+* `memory_cap`
 
     Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
     processes are spawned.
 
-`swap_cap`
+* `swap_cap`
 
     Analogous to `memory_cap` but the swap memory is considered.
 
@@ -184,36 +214,6 @@ You can pass the following arguments:
     continuing of trajectories (take a look at :ref:`more-on-continuing`).
     In order to resume trajectories use
     :func:`~pypet.environment.Environment.f_continue_run`.
-
-* `log_folder`
-
-    The `log_folder` specifies where all log files will be stored.
-    The environment will create a sub-folder with the name of the trajectory where
-    all txt files will be put.
-    The environment will create a major logfile (*main.txt*) incorporating all messages of the
-    current log level and beyond and
-    a log file that only contains warnings and errors *errors_and_warnings.txt*.
-
-    Moreover, if you use multiprocessing,
-    there will be a log file for every single run and process named
-    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
-    id. It contains all log messages produced by the corresponding process within the single run.
-
-    If you don't set a log level elsewhere before, the standard level will be *INFO*
-    (if you have no clue what I am talking about, take a look at the logging_ module).
-
-* `log_level`
-
-    Which log level message should be logged, default is `logging.INFO`. If you choose
-    `logging.DEBUG` more verbose statements about storing parameters and results will be
-    displayed. Set to `None` if you want to disable logging.
-
-* `log_stdout`
-
-    Whether the output of STDOUT and STDERROR should be recorded into the log files.
-    Disable if only logging statement should be recorded. Note if you work with an
-    interactive console like IPython, it is a good idea to set `log_stdout=False`
-    to avoid messing up the console output.
 
 * `use_hdf5`
 

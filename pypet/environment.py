@@ -215,7 +215,7 @@ class Environment(object):
 
         Path to a folder where all log files will be stored. If none is specified the default
         `./logs/` is chosen. The log files will be added to a
-        sub-folder with the name of the trajectory.
+        sub-folder with the name of the trajectory and the name of the environment.
 
     :param log_level:
 
@@ -659,7 +659,8 @@ class Environment(object):
 
         # The actual log folder is a sub-folder with the trajectory name
         if log_level is not None:
-            log_path = os.path.join(log_folder,self._traj.v_name)
+            log_path = os.path.join(log_folder, self._traj.v_name)
+            log_path = os.path.join(log_path, self.v_name)
             # Create the loggers
             self._make_logging_handlers(log_path, log_level, log_stdout)
 
