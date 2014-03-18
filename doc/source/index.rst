@@ -51,19 +51,19 @@ Python 2.6 or 2.7
 
 For git integration you additionally need
 
-* GitPython_
+* GitPython_ >= 0.3.1
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
 
-* psutil_
+* psutil_ >= 2.0.0
 
 .. _psutil: http://psutil.readthedocs.org/
 
 If you use Python 2.6 you also need
 
-* ordereddict_
+* ordereddict_ >= 1.1
 
 .. _ordereddict: https://pypi.python.org/pypi/ordereddict
 

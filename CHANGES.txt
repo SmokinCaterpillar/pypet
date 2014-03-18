@@ -70,6 +70,9 @@ pypet 0.1b.4
 
 *   git commits only happen on changes and not all the time
 
+*   Now one can specify CPU, RAM and Swap cap levels if no pool is used.
+    If these cap levels are crossed *pypet* won't start new processes.
+
 
 
 pypet 0.1b.3

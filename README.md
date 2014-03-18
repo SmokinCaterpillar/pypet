@@ -38,11 +38,17 @@ Python 2.6 or 2.7
 
 For git integration you additionally need
 
-* GitPython
+* GitPython >= 0.3.1
 
-If you use Python 2.6 you need
+To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
 
-* ordereddict
+* psutil >= 2.0.0
+
+If you use Python 2.6 you also need
+
+* ordereddict >= 1.1
+
+
 
 =========================
 What is pypet all about?
