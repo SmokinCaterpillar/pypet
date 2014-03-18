@@ -481,14 +481,13 @@ class TestMergeResultsSort(ResultSortTest):
         super(TestMergeResultsSort,self).setUp()
 
         env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          multiproc=self.multiproc,
+                          wrap_mode=self.mode,
+                          ncores=self.ncores)
 
         traj2 = env2.v_trajectory
 
-        traj2.multiproc = self.multiproc
-        if self.multiproc:
-            traj2.wrap_mode = self.mode
-            traj2.ncores = self.ncores
 
         traj2.v_standard_parameter=Parameter
 

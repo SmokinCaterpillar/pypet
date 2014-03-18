@@ -55,6 +55,12 @@ For git integration you additionally need
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
+To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
+
+* psutil_
+
+.. _psutil: http://psutil.readthedocs.org/
+
 If you use Python 2.6 you also need
 
 * ordereddict_

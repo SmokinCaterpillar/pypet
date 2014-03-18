@@ -226,17 +226,16 @@ class EnvironmentTest(TrajectoryComparator):
         random.seed()
         self.trajname = make_trajectory_name(self)
 
-        env = Environment(trajectory=self.trajname,filename=self.filename,
+        env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           results_per_run=5,
                           derived_parameters_per_run=5,
+                          multiproc=self.multiproc,
+                          ncores=self.ncores,
+                          wrap_mode=self.mode,
                           use_pool=self.use_pool)
 
         traj = env.v_trajectory
-
-        traj.multiproc = self.multiproc
-        traj.wrap_mode = self.mode
-        traj.ncores = self.ncores
 
         traj.v_standard_parameter=Parameter
 
@@ -578,13 +577,13 @@ class ResultSortTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          multiproc=self.multiproc,
+                          wrap_mode=self.mode,
+                          ncores=self.ncores,
                           use_pool=self.use_pool)
 
         traj = env.v_trajectory
 
-        traj.multiproc = self.multiproc
-        traj.wrap_mode = self.mode
-        traj.ncores = self.ncores
 
         traj.v_standard_parameter=Parameter
 

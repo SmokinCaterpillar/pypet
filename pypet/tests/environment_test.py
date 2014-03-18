@@ -33,7 +33,9 @@ class EnvironmentTest(unittest.TestCase):
         self.trajname = 'Test'
 
         env = Environment(trajectory=self.trajname,
-                          filename=self.filename, log_folder=self.logfolder)
+                          filename=self.filename, log_folder=self.logfolder,
+                          multiproc=True,
+                          ncores=2)
 
         traj = env.v_trajectory
         traj.v_storage_service=LazyStorageService()
@@ -47,9 +49,6 @@ class EnvironmentTest(unittest.TestCase):
             name = 'There.Are.Many.Of.m3' + str(irun)
 
             traj.f_add_parameter(name, irun)
-
-        traj.ncores= 2
-        traj.multiproc= True
 
         traj.f_explore({traj.f_get('par.Test').v_full_name:[1,2,3,4,5]})
 

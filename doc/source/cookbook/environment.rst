@@ -115,6 +115,41 @@ You can pass the following arguments:
     for instance), choose `use_pool=False` and continuable=`False` (see below).
     Be aware that you will have an individual logfile for every process you spawn.
 
+* `cpu_cap`
+
+    If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
+    0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
+    usage is above the specified level (averaged across all cores),
+    pypet will not spawn a new process and wait until
+    activity falls below the threshold again. Note that in order to avoid dead-lock at least
+    one process will always be running regardless of the current utilization.
+    If the threshold is crossed a warning will be issued. The warning won't be repeated as
+    long as the threshold remains crossed.
+
+    For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
+    used. Moreover, let's assume that at the moment only 2 processes are
+    computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
+    pypet will wait until cpu usage drops below (or equal to) 70 percent again
+    until it starts a third process to carry out another single run.
+
+    The parameters `memory_cap` and `swap_cap` are analogous. These three thresholds are
+    combined to determine whether a new process can be spawned. Accordingly, if only one
+    of these thresholds is crossed, no new processes will be spawned.
+
+    To disable the cap limits simply set all three values to 1.0.
+
+    You need the psutil_ package to use this cap feature. If not installed, the cap
+    values are simply ignored.
+
+`memory_cap`
+
+    Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
+    processes are spawned.
+
+`swap_cap`
+
+    Analogous to `memory_cap` but the swap memory is considered.
+
 * `wrap_mode`
 
      If `multiproc` is 1 (True), specifies how storage to disk is handled via
@@ -454,6 +489,31 @@ for some BRIAN networks, for example), don't worry either. Set `use_pool=False`
 *pypet* will spawn an entirely new subprocess.
 The data is than passed to the subprocess by inheritance and not by pickling.
 
+Moreover, if you **ENABLE** multiprocessing and **DISABLE** pool usage, besides the maximum number of
+utilized processors `ncores`, you can specify other usage cap levels with `cpu_cap`, `memory_cap`,
+and `swap_cap` as fractions of the maximum capacity.
+Values must be chosen larger than 0.0 and smaller or equal to 1.0. If any of these thresholds is
+crossed no new processes will be started by *pypet*. For instance, if you want to use 3 cores
+aka `ncores=3` and set a memory cap of `memory_cap=0.9` and let's assume that currently only
+2 processes are started. Moreover, let's say currently 95 percent of you RAM are occupied.
+Accordingly, papet will *NOT* start the third process until RAM usage drops again below
+(or equal to) 90 percent.
+
+Be aware that all three thresholds are combined. So if just one of them is crossed, *pypet*
+will refuse to start new processes. Moreover, to prevent dead-lock *pypet* will regardless
+of the cap values always start at least one process.
+
+To disable the cap levels, simply set all three to 1.0 (which is default, anyway).
+
+**IMPORTANT**: *pypet* does not check if the processes themselves obey the cap limit. Thus,
+if one of the process that computes your single runs needs more RAM/Swap or CPU power than the cap
+value, this is its very own problem.
+The process will **NOT** be terminated by *pypet*. The process will only cause *pypet* to not start
+new processes until the utilization falls below the threshold again.
+
+**IMPORTANT**: In order to use this cap feature you need the psutil_ package. If
+psutil_ is not installed, the cap values are simply ignored.
+
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
 classes for the HDF5 storage service to allow safe data storage.
@@ -479,6 +539,7 @@ since processes have to wait for each other to release locks quite often.
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
 
+.. _psutil: http://psutil.readthedocs.org/
 
 .. _more-on-git:
 

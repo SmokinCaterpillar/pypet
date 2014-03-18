@@ -127,11 +127,11 @@ class NetworkTest(TrajectoryComparator):
                           file_title='test',
                           log_folder=make_temp_file('experiments/tests/briantests/log'),
                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
-                                                        BrianMonitorResult])
+                                                        BrianMonitorResult],
+                          multiproc=False)
 
         traj = env.v_trajectory
 
-        traj.ncores= 2
         #env._set_standard_storage()
         #env._hdf5_queue_writer._hdf5storageservice = LazyStorageService()
         traj = env.v_trajectory
@@ -165,23 +165,42 @@ class NetworkTest(TrajectoryComparator):
         self.compare_trajectories(self.traj, traj2)
 
 
-    def test_multiprocessing(self):
-        self.traj.multiproc = True
-        self.traj.ncores = 3
-        self.traj.use_pool = False
-        self.env.f_run(run_net)
 
-        self.traj.f_load(load_derived_parameters=2, load_results=2)
 
-        traj2 = Trajectory(name = self.traj.v_name, add_time=False,
-                           filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
-                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
-                                                        BrianMonitorResult])
+class NetworkMPTest(NetworkTest):
 
-        traj2.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
+    def setUp(self):
+        logging.basicConfig(level = logging.INFO)
 
-        self.compare_trajectories(self.traj, traj2)
 
+        env = Environment(trajectory='Test',
+                          filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+                          file_title='test',
+                          log_folder=make_temp_file('experiments/tests/briantests/log'),
+                          dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                                                        BrianMonitorResult],
+                          multiproc=True,
+                          use_pool=False,
+                          ncores=2)
+
+        traj = env.v_trajectory
+
+        #env._set_standard_storage()
+        #env._hdf5_queue_writer._hdf5storageservice = LazyStorageService()
+        traj = env.v_trajectory
+        #traj.set_storage_service(LazyStorageService())
+
+        add_params(traj)
+        #traj.mode='Parallel'
+
+
+        traj.f_explore(cartesian_product({traj.f_get('N').v_full_name:[50,60],
+                               traj.f_get('tauw').v_full_name:[30*ms,40*ms]}))
+
+        self.traj = traj
+
+        self.env = env
+        self.traj = traj
 
 if __name__ == '__main__':
     make_run()

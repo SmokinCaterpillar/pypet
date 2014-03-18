@@ -266,6 +266,43 @@ class Environment(object):
         Whether to use a fixed pool of processes or whether to spawn a new process
         for every run. Use the latter if your data cannot be pickled.
 
+    :param cpu_cap:
+
+        If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
+        0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
+        usage is above the specified level (averaged across all cores),
+        pypet will not spawn a new process and wait until
+        activity falls below the threshold again. Note that in order to avoid dead-lock at least
+        one process will always be running regardless of the current utilization.
+        If the threshold is crossed a warning will be issued. The warning won't be repeated as
+        long as the threshold remains crossed.
+
+        For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
+        used. Moreover, let's assume that at the moment only 2 processes are
+        computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
+        pypet will wait until cpu usage drops below (or equal to) 70 percent again
+        until it starts a third process to carry out another single run.
+
+        The parameters `memory_cap` and `swap_cap` are analogous. These three thresholds are
+        combined to determine whether a new process can be spawned. Accordingly, if only one
+        of these thresholds is crossed, no new processes will be spawned.
+
+        To disable the cap limits simply set all three values to 1.0.
+
+        You need the psutil_ package to use this cap feature. If not installed, the cap
+        values are simply ignored.
+
+        .. psutil: http://psutil.readthedocs.org/
+
+    :param memory_cap:
+
+        Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
+        processes are spawned.
+
+    :param swap_cap:
+
+        Analogous to `memory_cap` but the swap memory is considered.
+
     :param wrap_mode:
 
          If multiproc is 1 (True), specifies how storage to disk is handled via
@@ -501,10 +538,10 @@ class Environment(object):
                  multiproc=False,
                  ncores=1,
                  use_pool=True,
-                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  cpu_cap=1.0,
                  memory_cap=1.0,
                  swap_cap=1.0,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
@@ -634,6 +671,12 @@ class Environment(object):
 
         # Whether to use a pool of processes
         self._use_pool = use_pool
+
+        if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
+            memory_cap <= 0.0 or memory_cap > 1.0 or
+            swap_cap <= 0.0 or swap_cap > 1.0):
+            raise ValueError('Please choose cap values larger than 0.0 and smaller or equal to 1.0.')
+
         self._cpu_cap = cpu_cap
         self._memory_cap = memory_cap
         self._swap_cap = swap_cap
@@ -673,8 +716,8 @@ class Environment(object):
                                         comment='Maximum RAM usage beyond which no new processes '
                                                 'are spawned')
 
-                    config_name='environment.%s.memory_cap' % self.v_name
-                    self._traj.f_add_config(config_name, memory_cap,
+                    config_name='environment.%s.swap_cap' % self.v_name
+                    self._traj.f_add_config(config_name, swap_cap,
                                         comment='Maximum Swap memory usage beyond which no new '
                                                 'processes are spawned')
 
@@ -685,7 +728,7 @@ class Environment(object):
 
 
                 config_name='environment.%s.wrap_mode' % self.v_name
-                self._traj.f_add_config(config_name,wrap_mode,
+                self._traj.f_add_config(config_name, wrap_mode,
                                             comment ='Multiprocessing mode (if multiproc),'
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
@@ -1087,26 +1130,26 @@ class Environment(object):
         log_path = self._log_path
         log_stdout = self._log_stdout
 
-        multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
+        self._multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
 
         result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
 
         self._storage_service = self._traj.v_storage_service
 
-        if multiproc:
+        if self._multiproc:
 
             manager = multip.Manager()
 
-            use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
-            mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
+            self._use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
+            self._wrap_mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
 
-            if not use_pool:
+            if not self._use_pool:
                 # If we spawn a single process for each run, we need an additional queue
                 # for the results of `runfunc`
                 result_queue = manager.Queue(maxsize=len(self._traj))
 
             # Prepare Multiprocessing
-            if mode == pypetconstants.WRAP_MODE_QUEUE:
+            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
                 # For queue mode we need to have a queue in a block of shared memory.
                 queue = manager.Queue()
 
@@ -1127,9 +1170,9 @@ class Environment(object):
                 queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
-            elif mode == pypetconstants.WRAP_MODE_LOCK:
+            elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
 
-                if use_pool:
+                if self._use_pool:
                     # We need a lock that is shared by all processes.
                     lock = manager.Lock()
                 else:
@@ -1142,13 +1185,13 @@ class Environment(object):
                 lock_wrapper = LockWrapper(self._storage_service,lock)
                 self._traj.v_storage_service=lock_wrapper
 
-            elif mode == pypetconstants.WRAP_MODE_NONE:
+            elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
                 # We assume that storage and loading is multiprocessing safe
                 pass
             else:
                 raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                    'not supported, use `%s` or `%s`.'
-                                    %(mode,pypetconstants.WRAP_MODE_QUEUE,
+                                    %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
                                       pypetconstants.WRAP_MODE_LOCK))
 
 
@@ -1166,11 +1209,11 @@ class Environment(object):
             # Create a generator to generate the tasks for the mp-pool
             iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
                          queue, runfunc, len(self._traj),
-                         multiproc, result_queue,  args, kwargs)
+                         self._multiproc, result_queue,  args, kwargs)
                          for n in xrange(len(self._traj)) if not self._traj.f_is_completed(n))
 
 
-            if use_pool:
+            if self._use_pool:
                 mpool = multip.Pool(ncores)
                 # Let the pool workers do their jobs provided by the generator
                 results = mpool.imap(_single_run, iterator)
@@ -1183,6 +1226,10 @@ class Environment(object):
                 results = [result for result in results]
 
             else:
+                self._cpu_cap = self._traj.f_get('config.environment.%s.cpu_cap'  % self.v_name).f_get()
+                self._memory_cap = self._traj.f_get('config.environment.%s.memory_cap'  % self.v_name).f_get()
+                self._swap_cap = self._traj.f_get('config.environment.%s.swap_cap'  % self.v_name).f_get()
+
                 check_usage = psutil is not None and (self._cpu_cap < 1.0 or
                                                       self._memory_cap < 1.0 or
                                                       self._swap_cap < 1.0)
@@ -1271,7 +1318,7 @@ class Environment(object):
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
-            if mode == pypetconstants.WRAP_MODE_QUEUE:
+            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
@@ -1303,7 +1350,7 @@ class Environment(object):
             # Sequentially run all single runs and append the results to a queue
             results = [_single_run((self._traj._make_single_run(n), log_path, log_stdout,
                                     None,runfunc,
-                                    len(self._traj),multiproc, result_queue, args,kwargs)) for
+                                    len(self._traj), self._multiproc, result_queue, args,kwargs)) for
                                     n in xrange(len(self._traj)) if not self._traj.f_is_completed(n)]
 
             # Do some finalization
