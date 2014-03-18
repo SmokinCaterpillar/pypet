@@ -28,6 +28,11 @@ import hashlib
 import time
 import datetime
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 
 from pypet.utils.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
@@ -484,14 +489,6 @@ class Environment(object):
 
         The commit message
 
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committer
-
-        The committer
-
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committer_email
-
-        Email address of committer
-
 
     """
     def __init__(self, trajectory='trajectory',
@@ -505,6 +502,9 @@ class Environment(object):
                  ncores=1,
                  use_pool=True,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 cpu_cap=1.0,
+                 memory_cap=1.0,
+                 swap_cap=1.0,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
@@ -634,6 +634,9 @@ class Environment(object):
 
         # Whether to use a pool of processes
         self._use_pool = use_pool
+        self._cpu_cap = cpu_cap
+        self._memory_cap = memory_cap
+        self._swap_cap = swap_cap
 
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
@@ -653,11 +656,28 @@ class Environment(object):
                                     comment= 'Whether or not to use multiprocessing. If yes'
                                              ' than everything must be pickable.')
 
-            if self._traj.f_get('config.environment.%s.multiproc' % self.v_name):
+            if self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get():
                 config_name='environment.%s.use_pool' % self.v_name
                 self._traj.f_add_config(config_name, use_pool,
                                         comment='Whether to use a pool of processes or '
                                                 'spawning individual processes for each run.')
+
+                if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
+                    config_name='environment.%s.cpu_cap' % self.v_name
+                    self._traj.f_add_config(config_name, cpu_cap,
+                                        comment='Maximum cpu usage beyond which no new processes '
+                                                'are spawned')
+
+                    config_name='environment.%s.memory_cap' % self.v_name
+                    self._traj.f_add_config(config_name, memory_cap,
+                                        comment='Maximum RAM usage beyond which no new processes '
+                                                'are spawned')
+
+                    config_name='environment.%s.memory_cap' % self.v_name
+                    self._traj.f_add_config(config_name, memory_cap,
+                                        comment='Maximum Swap memory usage beyond which no new '
+                                                'processes are spawned')
+
 
                 config_name='environment.%s.ncores' % self.v_name
                 self._traj.f_add_config(config_name,ncores,
@@ -1163,8 +1183,23 @@ class Environment(object):
                 results = [result for result in results]
 
             else:
-                keep_running=True
+                check_usage = psutil is not None and (self._cpu_cap < 1.0 or
+                                                      self._memory_cap < 1.0 or
+                                                      self._swap_cap < 1.0)
+                if check_usage:
+                    self._logger.info('Monitoring usage statistics. I will not spawn new processes '
+                                      'if one of the following cap thresholds is crossed, '
+                                      'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
+                                      (self._cpu_cap, self._memory_cap, self._swap_cap))
+                    psutil.cpu_percent() # Just for initialisation
+
+                no_cap = True # Evaluates if new processes are allowed to be started or if cap is
+                # reached
+                signal_cap = True # If True cap warning is emitted
+                keep_running=True # Evaluates to falls if trajectory produces no more single runs
                 process_dict = {} # Dict containing all subprocees
+
+
 
                 while len(process_dict)>0 or keep_running:
 
@@ -1182,18 +1217,52 @@ class Environment(object):
 
                     # If we have less active processes than ncores and there is still
                     # a job to do, add another process
-                    if len(process_dict) < ncores and keep_running:
+                    if len(process_dict) < ncores and keep_running and no_cap:
                         try:
                             task = iterator.next()
                             proc = multip.Process(target=_single_run,
                                                                args=(task,))
                             proc.start()
                             process_dict[proc.pid]=proc
+                            signal_cap = True
                         except StopIteration:
                             # All simulation runs have been started
                             keep_running=False
 
                     time.sleep(0.1)
+
+                    # Check if caps are reached. Cap is only checked if there is at least one
+                    # process working to prevent deadlock.
+                    if check_usage and keep_running:
+                        no_cap=True
+                        if len(process_dict) > 0:
+                            cpu_usage = psutil.cpu_percent()/100.0
+                            memory_usage = psutil.phymem_usage().percent/100.0
+                            swap_usage = psutil.swap_memory().percent/100.0
+                            if cpu_usage > self._cpu_cap:
+                                no_cap = False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process immediately.'
+                                                         'CPU Cap reached, %.2f > %.2f.' %
+                                                         (cpu_usage, self._cpu_cap))
+                                    signal_cap = False
+                            elif memory_usage > self._memory_cap:
+                                no_cap=False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process '
+                                                         'immediately. Memory Cap reached, '
+                                                         '%.2f > %.2f.' %
+                                                         (memory_usage, self._memory_cap))
+                                    signal_cap = False
+                            elif swap_usage > self._swap_cap:
+                                no_cap=False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process '
+                                                         'immediately. Swap Cap reached, '
+                                                         '%.2f > %.2f.' %
+                                                         (swap_usage, self._swap_cap))
+                                    signal_cap = False
+
 
                 # Get all results from the result queue
                 results = []

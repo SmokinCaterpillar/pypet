@@ -40,13 +40,13 @@ def add_commit_variables(traj, commit):
         traj.f_add_config(git_commit_name+'message', str(commit.message),
                                 comment='The commit message')
 
-        # Add commit author
-        traj.f_add_config(git_commit_name+'committer', str(commit.committer.name),
-                          comment='The committer of the commit')
-
-        # Add author's email
-        traj.f_add_config(git_commit_name+'committer_email', str(commit.committer.email),
-                          comment='Email of committer')
+        # # Add commit author
+        # traj.f_add_config(git_commit_name+'committer', str(commit.committer.name),
+        #                   comment='The committer of the commit')
+        #
+        # # Add author's email
+        # traj.f_add_config(git_commit_name+'committer_email', str(commit.committer.email),
+        #                   comment='Email of committer')
 
 
 
