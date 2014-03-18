@@ -1205,31 +1205,12 @@ class Environment(object):
 
                     terminated_procs_pids = []
                     # First check if some processes did finish their job
-                    for pid, proc in process_dict.iteritems():
+                    for pid in process_dict.keys():
+                        proc = process_dict[pid]
 
-                        # Remember the terminated processes
+                        # Delete the terminated processes
                         if not proc.is_alive():
-                            terminated_procs_pids.append(pid)
-
-                    # And delete these from the process dict
-                    for terminated_proc in terminated_procs_pids:
-                        process_dict.pop(terminated_proc)
-
-                    # If we have less active processes than ncores and there is still
-                    # a job to do, add another process
-                    if len(process_dict) < ncores and keep_running and no_cap:
-                        try:
-                            task = iterator.next()
-                            proc = multip.Process(target=_single_run,
-                                                               args=(task,))
-                            proc.start()
-                            process_dict[proc.pid]=proc
-                            signal_cap = True
-                        except StopIteration:
-                            # All simulation runs have been started
-                            keep_running=False
-
-                    time.sleep(0.1)
+                            process_dict.pop(pid)
 
                     # Check if caps are reached. Cap is only checked if there is at least one
                     # process working to prevent deadlock.
@@ -1262,6 +1243,24 @@ class Environment(object):
                                                          '%.2f > %.2f.' %
                                                          (swap_usage, self._swap_cap))
                                     signal_cap = False
+
+                    # If we have less active processes than ncores and there is still
+                    # a job to do, add another process
+                    if len(process_dict) < ncores and keep_running and no_cap:
+                        try:
+                            task = iterator.next()
+                            proc = multip.Process(target=_single_run,
+                                                               args=(task,))
+                            proc.start()
+                            process_dict[proc.pid]=proc
+                            signal_cap = True
+                        except StopIteration:
+                            # All simulation runs have been started
+                            keep_running=False
+
+                    time.sleep(0.1)
+
+
 
 
                 # Get all results from the result queue
