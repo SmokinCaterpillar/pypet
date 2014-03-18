@@ -3424,7 +3424,7 @@ class HDF5StorageService(StorageService):
                 self._prm_add_meta_info(instance, _hdf5_group, msg)
         except:
             # I anything fails, we want to remove the parameter again
-            self._logger('Failed storing leaf `%s`. I will remove the hdf5 node corresponding to '
+            self._logger.error('Failed storing leaf `%s`. I will remove the hdf5 node corresponding to '
                          'the leaf again.' % fullname)
             _hdf5_group._f_remove(recursive=True)
             raise
@@ -4042,7 +4042,7 @@ class HDF5StorageService(StorageService):
                 # again. This is especially important if the user hits Ctrl-C, otherwise he
                 # would end up with a half-loaded leaf which needs to be manually erased and
                 # reloaded.
-                self._logger('Error while reconstructing data of leaf `%s`. I will empty the '
+                self._logger.error('Error while reconstructing data of leaf `%s`. I will empty the '
                              'leaf again!' % full_name)
                 param.f_empty()
                 # ...And be nice and reraise the error
