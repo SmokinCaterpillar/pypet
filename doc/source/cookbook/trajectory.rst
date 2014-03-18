@@ -690,6 +690,40 @@ to get the whole trajectory tree containing all new results and derived paramete
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`
 in order to load whole subtrees.
 
+Automated logging and git commits are often very handy features. Probably you do not want
+to miss these while you do your data analysis. To enable these in case you simply want to
+load an old trajectory for data analysis without doing any more single runs, you can
+again use an :class:`~pypet.environment.Environment`.
+First, load the trajectory with `~pypet.trajectory.Trajectory.f_load`,
+and pass the loaded trajectory to a new environment. Accordingly the environment will trigger a
+git commit (in case you have specified a path to your repository root) and enable logging.
+You can additionally pass the argument `do_single_runs=False` to your environment if you only
+load your trajectory for data analysis. Accordingly, no config information like
+whether you want to use multiprocessing or resume a broken experiment is added to
+your trajectory. For example:
+
+::
+
+    # Create the trajectory independent of the environment
+    traj = Trajectory(filename='./myfile.hdf5',
+                      dynamically_imported_classes=[BrianParameter,
+                                                    BrianMonitorResult,
+                                                    BrianResult])
+
+    # Load the first trajectory in the file
+    traj.f_load(index=0, load_parameters=2,
+                load_derived_parameters=2, load_results=1,
+                load_other_data=1)
+
+    # Just pass the trajectory as the first argument to a new environment.
+    # You can pass the usual arguments for logging and git integration.
+    env = Environment(traj
+                      log_folder='./logs/',
+                      git_repository='../gitroot/',
+                      do_single_runs=False)
+
+    # Here comes your data analysis...
+
 
 -------------------------------------
 Removal of items

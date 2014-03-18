@@ -298,10 +298,18 @@ You can pass the following arguments:
 
     Message passed onto git command.
 
+* `do_single_runs`
+
+    Whether you intend to actually to compute single runs with the trajectory.
+    If you do not intend to carry out single runs (probably because you loaded an old trajectory
+    for data analysis), than set to `False` and the
+    environment won't add config information like number of processors to the
+    trajectory.
+
 * `lazy_debug`
 
-    If `lazy_debug=True` and in case you debug your code (aka the built-in variable `__debug__`
-    is set to `True` by python), the environment will use the
+    If `lazy_debug=True` and in case you debug your code (aka you use *pydevd* and
+    the expression `'pydevd' in sys.modules` is `True`), the environment will use the
     :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
     Accordingly, no files are created and your trajectory and results are not saved.
     This allows faster debugging and prevents *pypet* from blowing up your hard drive with

@@ -471,9 +471,9 @@ class Environment(object):
         If no changes are detected, the information about the previous commit and the previous
         commit message are added to the trajectory and this user passed message is discarded.
 
-    :param single_runs:
+    :param do_single_runs:
 
-        Whether you intend to actually make single runs with the trajectory.
+        Whether you intend to actually to compute single runs with the trajectory.
         If you do not intend to do single runs, than set to `False` and the
         environment won't add config information like number of processors to the
         trajectory.
