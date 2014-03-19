@@ -828,7 +828,7 @@ class HDF5StorageService(StorageService):
 
             self.load(msg,item,*args,**kwargs)
 
-    def _srcv_check_hdf_properties(self, traj):
+    def _srvc_check_hdf_properties(self, traj):
         """Reads out the properties for stroring new data into the hdf5file
 
         :param traj:
@@ -838,13 +838,21 @@ class HDF5StorageService(StorageService):
         """
         new_filters = False
 
-        if 'config.hdf5.complevel' in traj:
+        try:
             self._complevel = traj.f_get('config.hdf5.complevel').f_get()
             new_filters = True
+        except AttributeError:
+            pass
+        except TypeError:
+            pass
 
-        if 'config.hdf5.complib' in traj:
+        try:
             self._complib = traj.f_get('config.hdf5.complib').f_get()
             new_filters = True
+        except AttributeError:
+            pass
+        except TypeError:
+            pass
 
         if new_filters:
             self._filters = pt.Filters(complevel=self._complevel,
@@ -1597,7 +1605,7 @@ class HDF5StorageService(StorageService):
 
                     self._tree_load_recursively(traj, traj, hdf5group, loading)
 
-        self._srcv_check_hdf_properties(traj)
+        self._srvc_check_hdf_properties(traj)
 
     def _trj_load_meta_data(self,traj, as_new, force):
         """Loads meta information about the trajectory
@@ -1928,7 +1936,7 @@ class HDF5StorageService(StorageService):
         else:
             self._purge_duplicate_comments=True
 
-        self._srcv_check_hdf_properties(traj)
+        self._srvc_check_hdf_properties(traj)
 
         # Store meta information
         self._trj_store_meta_data(traj)
