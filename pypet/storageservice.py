@@ -1591,18 +1591,18 @@ class HDF5StorageService(StorageService):
 
                 # Load the subbranches recursively
                 if loading != pypetconstants.LOAD_NOTHING:
-                    self._logger.info('Loading subtree `%s` in mode `%s`.' % (what, str(loading)))
+                    self._logger.info('Loading branch `%s` in mode `%s`.' % (what, str(loading)))
                     self._tree_load_sub_branch(traj, traj, what, self._trajectory_group, loading)
             else:
 
                 if loading != pypetconstants.LOAD_NOTHING:
                     counter += 1
                     if counter <= maximum_display_other:
-                        self._logger.info('Loading subtree/node `%s` in mode `%s`.' % (what, str(loading)))
+                        self._logger.info('Loading branch/node `%s` in mode `%s`.' % (what, str(loading)))
                         if counter == maximum_display_other:
-                            self._logger.info('To many subtrees or nodes at root for display. '
+                            self._logger.info('To many branchs or nodes at root for display. '
                                               'I will not inform you about loading anymore. '
-                                              'Subtrees are loaded silently in the background.'
+                                              'Branches are loaded silently in the background.'
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
                     self._tree_load_recursively(traj, traj, hdf5group, loading)
@@ -1962,15 +1962,15 @@ class HDF5StorageService(StorageService):
             for child_name in traj._children:
 
                 if child_name in name_set:
-                    self._logger.info('Storing subtree `%s`.' % child_name)
+                    self._logger.info('Storing branch `%s`.' % child_name)
                 else:
                     counter += 1
                     if counter <= maximum_display_other:
-                        self._logger.info('Storing subtree/node `%s`.' % child_name)
+                        self._logger.info('Storing branch/node `%s`.' % child_name)
                         if counter == maximum_display_other:
-                            self._logger.info('To many subtrees or nodes at root for display. '
+                            self._logger.info('To many branches or nodes at root for display. '
                                               'I will not inform you about storing anymore. '
-                                              'Subtrees are stored silently in the background.'
+                                              'Branches are stored silently in the background.'
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
 
@@ -2288,6 +2288,7 @@ class HDF5StorageService(StorageService):
         for branch in ('results.runs', 'derived_parameters.runs'):
             branch_name = branch +'.'+single_run.v_name
             if branch_name in single_run:
+                self._logger.info('Storing branch `%s`.' % branch_name)
                 self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
                                            branch_name,self._trajectory_group)
 

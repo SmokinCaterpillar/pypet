@@ -100,6 +100,7 @@ class NNTreeNode(WithAnnotations):
         self._comment = ''
         self.v_comment = comment
 
+
     @property
     def v_comment(self):
         """Should be a nice descriptive comment"""
@@ -179,13 +180,13 @@ class NNTreeNode(WithAnnotations):
         return self._creator_name
 
     @property
-    def v_subtree(self):
-        """The name of the subtree, i.e. the first node below the root.
+    def v_branch(self):
+        """The name of the branch/subtree, i.e. the first node below the root.
 
         The empty string in case of root itself.
 
         """
-        return self._subtree
+        return self._branch
 
     def _rename(self, full_name):
         """ Renames the parameter or result."""
@@ -201,9 +202,9 @@ class NNTreeNode(WithAnnotations):
         self._name = split_name[-1]
 
         if self.v_is_root:
-            self._subtree = ''
+            self._branch = ''
         else:
-            self._subtree = split_name[0]
+            self._branch = split_name[0]
 
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
@@ -1026,7 +1027,7 @@ class NaturalNamingInterface(object):
                     'Sorry, you are not allowed to have an `overview` subtree directly under '
                     'the root node.')
         else:
-            where = start_node._subtree
+            where = start_node._branch
 
         if where in SUBTREE_MAPPING:
             type_tuple = SUBTREE_MAPPING[where]
