@@ -371,7 +371,10 @@ class Environment(object):
 
     :param complib:
 
-        The library used for compression.
+        The library used for compression. Choose between *zlib*, *blosc*, and *lzo*.
+        Note that 'blosc' and 'lzo' are usually faster than 'zlib' but it may be the case that
+        you can no longer open your hdf5 files with third-party applications that do not rely
+        on PyTables.
 
     :param purge_duplicate_comments:
 
@@ -547,7 +550,7 @@ class Environment(object):
                  filename=None,
                  file_title=None,
                  complevel=9,
-                 complib='lzo',
+                 complib='zlib',
                  purge_duplicate_comments=True,
                  summary_tables = True,
                  small_overview_tables=True,

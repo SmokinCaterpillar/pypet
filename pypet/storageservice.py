@@ -1954,9 +1954,28 @@ class HDF5StorageService(StorageService):
             msg = pypetconstants.LEAF
 
         if not only_init:
+
+            counter = 0
+            maximum_display_other = 10
+            name_set = set(['parameters', 'config', 'derived_parameters', 'results'])
+
             for child_name in traj._children:
 
+                if child_name in name_set:
+                    self._logger.info('Storing subtree `%s`.' % child_name)
+                else:
+                    counter += 1
+                    if counter <= maximum_display_other:
+                        self._logger.info('Storing subtree/node `%s`.' % child_name)
+                        if counter == maximum_display_other:
+                            self._logger.info('To many subtrees or nodes at root for display. '
+                                              'I will not inform you about storing anymore. '
+                                              'Subtrees are stored silently in the background.'
+                                              'Do not worry, I will not freeze! Pinky promise!!!')
+
+
                 if child_name == 'parameters':
+
                     # Store recursively the parameters subtree
                     self._tree_store_recursively(msg, traj.parameters, self._trajectory_group)
 

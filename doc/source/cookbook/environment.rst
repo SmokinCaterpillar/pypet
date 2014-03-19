@@ -244,7 +244,10 @@ You can pass the following arguments:
 
 * `complib`
 
-    The library used for compression
+    The library used for compression. Choose between *zlib*, *blosc*, and *lzo*.
+    Note that 'blosc' and 'lzo' are usually faster than 'zlib' but it may be the case that
+    you can no longer open your hdf5 files with third-party applications that do not rely
+    on PyTables.
 
 * `purge_duplicate_comments`
 
