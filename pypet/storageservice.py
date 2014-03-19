@@ -842,8 +842,10 @@ class HDF5StorageService(StorageService):
             self._complevel = traj.f_get('config.hdf5.complevel').f_get()
             new_filters = True
         except AttributeError:
+            # We end up here if the config parameter does not exist in `traj`.
             pass
         except TypeError:
+            # We end up here if the config parameter is empty.
             pass
 
         try:
