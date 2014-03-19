@@ -547,7 +547,7 @@ class Environment(object):
                  filename=None,
                  file_title=None,
                  complevel=9,
-                 complib='blosc',
+                 complib='lzo',
                  purge_duplicate_comments=True,
                  summary_tables = True,
                  small_overview_tables=True,
