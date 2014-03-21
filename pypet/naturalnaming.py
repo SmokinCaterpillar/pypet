@@ -2130,7 +2130,10 @@ class NNGroupNode(NNTreeNode):
         If you want to free memory on disk via your storage service,
         use :func:`~pypet.trajectory.Trajectory.f_delete_items` of your trajectory.
 
-        :param name: Name of child
+        :param name:
+
+            Name of child, naming by grouping is NOT allowed ('groupA.groupB.childC'),
+            child must be direct successor of current node.
 
         :param recursive:
 

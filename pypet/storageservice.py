@@ -258,15 +258,15 @@ class HDF5StorageService(StorageService):
 
 
     NAME_TABLE_MAPPING ={
-           'hdf5.overview.config':'config',
-           'hdf5.overview.parameters':'parameters',
-           'hdf5.overview.derived_parameters_trajectory':'derived_parameters_trajectory',
-           'hdf5.overview.derived_parameters_runs':'derived_parameters_runs',
-           'hdf5.overview.results_trajectory':'results_trajectory',
-           'hdf5.overview.results_runs': 'results_runs',
-           'hdf5.overview.explored_parameters': 'explored_parameters',
-           'hdf5.overview.derived_parameters_runs_summary':'derived_parameters_runs_summary',
-           'hdf5.overview.results_runs_summary':'results_runs_summary'
+           'overview_config':'config',
+           'overview_parameters':'parameters',
+           'overview_derived_parameters_trajectory':'derived_parameters_trajectory',
+           'overview_derived_parameters_runs':'derived_parameters_runs',
+           'overview_results_trajectory':'results_trajectory',
+           'overview_results_runs': 'results_runs',
+           'overview_explored_parameters': 'explored_parameters',
+           'overview_derived_parameters_runs_summary':'derived_parameters_runs_summary',
+           'overview_results_runs_summary':'results_runs_summary'
     }
     ''' Mapping of trajectory config names to the tables'''
 
@@ -387,18 +387,215 @@ class HDF5StorageService(StorageService):
         self._hdf5file = None
         self._trajectory_group = None # link to the top group in hdf5 file which is the start
         # node of a trajectory
-        self._purge_duplicate_comments = None # remembers whether to purge duplicate comments
+         # remembers whether to purge duplicate comments
         self._logger = logging.getLogger('HDF5StorageService')
-        self._complevel = 9
-        self._complib='zlib'
-        self._fletcher32 = False
-        self._filters = pt.Filters(complevel=self._complevel,
-                                   complib=self._complib,
-                                   fletcher32=self._fletcher32)
+        self._complevel = None
+        self._complib=None
+        self._fletcher32 = None
+
+        self._filters = None
+
+        self._pandas_append = None
+        self._pandas_format = None
+
+        self._purge_duplicate_comments = None
+        self._result_per_run = None
+        self._derived_parameters_per_run = None
+
+        self._overview_explored_parameters_runs = None
+        self._overview_derived_parameters_runs = None
+        self._overview_parameters = None,
+        self._overview_derived_parameters_trajectory = None,
+        self._overview_results_trajectory = None
+        self._overview_derived_parameters_runs = None
+        self._overview_results_runs = None
+
+
 
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
+
+
+
+
+    @property
+    def overview_explored_parameters_runs(self):
+        """ Whether to show explored parameters table for each run
+        """
+        if self._overview_explored_parameters_runs is None:
+            self._overview_explored_parameters_runs = True
+        return self._overview_explored_parameters_runs
+
+    @overview_explored_parameters_runs.setter
+    def overview_explored_parameters_runs(self, overview_explored_parameters_runs):
+        self._overview_explored_parameters_runs = bool(overview_explored_parameters_runs)
+
+
+    @property
+    def purge_duplicate_comments(self):
+        """ Whether to purge duplicate comments for each run"""
+        if self._purge_duplicate_comments is None:
+            self._purge_duplicate_comments = True
+        return self._purge_duplicate_comments
+
+    @purge_duplicate_comments.setter
+    def purge_duplicate_comments(self, purge_duplicate_comments):
+        self._purge_duplicate_comments = bool(purge_duplicate_comments)
+
+
+    @property
+    def overview_config(self):
+        """ Whether to show the overview table table"""
+        if self._overview_config is None:
+            self._overview_config = True
+        return self._overview_config
+
+    @overview_config.setter
+    def overview_config(self, overview_config):
+        self._overview_config = bool(overview_config)
+
+
+    @property
+    def overview_parameters(self):
+        """ Whether to show the overview table table"""
+        if self._overview_parameters is None:
+            self._overview_parameters = True
+        return self._overview_parameters
+
+    @overview_parameters.setter
+    def overview_parameters(self, overview_parameters):
+        self._overview_parameters = bool(overview_parameters)
+
+
+    @property
+    def overview_derived_parameters_trajectory(self):
+        """ Whether to show the overview table table"""
+        if self._overview_derived_parameters_trajectory is None:
+            self._overview_derived_parameters_trajectory = True
+        return self._overview_derived_parameters_trajectory
+
+    @overview_derived_parameters_trajectory.setter
+    def overview_derived_parameters_trajectory(self, overview_derived_parameters_trajectory):
+        self._overview_derived_parameters_trajectory = bool(overview_derived_parameters_trajectory)
+
+
+    @property
+    def overview_derived_parameters_runs(self):
+        """ Whether to show the overview table table"""
+        if self._overview_derived_parameters_runs is None:
+            self._overview_derived_parameters_runs = True
+        return self._overview_derived_parameters_runs
+
+    @overview_derived_parameters_runs.setter
+    def overview_derived_parameters_runs(self, overview_derived_parameters_runs):
+        self._overview_derived_parameters_runs = bool(overview_derived_parameters_runs)
+
+
+    @property
+    def overview_results_runs(self):
+        """ Whether to show the overview table table"""
+        if self._overview_results_runs is None:
+            self._overview_results_runs = True
+        return self._overview_results_runs
+
+    @overview_results_runs.setter
+    def overview_results_runs(self, overview_results_runs):
+        self._overview_results_runs = bool(overview_results_runs)
+
+    @property
+    def overview_results_trajectory(self):
+        """ Whether to show the overview table table"""
+        if self._overview_results_trajectory is None:
+            self._overview_results_trajectory = True
+        return self._overview_results_trajectory
+
+    @overview_results_trajectory.setter
+    def overview_results_trajectory(self, overview_results_trajectory):
+        self._overview_results_trajectory = bool(overview_results_trajectory)
+
+    @property
+    def results_per_run(self):
+        """Estimate of results per run"""
+        if self._result_per_run is None:
+            self._result_per_run = 0
+
+        return self._result_per_run
+
+    @results_per_run.setter
+    def results_per_run(self, results_per_run):
+        self._result_per_run = results_per_run
+
+
+    @property
+    def derived_parameters_per_run(self):
+        """Estimate of results per run"""
+        if self._derived_parameters_per_run is None:
+            self._derived_parameters_per_run = 0
+        return self._derived_parameters_per_run
+
+    @results_per_run.setter
+    def results_per_run(self, results_per_run):
+        self._result_per_run = results_per_run
+
+
+    @property
+    def complib(self):
+        "Compression library used"
+        if self._complib is None:
+            self._complib = 'zlib'
+        return self._complib
+
+    @complib.setter
+    def complib(self, complib):
+        self._complib = complib
+
+    @property
+    def complevel(self):
+        "Compression level used"
+        if self._complevel is None:
+            self._complevel = 9
+        return self._complevel
+
+    @complevel.setter
+    def complevel(self, complevel):
+        self._complevel = complevel
+
+
+    @property
+    def fletcher32(self):
+        """ Whether fletcher 32 should be used """
+        if self._fletcher32 is None:
+            self._fletcher32 = False
+        return self._fletcher32
+
+    @fletcher32.setter
+    def fletcher32(self, fletcher32):
+            self._fletcher32 = bool(fletcher32)
+
+    @property
+    def pandas_append(self):
+        """ If pandas should create storage in append mode"""
+        if self._pandas_append is None:
+            self._pandas_append = False
+        return self._pandas_append
+
+    @pandas_append.setter
+    def pandas_append(self, pandas_append):
+        self._pandas_append = bool(pandas_append)
+
+    @property
+    def pandas_format(self):
+        """Format of pandas data. Applicable formats are 'table' (or 't') and 'fixed' (or 'f')"""
+        if self._pandas_format is None:
+            self._pandas_format = 'fixed'
+        return self._pandas_format
+
+    @pandas_format.setter
+    def pandas_format(self, pandas_format):
+        if pandas_format not in ('f', 'fixed', 'table', 't'):
+            raise ValueError('''Pandas format can only be 'table' (or 't') and 'fixed' (or 'f')''')
+        self._pandas_format = pandas_format
 
     @property
     def filename(self):
@@ -414,6 +611,11 @@ class HDF5StorageService(StorageService):
     def _overview_group(self):
         """Direct link to the overview group"""
         return self._all_create_or_get_groups('overview')[0]
+
+    def _make_filters(self):
+        return pt.Filters(complevel=self.complevel,
+                         complib=self.complib,
+                        fletcher32=self.fletcher32)
 
 
     def load(self,msg,stuff_to_load,*args,**kwargs):
@@ -1411,11 +1613,8 @@ class HDF5StorageService(StorageService):
         actual_rows = run_table.nrows
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
+        add_table = self.overview_explored_parameters_runs
 
-        try:
-            add_table = traj.f_get('config.hdf5.overview.explored_parameters_runs').f_get()
-        except AttributeError:
-            add_table=True
 
         # Extract parameter summary and if necessary create new explored parameter tables
         # in the result groups
@@ -1805,6 +2004,29 @@ class HDF5StorageService(StorageService):
                                                  tablename='runs',
                                                  description=rundescription_dict)
 
+
+        hdf5_description_dict = {'complib' = pt.StringCol(7, pos=0),
+                                 'complevel' = pt.Intcol(pos=1),
+                                 'fletcher32' = pt.BoolCol(pos=2),
+                                  'pandas_append' = pt.BoolCol(pos=4),
+                                  'pandas_format' = pt.BoolCol(pos=3)}
+
+        pos = 5
+        for name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+            hdf5_description_dict[table_name] = pt.BoolCol(pos=pos)
+            pos+=1
+
+        hdf5_description_dict.update({'purge_duplicate_comments' : pt.BoolCol(pos=pos+1),
+                                     'results_per_run' : pt.IntCol(pos=pos+2),
+                                     'derived_parameters_per_run' : pt.IntCol})
+
+
+        hdf5table = self._all_get_or_create_table(where=self._overview_group,
+                                                  tablename='hdf5_config',
+                                                  description= hdf5_description_dict)
+
+
+
         # Fill table with dummy entries starting from the current table size
         actual_rows = runtable.nrows
         self._trj_fill_run_table_with_dummys(traj, actual_rows)
@@ -1820,13 +2042,16 @@ class HDF5StorageService(StorageService):
             # Check if we want the corresponding overview table
             # If the trajectory does not contain information about the table
             # we assume it should be created.
-            try:
-                if traj.config.f_get(name).f_get():
-                    tostore_tables.append(table_name)
-            except AttributeError:
+
+            if getattr(self, name):
                 tostore_tables.append(table_name)
 
-        for table_name in tostore_tables:
+
+        self._make_overview_tables(tostore_tables, traj)
+
+
+    def _make_overview_tables(self, tables_to_make, traj=None):
+        for table_name in tables_to_make:
             # Prepare the tables desciptions, depending on which overview table we create
             # we need different columns
             paramdescriptiondict ={}
@@ -1841,24 +2066,33 @@ class HDF5StorageService(StorageService):
                 paramdescriptiondict['value']=pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
             if table_name == 'config':
-                expectedrows= len(traj._config)
+                if traj is not None:
+                    expectedrows= len(traj._config)
+
 
             if table_name == 'parameters':
-                expectedrows= len(traj._parameters)
+                if traj is not None:
+                    expectedrows= len(traj._parameters)
+
 
             if table_name == 'explored_parameters':
                 paramdescriptiondict['range']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH)
-                expectedrows=len(traj._explored_parameters)
+                if traj is not None:
+                    expectedrows=len(traj._explored_parameters)
+
 
             if table_name == 'results_trajectory':
-                expectedrows=len(traj._results)
+                if traj is not None:
+                    expectedrows=len(traj._results)
 
             if table_name == 'derived_parameters_trajectory':
-                expectedrows=len(traj._derived_parameters)
+                if traj is not None:
+                    expectedrows=len(traj._derived_parameters)
 
             if table_name in ['derived_parameters_trajectory','results_trajectory',
                                   'derived_parameters_runs_summary', 'results_runs_summary',
                                   'config', 'parameters', 'explored_parameters']:
+
                 if table_name.startswith('derived') or table_name.endswith('parameters'):
                     paramdescriptiondict['length']= pt.IntCol()
 
@@ -1873,24 +2107,17 @@ class HDF5StorageService(StorageService):
             # This can help to speed up storing
             if table_name.startswith('derived_parameters_runs'):
 
-                try:
-                    expectedrows = traj.f_get('config.hdf5.derived_parameters_per_run').f_get()
-                except AttributeError:
-                    expectedrows = 0
+                expectedrows = self.derived_parameters_per_run
 
-                if not expectedrows <= 0:
-                    if not table_name.endswith('summary'):
-                        expectedrows *= len(traj)
+                if not table_name.endswith('summary') and traj is not NOne:
+                    expectedrows *= len(traj)
+
 
             if table_name.startswith('results_runs'):
-
-                try:
-                    expectedrows = traj.f_get('config.hdf5.results_per_run').f_get()
-                except AttributeError:
-                    expectedrows = 0
+                expectedrows = self.results_per_run
 
                 if not expectedrows <=0:
-                    if not table_name.endswith('summary'):
+                    if not table_name.endswith('summary') and traj is not None:
                         expectedrows *= len(traj)
 
             if expectedrows>0:
@@ -2292,12 +2519,7 @@ class HDF5StorageService(StorageService):
                 self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
                                            branch_name,self._trajectory_group)
 
-        # Check if we want explored parameters overview tables.
-        # If we do not know whether to build them, just do it
-        try:
-            add_table = single_run.f_get('config.hdf5.overview.explored_parameters_runs').f_get()
-        except AttributeError:
-            add_table = True
+        add_table = self.overview_derived_parameters_runs
 
         # For better readability and if desired add the explored parameters to the results
         # Also collect some summary information about the explored parameters
