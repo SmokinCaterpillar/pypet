@@ -624,12 +624,7 @@ class Environment(object):
         if not tail:
             self._filename =  os.path.join(self._filename, self._traj.v_name+'.hdf5')
 
-        self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
-        # Check if the user wants to use the hdf5 storage service. If yes,
-        # add a service to the trajectory
-        if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
-            self._add_hdf5_storage_service(lazy_debug)
 
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit
@@ -774,24 +769,28 @@ class Environment(object):
                                               'used to run the experiments'
 
         # Add HDF5 config in case the user wants the standard service
-        if (self._use_hdf5 and not self.v_trajectory.v_stored and
-                not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False)):
+        self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
+        if (self._use_hdf5 and self.v_trajectory.v_storage_service is None):
 
             # Print which file we use for storage
             self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
 
-            for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+            for table_name in HDF5StorageService.NAME_TABLE_MAPPING:
 
-                self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
-                                                                  'table with that name')
+                config_name = 'environment.%s.hdf5.'+table_name % self.v_name
+                self._traj.f_add_config( config_name, True,
+                                        comment='Whether or not to have an overview '
+                                                'table with that name')
 
 
-            self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
+
+            config_name = 'environment.%s.hdf5.overview.explored_parameters_runs' % self.v_name
+            self._traj.f_add_config(config_name, True,
                                         comment='Whether there are overview tables about the '
                                                 'explored parameters in each run')
 
-
-            self._traj.f_add_config('hdf5.purge_duplicate_comments',purge_duplicate_comments,
+            config_name = 'environment.%s.hdf5.purge_duplicate_comments' % self.v_name
+            self._traj.f_add_config(config_name,purge_duplicate_comments,
                                                 comment='Whether comments of results and'
                                                         ' derived parameters should only'
                                                         ' be stored for the very first instance.'
@@ -800,21 +799,45 @@ class Environment(object):
 
 
 
-            self._traj.f_add_config('hdf5.results_per_run', results_per_run,
+            cofig_name = 'environment.%s.hdf5.results_per_run' % self.v_name
+            self._traj.f_add_config(config_name, results_per_run,
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance')
 
 
-            self._traj.f_add_config('hdf5.derived_parameters_per_run', derived_parameters_per_run,
+            config_name = 'environment.%s.hdf5.derived_parameters_per_run' % self.v_name
+            self._traj.f_add_config( config_name, derived_parameters_per_run,
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance')
 
-            self._traj.f_add_config('hdf5.complevel',complevel,
+            config_name = 'environment.%s.hdf5.complevel' % self.v_name
+            self._traj.f_add_config(config_name,complevel,
                                         comment='Compression Level (0 no compression '
-                                                'to 9 highest compression)')
+                                                'to 9 highest compression)').f_lock()
 
-            self._traj.f_add_config('hdf5.complib',complib,
+            config_name = 'environmet.%s.hdf5.complib' % self.v_name
+            self._traj.f_add_config(config_name,complib,
                                         comment='Compression Algorithm')
+
+            config_name = 'environmet.%s.hdf5.fletcher32' % self.v_name
+            self._traj.f_add_config(config_name, fletcher32,
+                                        comment='Whether to use fletcher32 checksums '
+                                                'in the HDF5 library')
+
+            onfig_name = 'environmet.%s.hdf5.shuffle' % self.v_name
+            self._traj.f_add_config(config_name, shuffle,
+                                        comment='Whether to use the shuffle filter in the HDF5 '
+                                                'library.')
+
+            config_name = 'environmet.%s.hdf5.pandas_format' % self.v_name
+            self._traj.f_add_config(config_name, pandas_format,
+                                        comment=''''Format how to store pandas Data Frames. '
+                                                'Either as 'table' or 'frame'.''').f_lock()
+
+            config_name = 'environmet.%s.hdf5.pandas_append' % self.v_name
+            self._traj.f_add_config(config_name, pandas_append,
+                                        comment='In case if format is `table` if table should be '
+                                                'written in appedn mode.')
 
             self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
 
@@ -823,11 +846,19 @@ class Environment(object):
             self.f_set_large_overview(large_overview_tables)
 
 
-        # Notify that in case of lazy debuggin we won't record anythin
-        if lazy_debug and 'pydevd' in sys.modules:
-            self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
-        self._logger.info('Environment initialized.')
+
+            # Check if the user wants to use the hdf5 storage service. If yes,
+            # add a service to the trajectory
+            if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
+                self._add_hdf5_storage_service(lazy_debug)
+
+
+            # Notify that in case of lazy debuggin we won't record anythin
+            if lazy_debug and 'pydevd' in sys.modules:
+                self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
+
+            self._logger.info('Environment initialized.')
 
 
     def _make_logging_handlers(self, log_path, log_level, log_stdout):
@@ -907,25 +938,25 @@ class Environment(object):
     def f_set_large_overview(self, switch):
         """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.results_runs=switch
-        self._traj.config.hdf5.overview.derived_parameters_runs = switch
-        self._traj.config.hdf5.overview.explored_parameters_runs = switch
+        self._traj.config.environment[self.v_name].hdf5.overview.results_runs=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.derived_parameters_runs = switch
+        self._traj.config.environment[self.v_name].hdf5.overview.explored_parameters_runs = switch
 
     def f_set_summary(self, switch):
         """Switches summary tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.derived_parameters_runs_summary=switch
-        self._traj.config.hdf5.overview.results_runs_summary=switch
-        self._traj.config.hdf5.purge_duplicate_comments=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.derived_parameters_runs_summary=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.results_runs_summary=switch
+        self._traj.config.environment[self.v_name].hdf5.purge_duplicate_comments=switch
 
     def f_set_small_overview(self, switch):
         """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.parameters = switch
-        self._traj.config.hdf5.overview.config=switch
-        self._traj.config.hdf5.overview.explored_parameters=switch
-        self._traj.config.hdf5.overview.derived_parameters_trajectory=switch
-        self._traj.config.hdf5.overview.results_trajectory=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.parameters = switch
+        self._traj.config.environment[self.v_name].hdf5.overview.config=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.explored_parameters=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.derived_parameters_trajectory=switch
+        self._traj.config.environment[self.v_name].hdf5.overview.results_trajectory=switch
 
 
 
@@ -1027,7 +1058,8 @@ class Environment(object):
             self._storage_service = LazyStorageService()
         else:
             self._storage_service = HDF5StorageService(self._filename,
-                                                 self._file_title )
+                                                 self._file_title,
+                                    **self.v_trajectory.config.environmnet[self.v_name].hdf5.to_dict() )
 
         self._traj.v_storage_service=self._storage_service
 

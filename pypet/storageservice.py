@@ -379,7 +379,26 @@ class HDF5StorageService(StorageService):
     ''' Whether an hdf5 node is a leaf node'''
 
 
-    def __init__(self, filename=None, file_title='Experiment'):
+    def __init__(self, filename=None, file_title='Experiment',
+                complib=None,
+                complevel=None,
+                fletcher32=None,
+                shuffle=None,
+                pandas_format=None,
+                pandas_append=None,
+                overview_parameters = None,
+                overview_config = None,
+                overview_explored_parameters_runs = None,
+                overview_derived_parameters_trajectory = None,
+                overview_derived_parameters_runs = None,
+                overview_derived_parameters_runs_summary = None,
+                overview_results_trajectory = None,
+                overview_results_runs = None,
+                overview_results_runs_summary = None,
+                purge_duplicate_comments = None,
+                results_per_run = None,
+                derived_parameters_per_run = None,
+                 ):
         self._filename = filename
         self._file_title = file_title
         self._trajectory_name = None
@@ -389,26 +408,29 @@ class HDF5StorageService(StorageService):
         # node of a trajectory
          # remembers whether to purge duplicate comments
         self._logger = logging.getLogger('HDF5StorageService')
-        self._complevel = None
-        self._complib=None
-        self._fletcher32 = None
+        self._complevel = complevel
+        self._complib = complib
+        self._fletcher32 = fletcher32
+        self._shuffle = shuffle
 
         self._filters = None
 
-        self._pandas_append = None
-        self._pandas_format = None
+        self._pandas_append = pandas_append
+        self._pandas_format = pandas_format
 
-        self._purge_duplicate_comments = None
-        self._result_per_run = None
-        self._derived_parameters_per_run = None
+        self._purge_duplicate_comments = purge_duplicate_comments
+        self._result_per_run = results_per_run
+        self._derived_parameters_per_run = derived_parameters_per_run
 
-        self._overview_explored_parameters_runs = None
-        self._overview_derived_parameters_runs = None
-        self._overview_parameters = None,
-        self._overview_derived_parameters_trajectory = None,
-        self._overview_results_trajectory = None
-        self._overview_derived_parameters_runs = None
-        self._overview_results_runs = None
+        self._overview_parameters = overview_parameters,
+        self._overview_config = overview_config,
+        self._overview_explored_parameters_runs = overview_explored_parameters_runs,
+        self._overview_derived_parameters_trajectory = overview_derived_parameters_trajectory,
+        self._overview_derived_parameters_runs = overview_derived_parameters_runs,
+        self._overview_derived_parameters_runs_summary = overview_derived_parameters_runs_summary,
+        self._overview_results_trajectory = overview_results_trajectory,
+        self._overview_results_runs = overview_results_runs,
+        self._overview_results_runs_summary = overview_results_runs_summary
 
 
 
@@ -491,6 +513,28 @@ class HDF5StorageService(StorageService):
     def overview_derived_parameters_runs(self, overview_derived_parameters_runs):
         self._overview_derived_parameters_runs = bool(overview_derived_parameters_runs)
 
+
+    @property
+    def overview_derived_parameters_runs_summary(self):
+        """ Whether to show the overview table table"""
+        if self._overview_derived_parameters_runs_summary is None:
+            self._overview_derived_parameters_runs_summary = True
+        return self._overview_derived_parameters_runs_summary
+
+    @overview_derived_parameters_runs_summary.setter
+    def overview_derived_parameters_runs_summary(self, overview_derived_parameters_runs_summary):
+        self._overview_derived_parameters_runs_summary = bool(overview_derived_parameters_runs_summary)
+
+    @property
+    def overview_results_runs_summary(self):
+        """ Whether to show the overview table table"""
+        if self._overview_results_runs is None:
+            self._overview_results_runs = True
+        return self._overview_results_runs
+
+    @overview_results_runs.setter
+    def overview_results_runs(self, overview_results_runs):
+        self._overview_results_runs = bool(overview_results_runs)
 
     @property
     def overview_results_runs(self):
@@ -2013,7 +2057,7 @@ class HDF5StorageService(StorageService):
 
         pos = 5
         for name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
-            hdf5_description_dict[table_name] = pt.BoolCol(pos=pos)
+            hdf5_description_dict[name] = pt.BoolCol(pos=pos)
             pos+=1
 
         hdf5_description_dict.update({'purge_duplicate_comments' : pt.BoolCol(pos=pos+1),
@@ -2109,7 +2153,7 @@ class HDF5StorageService(StorageService):
 
                 expectedrows = self.derived_parameters_per_run
 
-                if not table_name.endswith('summary') and traj is not NOne:
+                if not table_name.endswith('summary') and traj is not None:
                     expectedrows *= len(traj)
 
 
