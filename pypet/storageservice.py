@@ -273,7 +273,8 @@ class HDF5StorageService(StorageService):
     PR_ATTR_NAME_MAPPING = {
         '_derived_parameters_per_run' : 'derived_parameters_per_run',
         '_results_per_run' : 'results_per_run',
-        '_purge_duplicate_comments' : 'purge_duplicate_comments'
+        '_purge_duplicate_comments' : 'purge_duplicate_comments',
+        '_overview_explored_parameters_runs' : 'explored_parameters_runs'
     }
     '''Mapping of Attribute names for hdf5_settings table'''
 
@@ -424,6 +425,7 @@ class HDF5StorageService(StorageService):
         self._overview_parameters = False
         self._overview_config = False
         self._overview_explored_parameters = False
+        self._overview_explored_parameters_runs = False
         self._overview_derived_parameters_trajectory = False
         self._overview_derived_parameters_runs = False
         self._overview_derived_parameters_runs_summary = False
@@ -1523,7 +1525,7 @@ class HDF5StorageService(StorageService):
         actual_rows = run_table.nrows
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
-        add_table = self._overview_explored_parameters
+        add_table = self._overview_explored_parameters_runs
 
 
         # Extract parameter summary and if necessary create new explored parameter tables
@@ -1731,7 +1733,7 @@ class HDF5StorageService(StorageService):
 
         version = metarow['version']
 
-        self._trj_check_version(version,force)
+        self._trj_check_version(version, force)
 
         if as_new:
             length = int(metarow['length'])
@@ -1800,6 +1802,7 @@ class HDF5StorageService(StorageService):
                 self._results_per_run = int(hdf5_row['results_per_run'])
                 self._derived_parameters_per_run = int(hdf5_row['derived_parameters_per_run'])
                 self._purge_duplicate_comments = bool(hdf5_row['purge_duplicate_comments'])
+                self._overview_explored_parameters_runs = bool(hdf5_row['explored_parameters_runs'])
 
                 for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
                     attr_value = bool(hdf5_row[table_name])
@@ -1953,9 +1956,10 @@ class HDF5StorageService(StorageService):
             pos+=1
 
         # Store the hdf5 properties in an overview table
-        hdf5_description_dict.update({'purge_duplicate_comments' : pt.BoolCol(pos=pos+1),
-                                     'results_per_run' : pt.IntCol(pos=pos+2),
-                                     'derived_parameters_per_run' : pt.IntCol(pos=pos+3)})
+        hdf5_description_dict.update({'purge_duplicate_comments' : pt.BoolCol(pos=pos+2),
+                                     'results_per_run' : pt.IntCol(pos=pos+3),
+                                     'derived_parameters_per_run' : pt.IntCol(pos=pos+4),
+                                     'explored_parameters_runs' : pt.BoolCol(pos=pos+1)})
 
 
         hdf5table = self._all_get_or_create_table(where=self._overview_group,
@@ -2111,6 +2115,7 @@ class HDF5StorageService(StorageService):
                                ' `%s` but this trajectory is already found in file `%s`' %
                                (traj.v_name,self._filename))
 
+        # Extract HDF5 settings from the trajectory
         self._srvc_check_hdf_properties(traj)
 
         # Store meta information

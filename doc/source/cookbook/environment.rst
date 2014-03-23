@@ -395,7 +395,7 @@ The following tables are created:
 
 * A `runs` table summarizing the single runs
 
-* The instance tables:
+* The branch tables:
 
     `parameters`
 
@@ -408,7 +408,8 @@ The following tables are created:
     `results_runs`
 
         All results of all individual runs, to reduce memory size only a short value
-        summary and the name is given.
+        summary and the name is given. Per default this table is switched off, to enable it
+        pass `large_overview_tables=True` to your environment.
 
 
     `results_runs_summary`
@@ -432,10 +433,12 @@ The following tables are created:
 
         All three are analogous to the result overviews above
 
-* The `explored_parameters` overview about your parameters explored in the single runs
+* The `explored_parameters` overview about your parameters explored in the single runs.
 
 * In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
   the values in each run.
+  Per default these tables are switched off, to enable it pass `large_overview_tables=True`
+  to your environment.
 
 However, if you have many *runs* and *results* and *derived_parameters*,
 I would advice you to switch of the result, derived parameter
