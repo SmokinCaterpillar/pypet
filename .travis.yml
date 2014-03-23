@@ -14,6 +14,9 @@ matrix:
 
 # Install dependencies for PyTables
 # command to install dependencies
+before_install:
+  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
+  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
 install:
   - echo "+++++++++++ Installing Coveralls +++++++++++"
   - pip install coveralls
@@ -22,12 +25,11 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
-  - pip install numpy==$NUMPY_VERSION
-  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
-  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
+   - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
+  - if [[ $COVERAGE == OFF ]]; then pip install numpy==$NUMPY_VERSION; fi
   - echo "+++++++++++ Installing SciPy $SCIPY_VERSION +++++++++++++"
-  - pip install scipy==$SCIPY_VERSION
+  - if [[ $COVERAGE == OFF ]]; then pip install scipy==$SCIPY_VERSION; fi
+  - if [[ $COVERAGE == ON ]]; then sudo apt-get install -qq python-numpy python-scipy
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
   - pip install numexpr==$NUMEXPR_VERSION
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
