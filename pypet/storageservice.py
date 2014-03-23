@@ -968,6 +968,8 @@ class HDF5StorageService(StorageService):
                 self._logger.warning('Could not find `%s` in traj, '
                                      'using default value.' % name)
 
+        self._make_filters()
+
 
 
 
@@ -1521,7 +1523,7 @@ class HDF5StorageService(StorageService):
         actual_rows = run_table.nrows
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
-        add_table = self.overview_explored_parameters_runs
+        add_table = self._overview_explored_parameters_runs
 
 
         # Extract parameter summary and if necessary create new explored parameter tables
