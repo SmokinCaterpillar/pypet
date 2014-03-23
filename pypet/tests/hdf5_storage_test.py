@@ -139,6 +139,12 @@ class EnvironmentTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
         self.use_pool=True
+        self.pandas_format='fixed'
+        self.pandas_append=False
+        self.complib = 'zlib'
+        self.complevel=9
+        self.shuffle=True
+        self.fletcher32 = False
 
 
     def explore_complex_params(self, traj):
@@ -233,7 +239,13 @@ class EnvironmentTest(TrajectoryComparator):
                           multiproc=self.multiproc,
                           ncores=self.ncores,
                           wrap_mode=self.mode,
-                          use_pool=self.use_pool)
+                          use_pool=self.use_pool,
+                          fletcher32=self.fletcher32,
+                          complevel=self.complevel,
+                          complib=self.complib,
+                          shuffle=self.shuffle,
+                          pandas_append=self.pandas_append,
+                          pandas_format=self.pandas_format)
 
         traj = env.v_trajectory
 
@@ -557,6 +569,31 @@ class EnvironmentTest(TrajectoryComparator):
             hdf5file.close()
 
 
+class TestOtherHDF5Settings(EnvironmentTest):
+    def set_mode(self):
+        self.mode = 'LOCK'
+        self.multiproc = False
+        self.ncores = 1
+        self.use_pool=True
+        self.pandas_format='table'
+        self.pandas_append=True
+        self.complib = 'blosc'
+        self.complevel=2
+        self.shuffle=False
+        self.fletcher32 = False
+
+class TestOtherHDF5Settings2(EnvironmentTest):
+    def set_mode(self):
+        self.mode = 'LOCK'
+        self.multiproc = False
+        self.ncores = 1
+        self.use_pool=True
+        self.pandas_format='table'
+        self.pandas_append=False
+        self.complib = 'lzo'
+        self.complevel=2
+        self.shuffle=False
+        self.fletcher32 = True
 
 
 class ResultSortTest(TrajectoryComparator):

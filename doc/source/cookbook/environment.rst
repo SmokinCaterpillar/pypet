@@ -49,6 +49,10 @@ You start your simulations by creating an environment object:
                  file_title=None,
                  complevel=9,
                  complib='zlib',
+                 shuffle=True,
+                 fletcher32=False,
+                 pandas_format='table',
+                 pandas_append=True,
                  purge_duplicate_comments=True,
                  summary_tables=True,
                  small_overview_tables=True,
@@ -248,6 +252,28 @@ You can pass the following arguments:
     Note that 'blosc' and 'lzo' are usually faster than 'zlib' but it may be the case that
     you can no longer open your hdf5 files with third-party applications that do not rely
     on PyTables.
+
+* `shuffle`
+
+    Whether or not to use the shuffle filters in the HDF5 library.
+    This normally improves the compression ratio.
+
+* `fletcher32`
+
+    Whether or not to use the *Fletcher32* filter in the HDF5 library.
+    This is used to add a checksum on hdf5 data.
+
+* `pandas_format`
+
+    How to store pandas data frames. Either in 'fixed' ('f') or 'table' ('t') format.
+    Fixed format allows fast reading and writing but disables querying the hdf5 data and
+    appending to the store (with other 3rd party software other than *pypet*).
+
+* `pandas_append`
+
+    If format is 'table', `pandas_append=True` allows to modify the tables after storage with
+    other 3rd party software. Currently appending is not supported by *pypet* but this
+    feature will come soon.
 
 * `purge_duplicate_comments`
 

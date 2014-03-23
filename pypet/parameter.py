@@ -2138,6 +2138,16 @@ class Result(BaseResult):
         """Loads data from load_dict"""
         self._data = load_dict
 
+    def __delitem__(self, key):
+        """ Deletes an item, see also __delattr__"""
+        if isinstance(key, int):
+            if key == 0:
+                key = self.v_name
+            else:
+                key = self.v_name+'_%d' % key
+
+        del self._data[key]
+
     def __delattr__(self, item):
         """ Deletes an item from the result.
 

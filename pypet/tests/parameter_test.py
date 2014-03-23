@@ -701,6 +701,23 @@ class ResultTest(unittest.TestCase):
                                     'Random_Values' :[42,43,44],
                                     'Doubles': [1.2,3.4,5.6]})
 
+        myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
+
+
+        myseries = myframe['TC1']
+
+        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),
+                            'Item2' : pd.DataFrame(np.random.randn(4, 2))})
+
+        self.data['series'] = myseries
+        self.data['panel'] = mypanel
+
+        # self.data['p4d'] = pd.Panel4D(np.random.randn(2, 2, 5, 4),
+        #     labels=['Label1','Label2'],
+        #    items=['Item1', 'Item2'],
+        #    major_axis=pd.date_range('1/1/2000', periods=5),
+        #   minor_axis=['A', 'B', 'C', 'D'])
+
         self.make_constructor()
         self.make_results()
 
@@ -777,6 +794,9 @@ class ResultTest(unittest.TestCase):
 
     def test_pickling(self):
         for key, res in self.results.items():
+
+            if 'p4d' in res:
+                del res['p4d']
 
             dump = pickle.dumps(res)
 
