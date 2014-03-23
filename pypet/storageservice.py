@@ -275,7 +275,7 @@ class HDF5StorageService(StorageService):
         '_results_per_run' : 'results_per_run',
         '_purge_duplicate_comments' : 'purge_duplicate_comments'
     }
-    '''Mapping of Attribute names for hdf5_config table'''
+    '''Mapping of Attribute names for hdf5_settings table'''
 
     ATTR_LIST = [
             'complevel',
@@ -285,7 +285,7 @@ class HDF5StorageService(StorageService):
             'pandas_format',
             'pandas_append'
     ]
-    '''List of HDF5StorageService Attributes that have to be stored into the hdf5_config table'''
+    '''List of HDF5StorageService Attributes that have to be stored into the hdf5_settings table'''
 
 
 
@@ -1784,8 +1784,8 @@ class HDF5StorageService(StorageService):
                 traj._run_information[name] = info_dict
 
             # Load the hdf5 config data:
-            if 'hdf5_config' in self._overview_group:
-                hdf5_table = self._overview_group.hdf5_config
+            if 'hdf5_settings' in self._overview_group:
+                hdf5_table = self._overview_group.hdf5_settings
                 hdf5_row = hdf5_table[0]
 
                 self.complib = str(hdf5_row['complib'])
@@ -1805,7 +1805,7 @@ class HDF5StorageService(StorageService):
 
 
             else:
-                self._logger.warning('Could not find `hdf5_config` overview table. I will use the '
+                self._logger.warning('Could not find `hdf5_settings` overview table. I will use the '
                                      'standard settings (for `complib`, `complevel` etc.) instead.')
 
     def _tree_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data, recursive=True):
@@ -1957,7 +1957,7 @@ class HDF5StorageService(StorageService):
 
 
         hdf5table = self._all_get_or_create_table(where=self._overview_group,
-                                                  tablename='hdf5_config',
+                                                  tablename='hdf5_settings',
                                                   description= hdf5_description_dict)
 
         insert_dict = {}
