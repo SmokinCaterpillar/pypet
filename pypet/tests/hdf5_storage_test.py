@@ -571,6 +571,7 @@ class EnvironmentTest(TrajectoryComparator):
 
 class TestOtherHDF5Settings(EnvironmentTest):
     def set_mode(self):
+        EnvironmentTest.set_mode(self)
         self.mode = 'LOCK'
         self.multiproc = False
         self.ncores = 1
@@ -584,6 +585,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
 
 class TestOtherHDF5Settings2(EnvironmentTest):
     def set_mode(self):
+        EnvironmentTest.set_mode(self)
         self.mode = 'LOCK'
         self.multiproc = False
         self.ncores = 1
