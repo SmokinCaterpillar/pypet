@@ -795,9 +795,6 @@ class ResultTest(unittest.TestCase):
     def test_pickling(self):
         for key, res in self.results.items():
 
-            if 'p4d' in res:
-                del res['p4d']
-
             dump = pickle.dumps(res)
 
             newRes = pickle.loads(dump)

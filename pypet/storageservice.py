@@ -423,7 +423,7 @@ class HDF5StorageService(StorageService):
 
         self._overview_parameters = False
         self._overview_config = False
-        self._overview_explored_parameters_runs = False
+        self._overview_explored_parameters = False
         self._overview_derived_parameters_trajectory = False
         self._overview_derived_parameters_runs = False
         self._overview_derived_parameters_runs_summary = False
@@ -1523,7 +1523,7 @@ class HDF5StorageService(StorageService):
         actual_rows = run_table.nrows
         self._trj_fill_run_table_with_dummys(traj,actual_rows)
 
-        add_table = self._overview_explored_parameters_runs
+        add_table = self._overview_explored_parameters
 
 
         # Extract parameter summary and if necessary create new explored parameter tables
