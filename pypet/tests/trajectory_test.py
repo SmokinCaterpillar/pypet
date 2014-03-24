@@ -85,6 +85,16 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
+    def test_shrink(self):
+
+        self.assertTrue(len(self.traj)>1)
+
+        self.traj.f_shrink()
+
+        self.assertTrue(len(self.traj)==1)
+
+        self.assertTrue(len(self.traj.f_get_explored_parameters())==0)
+
     def test_get_all(self):
         all_nodes = self.traj.f_get_all('peter')
 

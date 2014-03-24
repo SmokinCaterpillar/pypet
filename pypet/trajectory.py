@@ -1468,7 +1468,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             raise TypeError('Your trajectory is already stored to disk or database, shrinking is '
                             'not allowed.')
 
-        for key, param in self._explored_parameters:
+        for key, param in self._explored_parameters.items():
+            param.f_unlock()
             param._shrink()
 
         # If we shrink, we do not have any explored parameters left and we can erase all
