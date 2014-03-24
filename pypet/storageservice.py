@@ -1730,7 +1730,7 @@ class HDF5StorageService(StorageService):
                         if counter == maximum_display_other:
                             self._logger.info('To many branchs or nodes at root for display. '
                                               'I will not inform you about loading anymore. '
-                                              'Branches are loaded silently in the background.'
+                                              'Branches are loaded silently in the background. '
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
                     self._tree_load_recursively(traj, traj, hdf5group, loading)
@@ -2163,7 +2163,7 @@ class HDF5StorageService(StorageService):
                         if counter == maximum_display_other:
                             self._logger.info('To many branches or nodes at root for display. '
                                               'I will not inform you about storing anymore. '
-                                              'Branches are stored silently in the background.'
+                                              'Branches are stored silently in the background. '
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
 
