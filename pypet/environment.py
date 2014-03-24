@@ -562,7 +562,7 @@ class Environment(object):
                  log_stdout=True,
                  multiproc=False,
                  ncores=1,
-                 use_pool=True,
+                 use_pool=False,
                  cpu_cap=1.0,
                  memory_cap=1.0,
                  swap_cap=1.0,
