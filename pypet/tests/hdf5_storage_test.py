@@ -64,9 +64,6 @@ class StorageTest(TrajectoryComparator):
             traj.f_load(name='Non-Existising-Traj')
 
         with self.assertRaises(ValueError):
-            traj.f_load(as_new=True,load_parameters=1, name = traj_name)
-
-        with self.assertRaises(ValueError):
             traj.f_load(as_new=True,load_parameters=2, load_results=2,
                         name=traj_name)
 
@@ -98,14 +95,15 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_partially_delete_stuff(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+        traj = Trajectory(name='Test',
+                          filename=make_temp_file('testpartially.hdf5'))
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
         traj.f_store()
 
         self.assertTrue('a' in res)
-        traj.f_delete_item(res, delete_only=['a'])
+        traj.f_delete_item(res, delete_only=['a'], remove_from_item=True)
 
         self.assertTrue('c' in res)
         self.assertTrue('a' not in res)
@@ -257,10 +255,6 @@ class StorageTest(TrajectoryComparator):
         traj.group1.f_set_annotations(Test=44)
 
         traj.f_store_items(['test','testres','group1'])
-
-        with self.assertRaises(ValueError):
-            traj.f_load_item('testres',load_only='not-exisiting')
-
 
 
         traj2 = Trajectory(name=traj.v_name, add_time=False,

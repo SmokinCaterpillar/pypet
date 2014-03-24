@@ -1923,8 +1923,6 @@ class HDF5StorageService(StorageService):
 
         """
 
-
-
         # Description of the `info` table
         descriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH, pos=0),
                          'time': pt.StringCol(len(traj.v_time), pos=1),
@@ -2022,6 +2020,7 @@ class HDF5StorageService(StorageService):
 
 
     def _srvc_make_overview_tables(self, tables_to_make, traj=None):
+        """Creates the overview tables in overview group"""
         for table_name in tables_to_make:
             # Prepare the tables desciptions, depending on which overview table we create
             # we need different columns
@@ -2126,7 +2125,7 @@ class HDF5StorageService(StorageService):
 
         # In case we accidentally chose a trajectory name that already exist
         # We do not want to mess up the stored trajectory but raise an Error
-        if not traj._stored and self._trajectory_group._v_nchildren>0:
+        if not traj._stored and self._trajectory_group._v_nchildren > 0:
             raise RuntimeError('You want to store a completely new trajectory with name'
                                ' `%s` but this trajectory is already found in file `%s`' %
                                (traj.v_name,self._filename))

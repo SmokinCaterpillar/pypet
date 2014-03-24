@@ -141,9 +141,6 @@ class ContinueTest(TrajectoryComparator):
         self.explore(self.trajs[1])
 
 
-
-
-
         for irun in range(len(self.filenames)):
             self.make_run(self.envs[irun])
 
@@ -153,12 +150,13 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'),
                                         remove_empty_groups=True)
 
-        self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')
+        self.assertTrue('Delete.Me' not in self.trajs[0],'Delete.Me is still in traj')
 
         self.trajs[0].f_update_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
         self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
-                                        remove_empty_groups=True)
+                                        remove_empty_groups=True,
+                                        remove_from_trajectory=True)
 
         self.trajs[0].f_update_skeleton()
         self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')

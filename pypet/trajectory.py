@@ -1623,9 +1623,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """
 
         if where in ['results', 'r']:
-            search_group = self.results
+            if not 'results.runs' in self:
+                raise TypeError('Trajectory does not contain any results from single runs.')
+
+            search_group = self.results.runs
         elif where in ['derived_parameters', 'd']:
-            search_group = self.derived_parameters
+            if not 'derived_parameters.runs' in self:
+                raise TypeError('Trajectory does not contain any derived parameters '
+                                'from single runs.')
+
+            search_group = self.derived_parameters.runs
         else:
             raise ValueError('Subtree `%s` unknown or not supported, please use '
                              '`where=` `results`, `derived_parameters` or short forms '
