@@ -15,7 +15,7 @@ Here are some links to important functions:
     :nosignatures:
 
     ~trajectory.Trajectory
-    ~trakectory.SingleRun
+    ~trajectory.SingleRun
     ~naturalnaming.ParameterGroup.f_add_parameter
     ~naturalnaming.DerivedParameterGroup.f_add_derived_parameter
     ~naturalnaming.ResultGroup.f_add_result

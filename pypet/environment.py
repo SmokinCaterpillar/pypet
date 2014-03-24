@@ -292,7 +292,7 @@ class Environment(object):
         You need the psutil_ package to use this cap feature. If not installed, the cap
         values are simply ignored.
 
-        .. psutil: http://psutil.readthedocs.org/
+        .. _psutil: http://psutil.readthedocs.org/
 
     :param memory_cap:
 

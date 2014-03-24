@@ -10,7 +10,8 @@ The example is taken from the `Litwin-Kumar and Doiron paper`_ from Nature neuro
 
 
 It is split into three different modules: The `clusternet.py` file containing
-the network specification, the `runscript.py` file to start a simulation, and
+the network specification, the `runscript.py` file to start a simulation
+(you have to be patient, BRIAN simulations can take some time), and
 the `plotff.py` to plot the results of the parameter exploration, i.e. the
 Fano Factor as a function of the clustering parameter `R_ee`.
 

@@ -638,7 +638,7 @@ Sometimes you start your session not running an experiment, but loading an old t
 The first step in order to do that is to create a new empty trajectory - in case
 you have stored stuff into an HDF5 file, you can pass a `filename` to the
 :class:`~pypet.trajectory.Trajectory` constructor - and call
-`~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
+:func:`~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
 you want to select within the HDF5 file. For the index you can also count backwards, so
 `-1` would yield the last or newest trajectory in an HDF5 file.
 
@@ -701,7 +701,7 @@ Automated logging and git commits are often very handy features. Probably you do
 to miss these while you do your data analysis. To enable these in case you simply want to
 load an old trajectory for data analysis without doing any more single runs, you can
 again use an :class:`~pypet.environment.Environment`.
-First, load the trajectory with `~pypet.trajectory.Trajectory.f_load`,
+First, load the trajectory with :func:`~pypet.trajectory.Trajectory.f_load`,
 and pass the loaded trajectory to a new environment. Accordingly the environment will trigger a
 git commit (in case you have specified a path to your repository root) and enable logging.
 You can additionally pass the argument `do_single_runs=False` to your environment if you only
@@ -745,7 +745,7 @@ of the trajectory untouched.
 
 Although I made it pretty clear that in general what is stored to disk is set in stone,
 there are a functions to delete items not only from RAM but also from disk:
-`~pypet.trajectory.f_delete_item` and `~pypet.trajectory.f_delete_items`.
+:func:`~pypet.trajectory.f_delete_item` and :func:`~pypet.trajectory.f_delete_items`.
 Note that you cannot delete explored parameters.
 
 
