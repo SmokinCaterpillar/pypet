@@ -40,7 +40,7 @@ For git integration you additionally need
 
 * GitPython >= 0.3.1
 
-To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
+To utilize the cap feature for multiprocessing you need
 
 * psutil >= 2.0.0
 
