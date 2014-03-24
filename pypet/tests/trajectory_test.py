@@ -432,14 +432,14 @@ class TrajectoryTest(unittest.TestCase):
     def test_find_in_all_runs(self):
 
 
-        self.traj.f_add_result('results.run_00000000.sub.resulttest', 42)
-        self.traj.f_add_result('results.run_00000001.sub.resulttest', 43)
-        self.traj.f_add_result('results.run_00000002.sub.resulttest', 44)
+        self.traj.f_add_result('results.runs.run_00000000.sub.resulttest', 42)
+        self.traj.f_add_result('results.runs.run_00000001.sub.resulttest', 43)
+        self.traj.f_add_result('results.runs.run_00000002.sub.resulttest', 44)
 
-        self.traj.f_add_result('results.run_00000002.sub.resulttest2', 42)
-        self.traj.f_add_result('results.run_00000003.sub.resulttest2', 43)
+        self.traj.f_add_result('results.runs.run_00000002.sub.resulttest2', 42)
+        self.traj.f_add_result('results.runs.run_00000003.sub.resulttest2', 43)
 
-        self.traj.f_add_derived_parameter('derived_parameters.run_00000002.testing', 44)
+        self.traj.f_add_derived_parameter('derived_parameters.runs.run_00000002.testing', 44)
 
         res_dict = self.traj.f_get_from_runs('kkkkkkdjfoiuref')
 
@@ -461,7 +461,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(res_dict)==1)
 
-        self.traj.f_add_result('results.run_00000002.sub.sub.resulttest2', 444)
+        self.traj.f_add_result('results.runs.run_00000002.sub.sub.resulttest2', 444)
 
         with self.assertRaises(pex.NotUniqueNodeError):
             self.traj.f_get_from_runs('resulttest2', check_uniqueness=True)

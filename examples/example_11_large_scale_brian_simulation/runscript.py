@@ -36,7 +36,7 @@ def main():
     # If we scale the original network by 0.5 but keep the cluster size at 80,
     # experiments run a) faster and b) results are better in terms of neurons being
     # double stochastic.
-    scale = 0.5
+    scale = 1.0
     traj.f_add_parameter('simulation.scale', scale,
             comment='Meta parameter that can scale default settings. '
                     'Rescales number of neurons and connections strenghts, but '

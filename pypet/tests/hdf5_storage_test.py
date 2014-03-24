@@ -63,9 +63,6 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
 
-        with self.assertRaises(ValueError):
-            traj.f_load(as_new=True,load_parameters=2, load_results=2,
-                        name=traj_name)
 
 
     def test_version_mismatch(self):
@@ -95,8 +92,8 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_partially_delete_stuff(self):
-        traj = Trajectory(name='Test',
-                          filename=make_temp_file('testpartially.hdf5'))
+        traj = Trajectory(name='TestDelete',
+                          filename=make_temp_file('testpartiallydel.hdf5'))
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -123,7 +120,7 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(res not in traj)
 
     def test_overwrite_stuff(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+        traj = Trajectory(name='Test', filename=make_temp_file('testowrite.hdf5'))
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -156,7 +153,7 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_partial_loading(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+        traj = Trajectory(name='TestPartial', filename=make_temp_file('testpartially.hdf5'))
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
