@@ -189,6 +189,61 @@ class StorageTest(TrajectoryComparator):
             traj.f_load_item(traj.test, load_except=['x'], load_only=['y'])
 
 
+    def test_hdf5_settings(self):
+
+        filename = make_temp_file('hdfsettings.hdf5')
+        env = Environment('testraj', filename=filename,
+                          add_time=True,
+                         comment='',
+                         dynamically_imported_classes=None,
+                         log_folder=None,
+                         log_level=logging.DEBUG,
+                         multiproc=False,
+                         ncores=3,
+                         wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                         continuable=1,
+                         use_hdf5=True,
+                         complevel=4,
+                         complib='lzo',
+                         shuffle=True,
+                         fletcher32=True,
+                         pandas_format='t',
+                         pandas_append=True,
+                         purge_duplicate_comments=True,
+                         summary_tables=True,
+                         small_overview_tables=True,
+                         large_overview_tables=True,
+                         results_per_run=19,
+                         derived_parameters_per_run=17)
+
+        traj = env.v_trajectory
+
+        traj.f_store()
+
+        hdf5file = pt.openFile(filename=filename)
+
+        table= hdf5file.root._f_getChild(traj.v_name)._f_getChild('overview')._f_getChild('hdf5_settings')
+
+        row = table[0]
+
+        self.assertTrue(row['complevel'] == 4)
+
+        self.assertTrue(row['complib'] == 'lzo')
+
+        self.assertTrue(row['shuffle'])
+        self.assertTrue(row['fletcher32'])
+        self.assertTrue(row['pandas_append'])
+        self.assertTrue(row['pandas_format'] == 't')
+
+        for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+            self.assertTrue(row[table_name])
+
+        self.assertTrue(row['purge_duplicate_comments'])
+        self.assertTrue(row['explored_parameters_runs'])
+        self.assertTrue(row['results_per_run']==19)
+        self.assertTrue(row['derived_parameters_per_run'] == 17)
+
+
     def test_store_items_and_groups(self):
 
         traj = Trajectory(name='testtraj', filename=make_temp_file('teststoreitems.hdf5'))
