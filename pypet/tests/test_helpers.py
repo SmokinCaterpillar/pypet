@@ -4,9 +4,11 @@ from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
 from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
     BaseParameter, SparseParameter, SparseResult, ObjectTable
+import pypet.pypetconstants
 import scipy.sparse as spsp
 import os
 import logging
+import random
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -20,6 +22,7 @@ import pandas as pd
 
 
 import tempfile
+
 
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
@@ -70,6 +73,19 @@ def make_run(remove=None, folder=None):
     finally:
         if remove:
             shutil.rmtree(actual_tempdir,True)
+
+def make_trajectory_name(testcase):
+    """Creates a trajectory name best on the current `testcase`"""
+    name = testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
+    maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
+
+    if len(name) > maxlen:
+        name = name[len(name)-maxlen:]
+
+        while name.startswith('_'):
+            name = name[1:]
+
+    return name
 
 def create_param_dict(param_dict):
     '''Fills a dictionary with some parameters that can be put into a trajectory.
@@ -142,11 +158,11 @@ def add_params(traj,param_dict):
 
     for key, val in flat_dict.items():
         if isinstance(val, (np.ndarray,tuple)):
-            traj.f_add_parameter(ArrayParameter,key,val )
+            traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
         elif isinstance(val, (int,str,bool,long,float)):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
-            traj.f_add_parameter(SparseParameter,key,val).v_annotations.f_set(
+            traj.f_add_parameter(SparseParameter,key,val, comment='comment').v_annotations.f_set(
                 **{'Name':key,'Val' :str(val),'Favorite_Numbers:':[1,2,3],
                                  'Second_Fav':np.array([43.0,43.0])})
         elif isinstance(val,list):
@@ -157,8 +173,22 @@ def add_params(traj,param_dict):
             raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
 
-    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?')
+    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
+
+    traj.results.f_add_leaf('Test', 42, comment='NC')
+    traj.f_add_group('derived_parameters.uo', comment='Yeah, this is unsuals')
+    traj.dpar.f_add_leaf('uo.adsad', 3333, comment='Yo')
+    traj.derived_parameters.f_add_leaf('Test2', 42, comment='sfsdf')
+    traj.par.f_add_leaf('er.Test3', 42, comment='sdfds')
+
+    for irun in range(13):
+        traj.f_add_leaf('testleaf%d' % irun, 42, comment='f')
+
+    traj.par.f_add_group('Empty', comment='Notting!')
+
+    traj.f_add_group('imgeneric.bitch', comment='Generic_Group')
+    traj.imgeneric.f_add_leaf('gentest', 'fortytwo', comment='Oh yeah!')
 
 def multipy(traj):
     z=traj.x*traj.y
@@ -184,38 +214,58 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__NPINT'] = np.int_(55)
         my_dict['__INTaRRAy'] = np.array([1,2,3])
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
+        my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
         my_dict['__LONG'] = long(42)
 
         keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):
-            keys[idx] = key.replace('.','_')
+            keys[idx] = key.replace('.', '_')
 
-        traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2)
+        traj.f_add_result_group('List', comment='Im a result group')
+
+        traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
-        traj.f_add_result('ResMatrix',np.array([1.2,2.3]))
+        traj.f_add_result('ResMatrix',np.array([1.2,2.3]), comment='ResMatrix')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
+        myseries = myframe['TC1']
+
+        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),'Item2' : pd.DataFrame(np.random.randn(4, 2))})
+
+        # p4d = pd.Panel4D(np.random.randn(2, 2, 5, 4),
+        #     labels=['Label1','Label2'],
+        #    items=['Item1', 'Item2'],
+        #    major_axis=pd.date_range('1/1/2000', periods=5),
+        #   minor_axis=['A', 'B', 'C', 'D'])
+
+
+        traj.f_add_result('myseries', myseries, comment='dd')
+        traj.f_add_result('mypanel', mypanel, comment='dd')
+        #traj.f_add_result('mypanel4d', p4d, comment='dd')
+
         traj.f_get('DictsNFrame').f_set(myframe)
 
-        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2)
+        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2).v_comment='test'
         traj.f_add_derived_parameter('super.mega',33, comment='It is huuuuge!')
         traj.super.f_set_annotations(AgainATestAnnotations='I am a string!111elf')
 
-        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1)
-        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2)
-        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0)
+        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1, comment='p1')
+        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2, comment='p2')
+        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0, comment='p0')
 
-        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42)
-        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52)
-        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62)
-        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72)
+        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72).v_comment='sdsa'
+
+        traj.sparse.v_comment = 'I contain sparse data!'
 
         myobjtab = ObjectTable(data={'strings':['a','abc','qwertt'], 'ints':[1,2,3]})
 
-        traj.f_add_result('object.table', myobjtab).v_annotations.f_set(test=42)
+        traj.f_add_result('object.table', myobjtab, comment='k').v_annotations.f_set(test=42)
         traj.object.f_set_annotations(test2=42.42)
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
@@ -226,15 +276,33 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
 def to_dict_wo_config(traj):
         res_dict={}
-        res_dict.update(traj.parameters.f_to_dict(fast_access=False))
-        res_dict.update(traj.derived_parameters.f_to_dict(fast_access=False))
-        res_dict.update(traj.results.f_to_dict(fast_access=False))
+
+        for child_name in traj._children:
+
+            child = traj._children[child_name]
+            if child_name == 'config':
+                continue
+
+            if child.v_is_leaf:
+                res_dict[child_name] = child
+            else:
+                res_dict.update(child.f_to_dict(fast_access=False))
+
 
         return res_dict
 
 class TrajectoryComparator(unittest.TestCase):
 
     def compare_trajectories(self,traj1,traj2):
+
+        trajlength = len(traj1)
+
+        if 'results.runs' in traj1:
+            rungroups = traj1.results.runs.f_children()
+        else:
+            rungroups = 1
+
+        self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
 
         old_items = to_dict_wo_config(traj1)
         new_items = to_dict_wo_config(traj2)
@@ -259,6 +327,13 @@ class TrajectoryComparator(unittest.TestCase):
 
         # Check the annotations
         for node in traj1.f_iter_nodes(recursive=True):
+
+            if (not 'run' in node.v_full_name) or 'run_00000000' in node.v_full_name:
+                if node.v_comment != '' and node.v_full_name in traj2:
+                    second_comment = traj2.f_get(node.v_full_name).v_comment
+                    self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %
+                                                                     (node.v_comment, second_comment, node.v_full_name))
+
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations
                 self.assertTrue(nested_equal(node.v_annotations, second_anns))

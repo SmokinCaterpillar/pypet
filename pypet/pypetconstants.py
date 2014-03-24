@@ -65,13 +65,14 @@ PARAMETER_SUPPORTED_DATA = (np.int8,
 
 ################### HDF5 Naming and Comments ##########################
 
-HDF5_STRCOL_MAX_NAME_LENGTH = 64
+
+HDF5_STRCOL_MAX_NAME_LENGTH = 128
 """Maximum length of a (short) name"""
-HDF5_STRCOL_MAX_LOCATION_LENGTH = 128
+HDF5_STRCOL_MAX_LOCATION_LENGTH = 256
 """Maximum length of the location string"""
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
 """Maximum length of a value string"""
-HDF5_STRCOL_MAX_COMMENT_LENGTH = 256
+HDF5_STRCOL_MAX_COMMENT_LENGTH = 512
 """Maximum length of a comment """
 HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
 """Maximum length of a parameter array summary """
@@ -100,10 +101,12 @@ LOAD_DATA = 2
 """ Loads skeleton and data."""
 LOAD_NOTHING = 0
 """ Loads nothing """
-UPDATE_SKELETON = -1
-""" Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
-UPDATE_DATA = -2
-""" Updates skeleton and data, adds only items that are not part of your current trajectory."""
+OVERWRITE_DATA = 3
+"""Overwrites all data in RAM with data from disk"""
+UPDATE_SKELETON = 1
+""" DEPRECATED: Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
+UPDATE_DATA = 2
+""" DEPRECATED: Updates skeleton and data, adds only items that are not part of your current trajectory."""
 
 
 ##################### STORING Message Constants ################################
@@ -126,9 +129,9 @@ PREPARE_MERGE = 'PREPARE_MERGE'
 """ Updates a trajectory before it is going to be merged"""
 BACKUP = 'BACKUP'
 """ Backs up a trajectory"""
-REMOVE='REMOVE'
+DELETE='DELETE'
 """ Removes an item from hdf5 file"""
-REMOVE_INCOMPLETE_RUNS = 'REMOVE_INCOMPLETE_RUNS'
+DELETE_INCOMPLETE_RUNS = 'DELETE_INCOMPLETE_RUNS'
 """ Removes incomplete runs to continue a crashed trajectory"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""

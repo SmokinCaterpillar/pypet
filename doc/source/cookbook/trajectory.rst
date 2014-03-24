@@ -83,11 +83,11 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     Derived parameters can be introduced at any time during your simulation. If you add
     a derived parameter before starting individual runs that explore the parameter space,
-    they will be sorted into the subbranches `derived_parameters.trajectory`. If you
-    introduce a derived parameter within a single run, they are sorted into:
-    `derived_parameters.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
-    For example adding a derived parameter in the second run will add it to the subbranch
-    `derived_parameters.run_00000001`.
+    they will be directly put into the subbranch `derived_parameters`. If you
+    introduce a derived parameter within a single run, they are sorted into the subbranch
+    `derived_parameters.runs.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
+    For example adding, a derived parameter in the second run will add it to the subbranch
+    `derived_parameters.runs.run_00000001`.
 
     Any leaf added under *derived_parameters*
     is a :class:`~pypet.parameter.Parameter` object (or descendant of the corresponding
@@ -97,11 +97,10 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     I guess results are rather self explanatory. Any leaf added under *results*
     is a :class:`~pypet.parameters.Results` object (or descendant of the corresponding
-    base class :class:`~pypet.parameter.BaseResult`). Results are sorted under the subtrees
-    `results.trajectory` and `results.run_XXXXXXXX` according to whether they were added
-    before the parameter exploration or during a single run.
+    base class :class:`~pypet.parameter.BaseResult`). Results added during a single run
+    are sorted into `results.runs.run_XXXXXXXX`.
 
-Note that all *leaf* nodes provide the field 'v_comment', which can be filled manually or on
+Note that all nodes provide the field 'v_comment', which can be filled manually or on
 construction via `'comment='`. To allow others to understand your simulations it is very
 helpful to provide such a comment and explain what your parameter is good for. For *parameters*
 this comment will actually be shown in the parameter overview table (to reduce file size
@@ -109,12 +108,14 @@ it is not shown in the result and derived parameter overview tables, see also
 :ref:`more-on-overview`). It can also be found
 as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true for all *leaves*).
 
+If you using an older version of pypet, your tree structure might be slightly different, to
+update your files to the new format, see :ref:`tree-migrating`.
+
 .. [#]
 
     As a side remark, programming-wise the :class:`~pypet.trajectory.Trajectory` class
     inherits from the :class:`~pypet.trajectory.SingleRun` class. This yields a cleaner implementation
     than the other way round.
-
 
 .. _more-on-adding:
 
@@ -170,13 +171,13 @@ you will find this parameter also in the group `traj.parameters.traffic.ncycles`
 Besides *leaves* you can also add empty *groups* to the trajectory
 (and to all subgroups, of course) via:
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_config_group`
+* :func:`~pypet.naturalnaming.ConfigGroup.f_add_config_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter_group`
+* :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_derived_parameter_group`
+* :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_result_group`
+* :func:`~pypet.naturalnaming.ResultGroup.f_add_result_group`
 
 As before, if you create the group `groupA.groupB.groupC` and
 if group A and B were non-existent before, they will be created on the way.
@@ -204,11 +205,22 @@ the full name will be extended by the *full name* of the group you added it to:
 
 The *full name* of the new parameter is going to be `parameters.traffic.street.nzebras`.
 If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
-the group names `parameters`, `config`, `derived_parameters.trajectory`,
-`derived_parameters.run_XXXXXXX`,
-`results.trajectory`, or  `results.run_XXXXXXX` will be automatically added (of course,
+the group names `parameters`, `config`, `derived_parameters`,
+`derived_parameters.runs.run_XXXXXXX`,
+`results`, or  `results.runs.run_XXXXXXX` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generic Addition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You do not have to stick to the given trajectory structure with its four subtrees:
+`config`, `parameters`, `derived_parameters`, `results`. If you just want to use a trajectory
+as a simple tree container and store groups and leaves wherever you like, you can use the
+generic functions :func:`~pypet.naturalnaming.NNGroupNode.f_add_group` and
+:func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf`. Note however, that the four subtrees are
+reserved. Thus, if you add anything below one of the four, the corresponding
+speciality functions from above are called instead of the generic ones.
 
 .. _more-on-access:
 
@@ -218,22 +230,18 @@ Accessing Data in the Trajectory
 
 To access data that you have put into your trajectory you can use
 
-*
+*   :func:`~pypet.trajectory.Trajectory.f_get` method. You might want to take a look at the function
+    definition to check out the other arguments you can pass to
+    :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
+    but for any group node in your tree.
 
-  :func:`~pypet.trajectory.Trajectory.f_get` method. You might want to take a look at the function
-  definition to check out the other arguments you can pass to
-  :func:`~pypet.trajectory.Trajectory.f_get`. `f_get` not only works for the trajectory object,
-  but for any group node in your tree.
+*   Use natural naming dot notation like  `traj.nzebras`.
+    This natural naming scheme supports some special features see below.
 
-*
-
-    Use the square brackets - as you do with dictionaries - like `traj['nrebras']` which is
-    equivalent to calling `traj.f_get('nzebras')`.
-
-*
-
-    Use natural naming dot notation like  `traj.nzebras`.
-    The latter supports some special features see below.
+*   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
+    similar to calling `traj.nzebras`.
+    Check out below what happens if you ask for `traj['zoo.nzebras']`, i.e. asking your trajectory
+    of any group node for a grouped variable.
 
 
 ^^^^^^^^^^^^^^^
@@ -269,8 +277,8 @@ If it is empty or contains more than one item you will always get in return the 
     >>> traj.f_add_result('z',42)`
     >>> traj.z
     42
-    >>> traj.f_add_result('tuple', 11, 12.0)
-    >>> traj.tuple
+    >>> traj.f_add_result('two_data_values', 11, 12.0)
+    >>> traj.two_data_values
     <Result object>
 
 
@@ -322,31 +330,26 @@ to check for uniqueness (default `False`) can be passed as parameters.
     >>> traj.parameters.f_get('mobiles.ncars', fast_access=True)
     42
 
+If you don't want to allow this shortcutting through the tree use `f_get(target, shortcuts=False)`
+or set the trajectory attribute `v_shortcuts=False` to forbid the shortcuts for natural naming
+and *getitem* access.
 
-There also exit nice naming shortcuts for already present groups:
+There also exit nice naming shortcuts for already present groups (these are always active and
+cannot be switched off):
 
-*
+* `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same group as `traj.par`
 
-    `'par'` and `'param'` is mapped to `'parameters'`, i.e. `traj.parameters` is the same
-    group as `traj.par`
-
-* `'dpar'` and `'dparam'` is mapped to `derived_parameters`
+* `'dpar'` is mapped to `derived_parameters`
 
 * `'res'` is mapped to `'results'`
 
 * `'conf'` is mapped to `'config'`
 
-* `'traj'` and `'tr'` are mapped to `'trajectory'`
+* `'crun'` is mapped to the name of the current
+  run (for example `'run_00000002'`)
 
-*
-
-    `'cr'`, `'current_run'`, `'current_run'` are mapped to the name of the current
-    run (for example `'run_00000002'`)
-
-*
-
-    `'r_X'` and `'run_X'` are mapped to the corresponding run name, e.g. `'r_3'` is
-    mapped to `'run_00000003'`
+* `'r_X'` and `'run_X'` are mapped to the corresponding run name, e.g. `'r_3'` is
+  mapped to `'run_00000003'`
 
 
 For instance, `traj.par.traffic.street.nzebras` is equivalent to
@@ -357,6 +360,75 @@ For instance, `traj.par.traffic.street.nzebras` is equivalent to
 
     The search strategy can be changed via the property `v_search_strategy` between
     breadth first search (`'BFS'`) and depth first search (`'DFS'`).
+
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Backwards search
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Finally, there exists the possibility to perform bottom up search within the tree.
+If you use the square bracket notation or
+:func:`~pypet.trajectory.Trajectory.f_get` and don't pass a single name but a grouped
+name separated via colons like `traj['groubA.groupB.paramC']` or
+`traj.f_get('groubA.groupB.paramC', backwards_search=True)` (`backwards_search` is `True` by default)
+you can make *pypet* search the tree bottom up.
+Thus, *pypet* won't look for *groupA* first and than start looking for *grougB* from there and
+finally search for *paramC*. But since it keeps internal indices and links to all it's nodes
+it will directly locate all entries within the tree named *paramC* and climb up the tree back
+to the start node and
+check if it passes by *groupB* and *groupA* on the way to the top.
+Thus, the search complexity is
+:math:`O(kd)` with :math:`k` the number of occurrences of nodes named *paramC* and
+:math:`d` the depth of
+your search tree. By the way, this backwards search always checks if your search term yields a
+unique result irrespective of the setting of `check_uniqueness`.
+
+How is this backwards searching useful? Well, it will succeed in many more situations than
+simple breadth first forward traversal of the tree.
+For instance, let's assume you have the following tree structure.
+`traj.f_add_parameter('groupX.groupY.groupZ.paramA')` adds a parameter `paramA` to your trajectory,
+similarly does `traj.f_add_parameter('groupX.groupZ.paramB')`.
+However, note the difference between the location of `groupZ`. These are in fact two different
+groups that have different depths in the trajectory tree! Now calling `traj.groupZ.paramA` will
+fail with an error, whereas `traj['groupZ.paramA']` succeeds and will find `paramA` in your tree.
+
+Why? `traj.groupZ.paramA` will initiate a breadth first forward tree traversal. To be
+precise, it will do so twice: At first *pypet* finds
+the group `groupZ` directly below `groupX` and, next, it tries to locate `paramA` from there.
+However, in `groupX.groupZ` it can only find `paramB`.
+Yet, if you call `traj['groupZ.paramA']`, *pypet* directly looks for `paramA` and then moves
+up the tree back to the root note. It will find `groupZ` (the one below `groupY`) on the way and,
+therefore, knows that it has found the proper `paramA`.
+
+Phew, that is complicated. Why do you need such a complicated search mechanism, anyway?
+Well, there is a particular advantage when you use the same grouping within derived and
+regular parameters.
+For example, you have a derived parameter `lottery_numbers` that depends on a parameter
+`lottery_seed`, `nnumbers` and `highest_number` all of them grouped into a `lottery` group.
+
+::
+
+    import numpy as np
+
+    traj.f_add_parameter('lottery.lottery_seed', 42, comment='RNG seed')
+    traj.f_add_parameter('lottery.nnumbers', 6, comment='Amount of random numbers')
+    traj.f_add_parameter('lottery.highest_number', 49, comment='Largest number of distribution')
+
+    ...
+
+    #Sometime later you calculate the derived lottery numbers:
+    np.seed(traj.lottery_seed)
+    lottery_numbers = tuple(np.random.random_integers(traj.highest_number, size=(traj.nnumbers,)))
+    traj.f_add_derived_parameter('lottery.lottery_numbers', lottery_numbers,
+                        comment='Lottery numbers, drawn with numpy')
+
+
+
+Now calling `traj.lottery.lottery_numbers` does not work, since you have
+a `lottery` group under `traj.parameters` as well as `traj.derived_parameters`.
+However, you can make your life
+much easier and call `traj['lottery.lottery_numbers']` using backwards search
+instead of tediously typing `traj.derived_parameters.lottery.lottery_numbers` which is, of course,
+a unique forward path down the tree.
 
 .. _parameter-exploration:
 
@@ -493,14 +565,15 @@ You don't have to interact with the service directly, storage can be initiated b
 of the trajectory and it's groups and subbranches (they format and hand over the request to the
 service).
 There is a general scheme to storage, which is *whatever is stored to disk is the ground truth and
-therefore cannot be changed*. So basically as soon as you store parts of your trajectory to disk
-they will stay there!
+therefore cannot/should not be changed*.
+So basically as soon as you store parts of your trajectory to disk they will stay there!
 So far there is no real support for changing data that was stored to disk (you can
-delete some of it, see below).
+delete or rewrite some of it, see below).
 
 Why being so restrictive? Well, first of all, if you do
 simulations, they are like numerical *scientific experiments*, so you run them, collect your
-data and keep these results. There is usually no need to modify the first raw data after collecting it.
+data and keep these results.
+There is usually no need to modify the first raw data after collecting it.
 You may analyse it and create novel results from the raw data, but you usually should have
 no incentive to modify your original raw data.
 Second of all, HDF5 is bad for modifying data which usually leads
@@ -519,6 +592,18 @@ and that's it. In fact, if you use the trajectory in combination with the enviro
 :ref:`more-on-environment`) you
 do not need to do this call by yourself at all, this is done by the environment.
 
+If you store a trajectory to disk it's tree structure is also found in the structure of
+the HDF5 file!
+In addition, there will be some overview tables summarizing what you stored into the HDF5 file.
+They can be found under the top-group `overview`, the different tables are listed in the
+:ref:`more-on-overview` section.
+Btw, you can switch the creation of these tables off passing the appropriate arguments to the
+:class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Storing data individually
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 More interesting is the approach to store individual items.
 Assume you computed a result that is extremely large. So you want to store it to disk,
 than free the result and forget about it for the rest of your simulation:
@@ -529,7 +614,8 @@ than free the result and forget about it for the rest of your simulation:
 
 Note that in order to allow storage of single items, you need to have stored the trajectory at
 least once. If you operate during a single run, this has been done before, if not,
-simply call `traj.f_store()` once before.
+simply call `traj.f_store()` once before. If you do not want to store anything but initialise
+the storage, you can pass the argument `only_init=True`, i.e. `traj.f_store(only_init=True)`.
 
 Moreover, if you call `f_empty()` on a large result, only the reference to the giant data block within
 the result is deleted. So in order to make the python garbage collector free the memory, you must
@@ -539,13 +625,7 @@ To avoid re-opening an closing of the HDF5 file over and over again there is als
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
-If you store a trajectory to disk it's tree structure is also found in the structure of
-the HDF5 file!
-In addition, there will be some overview tables summarizing what you stored into the HDF5 file.
-They can be found under the top-group `overview`, the different tables are listed in the
-:ref:`more-on-overview` section.
-Btw, you can switch the creation of these tables off passing the appropriate arguments to the
-:class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
+
 
 
 .. _more-on-loading:
@@ -558,7 +638,7 @@ Sometimes you start your session not running an experiment, but loading an old t
 The first step in order to do that is to create a new empty trajectory - in case
 you have stored stuff into an HDF5 file, you can pass a `filename` to the
 :class:`~pypet.trajectory.Trajectory` constructor - and call
-`~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
+:func:`~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
 you want to select within the HDF5 file. For the index you can also count backwards, so
 `-1` would yield the last or newest trajectory in an HDF5 file.
 
@@ -594,23 +674,21 @@ If you choose tha latter load mode, you can specify how the individual subtrees 
 
 * :const:`pypet.pypetconstants.LOAD_DATA`: (2)
 
-    The whole data is loaded.
+    The whole data is loaded. Note in case you have non-empty leaves already in RAM,
+    these are left untouched.
 
-* :const:`pypet.pypetconstants.UPDATE_SKELETON`: (-1)
+* :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
 
-    The skeleton is updated, i.e. only items that are not currently part of your trajectory
-    in RAM are loaded empty.
+    As before, but non-empty leaves are emptied and reloaded.
 
-* :const:`pypet.pypetconstants.UPDATE_DATA`: (-2)
 
-     Like (2) but only items that are currently not in your trajectory are loaded.
 
 
 Compared to manual storage, you can also load single items manually via
-:func:`~pypet.trajectory.Trajectory.f_load_item`. If you load a large result with many entries
-you might consider loading only parts of it (see :func:`~pypet.trajectory.Trajectory.f_load_items`)
+:func:`~pypet.trajectory.SingleRun.f_load_item`. If you load a large result with many entries
+you might consider loading only parts of it (see :func:`~pypet.trajectory.SinleRun.f_load_items`)
 Note in order to load a parameter, result or group, with
-:func:`~pypet.trajectory.Trajectory.f_load_item` it must exist in the current trajectory in RAM,
+:func:`~pypet.trajectory.SingleRun.f_load_item` it must exist in the current trajectory in RAM,
 if it does not you can always bring your skeleton of your trajectory tree up to date
 with :`func:`~pypet.trajectory.Trajectory.f_update_skeleton`. This will load all items stored
 to disk and create empty instances. After a simulation is completed, you need to call this function
@@ -618,6 +696,40 @@ to get the whole trajectory tree containing all new results and derived paramete
 
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`
 in order to load whole subtrees.
+
+Automated logging and git commits are often very handy features. Probably you do not want
+to miss these while you do your data analysis. To enable these in case you simply want to
+load an old trajectory for data analysis without doing any more single runs, you can
+again use an :class:`~pypet.environment.Environment`.
+First, load the trajectory with :func:`~pypet.trajectory.Trajectory.f_load`,
+and pass the loaded trajectory to a new environment. Accordingly the environment will trigger a
+git commit (in case you have specified a path to your repository root) and enable logging.
+You can additionally pass the argument `do_single_runs=False` to your environment if you only
+load your trajectory for data analysis. Accordingly, no config information like
+whether you want to use multiprocessing or resume a broken experiment is added to
+your trajectory. For example:
+
+::
+
+    # Create the trajectory independent of the environment
+    traj = Trajectory(filename='./myfile.hdf5',
+                      dynamically_imported_classes=[BrianParameter,
+                                                    BrianMonitorResult,
+                                                    BrianResult])
+
+    # Load the first trajectory in the file
+    traj.f_load(index=0, load_parameters=2,
+                load_derived_parameters=2, load_results=1,
+                load_other_data=1)
+
+    # Just pass the trajectory as the first argument to a new environment.
+    # You can pass the usual arguments for logging and git integration.
+    env = Environment(traj
+                      log_folder='./logs/',
+                      git_repository='../gitroot/',
+                      do_single_runs=False)
+
+    # Here comes your data analysis...
 
 
 -------------------------------------
@@ -632,10 +744,9 @@ the :func:`f_empty()` function of a result or parameter. This will leave the act
 of the trajectory untouched.
 
 Although I made it pretty clear that in general what is stored to disk is set in stone,
-there are a functions to remove items not only from RAM but also from disk:
-`~pypet.trajectory.f_remove_item` and `~pypet.trajectory.f_remove_items` and calling them
-with `remove_from_storage=True`.
-Note that you cannot erase explored parameters.
+there are a functions to delete items not only from RAM but also from disk:
+:func:`~pypet.trajectory.f_delete_item` and :func:`~pypet.trajectory.f_delete_items`.
+Note that you cannot delete explored parameters.
 
 
 .. _more-on-merging:
@@ -716,7 +827,7 @@ Iterating over Loaded Data in a Trajectory
 The trajectory offers a way to iteratively look into the data you have obtained from several runs.
 Assume you have computed the value `z` with `z=traj.x*traj.x` and added `z` to the trajectory/single run
 in each run via `traj.f_add_result('z', z)`. Accordingly, you can find a couple of
-`traj.results.run_XXXXXXXX.z` in your trajectory (where `XXXXXXXX` is the index
+`traj.results.runs.run_XXXXXXXX.z` in your trajectory (where `XXXXXXXX` is the index
 of a particular run like `00000003`). To access these one after the other it
 is quite tedious to write `run_XXXXXXXX` each time.
 
@@ -748,7 +859,7 @@ code snippet will iterate over all four runs and print the result of each run:
         z=traj.z
         print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
 
-    # Don't forget to reset you trajectory to the default settings, to release its belief to
+    # Don't forget to reset your trajectory to the default settings, to release its belief to
     # be the last run:
     traj.f_restore_default()
 

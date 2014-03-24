@@ -186,8 +186,9 @@ class BrianMonitorTest(ResultTest):
             self.assertEqual(mon.timestep, res.timestep)
             self.assertTrue(comp.nested_equal(str(mon.P), res.source))
 
-            self.assertTrue(comp.nested_equal(mon.mean, res.f_get(varname+'_mean')))
-            self.assertTrue(comp.nested_equal(mon.var, res.f_get(varname+'_var')))
+            if hasattr(res, varname+'_mean'):
+                self.assertTrue(comp.nested_equal(mon.mean, res.f_get(varname+'_mean')))
+                self.assertTrue(comp.nested_equal(mon.var, res.f_get(varname+'_var')))
             if len(monitor.times)>0:
                 self.assertTrue(comp.nested_equal(mon.values, res.f_get(varname+'_values')))
 
@@ -206,8 +207,9 @@ class BrianMonitorTest(ResultTest):
         self.assertEqual(monitor.timestep, res.timestep)
         self.assertTrue(comp.nested_equal(str(monitor.P), res.source))
 
-        self.assertTrue(comp.nested_equal(monitor.mean, res.mean))
-        self.assertTrue(comp.nested_equal(monitor.var, res.var))
+        if hasattr(res, 'mean'):
+            self.assertTrue(comp.nested_equal(monitor.mean, res.mean))
+            self.assertTrue(comp.nested_equal(monitor.var, res.var))
 
         if len(monitor.times) > 0:
             self.assertTrue(comp.nested_equal(monitor.times, res.times))

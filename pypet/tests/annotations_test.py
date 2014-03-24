@@ -33,7 +33,7 @@ class AnnotationsTest(unittest.TestCase):
 
         self.add_annotations(self.traj)
 
-        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 8)
+        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 5)
 
 
     def make_annotations(self):
@@ -50,7 +50,7 @@ class AnnotationsTest(unittest.TestCase):
 
 
     def add_annotations(self, traj):
-        funcs = 4
+        funcs = 5
 
         for idx,node in enumerate(traj.f_iter_nodes(recursive=True)):
             for name in self.annotations:
@@ -66,6 +66,8 @@ class AnnotationsTest(unittest.TestCase):
                     node.v_annotations.f_set_single(name,anno)
                 elif idx % funcs == 3:
                     setattr(node.v_annotations,name, anno)
+                elif idx % funcs == 4:
+                    node.v_annotations[name]=anno
 
 
     def test_annotations_insert(self):
@@ -96,7 +98,8 @@ class AnnotationsTest(unittest.TestCase):
 
         self.traj = Trajectory(filename=self.filename)
 
-        self.traj.f_load(name=traj_name, load_results=2, load_parameters=2, load_derived_parameters=2)
+        self.traj.f_load(name=traj_name, load_results=2, load_parameters=2, load_derived_parameters=2,
+                         load_other_data=2)
 
         self.test_annotations_insert()
 

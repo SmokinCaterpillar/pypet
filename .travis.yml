@@ -2,29 +2,36 @@ language: python
 python:
   - 2.7
   - 2.6
+virtualenv:
+  system_site_packages: true
 env:
-  global:
-    - PANDAS_VERSION=0.12.0
-
   matrix:
-    - TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.9.0
-    - TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0
+    - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 NUMPY_VERSION=1.6.1 SCIPY_VERSION=0.9.0, COVERAGE=OFF
+    - PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=OFF
 
+matrix:
+  include:
+    - python: 2.7
+      env: PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=ON
 
 # Install dependencies for PyTables
 # command to install dependencies
+before_install:
+  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
+  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
+  - echo "+++++++++++ Installing HDF5 +++++++++++++"
+  - sudo apt-get install libhdf5-serial-dev
 install:
+  - echo "+++++++++++ Installing Coveralls +++++++++++"
+  - pip install coveralls
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
-  - echo "+++++++++++ Installing HDF5 +++++++++++++"
-  - sudo apt-get install libhdf5-serial-dev
   - echo "+++++++++++ Installing NumPy $NUMPY_VERSION +++++++++++++"
-  - pip install numpy==$NUMPY_VERSION
-  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
-  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
+  - if [[ $COVERAGE == OFF ]]; then pip install numpy==$NUMPY_VERSION; fi
   - echo "+++++++++++ Installing SciPy $SCIPY_VERSION +++++++++++++"
-  - pip install scipy==$SCIPY_VERSION
+  - if [[ $COVERAGE == OFF ]]; then pip install scipy==$SCIPY_VERSION; fi
+  - if [[ $COVERAGE == ON ]]; then sudo apt-get install -qq python-numpy python-scipy; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
   - pip install numexpr==$NUMEXPR_VERSION
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
@@ -44,7 +51,8 @@ install:
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: python ./pypet/tests/all_tests.py
+script: if [[ $COVERAGE == ON ]]; then coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_tests; coverage combine; else python ./pypet/tests/all_tests.py; fi
+after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
 branches:
   only:
     - develop

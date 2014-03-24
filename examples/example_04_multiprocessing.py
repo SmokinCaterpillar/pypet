@@ -15,7 +15,7 @@ def multiply(traj):
 
 
 # Create an environment that handles running.
-# Let's enable multiprocessing with A queue and 2 workers.
+# Let's enable multiprocessing with 2 workers.
 # Since we want to explore a rather large trajectory, we switch off
 # the large overview tables.
 env = Environment(trajectory='Example_04_MP',
@@ -26,7 +26,7 @@ env = Environment(trajectory='Example_04_MP',
                   multiproc=True,
                   ncores=2,
                   use_pool=True,
-                  wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
+                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                   large_overview_tables=False)
 
 # Get the trajectory from the environment

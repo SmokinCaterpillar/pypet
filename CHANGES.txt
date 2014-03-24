@@ -1,3 +1,80 @@
+pypet 0.1b.4
+
+*   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`
+
+*   Group Nodes can now contain comments as well
+
+*   Comments are only stored to HDF5 if they are not the empty string
+
+*   Large Overview Tables are off by default
+
+*   BrianDurationParameter was removed and the annotations are used instead.
+    Use a normal BrianParameter and instead of `v_order` use `v_annotations.order`
+
+*   The user is advised to use `environment.f_run(manager.run_network)`, instead of
+    `environment.f_run(run_network, manager)`
+
+*   Now there is the distinction between `small`, `large`, and `summary` tables
+
+*   BrianMonitorResult: Mean and variance values of State and MultiState Monitors are only
+    extracted if they were recorded (which for newer BRIAN versions is only the case if you
+    do NOT record traces)
+
+*   Log Level can be passed to environment
+
+*   BUG FIX: Scalars are no longer autoconverted by the storage service to zero-length numpy arrays
+
+*   Names of loggers have been shortened
+
+*   The trajectory now contains the functions `f_delete_item` and `f_delete_items` to erase stuff
+    from disk. `f_remove_items` and `f_remove_item` no longer delete data from disk.
+
+*   Loading and deletions of items can now be made with SingleRuns as well.
+
+*   f_iter_nodes now iterates by default recursively all nodes
+
+*   A group node now supports __iter__ which simply calls f_iter_nodes NON recursively
+
+*   The structure of the trees are slightly changed. Results and derived parameters added
+    with the trajectory are no longer assigned the prefix `trajectory`.
+    Results and derived parameters added during single runs are now sorted into
+    `runs.run_XXXXXXXXX`.
+
+*   Useless shortcuts have been removed.
+
+*   New *Backwards* search functionality
+
+*   New `f_get_all` functionality to find all items in a tree matching a particular
+    search string
+
+*   Pandas Series and Panels are now supported, too!
+
+*   Now Pypet allows compression of HDF5 files, this can yield a massive reduction in
+    memory space.
+
+*   `tr`, `cr`, `current_run`, `param`, `dparam` are no longer supported as a shortcuts
+
+*   __getitem__ is equivalent to __getattr__
+
+*   Now one can specify a maximum depth for accessing items.
+
+*   Now one can specify if shortcuts, i.e. hopping over parts of the tree, are allowed.
+
+*   New trajectroy attributes `v_backwards_search`, `v_max_depth`, `v_shortcuts` and
+    `v_iter_recursive`. `v_iter_recursive` specifies the behavior of `__iter__`.
+
+*   `__contains__` now greps is arguments from the attributes `v_max_depth` and `v_shortcuts`.
+
+*   `log_stdout` parameter of the Environment determines if STDOUT and STDERROR will be logged
+    to files. Can be disabled to allow better usage of pypet with interactive consoles.
+
+*   git commits only happen on changes and not all the time
+
+*   Now one can specify CPU, RAM and Swap cap levels if no pool is used.
+    If these cap levels are crossed *pypet* won't start new processes.
+
+
+
 pypet 0.1b.3
 
 *   BUG FIX: Now `f_run` and `f_continue_run` of an environment return the results
@@ -15,6 +92,12 @@ pypet 0.1b.3
 
 *   New Brian framework with NetworkManager, NetworkComponent, NetworkAnalyser,
     NetworkRunner and DurationParameter
+
+*   Components, Analysers and the network runner of the manager are now publicly available
+
+*   Every component now provides the function `set_logger` to enable logging and instantiate a
+    logger for `self.logger`
+
 
 
 pypet 0.1b.2
@@ -69,6 +152,7 @@ pypet 0.1b.2
 *   v_fast_accessible renamed to f_supports_fast_access and changed to function
 
 *   v_parameter changed to v_is_parameter
+
 
 
 pypet 0.1b.1

@@ -4,7 +4,7 @@ from collections import Sequence, Mapping, Set
 import numpy as np
 import pandas as pd
 
-import pypet.parameter
+import pypet
 import itertools as it
 import pypet.pypetconstants as pypetconstants
 

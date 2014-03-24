@@ -10,9 +10,9 @@ Welcome to pypet's documentation!
 The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
 
-Latest version: `0.1b.3`_
+Latest version: `0.1b.4`_
 
-.. _`0.1b.3`: https://pypi.python.org/pypi/pypet
+.. _`0.1b.4`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
@@ -51,13 +51,19 @@ Python 2.6 or 2.7
 
 For git integration you additionally need
 
-* GitPython_
+* GitPython_ >= 0.3.1
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
+To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
+
+* psutil_ >= 2.0.0
+
+.. _psutil: http://psutil.readthedocs.org/
+
 If you use Python 2.6 you also need
 
-* ordereddict_
+* ordereddict_ >= 1.1
 
 .. _ordereddict: https://pypi.python.org/pypi/ordereddict
 
@@ -174,7 +180,8 @@ If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 If you do not want to browse to your installation folder, you can also download the
 :download:`all_tests.py <../../pypet/tests/all_tests.py>` script.
 
-Running all tests can take up to 15 minutes. The test suite encompasses more than **300** tests
+Running all tests can take up to 15 minutes and might temporarily take up to
+8 GB of disk space. The test suite encompasses more than **300** tests
 (including the BRIAN based tests) and has a code coverage of more than **90%**!
 
 =====================

@@ -24,10 +24,20 @@ or some similar function!?
     environment variable `OPENBLAS_NUM_THREADS=1`.
 
 
-**Q:** Pypet crashes with the a TypeError: I do not know how to handle `XXXXXXXX
-Name: XXXXXX, dtype: XXXXX`, its type is `<class 'pandas.core.series.Series'>`!?
+**Q:**  GitPython does not work. If I specify my repository ``git_repository='./myrepo'``,
+pypet crashes with an `AttributeError: 'Repo' object has no attribute 'index'`.
+What should I do?
 
-    **A:** This is an issue with pandas 0.13.1 (and maybe 0.13.0). Either you install another
-    version of pandas or do not try to store numpy arrays in ObjectTables, dictionaries and/or
-    normal Parameters (use ArrayParameters instead). As far as I know, this issue is known to the
-    pandas development team and they will include a fix in future pandas versions.
+    **A:** You probably have an older version of GitPython (likely 0.1.7), install a newer one.
+    If ``pip install GitPython`` still downloads the old version, try ``pip install --pre GitPython``
+    or if you simply want to upgrade use ``pip install --upgrade --pre GitPython``.
+
+**Q:**  I am still using the old tree structure how can I update my hdf5files to the new one?
+
+    **A:** See :ref:`tree-migrating`
+
+**Q:**  If I create and environment in an *IPython* console everything becomes gibberish!?
+
+    **A:** Pypet will redirect STDOUT and STDERROR to files. Unfortunately, this messes with
+    the *IPython* console. To avoid this simply disable logging of these two streams setting the
+    `log_stdout` to `False`: ``env = Environment( ..., log_stdout=False, ...)``.

@@ -39,8 +39,8 @@ env.f_run(multiply)
 traj.f_load(load_results=pypetconstants.LOAD_DATA)
 
 # We access the ranges for plotting
-xs = traj['x'].f_get_range()
-ys = traj['y'].f_get_range()
+xs = traj.f_get('x').f_get_range()
+ys = traj.f_get('y').f_get_range()
 
 # Now we want to directly get all numbers z from all runs
 # for plotting.
@@ -51,9 +51,9 @@ ys = traj['y'].f_get_range()
 zs = traj.f_get_from_runs(name='z',fast_access=True).values()
 
 # Convert the lists to numpy 2D arrays
-x_mesh = np.reshape(np.array(xs),(x_length,y_length))
-y_mesh = np.reshape(np.array(ys),(x_length,y_length))
-z_mesh = np.reshape(np.array(zs),(x_length,y_length))
+x_mesh = np.reshape(np.array(xs),(x_length, y_length))
+y_mesh = np.reshape(np.array(ys),(x_length, y_length))
+z_mesh = np.reshape(np.array(zs),(x_length, y_length))
 
 # Make fancy 3D plot
 fig=plt.figure()

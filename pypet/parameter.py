@@ -70,7 +70,7 @@ import pickletools
 
 import numpy as np
 import scipy.sparse as spsp
-from pandas import DataFrame
+from pandas import DataFrame, Series, Panel, Panel4D
 
 from pypet import pypetconstants
 from pypet.naturalnaming import NNLeafNode
@@ -717,7 +717,7 @@ class Parameter(BaseParameter):
             self.f_set(data)
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.Parameter=' + self.v_full_name)
+        self._logger = logging.getLogger('Parameter=' + self.v_full_name)
 
     def _restore_default(self):
         """Restores the default data that was set with the
@@ -871,7 +871,7 @@ class Parameter(BaseParameter):
     def f_set(self,data):
 
         if self.v_locked:
-            raise pex.ParameterLockedException('Parameter >>' + self._name + '<< is locked!')
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self._full_name)
 
         if self.f_has_range():
             raise AttributeError('Your Parameter is an explored array can no longer change values!')
@@ -1095,7 +1095,7 @@ class Parameter(BaseParameter):
 
 
 class ArrayParameter(Parameter):
-    """Similar to the :class:`:func:`~pypet.parameter.Parameter`, but recommended for
+    """Similar to the :class:`~pypet.parameter.Parameter`, but recommended for
     large numpy arrays and python tuples.
 
     The array parameter is a bit smarter in memory management than the parameter.
@@ -1112,7 +1112,7 @@ class ArrayParameter(Parameter):
     """Identifier to mark stored data as an array"""
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.ArrayParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('ArrayParameter=' + self.v_full_name)
 
 
     def _store(self):
@@ -1242,7 +1242,7 @@ class ArrayParameter(Parameter):
 class SparseParameter(ArrayParameter):
     """Parameter that handles Scipy csr, csc, bsr and dia sparse matrices.
 
-    Sparse Parameter inherits from :class:`pypet.parameter.ArrayParameter` and supports
+    Sparse Parameter inherits from :class:`~pypet.parameter.ArrayParameter` and supports
     arrays and native python data as well.
 
     Uses similar memory management as its parent class.
@@ -1376,7 +1376,7 @@ class SparseParameter(ArrayParameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.SparseParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('SparseParameter=' + self.v_full_name)
 
     @staticmethod
     def _get_name_list(is_dia):
@@ -1588,7 +1588,7 @@ class PickleParameter(Parameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.PickleParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('PickleParameter=' + self.v_full_name)
 
     def f_supports(self, data):
         """There is no straightforward check if an object can be pickled and this function will
@@ -1820,6 +1820,11 @@ class Result(BaseResult):
         self.f_set(*args,**kwargs)
         self._no_data_string = False
 
+    def __dir__(self):
+        """Adds all data to auto-completion"""
+        result = dir(type(self)) + self.__dict__.keys()
+        result.extend(self._data.keys())
+        return result
 
     @property
     def v_no_data_string(self):
@@ -1894,7 +1899,7 @@ class Result(BaseResult):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.Result=' + self.v_full_name)
+        self._logger = logging.getLogger('Result=' + self.v_full_name)
 
 
     def __getstate__(self):
@@ -1975,8 +1980,23 @@ class Result(BaseResult):
 
 
     def __getitem__(self, name):
-        """ Equivalent to calling `f_get(name)` (see :func:`~pypet.parameter.BaseResult.f_get`)."""
+        """ Equivalent to calling `f_get`"""
         return self.f_get(name)
+
+
+    def __setitem__(self, key, value):
+        """Almost equivalent to calling __setattr__.
+
+        Treats integer values as `f_get`.
+
+        """
+        if isinstance(key, int):
+            if key == 0:
+                name = self.v_name
+            else:
+                name = self.v_name+'_%d' % key
+
+        setattr(self, key, value)
 
     def __iter__(self):
         """Equivalent to iterating over the keys of the data dictionary."""
@@ -2024,13 +2044,11 @@ class Result(BaseResult):
 
         result_list = []
         for name in args:
-            if name == 0:
-                name = self.v_name
-            else:
-                try:
+            if isinstance(name, int):
+                if name == 0:
+                    name = self.v_name
+                else:
                     name = self.v_name+'_%d' % name
-                except TypeError:
-                    pass
 
             if not name in self._data:
                 raise  AttributeError('`%s` is not part of your result `%s`.' %
@@ -2073,7 +2091,7 @@ class Result(BaseResult):
             self._data[name] = item
         else:
             raise TypeError('Your result `%s` of type `%s` is not supported.' %
-                                 (name,str(type(item))))
+                                 (name, str(type(item))))
 
     def _check_if_empty(self, item, name):
         """Checks if the result is requested to handle an empty item, like an empty list or
@@ -2092,7 +2110,9 @@ class Result(BaseResult):
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
-        return type(item) in ((np.ndarray,ObjectTable,DataFrame,dict,tuple,list,np.matrix)+
+        return type(item) in ((np.ndarray, ObjectTable,
+                               DataFrame, Series, Panel, Panel4D,
+                               dict, tuple, list, np.matrix) +
                              pypetconstants.PARAMETER_SUPPORTED_DATA)
 
 
@@ -2117,6 +2137,16 @@ class Result(BaseResult):
     def _load(self, load_dict):
         """Loads data from load_dict"""
         self._data = load_dict
+
+    def __delitem__(self, key):
+        """ Deletes an item, see also __delattr__"""
+        if isinstance(key, int):
+            if key == 0:
+                key = self.v_name
+            else:
+                key = self.v_name+'_%d' % key
+
+        del self._data[key]
 
     def __delattr__(self, item):
         """ Deletes an item from the result.
@@ -2309,7 +2339,7 @@ class PickleResult(Result):
         self._data[name] = item
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.parameter.PickleResult=' + self.v_full_name)
+        self._logger = logging.getLogger('PickleResult=' + self.v_full_name)
 
     def _store(self):
         """Returns a dictionary containing pickle dumps"""

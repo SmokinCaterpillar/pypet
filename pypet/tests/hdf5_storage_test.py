@@ -21,11 +21,13 @@ else:
 import scipy.sparse as spsp
 import random
 import tables
+import inspect
 
 import tables as pt
 
 from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multipy
+    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
+
 
 
 class StorageTest(TrajectoryComparator):
@@ -61,12 +63,6 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
 
-        with self.assertRaises(ValueError):
-            traj.f_load(as_new=True,load_parameters=1, name = traj_name)
-
-        with self.assertRaises(ValueError):
-            traj.f_load(as_new=True,load_parameters=2, load_results=2,
-                        name=traj_name)
 
 
     def test_version_mismatch(self):
@@ -95,6 +91,156 @@ class StorageTest(TrajectoryComparator):
         self.compare_trajectories(traj,traj2)
 
 
+    def test_partially_delete_stuff(self):
+        traj = Trajectory(name='TestDelete',
+                          filename=make_temp_file('testpartiallydel.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        self.assertTrue('a' in res)
+        traj.f_delete_item(res, delete_only=['a'], remove_from_item=True)
+
+        self.assertTrue('c' in res)
+        self.assertTrue('a' not in res)
+
+        res['a'] = 'offf'
+
+        self.assertTrue('a' in res)
+
+        traj.f_load(load_results=3)
+
+        self.assertTrue('a' not in res)
+        self.assertTrue('c' in res)
+
+        traj.f_delete_item(res, remove_from_trajectory=True, remove_empty_groups=True)
+
+        self.assertTrue('results' not in traj)
+        self.assertTrue(res not in traj)
+
+    def test_overwrite_stuff(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('testowrite.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        res['a'] = 333
+        res['c'] = 123445
+
+        traj.f_store_item(res, overwrite='a')
+
+        # Should emit a warning
+        traj.f_store_item(res, overwrite=['a', 'b'])
+
+        traj.f_load(load_results=3)
+
+        res = traj.test
+
+        self.assertTrue(res['a']==333)
+        self.assertTrue(res['c']=='d')
+
+        res['c'] = 123445
+
+        traj.f_store_item(res, overwrite=True)
+        res.f_empty()
+
+        traj.f_load(load_results=3)
+
+        self.assertTrue(traj.test['c']==123445)
+
+
+
+    def test_partial_loading(self):
+        traj = Trajectory(name='TestPartial', filename=make_temp_file('testpartially.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.f_update_skeleton()
+
+        traj.f_load_item(traj.test, load_only=['a', 'x'])
+
+        self.assertTrue('a' in traj.test)
+        self.assertTrue('c' not in traj.test)
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.f_update_skeleton()
+
+        load_except= ['c', 'd']
+        traj.f_load_item(traj.test, load_except=load_except)
+
+        self.assertTrue(len(load_except)==2)
+
+        self.assertTrue('a' in traj.test)
+        self.assertTrue('c' not in traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_load_item(traj.test, load_except=['x'], load_only=['y'])
+
+
+    def test_hdf5_settings(self):
+
+        filename = make_temp_file('hdfsettings.hdf5')
+        env = Environment('testraj', filename=filename,
+                          add_time=True,
+                         comment='',
+                         dynamically_imported_classes=None,
+                         log_folder=None,
+                         log_level=logging.DEBUG,
+                         multiproc=False,
+                         ncores=3,
+                         wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                         continuable=1,
+                         use_hdf5=True,
+                         complevel=4,
+                         complib='lzo',
+                         shuffle=True,
+                         fletcher32=True,
+                         pandas_format='t',
+                         pandas_append=True,
+                         purge_duplicate_comments=True,
+                         summary_tables=True,
+                         small_overview_tables=True,
+                         large_overview_tables=True,
+                         results_per_run=19,
+                         derived_parameters_per_run=17)
+
+        traj = env.v_trajectory
+
+        traj.f_store()
+
+        hdf5file = pt.openFile(filename=filename)
+
+        table= hdf5file.root._f_getChild(traj.v_name)._f_getChild('overview')._f_getChild('hdf5_settings')
+
+        row = table[0]
+
+        self.assertTrue(row['complevel'] == 4)
+
+        self.assertTrue(row['complib'] == 'lzo')
+
+        self.assertTrue(row['shuffle'])
+        self.assertTrue(row['fletcher32'])
+        self.assertTrue(row['pandas_append'])
+        self.assertTrue(row['pandas_format'] == 't')
+
+        for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+            self.assertTrue(row[table_name])
+
+        self.assertTrue(row['purge_duplicate_comments'])
+        self.assertTrue(row['explored_parameters_runs'])
+        self.assertTrue(row['results_per_run']==19)
+        self.assertTrue(row['derived_parameters_per_run'] == 17)
+
+        hdf5file.close()
+
+
     def test_store_items_and_groups(self):
 
         traj = Trajectory(name='testtraj', filename=make_temp_file('teststoreitems.hdf5'))
@@ -109,21 +255,20 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store_items(['test','testres','group1'])
 
-        with self.assertRaises(ValueError):
-            traj.f_load_item('testres',load_only='not-exisiting')
 
         traj2 = Trajectory(name=traj.v_name, add_time=False,
                            filename=make_temp_file('teststoreitems.hdf5'))
 
         traj2.f_load(load_results=2,load_parameters=2)
 
+        traj.f_add_result('Im.stored.along.a.path', 43)
+        traj.Im.stored.along.v_annotations['wtf'] =4444
+        traj.res.f_store_child('Im.stored.along.a.path')
+
+
+        traj2.res.f_load_child('Im.stored.along.a.path', load_data=2)
+
         self.compare_trajectories(traj,traj2)
-
-
-
-
-
-
 
 
 class EnvironmentTest(TrajectoryComparator):
@@ -134,6 +279,12 @@ class EnvironmentTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
         self.use_pool=True
+        self.pandas_format='fixed'
+        self.pandas_append=False
+        self.complib = 'blosc'
+        self.complevel=9
+        self.shuffle=True
+        self.fletcher32 = False
 
 
     def explore_complex_params(self, traj):
@@ -219,19 +370,24 @@ class EnvironmentTest(TrajectoryComparator):
         self.logfolder = make_temp_file('experiments/tests/Log')
 
         random.seed()
-        self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
+        self.trajname = make_trajectory_name(self)
 
-        env = Environment(trajectory=self.trajname,filename=self.filename,
+        env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           results_per_run=5,
                           derived_parameters_per_run=5,
-                          use_pool=self.use_pool)
+                          multiproc=self.multiproc,
+                          ncores=self.ncores,
+                          wrap_mode=self.mode,
+                          use_pool=self.use_pool,
+                          fletcher32=self.fletcher32,
+                          complevel=self.complevel,
+                          complib=self.complib,
+                          shuffle=self.shuffle,
+                          pandas_append=self.pandas_append,
+                          pandas_format=self.pandas_format)
 
         traj = env.v_trajectory
-
-        traj.multiproc = self.multiproc
-        traj.wrap_mode = self.mode
-        traj.ncores = self.ncores
 
         traj.v_standard_parameter=Parameter
 
@@ -288,10 +444,11 @@ class EnvironmentTest(TrajectoryComparator):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
-        newtraj.f_load(name=trajectory_name, load_derived_parameters=2,load_results=2,
+        newtraj.f_load(name=trajectory_name, load_parameters=2,
+                       load_derived_parameters=2,load_results=2,
+                       load_other_data=2,
                        index=trajectory_index, as_new=as_new)
         return newtraj
-
 
 
     def test_expand(self):
@@ -304,6 +461,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
+        print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -313,6 +471,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(self.traj,newtraj)
 
     def test_expand_after_reload(self):
+
         self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
         ###Explore
         self.explore(self.traj)
@@ -322,7 +481,8 @@ class EnvironmentTest(TrajectoryComparator):
         traj_name = self.traj.v_name
 
         traj_name = self.traj.v_name
-        del self.env
+
+
         self.env = Environment(trajectory=self.traj,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder)
 
@@ -332,13 +492,14 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
+        print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
 
     def expand(self):
@@ -354,20 +515,25 @@ class EnvironmentTest(TrajectoryComparator):
 
     ################## Overview TESTS #############################
 
-    def test_switch_off_large_tables(self):
+    def test_switch_ON_large_tables(self):
         self.traj.f_add_parameter('TEST', 'test_switch_off_LARGE_tables')
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_switch_off_large_overview()
+        self.env.f_set_large_overview(True)
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should_not = ['derived_parameters_runs', 'results_runs']
         for name in should_not:
-            self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
+            self.assertTrue(name in overview_group, '%s in overviews but should not!' % name)
         hdf5file.close()
+
+        self.traj.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name)
+
+        self.compare_trajectories(newtraj,self.traj)
 
     def test_switch_off_all_tables(self):
         ###Explore
@@ -381,6 +547,7 @@ class EnvironmentTest(TrajectoryComparator):
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
+            name = name.split('.')[-1] # Get only the name of the table, no the full name
             self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
 
         hdf5file.close()
@@ -396,11 +563,11 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.traj.f_store_item((pypetconstants.LEAF, self.traj.TestResItem))
 
-        self.traj.results.tr.f_remove_child('TestResItem')
+        self.traj.results.f_remove_child('TestResItem')
 
         self.assertTrue('TestResItem' not in self.traj)
 
-        self.traj.results.tr.f_load_child('TestResItem', load_data=pypetconstants.LOAD_SKELETON)
+        self.traj.results.f_load_child('TestResItem', load_data=pypetconstants.LOAD_SKELETON)
 
         self.traj.f_load_item((pypetconstants.LEAF,self.traj.TestResItem,(),{'load_only': 'TestResItem'}))
 
@@ -435,7 +602,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.assertTrue(self.traj.new.group.v_annotations.annotation, 42)
 
-        self.traj.f_remove_item('new.test.group', remove_from_storage=True, remove_empty_groups=True)
+        self.traj.f_delete_item('new.test.group', remove_empty_groups=True)
 
         with self.assertRaises(tables.NoSuchNodeError):
             self.traj.parameters.f_load_child('new', recursive=True, load_data=pypetconstants.LOAD_SKELETON)
@@ -480,7 +647,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.openFile(self.filename, mode='a')
 
         try:
             traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
@@ -519,7 +686,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.openFile(self.filename, mode='a')
 
         try:
             traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
@@ -528,7 +695,6 @@ class EnvironmentTest(TrajectoryComparator):
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
                     if 'run_' in node._v_pathname:
-                        #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
                         comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:
                             self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
@@ -543,6 +709,33 @@ class EnvironmentTest(TrajectoryComparator):
             hdf5file.close()
 
 
+class TestOtherHDF5Settings(EnvironmentTest):
+    def set_mode(self):
+        EnvironmentTest.set_mode(self)
+        self.mode = 'LOCK'
+        self.multiproc = False
+        self.ncores = 1
+        self.use_pool=True
+        self.pandas_format='table'
+        self.pandas_append=True
+        self.complib = 'zlib'
+        self.complevel=2
+        self.shuffle=False
+        self.fletcher32 = False
+
+class TestOtherHDF5Settings2(EnvironmentTest):
+    def set_mode(self):
+        EnvironmentTest.set_mode(self)
+        self.mode = 'LOCK'
+        self.multiproc = False
+        self.ncores = 1
+        self.use_pool=True
+        self.pandas_format='table'
+        self.pandas_append=False
+        self.complib = 'lzo'
+        self.complevel=2
+        self.shuffle=False
+        self.fletcher32 = True
 
 
 class ResultSortTest(TrajectoryComparator):
@@ -559,17 +752,17 @@ class ResultSortTest(TrajectoryComparator):
 
         self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         self.logfolder = make_temp_file('experiments/tests/Log')
-        self.trajname = 'Test_' + self.__class__.__name__ + '_'+str(random.randint(0,10**10))
+        self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          multiproc=self.multiproc,
+                          wrap_mode=self.mode,
+                          ncores=self.ncores,
                           use_pool=self.use_pool)
 
         traj = env.v_trajectory
 
-        traj.multiproc = self.multiproc
-        traj.wrap_mode = self.mode
-        traj.ncores = self.ncores
 
         traj.v_standard_parameter=Parameter
 
@@ -617,6 +810,40 @@ class ResultSortTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
+
+    def test_f_iter_runs(self):
+
+         ###Explore
+        self.explore(self.traj)
+
+
+        self.env.f_run(multipy)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        for idx, run_name in enumerate(self.traj.f_iter_runs()):
+            newtraj.v_as_run=run_name
+            self.traj.v_as_run == run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+
+            self.assertTrue('run_%08d' % (idx+1) not in traj)
+
+            self.assertTrue(newtraj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.z),str(traj.x),str(traj.y)))
+
+        self.assertTrue(traj.v_idx == -1)
+        self.assertTrue(traj.v_as_run is None)
+        self.assertTrue(newtraj.v_idx == idx)
+
 
     def test_expand(self):
         ###Explore

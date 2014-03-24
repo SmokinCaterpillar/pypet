@@ -111,7 +111,8 @@ class ContinueTest(TrajectoryComparator):
             self.trajs[irun].f_update_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA)
+                                    load_results=pypetconstants.UPDATE_DATA,
+                                    load_other_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
@@ -140,9 +141,6 @@ class ContinueTest(TrajectoryComparator):
         self.explore(self.trajs[1])
 
 
-
-
-
         for irun in range(len(self.filenames)):
             self.make_run(self.envs[irun])
 
@@ -152,12 +150,13 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'),
                                         remove_empty_groups=True)
 
-        self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')
+        self.assertTrue('Delete.Me' not in self.trajs[0],'Delete.Me is still in traj')
 
         self.trajs[0].f_update_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
-        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'), remove_from_storage=True,
-                                        remove_empty_groups=True)
+        self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
+                                        remove_empty_groups=True,
+                                        remove_from_trajectory=True)
 
         self.trajs[0].f_update_skeleton()
         self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')
@@ -209,7 +208,8 @@ class ContinueTest(TrajectoryComparator):
 
         self.trajs[0] = Trajectory()
         self.trajs[0].v_storage_service=temp_sservice
-        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2)
+        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2,
+                             load_other_data=2)
         #self.trajs[0].f_load(trajectory_name=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
 
         self.trajs[1].f_update_skeleton()

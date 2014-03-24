@@ -28,6 +28,11 @@ import hashlib
 import time
 import datetime
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 
 from pypet.utils.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
@@ -48,19 +53,21 @@ def _single_run(args):
 
         1. Path to log files
 
-        2. A queue object, only necessary in case of multiprocessing in queue mode.
+        2. Boolean whether to log stdout
 
-        3. The user's job function
+        3. A queue object, only necessary in case of multiprocessing in queue mode.
 
-        4. Number of total runs (int)
+        4. The user's job function
 
-        5. Whether to use multiprocessing
+        5. Number of total runs (int)
 
-        6. A queue object to store results into in case a pool is used, otherwise None
+        6. Whether to use multiprocessing
 
-        7. The arguments handed to the user's job function (as *args)
+        7. A queue object to store results into in case a pool is used, otherwise None
 
-        8. The keyword arguments handed to the user's job function (as **kwargs)
+        8. The arguments handed to the user's job function (as *args)
+
+        9. The keyword arguments handed to the user's job function (as **kwargs)
 
     :return: Results computed by the user's job function which are not stored into the trajectory
 
@@ -68,44 +75,36 @@ def _single_run(args):
 
     try:
         traj=args[0] 
-        log_path=args[1] 
-        queue=args[2]
-        runfunc=args[3] 
-        total_runs = args[4]
-        multiproc = args[5]
-        result_queue = args[6]
-        runparams = args[7]
-        kwrunparams = args[8]
+        log_path=args[1]
+        log_stdout = args[2]
+        queue=args[3]
+        runfunc=args[4]
+        total_runs = args[5]
+        multiproc = args[6]
+        result_queue = args[7]
+        runparams = args[8]
+        kwrunparams = args[9]
 
-        use_pool = result_queue is not None
+        use_pool = result_queue is None
 
         root = logging.getLogger()
         idx = traj.v_idx
 
-        if multiproc:
+        if multiproc and log_path is not None:
 
             # In case of multiprocessing we want to have a log file for each individual process.
-            pid = os.getpid()
-            if use_pool:
-                filename = 'process_%s.txt' % str(pid)
-                pid_to_run_file = 'process_%s_runs.txt' % str(pid)
-                pid_to_run_file = log_path+'/'+pid_to_run_file
-            else:
-                filename = '%s.txt' % traj.v_name
+            process_name = multip.current_process().name.lower().replace('-','_')
 
+            filename = '%s_%s.txt' % (traj.v_name, process_name)
 
             filename=log_path+'/'+filename
-            exists = os.path.isfile(filename)
 
-            # If the file does not exist we need to create it and create a handler that logs
-            # all messages into the file.
-            if not exists:
+            handler=logging.FileHandler(filename=filename)
+            formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+            handler.setFormatter(formatter)
+            root.addHandler(handler)
 
-                h=logging.FileHandler(filename=filename)
-                f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-                h.setFormatter(f)
-                root.addHandler(h)
-
+            if log_stdout:
                 # Also copy standard out and error to the log files
                 outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
                 sys.stdout = outstl
@@ -113,12 +112,6 @@ def _single_run(args):
                 errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
                 sys.stderr = errstl
 
-            if use_pool:
-                pid_file=open(pid_to_run_file, 'a+')
-                outstr = traj.v_time + ': ' + traj.v_name +'\n'
-                pid_file.write(outstr)
-                pid_file.flush()
-                pid_file.close()
 
         ## Add the queue for storage in case of multiprocessing in queue mode.
         if queue is not None:
@@ -149,7 +142,10 @@ def _single_run(args):
                   'Finished single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
 
-        if use_pool:
+        if multiproc:
+            root.removeHandler(handler)
+
+        if not use_pool:
             result_queue.put(result)
         else:
             return result
@@ -219,7 +215,24 @@ class Environment(object):
 
         Path to a folder where all log files will be stored. If none is specified the default
         `./logs/` is chosen. The log files will be added to a
-        sub-folder with the name of the trajectory.
+        sub-folder with the name of the trajectory and the name of the environment.
+
+    :param log_level:
+
+        The log level, default is `logging.INFO`, If you want to disable logging, simply set
+        `log_level = None`.
+
+        Note if you configured the logging module somewhere else with
+        a different log-level, the value of this `log_level` is simply ignored. Logging handlers
+        to log into files in the `log_folder` will still be generated. To strictly forbid the
+        generation of these handlers you have to choose set `log_level=None`.
+
+    :param log_stdout:
+
+        Whether the output of STDOUT and STDERROR should be recorded into the log files.
+        Disable if only logging statement should be recorded. Note if you work with an
+        interactive console like IPython, it is a good idea to set `log_stdout=False`
+        to avoid messing up the console output.
 
     :param multiproc:
 
@@ -252,6 +265,43 @@ class Environment(object):
 
         Whether to use a fixed pool of processes or whether to spawn a new process
         for every run. Use the latter if your data cannot be pickled.
+
+    :param cpu_cap:
+
+        If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
+        0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
+        usage is above the specified level (averaged across all cores),
+        pypet will not spawn a new process and wait until
+        activity falls below the threshold again. Note that in order to avoid dead-lock at least
+        one process will always be running regardless of the current utilization.
+        If the threshold is crossed a warning will be issued. The warning won't be repeated as
+        long as the threshold remains crossed.
+
+        For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
+        used. Moreover, let's assume that at the moment only 2 processes are
+        computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
+        pypet will wait until cpu usage drops below (or equal to) 70 percent again
+        until it starts a third process to carry out another single run.
+
+        The parameters `memory_cap` and `swap_cap` are analogous. These three thresholds are
+        combined to determine whether a new process can be spawned. Accordingly, if only one
+        of these thresholds is crossed, no new processes will be spawned.
+
+        To disable the cap limits simply set all three values to 1.0.
+
+        You need the psutil_ package to use this cap feature. If not installed, the cap
+        values are simply ignored.
+
+        .. _psutil: http://psutil.readthedocs.org/
+
+    :param memory_cap:
+
+        Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
+        processes are spawned.
+
+    :param swap_cap:
+
+        Analogous to `memory_cap` but the swap memory is considered.
 
     :param wrap_mode:
 
@@ -311,6 +361,43 @@ class Environment(object):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
+    :param complevel:
+
+        If you use HDF5, you can specify your compression level. 0 means no compression
+        and 9 is the highest compression level. See `PyTables Compression`_ for a detailed
+        description.
+
+        .. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
+
+    :param complib:
+
+        The library used for compression. Choose between *zlib*, *blosc*, and *lzo*.
+        Note that 'blosc' and 'lzo' are usually faster than 'zlib' but it may be the case that
+        you can no longer open your hdf5 files with third-party applications that do not rely
+        on PyTables.
+
+    :param shuffle:
+
+        Whether or not to use the shuffle filters in the HDF5 library.
+        This normally improves the compression ratio.
+
+    :param fletcher32:
+
+        Whether or not to use the *Fletcher32* filter in the HDF5 library.
+        This is used to add a checksum on hdf5 data.
+
+    :param pandas_format:
+
+        How to store pandas data frames. Either in 'fixed' ('f') or 'table' ('t') format.
+        Fixed format allows fast reading and writing but disables querying the hdf5 data and
+        appending to the store (with other 3rd party software other than *pypet*).
+
+    :param pandas_append:
+
+        If format is 'table', `pandas_append=True` allows to modify the tables after storage with
+        other 3rd party software. Currently appending is not supported by *pypet* but this
+        feature will come soon.
+
     :param purge_duplicate_comments:
 
         If you add a result via :func:`~pypet.trajectory.SingleRun.f_add_result` or a derived
@@ -342,15 +429,13 @@ class Environment(object):
 
         You need summary tables (see below) to be able to purge duplicate comments.
 
-    :param small_overview_tables:
+        This feature only works for comments in *leaf* nodes (aka Results and Parameters).
+        So try to avoid to add comments in *group* nodes within single runs.
 
-        Whether the small overview tables should be created.
-        Small tables are giving overview about 'config','parameters',
-        'derived_parameters_trajectory', 'derived_parameters_runs_summary',
-        'results_trajectory','results_runs_summary'.
+    :param summary_tables:
 
-        Note that these tables create some overhead. If you want very small hdf5 files set
-        `small_overview_tables` to False.
+        Whether the summary tables should be created, i.e. the 'derived_parameters_runs_summary',
+        and the `results_runs_summary`.
 
         The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
         It is assumed that results and derived parameters with equal names in individual runs
@@ -359,6 +444,16 @@ class Environment(object):
 
         The summary table can be used in combination with `purge_duplicate_comments` to only store
         a single comment for every result with the same name in each run, see above.
+
+    :param small_overview_tables:
+
+        Whether the small overview tables should be created.
+        Small tables are giving overview about 'config','parameters',
+        'derived_parameters_trajectory', ,
+        'results_trajectory','results_runs_summary'.
+
+        Note that these tables create some overhead. If you want very small hdf5 files set
+        `small_overview_tables` to False.
 
     :param large_overview_tables:
 
@@ -388,14 +483,25 @@ class Environment(object):
         Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
         The user can specify the commit message, see below. Note that the message
         will be augmented by the name and the comment of the trajectory.
+        A commit will only be triggered if there are changes detected within your
+        working copy.
 
         This will also add information about the revision to the trajectory, see below.
 
+        .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
     :param git_message:
 
-        Message passed onto git command.
+        Message passed onto git command. Only relevant if a new commit is triggered.
+        If no changes are detected, the information about the previous commit and the previous
+        commit message are added to the trajectory and this user passed message is discarded.
 
-    .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+    :param do_single_runs:
+
+        Whether you intend to actually to compute single runs with the trajectory.
+        If you do not intend to do single runs, than set to `False` and the
+        environment won't add config information like number of processors to the
+        trajectory.
 
     :param lazy_debug:
 
@@ -452,26 +558,39 @@ class Environment(object):
                  comment='',
                  dynamically_imported_classes=None,
                  log_folder=None,
+                 log_level=logging.INFO,
+                 log_stdout=True,
                  multiproc=False,
                  ncores=1,
-                 use_pool=True,
+                 use_pool=False,
+                 cpu_cap=1.0,
+                 memory_cap=1.0,
+                 swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  continuable=1,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 complevel=9,
+                 complib='zlib',
+                 shuffle=True,
+                 fletcher32=False,
+                 pandas_format='fixed',
+                 pandas_append=False,
                  purge_duplicate_comments=True,
+                 summary_tables = True,
                  small_overview_tables=True,
-                 large_overview_tables=True,
+                 large_overview_tables=False,
                  results_per_run=0,
                  derived_parameters_per_run=0,
                  git_repository = None,
                  git_message='',
+                 do_single_runs=True,
                  lazy_debug=False):
 
 
         # First check if purge settings are valid
-        if purge_duplicate_comments and not small_overview_tables:
+        if purge_duplicate_comments and not summary_tables:
             raise RuntimeError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
@@ -528,12 +647,8 @@ class Environment(object):
             # we put it into the current working directory
             self._filename = os.path.join(os.getcwd(),self._filename)
 
-
         if not tail:
             self._filename =  os.path.join(self._filename, self._traj.v_name+'.hdf5')
-
-
-
 
         self._use_hdf5 = use_hdf5 # Boolean whether to use hdf5 or not
 
@@ -545,8 +660,8 @@ class Environment(object):
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit
         if self._git_repository is not None:
-            self._hexsha=make_git_commit(self,self._git_repository, self._git_message) # Identifier
-            # hexsha
+            new_commit, self._hexsha=make_git_commit(self, self._git_repository, self._git_message)
+            # Identifier hexsha
         else:
             # Otherwise we need to create a novel hexsha
             self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
@@ -565,55 +680,113 @@ class Environment(object):
         self._traj._environment_name=self._name
 
         # If no log folder is provided, create the default log folder
-        if log_folder is None:
-            log_folder = os.path.join(os.getcwd(), 'logs')
+        if log_level is not None:
+            if log_folder is None:
+                log_folder = os.path.join(os.getcwd(), 'logs')
+        else:
+            log_path = None
 
         # The actual log folder is a sub-folder with the trajectory name
-        log_path = os.path.join(log_folder,self._traj.v_name)
+        if log_level is not None:
+            log_path = os.path.join(log_folder, self._traj.v_name)
+            log_path = os.path.join(log_path, self.v_name)
+            # Create the loggers
+            self._make_logging_handlers(log_path, log_level, log_stdout)
+
+        self._logger = logging.getLogger('Environment')
+
         self._log_path = log_path
+        self._log_stdout = log_stdout
 
 
         # Whether to use a pool of processes
         self._use_pool = use_pool
 
-        # Create the loggers
-        self._make_logger(log_path)
+        if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
+            memory_cap <= 0.0 or memory_cap > 1.0 or
+            swap_cap <= 0.0 or swap_cap > 1.0):
+            raise ValueError('Please choose cap values larger than 0.0 and smaller or equal to 1.0.')
 
-        config_name='environment.%s.multiproc' % self.v_name
-        self._traj.f_add_config(config_name, multiproc,
-                                comment= 'Whether or not to use multiprocessing. If yes'
-                                         ' than everything must be pickable.')
-
-        config_name='environment.%s.use_pool' % self.v_name
-        self._traj.f_add_config(config_name,use_pool,
-                                comment='Whether to use a pool of processes or '
-                                        'spawning individual processes for each run.')
-
-        config_name='environment.%s.ncores' % self.v_name
-        self._traj.f_add_config(config_name,ncores,
-                                comment='Number of processors in case of multiprocessing')
+        self._cpu_cap = cpu_cap
+        self._memory_cap = memory_cap
+        self._swap_cap = swap_cap
 
 
-        config_name='environment.%s.wrap_mode' % self.v_name
-        self._traj.f_add_config(config_name,wrap_mode,
-                                    comment ='Multiprocessing mode (if multiproc),'
-                                             ' i.e. whether to use QUEUE'
-                                             ' or LOCK or NONE'
-                                             ' for thread/process safe storing')
+        # Drop a message if we made a commit. We cannot drop the message directly after the
+        # commit, because the logger does not exist at this point, yet.
+        if self._git_repository is not None:
+            if new_commit:
+                self._logger.info('Triggered NEW GIT commit `%s`.' % str(self._hexsha))
+            else:
+                self._logger.info('No changes detected, added PREVIOUS GIT commit `%s`.' %
+                                  str(self._hexsha))
+
+        self._do_single_runs = do_single_runs
+
+        if self._do_single_runs:
+            config_name='environment.%s.multiproc' % self.v_name
+            self._traj.f_add_config(config_name, multiproc,
+                                    comment= 'Whether or not to use multiprocessing. If yes'
+                                             ' than everything must be pickable.')
+
+            if self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get():
+                config_name='environment.%s.use_pool' % self.v_name
+                self._traj.f_add_config(config_name, use_pool,
+                                        comment='Whether to use a pool of processes or '
+                                                'spawning individual processes for each run.')
+
+                if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
+                    config_name='environment.%s.cpu_cap' % self.v_name
+                    self._traj.f_add_config(config_name, cpu_cap,
+                                        comment='Maximum cpu usage beyond which no new processes '
+                                                'are spawned')
+
+                    config_name='environment.%s.memory_cap' % self.v_name
+                    self._traj.f_add_config(config_name, memory_cap,
+                                        comment='Maximum RAM usage beyond which no new processes '
+                                                'are spawned')
+
+                    config_name='environment.%s.swap_cap' % self.v_name
+                    self._traj.f_add_config(config_name, swap_cap,
+                                        comment='Maximum Swap memory usage beyond which no new '
+                                                'processes are spawned')
+
+
+                config_name='environment.%s.ncores' % self.v_name
+                self._traj.f_add_config(config_name,ncores,
+                                        comment='Number of processors in case of multiprocessing')
+
+
+                config_name='environment.%s.wrap_mode' % self.v_name
+                self._traj.f_add_config(config_name, wrap_mode,
+                                            comment ='Multiprocessing mode (if multiproc),'
+                                                     ' i.e. whether to use QUEUE'
+                                                     ' or LOCK or NONE'
+                                                     ' for thread/process safe storing')
+
+            config_name='environment.%s.continuable' % self._name
+            self._traj.f_add_config(config_name, continuable,
+                                    comment='Whether or not a continue file should'
+                                            ' be created. If yes, everything must be'
+                                            ' picklable.')
+
+        config_name='environment.%s.trajectory.name' % self.v_name
+        self._traj.f_add_config(config_name, self.v_trajectory.v_name,
+                                    comment ='Name of trajectory')
+
+        config_name='environment.%s.trajectory.timestamp' % self.v_name
+        self._traj.f_add_config(config_name, self.v_trajectory.v_timestamp,
+                                    comment ='Timestamp of trajectory')
+
 
         config_name='environment.%s.timestamp' % self.v_name
-        self._traj.f_add_config(config_name,self.v_timestamp,
+        self._traj.f_add_config(config_name, self.v_timestamp,
                                     comment ='Timestamp of environment creation')
 
         config_name='environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment')
 
-        config_name='environment.%s.continuable' % self._name
-        self._traj.f_add_config(config_name, continuable,
-                                comment='Whether or not a continue file should'
-                                        ' be created. If yes, everything must be'
-                                        ' picklable.')
 
         if self._traj.v_version != VERSION:
             config_name='environment.%s.version' % self.v_name
@@ -621,32 +794,32 @@ class Environment(object):
                                     comment ='Pypet version if it differs from the version'
                                              ' of the trajectory')
 
-        config_name='environment.%s.trajectory.name' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_name,
-                                    comment ='Name of trajectory')
 
-        config_name='environment.%s.trajectory.timestamp' % self.v_name
-        self._traj.f_add_config(config_name,self.v_trajectory.v_timestamp,
-                                    comment ='Timestamp of trajectory')
+
+        self._traj.config.environment.v_comment='Settings for the different environments '\
+                                              'used to run the experiments'
 
         # Add HDF5 config in case the user wants the standard service
-        if self._use_hdf5 and not self.v_trajectory.v_stored:
+        if (self._use_hdf5 and not self.v_trajectory.v_stored and
+                not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False)):
 
             # Print which file we use for storage
             self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
 
-            for config_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+            for table_name in HDF5StorageService.NAME_TABLE_MAPPING.values():
 
-                self._traj.f_add_config(config_name,1,comment='Whether or not to have an overview '
-                                                                  'table with that name')
+                self._traj.f_add_config('hdf5.overview.'+table_name,
+                                        True ,
+                                        comment='Whether or not to have an overview '
+                                                'table with that name')
 
 
-            self._traj.f_add_config('hdf5.overview.explored_parameters_runs',1,
+            self._traj.f_add_config('hdf5.overview.explored_parameters_runs', True,
                                         comment='Whether there are overview tables about the '
                                                 'explored parameters in each run')
 
 
-            self._traj.f_add_config('hdf5.purge_duplicate_comments',int(purge_duplicate_comments),
+            self._traj.f_add_config('hdf5.purge_duplicate_comments',purge_duplicate_comments,
                                                 comment='Whether comments of results and'
                                                         ' derived parameters should only'
                                                         ' be stored for the very first instance.'
@@ -655,20 +828,42 @@ class Environment(object):
 
 
 
-            self._traj.f_add_config('hdf5.results_per_run', int(results_per_run),
+            self._traj.f_add_config('hdf5.results_per_run', results_per_run,
                                         comment='Expected number of results per run,'
                                             ' a good guess can increase storage performance')
 
 
-            self._traj.f_add_config('hdf5.derived_parameters_per_run', int(derived_parameters_per_run),
+            self._traj.f_add_config('hdf5.derived_parameters_per_run', derived_parameters_per_run,
                                         comment='Expected number of derived parameters per run,'
                                             ' a good guess can increase storage performance')
 
+            self._traj.f_add_config('hdf5.complevel',complevel,
+                                        comment='Compression Level (0 no compression '
+                                                'to 9 highest compression)')
 
-            if not small_overview_tables:
-                self.f_switch_off_small_overview()
-            if not large_overview_tables:
-                self.f_switch_off_large_overview()
+            self._traj.f_add_config('hdf5.complib',complib,
+                                        comment='Compression Algorithm')
+
+            self._traj.f_add_config('hdf5.fletcher32',fletcher32,
+                                        comment='Whether to use fletcher 32 checksum')
+
+            self._traj.f_add_config('hdf5.shuffle', shuffle,
+                                        comment='Whether to use shuffle filtering.')
+
+            self._traj.f_add_config('hdf5.pandas_format', pandas_format,
+                                        comment='''How to store pandas data frames, either'''
+                                                ''' 'fixed' ('f') or 'table' ('t').''')
+
+            self._traj.f_add_config('hdf5.pandas_append', pandas_append,
+                                        comment='If pandas frames are stored as tables, one can '
+                                                'enable append mode.')
+
+            self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
+
+            self.f_set_summary(summary_tables)
+            self.f_set_small_overview(small_overview_tables)
+            self.f_set_large_overview(large_overview_tables)
+
 
         # Notify that in case of lazy debuggin we won't record anythin
         if lazy_debug and 'pydevd' in sys.modules:
@@ -677,7 +872,7 @@ class Environment(object):
         self._logger.info('Environment initialized.')
 
 
-    def _make_logger(self,log_path):
+    def _make_logging_handlers(self, log_path, log_level, log_stdout):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
@@ -686,7 +881,8 @@ class Environment(object):
         # Check if there already exist logging handlers, if so, we assume the user
         # has already set a log  level. If not, we set the log level to INFO
         if len(logging.getLogger().handlers)==0:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(level=log_level)
+
 
         # Add a handler for storing everything to a text file
         f = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
@@ -695,22 +891,23 @@ class Environment(object):
         root.addHandler(h)
 
         # Add a handler for storing warnings and errors to a text file
-        h=logging.FileHandler(filename=log_path+'/warnings_and_errors.txt')
+        h=logging.FileHandler(filename=log_path+'/errors_and_warnings.txt')
         h.setLevel(logging.WARNING)
         root = logging.getLogger()
         root.addHandler(h)
 
+        if log_stdout:
+            # Also copy standard out and error to the log files
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
 
-        # Also copy standard out and error to the log files
-        outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-        sys.stdout = outstl
-
-        errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-        sys.stderr = errstl
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
 
         for handler in root.handlers:
             handler.setFormatter(f)
-        self._logger = logging.getLogger('pypet.environment.Environment=%s' % self.v_name)
+
+
 
 
     @deprecated('Please use assignment in environment constructor.')
@@ -727,9 +924,7 @@ class Environment(object):
         DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
         """
-        self._traj.config.hdf5.overview.results_runs=0
-        self._traj.config.hdf5.overview.derived_parameters_runs = 0
-        self._traj.config.hdf5.overview.explored_parameters_runs = 0
+        self.f_set_large_overview(0)
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_all_overview(self):
@@ -738,8 +933,9 @@ class Environment(object):
         DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
         """
-        self.f_switch_off_small_overview()
-        self.f_switch_off_large_overview()
+        self.f_set_summary(0)
+        self.f_set_small_overview(0)
+        self.f_set_large_overview(0)
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_small_overview(self):
@@ -748,14 +944,31 @@ class Environment(object):
         DEPRECATED: Please pass whether to use the tables to the environment constructor.
 
         """
-        self._traj.config.hdf5.overview.parameters = 0
-        self._traj.config.hdf5.overview.config=0
-        self._traj.config.hdf5.overview.explored_parameters=0
-        self._traj.config.hdf5.overview.derived_parameters_trajectory=0
-        self._traj.config.hdf5.overview.derived_parameters_runs_summary=0
-        self._traj.config.hdf5.overview.results_trajectory=0
-        self._traj.config.hdf5.overview.results_runs_summary=0
-        self._traj.config.hdf5.purge_duplicate_comments=0
+        self.f_set_small_overview(0)
+
+    def f_set_large_overview(self, switch):
+        """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
+        switch = switch
+        self._traj.config.hdf5.overview.results_runs=switch
+        self._traj.config.hdf5.overview.derived_parameters_runs = switch
+        self._traj.config.hdf5.overview.explored_parameters_runs = switch
+
+    def f_set_summary(self, switch):
+        """Switches summary tables on (`switch=True`) or off (`switch=False`). """
+        switch = switch
+        self._traj.config.hdf5.overview.derived_parameters_runs_summary=switch
+        self._traj.config.hdf5.overview.results_runs_summary=switch
+        self._traj.config.hdf5.purge_duplicate_comments=switch
+
+    def f_set_small_overview(self, switch):
+        """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
+        switch = switch
+        self._traj.config.hdf5.overview.parameters = switch
+        self._traj.config.hdf5.overview.config=switch
+        self._traj.config.hdf5.overview.explored_parameters=switch
+        self._traj.config.hdf5.overview.derived_parameters_trajectory=switch
+        self._traj.config.hdf5.overview.results_trajectory=switch
+
 
 
     def f_continue_run(self, continue_file):
@@ -775,6 +988,10 @@ class Environment(object):
             `runfunc` still need to be pickled.
 
         """
+
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot continue a run if you did create an environment '
+                               'with `do_single_runs=False`.')
 
         # Unpack the stored data
         continue_dict = pickle.load(open(continue_file,'rb'))
@@ -882,6 +1099,10 @@ class Environment(object):
 
         """
 
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot make a run if you did create an environment '
+                               'with `do_single_runs=False`.')
+
         # Make some sanity checks if the user wants the standard hdf5 service.
         if self._use_hdf5:
             if ( (not self._traj.f_get('results_runs_summary').f_get() or
@@ -910,7 +1131,7 @@ class Environment(object):
         self._logger.info('Trajectory successfully stored.')
 
         # Make the trajectory continuable in case the user wants that
-        continuable = self._traj.f_get('config.environment.continuable').f_get()
+        continuable = self._traj.f_get('config.environment.%s.continuable' % self.v_name).f_get()
         if continuable:
 
             dump_dict ={}
@@ -953,27 +1174,28 @@ class Environment(object):
 
         """
         log_path = self._log_path
+        log_stdout = self._log_stdout
 
-        multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
+        self._multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
 
         result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
 
         self._storage_service = self._traj.v_storage_service
 
-        if multiproc:
+        if self._multiproc:
 
             manager = multip.Manager()
 
-            use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
-            mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
+            self._use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
+            self._wrap_mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
 
-            if not use_pool:
+            if not self._use_pool:
                 # If we spawn a single process for each run, we need an additional queue
                 # for the results of `runfunc`
                 result_queue = manager.Queue(maxsize=len(self._traj))
 
             # Prepare Multiprocessing
-            if mode == pypetconstants.WRAP_MODE_QUEUE:
+            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
                 # For queue mode we need to have a queue in a block of shared memory.
                 queue = manager.Queue()
 
@@ -994,9 +1216,9 @@ class Environment(object):
                 queue_sender.queue=queue
                 self._traj.v_storage_service=queue_sender
 
-            elif mode == pypetconstants.WRAP_MODE_LOCK:
+            elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
 
-                if use_pool:
+                if self._use_pool:
                     # We need a lock that is shared by all processes.
                     lock = manager.Lock()
                 else:
@@ -1009,18 +1231,18 @@ class Environment(object):
                 lock_wrapper = LockWrapper(self._storage_service,lock)
                 self._traj.v_storage_service=lock_wrapper
 
-            elif mode == pypetconstants.WRAP_MODE_NONE:
+            elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
                 # We assume that storage and loading is multiprocessing safe
                 pass
             else:
                 raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                    'not supported, use `%s` or `%s`.'
-                                    %(mode,pypetconstants.WRAP_MODE_QUEUE,
+                                    %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
                                       pypetconstants.WRAP_MODE_LOCK))
 
 
             # Number of processes to be started
-            ncores =  self._traj.f_get('config.ncores').f_get()
+            ncores =  self._traj.f_get('config.environment.%s.ncores'  % self.v_name).f_get()
 
 
             self._logger.info('\n************************************************************\n'
@@ -1031,15 +1253,16 @@ class Environment(object):
                               (self._traj.v_name, ncores))
 
             # Create a generator to generate the tasks for the mp-pool
-            iterator = ((self._traj._make_single_run(n), log_path, queue, runfunc, len(self._traj),
-                         multiproc, result_queue,  args, kwargs) for n in xrange(len(self._traj))
-                                if not self._traj.f_is_completed(n))
+            iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
+                         queue, runfunc, len(self._traj),
+                         self._multiproc, result_queue,  args, kwargs)
+                         for n in xrange(len(self._traj)) if not self._traj.f_is_completed(n))
 
 
-            if use_pool:
+            if self._use_pool:
                 mpool = multip.Pool(ncores)
                 # Let the pool workers do their jobs provided by the generator
-                results = mpool.imap(_single_run,iterator)
+                results = mpool.imap(_single_run, iterator)
 
                 # Everything is done
                 mpool.close()
@@ -1049,37 +1272,89 @@ class Environment(object):
                 results = [result for result in results]
 
             else:
-                keep_running=True
+                self._cpu_cap = self._traj.f_get('config.environment.%s.cpu_cap'  % self.v_name).f_get()
+                self._memory_cap = self._traj.f_get('config.environment.%s.memory_cap'  % self.v_name).f_get()
+                self._swap_cap = self._traj.f_get('config.environment.%s.swap_cap'  % self.v_name).f_get()
+
+                check_usage = psutil is not None and (self._cpu_cap < 1.0 or
+                                                      self._memory_cap < 1.0 or
+                                                      self._swap_cap < 1.0)
+                if check_usage:
+                    self._logger.info('Monitoring usage statistics. I will not spawn new processes '
+                                      'if one of the following cap thresholds is crossed, '
+                                      'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
+                                      (self._cpu_cap, self._memory_cap, self._swap_cap))
+                    psutil.cpu_percent() # Just for initialisation
+
+                no_cap = True # Evaluates if new processes are allowed to be started or if cap is
+                # reached
+                signal_cap = True # If True cap warning is emitted
+                keep_running=True # Evaluates to falls if trajectory produces no more single runs
                 process_dict = {} # Dict containing all subprocees
+
+
 
                 while len(process_dict)>0 or keep_running:
 
                     terminated_procs_pids = []
                     # First check if some processes did finish their job
-                    for pid, proc in process_dict.iteritems():
+                    for pid in process_dict.keys():
+                        proc = process_dict[pid]
 
-                        # Remember the terminated processes
+                        # Delete the terminated processes
                         if not proc.is_alive():
-                            terminated_procs_pids.append(pid)
+                            process_dict.pop(pid)
 
-                    # And delete these from the process dict
-                    for terminated_proc in terminated_procs_pids:
-                        process_dict.pop(terminated_proc)
+                    # Check if caps are reached. Cap is only checked if there is at least one
+                    # process working to prevent deadlock.
+                    if check_usage and keep_running:
+                        no_cap=True
+                        if len(process_dict) > 0:
+                            cpu_usage = psutil.cpu_percent()/100.0
+                            memory_usage = psutil.phymem_usage().percent/100.0
+                            swap_usage = psutil.swap_memory().percent/100.0
+                            if cpu_usage > self._cpu_cap:
+                                no_cap = False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process immediately.'
+                                                         'CPU Cap reached, %.2f > %.2f.' %
+                                                         (cpu_usage, self._cpu_cap))
+                                    signal_cap = False
+                            elif memory_usage > self._memory_cap:
+                                no_cap=False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process '
+                                                         'immediately. Memory Cap reached, '
+                                                         '%.2f > %.2f.' %
+                                                         (memory_usage, self._memory_cap))
+                                    signal_cap = False
+                            elif swap_usage > self._swap_cap:
+                                no_cap=False
+                                if signal_cap:
+                                    self._logger.warning('Could not start next process '
+                                                         'immediately. Swap Cap reached, '
+                                                         '%.2f > %.2f.' %
+                                                         (swap_usage, self._swap_cap))
+                                    signal_cap = False
 
                     # If we have less active processes than ncores and there is still
                     # a job to do, add another process
-                    if len(process_dict) < ncores and keep_running:
+                    if len(process_dict) < ncores and keep_running and no_cap:
                         try:
                             task = iterator.next()
                             proc = multip.Process(target=_single_run,
                                                                args=(task,))
                             proc.start()
                             process_dict[proc.pid]=proc
+                            signal_cap = True
                         except StopIteration:
                             # All simulation runs have been started
                             keep_running=False
 
                     time.sleep(0.1)
+
+
+
 
                 # Get all results from the result queue
                 results = []
@@ -1089,7 +1364,7 @@ class Environment(object):
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
-            if mode == pypetconstants.WRAP_MODE_QUEUE:
+            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
@@ -1119,9 +1394,10 @@ class Environment(object):
                               self._traj.v_name)
 
             # Sequentially run all single runs and append the results to a queue
-            results = [_single_run((self._traj._make_single_run(n),log_path,None,runfunc,
-                                    len(self._traj),multiproc, result_queue, args,kwargs)) for n in xrange(len(self._traj))
-                                    if not self._traj.f_is_completed(n)]
+            results = [_single_run((self._traj._make_single_run(n), log_path, log_stdout,
+                                    None,runfunc,
+                                    len(self._traj), self._multiproc, result_queue, args,kwargs)) for
+                                    n in xrange(len(self._traj)) if not self._traj.f_is_completed(n)]
 
             # Do some finalization
             self._traj._finalize()

@@ -62,7 +62,10 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.FloatParam=4.0
 
-        self.traj.f_explore({'FloatParam':[1.0,1.1,1.2,1.3]})
+
+        self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
+
+        self.traj.f_explore(self.explore_dict)
 
         self.assertTrue(len(self.traj) == 4)
 
@@ -81,6 +84,47 @@ class TrajectoryTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
+
+    def test_get_all(self):
+        all_nodes = self.traj.f_get_all('peter')
+
+        self.assertTrue(len(all_nodes)==2)
+
+        all_nodes = self.traj.f_get_all('peter.yve')
+
+        self.assertTrue(len(all_nodes)==1)
+
+        all_nodes = self.traj.f_get_all('paul.yve')
+
+        self.assertTrue(len(all_nodes)==0)
+
+        self.traj.f_add_parameter('paul.paul')
+
+        all_nodes = self.traj.peter.f_get_all('paul')
+
+        self.assertTrue(len(all_nodes)==1)
+
+        self.traj.f_add_result('results.runs.run_00000000.x.y',10)
+
+        self.traj.f_add_result('results.runs.run_00000001.x.y',10)
+
+        self.traj.f_add_derived_parameter('hfhfhf.x.y')
+
+        self.traj.f_add_result('x.y.y')
+
+        self.traj.f_as_run(1)
+
+        all_nodes=self.traj.f_get_all('x.y')
+
+        self.assertTrue(len(all_nodes)==4)
+
+    def test_backwards_search(self):
+
+        x=self.traj.peter.f_get('paul.peter')
+
+        y=self.traj.f_get('peter.peter')
+
+        self.assertTrue(x is y)
 
     def test_value_error_on_search_strategy_assignment(self):
         with self.assertRaises(ValueError):
@@ -201,22 +245,22 @@ class TrajectoryTest(unittest.TestCase):
         ################### Explored Parameters #######################
 
 
-        #We need to unlock the parameter because we have accessed it above
-        self.traj.f_get('yve').f_unlock()
-        explore_dict = {'yve':[4,5,65,66]}
+        # #We need to unlock the parameter because we have accessed it above
+        # self.traj.f_get('yve').f_unlock()
+        # explore_dict = {'yve':[4,5,65,66]}
 
-        # We can add to existing explored parameters if we match the length
-        self.traj.f_explore(explore_dict)
+        # # We can add to existing explored parameters if we match the length
+        # self.traj.f_expand(explore_dict)
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=False)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=True)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
@@ -225,7 +269,7 @@ class TrajectoryTest(unittest.TestCase):
 
         explore_dict_directly = self.traj.f_get_explored_parameters(copy=True, fast_access=True)
 
-        for key in explore_dict:
+        for key in self.explore_dict:
             self.assertTrue(comp.nested_equal(self.traj.f_get(key,fast_access=True),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
@@ -244,7 +288,14 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_get_item(self):
 
-        self.assertEqual(self.traj.markus.yve, self.traj['markus.yve'].f_get())
+        self.assertEqual(self.traj.markus.yve, self.traj['markus.yve'])
+
+    # def test_round_brackets(self):
+    #     x='markus'
+    #
+    #     y='yve'
+    #
+    #     self.assertEqual(self.traj(x)(y), self.traj.markus.f_get('yve'))
 
     @staticmethod
     def get_depth_dict(traj, as_run=None):
@@ -262,6 +313,8 @@ class TrajectoryTest(unittest.TestCase):
             if not item.v_is_leaf:
                 if as_run in item._children:
                     bfs_queue.append(item._children[as_run])
+                    if 'trajectory' in item._children:
+                        bfs_queue.append(item._children['trajectory'])
                 else:
                     for child in item._children.itervalues():
                         bfs_queue.append(child)
@@ -284,6 +337,26 @@ class TrajectoryTest(unittest.TestCase):
 
             depth_dict[node.v_depth].remove(node)
 
+
+        depth_dict = self.get_depth_dict(self.traj)
+
+        depth_dict[0] =[]
+
+        prev_depth = 0
+
+        self.traj.v_search_strategy = 'BFS'
+        self.traj.v_iter_recursive = True
+
+        for node in self.traj:
+            if prev_depth != node.v_depth:
+                self.assertEqual(len(depth_dict[prev_depth]),0)
+                prev_depth = node.v_depth
+
+            depth_dict[node.v_depth].remove(node)
+
+
+
+
     def test_iter_dfs(self):
 
         prev_node = None
@@ -291,6 +364,22 @@ class TrajectoryTest(unittest.TestCase):
         x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
 
         for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+            if not prev_node is None:
+                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+                    self.assertTrue(node.v_name in prev_node._children)
+
+            prev_node = node
+
+        prev_node = None
+
+        self.traj.v_iter_recursive=True
+        self.traj.v_search_strategy='DFS'
+
+        y = [y for y in self.traj]
+
+        self.assertEqual(x,y)
+
+        for node in self.traj:
             if not prev_node is None:
                 if not prev_node.v_is_leaf and len(prev_node._children) > 0:
                     self.assertTrue(node.v_name in prev_node._children)
@@ -343,14 +432,14 @@ class TrajectoryTest(unittest.TestCase):
     def test_find_in_all_runs(self):
 
 
-        self.traj.f_add_result('results.run_00000000.sub.resulttest', 42)
-        self.traj.f_add_result('results.run_00000001.sub.resulttest', 43)
-        self.traj.f_add_result('results.run_00000002.sub.resulttest', 44)
+        self.traj.f_add_result('results.runs.run_00000000.sub.resulttest', 42)
+        self.traj.f_add_result('results.runs.run_00000001.sub.resulttest', 43)
+        self.traj.f_add_result('results.runs.run_00000002.sub.resulttest', 44)
 
-        self.traj.f_add_result('results.run_00000002.sub.resulttest2', 42)
-        self.traj.f_add_result('results.run_00000003.sub.resulttest2', 43)
+        self.traj.f_add_result('results.runs.run_00000002.sub.resulttest2', 42)
+        self.traj.f_add_result('results.runs.run_00000003.sub.resulttest2', 43)
 
-        self.traj.f_add_derived_parameter('derived_parameters.run_00000002.testing', 44)
+        self.traj.f_add_derived_parameter('derived_parameters.runs.run_00000002.testing', 44)
 
         res_dict = self.traj.f_get_from_runs('kkkkkkdjfoiuref')
 
@@ -372,7 +461,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(res_dict)==1)
 
-        self.traj.f_add_result('results.run_00000002.sub.sub.resulttest2', 444)
+        self.traj.f_add_result('results.runs.run_00000002.sub.sub.resulttest2', 444)
 
         with self.assertRaises(pex.NotUniqueNodeError):
             self.traj.f_get_from_runs('resulttest2', check_uniqueness=True)
@@ -387,19 +476,48 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('f_get')
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
-                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
-                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri')
+            self.traj.f_add_parameter('e'*129)
+
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('ewhfiuehfhewfheufhewhfewhfehiueufhwfiuhfiuewhfiuewhfei'
-                                      'ewfewnfiuewnfiewfhnifuhnrifnhreifnheirfirenfhirefnhifri'
-                                      'weoiufwfjwfjewfurehiufhreiuhfiurehfriufhreiufhrifhrfri.test')
+            self.traj.f_add_parameter('e'*120+'.j'*120+'.k'*40)
 
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('tr',22)
+            self.traj.f_add_parameter('crun',22)
 
 
+    def test_max_depth(self):
+        self.traj.f_add_parameter('halo.this.is.a.depth.testrr')
+
+        contains = self.traj.f_contains('a.depth.testrr', max_depth=3)
+
+        self.assertFalse(contains)
+
+        contains = self.traj.par.f_contains('halo.this.is.a.depth.testrr', shortcuts=False)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('halo.this.depth.testrr', shortcuts=True)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('testrr', shortcuts=True)
+
+        self.assertTrue(contains)
+
+        contains = 'testrr' in self.traj
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('testrr', max_depth=5)
+
+        self.assertFalse(contains)
+
+        self.traj.v_max_depth = 5
+
+        contains = 'testrr' in self.traj
+
+        self.assertFalse(contains)
 
     def test_attribute_error_raises_when_leaf_and_group_with_same_name_are_added(self):
 
@@ -424,7 +542,7 @@ class TrajectoryTest(unittest.TestCase):
 
         #self.assertTrue(len(self.traj)==1)
 
-        self.traj.f_remove_item('FortyTwo',remove_empyt_groups=True)
+        self.traj.f_remove_item('FortyTwo',remove_empty_groups=True)
 
         self.traj.f_remove_item('SparseParam')
         self.traj.f_remove_item('IntParam')
@@ -583,32 +701,34 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_parameter('test', 42)
 
+        self.traj.f_add_config('tefffst', 42)
+
+        self.traj.f_add_derived_parameter('dtest', 42)
+
         self.traj.f_add_result('safd', 42)
 
         self.traj.f_explore({'test':[1,2,3,4]})
 
         self.assertEqual(id(self.traj.par), id(self.traj.parameters))
-        self.assertEqual(id(self.traj.param), id(self.traj.parameters))
+        #self.assertEqual(id(self.traj.param), id(self.traj.parameters))
 
 
         self.assertEqual(id(self.traj.dpar), id(self.traj.derived_parameters))
-        self.assertEqual(id(self.traj.dparam), id(self.traj.derived_parameters))
+        #self.assertEqual(id(self.traj.dparam), id(self.traj.derived_parameters))
 
         self.assertEqual(id(self.traj.conf), id(self.traj.config))
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
-        self.assertEqual(id(self.traj.results.traj), id(self.traj.results.trajectory))
-        self.assertEqual(id(self.traj.results.tr), id(self.traj.results.trajectory))
 
         srun = self.traj._make_single_run(3)
 
         srun.f_add_result('sdffds',42)
 
 
-        self.assertEqual(id(srun.results.cr), id(srun.results.f_get(srun.v_name)))
-        self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
-        self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
+        self.assertEqual(id(srun.results.crun), id(srun.results.f_get(srun.v_name)))
+        # self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
+        # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
 
 
@@ -799,7 +919,7 @@ class SingleRunTest(unittest.TestCase):
         self.assertTrue(self.single_run.Nice.Yo == value)
 
         self.single_run.f_add_result('Puberty.Hacks', val=value)
-        resval= self.single_run.f_get('Hacks').f_get('val')
+        resval= self.single_run.res.crun.f_get('Hacks').f_get('val')
         self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
 
 

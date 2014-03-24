@@ -45,7 +45,22 @@ class Annotations(object):
         return self.__dict__.__iter__()
 
     def __getitem__(self, item):
+        """Equivalent to calling f_get()"""
         return self.f_get(item)
+
+    def __setitem__(self, key, value):
+        """Almost equivalent to calling __setattr__.
+
+        Treats integer values as `f_get`.
+
+        """
+        if isinstance(key, int):
+            if key == 0:
+                key = 'annotation'
+            else:
+                key = 'annotation_%d' % key
+
+        setattr(self, key, value)
 
     def f_to_dict(self, copy=True):
         """Returns annotations as dictionary.
@@ -61,6 +76,10 @@ class Annotations(object):
     def f_is_empty(self):
         """Checks if annotations are empty"""
         return len(self.__dict__) == 0
+
+    def f_empty(self):
+        """REmoves all annotiations from RAM """
+        self.__dict__ = {}
 
     def f_get(self, *args):
         """Returns annotations

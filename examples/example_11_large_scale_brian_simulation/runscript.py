@@ -32,11 +32,9 @@ def main():
     #Get the trajectory container
     traj = env.v_trajectory
 
-    # We introduce a `meta` parameter that we can use to easily rescale our network.
-    # If we scale the original network by 0.5 but keep the cluster size at 80,
-    # experiments run a) faster and b) results are better in terms of neurons being
-    # double stochastic.
-    scale = 0.5
+    # We introduce a `meta` parameter that we can use to easily rescale our network
+    scale = 0.25 # To obtain the results from the paper scale this to 1.0
+    # Be aware that your machine will need a lot of memory then!
     traj.f_add_parameter('simulation.scale', scale,
             comment='Meta parameter that can scale default settings. '
                     'Rescales number of neurons and connections strenghts, but '
@@ -57,8 +55,8 @@ def main():
     clustered_network_manager.add_parameters(traj)
 
     # We need `tolist` here since our parameter is a python float and not a
-    # numpy.float.
-    explore_list = np.arange(1.0, 2.6, 0.1).tolist()
+    # numpy float.
+    explore_list = np.arange(1.0, 2.6, 0.25).tolist()
     # Explore different values of `R_ee`
     traj.f_explore({'R_ee' : explore_list})
 
@@ -66,7 +64,7 @@ def main():
     clustered_network_manager.pre_build(traj)
 
     # Run the network simulation
-    env.f_run(run_network, clustered_network_manager)
+    env.f_run(clustered_network_manager.run_network)
 
 
 if __name__=='__main__':

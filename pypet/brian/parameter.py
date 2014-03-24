@@ -1,14 +1,14 @@
 """Module containing results and parameters that can be used to store `BRIAN data`_.
 
-Parameters handling BRIAN data are the
-:class:`~pypet.brian.parameter.BrianParameter` for any BRIAN Quantity and the
-:class:`~pypet.brian.parameter.BrianDurationParameter` that can be combined
-with the experimental framework in `pypet.brian.network` to allow
-fast setup of large scale BRIAN experiments.
+Parameters handling BRIAN data are instantiated by the
+:class:`~pypet.brian.parameter.BrianParameter` class for any BRIAN Quantity.
 
 The :class:`~pypet.brian.parameter.BrianResult` can store BRIAN Quantities
 and the :class:`~pypet.brian.parameter.BrianMonitorResult` extracts data from
 BRIAN Monitors.
+
+All these can be combined with the experimental framework in `pypet.brian.network` to allow
+fast setup of large scale BRIAN experiments.
 
 .. _`BRIAN data`: http://briansimulator.org/
 
@@ -106,7 +106,7 @@ class BrianParameter(Parameter):
 
 
     def _set_logger(self):
-        self._logger = logging.getLogger('pypet.brian.parameter.BrianParameter=' + self.v_full_name)
+        self._logger = logging.getLogger('BrianParameter=' + self.v_full_name)
 
 
     def f_supports(self, data):
@@ -243,30 +243,37 @@ class BrianDurationParameter(BrianParameter):
 
     A Duration Parameter should be in time units (ms or s, for instance).
 
+    DEPRECATED: Please use a normal :class:`~pypet.brian.BrianParameter` instead and
+    add the property `order` to it's :class:`~pypet.annotations.Annotations`.
+    No longer use:
+
+        >>> subrun = BrianDurationParameter('mysubrun', 10*s, order=42)
+
+    But use:
+
+        >>> subrun = BrianParameter('mysubrun', 10*s)
+        >>> subrun.v_annotations.order=42
+
     """
     def __init__(self, full_name, data=None, order=0, comment='',storage_mode=BrianParameter.FLOAT_MODE):
-        self._order = order
         super(BrianDurationParameter, self).__init__(full_name, data, comment, storage_mode)
+        self.v_annotations.order=order
 
     @property
     def v_order(self):
         """The order in which the subrun with a particular duration will be run
         by the network runner"""
-        return self._order
+        return self.v_annotations.order
 
     @v_order.setter
     def v_order(self, order):
-        self._order=order
-
-    def _store(self):
-        store_dict=super(BrianDurationParameter, self)._store()
-        store_dict['order'] = self._order
-
-        return store_dict
+        self.v_annotations.order=order
 
     def _load(self,load_dict):
-        self._order=load_dict['order']
+        if 'order' in load_dict:
+            self.v_annotations.order=load_dict['order']
         super(BrianDurationParameter, self)._load(load_dict)
+
 
 class BrianResult(Result):
     """ A result class that can handle BRIAN quantities.
@@ -634,11 +641,14 @@ class BrianMonitorResult(Result):
 
         * mean
 
-            Mean value of the state variable for every neuron in the group.
+            Mean value of the state variable for every neuron in the group. Only extracted if
+            mean values are calculated by BRIAN. Note that for newer versions of BRIAN, means
+            and variances are no longer extracted if `record` is NOT set to `False`.
 
         * var
 
-            Unbiased estimated of variances of state variable for each neuron.
+            Unbiased estimated of variances of state variable for each neuron. Only extracted if
+            variance values are calculated by BRIAN.
 
         * values
 
@@ -974,7 +984,7 @@ class BrianMonitorResult(Result):
 
     def _extract_spike_counter(self,monitor):
 
-        self.f_set(nspikes = monitor.nspikes)
+        self.f_set(nspikes =monitor.nspikes)
         self.f_set(source = str(monitor.source))
         self.f_set(count=monitor.count)
         self.f_set(delay=monitor.delay)
@@ -1015,9 +1025,9 @@ class BrianMonitorResult(Result):
 
                 self.f_set(source = str(monitor.P))
 
-
-            self.f_set(**{varname+'_mean':monitor.mean})
-            self.f_set(**{varname+'_var' : monitor.var})
+            if np.mean(monitor.mean) != 0.0:
+                self.f_set(**{varname+'_mean':monitor.mean})
+                self.f_set(**{varname+'_var' : monitor.var})
             if len(monitors.times)>0:
                 self.f_set(**{varname+'_values' : monitor.values})
             self.f_set (**{varname+'_unit' : repr(monitor.unit)})
@@ -1038,9 +1048,9 @@ class BrianMonitorResult(Result):
         self.f_set(source = str(monitor.P))
         self.f_set(times_unit = 'second')
 
-
-        self.f_set(mean = monitor.mean)
-        self.f_set(var = monitor.var)
+        if np.mean(monitor.mean) != 0.0:
+            self.f_set(mean = monitor.mean)
+            self.f_set(var = monitor.var)
         if len(monitor.times)>0:
             self.f_set(times = monitor.times)
             self.f_set(values = monitor.values)
