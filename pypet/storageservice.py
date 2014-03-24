@@ -1555,7 +1555,7 @@ class HDF5StorageService(StorageService):
 
             traj._set_explored_parameters_to_idx(idx)
 
-            create_run_group = ('results.%s' % run_name) in traj
+            create_run_group = ('results.runs.%s' % run_name) in traj
 
             run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
                                                       add_table, create_run_group=create_run_group)
@@ -1990,7 +1990,7 @@ class HDF5StorageService(StorageService):
             insert_dict[table_name] = getattr(self, attr_name)
 
         for attr_name, name in self.PR_ATTR_NAME_MAPPING.items():
-            insert_dict[table_name] = getattr(self, attr_name)
+            insert_dict[name] = getattr(self, attr_name)
 
         self._all_add_or_modify_row(traj.v_name, insert_dict, hdf5table, index=0,
                                     flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW))
@@ -2486,7 +2486,7 @@ class HDF5StorageService(StorageService):
                 self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
                                            branch_name,self._trajectory_group)
 
-        add_table = self._overview_derived_parameters_runs
+        add_table = self._overview_explored_parameters_runs
 
         # For better readability and if desired add the explored parameters to the results
         # Also collect some summary information about the explored parameters
@@ -2531,25 +2531,18 @@ class HDF5StorageService(StorageService):
         paramdescriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH),
                                 'value' :pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)}
 
-        where = 'results.'+run_name
+        where = 'results.runs.'+run_name
 
         where = where.replace('.','/')
 
         if not where in self._trajectory_group:
             if create_run_group:
-                try:
-                    self._hdf5file.create_group(where =
-                                                self._trajectory_group._f_get_child('results'),
-                                                name = run_name)
-                except AttributeError:
-                    self._hdf5file.createGroup(where =
-                                                self._trajectory_group._f_getChild('results'),
-                                               name = run_name)
+                self._all_create_or_get_groups(where)
             else:
                 add_table = False
 
         if add_table:
-            rungroup = getattr(self._trajectory_group,where)
+            rungroup = getattr(self._trajectory_group, where)
 
             # Check if the table already exists
             if 'explored_parameters' in rungroup:
