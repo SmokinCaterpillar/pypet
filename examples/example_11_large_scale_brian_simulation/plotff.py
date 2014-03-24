@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 
 from pypet.trajectory import Trajectory
 from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurationParameter
-
+from pypet.environment import Environment
 
 
 def main():
 
     folder = 'experiments/example_11/HDF5/'
-    filename = 'Clustered_Network_2014_01_22_10h02m01s.hdf5' # Change this to the name of your
+    filename = 'Clustered_Network_2014_03_24_16h15m51s.hdf5' # Change this to the name of your
     # hdf5 file. The very first trajectory in this file is loaded.
 
     filename = os.path.join(folder, filename)
@@ -26,6 +26,10 @@ def main():
                     dynamically_imported_classes=[BrianDurationParameter,
                                                   BrianMonitorResult,
                                                   BrianParameter])
+
+    # Let's create and fake environment to enable logging:
+    Environment(traj, do_single_runs=False)
+
 
     # Load the trajectory, but onyl laod the skeleton of the results
     traj.f_load(index=0, # Change if you do not want to load the very first trajectory
@@ -42,7 +46,7 @@ def main():
 
     # Extract all values and R_ee values for each run
     ffs_values = [x.f_get() for x in ffs]
-    Rees = traj['R_ee'].f_get_range()
+    Rees = traj.f_get('R_ee').f_get_range()
 
     # Plot average fano factor as a function of R_ee
     plt.plot(Rees, ffs_values)

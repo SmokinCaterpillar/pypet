@@ -7,7 +7,7 @@ from pypet.utils.explore import cartesian_product
 from brian import *
 import logging
 
-# "e define a function to set all parameter
+# We define a function to set all parameter
 def add_params(traj):
     """Adds all necessary parameters to `traj`."""
 

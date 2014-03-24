@@ -109,8 +109,8 @@ class CNNeuronGroup(NetworkComponent):
                 new_conn_eqs = conn_eqs.replace('PRE', name_pre)
                 new_model_eqs += new_conn_eqs
 
-                tau1 = traj.model.synaptic['tau1'].f_get()
-                tau2 = traj.model.synaptic['tau2_'+name_pre].f_get()
+                tau1 = traj.model.synaptic['tau1']
+                tau2 = traj.model.synaptic['tau2_'+name_pre]
 
                 normalization = (tau1-tau2) / tau2
                 invtau1=1.0/tau1
@@ -122,7 +122,7 @@ class CNNeuronGroup(NetworkComponent):
                 variables_dict['tau1_'+name_pre] = tau1
                 variables_dict['tau2_'+name_pre] = tau2
 
-            variables_dict['tau_'+name_post] = traj.model['tau_'+name_post].f_get()
+            variables_dict['tau_'+name_post] = traj.model['tau_'+name_post]
 
             post_eqs[name_post] = Equations(new_model_eqs, **variables_dict)
 
