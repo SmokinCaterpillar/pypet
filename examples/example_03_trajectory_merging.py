@@ -57,11 +57,9 @@ traj1.f_merge(traj2,remove_duplicates=True,backup_filename=True,
 
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.
 # But before that we need to load the data we computed during the runs from disk.
-# We choose load_parameters=-2 and load_results=-2. We use `-2` instead of just `2`
-# to only load data that is currently not part of the trajectory and leave all data
-# currently in RAM untouched. Hence, one can understand the minus sign as `update` the
-# trajectory.
-traj1.f_load(load_parameters=-2,load_results=-2)
+# We choose load_parameters=2 and load_results=2 since we want to load all data and not only
+# the skeleton
+traj1.f_load(load_parameters=2, load_results=2)
 
 for run_name in traj1.f_get_run_names():
     # We can make the trajectory belief it is a single run and it will blind out all other

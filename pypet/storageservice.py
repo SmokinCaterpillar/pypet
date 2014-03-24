@@ -2531,17 +2531,19 @@ class HDF5StorageService(StorageService):
         paramdescriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH),
                                 'value' :pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)}
 
-        where = 'results.runs.'+run_name
+        location= 'results.runs.'+run_name
 
+        where = location
         where = where.replace('.','/')
 
         if not where in self._trajectory_group:
             if create_run_group:
-                self._all_create_or_get_groups(where)
+                self._all_create_or_get_groups(location)
             else:
                 add_table = False
 
         if add_table:
+
             rungroup = getattr(self._trajectory_group, where)
 
             # Check if the table already exists
