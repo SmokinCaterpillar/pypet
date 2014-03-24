@@ -2091,7 +2091,7 @@ class Result(BaseResult):
             self._data[name] = item
         else:
             raise TypeError('Your result `%s` of type `%s` is not supported.' %
-                                 (name,str(type(item))))
+                                 (name, str(type(item))))
 
     def _check_if_empty(self, item, name):
         """Checks if the result is requested to handle an empty item, like an empty list or

@@ -129,9 +129,9 @@ PREPARE_MERGE = 'PREPARE_MERGE'
 """ Updates a trajectory before it is going to be merged"""
 BACKUP = 'BACKUP'
 """ Backs up a trajectory"""
-REMOVE='REMOVE'
+DELETE='DELETE'
 """ Removes an item from hdf5 file"""
-REMOVE_INCOMPLETE_RUNS = 'REMOVE_INCOMPLETE_RUNS'
+DELETE_INCOMPLETE_RUNS = 'DELETE_INCOMPLETE_RUNS'
 """ Removes incomplete runs to continue a crashed trajectory"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""

@@ -11,7 +11,6 @@ __author__ = 'Robert Meyer'
 import logging
 import tables as pt
 import os
-import collections
 
 import numpy as np
 from pandas import DataFrame, read_hdf, Series, Panel, Panel4D
@@ -596,7 +595,13 @@ class HDF5StorageService(StorageService):
                     Just specify the name of the data you want to load. You can also provide a list,
                     for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
 
-                    Throws a ValueError if data cannot be found.
+                    Issues a warning if items cannot be found.
+
+                :param load_except:
+
+                    If you load a result you can partially load in and specify items
+                    that should NOT be loaded here. You cannot use `load_except` and
+                    `load_only` at the same time.
 
             * :const:`pypet.pypetconstants.TREE` ('TREE')
 
@@ -723,7 +728,7 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_store: The trajectory to be stored
 
-                :param onyl_init:
+                :param only_init:
 
                     If you just want to initialise the store. If yes, only meta information about
                     the trajectory is stored and none of the nodes/leaves within the trajectory.
@@ -732,10 +737,8 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_store: The single run to be stored
 
-            *
-
-                :const:`pypet.pypetconstants.LEAF` or :const:`pypetconstants.UPDATE_LEAF` ('LEAF'
-                or 'UPDATE_LEAF')
+            * :const:`pypet.pypetconstants.LEAF` or :const:`pypetconstants.UPDATE_LEAF` ('LEAF'
+              or 'UPDATE_LEAF')
 
                 Stores a parameter or result. Use `msg = 'UPDATE_LEAF'` if a parameter was expanded
                 (due to merging or expanding the trajectory) to modify it's data.
@@ -819,7 +822,12 @@ class HDF5StorageService(StorageService):
                     data. See :const:`pypet.HDF5StorageService.TYPE_FLAG_MAPPING` for the mapping
                     from type to flag.
 
-            * :const:`pypet.pypetconstants.REMOVE` ('REMOVE')
+                :param overwrite:
+
+                    Can be used if parts of a leaf should be replaced. Either a list of
+                    HDF5 names or `True` if this should account for all.
+
+            * :const:`pypet.pypetconstants.DELETE` ('DELETE')
 
                 Removes an item from disk. Empty group nodes, results and non-explored
                 parameters can be removed.
@@ -831,11 +839,20 @@ class HDF5StorageService(StorageService):
                     Whether to also remove groups that become empty due to removal.
                     default is False.
 
+                :param delete_only:
+
+                    Potential list of parts of a leaf node that should be deleted.
+
+                :param remove_from_item:
+
+                    If `delete_only` is used, whether deleted nodes should also be erased
+                    from the leaf nodes themseleves.
+
             * :const:`pypet.pypetconstants.GROUP` ('GROUP')
 
                 :param stuff_to_store: The group to store
 
-            * :const:`pypet.pypetconstants.REMOVE_INCOMPLETE_RUNS` ('REMOVE_INCOMPLETE_RUNS')
+            * :const:`pypet.pypetconstants.DELETE_INCOMPLETE_RUNS` ('DELETE_INCOMPLETE_RUNS')
 
                 Removes all data from hdf5 file that is from an incomplete run.
 
@@ -891,14 +908,14 @@ class HDF5StorageService(StorageService):
             elif msg in (pypetconstants.LEAF, pypetconstants.UPDATE_LEAF):
                 self._prm_store_parameter_or_result(msg,stuff_to_store,*args,**kwargs)
 
-            elif msg == pypetconstants.REMOVE:
-                self._all_remove_parameter_or_result_or_group(stuff_to_store,*args,**kwargs)
+            elif msg == pypetconstants.DELETE:
+                self._all_delete_parameter_or_result_or_group(stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.GROUP:
                 self._grp_store_group(stuff_to_store, *args, **kwargs)
 
-            elif msg == pypetconstants.REMOVE_INCOMPLETE_RUNS:
-                self._trj_remove_incomplete_runs(stuff_to_store, *args, **kwargs)
+            elif msg == pypetconstants.DELETE_INCOMPLETE_RUNS:
+                self._trj_delete_incomplete_runs(stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.TREE:
                 self._tree_store_tree(stuff_to_store,*args,**kwargs)
@@ -1552,7 +1569,7 @@ class HDF5StorageService(StorageService):
         traj.f_restore_default()
 
 
-    def _trj_remove_incomplete_runs(self,traj):
+    def _trj_delete_incomplete_runs(self,traj):
         """Deletes all data related to incompleted runs."""
         self._logger.info('Removing incomplete runs.')
         count = 0
@@ -1718,7 +1735,6 @@ class HDF5StorageService(StorageService):
 
                     self._tree_load_recursively(traj, traj, hdf5group, loading)
 
-        self._srvc_check_hdf_properties(traj)
 
     def _trj_load_meta_data(self,traj, as_new, force):
         """Loads meta information about the trajectory
@@ -3531,7 +3547,8 @@ class HDF5StorageService(StorageService):
             except pt.NoSuchNodeError:
                 pass
 
-    def _prm_store_parameter_or_result(self, msg, instance,store_flags=None,_hdf5_group=None):
+    def _prm_store_parameter_or_result(self, msg, instance, store_flags=None,
+                                       overwrite=None, _hdf5_group=None):
         """Stores a parameter or result to hdf5.
 
         :param msg:
@@ -3590,7 +3607,30 @@ class HDF5StorageService(StorageService):
             # it, pick default storage flags
             self._prm_extract_missing_flags(store_dict,store_flags)
 
+            if isinstance(overwrite, basestring):
+                overwrite = [overwrite]
+
+            if overwrite is True:
+                to_delete = [key for key in store_dict.keys() if key in _hdf5_group]
+                self._all_delete_parameter_or_result_or_group(instance,
+                                                              delete_only=to_delete)
+            elif overwrite is not None:
+                overwrite_set = set(overwrite)
+                key_set = set(store_dict.keys())
+
+                stuff_not_to_be_overwritten = overwrite_set - key_set
+
+                if len(stuff_not_to_be_overwritten) > 0:
+                    self._logger.warning('Cannot overwrite `%s`, these items are not supposed to '
+                                'be stored by the leaf node.' % str(stuff_not_to_be_overwritten))
+
+                stuff_to_overwrite = overwrite_set & key_set
+                if len(stuff_to_overwrite) > 0:
+                    self._all_delete_parameter_or_result_or_group(instance,
+                                        delete_only=list(stuff_to_overwrite))
+
             for key, data_to_store in store_dict.items():
+
                 # Iterate through the data and store according to the storage flags
                 if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
                     self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
@@ -3950,58 +3990,104 @@ class HDF5StorageService(StorageService):
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
-    def _all_remove_parameter_or_result_or_group(self, instance,remove_empty_groups=False):
+    def _all_delete_parameter_or_result_or_group(self, instance,
+                                                 remove_empty_groups=False,
+                                                 delete_only=None,
+                                                 remove_from_item=False):
         """Removes a parameter or result or group from the hdf5 file.
 
         :param instance: Instance to be removed
+
         :param remove_empty_groups: Whether to delete groups that might become empty due to deletion
 
+        :param delete_only:
+
+            List of elements if you only want to delete parts of a leaf node. Note that this
+            needs to list the names of the hdf5 subnodes. BE CAREFUL if you erase parts of a leaf.
+            Erasing partly happens at your own risk, it might be the case that you can
+            no longer reconstruct the leaf from the leftovers!
+
+        :param remove_from_item:
+
+            If using `delete_only` and `remove_from_item=True` after deletion the data item is
+            also removed from the `instance`.
+
+
         """
-        split_name = instance.v_full_name.split('.')
-
-        if instance.v_is_leaf:
-            # If we delete a leaf we need to take care about overview tables
-            base_group = split_name[0]
-
-            tablename = self._all_get_table_name(base_group,instance.v_creator_name)
-            table = getattr(self._overview_group,tablename)
-
-            self._all_store_param_or_result_table_entry(instance,table,
-                                                        flags=(HDF5StorageService.REMOVE_ROW,))
-
-            self._prm_meta_remove_summary(instance)
-
-
-        node_name = split_name.pop()
+        split_name = instance.v_location.split('.')
 
         where = '/'+self._trajectory_name+'/' + '/'.join(split_name)
 
-        try:
-            the_node = self._hdf5file.get_node(where=where, name=node_name)
-        except AttributeError:
-            the_node = self._hdf5file.getNode(where=where, name=node_name)
+        node_name = instance.v_name
 
-        if not instance.v_is_leaf:
-            if len(the_node._v_groups) != 0:
-                raise TypeError('You cannot remove a group that is not empty!')
+        if delete_only is None:
 
-        the_node._f_remove(recursive=True)
+            if instance.v_is_leaf:
+                # If we delete a leaf we need to take care about overview tables
+                base_group = split_name[0]
 
-        if remove_empty_groups:
-            for irun in reversed(range(len(split_name))):
-                where = '/'+self._trajectory_name+'/' + '/'.join(split_name[0:irun])
-                node_name = split_name[irun]
-                try:
-                    act_group = self._hdf5file.get_node(where=where,name=node_name)
-                except AttributeError:
-                    act_group = self._hdf5file.getNode(where=where,name=node_name)
-                if len(act_group._v_groups) == 0:
+                tablename = self._all_get_table_name(base_group, instance.v_creator_name)
+
+                if tablename in self._overview_group:
+                    table = getattr(self._overview_group, tablename)
+
+                    self._all_store_param_or_result_table_entry(instance,table,
+                                                                flags=(HDF5StorageService.REMOVE_ROW,))
+
+                self._prm_meta_remove_summary(instance)
+
+            try:
+                the_node = self._hdf5file.get_node(where=where, name=node_name)
+            except AttributeError:
+                the_node = self._hdf5file.getNode(where=where, name=node_name)
+
+            if not instance.v_is_leaf:
+                if len(the_node._v_groups) != 0:
+                    raise TypeError('You cannot remove a group that is not empty!')
+
+            the_node._f_remove(recursive=True)
+
+            if remove_empty_groups:
+                for irun in reversed(range(len(split_name))):
+                    where = '/'+self._trajectory_name+'/' + '/'.join(split_name[0:irun])
+                    node_name = split_name[irun]
                     try:
-                        self._hdf5file.remove_node(where=where,name=node_name,recursive=True)
+                        act_group = self._hdf5file.get_node(where=where, name=node_name)
                     except AttributeError:
-                        self._hdf5file.removeNode(where=where,name=node_name,recursive=True)
-                else:
-                    break
+                        act_group = self._hdf5file.getNode(where=where, name=node_name)
+                    if len(act_group._v_groups) == 0:
+                        try:
+                            self._hdf5file.remove_node(where=where,name=node_name, recursive=True)
+                        except AttributeError:
+                            self._hdf5file.removeNode(where=where,name=node_name, recursive=True)
+                    else:
+                        break
+        else:
+            if not instance.v_is_leaf:
+                raise ValueError('You can only choose `delete_only` mode for leafs.')
+
+            if isinstance(delete_only, basestring):
+                delete_only = [delete_only]
+
+            path_to_leaf = where+'/'+node_name
+            for delete_item in delete_only:
+                if (remove_from_item and
+                    hasattr(instance, '__contains__') and
+                    hasattr(instance, '__delattr__') and
+                    delete_item in instance):
+
+                    delattr(instance, delete_item)
+                try:
+                    try:
+                        the_node = self._hdf5file.get_node(where= path_to_leaf, name=delete_item)
+                    except AttributeError:
+                        the_node = self._hdf5file.getNode(where= path_to_leaf, name=delete_item)
+
+                    the_node._f_remove(recursive=True)
+                except pt.NoSuchNodeError:
+                    self._logger.warning('Could not delete `%s` from `%s`. HDF5 node not found!' %
+                                         (delete_item, instance.v_full_name))
+
 
     def _prm_store_into_pytable(self, msg, tablename, data, hdf5group, fullname):
         """Stores data as pytable.
@@ -4176,7 +4262,8 @@ class HDF5StorageService(StorageService):
         # Make the string Col longer than needed in order to allow later on slightly larger strings
         return maxlength*1.5
 
-    def _prm_load_parameter_or_result(self, param, load_only=None,_hdf5_group=None):
+    def _prm_load_parameter_or_result(self, param, load_only=None, load_except=None,
+                                      _hdf5_group=None):
         """Loads a parameter or result from disk.
 
         :param param:
@@ -4187,21 +4274,36 @@ class HDF5StorageService(StorageService):
 
             List of data keys if only parts of a result should be loaded
 
+        :param load_except:
+
+            List of data key that should NOT be loaded.
+
         :param _hdf5_group:
 
             The corresponding hdf5 group of the instance
 
         """
 
-        # If load onyl is just a name and not a list of names, turn it into a 1 element list
-        if isinstance(load_only,basestring):
-            load_only=[load_only]
+        if load_only is not None and load_except is not None:
+            raise ValueError('Please use either `load_only` or `load_except` and not '
+                             'both at the same time.')
+
+        # If load only is just a name and not a list of names, turn it into a 1 element list
+        if isinstance(load_only, basestring):
+            load_only= [load_only]
+        if isinstance(load_except, basestring):
+            load_except = [load_except]
 
 
         if load_only is not None:
-            self._logger.debug('I am in load only mode, I will only lode %s.' %
+            self._logger.debug('I am in load only mode, I will only load %s.' %
                                    str(load_only))
-            loaded=[]
+            load_only = set(load_only)
+        elif load_except is not None:
+            self._logger.debug('I am in load except mode, I will load everything except %s.' %
+                                   str(load_except))
+            # We do not want to modify the original list
+            load_except = set(load_except)
 
 
         if _hdf5_group is None:
@@ -4215,12 +4317,18 @@ class HDF5StorageService(StorageService):
                        # result
 
         for node in _hdf5_group:
-            if not load_only is None:
 
-                if not node._v_name in load_only:
+            if load_only is not None:
+
+                if node._v_name not in load_only:
                     continue
                 else:
-                    loaded.append(node._v_name)
+                    load_only.remove(node._v_name)
+
+            elif load_except is not None:
+                if node._v_name in load_except:
+                    load_except.remove(node._v_name)
+                    continue
 
             # Recall from the hdf5 node attributes how the data was stored and reload accordingly
             load_type = self._all_get_from_attrs(node, HDF5StorageService.STORAGE_TYPE)
@@ -4243,9 +4351,14 @@ class HDF5StorageService(StorageService):
 
         if load_only is not None:
             # Check if all data in `load_only` was actually found in the hdf5 file
-            if not set(loaded) == set(load_only):
-                raise ValueError('You marked %s for load only, but I cannot find these for `%s`' %
-                                 (str(set(load_only)-set(loaded)),full_name))
+            if len(load_only) > 0:
+                self._logger.warning('You marked %s for load only, '
+                                     'but I cannot find these for `%s`' %
+                                 (str(load_only),full_name) )
+        elif load_except is not None:
+            if len(load_except) > 0:
+                self._logger.warning(('You marked `%s` for not loading, but these were not part '
+                                      'of `%s` anyway.' % (str(load_except), full_name)))
 
         # Finally tell the parameter or result to load the data, if there was any ;-)
         if load_dict:

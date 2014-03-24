@@ -567,14 +567,14 @@ class NaturalNamingInterface(object):
             elif store_load == LOAD:
                 return pypetconstants.LEAF
             elif store_load == REMOVE:
-                return pypetconstants.REMOVE
+                return pypetconstants.DELETE
         else:
             if store_load == STORE:
                 return pypetconstants.GROUP
             elif store_load == LOAD:
                 return pypetconstants.GROUP
             elif store_load == REMOVE:
-                return pypetconstants.REMOVE
+                return pypetconstants.DELETE
 
 
     def _fetch_items(self, store_load, iterable, args, kwargs):
@@ -641,7 +641,7 @@ class NaturalNamingInterface(object):
 
             # Explored Parameters cannot be removed, this would break the underlying hdf5 file
             # structure
-            if (msg == pypetconstants.REMOVE and
+            if (msg == pypetconstants.DELETE and
                         item.v_full_name in self._root_instance._explored_parameters):
                 raise TypeError('You cannot remove an explored parameter of a trajectory stored '
                                 'into an hdf5 file.')
@@ -694,8 +694,8 @@ class NaturalNamingInterface(object):
 
         root = self._root_instance
 
-        if full_name in ['parameters', 'results', 'derived_parameters', 'config', '']:
-            # You cannot delete root or nodes in first layer
+        if full_name == '':
+            # You cannot delete root
             return
 
         if node.v_is_leaf:

@@ -97,6 +97,98 @@ class StorageTest(TrajectoryComparator):
         self.compare_trajectories(traj,traj2)
 
 
+    def test_partially_delete_stuff(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        self.assertTrue('a' in res)
+        traj.f_delete_item(res, delete_only=['a'])
+
+        self.assertTrue('c' in res)
+        self.assertTrue('a' not in res)
+
+        res['a'] = 'offf'
+
+        self.assertTrue('a' in res)
+
+        traj.f_load(load_results=3)
+
+        self.assertTrue('a' not in res)
+        self.assertTrue('c' in res)
+
+        traj.f_delete_item(res, remove_from_trajectory=True, remove_empty_groups=True)
+
+        self.assertTrue('results' not in traj)
+        self.assertTrue(res not in traj)
+
+    def test_overwrite_stuff(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        res['a'] = 333
+        res['c'] = 123445
+
+        traj.f_store_item(res, overwrite='a')
+
+        # Should emit a warning
+        traj.f_store_item(res, overwrite=['a', 'b'])
+
+        traj.f_load(load_results=3)
+
+        res = traj.test
+
+        self.assertTrue(res['a']==333)
+        self.assertTrue(res['c']=='d')
+
+        res['c'] = 123445
+
+        traj.f_store_item(res, overwrite=True)
+        res.f_empty()
+
+        traj.f_load(load_results=3)
+
+        self.assertTrue(traj.test['c']==123445)
+
+
+
+    def test_partial_loading(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('testpartially.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_store()
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.f_update_skeleton()
+
+        traj.f_load_item(traj.test, load_only=['a', 'x'])
+
+        self.assertTrue('a' in traj.test)
+        self.assertTrue('c' not in traj.test)
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.f_update_skeleton()
+
+        load_except= ['c', 'd']
+        traj.f_load_item(traj.test, load_except=load_except)
+
+        self.assertTrue(len(load_except)==2)
+
+        self.assertTrue('a' in traj.test)
+        self.assertTrue('c' not in traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_load_item(traj.test, load_except=['x'], load_only=['y'])
+
+
     def test_store_items_and_groups(self):
 
         traj = Trajectory(name='testtraj', filename=make_temp_file('teststoreitems.hdf5'))
@@ -141,7 +233,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.use_pool=True
         self.pandas_format='fixed'
         self.pandas_append=False
-        self.complib = 'zlib'
+        self.complib = 'blosc'
         self.complevel=9
         self.shuffle=True
         self.fletcher32 = False
@@ -578,7 +670,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.use_pool=True
         self.pandas_format='table'
         self.pandas_append=True
-        self.complib = 'blosc'
+        self.complib = 'zlib'
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = False

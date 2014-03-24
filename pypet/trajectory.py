@@ -601,7 +601,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_trajectory_name)
 
-    def f_store_item(self,item,*args,**kwargs):
+    def f_store_item(self, item, *args,**kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""
         self.f_store_items([item],*args,**kwargs)
 
@@ -612,7 +612,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         during runtime and you want to write these to disk immediately and empty them afterwards
         to free some memory.
 
-        Instead of storing individual paremeters or results you can also store whole subtrees with
+        Instead of storing individual parameters or results you can also store whole subtrees with
         :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
 
@@ -634,8 +634,35 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         :param kwargs:
 
-            Additional keyword arguments passed to the storage service
-            (except kwarg `non_empties`)
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param overwrite:
+
+                List names of parts of your item that should
+                be erased and overwritten by the new data in your leaf.
+                You can also set `overwrite=True`
+                to overwrite all parts.
+
+                For instance:
+
+                    >>> traj.f_add_result('mygroup.myresult', partA=42, partB=44, partC=46)
+                    >>> traj.f_store()
+                    >>> traj.mygroup.myresult.partA = 333
+                    >>> traj.mygroup.myresult.partB = 'I am going to change to a string'
+                    >>> traj.f_store_item('mygroup.myresult', overwrite=['partA', 'partB'])
+
+                Will store `'mygroup.myresult'` to disk again and overwrite the parts
+                `'partA'` and `'partB'` with the new values `333` and
+                `'I am going to change to a string'`.
+                The data stored as `partC` is not changed.
+
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                Note that massive overwriting will fragment and blow up your HDF5 file.
+                Try to avoid changing data on disk whenever you can.
 
         :raises:
 
@@ -711,15 +738,30 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
             (except the kwarg `only_empties`)
 
             If you use the standard hdf5 storage service, you can pass the following additional
-            keyword argument:
+            keyword arguments:
 
             :param load_only:
 
                 If you load a result, you can partially load it and ignore the rest of data items.
                 Just specify the name of the data you want to load. You can also provide a list,
-                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`
+                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
 
-                Throws a ValueError if data cannot be found.
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                A warning is issued if data specified in `load_only` cannot be found in the
+                instances specified in `iterator`.
+
+            :param load_except:
+
+                Analogous to the above, but everything is loaded except names or parts
+                specified in `load_except`.
+                You cannot use `load_only` and `load_except` at the same time. If you do
+                a ValueError is thrown.
+
+                A warning is issued if names listed in `load_except` are not part of the
+                items to load.
 
         """
 
@@ -739,14 +781,14 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
         self.f_remove_items([item], remove_empty_groups)
 
-    def f_remove_items(self, iterable, remove_empty_groups=False):
+    def f_remove_items(self, iterator, remove_empty_groups=False):
         """Removes parameters, results or groups from the trajectory.
 
         This function ONLY removes items from your current trajectory and does not delete
         data stored to disk. If you want to delete data from disk, take a look at
         :func:`~pypet.trajectory.SingleRun.f_delete_items`.
 
-        :param iterable:
+        :param iterator:
 
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
@@ -760,7 +802,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         # Will format the request in a form that is understood by the storage service
         # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, (), {})
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, (), {})
 
         if fetched_items:
 
@@ -776,10 +818,12 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.delete_items`"""
         self.f_delete_items([item],*args,**kwargs)
 
-    def f_delete_items(self, iterable, *args, **kwargs):
-        """Deletes items from trajectory AND from data stored to disk.
+    def f_delete_items(self, iterator,  *args, **kwargs):
+        """Deletes items from storage on disk.
 
-        :param iterable:
+        Per default the item is NOT removed from the trajectory.
+
+        :param iterator:
 
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
@@ -787,36 +831,69 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         :param remove_empty_groups:
 
             If your deletion of the instance leads to empty groups,
-            these will be deleted, too.
+            these will be deleted, too. Default is `False`.
+
+        :param remove_from_trajectory:
+
+            If items should also be removed from trajectory. Default is `False`.
 
 
         :param args: Additional arguments passed to the storage service
 
         :param kwargs: Additional keyword arguments passed to the storage service
 
-        Note if you use the standard hdf5 storage service, there are no additional arguments
-        or keyword arguments to pass!
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param delete_only:
+
+                You can partially delete leaf nodes. Specify a list of parts of the result node
+                that should be deleted like `delete_only=['mystuff','otherstuff']`.
+                This wil only delete the hdf5 sub parts `mystuff` and `otherstuff` from disk.
+                BE CAREFUL,
+                erasing data partly happens at your own risk. Depending on how complex the
+                loading process of your result node is, you might not be able to reconstruct
+                any data due to partially deleting some of it.
+
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                If the hdf5 nodes you specified in `delete_only` cannot be found a warning
+                is issued.
+
+                Note that massive deletion will fragment your HDF5 file.
+                Try to avoid changing data on disk whenever you can.
+
+                If you want to erase a full node, simply ignore this argument or set to `None`.
+
+            :param remove_from_item:
+
+                If data that you want to delete from storage should also be removed from
+                the items in `iterator` if they contain these. Default is `False`.
 
         """
 
         remove_empty_groups = kwargs.get('remove_empty_groups', False)
+        remove_from_trajectory = kwargs.pop('remove_from_trajectory', False)
 
         # Will format the request in a form that is understood by the storage service
         # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterable, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, args, kwargs)
 
         if fetched_items:
-            if self._stored:
-                try:
-                    self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                               trajectory_name=self.v_trajectory_name)
-                except:
-                    self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
-                                       ' item(s) was/were never stored to disk.')
-                    raise
 
-            for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+            try:
+                self._storage_service.store(pypetconstants.LIST, fetched_items,
+                                           trajectory_name=self.v_trajectory_name)
+            except:
+                self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
+                                   ' item(s) was/were never stored to disk.')
+                raise
+
+            if remove_from_trajectory:
+                for msg, item, dummy1, dummy2 in fetched_items:
+                    self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
 
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
@@ -1377,7 +1454,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         re-running of non-completed runs.
 
         """
-        self._storage_service.store(pypetconstants.REMOVE_INCOMPLETE_RUNS, self,
+        self._storage_service.store(pypetconstants.DELETE_INCOMPLETE_RUNS, self,
                                       trajectory_name=self.v_name)
 
     def f_shrink(self):
@@ -1884,18 +1961,21 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         and load annotations.
 
         """
-        self.f_load(self.v_name,None, False, pypetconstants.UPDATE_SKELETON, pypetconstants.UPDATE_SKELETON,
-                  pypetconstants.UPDATE_SKELETON)
+        self.f_load(self.v_name,None, False,
+                    load_parameters=pypetconstants.LOAD_SKELETON,
+                    load_derived_parameters=pypetconstants.LOAD_SKELETON,
+                    load_results=pypetconstants.LOAD_SKELETON,
+                    load_other_data=pypetconstants.LOAD_SKELETON)
 
 
     def f_load(self,
              name=None,
              index = None,
              as_new=False,
-             load_parameters=None,
-             load_derived_parameters=None,
-             load_results=None,
-             load_other_data=None,
+             load_parameters=pypetconstants.LOAD_DATA,
+             load_derived_parameters=pypetconstants.LOAD_SKELETON,
+             load_results=pypetconstants.LOAD_SKELETON,
+             load_other_data=pypetconstants.LOAD_SKELETON,
              force=False):
         """Loads a trajectory via the storage service.
 
@@ -1968,6 +2048,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 annotations will be reloaded if the corresponding instance
                 is created or the annotations of an existing instance were emptied before.
 
+
         :param force:
 
             pypet will refuse to load trajectories that have been created using pypet with a
@@ -1990,25 +2071,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if name is None and index is None:
             name = self.v_name
 
-        if as_new and load_parameters is None:
+        if as_new:
             load_parameters=pypetconstants.LOAD_DATA
-        elif load_parameters is None:
-            load_parameters = pypetconstants.UPDATE_DATA
-
-        if as_new and load_derived_parameters is None:
             load_derived_parameters = pypetconstants.LOAD_NOTHING
-        elif load_derived_parameters is None:
-            load_derived_parameters=pypetconstants.LOAD_SKELETON
-
-        if as_new and load_results is None:
             load_results = pypetconstants.LOAD_NOTHING
-        elif load_results is None:
-            load_results = pypetconstants.LOAD_SKELETON
-
-        if as_new and load_other_data is None:
             load_other_data = pypetconstants.LOAD_NOTHING
-        elif load_other_data is None:
-            load_other_data = pypetconstants.LOAD_SKELETON
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,

@@ -565,14 +565,15 @@ You don't have to interact with the service directly, storage can be initiated b
 of the trajectory and it's groups and subbranches (they format and hand over the request to the
 service).
 There is a general scheme to storage, which is *whatever is stored to disk is the ground truth and
-therefore cannot be changed*. So basically as soon as you store parts of your trajectory to disk
-they will stay there!
+therefore cannot/should not be changed*.
+So basically as soon as you store parts of your trajectory to disk they will stay there!
 So far there is no real support for changing data that was stored to disk (you can
-delete some of it, see below).
+delete or rewrite some of it, see below).
 
 Why being so restrictive? Well, first of all, if you do
 simulations, they are like numerical *scientific experiments*, so you run them, collect your
-data and keep these results. There is usually no need to modify the first raw data after collecting it.
+data and keep these results.
+There is usually no need to modify the first raw data after collecting it.
 You may analyse it and create novel results from the raw data, but you usually should have
 no incentive to modify your original raw data.
 Second of all, HDF5 is bad for modifying data which usually leads
@@ -590,6 +591,18 @@ The most straightforward way to store everything is to say:
 and that's it. In fact, if you use the trajectory in combination with the environment (see
 :ref:`more-on-environment`) you
 do not need to do this call by yourself at all, this is done by the environment.
+
+If you store a trajectory to disk it's tree structure is also found in the structure of
+the HDF5 file!
+In addition, there will be some overview tables summarizing what you stored into the HDF5 file.
+They can be found under the top-group `overview`, the different tables are listed in the
+:ref:`more-on-overview` section.
+Btw, you can switch the creation of these tables off passing the appropriate arguments to the
+:class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Storing data individually
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 More interesting is the approach to store individual items.
 Assume you computed a result that is extremely large. So you want to store it to disk,
@@ -612,13 +625,7 @@ To avoid re-opening an closing of the HDF5 file over and over again there is als
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
-If you store a trajectory to disk it's tree structure is also found in the structure of
-the HDF5 file!
-In addition, there will be some overview tables summarizing what you stored into the HDF5 file.
-They can be found under the top-group `overview`, the different tables are listed in the
-:ref:`more-on-overview` section.
-Btw, you can switch the creation of these tables off passing the appropriate arguments to the
-:class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
+
 
 
 .. _more-on-loading:
