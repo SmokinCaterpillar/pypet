@@ -238,6 +238,8 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(row['results_per_run']==19)
         self.assertTrue(row['derived_parameters_per_run'] == 17)
 
+        hdf5file.close()
+
 
     def test_store_items_and_groups(self):
 
