@@ -55,7 +55,7 @@ class StorageTest(TrajectoryComparator):
             traj.f_load(name = 'test', index=1)
 
         with self.assertRaises(RuntimeError):
-            traj.v_storage_service.store('LIST', [('LEAF',None,None,None,None)],trajectory_name = traj.v_name)
+            traj.v_storage_service.store('LIST', [('LEAF',None,None,None,None)], trajectory_name = traj.v_name)
 
         with self.assertRaises(ValueError):
             traj.f_load(index=9999)
@@ -63,6 +63,37 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
 
+
+    def test_auto_load(self):
+        import gc
+
+        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+
+        traj.v_auto_load = True
+
+        traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
+        traj.f_add_derived_parameter('ffa', 42)
+
+        traj.f_store()
+
+        ffa=traj.f_get('ffa')
+        ffa.f_empty()
+
+        self.assertTrue(ffa.f_is_empty())
+
+        traj.f_remove_child('results', recursive=True)
+
+        # check auto load
+        val = traj.res.I.am.a.mean.resu
+
+        self.assertTrue(val==42)
+
+        val = traj.ffa
+
+        self.assertTrue(val==42)
+
+        with self.assertRaises(Exception):
+            traj.kdsfdsf
 
 
     def test_version_mismatch(self):

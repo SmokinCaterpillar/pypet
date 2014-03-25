@@ -1091,7 +1091,9 @@ class Parameter(BaseParameter):
             self._shrink()
 
         del self._data
+        del self._default
         self._data=None
+        self._default=None
 
 
 class ArrayParameter(Parameter):

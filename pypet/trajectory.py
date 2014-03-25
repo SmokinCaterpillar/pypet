@@ -102,6 +102,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         self._shortcuts = parent_trajectory.v_shortcuts
         self._iter_recursive = parent_trajectory._iter_recursive
         self._max_depth = parent_trajectory._max_depth
+        self._auto_load = parent_trajectory._auto_load
 
         self._stored = False
 
@@ -260,6 +261,17 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
     @v_iter_recursive.setter
     def v_iter_recursive(self, iter_recursive):
         self._iter_recursive = bool(iter_recursive)
+
+
+    @property
+    def v_auto_load(self):
+        """Whether the trajectory should attempt to load data on the fly.
+        """
+        return self._auto_load
+
+    @v_auto_load.setter
+    def v_auto_load(self, auto_load):
+        self._auto_load = bool(auto_load)
 
     @property
     def v_search_strategy(self):
@@ -1073,6 +1085,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._shortcuts = True
         self._iter_recursive = False
         self._max_depth = None
+        self._auto_load = False
 
         self._environment_hexsha = None
         self._environment_name = None

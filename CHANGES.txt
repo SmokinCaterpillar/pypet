@@ -1,3 +1,9 @@
+pypet 0.1b5
+
+*   New auto load feature
+
+*   BUG FIX: When parameters are emptied, the default value is set to None (and no longer kept)
+
 pypet 0.1b.4
 
 *   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`
@@ -72,6 +78,7 @@ pypet 0.1b.4
 
 *   Now one can specify CPU, RAM and Swap cap levels if no pool is used.
     If these cap levels are crossed *pypet* won't start new processes.
+
 
 
 

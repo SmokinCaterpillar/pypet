@@ -697,10 +697,71 @@ to get the whole trajectory tree containing all new results and derived paramete
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`
 in order to load whole subtrees.
 
+
+^^^^^^^^^^^^^^^^^^^^
+Automatic Loading
+^^^^^^^^^^^^^^^^^^^^
+
+The trajectory supports the nice feature to automatically load data while you access it.
+Set `traj.v_auto_load=True` and you don't have to care about loading at all during data analyis.
+
+Enabling automatic loading will make *pypet* do two things. If you try to access group nodes
+or leaf nodes that are currently not in your trajectory on RAM but stored to disk, it will
+load these with data. Note that in order to automatically load data you cannot use shortcuts!
+Secondly, if your trajectory comes across an empty leaf node, it will load the data from disk
+(here shortcuts work again, since only data and not the skeleton has to be loaded).
+
+For instance:
+
+::
+
+    # Create the trajectory independent of the environment
+    traj = Trajectory(filename='./myfile.hdf5')
+
+    # We add a result
+    traj.f_add_result('mygropA.mygroupB.myresult', 42, comment='The answer')
+
+    # Now we store our trajectory
+    traj.f_store()
+
+    # We remove all results
+    traj.f_remove_child('results', recursive=True)
+
+    # We turn auto loading on
+    traj.v_auto_loading = True
+
+    # Now we can happily recall the result, since it is loaded while we access it.
+    # Stating `results` here is important. We removed the results node above, so
+    # we have to explicitly name it here to relaod it, too. There are no shortcuts allowed
+    # for nodes that have to be loaded on the fly and that did not exist in memory before.
+    answer= traj.results.mygroupA,mygroupB.myresult
+    # And answer will be 42
+
+
+    # Ok next example, now we only remove the data. Since everything is loaded we can shortcut
+    # through the tree.
+    traj.f_get('myresult').f_empty()
+    # Btw we have to use `f_get` here to get the result itself and not the data `42` via fast
+    # access
+
+    # If we now access myresult again through the trajectory, it will be automatically loaded.
+    # Since the result itsel is still in RAM but empty, we can shortcut through the tree:
+    answer = traj.myresult
+    # And again the answer will be 42
+
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Logging and Git Commits during data analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Automated logging and git commits are often very handy features. Probably you do not want
 to miss these while you do your data analysis. To enable these in case you simply want to
 load an old trajectory for data analysis without doing any more single runs, you can
 again use an :class:`~pypet.environment.Environment`.
+
+
+
 First, load the trajectory with :func:`~pypet.trajectory.Trajectory.f_load`,
 and pass the loaded trajectory to a new environment. Accordingly the environment will trigger a
 git commit (in case you have specified a path to your repository root) and enable logging.

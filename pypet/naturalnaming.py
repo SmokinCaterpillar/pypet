@@ -467,6 +467,8 @@ class NaturalNamingInterface(object):
     def _get_iter_recursive(self):
         return self._root_instance.v_iter_recursive
 
+    def _get_auto_load(self):
+        return self._root_instance.v_auto_load
 
     def _fetch_from_string(self, store_load, name, args, kwargs):
         """Method used by f_store/load/remove_items to find a corresponding item in the tree.
@@ -1623,6 +1625,13 @@ class NaturalNamingInterface(object):
             return ChainMap(temp_dict, temp_dict2)
 
 
+    def _get_as_run(self):
+        """ Returns the run name in case of 'v_as_run' is set, otherwise None."""
+        if not self._root_instance._is_run:
+            return self._root_instance.v_as_run
+        else:
+            return None
+
     def _very_fast_search(self, node, key, as_run, total_depth = float('inf')):
         """Fast search for a node in the tree.
 
@@ -1681,13 +1690,6 @@ class NaturalNamingInterface(object):
                     result_node = candidate_dict[goal_name]
 
         return result_node
-
-    def _get_as_run(self):
-        """ Returns the run name in case of 'v_as_run' is set, otherwise None."""
-        if not self._root_instance._is_run:
-            return self._root_instance.v_as_run
-        else:
-            return None
 
     def _search(self, node, key, check_uniqueness, search_strategy, max_depth=float('inf')):
         """ Searches for an item in the tree below `node`
@@ -1872,7 +1874,7 @@ class NaturalNamingInterface(object):
         return None
 
     def _get(self, node, name, fast_access, check_uniqueness, backwards_search, search_strategy,
-             shortcuts, max_depth):
+             shortcuts, max_depth, auto_load):
         """Searches for an item (parameter/result/group node) with the given `name`.
 
         :param node: The node below which the search is performed
@@ -1900,6 +1902,10 @@ class NaturalNamingInterface(object):
 
             Maximum search depth relative to start node.
 
+        :param auto_load:
+
+            If data should be automatically loaded
+
         :return:
 
             The found instance (result/parameter/group node) or if fast access is True and you
@@ -1912,6 +1918,9 @@ class NaturalNamingInterface(object):
         """
 
         split_name = name.split('.')
+
+        try_auto_load_directly=False
+        result = None
 
         if max_depth is None:
             max_depth = float('inf')
@@ -1932,9 +1941,13 @@ class NaturalNamingInterface(object):
                                      'names. Cannot return %s.' % key)
 
             if not key in self._nodes_and_leaves:
-                raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+                if not auto_load:
+                    raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+                else:
+                    try_auto_load_directly=True
+                    break
 
-        if shortcuts:
+        if shortcuts and not try_auto_load_directly:
             first = split_name[0]
 
             if len(split_name)== 1 and first in node._children:
@@ -1972,7 +1985,9 @@ class NaturalNamingInterface(object):
                         for key in split_name:
                             result = self._search(result, key, check_uniqueness, search_strategy,
                                                   max_depth)
-        else:
+                            if result is None:
+                                break
+        elif not try_auto_load_directly:
             result = node
             for name in split_name:
                 if not name in result._children:
@@ -1980,10 +1995,28 @@ class NaturalNamingInterface(object):
                                          'found  node `%s`.' % (name, result.v_full_name))
                 result = result._children[name]
 
+        if result is None and auto_load:
+            try:
+                result = node.f_load_child('.'.join(split_name), load_data=pypetconstants.LOAD_DATA)
+            except:
+                self._logger.error('Error while auto-loading `%s` under `%s`.' %
+                                   (name, node.v_full_name))
+                raise
+
         if result is None:
             raise AttributeError('The node or param/result `%s`, cannot be found under `%s`' %
                                  (name, node.v_full_name))
         if result.v_is_leaf:
+            if auto_load and result.f_is_empty():
+
+                try:
+                    self._root_instance.f_load_item(result)
+                except:
+                    self._logger.error('Error while auto-loading `%s` under `%s`. I found the '
+                                       'item but I could not load the data.' %
+                                       (name, node.v_full_name))
+                    raise
+
             return self._apply_fast_access(result, fast_access)
         else:
             return result
@@ -2274,7 +2307,8 @@ class NNGroupNode(NNTreeNode):
                                        backwards_search=self._nn_interface._get_backwards_search(),
                                        search_strategy=self._nn_interface._get_search_strategy(),
                                        shortcuts=self._nn_interface._get_shortcuts(),
-                                       max_depth=self._nn_interface._get_max_depth())
+                                       max_depth=self._nn_interface._get_max_depth(),
+                                       auto_load=self._nn_interface._get_auto_load())
 
     # def __call__(self, name, fast_access=False, check_uniqueness=False,
     #              search_strategy=pypetconstants.BFS):
@@ -2325,7 +2359,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._get_all(self, name, max_depth = max_depth)
 
     def f_get(self, name, fast_access=False, check_uniqueness=False, backwards_search=True,
-              search_strategy=pypetconstants.BFS, shortcuts=True, max_depth=None):
+              search_strategy=pypetconstants.BFS, shortcuts=True, max_depth=None, auto_load=False):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
@@ -2361,6 +2395,13 @@ class NNGroupNode(NNTreeNode):
             Maximum depth (relative to start node) how search should progress in tree.
             `None` means no depth limit.  Only relevant if `shortcuts` are allowed.
 
+        :param auto_load:
+
+            If data should be loaded from the storage service if it cannot be found in the
+            current trajectory tree. Auto-loading will load group and leaf nodes currently
+            not in memory and it will load data into empty leaves. Be aware that auto-loading
+            does not work with shortcuts.
+
         :return:
 
             The found instance (result/parameter/group node) or if fast access is True and you
@@ -2375,6 +2416,8 @@ class NNGroupNode(NNTreeNode):
                 If `check_uniqueness=True` or `backwards_search` and searching `name`
                 yields more than one node.
 
+            Any exception raised by the StorageService in case auto-loading is enabled
+
 
 
 
@@ -2384,7 +2427,8 @@ class NNGroupNode(NNTreeNode):
                                        backwards_search=backwards_search,
                                        search_strategy=search_strategy,
                                        shortcuts=shortcuts,
-                                       max_depth=max_depth)
+                                       max_depth=max_depth,
+                                       auto_load=auto_load)
 
     def f_get_children(self, copy=True):
         """Returns a children dictionary.
