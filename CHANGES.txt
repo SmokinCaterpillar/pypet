@@ -4,6 +4,8 @@ pypet 0.1b5
 
 *   BUG FIX: When parameters are emptied, the default value is set to None (and no longer kept)
 
+*   Now items are only saved once, if the node already exist on disk, storage is refused
+
 pypet 0.1b.4
 
 *   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`

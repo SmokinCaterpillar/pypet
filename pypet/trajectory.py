@@ -1823,8 +1823,16 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             count+=1
 
         original_length = len(self)
-        for irun in range(original_length,length):
+        for irun in range(original_length, length):
             self._add_run_info(irun)
+
+        # We need to update the explored parameters:
+        if self._stored:
+            for param_name, param in self._explored_parameters.items():
+
+                self._storage_service.store(pypetconstants.DELETE, param,
+                                               trajectory_name=self.v_trajectory_name)
+                self.f_store_item(param)
 
 
     def f_explore(self, build_dict):

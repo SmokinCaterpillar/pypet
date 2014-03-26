@@ -737,11 +737,9 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_store: The single run to be stored
 
-            * :const:`pypet.pypetconstants.LEAF` or :const:`pypetconstants.UPDATE_LEAF` ('LEAF'
-              or 'UPDATE_LEAF')
+            * :const:`pypet.pypetconstants.LEAF`
 
-                Stores a parameter or result. Use `msg = 'UPDATE_LEAF'` if a parameter was expanded
-                (due to merging or expanding the trajectory) to modify it's data.
+                Stores a parameter or result.
 
                 Modification of results is not supported (yet). Everything stored to disk is
                 set in stone!
@@ -905,7 +903,7 @@ class HDF5StorageService(StorageService):
             elif msg == pypetconstants.SINGLE_RUN:
                 self._srn_store_single_run(stuff_to_store,*args,**kwargs)
 
-            elif msg in (pypetconstants.LEAF, pypetconstants.UPDATE_LEAF):
+            elif msg in (pypetconstants.LEAF):
                 self._prm_store_parameter_or_result(msg,stuff_to_store,*args,**kwargs)
 
             elif msg == pypetconstants.DELETE:
@@ -1535,7 +1533,10 @@ class HDF5StorageService(StorageService):
         # Store extended parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
-            self.store(pypetconstants.UPDATE_LEAF,param)
+            # First we delete the parameter
+            self.store(pypetconstants.DELETE, param)
+            # And then we add it again
+            self.store(pypetconstants.LEAF,param)
 
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group,'runs')
@@ -1574,8 +1575,14 @@ class HDF5StorageService(StorageService):
         self._logger.info('Removing incomplete runs.')
         count = 0
 
-        dparams_group = self._trajectory_group.derived_parameters
-        result_group = self._trajectory_group.results
+        if (hasattr(self._trajectory_group, 'derived_paramaters') and
+                hasattr(self._trajectory_group.derived_parameters, 'runs')):
+
+            dparams_group = self._trajectory_group.derived_parameters.runs
+
+        if (hasattr(self._trajectory_group, 'results') and
+                hasattr(self._trajectory_group.results, 'runs') ):
+            result_group = self._trajectory_group.results.runs
 
         for run_name, info_dict in traj._run_information.iteritems():
             completed = info_dict['completed']
@@ -2017,8 +2024,6 @@ class HDF5StorageService(StorageService):
         self._srvc_make_overview_tables(tostore_tables, traj)
 
 
-
-
     def _srvc_make_overview_tables(self, tables_to_make, traj=None):
         """Creates the overview tables in overview group"""
         for table_name in tables_to_make:
@@ -2139,13 +2144,6 @@ class HDF5StorageService(StorageService):
         # # Store recursively the config subtree
         # self._tree_store_recursively(pypetconstants.LEAF,traj.config,self._trajectory_group)
 
-        # If we restore a trajectory it could be the case that it was expanded,
-        # so we need to choose the appropriate message to update enlarged parameters
-        if traj._stored:
-            msg = pypetconstants.UPDATE_LEAF
-        else:
-            msg = pypetconstants.LEAF
-
         if not only_init:
 
             counter = 0
@@ -2166,16 +2164,8 @@ class HDF5StorageService(StorageService):
                                               'Branches are stored silently in the background. '
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
-
-                if child_name == 'parameters':
-
-                    # Store recursively the parameters subtree
-                    self._tree_store_recursively(msg, traj.parameters, self._trajectory_group)
-
-                else:
-
-                    # Store recursively the derived parameters subtree
-                    self._tree_store_recursively(pypetconstants.LEAF, traj._children[child_name],
+                # Store recursively the derived parameters subtree
+                self._tree_store_nodes(pypetconstants.LEAF, traj._children[child_name],
                                                  self._trajectory_group)
 
 
@@ -2211,14 +2201,14 @@ class HDF5StorageService(StorageService):
             # Store along a branch
             traj_node = traj_node._children[name]
 
-            self._tree_store_recursively(msg,traj_node,hdf5_group, recursive=False)
+            self._tree_store_nodes(msg,traj_node,hdf5_group, recursive=False)
 
             hdf5_group=getattr(hdf5_group, name)
 
         # Store final group and recursively everything below it
         traj_node = traj_node._children[leaf_name]
 
-        self._tree_store_recursively(msg,traj_node,hdf5_group, recursive)
+        self._tree_store_nodes(msg,traj_node,hdf5_group, recursive)
 
 
     ########################  Storing and Loading Sub Trees #######################################
@@ -2431,7 +2421,7 @@ class HDF5StorageService(StorageService):
                     for new_hdf5group in hdf5group._f_iterNodes(classname='Group'):
                         self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
 
-    def _tree_store_recursively(self,msg, traj_node, parent_hdf5_group, recursive = True):
+    def _tree_store_nodes(self,msg, traj_node, parent_hdf5_group, recursive = True):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
 
         :param msg: How to store leaf nodes, either 'LEAF' or 'UPDATE_LEAF'
@@ -2443,29 +2433,40 @@ class HDF5StorageService(StorageService):
 
         name = traj_node.v_name
 
+        store_new = False
+        store_msg=msg
+
         # If the node does not exist in the hdf5 file create it
         if not hasattr(parent_hdf5_group,name):
+            store_new = True
             try:
                 new_hdf5_group = self._hdf5file.create_group(where=parent_hdf5_group,name=name)
             except AttributeError:
                 new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
-
-            msg = pypetconstants.UPDATE_LEAF
         else:
+            self._logger.debug('Already found `%s` on disk I will not store it!' %
+                               traj_node.v_full_name)
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
+
+
+
         if traj_node.v_is_leaf:
-            # If we have a leaf node, store it as a parameter or result
-            self._prm_store_parameter_or_result(msg, traj_node, _hdf5_group=new_hdf5_group)
+            if store_new:
+                # If we have a leaf node, store it as a parameter or result
+                self._prm_store_parameter_or_result(store_msg, traj_node,
+                                                    _hdf5_group=new_hdf5_group,
+                                                    _newly_created=True)
 
         else:
             # Else store it as a group node
-            self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
+            if store_new:
+                self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
 
             if recursive:
                 # And if desired store recursively the subtree
                 for child in traj_node._children.itervalues():
-                    self._tree_store_recursively(msg,child,new_hdf5_group)
+                    self._tree_store_nodes(store_msg,child,new_hdf5_group)
 
 
     ######################## Storing a Single Run ##########################################
@@ -2999,27 +3000,29 @@ class HDF5StorageService(StorageService):
 
             row.update()
 
-        elif row is not None and HDF5StorageService.REMOVE_ROW in flags:
+        elif HDF5StorageService.REMOVE_ROW in flags:
             # Here we delete an existing row
 
-            rownumber = row.nrow
-            multiple_entries = False
+            if row is not None:
+                # Only delete if the row does exist otherwise we do not have to do anything
+                rownumber = row.nrow
+                multiple_entries = False
 
-            try:
-                row_iterator.next()
-                multiple_entries = True
-            except StopIteration:
-                pass
+                try:
+                    row_iterator.next()
+                    multiple_entries = True
+                except StopIteration:
+                    pass
 
-            if  multiple_entries:
-                 raise RuntimeError('There is something entirely wrong, `%s` '
-                                    'appears more than once in table %s.'
-                                    %(item_name,table._v_name))
+                if  multiple_entries:
+                     raise RuntimeError('There is something entirely wrong, `%s` '
+                                        'appears more than once in table %s.'
+                                        %(item_name,table._v_name))
 
-            try:
-                table.remove_rows(rownumber)
-            except AttributeError:
-                table.removeRows(rownumber)
+                try:
+                    table.remove_rows(rownumber)
+                except AttributeError:
+                    table.removeRows(rownumber)
         else:
             raise ValueError('Something is wrong, you might not have found '
                                'a row, or your flags are not set approprialty')
@@ -3041,7 +3044,7 @@ class HDF5StorageService(StorageService):
 
         # Check if we added something. Note that row is also not None in case REMOVE_ROW,
         # then it refers to the deleted row
-        if row is None:
+        if HDF5StorageService.REMOVE_ROW not in flags and row is None:
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' %(item_name,table._v_name))
         table.flush()
@@ -3499,10 +3502,8 @@ class HDF5StorageService(StorageService):
         :param msg: Whether to update leaf (we need to modify a row) or just store it
 
         """
-        if msg == pypetconstants.UPDATE_LEAF:
-            flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW)
-        else:
-            flags=(HDF5StorageService.ADD_ROW,)
+
+        flags=(HDF5StorageService.ADD_ROW,)
 
         # Check if we need to store the comment. Maybe update the overview tables
         # accordingly if the current run index is lower than the one in the table.
@@ -3542,15 +3543,12 @@ class HDF5StorageService(StorageService):
                 pass
 
     def _prm_store_parameter_or_result(self, msg, instance, store_flags=None,
-                                       overwrite=None, _hdf5_group=None):
+                                       overwrite=None, _hdf5_group=None, _newly_created=False):
         """Stores a parameter or result to hdf5.
 
         :param msg:
 
             Either :const:`~pypet.pypetconstants.LEAF` for storing a new parameter or result
-
-            Or :const:`~pypet.pypetconstants.UPDATE_LEAF` in case an existing parameter was
-            extended.
 
         :param instance:
 
@@ -3573,7 +3571,7 @@ class HDF5StorageService(StorageService):
             # If no group is provided we might need to create one
             _hdf5_group, newly_created = self._all_create_or_get_groups(fullname)
         else:
-            newly_created = False
+            newly_created = _newly_created
 
         try:
 
@@ -3626,17 +3624,13 @@ class HDF5StorageService(StorageService):
             for key, data_to_store in store_dict.items():
 
                 # Iterate through the data and store according to the storage flags
-                if (not instance.v_is_parameter or msg == pypetconstants.LEAF) and  key in _hdf5_group:
+                if  key in _hdf5_group:
+                    # We won't change any data that is found on disk
                     self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
                                        (key, fullname))
-
                     continue
                 if store_flags[key] == HDF5StorageService.TABLE:
-                    self._prm_store_into_pytable(msg,key, data_to_store, _hdf5_group, fullname)
-                elif key in _hdf5_group:
-                    self._logger.debug('Found %s already in hdf5 node of %s, so I will ignore it.' %
-                                       (key, fullname))
-                    continue
+                    self._prm_store_into_pytable(msg, key, data_to_store, _hdf5_group, fullname)
                 elif store_flags[key] == HDF5StorageService.DICT:
                     self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
                 elif store_flags[key] == HDF5StorageService.ARRAY:
@@ -3655,7 +3649,7 @@ class HDF5StorageService(StorageService):
             # Store annotations
             self._ann_store_annotations(instance,_hdf5_group)
 
-            if msg == pypetconstants.UPDATE_LEAF or newly_created:
+            if newly_created:
                 # If we created a new group or the parameter was extended we need to
                 # update the meta information and summary tables
                 self._prm_add_meta_info(instance, _hdf5_group, msg)
@@ -4025,8 +4019,17 @@ class HDF5StorageService(StorageService):
                 if tablename in self._overview_group:
                     table = getattr(self._overview_group, tablename)
 
-                    self._all_store_param_or_result_table_entry(instance,table,
-                                                                flags=(HDF5StorageService.REMOVE_ROW,))
+                    self._all_store_param_or_result_table_entry(instance, table,
+                                                     flags=(HDF5StorageService.REMOVE_ROW,))
+
+                if instance.v_is_parameter:
+                    table_name = 'explored_parameters'
+                    if  table_name in self._overview_group:
+                        table = getattr(self._overview_group, tablename)
+
+                        self._all_store_param_or_result_table_entry(instance, table,
+                                                flags=(HDF5StorageService.REMOVE_ROW,))
+
 
                 self._prm_meta_remove_summary(instance)
 
@@ -4111,51 +4114,24 @@ class HDF5StorageService(StorageService):
         datasize = data.shape[0]
 
         try:
-            if hasattr(hdf5group,tablename):
-                # If table already exists, check if we want to `UPDATE_LEAF`, i.e. if a
-                # parameter got extended
-                table = getattr(hdf5group,tablename)
 
-                if msg == pypetconstants.UPDATE_LEAF:
-                    nstart= table.nrows
-                    datasize = data.shape[0]
-                    if nstart==datasize:
-                        self._logger.debug('There is no new data to the parameter `%s`. I will'
-                                           ' skip storage of table `%s`' % (fullname,tablename))
-                        return
-                    else:
-                        self._logger.debug('There is new data to the parameter `%s`. I will'
-                                           ' add data to table `%s`' % (fullname,tablename))
-
-                else:
-                    raise ValueError('Table %s already exists, appending is only supported for '
-                                     'parameter merging and appending, please use >>msg= %s<<.' %
-                                     (tablename,pypetconstants.UPDATE_LEAF))
-
-                self._logger.debug('Found table %s in file %s, will append new entries in %s to the table.' %
-                                   (tablename,self._filename, fullname))
-
-                ## If the table exists, it already knows what the original data of the input was:
-                data_type_dict = {}
-            else:
-                # Get a new pytables description from the data and create a new table
-                description_dict, data_type_dict = self._prm_make_description(data, fullname)
+            # Get a new pytables description from the data and create a new table
+            description_dict, data_type_dict = self._prm_make_description(data, fullname)
 
 
-                try:
-                    table = self._hdf5file.create_table(where=hdf5group, name=tablename,
-                                                       description=description_dict,
-                                                       title=tablename,
-                                                       expectedrows=datasize,
-                                                       filters=self._filters)
-                except AttributeError:
-                    table = self._hdf5file.createTable(where=hdf5group, name=tablename,
-                                                       description=description_dict,
-                                                       title=tablename,
-                                                       expectedrows=datasize,
-                                                       filters=self._filters)
-                nstart = 0
-
+            try:
+                table = self._hdf5file.create_table(where=hdf5group, name=tablename,
+                                                   description=description_dict,
+                                                   title=tablename,
+                                                   expectedrows=datasize,
+                                                   filters=self._filters)
+            except AttributeError:
+                table = self._hdf5file.createTable(where=hdf5group, name=tablename,
+                                                   description=description_dict,
+                                                   title=tablename,
+                                                   expectedrows=datasize,
+                                                   filters=self._filters)
+            nstart = 0
             row = table.row
 
 
