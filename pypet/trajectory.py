@@ -1087,6 +1087,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._max_depth = None
         self._auto_load = False
 
+        self._expansion_not_stored=False
+
         self._environment_hexsha = None
         self._environment_name = None
 
@@ -1773,6 +1775,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
 
+        Note that after expanding `:func:`~pypet.trajectory.Trajectory.f_store` needs to be
+        called at least once!
+
         :raises:
 
             TypeError: If not all explored parameters are enlarged
@@ -1828,10 +1833,20 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # We need to update the explored parameters:
         if self._stored:
-            for param_name, param in self._explored_parameters.items():
+            self._expansion_not_stored=True
 
-                self._storage_service.store(pypetconstants.DELETE, param,
+
+    def _store_expansion(self):
+        for param_name, param in self._explored_parameters.items():
+
+                try:
+
+                    self._storage_service.store(pypetconstants.DELETE, param,
                                                trajectory_name=self.v_trajectory_name)
+
+                except Exception:
+                    self._logger.error('Could not erase explored parameter `%s` from disk for '
+                                         'expansion.' % param_name)
                 self.f_store_item(param)
 
 
@@ -3091,6 +3106,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if new_filename is not None or new_name is not None:
             self.f_migrate(new_name, new_filename)
+
+        if self._stored and self._expansion_not_stored:
+            self._store_expansion()
+            self._expansion_not_stored=False
 
         self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
                                         only_init = only_init)

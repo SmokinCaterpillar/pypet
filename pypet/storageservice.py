@@ -1575,30 +1575,36 @@ class HDF5StorageService(StorageService):
         self._logger.info('Removing incomplete runs.')
         count = 0
 
+        delete_results = False
+        delete_dpars = False
+
         if (hasattr(self._trajectory_group, 'derived_paramaters') and
                 hasattr(self._trajectory_group.derived_parameters, 'runs')):
 
             dparams_group = self._trajectory_group.derived_parameters.runs
+            delete_dpars=True
 
         if (hasattr(self._trajectory_group, 'results') and
                 hasattr(self._trajectory_group.results, 'runs') ):
             result_group = self._trajectory_group.results.runs
+            delete_results=True
 
         for run_name, info_dict in traj._run_information.iteritems():
             completed = info_dict['completed']
 
             if completed == 0:
-                if run_name in dparams_group or run_name in result_group:
+                if ( (delete_dpars and run_name in dparams_group) or
+                         (delete_results and run_name in result_group)):
                     self._logger.info('Removing run %s.' % run_name)
                     count +=1
 
-                if run_name in dparams_group:
+                if delete_dpars and run_name in dparams_group:
                     try:
                         dparams_group._f_get_child(run_name)._f_remove(recursive=True)
                     except AttributeError:
                         dparams_group._f_getChild(run_name)._f_remove(recursive=True)
 
-                if run_name in result_group:
+                if delete_results and run_name in result_group:
                     try:
                         result_group._f_get_child(run_name)._f_remove(recursive=True)
                     except AttributeError:
@@ -3040,7 +3046,7 @@ class HDF5StorageService(StorageService):
         if  multiple_entries:
              raise RuntimeError('There is something entirely wrong, `%s` '
                                 'appears more than once in table %s.'
-                                %(item_name,table._v_name))
+                                % (item_name,table._v_name))
 
         # Check if we added something. Note that row is also not None in case REMOVE_ROW,
         # then it refers to the deleted row
