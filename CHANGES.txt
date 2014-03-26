@@ -5,6 +5,10 @@ pypet 0.1b5
 *   BUG FIX: When parameters are emptied, the default value is set to None (and no longer kept)
 
 *   Now items are only saved once, if the node already exist on disk, storage is refused
+    (Previously new data was added if it was not within the leaf before, but this can lead to
+    strange inconsistencies).
+
+
 
 pypet 0.1b.4
 

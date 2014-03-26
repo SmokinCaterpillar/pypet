@@ -608,7 +608,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def f_store(self, *args, **kwargs):
+    def f_store(self):
         """Stores the single run to disk."""
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_trajectory_name)
@@ -2169,8 +2169,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # If not ignored, add also the trajectory derived parameters to check for merging
         if not ignore_trajectory_derived_parameters and 'derived_parameters' in self:
             my_traj_dpars = self._get_traj_dpars_or_results(self, 'derived_parameters')
+            if self._stored:
+                self.f_load_items(my_traj_dpars.itervalues(), only_empties=True)
             allmyparams.update(my_traj_dpars)
             other_traj_dpars = self._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
+            if other_trajectory._stored:
+                other_trajectory.f_load_items(other_traj_dpars.values(),
+                                          only_empties=True)
             allotherparams.update(other_traj_dpars)
 
 

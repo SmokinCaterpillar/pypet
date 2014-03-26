@@ -626,6 +626,7 @@ class HDF5StorageService(StorageService):
         :raises: NoSuchServiceError if message or data is not understood
 
         """
+        opened = True
         try:
 
             self._srvc_extract_file_information(kwargs)
@@ -651,7 +652,7 @@ class HDF5StorageService(StorageService):
 
             self._srvc_closing_routine(opened)
         except:
-            self._srvc_closing_routine(True)
+            self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
 
@@ -878,6 +879,7 @@ class HDF5StorageService(StorageService):
         :raises: NoSuchServiceError if message or data is not understood
 
         """
+        opened = True
         try:
 
             self._srvc_extract_file_information(kwargs)
@@ -927,7 +929,7 @@ class HDF5StorageService(StorageService):
             self._srvc_closing_routine(opened)
 
         except:
-            self._srvc_closing_routine(True)
+            self._srvc_closing_routine(opened)
             self._logger.error('Failed storing `%s`' % str(stuff_to_store))
             raise
 
@@ -1523,6 +1525,9 @@ class HDF5StorageService(StorageService):
 
         """
 
+        if not traj._stored:
+            traj.f_store()
+
         # Update meta information
         infotable = getattr(self._overview_group,'info')
         insert_dict = self._all_extract_insert_dict(traj,infotable.colnames)
@@ -1534,9 +1539,13 @@ class HDF5StorageService(StorageService):
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
             # First we delete the parameter
-            self.store(pypetconstants.DELETE, param)
+            try:
+                self.store(pypetconstants.DELETE, param)
+            except pt.NoSuchNodeError:
+                pass # We can end up here if the parameter was never stored
+
             # And then we add it again
-            self.store(pypetconstants.LEAF,param)
+            self.store(pypetconstants.LEAF, param)
 
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group,'runs')
@@ -4016,6 +4025,15 @@ class HDF5StorageService(StorageService):
 
         if delete_only is None:
 
+            try:
+                the_node = self._hdf5file.get_node(where=where, name=node_name)
+            except AttributeError:
+                the_node = self._hdf5file.getNode(where=where, name=node_name)
+
+            if not instance.v_is_leaf:
+                if len(the_node._v_groups) != 0:
+                    raise TypeError('You cannot remove a group that is not empty!')
+
             if instance.v_is_leaf:
                 # If we delete a leaf we need to take care about overview tables
                 base_group = split_name[0]
@@ -4038,15 +4056,6 @@ class HDF5StorageService(StorageService):
 
 
                 self._prm_meta_remove_summary(instance)
-
-            try:
-                the_node = self._hdf5file.get_node(where=where, name=node_name)
-            except AttributeError:
-                the_node = self._hdf5file.getNode(where=where, name=node_name)
-
-            if not instance.v_is_leaf:
-                if len(the_node._v_groups) != 0:
-                    raise TypeError('You cannot remove a group that is not empty!')
 
             the_node._f_remove(recursive=True)
 

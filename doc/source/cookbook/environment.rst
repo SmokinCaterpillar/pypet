@@ -38,10 +38,20 @@ You start your simulations by creating an environment object:
                  add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
+                 fast_access=True,
+                 shortcuts=True,
+                 backwards_search=True,
+                 iter_recursive=True,
+                 store_before_runs=True,
                  log_folder=None,
-                 log_level=logging.DEBUG,
+                 log_level=logging.INFO,
+                 log_stdout=True,
                  multiproc=False,
                  ncores=1,
+                 use_pool=False,
+                 cpu_cap=1.0,
+                 memory_cap=1.0,
+                 swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  continuable=1,
                  use_hdf5=True,
@@ -51,18 +61,21 @@ You start your simulations by creating an environment object:
                  complib='zlib',
                  shuffle=True,
                  fletcher32=False,
-                 pandas_format='table',
-                 pandas_append=True,
+                 pandas_format='fixed',
+                 pandas_append=False,
                  purge_duplicate_comments=True,
-                 summary_tables=True,
+                 summary_tables = True,
                  small_overview_tables=True,
-                 large_overview_tables=True,
+                 large_overview_tables=False,
                  results_per_run=0,
                  derived_parameters_per_run=0,
                  git_repository = None,
-                 git_message=''):
+                 git_message='',
+                 do_single_runs=True,
+                 lazy_debug=False)::
 
-You can pass the following arguments:
+You can pass the following arguments. Note usually you only have to change very few of these
+because most of the time the default settings are sufficient.
 
 * `trajectory`
 
@@ -82,6 +95,8 @@ You can pass the following arguments:
 
 * `dynamically_imported_classes`
 
+    Only considered if a new trajectory is created.
+
     The argument `dynamically_imported_classes` is important
     if you have written your own *parameter* or *result* classes, you can pass these either
     as class variables `MyCustomParameterClass` or as strings leading to the classes in your package:
@@ -93,6 +108,39 @@ You can pass the following arguments:
     It is **VERY important**, that every class name is **UNIQUE**. So you should not have
     two classes named `'MyCustomParameterClass'` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
+
+* `fast_access`
+
+    Only considered if a new trajectory is created.
+    If *fast access* should be enabled for the new trajectory.
+    Will simply call `traj.v_fast_access = fast_access` on the new trajectory.
+    Can be changed later on during runtime.
+
+* `shortcuts`
+
+    Only considered if a new trajectory is created.
+    If *shortcuts* should be enabled for the new trajectory.
+    Will simply call `traj.v_shortcuts = shortcuts` on the new trajectory.
+    Can be changed later on during runtime.
+
+* `backwards_search`
+
+    Only considered if a new trajectory is created.
+    If *backwards search* should be enabled for the new trajectory.
+    Will simply call `traj.v_backwards_search = backwards_search` on the new trajectory.
+    Can be changed later on during runtime.
+
+* `iter_recursive`
+
+    Only considered if a new trajectory is created.
+    If recursive iterations should be enabled for the new trajectory.
+    Will simply call `traj.v_iter_recursive = iter_recursive` on the new trajectory.
+    Can be changed later on during runtime.
+
+* `store_before_runs`
+
+    I the whole trajectory should be stored before the runs are started. Otherwise
+    the storage will be only initialised.
 
 * `log_folder`
 

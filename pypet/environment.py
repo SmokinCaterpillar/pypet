@@ -198,6 +198,7 @@ class Environment(object):
 
     :param dynamically_imported_classes:
 
+          Only considered if a new trajectory is created.
           If you've written custom parameters or results that need to be loaded
           dynamically during runtime, the module containing the class
           needs to be specified here as a list of classes or strings
@@ -210,6 +211,39 @@ class Environment(object):
           If you only have a single class to import, you do not need
           the list brackets:
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+
+    :param fast_access:
+
+        Only considered if a new trajectory is created.
+        If *fast access* should be enabled for the new trajectory.
+        Will simply call `traj.v_fast_access = fast_access` on the new trajectory.
+        Can be changed later on during runtime.
+
+    :param shortcuts:
+
+        Only considered if a new trajectory is created.
+        If *shortcuts* should be enabled for the new trajectory.
+        Will simply call `traj.v_shortcuts = shortcuts` on the new trajectory.
+        Can be changed later on during runtime.
+
+    :param backwards_search:
+
+        Only considered if a new trajectory is created.
+        If *backwards search* should be enabled for the new trajectory.
+        Will simply call `traj.v_backwards_search = backwards_search` on the new trajectory.
+        Can be changed later on during runtime.
+
+    :param iter_recursive:
+
+        Only considered if a new trajectory is created.
+        If recursive iterations should be enabled for the new trajectory.
+        Will simply call `traj.v_iter_recursive = iter_recursive` on the new trajectory.
+        Can be changed later on during runtime.
+
+    :param store_before_runs:
+
+        I the whole trajectory should be stored before the runs are started. Otherwise
+        the storage will be only initialised.
 
     :param log_folder:
 
@@ -557,6 +591,11 @@ class Environment(object):
                  add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
+                 fast_access=True,
+                 shortcuts=True,
+                 backwards_search=True,
+                 iter_recursive=True,
+                 store_before_runs=True,
                  log_folder=None,
                  log_level=logging.INFO,
                  log_stdout=True,
@@ -599,7 +638,7 @@ class Environment(object):
         self._git_message=git_message
 
         # Check if a novel trajectory needs to be created.
-        if isinstance(trajectory,str):
+        if isinstance(trajectory, basestring):
             # Create a new trajectory
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
@@ -608,6 +647,11 @@ class Environment(object):
 
             self._timestamp = self.v_trajectory.v_timestamp # Timestamp of creation
             self._time = self.v_trajectory.v_time # Formatted timestamp
+
+            self._traj.v_fast_access = fast_access
+            self._traj.v_backwards_search = backwards_search
+            self._traj.v_iter_recursive = iter_recursive
+            self._traj.v_shortcuts = shortcuts
 
         else:
 
@@ -722,12 +766,14 @@ class Environment(object):
                                   str(self._hexsha))
 
         self._do_single_runs = do_single_runs
+        self._store_before_runs = store_before_runs
 
         if self._do_single_runs:
             config_name='environment.%s.multiproc' % self.v_name
             self._traj.f_add_config(config_name, multiproc,
                                     comment= 'Whether or not to use multiprocessing. If yes'
                                              ' than everything must be pickable.')
+
 
             if self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get():
                 config_name='environment.%s.use_pool' % self.v_name
@@ -1119,15 +1165,23 @@ class Environment(object):
 
         # Add the amount to be run to the trajectory
         config_name='environment.%s.normal_runs' % self.v_name
-        if not config_name in self._traj:
+        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
             self._traj.f_add_config(config_name, count,
                                     comment ='Added if trajectory was explored normally and not '
                                              'continued.')
 
+        config_name='evironment.%s.store_before_runs' % self.v_name
+        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
+            self._traj.f_add_config(config_name, self._store_before_runs,
+                    comment='If the trajectory was automatically be saved before the '
+                            'single runs start, otherwise the store is only initialised. '
+                            'Only added if runs are started, not continued.')
+
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and store it.')
         self._traj._prepare_experiment()
-        self._traj.f_store()
+
+        self._traj.f_store(only_init= (not self._store_before_runs))
         self._logger.info('Trajectory successfully stored.')
 
         # Make the trajectory continuable in case the user wants that
