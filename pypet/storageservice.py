@@ -851,12 +851,6 @@ class HDF5StorageService(StorageService):
 
                 :param stuff_to_store: The group to store
 
-            * :const:`pypet.pypetconstants.DELETE_INCOMPLETE_RUNS` ('DELETE_INCOMPLETE_RUNS')
-
-                Removes all data from hdf5 file that is from an incomplete run.
-
-                :param stuff_to_store: The trajectory
-
             * :const:`pypet.pypetconstants.TREE`
 
                 Stores a single node or a full subtree
@@ -913,9 +907,6 @@ class HDF5StorageService(StorageService):
 
             elif msg == pypetconstants.GROUP:
                 self._grp_store_group(stuff_to_store, *args, **kwargs)
-
-            elif msg == pypetconstants.DELETE_INCOMPLETE_RUNS:
-                self._trj_delete_incomplete_runs(stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.TREE:
                 self._tree_store_tree(stuff_to_store,*args,**kwargs)
@@ -1578,48 +1569,6 @@ class HDF5StorageService(StorageService):
 
         traj.f_restore_default()
 
-
-    def _trj_delete_incomplete_runs(self,traj):
-        """Deletes all data related to incompleted runs."""
-        self._logger.info('Removing incomplete runs.')
-        count = 0
-
-        delete_results = False
-        delete_dpars = False
-
-        if (hasattr(self._trajectory_group, 'derived_paramaters') and
-                hasattr(self._trajectory_group.derived_parameters, 'runs')):
-
-            dparams_group = self._trajectory_group.derived_parameters.runs
-            delete_dpars=True
-
-        if (hasattr(self._trajectory_group, 'results') and
-                hasattr(self._trajectory_group.results, 'runs') ):
-            result_group = self._trajectory_group.results.runs
-            delete_results=True
-
-        for run_name, info_dict in traj._run_information.iteritems():
-            completed = info_dict['completed']
-
-            if completed == 0:
-                if ( (delete_dpars and run_name in dparams_group) or
-                         (delete_results and run_name in result_group)):
-                    self._logger.info('Removing run %s.' % run_name)
-                    count +=1
-
-                if delete_dpars and run_name in dparams_group:
-                    try:
-                        dparams_group._f_get_child(run_name)._f_remove(recursive=True)
-                    except AttributeError:
-                        dparams_group._f_getChild(run_name)._f_remove(recursive=True)
-
-                if delete_results and run_name in result_group:
-                    try:
-                        result_group._f_get_child(run_name)._f_remove(recursive=True)
-                    except AttributeError:
-                        result_group._f_getChild(run_name)._f_remove(recursive=True)
-
-        self._logger.info('Finished removal of incomplete runs, removed %d runs.' % count)
 
 
     ######################## LOADING A TRAJECTORY #################################################
@@ -3035,9 +2984,13 @@ class HDF5StorageService(StorageService):
                                         %(item_name,table._v_name))
 
                 try:
-                    table.remove_rows(rownumber)
-                except AttributeError:
-                    table.removeRows(rownumber)
+                    try:
+                        table.remove_rows(rownumber)
+                    except AttributeError:
+                        table.removeRows(rownumber)
+                except NotImplementedError:
+                    pass # We get here if we try to remove the last row of a table
+                    # there is nothing we can do except for keeping it :(
         else:
             raise ValueError('Something is wrong, you might not have found '
                                'a row, or your flags are not set approprialty')
@@ -3351,6 +3304,8 @@ class HDF5StorageService(StorageService):
 
 
                 except  pt.NoSuchNodeError:
+                    pass
+                except StopIteration:
                     pass
                 finally:
                     # Get the old name back
@@ -4032,16 +3987,17 @@ class HDF5StorageService(StorageService):
 
             if not instance.v_is_leaf:
                 if len(the_node._v_groups) != 0:
-                    raise TypeError('You cannot remove a group that is not empty!')
+                    raise TypeError('You cannot remove the group `%s`, it is not empty!' %
+                                    instance.v_full_name)
 
             if instance.v_is_leaf:
                 # If we delete a leaf we need to take care about overview tables
                 base_group = split_name[0]
 
-                tablename = self._all_get_table_name(base_group, instance.v_creator_name)
+                table_name = self._all_get_table_name(base_group, instance.v_creator_name)
 
-                if tablename in self._overview_group:
-                    table = getattr(self._overview_group, tablename)
+                if table_name in self._overview_group:
+                    table = getattr(self._overview_group, table_name)
 
                     self._all_store_param_or_result_table_entry(instance, table,
                                                      flags=(HDF5StorageService.REMOVE_ROW,))
@@ -4049,7 +4005,7 @@ class HDF5StorageService(StorageService):
                 if instance.v_is_parameter:
                     table_name = 'explored_parameters'
                     if  table_name in self._overview_group:
-                        table = getattr(self._overview_group, tablename)
+                        table = getattr(self._overview_group, table_name)
 
                         self._all_store_param_or_result_table_entry(instance, table,
                                                 flags=(HDF5StorageService.REMOVE_ROW,))

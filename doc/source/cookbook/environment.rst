@@ -275,9 +275,8 @@ because most of the time the default settings are sufficient.
     Be aware that your individual single runs must be completely independent of one
     another to allow continuing to work. Thus, they should **NOT** be based on shared data (like a
     multiprocessing list).
-    Moreover, your single runs should not return data to the main script,
-    but store all results directly into the trajectory. Otherwise continuing
-    will not work either.
+
+    Note that `continuable=True` only works with `use_pool=False` in case of multiprocessing.
 
 * `use_hdf5`
 
@@ -720,7 +719,8 @@ Resuming an Experiment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If all of your data is picklable, you can use the config parameter `continuable=True` passed
-to the :class:`~pypet.environment.Environment` constructor.
+to the :class:`~pypet.environment.Environment` constructor. Note that `continuable=True`
+only works with `use_pool=False` in case of multiprocessing.
 This will create a '.cnt' file with the name of your trajectory in the
 folder where your final HDF5 file will be placed. The `.cnt` file is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
@@ -729,10 +729,6 @@ without recomputing already obtained results. Note that this works only if the
 hdf5 file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
-
-Moreover, continuing works **ONLY** if your top-level simulation function does **NOT** return
-any results that are further processed but stores all results directly into the trajectory.
-Returned results are lost if the simulation crashes!
 
 You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue_run`
 with the name of the corresponding '.cnt' file.

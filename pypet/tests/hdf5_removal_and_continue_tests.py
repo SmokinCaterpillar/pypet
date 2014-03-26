@@ -18,12 +18,13 @@ from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 import logging
+import pickle
 
 import os
 
 import tables as pt
 from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
-    TrajectoryComparator, make_temp_file
+    TrajectoryComparator, make_temp_file, multiply
 
 
 
@@ -37,7 +38,32 @@ class ContinueTest(TrajectoryComparator):
         simple_kwarg= 13.0
         env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
+    def make_run_mp(self,env):
 
+        ### Make a test run
+        simple_arg = -13
+        simple_kwarg= 13.0
+        env.f_run(multiply)
+
+    def make_environment_mp(self, idx, filename):
+
+        logging.basicConfig(level = logging.INFO)
+
+        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        logfolder = make_temp_file('experiments/tests/Log')
+        trajname = 'Test%d' % idx
+
+        env = Environment(trajectory=trajname,
+                          filename=filename,
+                          file_title=trajname,
+                          log_folder=logfolder,
+                          continuable=True,
+                          multiproc=True,
+                          ncores=2)
+
+
+        self.envs.append(env)
+        self.trajs.append( env.v_trajectory)
 
     def make_environment(self, idx, filename):
 
@@ -47,7 +73,12 @@ class ContinueTest(TrajectoryComparator):
         logfolder = make_temp_file('experiments/tests/Log')
         trajname = 'Test%d' % idx
 
-        env = Environment(trajectory=trajname,filename=filename,file_title=trajname, log_folder=logfolder)
+        env = Environment(trajectory=trajname,
+                          filename=filename,
+                          file_title=trajname,
+                          log_folder=logfolder,
+                          continuable=True,
+                          large_overview_tables=True)
 
 
         self.envs.append(env)
@@ -59,11 +90,76 @@ class ContinueTest(TrajectoryComparator):
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
 
+        traj.f_explore(self.explored)
+
+    def explore_mp(self, traj):
+        self.explored={'x':[0.0, 1.0, 2.0, 3.0, 4.0], 'y':[0.1, 2.2, 3.3, 4.4, 5.5]}
+
         traj.f_explore(cartesian_product(self.explored))
 
 
+    def test_continueing_mp(self):
+        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
+
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment_mp( irun, filename)
+
+        self.param_dict={'x':1.0, 'y':2.0}
+
+
+
+        for irun in range(len(self.filenames)):
+            add_params(self.trajs[irun], self.param_dict)
+
+
+        self.explore_mp(self.trajs[0])
+        self.explore_mp(self.trajs[1])
+
+        for irun in range(len(self.filenames)):
+            self.make_run_mp(self.envs[irun])
+
+
+
+        continue_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.cnt'
+        suppl_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.sppl'
+
+        dump_file=open(suppl_file, 'rb')
+        dump_dict = pickle.load(dump_file)
+        dump_file.close()
+        dump_dict['result_list'] = dump_dict['result_list'][0:-2]
+
+        dump_file = open(suppl_file,'wb')
+        pickle.dump(dump_dict, dump_file, protocol=2)
+        dump_file.flush()
+        dump_file.close()
+
+
+        results= self.envs[0].f_continue_run(multiply, continue_file, suppl_file)
+
+        self.trajs[0]=self.envs[0].v_trajectory
+
+        for irun in range(len(self.filenames)):
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA,
+                                    load_other_data=pypetconstants.UPDATE_DATA)
+
+        self.compare_trajectories(self.trajs[0],self.trajs[1])
+
+        for run_name in self.trajs[0].f_iter_runs():
+            self.assertTrue(self.trajs[0].z in results)
+
     def test_continueing(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
+        self.filenames = [make_temp_file('test_removal.hdf5'), 0]
 
 
 
@@ -90,23 +186,21 @@ class ContinueTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
 
-        ### Create a crash and say, that the second last and last run did not work.
-        pt_file = pt.openFile(self.filenames[0],mode='a')
-        runtable = pt_file.getNode('/'+self.trajs[0].v_name+'/overview/runs')
-
-        for idx,row in enumerate(runtable.iterrows()):
-            if idx == 2 or idx == 3:
-                row['completed'] = 0
-                row.update()
-
-        runtable.flush()
-        pt_file.flush()
-        pt_file.close()
-
-
-
         continue_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.cnt'
-        self.envs[0].f_continue_run(continue_file)
+        suppl_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.sppl'
+
+        dump_file=open(suppl_file, 'rb')
+        dump_dict = pickle.load(dump_file)
+        dump_file.close()
+        dump_dict['result_list'] = dump_dict['result_list'][0:-2]
+
+        dump_file = open(suppl_file,'wb')
+        pickle.dump(dump_dict, dump_file, protocol=2)
+        dump_file.flush()
+        dump_file.close()
+
+
+        self.envs[0].f_continue_run(simple_calculations, continue_file, suppl_file)
 
         self.trajs[0]=self.envs[0].v_trajectory
 

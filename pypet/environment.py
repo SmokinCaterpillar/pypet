@@ -389,9 +389,8 @@ class Environment(object):
         Be aware that your individual single runs must be completely independent of one
         another to allow continuing to work. Thus, they should **NOT** be based on shared data
         (like a multiprocessing list).
-        Moreover, your single runs should not return data to the main script,
-        but store all results directly into the trajectory. Otherwise continuing
-        will not work either.
+
+        Note that `continuable=True` only works with `use_pool=False` in case of multiprocessing.
 
     :param use_hdf5:
 
@@ -645,6 +644,10 @@ class Environment(object):
             raise RuntimeError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
+        if continuable and use_pool:
+            raise RuntimeError('You cannot use `continuable=True` with a pool, please set '
+                               '`use_pool=False`.')
+
 
         self._git_repository = git_repository
         self._git_message=git_message
@@ -779,6 +782,7 @@ class Environment(object):
 
         self._do_single_runs = do_single_runs
         self._store_before_runs = store_before_runs
+        self._continuable = continuable
 
         if self._do_single_runs:
             config_name='environment.%s.multiproc' % self.v_name
@@ -1029,7 +1033,7 @@ class Environment(object):
 
 
 
-    def f_continue_run(self, continue_file):
+    def f_continue_run(self, runfunc, continue_file, supplementary_file):
         """Resumes crashed trajectories by supplying the '.cnt' file.
 
         :return:
@@ -1052,24 +1056,35 @@ class Environment(object):
                                'with `do_single_runs=False`.')
 
         # Unpack the stored data
-        continue_dict = pickle.load(open(continue_file,'rb'))
+        dump_file=open(supplementary_file,'rb')
+        suppl_dict = pickle.load(dump_file)
+        dump_file.close()
+
         # User's job function
-        runfunc = continue_dict['runfunc']
+        # runfunc = continue_dict['runfunc']
         # Arguments to the user's job function
-        args = continue_dict['args']
+        args = suppl_dict['args']
         # Keyword arguments to the user's job function
-        kwargs = continue_dict['kwargs']
+        kwargs = suppl_dict['kwargs']
+        result_list = suppl_dict['result_list']
+
+        # Unpack the stored data
+        dump_file=open(continue_file,'rb')
+        continue_dict = pickle.load(dump_file)
+        dump_file.close()
+
         # Unpack the trajectory
         self._traj = continue_dict['trajectory']
         self._traj.v_full_copy = continue_dict['full_copy']
         # Load meta data
         self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
              load_derived_parameters=pypetconstants.LOAD_NOTHING,
-             load_results=pypetconstants.LOAD_NOTHING)
+             load_results=pypetconstants.LOAD_NOTHING,
+             load_other_data=pypetconstants.LOAD_NOTHING)
 
 
         # Remove incomplete runs
-        self._traj._remove_incomplete_runs()
+        self._traj._remove_incomplete_runs(finished_runs=len(result_list))
 
         # Check how many runs are about to be done
         count = 0
@@ -1084,7 +1099,7 @@ class Environment(object):
                                     comment ='Added if a crashed trajectory was continued.')
 
         # Resume the experiment
-        return self._do_runs(runfunc,args,kwargs)
+        return self._do_runs(runfunc, args, kwargs, result_list)
 
     @ property
     def v_trajectory(self):
@@ -1196,38 +1211,74 @@ class Environment(object):
         self._traj.f_store(only_init= (not self._store_before_runs))
         self._logger.info('Trajectory successfully stored.')
 
-        # Make the trajectory continuable in case the user wants that
-        continuable = self._traj.f_get('config.environment.%s.continuable' % self.v_name).f_get()
-        if continuable:
-
-            dump_dict ={}
-            # Put the file into the hdf5 file folder. If no hdf5 files are used, put it into
-            # the log folder.
-            if self._use_hdf5:
-                filename = self._filename
-                dump_folder= os.path.split(filename)[0]
-                dump_filename=os.path.join(dump_folder,self._traj.v_name+'.cnt')
-            else:
-                dump_filename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
-
-            # Store all relevant info into a dictionary and pickle it.
-            prev_full_copy = self._traj.v_full_copy
-            dump_dict['full_copy'] = prev_full_copy
-            dump_dict['runfunc'] = runfunc
-            dump_dict['args'] = args
-            dump_dict['kwargs'] = kwargs
-            self._traj.v_full_copy=True
-            dump_dict['trajectory'] = self._traj
-
-            pickle.dump(dump_dict, open(dump_filename,'wb'),protocol=2)
-
-            self._traj.v_full_copy=prev_full_copy
+        if self._continuable:
+            self._trigger_continue_snapshot(args, kwargs, [], True)
 
         # Start the runs
         return self._do_runs(runfunc, args, kwargs)
 
+    def _trigger_continue_snapshot(self, args, kwargs, result_list, first_dump):
+        '''Makes the trajectory continuable in case the user wants that
 
-    def _do_runs(self, runfunc, args, kwargs):
+        :param runfunc:
+
+            The function to execute
+
+        :param args:
+
+            Arguments passed to runfunc
+
+        :param kwargs:
+
+            Keyword arguments passed to runfunc
+
+        :param result_list:
+
+            Previously computed results
+
+        '''
+        dump_dict_supplementary ={}
+        dump_dict = {}
+        # Put the file into the hdf5 file folder. If no hdf5 files are used, put it into
+        # the log folder.
+        if first_dump:
+            if self._use_hdf5:
+                filename = self._filename
+                dump_folder= os.path.split(filename)[0]
+                self._dump_filename=os.path.join(dump_folder, self._traj.v_name+'.cnt')
+            else:
+                self._dump_filename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
+
+            root, ext = os.path.splitext(self._dump_filename)
+            self._dump_filename_supplementary = root+'.sppl'
+
+        # Keep track if arguments change over time
+        dump_dict_supplementary['args'] = args
+        dump_dict_supplementary['kwargs'] = kwargs
+        dump_dict_supplementary['result_list'] = result_list
+
+        # Store all relevant info into a dictionary and pickle it.
+        dump_file = open(self._dump_filename_supplementary,'wb')
+        pickle.dump(dump_dict_supplementary, dump_file, protocol=2)
+        dump_file.flush()
+        dump_file.close()
+
+        if first_dump:
+            # Store the trajectory before the first runs
+            prev_full_copy = self._traj.v_full_copy
+            dump_dict['full_copy'] = prev_full_copy
+            self._traj.v_full_copy=True
+            dump_dict['trajectory'] = self._traj
+
+            dump_file = open(self._dump_filename,'wb')
+            pickle.dump(dump_dict, dump_file, protocol=2)
+            dump_file.flush()
+            dump_file.close()
+
+            self._traj.v_full_copy=prev_full_copy
+
+
+    def _do_runs(self, runfunc, args, kwargs, prev_results=None):
         """ Starts the individual single runs.
 
         Starts runs sequentially or initiates multiprocessing.
@@ -1235,12 +1286,16 @@ class Environment(object):
         :param runfunc: The user's job
         :param args: Arguments handed to the job
         :param kwargs: Keyword arguments handed to the job
+        :param prev_results: Potentially previously computed results
 
         :return: Iterable over the results of the individual runs
 
         """
         log_path = self._log_path
         log_stdout = self._log_stdout
+
+        if prev_results is None:
+            prev_results = []
 
         self._multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
 
@@ -1427,6 +1482,8 @@ class Environment(object):
                 while not result_queue.empty():
                     result = result_queue.get()
                     results.append(result)
+                    if self._continuable:
+                        self._trigger_continue_snapshot( args, kwargs, results, False)
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
@@ -1447,7 +1504,7 @@ class Environment(object):
                               '************************************************************\n' %
                               (self._traj.v_name, ncores))
 
-            return results
+            return prev_results + results
 
 
         else:
@@ -1460,10 +1517,16 @@ class Environment(object):
                               self._traj.v_name)
 
             # Sequentially run all single runs and append the results to a queue
-            results = [_single_run((self._traj._make_single_run(n), log_path, log_stdout,
-                                    None,runfunc,
-                                    len(self._traj), self._multiproc, result_queue, args,kwargs)) for
-                                    n in xrange(len(self._traj)) if not self._traj.f_is_completed(n)]
+            results = []
+            for n in xrange(len(self._traj)):
+                if not self._traj.f_is_completed(n):
+                    results.append( _single_run((self._traj._make_single_run(n), log_path, log_stdout,
+                                                None,runfunc,
+                                                len(self._traj),
+                                                self._multiproc,
+                                                result_queue, args,kwargs)))
+
+                    self._trigger_continue_snapshot(args, kwargs, results, False)
 
             # Do some finalization
             self._traj._finalize()
@@ -1475,5 +1538,5 @@ class Environment(object):
                               '************************************************************\n' %
                               self._traj.v_name)
 
-            return results
+            return prev_results + results
                 

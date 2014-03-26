@@ -900,7 +900,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
                                            trajectory_name=self.v_trajectory_name)
             except:
                 self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
-                                   ' item(s) was/were never stored to disk.')
+                                   ' item(s) was/were never stored to disk.' % str(fetched_items))
                 raise
 
             if remove_from_trajectory:
@@ -1462,15 +1462,83 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
 
-    def _remove_incomplete_runs(self):
+    def _remove_incomplete_runs(self, finished_runs):
         """Requests the storage service to delete incomplete runs.
 
         Called by the environment if you resume a crashed trajectory to allow
         re-running of non-completed runs.
 
+        :param finished_runs:
+
+            Number of actually finished runs
+
         """
-        self._storage_service.store(pypetconstants.DELETE_INCOMPLETE_RUNS, self,
-                                      trajectory_name=self.v_name)
+        self._logger.info('Removing incomplete runs.')
+        count = 0
+
+        # First check if the completed runs are also finished runs (i.e. are part of the snapshot)
+        number_of_completed_runs = 0
+        for run_name, info_dict in self._run_information.iteritems():
+            completed = info_dict['completed']
+
+            if completed:
+                number_of_completed_runs+=1
+
+        run_difference = number_of_completed_runs - finished_runs
+
+        if run_difference > 0:
+            # Here we have a snapshot slightly before the finished run so we have to delete
+            # the completed runs that are not part of the continue snapshot
+            for idx in range(run_difference):
+                latest_timestamp = 0
+                latest_run_name = None
+                for run_name, info_dict in self._run_information.iteritems():
+                    if self._run_information[run_name]['completed']:
+                        finish_timestamp = info_dict['finish_timestamp']
+                        if finish_timestamp > latest_timestamp:
+                            latest_timestamp = finish_timestamp
+                            latest_run_name = run_name
+
+                self._run_information[latest_run_name]['completed'] = 0
+
+        # Next, delete all the data for the corresponding run
+        for run_name, info_dict in self._run_information.iteritems():
+            completed = info_dict['completed']
+
+            if not completed:
+                for where in ['results', 'derived_parameters']:
+
+                    if self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False):
+                        self[where].runs.f_remove_child(run_name, recursive=True)
+
+                    delete_items = True
+                    try:
+                        run_node = self.f_load_child('%s.runs.%s' % (where, run_name),
+                                                     recursive=True, load_data=1)
+                    except Exception:
+                        delete_items = False # We end here if we could not load data
+
+                    if delete_items:
+                        self.f_delete_items(run_node.f_to_dict().values(),
+                                                remove_empty_groups=True,
+                                                remove_from_trajectory=True)
+
+                        if self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False):
+                            # We end here if there are still some empty groups left
+                            still_empty=[]
+                            for node in run_node.f_iter_nodes():
+                                if not node.f_has_children():
+                                    still_empty.append(node)
+
+                            if still_empty:
+                                self.f_delete_items(still_empty, remove_from_trajectory=True,
+                                                remove_empty_groups=True)
+
+                        if (self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False)
+                            and self.f_get('%s.runs.%s').f_has_children()):
+                            raise RuntimeError('Something is wrong!')
+
+
 
     def f_shrink(self):
         """ Shrinks the trajectory and removes all exploration ranges from the parameters.

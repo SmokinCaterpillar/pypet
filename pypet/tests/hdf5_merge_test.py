@@ -18,7 +18,7 @@ from pypet import pypetconstants
 import logging
 
 from test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
-    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
+    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 from hdf5_storage_test import ResultSortTest
 
 
@@ -508,8 +508,8 @@ class TestMergeResultsSort(ResultSortTest):
         self.assertTrue(len1==5)
         self.assertTrue(len2==5)
 
-        self.env.f_run(multipy)
-        self.env2.f_run(multipy)
+        self.env.f_run(multiply)
+        self.env2.f_run(multiply)
 
         self.traj.f_merge(self.env2.v_trajectory)
 
@@ -529,8 +529,8 @@ class TestMergeResultsSort(ResultSortTest):
         self.assertTrue(len1==5)
         self.assertTrue(len2==5)
 
-        self.env.f_run(multipy)
-        self.env2.f_run(multipy)
+        self.env.f_run(multiply)
+        self.env2.f_run(multiply)
 
         self.traj.f_merge(self.env2.v_trajectory,remove_duplicates=True)
 

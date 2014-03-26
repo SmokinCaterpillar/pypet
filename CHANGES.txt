@@ -8,6 +8,7 @@ pypet 0.1b5
     (Previously new data was added if it was not within the leaf before, but this can lead to
     strange inconsistencies).
 
+*   BUG FIX: `f_has_children` of a group node, now returns the correct result
 
 
 

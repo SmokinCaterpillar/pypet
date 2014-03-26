@@ -131,8 +131,6 @@ BACKUP = 'BACKUP'
 """ Backs up a trajectory"""
 DELETE='DELETE'
 """ Removes an item from hdf5 file"""
-DELETE_INCOMPLETE_RUNS = 'DELETE_INCOMPLETE_RUNS'
-""" Removes incomplete runs to continue a crashed trajectory"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
 

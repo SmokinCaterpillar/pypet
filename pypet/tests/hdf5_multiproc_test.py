@@ -7,7 +7,7 @@ from pypet.environment import Environment
 from hdf5_storage_test import EnvironmentTest, ResultSortTest
 
 from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
+    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 from pypet.utils.explore import cartesian_product
 
 import random

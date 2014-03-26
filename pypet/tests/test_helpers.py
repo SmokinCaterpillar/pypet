@@ -190,7 +190,7 @@ def add_params(traj,param_dict):
     traj.f_add_group('imgeneric.bitch', comment='Generic_Group')
     traj.imgeneric.f_add_leaf('gentest', 'fortytwo', comment='Oh yeah!')
 
-def multipy(traj):
+def multiply(traj):
     z=traj.x*traj.y
     print 'z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y)
     traj.f_add_result('z',z)
@@ -223,6 +223,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
             keys[idx] = key.replace('.', '_')
 
         traj.f_add_result_group('List', comment='Im a result group')
+        traj.f_add_result_group('Iwiiremainempty.yo', comment='Empty group!')
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')

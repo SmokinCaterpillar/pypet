@@ -2137,7 +2137,7 @@ class NNGroupNode(NNTreeNode):
 
     def f_has_children(self):
         """Checks if node has children or not"""
-        return len(self._children) == 0
+        return len(self._children) != 0
 
     def __contains__(self, item):
         """Equivalent to calling :func:`~pypet.naturalnaming.NNGroupNode.f_contains`.
@@ -2505,12 +2505,17 @@ class NNGroupNode(NNTreeNode):
 
         :param recursive:
 
-            Whether recursively all children's children should be loaded too.
+            Whether recursively all nodes below the last child should be loaded, too.
 
         :param load_data:
 
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
+
+        :returns:
+
+            The loaded child, in case of grouping ('groupA.groupB.childC') the last
+            node (here 'childC') is returned.
 
         """
 
@@ -2521,8 +2526,8 @@ class NNGroupNode(NNTreeNode):
                              trajectory_name=traj.v_trajectory_name,
                              recursive=recursive, load_data=load_data, trajectory=traj)
 
-        if name in self._children:
-            return self._children[name]
+
+        return self.f_get(name, shortcuts=False)
 
 
 class ParameterGroup(NNGroupNode):

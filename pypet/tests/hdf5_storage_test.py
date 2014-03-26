@@ -26,7 +26,7 @@ import inspect
 import tables as pt
 
 from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multipy, make_trajectory_name
+    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 
 
 
@@ -867,7 +867,7 @@ class ResultSortTest(TrajectoryComparator):
         self.explore(self.traj)
 
 
-        self.env.f_run(multipy)
+        self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 
@@ -887,7 +887,7 @@ class ResultSortTest(TrajectoryComparator):
         self.explore(self.traj)
 
 
-        self.env.f_run(multipy)
+        self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 
@@ -919,7 +919,7 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        print self.env.f_run(multipy)
+        print self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 
@@ -938,7 +938,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.expand(self.traj)
 
-        self.env.f_run(multipy)
+        self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
 
@@ -957,7 +957,7 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(multipy)
+        self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 
@@ -967,7 +967,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.expand(self.traj)
 
-        self.env.f_run(multipy)
+        self.env.f_run(multiply)
         traj = self.traj
         self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
 
