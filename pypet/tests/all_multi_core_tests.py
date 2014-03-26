@@ -4,8 +4,10 @@ import getopt
 import sys
 import os
 
-from pypet.tests.all_single_core_tests import *
-from pypet.tests.all_multi_core_tests import *
+from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest, \
+    MultiprocNoPoolLockTest,MultiprocNoPoolQueueTest,MultiprocNoPoolSortLockTest,MultiprocNoPoolSortQueueTest, CapTest
+
+from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
 try:

@@ -4,8 +4,17 @@ import getopt
 import sys
 import os
 
-from pypet.tests.all_single_core_tests import *
-from pypet.tests.all_multi_core_tests import *
+
+from pypet.tests.parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest, \
+    ResultTest,SparseResultTest,PickleResultTest
+from pypet.tests.trajectory_test import SingleRunQueueTest, SingleRunTest, TrajectoryFindTest, TrajectoryMergeTest, TrajectoryTest
+from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest, StorageTest, TestOtherHDF5Settings, TestOtherHDF5Settings2
+from pypet.tests.hdf5_merge_test import TestMergeResultsSort, MergeTest
+from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
+from pypet.tests.utilstest import CartesianTest
+from pypet.tests.environment_test import EnvironmentTest
+from pypet.tests.annotations_test import AnnotationsTest
+from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
 try:
