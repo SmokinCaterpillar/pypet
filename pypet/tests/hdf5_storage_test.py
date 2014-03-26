@@ -82,14 +82,14 @@ class StorageTest(TrajectoryComparator):
 
     def test_migrations(self):
 
-        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+        traj = Trajectory(name='Test', filename=make_temp_file('migrate.hdf5'))
 
         traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
         traj.f_add_derived_parameter('ffa', 42)
 
         traj.f_store()
 
-        new_file = make_temp_file('autoload2.hdf5')
+        new_file = make_temp_file('migrate2.hdf5')
         traj.f_migrate(new_filename=new_file)
 
         traj.f_store()
