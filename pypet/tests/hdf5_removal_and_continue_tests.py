@@ -35,7 +35,7 @@ class ContinueTest(TrajectoryComparator):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
 
 
@@ -80,7 +80,7 @@ class ContinueTest(TrajectoryComparator):
         create_param_dict(self.param_dict)
 
         for irun in range(len(self.filenames)):
-            add_params(self.trajs[irun],self.param_dict)
+            add_params(self.trajs[irun], self.param_dict)
 
 
         self.explore(self.trajs[0])
@@ -104,8 +104,11 @@ class ContinueTest(TrajectoryComparator):
         pt_file.close()
 
 
+
         continue_file = os.path.split(self.filenames[0])[0]+'/'+self.trajs[0].v_name+'.cnt'
         self.envs[0].f_continue_run(continue_file)
+
+        self.trajs[0]=self.envs[0].v_trajectory
 
         for irun in range(len(self.filenames)):
             self.trajs[irun].f_update_skeleton()

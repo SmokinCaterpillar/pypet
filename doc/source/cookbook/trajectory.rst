@@ -222,6 +222,12 @@ generic functions :func:`~pypet.naturalnaming.NNGroupNode.f_add_group` and
 reserved. Thus, if you add anything below one of the four, the corresponding
 speciality functions from above are called instead of the generic ones.
 
+Note however, if you add any items during a single run, which are not located below
+`derived_parameter.runs.run_XXXXXXXX` and `results.runs.run_XXXXXXXX` (where *run_XXXXXXXXX* is
+ the name of your current run) these items
+are not automatically stored and you need to store them manually before the end of the run
+via :func:`~pypet.trajectory.SingleRun.f_store_items`.
+
 .. _more-on-access:
 
 ---------------------------------
@@ -866,15 +872,19 @@ Single run objects lack some functionality compared to trajectories:
 
 * You can no longer add *config* and *parameters*
 
-*
-
-    You cannot load stuff from disk (maybe this will be changed in later versions, let's see how
-    restrictive this ist.)
-
-*
-
-    You can usually not access the full exploration range of parameters but only the current
+* You can usually not access the full exploration range of parameters but only the current
     value that corresponds to the index of the run.
+
+Conceptually one should regard all single runs to be *independent*. As a consequence,
+you should **NOT** load data during a particular run that was computed by a previous one.
+You should **NOT** make a run manipulate data in the trajectory that was not added during the
+particular single run. This is **very important**!
+First of all, the trajectory is stored before the runs start.
+Accordingly, manipulating data in the trajectory after storage is impossible since the changes
+will not be saved to disk! Secondly, when it comes to multiprocessing, manipulating data
+put into the trajectory before the single runs is even more useless. Because the trajectory is
+either pickled or the whole memory space of the trajectory is forked by the OS, changing stuff
+within the trajectory will not be noticed by any other process or even the main script!
 
 
 ========================================================

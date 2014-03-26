@@ -243,7 +243,12 @@ class Environment(object):
     :param store_before_runs:
 
         I the whole trajectory should be stored before the runs are started. Otherwise
-        the storage will be only initialised.
+        the storage will be only initialised. Be aware that you have to manually store
+        your trajectory at some point if you disable the automatic storage,
+        otherwise you will lose all information about items
+        that were added before the starting of the single runs. You are advised NOT to change
+        the default setting (`True` per default). Disable this feature ONLY if you have a very
+        sound reason to do so.
 
     :param log_folder:
 
@@ -366,7 +371,7 @@ class Environment(object):
     :param continuable:
 
         Whether the environment should take special care to allow to resume or continue
-        crashed trajectories. Default is 1 (True).
+        crashed trajectories. Default is false.
         Everything must be picklable in order to allow continuing of trajectories.
 
         Assume you run experiments that take a lot of time.
@@ -380,6 +385,13 @@ class Environment(object):
         into the log folder.
 
         In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue_run`.
+
+        Be aware that your individual single runs must be completely independent of one
+        another to allow continuing to work. Thus, they should **NOT** be based on shared data
+        (like a multiprocessing list).
+        Moreover, your single runs should not return data to the main script,
+        but store all results directly into the trajectory. Otherwise continuing
+        will not work either.
 
     :param use_hdf5:
 
@@ -606,7 +618,7 @@ class Environment(object):
                  memory_cap=1.0,
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                 continuable=1,
+                 continuable=True,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
@@ -772,35 +784,35 @@ class Environment(object):
             config_name='environment.%s.multiproc' % self.v_name
             self._traj.f_add_config(config_name, multiproc,
                                     comment= 'Whether or not to use multiprocessing. If yes'
-                                             ' than everything must be pickable.')
+                                             ' than everything must be pickable.').f_lock()
 
 
             if self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get():
                 config_name='environment.%s.use_pool' % self.v_name
                 self._traj.f_add_config(config_name, use_pool,
                                         comment='Whether to use a pool of processes or '
-                                                'spawning individual processes for each run.')
+                                        'spawning individual processes for each run.').f_lock()
 
                 if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
                     config_name='environment.%s.cpu_cap' % self.v_name
                     self._traj.f_add_config(config_name, cpu_cap,
                                         comment='Maximum cpu usage beyond which no new processes '
-                                                'are spawned')
+                                                'are spawned').f_lock()
 
                     config_name='environment.%s.memory_cap' % self.v_name
                     self._traj.f_add_config(config_name, memory_cap,
                                         comment='Maximum RAM usage beyond which no new processes '
-                                                'are spawned')
+                                                'are spawned').f_lock()
 
                     config_name='environment.%s.swap_cap' % self.v_name
                     self._traj.f_add_config(config_name, swap_cap,
                                         comment='Maximum Swap memory usage beyond which no new '
-                                                'processes are spawned')
+                                                'processes are spawned').f_lock()
 
 
                 config_name='environment.%s.ncores' % self.v_name
                 self._traj.f_add_config(config_name,ncores,
-                                        comment='Number of processors in case of multiprocessing')
+                        comment='Number of processors in case of multiprocessing').f_lock()
 
 
                 config_name='environment.%s.wrap_mode' % self.v_name
@@ -808,30 +820,30 @@ class Environment(object):
                                             comment ='Multiprocessing mode (if multiproc),'
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
-                                                     ' for thread/process safe storing')
+                                                     ' for thread/process safe storing').f_lock()
 
             config_name='environment.%s.continuable' % self._name
             self._traj.f_add_config(config_name, continuable,
                                     comment='Whether or not a continue file should'
                                             ' be created. If yes, everything must be'
-                                            ' picklable.')
+                                            ' picklable.').f_lock()
 
         config_name='environment.%s.trajectory.name' % self.v_name
         self._traj.f_add_config(config_name, self.v_trajectory.v_name,
-                                    comment ='Name of trajectory')
+                                    comment ='Name of trajectory').f_lock()
 
         config_name='environment.%s.trajectory.timestamp' % self.v_name
         self._traj.f_add_config(config_name, self.v_trajectory.v_timestamp,
-                                    comment ='Timestamp of trajectory')
+                                    comment ='Timestamp of trajectory').f_lock()
 
 
         config_name='environment.%s.timestamp' % self.v_name
         self._traj.f_add_config(config_name, self.v_timestamp,
-                                    comment ='Timestamp of environment creation')
+                                    comment ='Timestamp of environment creation').f_lock()
 
         config_name='environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(config_name,self.v_hexsha,
-                                    comment ='SHA-1 identifier of the environment')
+                                    comment ='SHA-1 identifier of the environment').f_lock()
 
 
         if self._traj.v_version != VERSION:
@@ -1207,12 +1219,12 @@ class Environment(object):
             self._traj.v_full_copy=True
             dump_dict['trajectory'] = self._traj
 
-            pickle.dump(dump_dict,open(dump_filename,'wb'),protocol=2)
+            pickle.dump(dump_dict, open(dump_filename,'wb'),protocol=2)
 
             self._traj.v_full_copy=prev_full_copy
 
         # Start the runs
-        return self._do_runs(runfunc,args,kwargs)
+        return self._do_runs(runfunc, args, kwargs)
 
 
     def _do_runs(self, runfunc, args, kwargs):

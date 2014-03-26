@@ -63,9 +63,48 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
 
+    def test_change_auto_store(self):
+
+        def simple_run(traj):
+            traj.f_add_result('simple', 42)
+
+        filename = make_temp_file('testautodisable,hdf5')
+        env = Environment(filename=filename, store_before_runs=False, continuable=False)
+
+        env.f_run(simple_run)
+
+        traj = Trajectory(filename=filename)
+
+        traj.f_load(index=0)
+
+        self.assertTrue('config' not in traj)
+
+
+    def test_migrations(self):
+
+        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+
+        traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
+        traj.f_add_derived_parameter('ffa', 42)
+
+        traj.f_store()
+
+        new_file = make_temp_file('autoload2.hdf5')
+        traj.f_migrate(new_filename=new_file)
+
+        traj.f_store()
+
+        new_traj = Trajectory()
+
+        new_traj.f_migrate(new_name=traj.v_name, new_filename=new_file, in_store=True)
+
+        new_traj.v_auto_load=True
+
+        self.assertTrue(new_traj.results.I.am.a.mean.resu == 42)
+
 
     def test_auto_load(self):
-        import gc
+
 
         traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
 

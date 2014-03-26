@@ -140,7 +140,12 @@ because most of the time the default settings are sufficient.
 * `store_before_runs`
 
     I the whole trajectory should be stored before the runs are started. Otherwise
-    the storage will be only initialised.
+    the storage will be only initialised. Be aware that you have to manually store
+    your trajectory at some point if you disable the automatic storage,
+    otherwise you will lose all information about items
+    that were added before the starting of the single runs. You are advised NOT to change
+    the default setting (`True` per default). Disable this feature ONLY if you have a very
+    sound reason to do so.
 
 * `log_folder`
 
@@ -261,11 +266,18 @@ because most of the time the default settings are sufficient.
 * `continuable`
 
     Whether the environment should take special care to allow to resume or continue
-    crashed trajectories. Default is 1 (True).
+    crashed trajectories.
     Everything must be picklable in order to allow
     continuing of trajectories (take a look at :ref:`more-on-continuing`).
     In order to resume trajectories use
-    :func:`~pypet.environment.Environment.f_continue_run`.
+    :func:`~pypet.environment.Environment.f_continue_run`.<
+
+    Be aware that your individual single runs must be completely independent of one
+    another to allow continuing to work. Thus, they should **NOT** be based on shared data (like a
+    multiprocessing list).
+    Moreover, your single runs should not return data to the main script,
+    but store all results directly into the trajectory. Otherwise continuing
+    will not work either.
 
 * `use_hdf5`
 
@@ -707,7 +719,7 @@ to the fully explored parameters but only to a single parameter space point.
 Resuming an Experiment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If all of your data is picklable, you can use the config parameter `continuable=1` passed
+If all of your data is picklable, you can use the config parameter `continuable=True` passed
 to the :class:`~pypet.environment.Environment` constructor.
 This will create a '.cnt' file with the name of your trajectory in the
 folder where your final HDF5 file will be placed. The `.cnt` file is your safety net
@@ -717,6 +729,10 @@ without recomputing already obtained results. Note that this works only if the
 hdf5 file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
+
+Moreover, continuing works **ONLY** if your top-level simulation function does **NOT** return
+any results that are further processed but stores all results directly into the trajectory.
+Returned results are lost if the simulation crashes!
 
 You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue_run`
 with the name of the corresponding '.cnt' file.
