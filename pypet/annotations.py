@@ -23,7 +23,6 @@ This module contains two classes:
 __author__ = 'Robert Meyer'
 
 from pypet.utils.decorators import deprecated
-from pypet.pypetlogging import HasLogger
 
 
 class Annotations(object):
@@ -151,7 +150,7 @@ class Annotations(object):
         return self.f_ann_to_str()
 
 
-class WithAnnotations(HasLogger):
+class WithAnnotations(object):
     def __init__(self):
         self._annotations = Annotations() # The annotation object to handle annotations
 

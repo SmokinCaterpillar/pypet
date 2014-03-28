@@ -124,15 +124,6 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         self._lock = lock
         self._set_logger()
 
-    def __getstate__(self):
-        result = self.__dict__.copy()
-        del result['_logger']
-        return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._logger = logging.getLogger('StorageServiceLockWrapper')
-
     def store(self,*args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
         try:

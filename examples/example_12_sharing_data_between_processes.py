@@ -31,8 +31,8 @@ env = Environment(trajectory='Multiplication',
                   file_title='Example_01_First_Steps',
                   log_folder='experiments/example_01/LOGS/',
                   comment='The first example!',
-                  continuable=False, # Unfortunately multiprocessing lists as we use one
-                  # below cannot be pickled, so continuing does not work.
+                  continuable=False, # We have shared data in terms of a multiprocessing list,
+                  # so we CANNOT use the continue feature.
                   multiproc=True,
                   ncores=2)
 

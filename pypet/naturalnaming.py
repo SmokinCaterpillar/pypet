@@ -102,6 +102,41 @@ class NNTreeNode(WithAnnotations):
         self._comment = ''
         self.v_comment = comment
 
+    def __getstate__(self):
+        """Called for pickling.
+
+        Removes the logger to allow pickling and returns a copy of `__dict__`.
+
+        """
+        statedict = self.__dict__.copy()
+        if 'logger' in statedict:
+            # Pickling does not work with loggers objects, so we just keep the logger's name:
+            statedict['logger'] = self._logger.name
+        return statedict
+
+    def __setstate__(self, statedict):
+        """Called after loading a pickle dump.
+
+        Restores `__dict__` from `statedict` and adds a new logger.
+
+        """
+        self.__dict__.update(statedict)
+        if 'logger' in statedict:
+            # If we re-instantiate the component the logger attribute only contains a name,
+            # so we also need to re-create the logger:
+            self._set_logger(statedict['logger'])
+
+    def _set_logger(self, name=None):
+        """Adds a logger with a given `name`.
+
+        If no name is given, name is constructed as
+        `type(self).__name__`.
+
+        """
+        if name is None:
+            name = type(self).__name__
+        self._logger = logging.getLogger(name)
+
 
     @property
     def v_comment(self):
@@ -374,7 +409,7 @@ class NNLeafNode(NNTreeNode):
         raise NotImplementedError('You should implement this!')
 
 
-class NaturalNamingInterface(HasLogger):
+class NaturalNamingInterface(object):
     """Class to manage the tree structure of a trajectory.
 
     Handles search, insertion, etc.
@@ -1426,6 +1461,17 @@ class NaturalNamingInterface(HasLogger):
 
         return instance
 
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['_logger']
+        return result
+
+    def __setstate__(self, statedict):
+        self.__dict__.update(statedict)
+        self._set_logger()
+
+    def _set_logger(self, name=None):
+        self._logger = logging.getLogger(type(self).__name__)
 
     @staticmethod
     def _apply_fast_access(data, fast_access):
@@ -2284,6 +2330,7 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self.__getattr__(item)
+
 
 
     def __getattr__(self, name):

@@ -20,11 +20,11 @@ class HasLogger(object):
         Removes the logger to allow pickling and returns a copy of `__dict__`.
 
         """
-        result = self.__dict__.copy()
-        if 'logger' in result:
+        statedict = self.__dict__.copy()
+        if 'logger' in statedict:
             # Pickling does not work with loggers objects, so we just keep the logger's name:
-            result['logger'] = self._logger.name
-        return result
+            statedict['logger'] = self._logger.name
+        return statedict
 
     def __setstate__(self, statedict):
         """Called after loading a pickle dump.
@@ -32,7 +32,7 @@ class HasLogger(object):
         Restores `__dict__` from `statedict` and adds a new logger.
 
         """
-        self.__dict__.update( statedict)
+        self.__dict__.update(statedict)
         if 'logger' in statedict:
             # If we re-instantiate the component the logger attribute only contains a name,
             # so we also need to re-create the logger:

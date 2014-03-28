@@ -35,10 +35,9 @@ from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup,
 from pypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
 from pypet.storageservice import HDF5StorageService
-from pypet.pypetlogging import HasLogger
 
 
-class SingleRun(DerivedParameterGroup,ResultGroup):
+class SingleRun(DerivedParameterGroup, ResultGroup):
     """ Constitutes one specific parameter combination in a whole trajectory
     with parameter exploration.
 
