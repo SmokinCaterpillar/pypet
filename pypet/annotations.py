@@ -25,7 +25,6 @@ __author__ = 'Robert Meyer'
 from pypet.utils.decorators import deprecated
 
 
-
 class Annotations(object):
     """ Simple container class for annotations.
 

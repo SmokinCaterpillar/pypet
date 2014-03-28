@@ -46,6 +46,7 @@ from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
 from pypet import __version__ as VERSION
 from pypet.utils.decorators import deprecated
+from pypet.pypetlogging import HasLogger
 
 
 def _single_run(args):
@@ -182,7 +183,7 @@ def _queue_handling(handler,log_path):
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
 
-class Environment(object):
+class Environment(HasLogger):
     """ The environment to run a parameter exploration.
 
     The first thing you usually do is to create and environment object that takes care about
@@ -742,11 +743,11 @@ class Environment(object):
         self._traj._environment_name=self._name
 
         # If no log folder is provided, create the default log folder
+        log_path = None
         if log_level is not None:
             if log_folder is None:
                 log_folder = os.path.join(os.getcwd(), 'logs')
-        else:
-            log_path = None
+
 
         # The actual log folder is a sub-folder with the trajectory name and the environment name
         if log_level is not None:
@@ -755,7 +756,7 @@ class Environment(object):
             # Create the loggers
             self._make_logging_handlers(log_path, log_level, log_stdout)
 
-        self._logger = logging.getLogger('Environment')
+        self._set_logger()
 
         self._log_folder = log_folder
         self._log_path = log_path

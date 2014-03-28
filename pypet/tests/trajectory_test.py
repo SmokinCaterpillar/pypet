@@ -1,4 +1,4 @@
-
+from pypet.naturalnaming import NNGroupNode
 
 __author__ = 'Robert Meyer'
 
@@ -14,6 +14,7 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, Result, BaseResult
 from pypet.trajectory import Trajectory, SingleRun
+from pypet.naturalnaming import NaturalNamingInterface
 from pypet.storageservice import LazyStorageService
 import pickle
 import logging
@@ -607,9 +608,11 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_if_picklable(self):
 
+
         self.traj.v_fast_access=True
 
         #self.traj.v_full_copy=True
+
         dump = pickle.dumps(self.traj)
 
         newtraj = pickle.loads(dump)

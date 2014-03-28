@@ -61,6 +61,12 @@ To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessin
 
 .. _psutil: http://psutil.readthedocs.org/
 
+To utilize the continuing of crashed trajectories you need
+
+* dill_ >= 0.2b.1
+
+.. _dill: https://pypi.python.org/pypi/dill
+
 If you use Python 2.6 you also need
 
 * ordereddict_ >= 1.1

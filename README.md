@@ -44,6 +44,10 @@ To utilize the cap feature for multiprocessing you need
 
 * psutil >= 2.0.0
 
+To utilize the continuing of crashed trajectories you need
+
+* dill >= 0.2b.1
+
 If you use Python 2.6 you also need
 
 * ordereddict >= 1.1

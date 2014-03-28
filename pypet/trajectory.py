@@ -37,7 +37,7 @@ from pypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayP
 from pypet.storageservice import HDF5StorageService
 
 
-class SingleRun(DerivedParameterGroup,ResultGroup):
+class SingleRun(DerivedParameterGroup, ResultGroup):
     """ Constitutes one specific parameter combination in a whole trajectory
     with parameter exploration.
 
@@ -108,7 +108,7 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
 
         self._dynamic_imports = parent_trajectory._dynamic_imports
 
-        self._logger = logging.getLogger('SingleRun')
+        self._set_logger()
 
         self._is_run = True
 
@@ -148,15 +148,6 @@ class SingleRun(DerivedParameterGroup,ResultGroup):
         startdatetime = datetime.datetime.fromtimestamp(self._timestamp)
 
         self._runtime = str(findatetime-startdatetime)
-
-    def __getstate__(self):
-        result = self.__dict__.copy()
-        del result['_logger']
-        return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._logger = logging.getLogger('SingleRun')
 
 
     def __len__(self):
@@ -1139,7 +1130,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                  % (name, faulty_names))
 
 
-        self._logger = logging.getLogger('Trajectory')
+        self._set_logger()
 
         self._comment=''
         self.v_comment=comment
@@ -1828,7 +1819,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('Trajectory')
+        self._set_logger()
 
 
     def f_is_completed(self, name_or_id=None):
