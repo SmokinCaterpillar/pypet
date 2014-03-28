@@ -11,6 +11,7 @@ __author__ = 'Robert Meyer'
 import logging
 import tables as pt
 import os
+import warnings
 
 import numpy as np
 from pandas import DataFrame, read_hdf, Series, Panel, Panel4D
@@ -20,7 +21,8 @@ import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
 from pypet.parameter import ObjectTable
 import pypet.naturalnaming as nn
-import warnings
+from pypet.pypetlogging import HasLogger
+
 
 
 class MultiprocWrapper(object):
@@ -35,7 +37,7 @@ class MultiprocWrapper(object):
         raise NotImplementedError('Implement this!')
 
 
-class QueueStorageServiceSender(MultiprocWrapper):
+class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     """ For multiprocessing with :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
         original storage service.
 
@@ -47,12 +49,11 @@ class QueueStorageServiceSender(MultiprocWrapper):
     """
     def __init__(self):
         self.queue = None
-        self._logger = logging.getLogger('StorageServiceQueueWrapper')
-        '''The queue'''
+        self._set_logger()
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
-        self._logger = logging.getLogger('StorageServiceQueueWrapper')
+        self._set_logger()
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -111,7 +112,7 @@ class QueueStorageServiceWriter(object):
             finally:
                 self._queue.task_done()
 
-class LockWrapper(MultiprocWrapper):
+class LockWrapper(MultiprocWrapper, HasLogger):
     """For multiprocessing in :const:`~pypet.pypetconstants.WRAP_MODE_LOCK` mode,
     augments a storage service with a lock.
 
@@ -121,7 +122,7 @@ class LockWrapper(MultiprocWrapper):
     def __init__(self,storage_service, lock):
         self._storage_service = storage_service
         self._lock = lock
-        self._logger = logging.getLogger('StorageServiceLockWrapper')
+        self._set_logger()
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -192,7 +193,7 @@ class LazyStorageService(StorageService):
         """Do whatever you want, I won't store anything!"""
         pass
 
-class HDF5StorageService(StorageService):
+class HDF5StorageService(StorageService, HasLogger):
     """Storage Service to handle the storage of a trajectory/parameters/results into hdf5 files.
 
     Normally you do not interact with the storage service directly but via the trajectory,
@@ -406,7 +407,7 @@ class HDF5StorageService(StorageService):
         self._trajectory_group = None # link to the top group in hdf5 file which is the start
         # node of a trajectory
          # remembers whether to purge duplicate comments
-        self._logger = logging.getLogger('HDF5StorageService')
+        self._set_logger()
         self._complevel = 9
         self._complib = 'zlib'
         self._fletcher32 = False
@@ -1172,14 +1173,6 @@ class HDF5StorageService(StorageService):
         if 'trajectory_index' in kwargs:
             self._trajectory_index = kwargs.pop('trajectory_index')
 
-    def __getstate__(self):
-        result = self.__dict__.copy()
-        del result['_logger']
-        return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._logger = logging.getLogger('HDF5StorageService')
 
 
     ########################### MERGING ###########################################################

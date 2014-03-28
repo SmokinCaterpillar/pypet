@@ -34,6 +34,7 @@ from brian.units import second
 
 from pypet.brian.parameter import BrianDurationParameter
 from pypet.utils.decorators import deprecated
+from pypet.pypetlogging import HasLogger
 
 @deprecated('Please use `environment.f_run(manager.run_network)` instead of '
             '`environment.f_run(run_network, manager)`.')
@@ -58,7 +59,7 @@ def run_network(traj, network_manager):
     network_manager.run_network(traj)
 
 
-class NetworkComponent(object):
+class NetworkComponent(HasLogger):
     """Abstract class to define a component of a BRIAN network.
 
     Can be subclassed to define the construction of NeuronGroups_ or
@@ -69,41 +70,6 @@ class NetworkComponent(object):
     .. _Connections: http://briansimulator.org/docs/reference-connections.html
 
     """
-
-    def __getstate__(self):
-        """Called for pickling.
-
-        Removes the logger to allow pickling and returns a copy of `__dict__`.
-
-        """
-        result = self.__dict__.copy()
-        if 'logger' in result:
-            # Pickling does not work with loggers objects, so we just keep the logger's name:
-            result['logger'] = self.logger.name
-        return result
-
-    def __setstate__(self, statedict):
-        """Called after loading a pickle dump.
-
-        Restores `__dict__` from `statedict` and adds a new logger.
-
-        """
-        self.__dict__.update( statedict)
-        if 'logger' in statedict:
-            # If we re-instantiate the component the logger attribute only contains a name,
-            # so we also need to re-create the logger:
-            self.set_logger(statedict['logger'])
-
-    def set_logger(self, name=None):
-        """Adds a logger with a given `name`.
-
-        If no name is given, name is constructed as
-        `module_name.class_name`.
-
-        """
-        if name is None:
-            name = self.__class__.__name__
-        self.logger = logging.getLogger(name)
 
     def add_parameters(self, traj):
         """Adds parameters to `traj`.
@@ -340,8 +306,8 @@ class NetworkRunner(NetworkComponent):
         Whether to check if the parameter group names specified in the two parameters
         above match a unique group in the trajectory.
 
-    Moreover, in your subclass you can log messages with the attribute `logger`
-    which is initialised in :func:`~pypet.brian.network.NetworkRunner.set_logger`.
+    Moreover, in your subclass you can log messages with the private attribute `_logger`
+    which is initialised in :func:`~pypet.pypetlogging.HasLogger._set_logger`.
 
     """
     def __init__(self, report='text', report_period=None,
@@ -359,7 +325,7 @@ class NetworkRunner(NetworkComponent):
         self._pre_durations_group_name = pre_durations_group_name
         self._check_uniqueness=check_uniqueness
 
-        self.set_logger()
+        self._set_logger()
 
 
     def execute_network_pre_run(self, traj, network,  network_dict, component_list, analyser_list):
@@ -501,7 +467,7 @@ class NetworkRunner(NetworkComponent):
         for duration_param in durations.f_iter_leaves():
 
             if isinstance(duration_param, BrianDurationParameter):
-                self.logger.warning('BrianDurationParameters are deprecated. Please use a normal '
+                self._logger.warning('BrianDurationParameters are deprecated. Please use a normal '
                                     'BrianParameter and specify the order in `v_annotations.order`!')
 
             if 'order' in duration_param.v_annotations:
@@ -556,7 +522,7 @@ class NetworkRunner(NetworkComponent):
                                  network_dict)
 
             # 4. Run the network
-            self.logger.info('STARTING subrun `%s` (#%d) lasting %s.' %
+            self._logger.info('STARTING subrun `%s` (#%d) lasting %s.' %
                              (current_subrun.v_name, subrun_number, str(current_subrun.f_get())))
             network.run(duration=current_subrun.f_get(), report=self._report,
                               report_period=self._report_period)

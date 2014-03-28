@@ -759,6 +759,6 @@ these changes will be lost and cannot be captured by the continue snapshots.
 
 A work around here would be to not manipulate the arguments but pass these values as results
 of your top-level simulation function. Everything that is returned by your main function will be
-part of a snapshot.
+part of the snapshots.
 
 .. _dill: https://pypi.python.org/pypi/dill

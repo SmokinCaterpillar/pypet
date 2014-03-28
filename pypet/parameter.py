@@ -716,9 +716,6 @@ class Parameter(BaseParameter):
         if data is not None:
             self.f_set(data)
 
-    def _set_logger(self):
-        self._logger = logging.getLogger('Parameter=' + self.v_full_name)
-
     def _restore_default(self):
         """Restores the default data that was set with the
         `:func:`~pypet.parameter.Parameter.f_set` method (or at initialisation).
@@ -1113,9 +1110,6 @@ class ArrayParameter(Parameter):
     IDENTIFIER = '__rr__'
     """Identifier to mark stored data as an array"""
 
-    def _set_logger(self):
-        self._logger = logging.getLogger('ArrayParameter=' + self.v_full_name)
-
 
     def _store(self):
         """Creates a storage dictionary for the storage service.
@@ -1377,9 +1371,6 @@ class SparseParameter(ArrayParameter):
         return return_list, return_names, tuple(hash_list)
 
 
-    def _set_logger(self):
-        self._logger = logging.getLogger('SparseParameter=' + self.v_full_name)
-
     @staticmethod
     def _get_name_list(is_dia):
         if is_dia:
@@ -1588,9 +1579,6 @@ class PickleParameter(Parameter):
         """Sets the protocol"""
         self._protocol = value
 
-
-    def _set_logger(self):
-        self._logger = logging.getLogger('PickleParameter=' + self.v_full_name)
 
     def f_supports(self, data):
         """There is no straightforward check if an object can be pickled and this function will
@@ -1897,11 +1885,6 @@ class Result(BaseResult):
                                                   self.v_full_name,self.v_comment,datastr)
         else:
             return '<%s> %s: %s' % (self.f_get_class_name(),self.v_full_name,datastr)
-
-
-
-    def _set_logger(self):
-        self._logger = logging.getLogger('Result=' + self.v_full_name)
 
 
     def __getstate__(self):
@@ -2340,8 +2323,6 @@ class PickleResult(Result):
         """
         self._data[name] = item
 
-    def _set_logger(self):
-        self._logger = logging.getLogger('PickleResult=' + self.v_full_name)
 
     def _store(self):
         """Returns a dictionary containing pickle dumps"""

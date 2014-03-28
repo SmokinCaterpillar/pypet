@@ -52,6 +52,7 @@ from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 
+from pypet.pypetlogging import HasLogger
 
 
 #For fetching:
@@ -85,6 +86,7 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 FAST_UPPER_BOUND = 2
 
 SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res', 'traj'])
+
 
 
 class NNTreeNode(WithAnnotations):
@@ -372,7 +374,7 @@ class NNLeafNode(NNTreeNode):
         raise NotImplementedError('You should implement this!')
 
 
-class NaturalNamingInterface(object):
+class NaturalNamingInterface(HasLogger):
     """Class to manage the tree structure of a trajectory.
 
     Handles search, insertion, etc.
@@ -387,8 +389,7 @@ class NaturalNamingInterface(object):
 
         self._run_or_traj_name = root_instance.v_name
 
-        self._logger = logging.getLogger('NNTree=' +
-                                         self._root_instance.v_name)
+        self._set_logger()
 
         # Dictionary containing ALL leaves. Keys are the full names and values the parameter
         # and result instances.
@@ -1425,15 +1426,6 @@ class NaturalNamingInterface(object):
 
         return instance
 
-    def __getstate__(self):
-        result = self.__dict__.copy()
-        del result['_logger']
-        return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._logger = logging.getLogger('NNTree=' +
-                                         self._run_or_traj_name)
 
     @staticmethod
     def _apply_fast_access(data, fast_access):

@@ -105,10 +105,6 @@ class BrianParameter(Parameter):
         self._storage_mode = storage_mode
 
 
-    def _set_logger(self):
-        self._logger = logging.getLogger('BrianParameter=' + self.v_full_name)
-
-
     def f_supports(self, data):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
