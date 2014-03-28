@@ -44,6 +44,8 @@ install:
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
+  - echo "+++++++++++ Installing dill ++++++++++++"
+  - pip install dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
