@@ -10,7 +10,9 @@ pypet 0.1b5
 
 *   BUG FIX: `f_has_children` of a group node, now returns the correct result
 
-
+*   Refactored continueing of trajectorys. Now this is based on `dill` and works also
+    with data that cannot be pickled. `f_continue_run` is renamed `f_continue` to emphasize
+    this change in API
 
 pypet 0.1b.4
 

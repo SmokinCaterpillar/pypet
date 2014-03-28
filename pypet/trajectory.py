@@ -1462,7 +1462,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
 
-    def _remove_incomplete_runs(self, finished_runs):
+    def _remove_incomplete_runs(self, finished_runs, nruns):
         """Requests the storage service to delete incomplete runs.
 
         Called by the environment if you resume a crashed trajectory to allow
@@ -1471,6 +1471,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param finished_runs:
 
             Number of actually finished runs
+
+        :param nruns:
+
+            Number of runs that were supposed to be executed with this environment
 
         """
         self._logger.info('Removing incomplete runs.')
@@ -1484,7 +1488,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if completed:
                 number_of_completed_runs+=1
 
-        run_difference = number_of_completed_runs - finished_runs
+        # in case the trajectory was expanded the number of runs for this environment
+        # can differ from the actual length of the trajectory.
+        runs_completed_before = len(self) - nruns
+
+        run_difference = number_of_completed_runs - runs_completed_before - finished_runs
 
         if run_difference > 0:
             # Here we have a snapshot slightly before the finished run so we have to delete
@@ -2288,8 +2296,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 move_nodes=False,
                 delete_other_trajectory=False,
                 keep_info = True,
-                merge_config=True,
-                keep_other_trajectory_info=True):
+                keep_other_trajectory_info=True,
+                merge_config=True,):
         """Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. This means both need to have the same
@@ -2354,15 +2362,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Whether or not to merge all config parameters under `.config.git`,
             `.config.environment`, and `.config.merge` of the other trajectory
-            into the current one. Setting onyl relevant if `keep_info=True`.
+            into the current one.
 
         :param keep_other_trajectory_info:
 
             Whether to keep information like length, name, etc. of the other trajectory
             in case you want to keep all the information. Setting of `keep_other_trajectory_info`
             is irrelevant in case `keep_info=False`.
-
-
 
         If you cannot directly merge trajectories within one HDF5 file, a slow merging process
         is used. Results are loaded, stored, and emptied again one after the other. Might take
@@ -2387,7 +2393,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # BACKUP if merge is possible
         if not backup_filename is None:
             if backup_filename==1 or backup_filename==True:
-                backup_filename = None
+                backup_filename = None # We set it to None here to signal the backup function
+                                      # that we want the names to be chosen for us
 
             other_trajectory.f_backup(backup_filename=backup_filename)
             self.f_backup(backup_filename=backup_filename)
@@ -2547,7 +2554,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
         # Finally we will merge the git commits and other config data
-        if merge_config and keep_info:
+        if merge_config:
             self._merge_config(other_trajectory)
 
         # Write the meta data about the merge to disk
@@ -2557,7 +2564,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._logger.info('Finished Merging!')
 
-    def _merge_config(self,other_trajectory):
+    def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
         of the other trajectory into the current one.
 

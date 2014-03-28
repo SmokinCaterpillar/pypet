@@ -109,34 +109,6 @@ because most of the time the default settings are sufficient.
     two classes named `'MyCustomParameterClass'` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
-* `fast_access`
-
-    Only considered if a new trajectory is created.
-    If *fast access* should be enabled for the new trajectory.
-    Will simply call `traj.v_fast_access = fast_access` on the new trajectory.
-    Can be changed later on during runtime.
-
-* `shortcuts`
-
-    Only considered if a new trajectory is created.
-    If *shortcuts* should be enabled for the new trajectory.
-    Will simply call `traj.v_shortcuts = shortcuts` on the new trajectory.
-    Can be changed later on during runtime.
-
-* `backwards_search`
-
-    Only considered if a new trajectory is created.
-    If *backwards search* should be enabled for the new trajectory.
-    Will simply call `traj.v_backwards_search = backwards_search` on the new trajectory.
-    Can be changed later on during runtime.
-
-* `iter_recursive`
-
-    Only considered if a new trajectory is created.
-    If recursive iterations should be enabled for the new trajectory.
-    Will simply call `traj.v_iter_recursive = iter_recursive` on the new trajectory.
-    Can be changed later on during runtime.
-
 * `store_before_runs`
 
     I the whole trajectory should be stored before the runs are started. Otherwise
@@ -266,17 +238,43 @@ because most of the time the default settings are sufficient.
 * `continuable`
 
     Whether the environment should take special care to allow to resume or continue
-    crashed trajectories.
-    Everything must be picklable in order to allow
-    continuing of trajectories (take a look at :ref:`more-on-continuing`).
-    In order to resume trajectories use
-    :func:`~pypet.environment.Environment.f_continue_run`.<
+    crashed trajectories. Default is `False`.
+
+    You need to install dill_ to use this feature. *dill* will make snapshots
+    of your simulation function as well as the passed arguments.
+    BE AWARE that dill is still rather experimental!
+
+    Assume you run experiments that take a lot of time.
+    If during your experiments there is a power failure,
+    you can resume your trajectory after the last single run that was still
+    successfully stored via your storage service.
+
+    The environment will create several `.ecnt` and `.rcnt` files in a folder that you specify
+    (see below).
+    Using this data you can continue crashed trajectories.
+
+    In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue`.
 
     Be aware that your individual single runs must be completely independent of one
-    another to allow continuing to work. Thus, they should **NOT** be based on shared data (like a
-    multiprocessing list).
+    another to allow continuing to work. Thus, they should **NOT** be based on shared data
+    that is manipulated during runtime (like a multiprocessing manager list)
+    in the positional and keyword arguments passed to the run function.
 
     Note that `continuable=True` only works with `use_pool=False` in case of multiprocessing.
+
+    .. _dill: https://pypi.python.org/pypi/dill
+
+* `continue_folder`
+
+    The folder where the continue files will be placed. Note that *pypet* will create
+    a sub-folder with the name of the environment.
+
+* `delete_continue`
+
+    If true, *pypet* will delete the continue files after a successful simulation.
+    *pypet* will delete all files and the sub-folder with the name of the trajectory.
+    If other folders apart from the trajectory were created before, *pypet* will not
+    erase these.
 
 * `use_hdf5`
 
@@ -718,11 +716,17 @@ to the fully explored parameters but only to a single parameter space point.
 Resuming an Experiment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If all of your data is picklable, you can use the config parameter `continuable=True` passed
+In order to use this feature you need dill_.
+
+BE AWARE that *dill* is rather experimental and still in alpha status!
+
+If all of your data can be handled by dill (probably anything),
+you can use the config parameter `continuable=True` passed
 to the :class:`~pypet.environment.Environment` constructor. Note that `continuable=True`
 only works with `use_pool=False` in case of multiprocessing.
-This will create a '.cnt' file with the name of your trajectory in the
-folder where your final HDF5 file will be placed. The `.cnt` file is your safety net
+
+This will create a continue directory (name spacified by you) and a sub-folder with the name
+ot the trajectory. This folder is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
 lasting simulation was interrupted, you can resume it
 without recomputing already obtained results. Note that this works only if the
@@ -731,10 +735,30 @@ to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
 
 You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue_run`
-with the name of the corresponding '.cnt' file.
+with the name of the continue folder (not the subfolder) and the name of the trajectory:
 
 .. code-block:: python
 
-    env = Environment()
+    env = Environment(continuable=True)
 
-    env.f_continue_run('./experiments/my_traj_2015_10_21_04h29m00s.cnt')
+    env.f_continue_run(trajectory_name = my_traj_2015_10_21_04h29m00s,
+                            continue_folder = './experiments/continue/')
+
+
+The neat thing here is, that you create a nove environment for the continuation. Accordingly,
+you can set different environmental settings, like changing the number of cores, etc.
+You CANNOT change any hdf5 settings or even change the whole storage service.
+
+When does continuing not work?
+
+Continuing will **NOT** work if your top-level simulation function or the arguments passed to your
+simulation function are altered between individual runs. For instance, if you use multiprocessing
+and you want to write computed data into a shared data list
+(like `multiprocessing.Manager().list()`, see :ref:`example-12`),
+these changes will be lost and cannot be captured by the continue snapshots.
+
+A work around here would be to not manipulate the arguments but pass these values as results
+of your top-level simulation function. Everything that is returned by your main function will be
+part of a snapshot.
+
+.. _dill: https://pypi.python.org/pypi/dill

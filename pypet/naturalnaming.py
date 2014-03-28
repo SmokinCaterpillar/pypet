@@ -1992,7 +1992,7 @@ class NaturalNamingInterface(object):
             for name in split_name:
                 if not name in result._children:
                     raise AttributeError('You did not allow for shortcuts and `%s` was not directly '
-                                         'found  node `%s`.' % (name, result.v_full_name))
+                                         'found  under node `%s`.' % (name, result.v_full_name))
                 result = result._children[name]
 
         if result is None and auto_load:

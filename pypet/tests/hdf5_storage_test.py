@@ -69,7 +69,7 @@ class StorageTest(TrajectoryComparator):
             traj.f_add_result('simple', 42)
 
         filename = make_temp_file('testautodisable,hdf5')
-        env = Environment(filename=filename, store_before_runs=False, continuable=False)
+        env = Environment(filename=filename, log_level=None, store_before_runs=False, continuable=False)
 
         env.f_run(simple_run)
 
@@ -262,11 +262,11 @@ class StorageTest(TrajectoryComparator):
                          comment='',
                          dynamically_imported_classes=None,
                          log_folder=None,
-                         log_level=logging.DEBUG,
+                         log_level=None,
                          multiproc=False,
                          ncores=3,
                          wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                         continuable=1,
+                         continuable=False,
                          use_hdf5=True,
                          complevel=4,
                          complib='lzo',

@@ -18,15 +18,19 @@ __author__ = 'Robert Meyer'
 import os
 import sys
 import logging
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import shutil
 import multiprocessing as multip
 import traceback
 import hashlib
 import time
 import datetime
+
+
+try:
+    import dill
+    logging.getLogger(dill.__name__).setLevel(logging.WARNING)
+except ImportError:
+    dill = None
 
 try:
     import psutil
@@ -212,34 +216,6 @@ class Environment(object):
           the list brackets:
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
 
-    :param fast_access:
-
-        Only considered if a new trajectory is created.
-        If *fast access* should be enabled for the new trajectory.
-        Will simply call `traj.v_fast_access = fast_access` on the new trajectory.
-        Can be changed later on during runtime.
-
-    :param shortcuts:
-
-        Only considered if a new trajectory is created.
-        If *shortcuts* should be enabled for the new trajectory.
-        Will simply call `traj.v_shortcuts = shortcuts` on the new trajectory.
-        Can be changed later on during runtime.
-
-    :param backwards_search:
-
-        Only considered if a new trajectory is created.
-        If *backwards search* should be enabled for the new trajectory.
-        Will simply call `traj.v_backwards_search = backwards_search` on the new trajectory.
-        Can be changed later on during runtime.
-
-    :param iter_recursive:
-
-        Only considered if a new trajectory is created.
-        If recursive iterations should be enabled for the new trajectory.
-        Will simply call `traj.v_iter_recursive = iter_recursive` on the new trajectory.
-        Can be changed later on during runtime.
-
     :param store_before_runs:
 
         I the whole trajectory should be stored before the runs are started. Otherwise
@@ -371,26 +347,43 @@ class Environment(object):
     :param continuable:
 
         Whether the environment should take special care to allow to resume or continue
-        crashed trajectories. Default is false.
-        Everything must be picklable in order to allow continuing of trajectories.
+        crashed trajectories. Default is `False`.
+
+        You need to install dill_ to use this feature. *dill* will make snapshots
+        of your simulation function as well as the passed arguments.
+        BE AWARE that dill is still rather experimental!
 
         Assume you run experiments that take a lot of time.
         If during your experiments there is a power failure,
         you can resume your trajectory after the last single run that was still
         successfully stored via your storage service.
 
-        The environment will create a `.cnt` file in the same folder as your hdf5 file,
-        using this you can continue crashed trajectories.
-        If you do not use hdf5 files or the hdf5 storage service, the `.cnt` file is placed
-        into the log folder.
+        The environment will create several `.ecnt` and `.rcnt` files in a folder that you specify
+        (see below).
+        Using this data you can continue crashed trajectories.
 
-        In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue_run`.
+        In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue`.
 
         Be aware that your individual single runs must be completely independent of one
         another to allow continuing to work. Thus, they should **NOT** be based on shared data
-        (like a multiprocessing list).
+        that is manipulated during runtime (like a multiprocessing manager list)
+        in the positional and keyword arguments passed to the run function.
 
         Note that `continuable=True` only works with `use_pool=False` in case of multiprocessing.
+
+        .. _dill: https://pypi.python.org/pypi/dill
+
+    :param continue_folder:
+
+        The folder where the continue files will be placed. Note that *pypet* will create
+        a sub-folder with the name of the environment.
+
+    :param delete_continue:
+
+        If true, *pypet* will delete the continue files after a successful simulation.
+        *pypet* will delete all files and the sub-folder with the name of the trajectory.
+        If other folders apart from the trajectory were created before, *pypet* will not
+        erase these.
 
     :param use_hdf5:
 
@@ -617,7 +610,9 @@ class Environment(object):
                  memory_cap=1.0,
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                 continuable=True,
+                 continuable=False,
+                 continue_folder=None,
+                 delete_continue=True,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
@@ -647,6 +642,10 @@ class Environment(object):
         if continuable and use_pool:
             raise RuntimeError('You cannot use `continuable=True` with a pool, please set '
                                '`use_pool=False`.')
+
+        if continuable and dill is None:
+            raise RuntimeError('Please install `dill` if you want to use the feature to '
+                               'continue halted trajectories')
 
 
         self._git_repository = git_repository
@@ -717,11 +716,15 @@ class Environment(object):
             self._add_hdf5_storage_service(lazy_debug)
 
         # In case the user provided a git repository path, a git commit is performed
-        # and the environment's hexsha is taken from the commit
+        # and the environment's hexsha is taken from the commit if the commit was triggered by
+        # this particular environment, otherwise a new one is generated
         if self._git_repository is not None:
             new_commit, self._hexsha=make_git_commit(self, self._git_repository, self._git_message)
             # Identifier hexsha
         else:
+            new_commit = False
+
+        if not new_commit:
             # Otherwise we need to create a novel hexsha
             self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
                                       str(self.v_trajectory.v_timestamp) +
@@ -745,7 +748,7 @@ class Environment(object):
         else:
             log_path = None
 
-        # The actual log folder is a sub-folder with the trajectory name
+        # The actual log folder is a sub-folder with the trajectory name and the environment name
         if log_level is not None:
             log_path = os.path.join(log_folder, self._traj.v_name)
             log_path = os.path.join(log_path, self.v_name)
@@ -754,8 +757,25 @@ class Environment(object):
 
         self._logger = logging.getLogger('Environment')
 
+        self._log_folder = log_folder
         self._log_path = log_path
         self._log_stdout = log_stdout
+
+        self._continuable = continuable
+
+        if self._continuable:
+            if continue_folder is None:
+                continue_folder = os.path.join(os.getcwd(), 'continue')
+            continue_path = os.path.join(continue_folder, self._traj.v_name)
+
+            if not os.path.isdir(continue_path):
+                os.makedirs(continue_path)
+        else:
+            continue_path = None
+
+        self._continue_folder = continue_folder
+        self._continue_path = continue_path
+        self._delete_continue = delete_continue
 
 
         # Whether to use a pool of processes
@@ -782,7 +802,7 @@ class Environment(object):
 
         self._do_single_runs = do_single_runs
         self._store_before_runs = store_before_runs
-        self._continuable = continuable
+
 
         if self._do_single_runs:
             config_name='environment.%s.multiproc' % self.v_name
@@ -1033,48 +1053,77 @@ class Environment(object):
 
 
 
-    def f_continue_run(self, runfunc, continue_file, supplementary_file):
-        """Resumes crashed trajectories by supplying the '.cnt' file.
+    def f_continue(self, trajectory_name=None, continue_folder=None):
+        """Resumes crashed trajectories.
+
+        :param trajectory_name:
+
+            Name of trajectory to resume, if not specified the name passed to the environment
+            is used. Be aware that if `add_time=True` the name you passed to the environment is
+            altered and the current date is added.
+
+        :param continue_folder:
+
+            The folder where continue files can be found. Do not pass the name of the sub-folder
+            with the trajectory name, but to the name of the parental folder.
+            If not specified the continue folder passed to the environment is used.
 
         :return:
-
-            List of the individual results returned by `runfunc`.
-
-            Does not contain results stored in the trajectory!
-            In order to access these simply interact with the trajectory object,
-            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
-            and loading all results at once with :func:`~pypet.trajectory.f_load`
-            or loading manually with :func:`~pypet.trajectory.f_load_items`.
-
-            If you use multiprocessing without a pool the results returned by
-            `runfunc` still need to be pickled.
-
         """
+
+        if not self._continuable:
+            raise RuntimeError('If you create an environment to continue a run, you need to '
+                               'set `continuable=True`.')
 
         if not self._do_single_runs:
             raise RuntimeError('You cannot continue a run if you did create an environment '
                                'with `do_single_runs=False`.')
 
-        # Unpack the stored data
-        dump_file=open(supplementary_file,'rb')
-        suppl_dict = pickle.load(dump_file)
-        dump_file.close()
+        if trajectory_name is None:
+            trajectory_name = self.v_trajectory.v_name
+
+        if continue_folder is not None:
+            self._continue_folder = continue_folder
+
+        self._continue_path = os.path.join(self._continue_folder, trajectory_name)
+        cnt_filename = os.path.join(self._continue_path, 'environment.ecnt')
+        cnt_file = open(cnt_filename, 'rb')
+        continue_dict = dill.load(cnt_file)
+        cnt_file.close()
+        traj = continue_dict['trajectory']
+
+        # We need to update the information about the trajectory name
+        config_name='config.environment.%s.trajectory.name' % self.v_name
+        if self._traj.f_contains(config_name, shortcuts=False):
+            param = self._traj.f_get(config_name, shortcuts=False)
+            param.f_unlock()
+            param.f_set(traj.v_name)
+            param.f_lock()
+
+        config_name='config.environment.%s.trajectory.timestamp' % self.v_name
+        if self._traj.f_contains(config_name, shortcuts=False):
+            param = self._traj.f_get(config_name, shortcuts=False)
+            param.f_unlock()
+            param.f_set(traj.v_timestamp)
+            param.f_lock()
+
+
+        # Merge the information so that we keep a record about the current environment
+        if not traj.config.environment.f_contains(self.v_name, shortcuts=False):
+            traj._merge_config(self._traj)
+        self._traj = traj
+
 
         # User's job function
-        # runfunc = continue_dict['runfunc']
+        runfunc = continue_dict['runfunc']
         # Arguments to the user's job function
-        args = suppl_dict['args']
+        args = continue_dict['args']
         # Keyword arguments to the user's job function
-        kwargs = suppl_dict['kwargs']
-        result_list = suppl_dict['result_list']
-
-        # Unpack the stored data
-        dump_file=open(continue_file,'rb')
-        continue_dict = pickle.load(dump_file)
-        dump_file.close()
+        kwargs = continue_dict['kwargs']
+        # Check how many runs are about to be done
+        nruns = continue_dict['nruns']
 
         # Unpack the trajectory
-        self._traj = continue_dict['trajectory']
         self._traj.v_full_copy = continue_dict['full_copy']
         # Load meta data
         self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
@@ -1082,15 +1131,33 @@ class Environment(object):
              load_results=pypetconstants.LOAD_NOTHING,
              load_other_data=pypetconstants.LOAD_NOTHING)
 
+        # Now we have to reconstruct previous results
+        result_tuple_list = []
+        for filename in os.listdir(self._continue_path):
+            _, ext = os.path.splitext(filename)
+
+            if ext != '.rcnt':
+                continue
+
+            cnt_file = open(os.path.join(self._continue_path, filename), 'rb')
+            result_dict = dill.load(cnt_file)
+            cnt_file.close()
+            result_tuple_list.append((result_dict['counter'], result_dict['result']))
+
+        # Sort according to counter
+        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
+        result_list = [x[1] for x in result_tuple_list]
+
+        finished_runs = len(result_list)
 
         # Remove incomplete runs
-        self._traj._remove_incomplete_runs(finished_runs=len(result_list))
+        self._traj._remove_incomplete_runs(finished_runs, nruns)
 
         # Check how many runs are about to be done
         count = 0
         for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
             if not run_dict['completed']:
-                count +=1
+                count += 1
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name='environment.%s.continued_runs' % self.v_name
@@ -1098,6 +1165,10 @@ class Environment(object):
             self._traj.f_add_config(config_name, count,
                                     comment ='Added if a crashed trajectory was continued.')
 
+        # Trigger another continue saving to update the trajectory
+        self._trigger_continue_snapshot(runfunc, args, kwargs, nruns, False)
+
+        self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
         # Resume the experiment
         return self._do_runs(runfunc, args, kwargs, result_list)
 
@@ -1212,12 +1283,12 @@ class Environment(object):
         self._logger.info('Trajectory successfully stored.')
 
         if self._continuable:
-            self._trigger_continue_snapshot(args, kwargs, [], True)
+            self._trigger_continue_snapshot(runfunc, args, kwargs, count, True)
 
         # Start the runs
         return self._do_runs(runfunc, args, kwargs)
 
-    def _trigger_continue_snapshot(self, args, kwargs, result_list, first_dump):
+    def _trigger_continue_snapshot(self, runfunc, args, kwargs, nruns, new_trajectory):
         '''Makes the trajectory continuable in case the user wants that
 
         :param runfunc:
@@ -1232,50 +1303,54 @@ class Environment(object):
 
             Keyword arguments passed to runfunc
 
-        :param result_list:
+        :param nruns:
 
-            Previously computed results
+            The number of runs to be completed
+
+        :param new_trajectory:
+
+            Boolean if a new trajectory is started or is a trajectory is continued.
 
         '''
-        dump_dict_supplementary ={}
         dump_dict = {}
-        # Put the file into the hdf5 file folder. If no hdf5 files are used, put it into
-        # the log folder.
-        if first_dump:
-            if self._use_hdf5:
-                filename = self._filename
-                dump_folder= os.path.split(filename)[0]
-                self._dump_filename=os.path.join(dump_folder, self._traj.v_name+'.cnt')
-            else:
-                self._dump_filename = os.path.join(self._log_path,self._traj.v_name+'.cnt')
+        dump_filename=os.path.join(self._continue_path,'environment.ecnt')
 
-            root, ext = os.path.splitext(self._dump_filename)
-            self._dump_filename_supplementary = root+'.sppl'
+        if new_trajectory and os.listdir(self._continue_path):
+            raise RuntimeError('Your continue folder `%s` needs to be empty to allow continuing!')
 
-        # Keep track if arguments change over time
-        dump_dict_supplementary['args'] = args
-        dump_dict_supplementary['kwargs'] = kwargs
-        dump_dict_supplementary['result_list'] = result_list
 
-        # Store all relevant info into a dictionary and pickle it.
-        dump_file = open(self._dump_filename_supplementary,'wb')
-        pickle.dump(dump_dict_supplementary, dump_file, protocol=2)
+        # Store the trajectory before the first runs
+        prev_full_copy = self._traj.v_full_copy
+        dump_dict['full_copy'] = prev_full_copy
+        self._traj.v_full_copy=True
+        dump_dict['trajectory'] = self._traj
+        dump_dict['args'] = args
+        dump_dict['kwargs'] = kwargs
+        dump_dict['runfunc'] = runfunc
+        dump_dict['nruns'] = nruns
+
+        dump_file = open(dump_filename, 'wb')
+        dill.dump(dump_dict, dump_file, protocol=2)
         dump_file.flush()
         dump_file.close()
 
-        if first_dump:
-            # Store the trajectory before the first runs
-            prev_full_copy = self._traj.v_full_copy
-            dump_dict['full_copy'] = prev_full_copy
-            self._traj.v_full_copy=True
-            dump_dict['trajectory'] = self._traj
+        self._traj.v_full_copy=prev_full_copy
 
-            dump_file = open(self._dump_filename,'wb')
-            pickle.dump(dump_dict, dump_file, protocol=2)
-            dump_file.flush()
-            dump_file.close()
 
-            self._traj.v_full_copy=prev_full_copy
+    def _trigger_result_snapshot(self, result, counter):
+
+        dump_dict = {}
+        dump_filename=os.path.join(self._continue_path, 'result_%08d.rcnt' % counter)
+        dump_dict['result'] = result
+        dump_dict['counter'] = counter
+
+        dump_file = open(dump_filename, 'wb')
+        dill.dump(dump_dict, dump_file, protocol=2)
+        dump_file.flush()
+        dump_file.close()
+
+
+
 
 
     def _do_runs(self, runfunc, args, kwargs, prev_results=None):
@@ -1293,6 +1368,7 @@ class Environment(object):
         """
         log_path = self._log_path
         log_stdout = self._log_stdout
+        snapshot_counter = 0
 
         if prev_results is None:
             prev_results = []
@@ -1483,7 +1559,8 @@ class Environment(object):
                     result = result_queue.get()
                     results.append(result)
                     if self._continuable:
-                        self._trigger_continue_snapshot( args, kwargs, results, False)
+                        self._trigger_result_snapshot(result, snapshot_counter)
+                        snapshot_counter += 1
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
@@ -1504,7 +1581,7 @@ class Environment(object):
                               '************************************************************\n' %
                               (self._traj.v_name, ncores))
 
-            return prev_results + results
+
 
 
         else:
@@ -1520,13 +1597,17 @@ class Environment(object):
             results = []
             for n in xrange(len(self._traj)):
                 if not self._traj.f_is_completed(n):
-                    results.append( _single_run((self._traj._make_single_run(n), log_path, log_stdout,
+                    result = _single_run((self._traj._make_single_run(n), log_path, log_stdout,
                                                 None,runfunc,
                                                 len(self._traj),
                                                 self._multiproc,
-                                                result_queue, args,kwargs)))
+                                                result_queue, args,kwargs))
+                    results.append(result)
+                    if self._continuable:
+                        self._trigger_result_snapshot(result, snapshot_counter)
+                        snapshot_counter += 1
 
-                    self._trigger_continue_snapshot(args, kwargs, results, False)
+
 
             # Do some finalization
             self._traj._finalize()
@@ -1538,5 +1619,10 @@ class Environment(object):
                               '************************************************************\n' %
                               self._traj.v_name)
 
-            return prev_results + results
+
+        if self._continuable and self._delete_continue:
+            # We remove all continue files if the simulation was successfully completed
+            shutil.rmtree(self._continue_path)
+
+        return prev_results + results
                 
