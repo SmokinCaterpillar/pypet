@@ -45,7 +45,7 @@ install:
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install dill
+  - pip install --pre dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
