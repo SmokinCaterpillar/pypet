@@ -19,7 +19,7 @@ import hashlib
 import importlib
 import itertools as itools
 import inspect
-import copy
+import copy as cp
 import numpy as np
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -1392,7 +1392,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """
         if name_or_idx is None:
             if copy:
-                return copy.deepcopy(self._run_information)
+                return cp.deepcopy(self._run_information)
             else:
                 return self._run_information
         try:
@@ -3208,7 +3208,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self.v_full_copy=True
             storage_service = self._storage_service
             self._storage_service = None
-            traj=copy.deepcopy(self)
+            traj=cp.deepcopy(self)
             self._storage_service=storage_service
             traj._storage_service=storage_service
             self.v_full_copy=old_copy_mode

@@ -25,6 +25,10 @@ import hashlib
 import time
 import datetime
 
+try:
+    from sumatra.projects import load_project
+except ImportError:
+    load_project = None
 
 try:
     import dill
@@ -632,6 +636,8 @@ class Environment(HasLogger):
                  git_repository = None,
                  git_message='',
                  do_single_runs=True,
+                 sumatra_project=None,
+                 sumatra_reason = '',
                  lazy_debug=False):
 
 
@@ -648,6 +654,12 @@ class Environment(HasLogger):
             raise RuntimeError('Please install `dill` if you want to use the feature to '
                                'continue halted trajectories')
 
+        if load_project is None and sumatra_project is not None:
+            raise RuntimeError('`sumatra` package has not been found, either install '
+                               '`sumatra` or set `sumatra_project=None`.')
+
+        self._sumatra_project=sumatra_project
+        self._sumatra_reason = sumatra_reason
 
         self._git_repository = git_repository
         self._git_message=git_message
@@ -1351,7 +1363,45 @@ class Environment(HasLogger):
         dump_file.close()
 
 
+    def _prepare_sumatra(self):
+        reason = self._sumatra_reason
+        if reason:
+            reason += ' -- '
+        reason += 'Trajectory: `%s`, Explored Parameters: %s,  %s' % \
+                  (self._traj.v_name,
+                   str(self._traj._explored_parameters.keys()),
+                   self._traj.v_comment)
 
+        self._logger.info('Preparing sumatra record with reason: %s' % reason)
+        self._project = load_project(self._sumatra_project)
+
+        #
+        if self._traj.f_contains('parameters'):
+            param_dict = self._traj.parameters.f_to_dict(fast_access=False)
+
+            for param_name in param_dict.keys():
+                param = param_dict[param_name]
+                if param.f_has_range():
+                    param_dict[param_name] = param.f_get_range()
+                else:
+                    param_dict[param_name] = param.f_get()
+        else:
+            param_dict={}
+
+        relpath = os.path.relpath(sys.modules['__main__'].__file__, self._sumatra_project)
+
+        self._record = self._project.new_record(
+                    parameters=param_dict,
+                    main_file=relpath,
+                    reason=reason)
+
+
+    def _finish_sumatra(self, finish_time):
+        self._record.duration = finish_time
+        self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
+        self._project.add_record(self._record)
+        self._project.save()
+        self._logger.info('Saved sumatra project.')
 
 
     def _do_runs(self, runfunc, args, kwargs, prev_results=None):
@@ -1370,6 +1420,11 @@ class Environment(HasLogger):
         log_path = self._log_path
         log_stdout = self._log_stdout
         snapshot_counter = 0
+
+
+        if self._sumatra_project is not None:
+            start_time = time.time()
+            self._prepare_sumatra()
 
         if prev_results is None:
             prev_results = []
@@ -1624,6 +1679,9 @@ class Environment(HasLogger):
         if self._continuable and self._delete_continue:
             # We remove all continue files if the simulation was successfully completed
             shutil.rmtree(self._continue_path)
+
+        if self._sumatra_project is not None:
+            self._finish_sumatra(time.time()-start_time)
 
         return prev_results + results
                 

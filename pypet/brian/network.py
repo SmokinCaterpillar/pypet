@@ -301,10 +301,7 @@ class NetworkRunner(NetworkComponent):
 
         As above, but for pre running a network.
 
-    :param check_uniqueness:
 
-        Whether to check if the parameter group names specified in the two parameters
-        above match a unique group in the trajectory.
 
     Moreover, in your subclass you can log messages with the private attribute `_logger`
     which is initialised in :func:`~pypet.pypetlogging.HasLogger._set_logger`.
@@ -312,8 +309,7 @@ class NetworkRunner(NetworkComponent):
     """
     def __init__(self, report='text', report_period=None,
                  durations_group_name = 'parameters.simulation.durations',
-                 pre_durations_group_name = 'parameters.simulation.pre_durations',
-                 check_uniqueness=True):
+                 pre_durations_group_name = 'parameters.simulation.pre_durations'):
 
         if report_period is None:
             report_period=10 * second
@@ -323,7 +319,7 @@ class NetworkRunner(NetworkComponent):
 
         self._durations_group_name = durations_group_name
         self._pre_durations_group_name = pre_durations_group_name
-        self._check_uniqueness=check_uniqueness
+
 
         self._set_logger()
 
@@ -452,11 +448,9 @@ class NetworkRunner(NetworkComponent):
 
         """
         if pre_run:
-            durations = traj.f_get(self._pre_durations_group_name,
-                                   check_uniqueness=self._check_uniqueness)
+            durations = traj.f_get(self._pre_durations_group_name)
         else:
-            durations = traj.f_get(self._durations_group_name,
-                                   check_uniqueness=self._check_uniqueness)
+            durations = traj.f_get(self._durations_group_name)
 
 
         subruns = {}

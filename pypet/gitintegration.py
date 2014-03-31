@@ -75,7 +75,7 @@ def make_git_commit(environment, git_repository, user_message):
     if user_message:
        user_message += ' -- '
 
-    message = '%sTrajectory: `%s`, Time: `%s`%s' % \
+    message = '%sTrajectory: `%s`, Time: `%s`, %s' % \
               (user_message, traj.v_name, traj.v_time, commentstr)
 
     # Detect changes:

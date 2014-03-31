@@ -10,7 +10,7 @@ pypet 0.1b5
 
 *   BUG FIX: `f_has_children` of a group node, now returns the correct result
 
-*   Refactored continueing of trajectorys. Now this is based on `dill` and works also
+*   Refactored continuing of trajectories. Now this is based on `dill` and works also
     with data that cannot be pickled. `f_continue_run` is renamed `f_continue` to emphasize
     this change in API
 
@@ -19,6 +19,14 @@ pypet 0.1b5
     with the same name within the same depth, and skip search if the next tree depth is entered.
 
 *   `f_contains` of group nodes has per default `shortcuts=False`
+
+*   There exists now the abstract class `HasLogger` in pypetlogging.py that establishes
+    a unified logging framework
+
+*   Likewise the loggers of all network components are now private objects `_logger` and
+    so is the function `_set_logger`.
+
+*   BUG FIX: `f_get_run_information` now works without passing any arguments
 
 pypet 0.1b.4
 
