@@ -173,10 +173,11 @@ class ContinueTest(TrajectoryComparator):
 
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
-        for run_name in self.trajs[0].f_iter_runs():
+        for run_name in self.trajs[-1].f_iter_runs():
             self.assertTrue(self.trajs[-1].z in results)
 
         self.assertTrue(len(self.trajs[-1])== len(results))
+
 
     def test_continueing_mp(self):
         self.filenames = [make_temp_file('test_removal2.hdf5'), 0]

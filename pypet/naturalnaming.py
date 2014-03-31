@@ -73,6 +73,8 @@ CONFIG_GROUP = 'CONFIG_GROUP'
 GROUP = 'GROUP'
 LEAF = 'LEAF'
 
+LENGTH_WARNING_THRESHOLD = 100
+
 #SUBTREE Mapping
 SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
                    'parameters': (PARAMETER_GROUP, PARAMETER),
@@ -452,12 +454,6 @@ class NaturalNamingInterface(HasLogger):
 
     def _get_fast_access(self):
         return self._root_instance.v_fast_access
-
-    def _get_search_strategy(self):
-        return self._root_instance.v_search_strategy
-
-    def _get_check_uniqueness(self):
-        return self._root_instance.v_check_uniqueness
 
     def _get_shortcuts(self):
         return self._root_instance.v_shortcuts
@@ -1436,7 +1432,7 @@ class NaturalNamingInterface(HasLogger):
             return data
 
 
-    def _iter_nodes(self, node, recursive=False, search_strategy=pypetconstants.BFS, total_depth=float('inf')):
+    def _iter_nodes(self, node, recursive=False, total_depth=float('inf')):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1447,9 +1443,6 @@ class NaturalNamingInterface(HasLogger):
 
             Whether recursively also iterate over the children of the start node's children
 
-        :param search_strategy:
-
-            Breadth first search or depth first search
 
         :param max_depth:
 
@@ -1461,12 +1454,7 @@ class NaturalNamingInterface(HasLogger):
         as_run = self._get_as_run()
 
         if recursive:
-            if search_strategy == pypetconstants.BFS:
-                return NaturalNamingInterface._recursive_traversal_bfs(node, as_run, total_depth)
-            elif search_strategy == pypetconstants.DFS:
-                return NaturalNamingInterface._recursive_traversal_dfs(node, as_run, total_depth)
-            else:
-                raise ValueError('Your search method is not understood!')
+            return NaturalNamingInterface._recursive_traversal_bfs(node, as_run, total_depth)
         else:
             return node._children.itervalues()
 
@@ -1582,19 +1570,19 @@ class NaturalNamingInterface(HasLogger):
                 break
 
 
-    @staticmethod
-    def _recursive_traversal_dfs(node, run_name=None, total_depth=float('inf')):
-        """Iterator function traversing the tree below `node` in depth first search manner.
-
-        If `run_name` is given only sub branches of this run are considered and the rest is
-        blinded out.
-
-        """
-        if not node._leaf and node._depth < total_depth:
-            for child in NaturalNamingInterface._make_child_iterator(node, run_name):
-                yield child
-                for new_node in NaturalNamingInterface._recursive_traversal_dfs(child, run_name):
-                    yield new_node
+    # @staticmethod
+    # def _recursive_traversal_dfs(node, run_name=None, total_depth=float('inf')):
+    #     """Iterator function traversing the tree below `node` in depth first search manner.
+    #
+    #     If `run_name` is given only sub branches of this run are considered and the rest is
+    #     blinded out.
+    #
+    #     """
+    #     if not node._leaf and node._depth < total_depth:
+    #         for child in NaturalNamingInterface._make_child_iterator(node, run_name):
+    #             yield child
+    #             for new_node in NaturalNamingInterface._recursive_traversal_dfs(child, run_name):
+    #                 yield new_node
 
 
     def _get_candidate_dict(self, key, as_run, use_upper_bound=True):
@@ -1683,7 +1671,7 @@ class NaturalNamingInterface(HasLogger):
 
         return result_node
 
-    def _search(self, node, key, check_uniqueness, search_strategy, max_depth=float('inf')):
+    def _search(self, node, key, max_depth=float('inf')):
         """ Searches for an item in the tree below `node`
 
         :param node:
@@ -1693,14 +1681,6 @@ class NaturalNamingInterface(HasLogger):
         :param key:
 
             Name to search for. Can be the short name, the full name or parts of it
-
-        :param check_uniqueness:
-
-            Whether to check if search yields unique items
-
-        :param search_strategy:
-
-            BFS or DFS
 
         :param max_depth:
 
@@ -1720,32 +1700,34 @@ class NaturalNamingInterface(HasLogger):
         except pex.TooManyGroupsError:
             pass
         except pex.NotUniqueNodeError:
-            if check_uniqueness:
-                raise
-            else:
-                pass
+            pass
 
         # Slowly traverse the entire tree
         nodes_iterator = self._iter_nodes(node, recursive=True,
-                                          search_strategy=search_strategy,
                                           total_depth = total_depth)
         result_node = None
+        result_depth = float('inf')
         for child in nodes_iterator:
-            if key == child.v_name:
+
+            if child._depth > result_depth:
+                # We can break here because we enter a deeper stage of the tree and we
+                # cannot find matching node of the same depth as the one we found
+                break
+
+            if key == child._name:
 
                 # If result_node is not None means that we care about uniqueness and the search
                 # has found more than a single solution.
-                if not result_node is None:
-                    raise pex.NotUniqueNodeError('Node `%s` has been found more than once,'
-                                                 'full name of first occurrence is `%s` and of '
+                if result_node is not None:
+                    raise pex.NotUniqueNodeError('Node `%s` has been found more than once within '
+                                                 'the same depth %d.'
+                                                 'Full name of first occurrence is `%s` and of '
                                                  'second `%s`'
-                                                 % (
-                        key, child.v_full_name, result_node.v_full_name))
+                                                 % ( key, child.v_depth, result_node.v_full_name,
+                                                     child.v_full_name ))
 
                 result_node = child
-                # If we do not care about uniqueness we can return the first finding.
-                if not check_uniqueness:
-                    return result_node
+                result_depth = result_node._depth
 
         return result_node
 
@@ -1777,7 +1759,15 @@ class NaturalNamingInterface(HasLogger):
 
         split_length = len(split_name)
 
+        if len(candidate_dict) > LENGTH_WARNING_THRESHOLD:
+            self._logger.warning('Backwards search found more than %d possible candidates'
+                                 '(it found %d potential terminal nodes for `%s`). '
+                                 'Better use forward search and try to avoid '
+                                 'shortcuts for faster performance.' %
+                                 (LENGTH_WARNING_THRESHOLD, len(candidate_dict), key))
+
         for candidate_name in candidate_dict.iterkeys():
+
 
             # Check if candidate startswith the parent's name
             if candidate_name.startswith(parent_full_name):
@@ -1865,7 +1855,7 @@ class NaturalNamingInterface(HasLogger):
 
         return None
 
-    def _get(self, node, name, fast_access, check_uniqueness, backwards_search, search_strategy,
+    def _get(self, node, name, fast_access, backwards_search,
              shortcuts, max_depth, auto_load):
         """Searches for an item (parameter/result/group node) with the given `name`.
 
@@ -1875,20 +1865,13 @@ class NaturalNamingInterface(HasLogger):
 
         :param fast_access: If the result is a parameter, whether fast access should be applied.
 
-        :param check_uniqueness:
-
-            Whether it should be checked if the name unambiguously yields a single result.
 
         :param backwards_search:
 
             If the tree should be searched backwards in case more than one name/location is given.
             For instance, `groupA,groupC,valD` can be used for backwards search.
             The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`. If full path search is active,
-            the choice of search strategy is ignored and it is always checked if the result
-            is unique.
-
-        :param search_strategy: The search strategy (default and recommended is BFS)
+            and check if it passes by `groupA` and `groupC`.
 
         :param max_depth:
 
@@ -1971,12 +1954,9 @@ class NaturalNamingInterface(HasLogger):
 
                         # Check in O(N) with `N` number of groups and nodes
                         # [Worst Case O(N), average case is better since looking into a single dict costs O(1)].
-                        # If `check_uniqueness=True`, search is slower since the full tree
-                        # is searched and we always need O(N).
                         result = node
                         for key in split_name:
-                            result = self._search(result, key, check_uniqueness, search_strategy,
-                                                  max_depth)
+                            result = self._search(result, key, max_depth)
                             if result is None:
                                 break
         elif not try_auto_load_directly:
@@ -2046,11 +2026,9 @@ class NNGroupNode(NNTreeNode):
         """Equivalent to call :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes`
 
         Whether to iterate recursively is determined by `v_iter_recursive`.
-        Search strategy is taken from `v_search_strategy`.
 
         """
-        return self.f_iter_nodes(recursive=self._nn_interface._get_iter_recursive(),
-                                 search_strategy=self._nn_interface._get_search_strategy())
+        return self.f_iter_nodes(recursive=self._nn_interface._get_iter_recursive())
 
     def _debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
@@ -2136,12 +2114,10 @@ class NNGroupNode(NNTreeNode):
 
         Whether to allow shortcuts is taken from `v_shortcuts`.
         Whether to stop at a given depth is taken from `v_max_depth`.
-        Search strategies are taken from `v_backwards_search` and `v_search_strategy`
 
         """
         return self.f_contains(item,
                                backwards_search=self._nn_interface._get_backwards_search(),
-                               search_strategy=self._nn_interface._get_search_strategy(),
                                shortcuts=self._nn_interface._get_shortcuts(),
                                max_depth=self._nn_interface._get_max_depth())
 
@@ -2187,8 +2163,7 @@ class NNGroupNode(NNTreeNode):
 
 
     def f_contains(self, item, backwards_search = True,
-                   search_strategy = pypetconstants.BFS,
-                   shortcuts = True, max_depth=None):
+                   shortcuts = False, max_depth=None):
         """Checks if the node contains a specific parameter or result.
 
         It is checked if the item can be found via the
@@ -2202,11 +2177,7 @@ class NNGroupNode(NNTreeNode):
 
         :param backwards_search:
 
-            If backwards search should be allowed.
-
-        :param search_strategy:
-
-            Search strategy in case backwards search is not applied.
+            If backwards search should be allowed in case the name contains grouping.
 
         :param shortcuts:
 
@@ -2244,7 +2215,6 @@ class NNGroupNode(NNTreeNode):
 
         try:
             result = self.f_get(search_string,backwards_search=backwards_search,
-                                search_strategy=search_strategy,
                                 shortcuts=shortcuts, max_depth=max_depth)
         except AttributeError:
             return False
@@ -2296,30 +2266,21 @@ class NNGroupNode(NNTreeNode):
 
         return self._nn_interface._get(self, name,
                                        fast_access=self._nn_interface._get_fast_access(),
-                                       check_uniqueness=self._nn_interface._get_check_uniqueness(),
                                        backwards_search=self._nn_interface._get_backwards_search(),
-                                       search_strategy=self._nn_interface._get_search_strategy(),
                                        shortcuts=self._nn_interface._get_shortcuts(),
                                        max_depth=self._nn_interface._get_max_depth(),
                                        auto_load=self._nn_interface._get_auto_load())
 
-    # def __call__(self, name, fast_access=False, check_uniqueness=False,
-    #              search_strategy=pypetconstants.BFS):
-    #
-    #     return self.f_get(name, fast_access, check_uniqueness, search_strategy)
 
-    def f_iter_nodes(self, recursive=True, search_strategy=pypetconstants.BFS):
+    def f_iter_nodes(self, recursive=True):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
-        :param search_strategy: Either BFS or DFS (BFS recommended)
-
         :return: Iterator over nodes
 
         """
-        return self._nn_interface._iter_nodes(self, recursive=recursive,
-                                              search_strategy=search_strategy)
+        return self._nn_interface._iter_nodes(self, recursive=recursive)
 
 
     def f_iter_leaves(self):
@@ -2351,32 +2312,22 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._get_all(self, name, max_depth = max_depth)
 
-    def f_get(self, name, fast_access=False, check_uniqueness=False, backwards_search=True,
-              search_strategy=pypetconstants.BFS, shortcuts=True, max_depth=None, auto_load=False):
+    def f_get(self, name, fast_access=False, backwards_search=True,
+              shortcuts=True, max_depth=None, auto_load=False):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
 
         :param fast_access: Whether fast access should be applied.
 
-        :param check_uniqueness:
-
-            Whether it should be checked if the name unambiguously yields
-            a single result. Only relevant if `shortcuts` are allowed.
 
         :param backwards_search:
 
             If the tree should be searched backwards in case more than one name/location is given.
             For instance, `groupA,groupC,valD` can be used for backwards search.
             The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`. If full path search is active,
-            the choice of search strategy is ignored  and it is always checked if the result
-            is unique. Only relevant if `shortcuts` are allowed.
+            and check if it passes by `groupA` and `groupC`.
 
-        :param search_strategy:
-
-            The search strategy (default and recommended is BFS) if backwards search
-            is not performed and `shortcuts` are allowed.
 
         :param shortcuts:
 
@@ -2406,8 +2357,9 @@ class NNGroupNode(NNTreeNode):
 
             NotUniqueNodeError
 
-                If `check_uniqueness=True` or `backwards_search` and searching `name`
-                yields more than one node.
+                In case of forward search if more than one candidate node is found within a
+                particular depth of the tree. In case of backwards search if more than
+                one candidate is found regardless of the depth.
 
             Any exception raised by the StorageService in case auto-loading is enabled
 
@@ -2416,9 +2368,7 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self._nn_interface._get(self, name, fast_access=fast_access,
-                                       check_uniqueness=check_uniqueness,
                                        backwards_search=backwards_search,
-                                       search_strategy=search_strategy,
                                        shortcuts=shortcuts,
                                        max_depth=max_depth,
                                        auto_load=auto_load)

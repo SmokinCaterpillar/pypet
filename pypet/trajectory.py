@@ -95,8 +95,6 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._standard_parameter = parent_trajectory.v_standard_parameter
         self._standard_result = parent_trajectory.v_standard_result
         self._standard_leaf = parent_trajectory.v_standard_leaf
-        self._search_strategy = parent_trajectory.v_search_strategy
-        self._check_uniqueness = parent_trajectory.v_check_uniqueness
         self._fast_access = parent_trajectory.v_fast_access
         self._backwards_search = parent_trajectory.v_backwards_search
         self._shortcuts = parent_trajectory.v_shortcuts
@@ -265,25 +263,6 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._auto_load = bool(auto_load)
 
     @property
-    def v_search_strategy(self):
-        """Search strategy for lookup of items in the trajectory tree.
-
-        Default is breadth first search ('BFS'), you could also choose depth first search ('DFS'),
-        but this is not recommended.
-
-        """
-        return self._search_strategy
-
-    @v_search_strategy.setter
-    def v_search_strategy(self,strategy):
-        """Sets the search strategy, throws ValueError if strategy is unknown."""
-        if not (strategy == pypetconstants.BFS or strategy == pypetconstants.DFS):
-            raise ValueError('Please use strategies %s or %s others are not supported atm.' %
-                             (pypetconstants.BFS, pypetconstants.DFS))
-
-        self._search_strategy = strategy
-
-    @property
     def v_timestamp(self):
         """Float timestamp of creation time"""
         return self._timestamp
@@ -344,22 +323,6 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
     def v_fast_access(self, value):
         """Sets fast access"""
         self._fast_access=bool(value)
-
-    @property
-    def v_check_uniqueness(self):
-        """Whether it should be check if naming and search in tree is unambiguous.
-
-        Default is False. If True, searching a parameter or result via
-        :func'~pypet.naturalnaming.NNGroupNode.f_get` will take O(N), because all nodes have
-        to be visited!
-
-        """
-        return self._check_uniqueness
-
-    @v_check_uniqueness.setter
-    def v_check_uniqueness(self, val):
-        """Sets the uniqueness checking"""
-        self._check_uniqueness = bool(val)
 
     @property
     def v_environment_hexsha(self):
@@ -1070,8 +1033,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access=True
-        self._check_uniqueness=False
-        self._search_strategy=pypetconstants.BFS
         self._backwards_search = True
         self._shortcuts = True
         self._iter_recursive = False
@@ -1658,8 +1619,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         runs.f_remove_child(node_name,recursive=True)
 
     def f_get_from_runs(self, name, where='results', use_indices=False,
-                           fast_access=False, check_uniqueness=False,
-                           search_strategy=pypetconstants.BFS):
+                           fast_access=False, backwards_search=True,
+                           shortcuts=True, max_depth=None, auto_load=False):
         """Searches for all occurrences of `name` in each run.
 
         Generates an ordered dictionary with the run names or indices as keys and
@@ -1689,14 +1650,30 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Whether to return parameter or result instances or the values handled by these.
 
-        :param check_uniqueness:
+        :param backwards_search:
 
-            If `True` it is checked if `name` refers only to a single
-            item in every run.
+            If the tree should be searched backwards in case more than one name/location is given.
+            For instance, `groupA,groupC,valD` can be used for backwards search.
+            The starting group will look for `valD` first and try to find a way back
+            and check if it passes by `groupA` and `groupC`.
 
-        :param search_strategy:
 
-            BFS or DFS
+        :param shortcuts:
+
+            If shortcuts are allowed and the trajectory can *hop* over nodes in the
+            path.
+
+        :param max_depth:
+
+            Maximum depth (relative to start node) how search should progress in tree.
+            `None` means no depth limit.  Only relevant if `shortcuts` are allowed.
+
+        :param auto_load:
+
+            If data should be loaded from the storage service if it cannot be found in the
+            current trajectory tree. Auto-loading will load group and leaf nodes currently
+            not in memory and it will load data into empty leaves. Be aware that auto-loading
+            does not work with shortcuts.
 
         :return:
 
@@ -1731,7 +1708,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 run_group = child_dict[run_name]
 
                 try:
-                    value = run_group.f_get(name, fast_access, check_uniqueness)
+                    value = run_group.f_get(name, fast_access=fast_access,
+                                            backwards_search=backwards_search,
+                                            shortcuts=shortcuts,
+                                            max_depth=max_depth,
+                                            auto_load=auto_load)
                 except pex.NotUniqueNodeError:
                     raise
                 except AttributeError:
@@ -1859,7 +1840,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        enlarge_set = [self.f_get(key, check_uniqueness=True).v_full_name
+        enlarge_set = [self.f_get(key).v_full_name
                        for key in build_dict.keys()]
 
 
@@ -1874,7 +1855,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         count = 0
         for key, builditerable in build_dict.items():
-            act_param = self.f_get(key, check_uniqueness=True)
+            act_param = self.f_get(key)
 
 
 
@@ -1985,7 +1966,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         count = 0
         for key, builditerable in build_dict.items():
-            act_param = self.f_get(key, check_uniqueness=True)
+            act_param = self.f_get(key)
             if not act_param.v_is_leaf or not act_param.v_is_parameter:
                 raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
@@ -2928,7 +2909,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if trial_parameter_name:
             # We want to merge a trial parameter
             # First make some sanity checks
-            my_trial_parameter = self.f_get(trial_parameter_name, check_uniqueness=True)
+            my_trial_parameter = self.f_get(trial_parameter_name)
             other_trial_parameter = other_trajectory.f_get(trial_parameter_name)
             if not isinstance(my_trial_parameter, BaseParameter):
                 raise TypeError('Your trial_parameter `%s` does not evaluate to a real parameter'

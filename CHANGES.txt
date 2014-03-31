@@ -14,6 +14,10 @@ pypet 0.1b5
     with data that cannot be pickled. `f_continue_run` is renamed `f_continue` to emphasize
     this change in API
 
+*   Picking the search strategy and using `v_check_uniqueness` is no longer supported.
+    Sorry for the inconvenience. So forward search will always check if it finds 2 nodes
+    with the same name within the same depth, and skip search if the next tree depth is entered.
+
 pypet 0.1b.4
 
 *   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`

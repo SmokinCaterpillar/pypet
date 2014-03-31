@@ -136,10 +136,10 @@ class TrajectoryTest(unittest.TestCase):
         y=self.traj.f_get('peter.peter')
 
         self.assertTrue(x is y)
-
-    def test_value_error_on_search_strategy_assignment(self):
-        with self.assertRaises(ValueError):
-            self.traj.v_search_strategy = 'ewnforenfre'
+    #
+    # def test_value_error_on_search_strategy_assignment(self):
+    #     with self.assertRaises(ValueError):
+    #         self.traj.v_search_strategy = 'ewnforenfre'
 
     def test_get_data_dictionaries_directly(self):
 
@@ -341,7 +341,7 @@ class TrajectoryTest(unittest.TestCase):
 
         prev_depth = 0
 
-        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='BFS'):
+        for node in self.traj.f_iter_nodes(recursive=True):
             if prev_depth != node.v_depth:
                 self.assertEqual(len(depth_dict[prev_depth]),0)
                 prev_depth = node.v_depth
@@ -355,7 +355,6 @@ class TrajectoryTest(unittest.TestCase):
 
         prev_depth = 0
 
-        self.traj.v_search_strategy = 'BFS'
         self.traj.v_iter_recursive = True
 
         for node in self.traj:
@@ -366,36 +365,36 @@ class TrajectoryTest(unittest.TestCase):
             depth_dict[node.v_depth].remove(node)
 
 
-
-
-    def test_iter_dfs(self):
-
-        prev_node = None
-
-        x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
-
-        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
-            if not prev_node is None:
-                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-                    self.assertTrue(node.v_name in prev_node._children)
-
-            prev_node = node
-
-        prev_node = None
-
-        self.traj.v_iter_recursive=True
-        self.traj.v_search_strategy='DFS'
-
-        y = [y for y in self.traj]
-
-        self.assertEqual(x,y)
-
-        for node in self.traj:
-            if not prev_node is None:
-                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-                    self.assertTrue(node.v_name in prev_node._children)
-
-            prev_node = node
+    #
+    #
+    # def test_iter_dfs(self):
+    #
+    #     prev_node = None
+    #
+    #     x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
+    #
+    #     for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+    #         if not prev_node is None:
+    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+    #                 self.assertTrue(node.v_name in prev_node._children)
+    #
+    #         prev_node = node
+    #
+    #     prev_node = None
+    #
+    #     self.traj.v_iter_recursive=True
+    #     self.traj.v_search_strategy='DFS'
+    #
+    #     y = [y for y in self.traj]
+    #
+    #     self.assertEqual(x,y)
+    #
+    #     for node in self.traj:
+    #         if not prev_node is None:
+    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+    #                 self.assertTrue(node.v_name in prev_node._children)
+    #
+    #         prev_node = node
 
     def test_iter_bfs_as_run(self):
         as_run = 1
@@ -411,7 +410,7 @@ class TrajectoryTest(unittest.TestCase):
 
         prev_depth = 0
 
-        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='BFS'):
+        for node in self.traj.f_iter_nodes(recursive=True):
             self.assertTrue('run_00000000' not in node.v_full_name)
             if prev_depth != node.v_depth:
                 self.assertEqual(len(depth_dict[prev_depth]),0)
@@ -419,25 +418,25 @@ class TrajectoryTest(unittest.TestCase):
 
             depth_dict[node.v_depth].remove(node)
 
-    def test_iter_dfs_as_run(self):
-
-        self.traj.f_add_result('results.run_00000000.resulttest', 42)
-        self.traj.f_add_result('results.run_00000001.resulttest', 43)
-
-        self.traj.f_as_run('run_00000001')
-
-        prev_node = None
-
-        x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
-
-        for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
-            self.assertTrue('run_00000000' not in node.v_full_name)
-
-            if not prev_node is None:
-                if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-                    self.assertTrue(node.v_name in prev_node._children)
-
-            prev_node = node
+    # def test_iter_dfs_as_run(self):
+    #
+    #     self.traj.f_add_result('results.run_00000000.resulttest', 42)
+    #     self.traj.f_add_result('results.run_00000001.resulttest', 43)
+    #
+    #     self.traj.f_as_run('run_00000001')
+    #
+    #     prev_node = None
+    #
+    #     x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
+    #
+    #     for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
+    #         self.assertTrue('run_00000000' not in node.v_full_name)
+    #
+    #         if not prev_node is None:
+    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
+    #                 self.assertTrue(node.v_name in prev_node._children)
+    #
+    #         prev_node = node
 
 
     def test_find_in_all_runs(self):
@@ -472,10 +471,11 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(res_dict)==1)
 
-        self.traj.f_add_result('results.runs.run_00000002.sub.sub.resulttest2', 444)
+        self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.sub.resulttest2', 444)
+        self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.resulttest2', 444)
 
         with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_get_from_runs('resulttest2', check_uniqueness=True)
+            self.traj.f_get_from_runs('sub.sub.resulttest2')
 
         with self.assertRaises(ValueError):
             self.traj.f_get_from_runs('test', where='Portland')
@@ -673,7 +673,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.parameters.f_remove_child('test')
 
-        len(self.traj) == 1
+        self.assertTrue(len(self.traj) == 1)
 
     def test_not_unique_search(self):
         self.traj = Trajectory()
@@ -681,9 +681,16 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_parameter('ghgghg.test')
         self.traj.f_add_parameter('ghdsfdfdsfdsghg.test')
 
-        self.traj.v_check_uniqueness=True
         with self.assertRaises(pex.NotUniqueNodeError):
             self.traj.test
+
+        self.traj.f_add_parameter('depth0.depth1.depth2.findme', 42)
+        self.traj.f_add_parameter('depth0.depth1.findme', 43)
+
+        self.assertTrue(self.traj.findme==43)
+
+        with self.assertRaises(pex.NotUniqueNodeError):
+            self.traj.f_get('depth0.findme')
 
 
     def test_contains_item_identity(self):

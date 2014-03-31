@@ -135,13 +135,6 @@ TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
 
 
-################### Search Strategies ##########################
-
-BFS = 'BFS'
-"""For search in trajectory tree, breadth first search, default strategy"""
-DFS = 'DFS'
-"""Depth first search in trajectory tree, not recommended"""
-
 
 ########## Names of Runs ####################
 
