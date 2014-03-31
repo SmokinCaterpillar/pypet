@@ -21,9 +21,9 @@ class HasLogger(object):
 
         """
         statedict = self.__dict__.copy()
-        if 'logger' in statedict:
+        if '_logger' in statedict:
             # Pickling does not work with loggers objects, so we just keep the logger's name:
-            statedict['logger'] = self._logger.name
+            statedict['_logger'] = self._logger.name
         return statedict
 
     def __setstate__(self, statedict):
@@ -33,10 +33,10 @@ class HasLogger(object):
 
         """
         self.__dict__.update(statedict)
-        if 'logger' in statedict:
+        if '_logger' in statedict:
             # If we re-instantiate the component the logger attribute only contains a name,
             # so we also need to re-create the logger:
-            self._set_logger(statedict['logger'])
+            self._set_logger(statedict['_logger'])
 
     def _set_logger(self, name=None):
         """Adds a logger with a given `name`.

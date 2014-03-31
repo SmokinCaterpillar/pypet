@@ -758,20 +758,16 @@ class Parameter(BaseParameter):
         If `v_full_copy` is true the exploration range is also pickled, otherwise it is omitted.
 
         """
-        result = self.__dict__.copy()
-
+        result = super(Parameter, self).__getstate__()
 
         # If we don't need a full copy of the Parameter (because a single process needs
         # only access to a single point in the parameter space) we can delete the rest
         if not self._full_copy :
             result['_explored_range'] = tuple()
 
-        del result['_logger'] #pickling does not work with loggers
         return result
 
-    def __setstate__(self, statedict):
-        self.__dict__.update( statedict)
-        self._set_logger()
+
       
     @copydoc(BaseParameter._set_parameter_access)
     def _set_parameter_access(self, idx=0):
@@ -1886,16 +1882,6 @@ class Result(BaseResult):
         else:
             return '<%s> %s: %s' % (self.f_get_class_name(),self.v_full_name,datastr)
 
-
-    def __getstate__(self):
-        result = self.__dict__.copy()
-        del result['_logger'] #pickling does not work with loggers
-        return result
-
-
-    def __setstate__(self, statedict):
-        self.__dict__.update( statedict)
-        self._set_logger()
 
     def f_to_dict(self, copy = True):
         """Returns all handled data as a dictionary.

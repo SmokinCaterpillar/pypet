@@ -12,7 +12,9 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-import dill
+
+
+
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
@@ -23,6 +25,7 @@ import multiprocessing as mp
 import pickle
 
 import os
+import dill
 
 import tables as pt
 from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
