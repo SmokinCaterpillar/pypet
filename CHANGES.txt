@@ -18,6 +18,8 @@ pypet 0.1b5
     Sorry for the inconvenience. So forward search will always check if it finds 2 nodes
     with the same name within the same depth, and skip search if the next tree depth is entered.
 
+*   `f_contains` of group nodes has per default `shortcuts=False`
+
 pypet 0.1b.4
 
 *   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`

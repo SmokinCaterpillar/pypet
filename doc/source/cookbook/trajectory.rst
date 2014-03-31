@@ -246,8 +246,8 @@ To access data that you have put into your trajectory you can use
 
 *   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
     similar to calling `traj.nzebras`.
-    Check out below what happens if you ask for `traj['zoo.nzebras']`, i.e. asking your trajectory
-    of any group node for a grouped variable.
+    Check out below what happens if you ask for `traj['zoo.nzebras']`, i.e. passing more than
+    a single name to the trajectory.
 
 
 ^^^^^^^^^^^^^^^
@@ -280,12 +280,20 @@ For instance if you add the result `traj.f_add_result('z',42)`, you can fast acc
 the first positional argument is mapped to the name 'z' (See also :ref:`more-on-results`).
 If it is empty or contains more than one item you will always get in return the result object.
 
-    >>> traj.f_add_result('z',42)`
+    >>> traj.f_add_result('z', 42)`
     >>> traj.z
+    42
+    >>> traj.f_add_result('k', kay=42)`
+    >>> traj.k
+    <Result object>
+    >>> traj.k.kay
     42
     >>> traj.f_add_result('two_data_values', 11, 12.0)
     >>> traj.two_data_values
     <Result object>
+    >>> traj.two_data_values[0]
+    11
+
 
 
 ^^^^^^^^^^^^^^^^^
@@ -305,7 +313,7 @@ First, you can request the group above the parameters, and then access the varia
     11
 
 Or you can make use of shortcuts. If you leave out intermediate groups in your natural naming
-request, a breadth first search [#]_ is applied to find the corresponding group/leaf.
+request, a breadth first search is applied to find the corresponding group/leaf.
 
     >>> traj.mobiles
     42
@@ -319,17 +327,32 @@ Search is established with very fast look up and usually needs much less then :m
 and `N` the total number of nodes, i.e. *groups* + *leaves*].
 
 However, sometimes your shortcuts are not unique and you might find several solutions for
-your natural naming search in the tree. To speed up the lookup, the search is stopped after the
-first result. So you won't be notified whether your result is actually unique. Yet, you
-can set `v_check_uniqueness=True` at your trajectory object and it will be checked for these
-circumstances. Nonetheless, enabling `v_check_uniqueness=True` will require always :math:`O(N)` for
-your lookups. So do that
-for debugging purposes once and switch it off during your real simulation runs to save time!
+your natural naming search in the tree. *pypet* will return the first item it finds via breadth
+first search within the tree. If there are several items with the same name but in different
+depths within the tree, the one with the lowest depth is returned. For performance reasons
+*pypet* actually stops the search if an item was found and there is no other item within the tree
+with the same name and same depth. If there happen to be
+two or more items with the same name and with the same depth in the tree, *pypet* will
+raise a `NotUniqueNodeError` since *pypet* cannot know which of the two items you want. [#previous]_
+
+.. _[#previous]:
+
+    In previous versions, *pypet* would stop immediately after the first encounter of a matching node.
+    You had to force the lookup of unique matchings via `v_check_uniqueness`.
+    This feature has been abolished
+    since the behavior is inconsistent within different simulations. There is no ordering
+    in nodes. So the children of a node are traversed arbitrarily since they are stored
+    in dictionaries. Searching for one node could yield
+    different results every time it was performed if two or more nodes happened to
+    have the same name and were found within the same depth in the tree.
+    Also in previous versions, you could choose
+    depth first search instead of breadth first search. Yet, again since nodes are in arbitrary
+    order, this search strategy is rather useless because the user cannot determine the
+    traversal order of tree nodes.
+
 
 The method that performs the natural naming search in the tree can be called directly, it is
-:func:`~pypet.naturalnaming.NNGroupNode.f_get`. Here fast access (default `False`),
-search strategy (default `'BFS'`) and whether
-to check for uniqueness (default `False`) can be passed as parameters.
+:func:`~pypet.naturalnaming.NNGroupNode.f_get`.
 
     >>> traj.parameters.f_get('mobiles.ncars')
     <Parameter object ncars>
@@ -361,12 +384,6 @@ cannot be switched off):
 For instance, `traj.par.traffic.street.nzebras` is equivalent to
 `traj.parameters.traffic.street.nzebras`.
 
-
-.. [#]
-
-    The search strategy can be changed via the property `v_search_strategy` between
-    breadth first search (`'BFS'`) and depth first search (`'DFS'`).
-
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Backwards search
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -386,7 +403,21 @@ Thus, the search complexity is
 :math:`O(kd)` with :math:`k` the number of occurrences of nodes named *paramC* and
 :math:`d` the depth of
 your search tree. By the way, this backwards search always checks if your search term yields a
-unique result irrespective of the setting of `check_uniqueness`.
+unique result irrespective of the depth of any of the nodes.
+
+*pypet* will issue a performance warning if backwards search has to check too many terminal nodes.
+In this case you are advised to avoid shortcutting through the tree and state the full name of
+a parameter or result.
+
+Note that backwards search is not triggered if the name can be directly found without shortcuts.
+For instance:
+
+::
+
+    traj.f_add_parameters('groupA.groupB.paramC')
+    traj['groupB.paramC'] # this will trigger backwards search
+    traj.parameters['groupA.groupB.paramC'] # this won't because
+    # 'parameters.groupA.groupB.paramC' is the real full name of the parameter
 
 How is this backwards searching useful? Well, it will succeed in many more situations than
 simple breadth first forward traversal of the tree.
