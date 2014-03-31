@@ -27,8 +27,10 @@ import datetime
 
 try:
     from sumatra.projects import load_project
+    from sumatra.programs import PythonExecutable
 except ImportError:
     load_project = None
+    PythonExecutable = None
 
 try:
     import dill
@@ -164,25 +166,28 @@ def _single_run(args):
         logging.getLogger('STDERR').error(errstr)
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
-def _queue_handling(handler,log_path):
+def _queue_handling(handler, log_path, log_stdout):
     """ Starts running a queue handler and creates a log file for the queue."""
 
-    # Create a new log file for the queue writer
-    filename = 'queue_process.txt'
-    filename=log_path+'/'+filename
-    root = logging.getLogger()
+    if log_path is not None:
+        # Create a new log file for the queue writer
+        filename = 'queue_process.txt'
+        filename=log_path+'/'+filename
+        root = logging.getLogger()
 
-    h=logging.FileHandler(filename=filename)
-    f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-    h.setFormatter(f)
-    root.addHandler(h)
+        h=logging.FileHandler(filename=filename)
+        f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+        h.setFormatter(f)
+        root.addHandler(h)
 
-    #Redirect standard out and error to the file
-    outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-    sys.stdout = outstl
+        if log_stdout:
 
-    errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-    sys.stderr = errstl
+            #Redirect standard out and error to the file
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
+
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
 
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
@@ -539,6 +544,35 @@ class Environment(HasLogger):
         If no changes are detected, the information about the previous commit and the previous
         commit message are added to the trajectory and this user passed message is discarded.
 
+    :param sumatra_project:
+
+        If your simulation is managed by sumatra_, you can specify here the path to the
+        *sumatra* root folder. Note that you have to initialise the *sumatra* project at least
+        once before via ``smt init MyFancyProjectName``.
+
+        *pypet* will automatically ad ALL parameters to the *sumatra* record.
+        If a parameter is explored, the WHOLE range is added instead of the default value.
+
+        *pypet* will add the label and reason (only if provided, see below)
+        to your trajectory as config parameters.
+
+        .. _sumatra : http://neuralensemble.org/sumatra/
+
+    :param sumatra_reason:
+
+        You can add an additional reason string that is added to the *sumatra* record.
+        Regardless if `sumatra_reason` is empty, the name of the trajectory, the comment
+        as well as a list of all explored parameters is added to the *sumatra* record.
+
+        Note that the augmented label is not stored into the trajectory as config
+        parameter, but the original one (without the name of the trajectory, the comment,
+        and the list of explored parameters) in case it is not the empty string.
+
+    :param sumatra_label:
+
+        The label or name of your sumatra record. Set to `None` if you want sumatra
+        to choose a label in form of a timestamp for you.
+
     :param do_single_runs:
 
         Whether you intend to actually to compute single runs with the trajectory.
@@ -635,9 +669,10 @@ class Environment(HasLogger):
                  derived_parameters_per_run=0,
                  git_repository = None,
                  git_message='',
-                 do_single_runs=True,
                  sumatra_project=None,
                  sumatra_reason = '',
+                 sumatra_label = None,
+                 do_single_runs=True,
                  lazy_debug=False):
 
 
@@ -658,8 +693,12 @@ class Environment(HasLogger):
             raise RuntimeError('`sumatra` package has not been found, either install '
                                '`sumatra` or set `sumatra_project=None`.')
 
+        if '.' in sumatra_label:
+            raise RuntimeError('Your sumatra label is not allowed to contain dots.')
+
         self._sumatra_project=sumatra_project
         self._sumatra_reason = sumatra_reason
+        self._sumatra_label = sumatra_label
 
         self._git_repository = git_repository
         self._git_message=git_message
@@ -1281,10 +1320,10 @@ class Environment(HasLogger):
                                     comment ='Added if trajectory was explored normally and not '
                                              'continued.')
 
-        config_name='evironment.%s.store_before_runs' % self.v_name
+        config_name='environment.%s.store_before_runs' % self.v_name
         if not self._traj.f_contains('config.'+config_name, shortcuts=False):
             self._traj.f_add_config(config_name, self._store_before_runs,
-                    comment='If the trajectory was automatically be saved before the '
+                    comment='If the trajectory should automatically be saved before the '
                             'single runs start, otherwise the store is only initialised. '
                             'Only added if runs are started, not continued.')
 
@@ -1367,10 +1406,10 @@ class Environment(HasLogger):
         reason = self._sumatra_reason
         if reason:
             reason += ' -- '
-        reason += 'Trajectory: `%s`, Explored Parameters: %s,  %s' % \
+        reason += 'Trajectory: `%s`, %s -- Explored Parameters: %s' % \
                   (self._traj.v_name,
-                   str(self._traj._explored_parameters.keys()),
-                   self._traj.v_comment)
+                   self._traj.v_comment,
+                   str(self._traj._explored_parameters.keys()))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
         self._project = load_project(self._sumatra_project)
@@ -1390,17 +1429,35 @@ class Environment(HasLogger):
 
         relpath = os.path.relpath(sys.modules['__main__'].__file__, self._sumatra_project)
 
+        executable = PythonExecutable(path=sys.executable)
+
         self._record = self._project.new_record(
                     parameters=param_dict,
                     main_file=relpath,
+                    executable=executable,
+                    label = self._sumatra_label,
                     reason=reason)
 
 
-    def _finish_sumatra(self, finish_time):
+    def _finish_sumatra(self):
+        finish_time = self._start_timestamp - self._finish_timestamp
         self._record.duration = finish_time
         self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
         self._project.add_record(self._record)
         self._project.save()
+        sumatra_label = self._record.label
+        conf_list = []
+        config_name = 'sumatra.record_%s.label' % str(sumatra_label)
+        conf = self._traj.f_add_config(config_name, sumatra_label,
+                            comment='The label of the sumatra record')
+        conf_list.append(conf)
+        if self._sumatra_reason:
+            config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
+            conf = self._traj.f_add_config(config_name, self._sumatra_reason,
+                    comment='Reason of sumatra run.')
+            conf_list.append(conf)
+
+        self._traj.f_store_items(conf_list)
         self._logger.info('Saved sumatra project.')
 
 
@@ -1421,9 +1478,14 @@ class Environment(HasLogger):
         log_stdout = self._log_stdout
         snapshot_counter = 0
 
+        self._start_timestamp = time.time()
+        config_name='environment.%s.start_timestamp' % self.v_name
+        conf = self._traj.f_add_config(config_name, self._start_timestamp,
+            comment='Timestamp of starting of experiment (when the actual simulation was '
+                    'started (either by calling `f_run`, `f_continue`, or `f_pipeline`).')
+        self._traj.f_store_item(conf)
 
         if self._sumatra_project is not None:
-            start_time = time.time()
             self._prepare_sumatra()
 
         if prev_results is None:
@@ -1458,7 +1520,8 @@ class Environment(HasLogger):
                 queue_writer = QueueStorageServiceWriter(self._storage_service,queue)
 
                 # Start the queue process
-                queue_process = multip.Process(name='QueueProcess',target=_queue_handling, args=(queue_writer,log_path))
+                queue_process = multip.Process(name='QueueProcess',target=_queue_handling,
+                                        args=(queue_writer,log_path, log_stdout))
                 queue_process.start()
 
                 # Replace the storage service of the trajectory by a sender.
@@ -1680,8 +1743,25 @@ class Environment(HasLogger):
             # We remove all continue files if the simulation was successfully completed
             shutil.rmtree(self._continue_path)
 
+        self._finish_timestamp = time.time()
+
+        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
+        startdatetime = datetime.datetime.fromtimestamp(self._start_timestamp)
+
+        self._runtime = str(findatetime-startdatetime)
+
+        config_name='environment.%s.finish_timestamp' % self.v_name
+        conf1 = self._traj.f_add_config(config_name, self._finish_timestamp,
+            comment='Timestamp of finishing of an experiment.')
+
+        config_name='environment.%s.runtime' % self.v_name
+        conf2 = self._traj.f_add_config(config_name, self._runtime,
+            comment='Runtime of whole experiment.')
+
+        self._traj.f_store_items([conf1, conf2])
+
         if self._sumatra_project is not None:
-            self._finish_sumatra(time.time()-start_time)
+            self._finish_sumatra()
 
         return prev_results + results
                 

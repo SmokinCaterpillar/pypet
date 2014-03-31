@@ -2214,7 +2214,7 @@ class NNGroupNode(NNTreeNode):
             item = None
 
         try:
-            result = self.f_get(search_string,backwards_search=backwards_search,
+            result = self.f_get(search_string, backwards_search=backwards_search,
                                 shortcuts=shortcuts, max_depth=max_depth)
         except AttributeError:
             return False

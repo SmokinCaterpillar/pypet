@@ -2446,7 +2446,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Finally, add the real run information to the `run` table
         table = getattr(self._overview_group,'runs')
 
-        insert_dict = self._all_extract_insert_dict(single_run,table.colnames)
+        insert_dict = self._all_extract_insert_dict(single_run, table.colnames)
         insert_dict['parameter_summary'] = run_summary
         insert_dict['completed'] = 1
 

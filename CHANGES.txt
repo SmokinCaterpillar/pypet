@@ -28,6 +28,8 @@ pypet 0.1b5
 
 *   BUG FIX: `f_get_run_information` now works without passing any arguments
 
+*   Trajectories no longer accept a `file_tile` on initialisation
+
 pypet 0.1b.4
 
 *   Annotations and Results now support __setitem__, which is analogue to `f_get` and `f_set`

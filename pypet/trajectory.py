@@ -966,10 +966,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         filename of the HDF5 file. If you specify the filename, the trajectory
         will automatically create the corresponding service object.
 
-    :param file_title:
-
-        HDF5 also let's you specify the title of the file.
-
     :raises:
 
         ValueError: If the name of the trajectory contains invalid characters.
@@ -985,7 +981,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     """
     def __init__(self, name='my_trajectory', add_time=True, comment='',
                  dynamically_imported_classes=None,
-                 filename=None, file_title = None):
+                 filename=None):
 
         # We call the init of the grandparent class because a Single Run init requires
         # a parent trajectory which would yield circular dependencies. Besides, everything
@@ -1048,10 +1044,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._storage_service=None
             self._filename = None
         else:
-            if file_title is None:
-                file_title = filename
             self._filename = filename
-            self._storage_service = HDF5StorageService(filename=filename, file_title=file_title)
+            self._storage_service = HDF5StorageService(filename=filename)
 
 
         # Index of a trajectory is -1, if the trajectory should behave like a single run
@@ -2068,7 +2062,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
              load_derived_parameters=pypetconstants.LOAD_SKELETON,
              load_results=pypetconstants.LOAD_SKELETON,
              load_other_data=pypetconstants.LOAD_SKELETON,
-             force=False):
+             force=False,
+             filename=None):
         """Loads a trajectory via the storage service.
 
 
@@ -2147,6 +2142,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             different version number. To force the load of a trajectory from a previous version
             simply set `force = True`.
 
+        :param filename:
+
+            If you haven't specified a filename on creation of the trajectory, you can
+            specify one here. The trajectory will generate an HDF5StorageService
+            automatically.
+
 
         :raises:
 
@@ -2168,6 +2169,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             load_derived_parameters = pypetconstants.LOAD_NOTHING
             load_results = pypetconstants.LOAD_NOTHING
             load_other_data = pypetconstants.LOAD_NOTHING
+
+        if filename:
+            if self._storage_service is None:
+                self._storage_service = HDF5StorageService(filename=filename)
+            else:
+                self._storage_service.filename = filename
+
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,
@@ -3075,7 +3083,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return use_runs, params_to_change.keys()
 
-    def f_migrate(self, new_name=None, new_filename=None, in_store=False):
+    def f_migrate(self, new_name=None, new_filename=None, new_filetile = None, in_store=False):
         """Can be called to rename and relocate the trajectory.
 
         Choosing a new filename only works with the original HDF5StorageService.
@@ -3114,7 +3122,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if new_filename is not None:
             if self._storage_service is None:
-                self._storage_service = HDF5StorageService(filename=new_filename, file_title=new_filename)
+                self._storage_service = HDF5StorageService(filename=new_filename)
             else:
                 self._storage_service.filename = new_filename
             self._filename = new_filename
