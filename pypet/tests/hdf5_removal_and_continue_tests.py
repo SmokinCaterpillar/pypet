@@ -160,6 +160,7 @@ class ContinueTest(TrajectoryComparator):
         self._remove_nresults(3, continue_folder)
         self.make_environment(0, self.filenames[0])
         results = self.envs[-1].f_continue(trajectory_name = traj_name)
+        results = [result[1] for result in results]
 
         self.trajs[-1]=self.envs[-1].v_trajectory
 
@@ -215,6 +216,7 @@ class ContinueTest(TrajectoryComparator):
         self._remove_nresults(3, continue_folder)
         self.make_environment(0, self.filenames[0])
         results = self.envs[-1].f_continue(trajectory_name = traj_name)
+        results = [result[1] for result in results]
 
         self.trajs[-1]=self.envs[-1].v_trajectory
 
@@ -243,23 +245,21 @@ class ContinueTest(TrajectoryComparator):
             cnt_file = open(os.path.join(continue_folder, filename), 'rb')
             result_dict = dill.load(cnt_file)
             cnt_file.close()
-            result_tuple_list.append((result_dict['counter'], result_dict['result']))
+            result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
 
         # Sort according to counter
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
-        counter_list = [x[0] for x in result_tuple_list]
+        timestamp_list = [x[0] for x in result_tuple_list]
 
-        counter_list = counter_list[-nresults:]
+        timestamp_list = timestamp_list[-nresults:]
 
-        for counter in counter_list:
-            filename = os.path.join(continue_folder, 'result_%08d.rcnt' % counter)
+        for timestamp in timestamp_list:
+            filename = os.path.join(continue_folder, 'result_%s.rcnt' % repr(timestamp).replace('.','_'))
             os.remove(filename)
 
 
     def test_continueing(self):
         self.filenames = [make_temp_file('test_removal.hdf5'), 0]
-
-
 
         self.envs=[]
         self.trajs = []

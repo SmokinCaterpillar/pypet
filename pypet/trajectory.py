@@ -1407,7 +1407,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
 
-    def _remove_incomplete_runs(self, finished_runs, nruns):
+    def _remove_incomplete_runs(self, start_timestamp, run_indices):
         """Requests the storage service to delete incomplete runs.
 
         Called by the environment if you resume a crashed trajectory to allow
@@ -1423,38 +1423,20 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
         self._logger.info('Removing incomplete runs.')
-        count = 0
+
+        index_set = set(run_indices)
 
         # First check if the completed runs are also finished runs (i.e. are part of the snapshot)
-        number_of_completed_runs = 0
+        # If not remove these
         for run_name, info_dict in self._run_information.iteritems():
             completed = info_dict['completed']
+            timestamp = info_dict['timestamp']
+            idx = info_dict['idx']
+            name = info_dict['name']
+            if completed and timestamp >= start_timestamp and idx not in index_set:
+                self._run_information[name]['completed'] = 0
 
-            if completed:
-                number_of_completed_runs+=1
-
-        # in case the trajectory was expanded the number of runs for this environment
-        # can differ from the actual length of the trajectory.
-        runs_completed_before = len(self) - nruns
-
-        run_difference = number_of_completed_runs - runs_completed_before - finished_runs
-
-        if run_difference > 0:
-            # Here we have a snapshot slightly before the finished run so we have to delete
-            # the completed runs that are not part of the continue snapshot
-            for idx in range(run_difference):
-                latest_timestamp = 0
-                latest_run_name = None
-                for run_name, info_dict in self._run_information.iteritems():
-                    if self._run_information[run_name]['completed']:
-                        finish_timestamp = info_dict['finish_timestamp']
-                        if finish_timestamp > latest_timestamp:
-                            latest_timestamp = finish_timestamp
-                            latest_run_name = run_name
-
-                self._run_information[latest_run_name]['completed'] = 0
-
-        # Next, delete all the data for the corresponding run
+        # Next, delete all the data for not completed runs
         for run_name, info_dict in self._run_information.iteritems():
             completed = info_dict['completed']
 

@@ -1162,6 +1162,22 @@ class Environment(HasLogger):
             If not specified the continue folder passed to the environment is used.
 
         :return:
+
+            List of the individual results returned by your run function.
+
+            Returns a LIST OF TUPLES, where first entry is the run idx and second entry
+            is the actual result. In case of multiprocessing these are not necessarily
+            ordered according to their run index, but ordered according to their finishing time.
+
+            Does not contain results stored in the trajectory!
+            In order to access these simply interact with the trajectory object,
+            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            and loading all results at once with :func:`~pypet.trajectory.f_load`
+            or loading manually with :func:`~pypet.trajectory.f_load_items`.
+
+            Even if you use multiprocessing without a pool the results returned by
+            `runfunc` still need to be pickled.
+
         """
         if trajectory_name is None:
             self.trajectory_name = self.v_trajectory.v_name
@@ -1171,7 +1187,7 @@ class Environment(HasLogger):
         if continue_folder is not None:
             self._continue_folder = continue_folder
 
-        self._do_runs(None)
+        return self._do_runs(None)
 
     @ property
     def v_trajectory(self):
@@ -1218,6 +1234,91 @@ class Environment(HasLogger):
 
         self._traj.v_storage_service=self._storage_service
 
+    def f_pipeline(self, pipeline):
+        """ You can make *pypet* supervise your whole experiment by defining a pipeline.
+
+        `pipeline` is a function that defines the entire experiment. From pre-processing
+        including setting up the trajectory over defining the actual simulation runs to
+        post processing.
+
+        The `pipeline` function needs to return TWO tuples with a maximum of three entries each.
+
+        For example:
+
+        ::
+
+            return (runfunc, args, kwargs), (postproc, postproc_args, postproc_kwargs)
+
+        Where `runfunc` is the actual simulation function thet gets passed the trajectory
+        container and potentially additional arguments `args` and keyword arguments `kwargs`.
+        This will be run by your environment with all parameter combinations.
+
+        `postproc` is a post processing function that handles your computed results.
+        The function must accept as arguments the trajectory container, a list of
+        results (list of tuples (run idx, result) ) and potentially
+        additional arguments `postproc_args` and keyword arguments `postproc_kwargs`.
+
+        As for :func:`~pypet.environment.Environment.f_add_postproc`, this function can
+        potentially extend the trajectory.
+
+        If you don't want to apply post-processing, your pipeline function can also simply
+        return the run function and the arguments:
+
+        ::
+
+            return runfunc, args, kwargs
+
+        Or simply:
+
+        ::
+            return runfunc, args
+
+        Or only
+
+        ::
+
+            return runfunc
+
+        ``return runfunc, kwargs`` does NOT work, if you don't want to pass `args` do
+        ``return runfunc, (), kwargs``.
+
+        Analogously combinations like
+
+        ::
+
+            (runfunc, args), (postproc,)
+
+        work as well.
+
+        :param pipeline:
+
+            The pipleine function, taking only a single argument `traj`.
+            And returning all functions necessary for your experiment.
+
+        :return:
+
+            List of the individual results returned by `runfunc`.
+
+            Returns a LIST OF TUPLES, where first entry is the run idx and second entry
+            is the actual result. In case of multiprocessing these are not necessarily
+            ordered according to their run index, but ordered according to their finishing time.
+
+            Does not contain results stored in the trajectory!
+            In order to access these simply interact with the trajectory object,
+            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            and loading all results at once with :func:`~pypet.trajectory.f_load`
+            or loading manually with :func:`~pypet.trajectory.f_load_items`.
+
+            Even if you use multiprocessing without a pool the results returned by
+            `runfunc` still need to be pickled.
+
+            Results computed from `postproc` are not returned. `postproc` should not
+            return any results except dictionaries if the trajectory should be expanded.
+
+        """
+        self._user_pipeline = True
+        return self._do_runs(pipeline)
+
     def f_run(self, runfunc, *args,**kwargs):
         """ Runs the experiments and explores the parameter space.
 
@@ -1234,7 +1335,8 @@ class Environment(HasLogger):
             List of the individual results returned by `runfunc`.
 
             Returns a LIST OF TUPLES, where first entry is the run idx and second entry
-            is the actual result.
+            is the actual result. In case of multiprocessing these are not necessarily
+            ordered according to their run index, but ordered according to their finishing time.
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
@@ -1253,14 +1355,8 @@ class Environment(HasLogger):
 
         return self._do_runs(pipeline)
 
-    def _trigger_continue_snapshot(self, nruns):
-        '''Makes the trajectory continuable in case the user wants that
-
-        :param nruns:
-
-            The number of runs to be completed
-
-        '''
+    def _trigger_continue_snapshot(self):
+        ''' Makes the trajectory continuable in case the user wants that.'''
         dump_dict = {}
         dump_filename=os.path.join(self._continue_path,'environment.ecnt')
 
@@ -1276,7 +1372,7 @@ class Environment(HasLogger):
         dump_dict['postproc'] = self._postproc
         dump_dict['postproc_args'] = self._postproc_args
         dump_dict['postproc_kwargs'] = self._postproc_kwargs
-        dump_dict['nruns'] = nruns
+        dump_dict['start_timestamp'] = self._start_timestamp
 
         dump_file = open(dump_filename, 'wb')
         dill.dump(dump_dict, dump_file, protocol=2)
@@ -1286,12 +1382,20 @@ class Environment(HasLogger):
         self._traj.v_full_copy=prev_full_copy
 
 
-    def _trigger_result_snapshot(self, result, counter):
+    def _trigger_result_snapshot(self, result):
+        """ Triggers a snapshot of the results for continuing
 
+        :param result:
+
+            Currently computed result
+
+        """
         dump_dict = {}
-        dump_filename=os.path.join(self._continue_path, 'result_%08d.rcnt' % counter)
+        timestamp = time.time()
+        timestamp_str = repr(timestamp).replace('.','_')
+        dump_filename=os.path.join(self._continue_path, 'result_%s.rcnt' % timestamp_str )
         dump_dict['result'] = result
-        dump_dict['counter'] = counter
+        dump_dict['timestamp'] = timestamp
 
         dump_file = open(dump_filename, 'wb')
         dill.dump(dump_dict, dump_file, protocol=2)
@@ -1300,6 +1404,7 @@ class Environment(HasLogger):
 
 
     def _prepare_sumatra(self):
+        """ Prepares a sumatra record"""
         reason = self._sumatra_reason
         if reason:
             reason += ' -- '
@@ -1337,6 +1442,7 @@ class Environment(HasLogger):
 
 
     def _finish_sumatra(self):
+        """ Saves a sumatra record"""
         finish_time = self._start_timestamp - self._finish_timestamp
         self._record.duration = finish_time
         self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
@@ -1344,20 +1450,24 @@ class Environment(HasLogger):
         self._project.save()
         sumatra_label = self._record.label
         conf_list = []
+
         config_name = 'sumatra.record_%s.label' % str(sumatra_label)
-        conf = self._traj.f_add_config(config_name, sumatra_label,
-                            comment='The label of the sumatra record')
-        conf_list.append(conf)
+        if not self._traj.f_contains('config.'+config_name):
+            conf = self._traj.f_add_config(config_name, sumatra_label,
+                                comment='The label of the sumatra record')
+            conf_list.append(conf)
         if self._sumatra_reason:
             config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
-            conf = self._traj.f_add_config(config_name, self._sumatra_reason,
-                    comment='Reason of sumatra run.')
-            conf_list.append(conf)
+            if not self._traj.f_contains('config.'+config_name):
+                conf = self._traj.f_add_config(config_name, self._sumatra_reason,
+                        comment='Reason of sumatra run.')
+                conf_list.append(conf)
 
         self._traj.f_store_items(conf_list)
         self._logger.info('Saved sumatra project.')
 
     def _prepare_continue(self):
+        """Prepares the continuation of a crashed trajectory"""
         if not self._continuable:
             raise RuntimeError('If you create an environment to continue a run, you need to '
                                'set `continuable=True`.')
@@ -1407,8 +1517,8 @@ class Environment(HasLogger):
         self._postproc_args = continue_dict['postproc_args']
         # Postproc Kwargs
         self._postproc_kwargs = continue_dict['postproc_kwargs']
-        # Check how many runs are about to be done
-        nruns = continue_dict['nruns']
+
+        old_start_timestamp = continue_dict['start_timestamp']
 
         # Unpack the trajectory
         self._traj.v_full_copy = continue_dict['full_copy']
@@ -1429,16 +1539,16 @@ class Environment(HasLogger):
             cnt_file = open(os.path.join(self._continue_path, filename), 'rb')
             result_dict = dill.load(cnt_file)
             cnt_file.close()
-            result_tuple_list.append((result_dict['counter'], result_dict['result']))
+            result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
 
         # Sort according to counter
-        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
-        result_list = [x[1] for x in result_tuple_list]
+        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])[:-1]
+        # to be on the safe side, we remove the very last result
+        result_list = [x[1] for x in result_tuple_list][:-1]
 
-        finished_runs = len(result_list)
-
+        run_indices = [result[0] for result in result_list]
         # Remove incomplete runs
-        self._traj._remove_incomplete_runs(finished_runs, nruns)
+        self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
 
         # Check how many runs are about to be done
         count = 0
@@ -1454,7 +1564,7 @@ class Environment(HasLogger):
 
         self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
 
-        return nruns, result_list
+        return result_list
 
 
     def _prepare_runs(self, pipeline):
@@ -1576,13 +1686,12 @@ class Environment(HasLogger):
 
         if pipeline is not None:
             prev_results = []
-            nruns = self._prepare_runs(pipeline)
+            self._prepare_runs(pipeline)
         else:
-            nruns, prev_results = self._prepare_continue()
+            prev_results = self._prepare_continue()
 
         log_path = self._log_path
         log_stdout = self._log_stdout
-        snapshot_counter = 0
 
         runfunc = self._runfunc
         kwargs = self._kwargs
@@ -1595,7 +1704,7 @@ class Environment(HasLogger):
         clean_up_after_run = self._clean_up_after_run
         deep_copy_arguments = self._deep_copy_arguments
 
-        start_run_idx = 0 # Index from where to start
+        start_run_idx = 0
 
 
         config_name='environment.%s.start_timestamp' % self.v_name
@@ -1611,13 +1720,13 @@ class Environment(HasLogger):
 
         self._storage_service = self._traj.v_storage_service
 
-        results = prev_results # List for the results computed now
+        results = prev_results # List for the computed results
 
         runs_added_by_postproc = 0
 
         while True:
             if self._continuable:
-                self._trigger_continue_snapshot(nruns)
+                self._trigger_continue_snapshot()
 
             if self._multiproc:
 
@@ -1795,8 +1904,8 @@ class Environment(HasLogger):
                             results.append(result)
 
                             if self._continuable:
-                                self._trigger_result_snapshot(result, snapshot_counter)
-                                snapshot_counter += 1
+                                self._trigger_result_snapshot(result)
+
 
                 # In case of queue mode, we need to signal to the queue writer that no more data
                 # will be put onto the queue
@@ -1825,10 +1934,9 @@ class Environment(HasLogger):
                                   self._traj.v_name)
 
                 # Sequentially run all single runs and append the results to a queue
-                results = []
                 for n in xrange(start_run_idx, len(self._traj)):
                     if not self._traj.f_is_completed(n):
-                        if self._deep_copy_arguments:
+                        if deep_copy_arguments: # This is so far not supported!!!! For future reference
                             result = _single_run((cp.deepcopy(self._traj._make_single_run(n)),
                                               log_path,
                                               log_stdout,
@@ -1839,18 +1947,18 @@ class Environment(HasLogger):
                                               clean_up_after_run))
                         else:
                             result = _single_run((self._traj._make_single_run(n),
-                                              log_path,
-                                              log_stdout,
-                                              None, runfunc,
-                                              len(self._traj),
-                                              self._multiproc,
-                                              None, args, kwargs,
-                                              clean_up_after_run))
+                                          log_path,
+                                          log_stdout,
+                                          None, runfunc,
+                                          len(self._traj),
+                                          self._multiproc,
+                                          None, args, kwargs,
+                                          clean_up_after_run))
 
                         results.append(result)
                         if self._continuable:
-                            self._trigger_result_snapshot(result, snapshot_counter)
-                            snapshot_counter += 1
+                            self._trigger_result_snapshot(result)
+
 
                 # Do some finalization
                 self._traj._finalize()
@@ -1910,7 +2018,7 @@ class Environment(HasLogger):
 
         conf_list = []
         if runs_added_by_postproc:
-            config_name='environment.%s.expanded' % self.v_name
+            config_name='environment.%s.postproc_expand' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
                 conf0 = self._traj.f_add_config(config_name, True,
                     comment='Added if trajectory was expanded by postprocessing.')

@@ -63,21 +63,21 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
 
-    def test_change_auto_store(self):
-
-        def simple_run(traj):
-            traj.f_add_result('simple', 42)
-
-        filename = make_temp_file('testautodisable,hdf5')
-        env = Environment(filename=filename, log_level=None, auto_preparation=False, continuable=False)
-
-        env.f_run(simple_run)
-
-        traj = Trajectory(filename=filename)
-
-        traj.f_load(index=0)
-
-        self.assertTrue('config' not in traj)
+    # def test_change_auto_store(self):
+    #
+    #     def simple_run(traj):
+    #         traj.f_add_result('simple', 42)
+    #
+    #     filename = make_temp_file('testautodisable,hdf5')
+    #     env = Environment(filename=filename, log_level=None, auto_preparation=False, continuable=False)
+    #
+    #     env.f_run(simple_run)
+    #
+    #     traj = Trajectory(filename=filename)
+    #
+    #     traj.f_load(index=0)
+    #
+    #     self.assertTrue('config' not in traj)
 
 
     def test_migrations(self):
