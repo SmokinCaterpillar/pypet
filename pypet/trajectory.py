@@ -2009,13 +2009,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def _remove_run_data(self):
         group_names = ['results.runs', 'derived_parameters.runs']
         for group_name in group_names:
-            group = self.g_get(group_name)
             if self.f_contains(group_name):
+                group = self.f_get(group_name)
                 for child_name in \
                         group.f_get_children(copy=False).keys():
 
                     if child_name.startswith(pypetconstants.RUN_NAME):
-                        group.f_reomve_child(child_name, recursive=True)
+                        group.f_remove_child(child_name, recursive=True)
 
     def _finalize(self):
         """Final rollback initiated by the environment
@@ -2041,7 +2041,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         and load annotations.
 
         """
-        self.f_load(self.v_name,None, False,
+        self.f_load(self.v_name, None, False,
                     load_parameters=pypetconstants.LOAD_SKELETON,
                     load_derived_parameters=pypetconstants.LOAD_SKELETON,
                     load_results=pypetconstants.LOAD_SKELETON,
@@ -2056,6 +2056,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
              load_derived_parameters=pypetconstants.LOAD_SKELETON,
              load_results=pypetconstants.LOAD_SKELETON,
              load_other_data=pypetconstants.LOAD_SKELETON,
+             load_all = None,
              force=False,
              filename=None,
              dynamically_imported_classes=None):
@@ -2130,6 +2131,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 annotations will be reloaded if the corresponding instance
                 is created or the annotations of an existing instance were emptied before.
 
+        :param load_all:
+
+            As the above, per default set to `None`. If not `None` the setting of `load_all`
+            will overwrite the settings of `load_parameters`, `load_derived_parameters`,
+            `load_results`, and `load_other_data`. This is more or less or shortcut if all
+            types should be loaded the same.
 
         :param force:
 
@@ -2185,6 +2192,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if not dynamically_imported_classes is None:
             self.f_add_to_dynamic_imports(dynamically_imported_classes)
+
+        if load_all is not None:
+            load_parameters = load_all
+            load_derived_parameters = load_all
+            load_results = load_all
+            load_other_data = load_all
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,

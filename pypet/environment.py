@@ -1234,6 +1234,45 @@ class Environment(HasLogger):
 
         self._traj.v_storage_service=self._storage_service
 
+    def f_add_postprocessing(self, postproc, *args, **kwargs):
+        """ Adds a post processing function.
+
+        The environment will call this function via
+        ``postproc(traj, result_list, *args, **kwargs)`` after the completion of the
+        single runs.
+
+        This function can load parts of the trajectory id needed and add additional results.
+
+        Moreover, the function can be used to trigger an expansion of the trajectory.
+        This can be useful if the user has an `optimization` task.
+
+        Either the function calls `f_expand` directly on the trajectory or returns
+        an dictionary. If latter `f_expand` is called by the environemnt.
+
+        Note that after expansion of the trajectory, the postprocessing function is called
+        again (and aigan for further expansions). Thus, this allows an iterative approach
+        to parameter exploration.
+
+        :param postproc:
+
+            The post processing function
+
+        :param args:
+
+            Additional arguments passed to the post-processing function
+
+        :param kwargs:
+
+            Additional keyword arguments passed to the postprocessing function
+
+        :return:
+
+        """
+
+        self._postproc = postproc
+        self._postproc_args = args
+        self._postproc_kwargs = kwargs
+
     def f_pipeline(self, pipeline):
         """ You can make *pypet* supervise your whole experiment by defining a pipeline.
 
@@ -1648,11 +1687,11 @@ class Environment(HasLogger):
                                        '(postproc, postproc_args, postproc_kwargs)' )
 
 
-        # Check how many runs are about to be done
-        count = 0
-        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
-            if not run_dict['completed']:
-                count +=1
+        # # Check how many runs are about to be done
+        # count = 0
+        # for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
+        #     if not run_dict['completed']:
+        #         count +=1
 
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and store it.')
@@ -1661,7 +1700,7 @@ class Environment(HasLogger):
         self._traj.f_store(only_init = (not self._store_before_runs))
         self._logger.info('Trajectory successfully stored.')
 
-        return count
+
 
 
     def _do_runs(self, pipeline):
@@ -1685,10 +1724,10 @@ class Environment(HasLogger):
             self._prepare_sumatra()
 
         if pipeline is not None:
-            prev_results = []
+            results = []
             self._prepare_runs(pipeline)
         else:
-            prev_results = self._prepare_continue()
+            results = self._prepare_continue()
 
         log_path = self._log_path
         log_stdout = self._log_stdout
@@ -1720,9 +1759,8 @@ class Environment(HasLogger):
 
         self._storage_service = self._traj.v_storage_service
 
-        results = prev_results # List for the computed results
 
-        runs_added_by_postproc = 0
+        expanded_by_postproc = False
 
         while True:
             if self._continuable:
@@ -1977,7 +2015,7 @@ class Environment(HasLogger):
                                   '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
                 old_traj_length = len(self._traj)
-                postproc_res = postproc(self._traj, prev_results + results,
+                postproc_res = postproc(self._traj, results,
                                    *postproc_args, **postproc_kwargs)
 
                 new_traj_length = len(self._traj)
@@ -1987,12 +2025,11 @@ class Environment(HasLogger):
                     repeat = True
                     if isinstance(postproc_res, dict):
                         self._traj.f_expand(postproc_res)
-                        self._traj.f_store(only_init=True)
+
+                    self._traj.f_store(only_init=True)
 
                     new_traj_length = len(self._traj)
                     new_runs = new_traj_length - old_traj_length
-                    runs_added_by_postproc += new_runs
-                    nruns += runs_added_by_postproc
 
                     if self._multiproc or self._clean_up_after_run:
                         self._traj._remove_run_data()
@@ -2000,6 +2037,7 @@ class Environment(HasLogger):
             if not repeat:
                 break
             else:
+                expanded_by_postproc = True
                 self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
                                   '  POSTPROCESSING extended the trajectory and added %d new runs.'
                                   '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n'
@@ -2017,7 +2055,7 @@ class Environment(HasLogger):
         self._runtime = str(findatetime-startdatetime)
 
         conf_list = []
-        if runs_added_by_postproc:
+        if expanded_by_postproc:
             config_name='environment.%s.postproc_expand' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
                 conf0 = self._traj.f_add_config(config_name, True,
