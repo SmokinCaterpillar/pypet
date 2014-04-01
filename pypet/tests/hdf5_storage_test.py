@@ -69,7 +69,7 @@ class StorageTest(TrajectoryComparator):
             traj.f_add_result('simple', 42)
 
         filename = make_temp_file('testautodisable,hdf5')
-        env = Environment(filename=filename, log_level=None, store_before_runs=False, continuable=False)
+        env = Environment(filename=filename, log_level=None, auto_preparation=False, continuable=False)
 
         env.f_run(simple_run)
 

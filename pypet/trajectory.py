@@ -1043,7 +1043,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._filename = None
         else:
             self._filename = filename
-            self._storage_service = HDF5StorageService(filename=filename)
+            self._storage_service = HDF5StorageService(filename=filename,
+                                                       file_title=self.v_name)
 
 
         # Index of a trajectory is -1, if the trajectory should behave like a single run
@@ -3148,7 +3149,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if new_filename is not None:
             if self._storage_service is None:
-                self._storage_service = HDF5StorageService(filename=new_filename)
+                self._storage_service = HDF5StorageService(filename=new_filename,
+                                                           file_title=self.v_name)
             else:
                 self._storage_service.filename = new_filename
             self._filename = new_filename

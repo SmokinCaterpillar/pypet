@@ -24,6 +24,7 @@ import traceback
 import hashlib
 import time
 import datetime
+import copy as cp
 
 try:
     from sumatra.projects import load_project
@@ -80,6 +81,8 @@ def _single_run(args):
 
         9. The keyword arguments handed to the user's job function (as **kwargs)
 
+        10. Whether to clean up after the run
+
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
@@ -98,6 +101,7 @@ def _single_run(args):
         result_queue = args[7]
         runparams = args[8]
         kwrunparams = args[9]
+        clean_up_after_run = args[10]
 
         use_pool = result_queue is None
 
@@ -150,7 +154,8 @@ def _single_run(args):
         traj.f_store()
 
         # Make some final adjustments to the single run before termination
-        traj._finalize()
+        if clean_up_after_run:
+            traj._finalize()
 
         root.info('\n===================================\n '
                   'Finished single run #%d of %d '
@@ -231,16 +236,6 @@ class Environment(HasLogger):
           If you only have a single class to import, you do not need
           the list brackets:
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
-
-    :param store_before_runs:
-
-        I the whole trajectory should be stored before the runs are started. Otherwise
-        the storage will be only initialised. Be aware that you have to manually store
-        your trajectory at some point if you disable the automatic storage,
-        otherwise you will lose all information about items
-        that were added before the starting of the single runs. You are advised NOT to change
-        the default setting (`True` per default). Disable this feature ONLY if you have a very
-        sound reason to do so.
 
     :param log_folder:
 
@@ -644,7 +639,6 @@ class Environment(HasLogger):
                  shortcuts=True,
                  backwards_search=True,
                  iter_recursive=True,
-                 store_before_runs=True,
                  log_folder=None,
                  log_level=logging.INFO,
                  log_stdout=True,
@@ -868,7 +862,10 @@ class Environment(HasLogger):
                                   str(self._hexsha))
 
         self._do_single_runs = do_single_runs
-        self._store_before_runs = store_before_runs
+        self._store_before_runs = True # For future reference store_before_runs
+        self._clean_up_after_run = True # For future reference clean_up_after_run
+        self._deep_copy_arguments = False # For future reference deep_copy_arguments
+
 
 
         if self._do_single_runs:
@@ -912,12 +909,41 @@ class Environment(HasLogger):
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
                                                      ' for thread/process safe storing').f_lock()
+            # # For future refernce
+            # else:
+            #     config_name='environment.%s.clean_up_after_run' % self._name
+            #     self._traj.f_add_config(config_name, self._clean_up_after_run,
+            #                         comment='Whether or not results should be removed after the '
+            #                                 'completion of a single run. Only important for '
+            #                                 'single processing, otherwise the removal will happen '
+            #                                 'due to the nature of multiprocessing. '
+            #                                 'You are not advised to set this '
+            #                                 'to `False`. Only do it if you know what you are '
+            #                                 'doing.').f_lock()
+            #
+            #     config_name='environment.%s.deep_copy_arguments' % self._name
+            #     self._traj.f_add_config(config_name, self._deep_copy_arguments,
+            #                         comment='Whether or not all arguments '
+            #                                 '(including the trajectory) passed to your runfunction '
+            #                                 'should be copied before passing. This ensures '
+            #                                 'that single processing is equivalent to '
+            #                                 'multiprocessing. Yet requires everything to be '
+            #                                 ' picklable.').f_lock()
+
 
             config_name='environment.%s.continuable' % self._name
-            self._traj.f_add_config(config_name, continuable,
+            self._traj.f_add_config(config_name, self._continuable,
                                     comment='Whether or not a continue file should'
-                                            ' be created. If yes, everything must be'
-                                            ' picklable.').f_lock()
+                                            ' be created. If yes, everything is'
+                                            ' handled by `dill`.').f_lock()
+
+            # # For future reference
+            # config_name='environment.%s.store_before_runs' % self._name
+            # self._traj.f_add_config(config_name, self._store_before_runs,
+            #                         comment='Whether or not a the trajectory should be stored '
+            #                                 'before the runs. You are not advised to set this '
+            #                                 'to `False`. Only do it if you know what you are '
+            #                                 'doing.').f_lock()
 
         config_name='environment.%s.trajectory.name' % self.v_name
         self._traj.f_add_config(config_name, self.v_trajectory.v_name,
@@ -1566,6 +1592,9 @@ class Environment(HasLogger):
         postproc_args = self._postproc_args
         postproc_kwargs = self._postproc_kwargs
 
+        clean_up_after_run = self._clean_up_after_run
+        deep_copy_arguments = self._deep_copy_arguments
+
         start_run_idx = 0 # Index from where to start
 
 
@@ -1663,7 +1692,7 @@ class Environment(HasLogger):
                 # Create a generator to generate the tasks for the mp-pool
                 iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
                              queue, runfunc, len(self._traj),
-                             self._multiproc, result_queue,  args, kwargs)
+                             self._multiproc, result_queue,  args, kwargs, True)
                              for n in xrange(start_run_idx, len(self._traj)) if not self._traj.f_is_completed(n))
 
 
@@ -1799,13 +1828,24 @@ class Environment(HasLogger):
                 results = []
                 for n in xrange(start_run_idx, len(self._traj)):
                     if not self._traj.f_is_completed(n):
-                        result = _single_run((self._traj._make_single_run(n),
+                        if self._deep_copy_arguments:
+                            result = _single_run((cp.deepcopy(self._traj._make_single_run(n)),
                                               log_path,
                                               log_stdout,
                                               None, runfunc,
                                               len(self._traj),
                                               self._multiproc,
-                                              result_queue, args,kwargs))
+                                              None, cp.deepcopy(args), cp.deepcopy(kwargs),
+                                              clean_up_after_run))
+                        else:
+                            result = _single_run((self._traj._make_single_run(n),
+                                              log_path,
+                                              log_stdout,
+                                              None, runfunc,
+                                              len(self._traj),
+                                              self._multiproc,
+                                              None, args, kwargs,
+                                              clean_up_after_run))
 
                         results.append(result)
                         if self._continuable:
@@ -1846,7 +1886,7 @@ class Environment(HasLogger):
                     runs_added_by_postproc += new_runs
                     nruns += runs_added_by_postproc
 
-                    if self._multiproc:
+                    if self._multiproc or self._clean_up_after_run:
                         self._traj._remove_run_data()
 
             if not repeat:
