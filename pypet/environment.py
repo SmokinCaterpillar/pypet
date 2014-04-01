@@ -941,7 +941,7 @@ class Environment(HasLogger):
             config_name='environment.%s.version' % self.v_name
             self._traj.f_add_config(config_name,self.v_trajectory.v_version,
                                     comment ='Pypet version if it differs from the version'
-                                             ' of the trajectory')
+                                             ' of the trajectory').f_lock()
 
 
 
@@ -1510,24 +1510,6 @@ class Environment(HasLogger):
                                        'Or return two tuple of maximum length 3: '
                                        '``(runfunc, args, kwargs), '
                                        '(postproc, postproc_args, postproc_kwargs)' )
-
-        # Add some config about the pipeline
-        if self._user_pipeline:
-            config_name='environment.%s.pipeline' % self.v_name
-            if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-                self._traj.f_add_config(config_name, pipeline.__name__,
-                                        comment ='Name of pipeline function.')
-
-        config_name='environment.%s.runfunc' % self.v_name
-        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-            self._traj.f_add_config(config_name, self._runfunc.__name__,
-                                    comment ='Name of run function.')
-
-        if self._postproc is not None:
-            config_name='environment.%s.runfunc' % self.v_name
-            if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-                self._traj.f_add_config(config_name, self._postproc.__name__,
-                                        comment ='Name of posptroc function.')
 
 
         # Check how many runs are about to be done

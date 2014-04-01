@@ -52,8 +52,6 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
     """
     def __init__(self, name, idx, parent_trajectory):
-
-
         super(SingleRun,self).__init__()
 
         # We keep a reference to the parent trajectory.
@@ -2076,7 +2074,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
              load_results=pypetconstants.LOAD_SKELETON,
              load_other_data=pypetconstants.LOAD_SKELETON,
              force=False,
-             filename=None):
+             filename=None,
+             dynamically_imported_classes=None):
         """Loads a trajectory via the storage service.
 
 
@@ -2161,6 +2160,18 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             specify one here. The trajectory will generate an HDF5StorageService
             automatically.
 
+        :param dynamically_imported_classes:
+
+            If you've written a custom parameter that needs to be loaded dynamically during runtime,
+            this needs to be specified here as a list of classes or strings naming classes
+            and there module paths. For example:
+            `dynamically_imported_classes = ['pypet.parameter.PickleParameter',MyCustomParameter]`
+
+            If you only have a single class to import, you do not need the list brackets:
+            `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+
+            The classes passed here are added for good and will be kept by the trajectory.
+            Please add your dynamically imported classes only once.
 
         :raises:
 
@@ -2189,6 +2200,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             else:
                 self._storage_service.filename = filename
 
+        if not dynamically_imported_classes is None:
+            self.f_add_to_dynamic_imports(dynamically_imported_classes)
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                   trajectory_index=index,

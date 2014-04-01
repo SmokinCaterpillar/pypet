@@ -1688,7 +1688,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                               'Branches are loaded silently in the background. '
                                               'Do not worry, I will not freeze! Pinky promise!!!')
 
-                    self._tree_load_recursively(traj, traj, hdf5group, loading)
+                    self._tree_load_nodes(traj, traj, hdf5group, loading)
 
 
     def _trj_load_meta_data(self,traj, as_new, force):
@@ -1815,14 +1815,14 @@ class HDF5StorageService(StorageService, HasLogger):
             # First load along the branch
             hdf5_group = getattr(hdf5_group,name)
 
-            self._tree_load_recursively(traj,traj_node, hdf5_group, load_data, recursive=False)
+            self._tree_load_nodes(traj,traj_node, hdf5_group, load_data, recursive=False)
 
             traj_node = traj_node._children[name]
 
 
         # Then load recursively all data in the last group and below
         hdf5_group = getattr(hdf5_group,final_group_name)
-        self._tree_load_recursively(traj,traj_node, hdf5_group, load_data, recursive=recursive)
+        self._tree_load_nodes(traj,traj_node, hdf5_group, load_data, recursive=recursive)
 
     def _trj_check_version( self, version, force):
         """Checks for version mismatch
@@ -2247,7 +2247,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                    recursive = recursive)
 
 
-    def _tree_load_recursively(self, traj, parent_traj_node, hdf5group,
+    def _tree_load_nodes(self, traj, parent_traj_node, hdf5group,
                               load_data=pypetconstants.UPDATE_SKELETON, recursive=True):
         """Loads a node from hdf5 file and if desired recursively everything below
 
@@ -2337,7 +2337,6 @@ class HDF5StorageService(StorageService, HasLogger):
             if not name in parent_traj_node._children:
                 # If the group does not exist create it
 
-
                 comment = self._all_get_from_attrs(hdf5group,HDF5StorageService.COMMENT)
                 if comment is None:
                     comment = ''
@@ -2364,10 +2363,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 # We load recursively everything below it
                 try:
                     for new_hdf5group in hdf5group._f_iter_nodes(classname='Group'):
-                        self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
+                        self._tree_load_nodes(traj,new_traj_node,new_hdf5group,load_data)
                 except AttributeError:
                     for new_hdf5group in hdf5group._f_iterNodes(classname='Group'):
-                        self._tree_load_recursively(traj,new_traj_node,new_hdf5group,load_data)
+                        self._tree_load_nodes(traj,new_traj_node,new_hdf5group,load_data)
 
     def _tree_store_nodes(self,msg, traj_node, parent_hdf5_group, recursive = True):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
@@ -2396,16 +2395,12 @@ class HDF5StorageService(StorageService, HasLogger):
                                traj_node.v_full_name)
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
-
-
-
         if traj_node.v_is_leaf:
             if store_new:
                 # If we have a leaf node, store it as a parameter or result
                 self._prm_store_parameter_or_result(store_msg, traj_node,
                                                     _hdf5_group=new_hdf5_group,
                                                     _newly_created=True)
-
         else:
             # Else store it as a group node
             if store_new:
