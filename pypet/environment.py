@@ -192,6 +192,43 @@ def _queue_handling(handler, log_path, log_stdout):
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
 
+def _evaluation_handling(traj, evaluationfunc, args, kwargs,
+                         result_queue, expand_queue, shared_flag_list,
+                         log_path, log_stdout):
+
+    if log_path is not None:
+        # Create a new log file for the queue writer
+        filename = 'evalutation_process.txt'
+        filename=log_path+'/'+filename
+        root = logging.getLogger()
+
+        h=logging.FileHandler(filename=filename)
+        f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+        h.setFormatter(f)
+        root.addHandler(h)
+
+        if log_stdout:
+
+            #Redirect standard out and error to the file
+            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+            sys.stdout = outstl
+
+            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+            sys.stderr = errstl
+
+    while True:
+
+        if not result_queue.empty():
+            result = result_queue.get()
+            shared_flag_list[1] = 'WORKING'
+            new_dict = evaluationfunc(traj, result, *args, **kwargs)
+            expand_queue.put(new_dict)
+            shared_flag_list[1] = 'DONE'
+
+        elif shared_flag_list[0] == 'DONE' and shared_flag_list[1] == 'DONE':
+                break
+
+
 class Environment(HasLogger):
     """ The environment to run a parameter exploration.
 
@@ -693,12 +730,16 @@ class Environment(HasLogger):
             raise RuntimeError('`sumatra` package has not been found, either install '
                                '`sumatra` or set `sumatra_project=None`.')
 
-        if '.' in sumatra_label:
+        if sumatra_label is not None and '.' in sumatra_label:
             raise RuntimeError('Your sumatra label is not allowed to contain dots.')
 
         self._sumatra_project=sumatra_project
         self._sumatra_reason = sumatra_reason
         self._sumatra_label = sumatra_label
+
+        self._evaluation_function = None
+        self._evaluation_args=None
+        self._evaluation_kwargs=None
 
         self._git_repository = git_repository
         self._git_message=git_message
@@ -1529,7 +1570,7 @@ class Environment(HasLogger):
                 # The writer from above will receive the data from the queue and hand it over to
                 # the storage service
                 queue_sender = QueueStorageServiceSender()
-                queue_sender.queue=queue
+                queue_sender.queue = queue
                 self._traj.v_storage_service=queue_sender
 
             elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
@@ -1555,6 +1596,19 @@ class Environment(HasLogger):
                                    'not supported, use `%s` or `%s`.'
                                     %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
                                       pypetconstants.WRAP_MODE_LOCK))
+
+            # Start the evaluation process
+            if self._evaluation_function is not None:
+                eval_queue = manager.Queue()
+                expand_queue = manager.Queue()
+                evaluation_process = multip.Process(name='EvaluationProcess',
+                    target=_evaluation_handling,
+                    args=(self._traj,
+                          self._evaluation_function,
+                          self._evaluation_args,
+                            self._evaluation_kwargs,
+                            eval_queue, expand_queue,
+                            log_path, log_stdout))
 
 
             # Number of processes to be started
@@ -1608,9 +1662,12 @@ class Environment(HasLogger):
                 keep_running=True # Evaluates to falls if trajectory produces no more single runs
                 process_dict = {} # Dict containing all subprocees
 
+                if self._evaluation_function is not None:
+                    evaluation_not_done = True
+                else:
+                    evaluation_not_done = False
 
-
-                while len(process_dict)>0 or keep_running:
+                while len(process_dict)>0 or keep_running or evaluation_not_done:
 
                     terminated_procs_pids = []
                     # First check if some processes did finish their job
@@ -1669,17 +1726,27 @@ class Environment(HasLogger):
 
                     time.sleep(0.1)
 
+                    # Get all results from the result queue
+                    results = []
+                    while not result_queue.empty():
+                        result = result_queue.get()
+                        if not self._evaluation_function is None:
+                            eval_queue.put(result)
+
+                        results.append(result)
+
+                        if self._continuable:
+                            self._trigger_result_snapshot(result, snapshot_counter)
+                            snapshot_counter += 1
+
+                    if not self._evaluation_function is None:
+                        while not expand_queue.empty():
+                            expand = expand_queue.get()
+
+                            if (expand is None or not hasattr(expand, '__len__') or
+                                                          len(expand) == 0):
 
 
-
-                # Get all results from the result queue
-                results = []
-                while not result_queue.empty():
-                    result = result_queue.get()
-                    results.append(result)
-                    if self._continuable:
-                        self._trigger_result_snapshot(result, snapshot_counter)
-                        snapshot_counter += 1
 
             # In case of queue mode, we need to signal to the queue writer that no more data
             # will be put onto the queue
@@ -1687,7 +1754,9 @@ class Environment(HasLogger):
                 self._traj.v_storage_service.send_done()
                 queue_process.join()
 
-
+            # In case we had an evaluation process we can have to make it join, too
+            if self._evaluation_function is not None:
+                evaluation_process.join()
 
             # Replace the wrapped storage service with the original one and do some finalization
             self._traj.v_storage_service=self._storage_service
