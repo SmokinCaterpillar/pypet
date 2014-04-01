@@ -405,11 +405,11 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         of all runs.
 
         """
-        if 'results.runs.'+self.v_name in self:
-            self.results.runs.f_remove_child(self.v_name,recursive=True)
+        if self.f_contains('results.runs.'+ self.v_name):
+            self.results.runs.f_remove_child(self.v_name, recursive=True)
 
-        if 'derived_parameters.runs.' +self.v_name in self:
-            self.derived_parameters.runs.f_remove_child(self.v_name,recursive=True)
+        if self.f_contains('derived_parameters.runs.' + self.v_name):
+            self.derived_parameters.runs.f_remove_child(self.v_name, recursive=True)
 
 
     def f_to_dict(self,fast_access = False, short_names=False, copy = True):
@@ -1881,15 +1881,15 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def _store_expansion(self):
         for param_name, param in self._explored_parameters.items():
 
-                try:
+            try:
 
-                    self._storage_service.store(pypetconstants.DELETE, param,
-                                               trajectory_name=self.v_trajectory_name)
+                self._storage_service.store(pypetconstants.DELETE, param,
+                                           trajectory_name=self.v_trajectory_name)
 
-                except Exception:
-                    self._logger.error('Could not erase explored parameter `%s` from disk for '
-                                         'expansion.' % param_name)
-                self.f_store_item(param)
+            except Exception:
+                self._logger.error('Could not erase explored parameter `%s` from disk for '
+                                     'expansion.' % param_name)
+            self.f_store_item(param)
 
 
     def f_explore(self, build_dict):
@@ -2025,6 +2025,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for key, par in self._derived_parameters.items():
             par.f_lock()
 
+    def _remove_run_data(self):
+        group_names = ['results.runs', 'derived_parameters.runs']
+        for group_name in group_names:
+            group = self.g_get(group_name)
+            if self.f_contains(group_name):
+                for child_name in \
+                        group.f_get_children(copy=False).keys():
+
+                    if child_name.startswith(pypetconstants.RUN_NAME):
+                        group.f_reomve_child(child_name, recursive=True)
+
     def _finalize(self):
         """Final rollback initiated by the environment
 
@@ -2035,8 +2046,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """
         self.f_restore_default()
         self._nn_interface._change_root(self)
-        self.f_load(self.v_name,None, False, pypetconstants.LOAD_NOTHING, pypetconstants.LOAD_NOTHING,
-                  pypetconstants.LOAD_NOTHING)
+        self.f_load(self.v_name,None, False, load_parameters=pypetconstants.LOAD_NOTHING,
+                    load_derived_parameters=pypetconstants.LOAD_NOTHING,
+                   load_results=pypetconstants.LOAD_NOTHING,
+                   load_other_data=pypetconstants.LOAD_NOTHING)
 
     def f_update_skeleton(self):
         """Loads the full skeleton from the storage service.

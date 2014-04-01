@@ -80,7 +80,10 @@ def _single_run(args):
 
         9. The keyword arguments handed to the user's job function (as **kwargs)
 
-    :return: Results computed by the user's job function which are not stored into the trajectory
+    :return:
+
+        Results computed by the user's job function which are not stored into the trajectory.
+        Returns a tuple of run index and result: ``(traj.v_idx, result)``
 
     """
 
@@ -156,6 +159,8 @@ def _single_run(args):
         if multiproc:
             root.removeHandler(handler)
 
+        result = (traj.v_idx, result)
+
         if not use_pool:
             result_queue.put(result)
         else:
@@ -191,42 +196,6 @@ def _queue_handling(handler, log_path, log_stdout):
 
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
-
-def _evaluation_handling(traj, evaluationfunc, args, kwargs,
-                         result_queue, expand_queue, shared_flag_list,
-                         log_path, log_stdout):
-
-    if log_path is not None:
-        # Create a new log file for the queue writer
-        filename = 'evalutation_process.txt'
-        filename=log_path+'/'+filename
-        root = logging.getLogger()
-
-        h=logging.FileHandler(filename=filename)
-        f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-        h.setFormatter(f)
-        root.addHandler(h)
-
-        if log_stdout:
-
-            #Redirect standard out and error to the file
-            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-            sys.stdout = outstl
-
-            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-            sys.stderr = errstl
-
-    while True:
-
-        if not result_queue.empty():
-            result = result_queue.get()
-            shared_flag_list[1] = 'WORKING'
-            new_dict = evaluationfunc(traj, result, *args, **kwargs)
-            expand_queue.put(new_dict)
-            shared_flag_list[1] = 'DONE'
-
-        elif shared_flag_list[0] == 'DONE' and shared_flag_list[1] == 'DONE':
-                break
 
 
 class Environment(HasLogger):
@@ -737,9 +706,14 @@ class Environment(HasLogger):
         self._sumatra_reason = sumatra_reason
         self._sumatra_label = sumatra_label
 
-        self._evaluation_function = None
-        self._evaluation_args=None
-        self._evaluation_kwargs=None
+        self._runfunc = None
+        self._args = ()
+        self._kwargs = {}
+
+        self._postproc = None
+        self._postproc_args = ()
+        self._postproc_kwargs = {}
+        self._user_pipeline = False
 
         self._git_repository = git_repository
         self._git_message=git_message
@@ -1163,107 +1137,15 @@ class Environment(HasLogger):
 
         :return:
         """
-
-        if not self._continuable:
-            raise RuntimeError('If you create an environment to continue a run, you need to '
-                               'set `continuable=True`.')
-
-        if not self._do_single_runs:
-            raise RuntimeError('You cannot continue a run if you did create an environment '
-                               'with `do_single_runs=False`.')
-
         if trajectory_name is None:
-            trajectory_name = self.v_trajectory.v_name
+            self.trajectory_name = self.v_trajectory.v_name
+        else:
+            self.trajectory_name = trajectory_name
 
         if continue_folder is not None:
             self._continue_folder = continue_folder
 
-        self._continue_path = os.path.join(self._continue_folder, trajectory_name)
-        cnt_filename = os.path.join(self._continue_path, 'environment.ecnt')
-        cnt_file = open(cnt_filename, 'rb')
-        continue_dict = dill.load(cnt_file)
-        cnt_file.close()
-        traj = continue_dict['trajectory']
-
-        # We need to update the information about the trajectory name
-        config_name='config.environment.%s.trajectory.name' % self.v_name
-        if self._traj.f_contains(config_name, shortcuts=False):
-            param = self._traj.f_get(config_name, shortcuts=False)
-            param.f_unlock()
-            param.f_set(traj.v_name)
-            param.f_lock()
-
-        config_name='config.environment.%s.trajectory.timestamp' % self.v_name
-        if self._traj.f_contains(config_name, shortcuts=False):
-            param = self._traj.f_get(config_name, shortcuts=False)
-            param.f_unlock()
-            param.f_set(traj.v_timestamp)
-            param.f_lock()
-
-
-        # Merge the information so that we keep a record about the current environment
-        if not traj.config.environment.f_contains(self.v_name, shortcuts=False):
-            traj._merge_config(self._traj)
-        self._traj = traj
-
-
-        # User's job function
-        runfunc = continue_dict['runfunc']
-        # Arguments to the user's job function
-        args = continue_dict['args']
-        # Keyword arguments to the user's job function
-        kwargs = continue_dict['kwargs']
-        # Check how many runs are about to be done
-        nruns = continue_dict['nruns']
-
-        # Unpack the trajectory
-        self._traj.v_full_copy = continue_dict['full_copy']
-        # Load meta data
-        self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
-             load_derived_parameters=pypetconstants.LOAD_NOTHING,
-             load_results=pypetconstants.LOAD_NOTHING,
-             load_other_data=pypetconstants.LOAD_NOTHING)
-
-        # Now we have to reconstruct previous results
-        result_tuple_list = []
-        for filename in os.listdir(self._continue_path):
-            _, ext = os.path.splitext(filename)
-
-            if ext != '.rcnt':
-                continue
-
-            cnt_file = open(os.path.join(self._continue_path, filename), 'rb')
-            result_dict = dill.load(cnt_file)
-            cnt_file.close()
-            result_tuple_list.append((result_dict['counter'], result_dict['result']))
-
-        # Sort according to counter
-        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
-        result_list = [x[1] for x in result_tuple_list]
-
-        finished_runs = len(result_list)
-
-        # Remove incomplete runs
-        self._traj._remove_incomplete_runs(finished_runs, nruns)
-
-        # Check how many runs are about to be done
-        count = 0
-        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
-            if not run_dict['completed']:
-                count += 1
-
-        # Add a config parameter signalling that an experiment was continued, and how many of them
-        config_name='environment.%s.continued_runs' % self.v_name
-        if not config_name in self._traj:
-            self._traj.f_add_config(config_name, count,
-                                    comment ='Added if a crashed trajectory was continued.')
-
-        # Trigger another continue saving to update the trajectory
-        self._trigger_continue_snapshot(runfunc, args, kwargs, nruns, False)
-
-        self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
-        # Resume the experiment
-        return self._do_runs(runfunc, args, kwargs, result_list)
+        self._do_runs(None)
 
     @ property
     def v_trajectory(self):
@@ -1325,6 +1207,9 @@ class Environment(HasLogger):
 
             List of the individual results returned by `runfunc`.
 
+            Returns a LIST OF TUPLES, where first entry is the run idx and second entry
+            is the actual result.
+
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
             potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
@@ -1335,81 +1220,23 @@ class Environment(HasLogger):
             `runfunc` still need to be pickled.
 
         """
+        pipeline = lambda traj : ((runfunc, args, kwargs),
+                             (self._postproc, self._postproc_args, self._postproc_kwargs) )
 
-        if not self._do_single_runs:
-            raise RuntimeError('You cannot make a run if you did create an environment '
-                               'with `do_single_runs=False`.')
+        self._user_pipeline = False
 
-        # Make some sanity checks if the user wants the standard hdf5 service.
-        if self._use_hdf5:
-            if ( (not self._traj.f_get('results_runs_summary').f_get() or
-                        not self._traj.f_get('results_runs_summary').f_get()) and
-                    self._traj.f_get('purge_duplicate_comments').f_get()):
-                    raise RuntimeError('You can only use the reduce comments if you enable '
-                                       'the summary tables.')
+        return self._do_runs(pipeline)
 
-        # Check how many runs are about to be done
-        count = 0
-        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
-            if not run_dict['completed']:
-                count +=1
-
-        # Add the amount to be run to the trajectory
-        config_name='environment.%s.normal_runs' % self.v_name
-        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-            self._traj.f_add_config(config_name, count,
-                                    comment ='Added if trajectory was explored normally and not '
-                                             'continued.')
-
-        config_name='environment.%s.store_before_runs' % self.v_name
-        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-            self._traj.f_add_config(config_name, self._store_before_runs,
-                    comment='If the trajectory should automatically be saved before the '
-                            'single runs start, otherwise the store is only initialised. '
-                            'Only added if runs are started, not continued.')
-
-        # Make some preparations (locking of parameters etc) and store the trajectory
-        self._logger.info('I am preparing the Trajectory for the experiment and store it.')
-        self._traj._prepare_experiment()
-
-        self._traj.f_store(only_init= (not self._store_before_runs))
-        self._logger.info('Trajectory successfully stored.')
-
-        if self._continuable:
-            self._trigger_continue_snapshot(runfunc, args, kwargs, count, True)
-
-        # Start the runs
-        return self._do_runs(runfunc, args, kwargs)
-
-    def _trigger_continue_snapshot(self, runfunc, args, kwargs, nruns, new_trajectory):
+    def _trigger_continue_snapshot(self, nruns):
         '''Makes the trajectory continuable in case the user wants that
-
-        :param runfunc:
-
-            The function to execute
-
-        :param args:
-
-            Arguments passed to runfunc
-
-        :param kwargs:
-
-            Keyword arguments passed to runfunc
 
         :param nruns:
 
             The number of runs to be completed
 
-        :param new_trajectory:
-
-            Boolean if a new trajectory is started or is a trajectory is continued.
-
         '''
         dump_dict = {}
         dump_filename=os.path.join(self._continue_path,'environment.ecnt')
-
-        if new_trajectory and os.listdir(self._continue_path):
-            raise RuntimeError('Your continue folder `%s` needs to be empty to allow continuing!')
 
 
         # Store the trajectory before the first runs
@@ -1417,9 +1244,12 @@ class Environment(HasLogger):
         dump_dict['full_copy'] = prev_full_copy
         self._traj.v_full_copy=True
         dump_dict['trajectory'] = self._traj
-        dump_dict['args'] = args
-        dump_dict['kwargs'] = kwargs
-        dump_dict['runfunc'] = runfunc
+        dump_dict['args'] = self._args
+        dump_dict['kwargs'] = self._kwargs
+        dump_dict['runfunc'] = self._runfunc
+        dump_dict['postproc'] = self._postproc
+        dump_dict['postproc_args'] = self._postproc_args
+        dump_dict['postproc_kwargs'] = self._postproc_kwargs
         dump_dict['nruns'] = nruns
 
         dump_file = open(dump_filename, 'wb')
@@ -1501,36 +1331,268 @@ class Environment(HasLogger):
         self._traj.f_store_items(conf_list)
         self._logger.info('Saved sumatra project.')
 
+    def _prepare_continue(self):
+        if not self._continuable:
+            raise RuntimeError('If you create an environment to continue a run, you need to '
+                               'set `continuable=True`.')
 
-    def _do_runs(self, runfunc, args, kwargs, prev_results=None):
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot continue a run if you did create an environment '
+                               'with `do_single_runs=False`.')
+
+
+        self._continue_path = os.path.join(self._continue_folder, self.trajectory_name)
+        cnt_filename = os.path.join(self._continue_path, 'environment.ecnt')
+        cnt_file = open(cnt_filename, 'rb')
+        continue_dict = dill.load(cnt_file)
+        cnt_file.close()
+        traj = continue_dict['trajectory']
+
+        # We need to update the information about the trajectory name
+        config_name='config.environment.%s.trajectory.name' % self.v_name
+        if self._traj.f_contains(config_name, shortcuts=False):
+            param = self._traj.f_get(config_name, shortcuts=False)
+            param.f_unlock()
+            param.f_set(traj.v_name)
+            param.f_lock()
+
+        config_name='config.environment.%s.trajectory.timestamp' % self.v_name
+        if self._traj.f_contains(config_name, shortcuts=False):
+            param = self._traj.f_get(config_name, shortcuts=False)
+            param.f_unlock()
+            param.f_set(traj.v_timestamp)
+            param.f_lock()
+
+        # Merge the information so that we keep a record about the current environment
+        if not traj.config.environment.f_contains(self.v_name, shortcuts=False):
+            traj._merge_config(self._traj)
+        self._traj = traj
+
+
+        # User's job function
+        self._runfunc = continue_dict['runfunc']
+        # Arguments to the user's job function
+        self._args = continue_dict['args']
+        # Keyword arguments to the user's job function
+        self._kwargs = continue_dict['kwargs']
+        # Postproc Function
+        self._postproc = continue_dict['postproc']
+        # Postprog args
+        self._postproc_args = continue_dict['postproc_args']
+        # Postproc Kwargs
+        self._postproc_kwargs = continue_dict['postproc_kwargs']
+        # Check how many runs are about to be done
+        nruns = continue_dict['nruns']
+
+        # Unpack the trajectory
+        self._traj.v_full_copy = continue_dict['full_copy']
+        # Load meta data
+        self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
+             load_derived_parameters=pypetconstants.LOAD_NOTHING,
+             load_results=pypetconstants.LOAD_NOTHING,
+             load_other_data=pypetconstants.LOAD_NOTHING)
+
+        # Now we have to reconstruct previous results
+        result_tuple_list = []
+        for filename in os.listdir(self._continue_path):
+            _, ext = os.path.splitext(filename)
+
+            if ext != '.rcnt':
+                continue
+
+            cnt_file = open(os.path.join(self._continue_path, filename), 'rb')
+            result_dict = dill.load(cnt_file)
+            cnt_file.close()
+            result_tuple_list.append((result_dict['counter'], result_dict['result']))
+
+        # Sort according to counter
+        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
+        result_list = [x[1] for x in result_tuple_list]
+
+        finished_runs = len(result_list)
+
+        # Remove incomplete runs
+        self._traj._remove_incomplete_runs(finished_runs, nruns)
+
+        # Check how many runs are about to be done
+        count = 0
+        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
+            if not run_dict['completed']:
+                count += 1
+
+        # Add a config parameter signalling that an experiment was continued, and how many of them
+        config_name='environment.%s.continued' % self.v_name
+        if not config_name in self._traj:
+            self._traj.f_add_config(config_name, True,
+                                    comment ='Added if a crashed trajectory was continued.')
+
+        self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
+
+        return nruns, result_list
+
+
+    def _prepare_runs(self, pipeline):
+        """Prepares the running of an experiment
+
+        :param pipeline:
+
+            A pipeline function that defines the task
+
+        :return:
+
+            The number of runs to be executed
+
+        """
+        if not self._do_single_runs:
+            raise RuntimeError('You cannot make a run if you did create an environment '
+                               'with `do_single_runs=False`.')
+
+        # Make some sanity checks if the user wants the standard hdf5 service.
+        if self._use_hdf5:
+            if ( (not self._traj.f_get('results_runs_summary').f_get() or
+                        not self._traj.f_get('results_runs_summary').f_get()) and
+                    self._traj.f_get('purge_duplicate_comments').f_get()):
+                    raise RuntimeError('You can only use the reduce comments if you enable '
+                                       'the summary tables.')
+
+        if self._continuable and os.listdir(self._continue_path):
+            raise RuntimeError('Your continue folder `%s` needs to be empty to allow continuing!')
+
+
+        config_name='environment.%s.store_before_runs' % self.v_name
+        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
+            self._traj.f_add_config(config_name, self._store_before_runs,
+                    comment='If the trajectory should automatically be saved before the '
+                            'single runs start, otherwise the store is only initialised. '
+                            'Only added if runs are started, not continued.')
+
+        if self._user_pipeline:
+            self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                  '  STARTING PPREPROCESSING.'
+                              '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+
+        pip_result = pipeline(self._traj) # Call the pipeline function
+
+        # Extract the task to do from the pipeline resutl
+        raise_error = False
+        if (len(pip_result) == 2 and
+            isinstance(pip_result[0], tuple) and
+            isinstance(pip_result[1], tuple)):
+
+            run_tuple = pip_result[0]
+            self._runfunc = run_tuple[0]
+            if len(run_tuple) > 1:
+                self._args = run_tuple[1]
+            if len(run_tuple) > 2:
+                self._kwargs = run_tuple[2]
+            if len(run_tuple) > 3:
+                raise_error = True
+
+            postproc_tuple = pip_result[1]
+            self._postproc = postproc_tuple[0]
+            if len(postproc_tuple)>1:
+                self._postproc_args = postproc_tuple[1]
+            if len(postproc_tuple)>2:
+                self._postproc_kwargs = postproc_tuple[2]
+
+        elif len(pip_result) <= 3:
+            self._runfunc = pip_result[0]
+            if len(pip_result) > 1:
+                self._args = pip_result[1]
+            if len(pip_result) > 2:
+                self._kwargs = pip_result[2]
+        else:
+            raise_error = True
+
+        if raise_error:
+            raise RuntimeError('Your pipeline result is not understood please return'
+                                       'a tuple of maximum length 3: ``(runfunc, args, kwargs)`` '
+                                       'Or return two tuple of maximum length 3: '
+                                       '``(runfunc, args, kwargs), '
+                                       '(postproc, postproc_args, postproc_kwargs)' )
+
+        # Add some config about the pipeline
+        if self._user_pipeline:
+            config_name='environment.%s.pipeline' % self.v_name
+            if not self._traj.f_contains('config.'+config_name, shortcuts=False):
+                self._traj.f_add_config(config_name, pipeline.__name__,
+                                        comment ='Name of pipeline function.')
+
+        config_name='environment.%s.runfunc' % self.v_name
+        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
+            self._traj.f_add_config(config_name, self._runfunc.__name__,
+                                    comment ='Name of run function.')
+
+        if self._postproc is not None:
+            config_name='environment.%s.runfunc' % self.v_name
+            if not self._traj.f_contains('config.'+config_name, shortcuts=False):
+                self._traj.f_add_config(config_name, self._postproc.__name__,
+                                        comment ='Name of posptroc function.')
+
+
+        # Check how many runs are about to be done
+        count = 0
+        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
+            if not run_dict['completed']:
+                count +=1
+
+        # Make some preparations (locking of parameters etc) and store the trajectory
+        self._logger.info('I am preparing the Trajectory for the experiment and store it.')
+        self._traj._prepare_experiment()
+
+        self._traj.f_store(only_init = (not self._store_before_runs))
+        self._logger.info('Trajectory successfully stored.')
+
+        return count
+
+
+    def _do_runs(self, pipeline):
         """ Starts the individual single runs.
 
         Starts runs sequentially or initiates multiprocessing.
 
-        :param runfunc: The user's job
-        :param args: Arguments handed to the job
-        :param kwargs: Keyword arguments handed to the job
-        :param prev_results: Potentially previously computed results
+        :param pipeline:
 
-        :return: Iterable over the results of the individual runs
+            A pipeline function producing the run function the corresponding arguments
+            and postprocessing function and arguments
+
+        :return:
+
+            List of tuples, where each tuple contains the run idx and the result.
 
         """
-        log_path = self._log_path
-        log_stdout = self._log_stdout
-        snapshot_counter = 0
-
         self._start_timestamp = time.time()
-        config_name='environment.%s.start_timestamp' % self.v_name
-        conf = self._traj.f_add_config(config_name, self._start_timestamp,
-            comment='Timestamp of starting of experiment (when the actual simulation was '
-                    'started (either by calling `f_run`, `f_continue`, or `f_pipeline`).')
-        self._traj.f_store_item(conf)
 
         if self._sumatra_project is not None:
             self._prepare_sumatra()
 
-        if prev_results is None:
+        if pipeline is not None:
             prev_results = []
+            nruns = self._prepare_runs(pipeline)
+        else:
+            nruns, prev_results = self._prepare_continue()
+
+        log_path = self._log_path
+        log_stdout = self._log_stdout
+        snapshot_counter = 0
+
+        runfunc = self._runfunc
+        kwargs = self._kwargs
+        args = self._args
+
+        postproc = self._postproc
+        postproc_args = self._postproc_args
+        postproc_kwargs = self._postproc_kwargs
+
+        start_run_idx = 0 # Index from where to start
+
+
+        config_name='environment.%s.start_timestamp' % self.v_name
+        if not self._traj.f_contains('config.' + config_name):
+            conf = self._traj.f_add_config(config_name, self._start_timestamp,
+                comment='Timestamp of starting of experiment (when the actual simulation was '
+                        'started (either by calling `f_run`, `f_continue`, or `f_pipeline`).')
+            self._traj.f_store_item(conf)
 
         self._multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
 
@@ -1538,275 +1600,280 @@ class Environment(HasLogger):
 
         self._storage_service = self._traj.v_storage_service
 
-        if self._multiproc:
+        results = prev_results # List for the results computed now
 
-            manager = multip.Manager()
+        runs_added_by_postproc = 0
 
-            self._use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
-            self._wrap_mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
+        while True:
+            if self._continuable:
+                self._trigger_continue_snapshot(nruns)
 
-            if not self._use_pool:
-                # If we spawn a single process for each run, we need an additional queue
-                # for the results of `runfunc`
-                result_queue = manager.Queue(maxsize=len(self._traj))
+            if self._multiproc:
 
-            # Prepare Multiprocessing
-            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                # For queue mode we need to have a queue in a block of shared memory.
-                queue = manager.Queue()
+                manager = multip.Manager()
 
-                self._logger.info('Starting the Storage Queue!')
+                self._use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
+                self._wrap_mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
 
-                # Wrap a queue writer around the storage service
-                queue_writer = QueueStorageServiceWriter(self._storage_service,queue)
+                if not self._use_pool:
+                    # If we spawn a single process for each run, we need an additional queue
+                    # for the results of `runfunc`
+                    result_queue = manager.Queue(maxsize=len(self._traj))
 
-                # Start the queue process
-                queue_process = multip.Process(name='QueueProcess',target=_queue_handling,
-                                        args=(queue_writer,log_path, log_stdout))
-                queue_process.start()
+                # Prepare Multiprocessing
+                if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+                    # For queue mode we need to have a queue in a block of shared memory.
+                    queue = manager.Queue()
 
-                # Replace the storage service of the trajectory by a sender.
-                # The sender will put all data onto the queue.
-                # The writer from above will receive the data from the queue and hand it over to
-                # the storage service
-                queue_sender = QueueStorageServiceSender()
-                queue_sender.queue = queue
-                self._traj.v_storage_service=queue_sender
+                    self._logger.info('Starting the Storage Queue!')
 
-            elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
+                    # Wrap a queue writer around the storage service
+                    queue_writer = QueueStorageServiceWriter(self._storage_service,queue)
+
+                    # Start the queue process
+                    queue_process = multip.Process(name='QueueProcess',target=_queue_handling,
+                                            args=(queue_writer,log_path, log_stdout))
+                    queue_process.start()
+
+                    # Replace the storage service of the trajectory by a sender.
+                    # The sender will put all data onto the queue.
+                    # The writer from above will receive the data from the queue and hand it over to
+                    # the storage service
+                    queue_sender = QueueStorageServiceSender()
+                    queue_sender.queue = queue
+                    self._traj.v_storage_service=queue_sender
+
+                elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
+
+                    if self._use_pool:
+                        # We need a lock that is shared by all processes.
+                        lock = manager.Lock()
+                    else:
+                        lock = multip.Lock()
+
+                    queue = None
+
+                    # Wrap around the storage service to allow the placement of locks around
+                    # the storage procedure.
+                    lock_wrapper = LockWrapper(self._storage_service,lock)
+                    self._traj.v_storage_service=lock_wrapper
+
+                elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
+                    # We assume that storage and loading is multiprocessing safe
+                    pass
+                else:
+                    raise RuntimeError('The mutliprocessing mode %s, your choice is '
+                                       'not supported, use `%s` or `%s`.'
+                                        %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
+                                          pypetconstants.WRAP_MODE_LOCK))
+
+                # Number of processes to be started
+                ncores =  self._traj.f_get('config.environment.%s.ncores'  % self.v_name).f_get()
+
+
+                self._logger.info('\n************************************************************\n'
+                                  '************************************************************\n'
+                                  'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
+                                  '\n************************************************************\n'
+                                  '************************************************************\n' %
+                                  (self._traj.v_name, ncores))
+
+                # Create a generator to generate the tasks for the mp-pool
+                iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
+                             queue, runfunc, len(self._traj),
+                             self._multiproc, result_queue,  args, kwargs)
+                             for n in xrange(start_run_idx, len(self._traj)) if not self._traj.f_is_completed(n))
+
 
                 if self._use_pool:
-                    # We need a lock that is shared by all processes.
-                    lock = manager.Lock()
+                    mpool = multip.Pool(ncores)
+                    # Let the pool workers do their jobs provided by the generator
+                    pool_results = mpool.imap(_single_run, iterator)
+
+                    # Everything is done
+                    mpool.close()
+                    mpool.join()
+
+                    # We want to consistently return a list of results not an iterator
+                    results.extend([result for result in pool_results])
+
                 else:
-                    lock = multip.Lock()
+                    self._cpu_cap = self._traj.f_get('config.environment.%s.cpu_cap'  % self.v_name).f_get()
+                    self._memory_cap = self._traj.f_get('config.environment.%s.memory_cap'  % self.v_name).f_get()
+                    self._swap_cap = self._traj.f_get('config.environment.%s.swap_cap'  % self.v_name).f_get()
 
-                queue = None
+                    check_usage = psutil is not None and (self._cpu_cap < 1.0 or
+                                                          self._memory_cap < 1.0 or
+                                                          self._swap_cap < 1.0)
+                    if check_usage:
+                        self._logger.info('Monitoring usage statistics. I will not spawn new processes '
+                                          'if one of the following cap thresholds is crossed, '
+                                          'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
+                                          (self._cpu_cap, self._memory_cap, self._swap_cap))
+                        psutil.cpu_percent() # Just for initialisation
 
-                # Wrap around the storage service to allow the placement of locks around
-                # the storage procedure.
-                lock_wrapper = LockWrapper(self._storage_service,lock)
-                self._traj.v_storage_service=lock_wrapper
+                    no_cap = True # Evaluates if new processes are allowed to be started or if cap is
+                    # reached
+                    signal_cap = True # If True cap warning is emitted
+                    keep_running=True # Evaluates to falls if trajectory produces no more single runs
+                    process_dict = {} # Dict containing all subprocees
 
-            elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
-                # We assume that storage and loading is multiprocessing safe
-                pass
+                    while len(process_dict)>0 or keep_running:
+
+                        terminated_procs_pids = []
+                        # First check if some processes did finish their job
+                        for pid in process_dict.keys():
+                            proc = process_dict[pid]
+
+                            # Delete the terminated processes
+                            if not proc.is_alive():
+                                process_dict.pop(pid)
+
+                        # Check if caps are reached. Cap is only checked if there is at least one
+                        # process working to prevent deadlock.
+                        if check_usage and keep_running:
+                            no_cap=True
+                            if len(process_dict) > 0:
+                                cpu_usage = psutil.cpu_percent()/100.0
+                                memory_usage = psutil.phymem_usage().percent/100.0
+                                swap_usage = psutil.swap_memory().percent/100.0
+                                if cpu_usage > self._cpu_cap:
+                                    no_cap = False
+                                    if signal_cap:
+                                        self._logger.warning('Could not start next process immediately.'
+                                                             'CPU Cap reached, %.2f > %.2f.' %
+                                                             (cpu_usage, self._cpu_cap))
+                                        signal_cap = False
+                                elif memory_usage > self._memory_cap:
+                                    no_cap=False
+                                    if signal_cap:
+                                        self._logger.warning('Could not start next process '
+                                                             'immediately. Memory Cap reached, '
+                                                             '%.2f > %.2f.' %
+                                                             (memory_usage, self._memory_cap))
+                                        signal_cap = False
+                                elif swap_usage > self._swap_cap:
+                                    no_cap=False
+                                    if signal_cap:
+                                        self._logger.warning('Could not start next process '
+                                                             'immediately. Swap Cap reached, '
+                                                             '%.2f > %.2f.' %
+                                                             (swap_usage, self._swap_cap))
+                                        signal_cap = False
+
+                        # If we have less active processes than ncores and there is still
+                        # a job to do, add another process
+                        if len(process_dict) < ncores and keep_running and no_cap:
+                            try:
+                                task = iterator.next()
+                                proc = multip.Process(target=_single_run,
+                                                                   args=(task,))
+                                proc.start()
+                                process_dict[proc.pid]=proc
+                                signal_cap = True
+                            except StopIteration:
+                                # All simulation runs have been started
+                                keep_running=False
+
+                        time.sleep(0.1)
+
+                        # Get all results from the result queue
+                        while not result_queue.empty():
+                            result = result_queue.get()
+
+                            results.append(result)
+
+                            if self._continuable:
+                                self._trigger_result_snapshot(result, snapshot_counter)
+                                snapshot_counter += 1
+
+                # In case of queue mode, we need to signal to the queue writer that no more data
+                # will be put onto the queue
+                if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+                    self._traj.v_storage_service.send_done()
+                    queue_process.join()
+
+                # Replace the wrapped storage service with the original one and do some finalization
+                self._traj.v_storage_service=self._storage_service
+                self._traj._finalize()
+
+                self._logger.info('\n************************************************************\n'
+                                  '************************************************************\n'
+                                  'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
+                                  '\n************************************************************\n'
+                                  '************************************************************\n' %
+                                  (self._traj.v_name, ncores))
+
             else:
-                raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                   'not supported, use `%s` or `%s`.'
-                                    %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
-                                      pypetconstants.WRAP_MODE_LOCK))
+                # Single Processing
+                self._logger.info('\n************************************************************\n'
+                                  '************************************************************\n'
+                                  'STARTING runs of trajectory\n`%s`.'
+                                  '\n************************************************************\n'
+                                  '************************************************************\n' %
+                                  self._traj.v_name)
 
-            # Start the evaluation process
-            if self._evaluation_function is not None:
-                eval_queue = manager.Queue()
-                expand_queue = manager.Queue()
-                evaluation_process = multip.Process(name='EvaluationProcess',
-                    target=_evaluation_handling,
-                    args=(self._traj,
-                          self._evaluation_function,
-                          self._evaluation_args,
-                            self._evaluation_kwargs,
-                            eval_queue, expand_queue,
-                            log_path, log_stdout))
-
-
-            # Number of processes to be started
-            ncores =  self._traj.f_get('config.environment.%s.ncores'  % self.v_name).f_get()
-
-
-            self._logger.info('\n************************************************************\n'
-                              '************************************************************\n'
-                              'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
-                              '\n************************************************************\n'
-                              '************************************************************\n' %
-                              (self._traj.v_name, ncores))
-
-            # Create a generator to generate the tasks for the mp-pool
-            iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
-                         queue, runfunc, len(self._traj),
-                         self._multiproc, result_queue,  args, kwargs)
-                         for n in xrange(len(self._traj)) if not self._traj.f_is_completed(n))
-
-
-            if self._use_pool:
-                mpool = multip.Pool(ncores)
-                # Let the pool workers do their jobs provided by the generator
-                results = mpool.imap(_single_run, iterator)
-
-                # Everything is done
-                mpool.close()
-                mpool.join()
-
-                # We want to consistently return a list of results not an iterator
-                results = [result for result in results]
-
-            else:
-                self._cpu_cap = self._traj.f_get('config.environment.%s.cpu_cap'  % self.v_name).f_get()
-                self._memory_cap = self._traj.f_get('config.environment.%s.memory_cap'  % self.v_name).f_get()
-                self._swap_cap = self._traj.f_get('config.environment.%s.swap_cap'  % self.v_name).f_get()
-
-                check_usage = psutil is not None and (self._cpu_cap < 1.0 or
-                                                      self._memory_cap < 1.0 or
-                                                      self._swap_cap < 1.0)
-                if check_usage:
-                    self._logger.info('Monitoring usage statistics. I will not spawn new processes '
-                                      'if one of the following cap thresholds is crossed, '
-                                      'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
-                                      (self._cpu_cap, self._memory_cap, self._swap_cap))
-                    psutil.cpu_percent() # Just for initialisation
-
-                no_cap = True # Evaluates if new processes are allowed to be started or if cap is
-                # reached
-                signal_cap = True # If True cap warning is emitted
-                keep_running=True # Evaluates to falls if trajectory produces no more single runs
-                process_dict = {} # Dict containing all subprocees
-
-                if self._evaluation_function is not None:
-                    evaluation_not_done = True
-                else:
-                    evaluation_not_done = False
-
-                while len(process_dict)>0 or keep_running or evaluation_not_done:
-
-                    terminated_procs_pids = []
-                    # First check if some processes did finish their job
-                    for pid in process_dict.keys():
-                        proc = process_dict[pid]
-
-                        # Delete the terminated processes
-                        if not proc.is_alive():
-                            process_dict.pop(pid)
-
-                    # Check if caps are reached. Cap is only checked if there is at least one
-                    # process working to prevent deadlock.
-                    if check_usage and keep_running:
-                        no_cap=True
-                        if len(process_dict) > 0:
-                            cpu_usage = psutil.cpu_percent()/100.0
-                            memory_usage = psutil.phymem_usage().percent/100.0
-                            swap_usage = psutil.swap_memory().percent/100.0
-                            if cpu_usage > self._cpu_cap:
-                                no_cap = False
-                                if signal_cap:
-                                    self._logger.warning('Could not start next process immediately.'
-                                                         'CPU Cap reached, %.2f > %.2f.' %
-                                                         (cpu_usage, self._cpu_cap))
-                                    signal_cap = False
-                            elif memory_usage > self._memory_cap:
-                                no_cap=False
-                                if signal_cap:
-                                    self._logger.warning('Could not start next process '
-                                                         'immediately. Memory Cap reached, '
-                                                         '%.2f > %.2f.' %
-                                                         (memory_usage, self._memory_cap))
-                                    signal_cap = False
-                            elif swap_usage > self._swap_cap:
-                                no_cap=False
-                                if signal_cap:
-                                    self._logger.warning('Could not start next process '
-                                                         'immediately. Swap Cap reached, '
-                                                         '%.2f > %.2f.' %
-                                                         (swap_usage, self._swap_cap))
-                                    signal_cap = False
-
-                    # If we have less active processes than ncores and there is still
-                    # a job to do, add another process
-                    if len(process_dict) < ncores and keep_running and no_cap:
-                        try:
-                            task = iterator.next()
-                            proc = multip.Process(target=_single_run,
-                                                               args=(task,))
-                            proc.start()
-                            process_dict[proc.pid]=proc
-                            signal_cap = True
-                        except StopIteration:
-                            # All simulation runs have been started
-                            keep_running=False
-
-                    time.sleep(0.1)
-
-                    # Get all results from the result queue
-                    results = []
-                    while not result_queue.empty():
-                        result = result_queue.get()
-                        if not self._evaluation_function is None:
-                            eval_queue.put(result)
+                # Sequentially run all single runs and append the results to a queue
+                results = []
+                for n in xrange(start_run_idx, len(self._traj)):
+                    if not self._traj.f_is_completed(n):
+                        result = _single_run((self._traj._make_single_run(n),
+                                              log_path,
+                                              log_stdout,
+                                              None, runfunc,
+                                              len(self._traj),
+                                              self._multiproc,
+                                              result_queue, args,kwargs))
 
                         results.append(result)
-
                         if self._continuable:
                             self._trigger_result_snapshot(result, snapshot_counter)
                             snapshot_counter += 1
 
-                    if not self._evaluation_function is None:
-                        while not expand_queue.empty():
-                            expand = expand_queue.get()
+                # Do some finalization
+                self._traj._finalize()
 
-                            if (expand is None or not hasattr(expand, '__len__') or
-                                                          len(expand) == 0):
+                self._logger.info('\n************************************************************\n'
+                                  '************************************************************\n'
+                                  'FINISHED all runs of trajectory\n`%s`.'
+                                  '\n************************************************************\n'
+                                  '************************************************************\n' %
+                                  self._traj.v_name)
 
+            repeat = False
+            if self._postproc is not None:
+                self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                  '  STARTING POSTPROCESSING.'
+                                  '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
+                old_traj_length = len(self._traj)
+                postproc_res = postproc(self._traj, prev_results + results,
+                                   *postproc_args, **postproc_kwargs)
 
-            # In case of queue mode, we need to signal to the queue writer that no more data
-            # will be put onto the queue
-            if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                self._traj.v_storage_service.send_done()
-                queue_process.join()
+                new_traj_length = len(self._traj)
 
-            # In case we had an evaluation process we can have to make it join, too
-            if self._evaluation_function is not None:
-                evaluation_process.join()
+                if new_traj_length != old_traj_length or isinstance(postproc_res, dict):
+                    start_run_idx = old_traj_length
+                    repeat = True
+                    if isinstance(postproc_res, dict):
+                        self._traj.f_expand(postproc_res)
+                        self._traj.f_store(only_init=True)
 
-            # Replace the wrapped storage service with the original one and do some finalization
-            self._traj.v_storage_service=self._storage_service
-            self._traj._finalize()
+                    new_traj_length = len(self._traj)
+                    new_runs = new_traj_length - old_traj_length
+                    runs_added_by_postproc += new_runs
+                    nruns += runs_added_by_postproc
 
-            self._logger.info('\n************************************************************\n'
-                              '************************************************************\n'
-                              'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
-                              '\n************************************************************\n'
-                              '************************************************************\n' %
-                              (self._traj.v_name, ncores))
+                    if self._multiproc:
+                        self._traj._remove_run_data()
 
-
-
-
-        else:
-            # Single Processing
-            self._logger.info('\n************************************************************\n'
-                              '************************************************************\n'
-                              'STARTING runs of trajectory\n`%s`.'
-                              '\n************************************************************\n'
-                              '************************************************************\n' %
-                              self._traj.v_name)
-
-            # Sequentially run all single runs and append the results to a queue
-            results = []
-            for n in xrange(len(self._traj)):
-                if not self._traj.f_is_completed(n):
-                    result = _single_run((self._traj._make_single_run(n), log_path, log_stdout,
-                                                None,runfunc,
-                                                len(self._traj),
-                                                self._multiproc,
-                                                result_queue, args,kwargs))
-                    results.append(result)
-                    if self._continuable:
-                        self._trigger_result_snapshot(result, snapshot_counter)
-                        snapshot_counter += 1
-
-
-
-            # Do some finalization
-            self._traj._finalize()
-
-            self._logger.info('\n************************************************************\n'
-                              '************************************************************\n'
-                              'FINISHED all runs of trajectory\n`%s`.'
-                              '\n************************************************************\n'
-                              '************************************************************\n' %
-                              self._traj.v_name)
-
+            if not repeat:
+                break
+            else:
+                self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                  '  POSTPROCESSING extended the trajectory and added %d new runs.'
+                                  '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n'
+                                  % new_runs)
 
         if self._continuable and self._delete_continue:
             # We remove all continue files if the simulation was successfully completed
@@ -1819,18 +1886,33 @@ class Environment(HasLogger):
 
         self._runtime = str(findatetime-startdatetime)
 
+        conf_list = []
+        if runs_added_by_postproc:
+            config_name='environment.%s.expanded' % self.v_name
+            if not self._traj.f_contains('config.' + config_name):
+                conf0 = self._traj.f_add_config(config_name, True,
+                    comment='Added if trajectory was expanded by postprocessing.')
+                conf_list.append(conf0)
+
         config_name='environment.%s.finish_timestamp' % self.v_name
-        conf1 = self._traj.f_add_config(config_name, self._finish_timestamp,
-            comment='Timestamp of finishing of an experiment.')
+        if not self._traj.f_contains('config.' + config_name):
+            conf1 = self._traj.f_add_config(config_name, self._finish_timestamp,
+                comment='Timestamp of finishing of an experiment.')
+            conf_list.append(conf1)
+
 
         config_name='environment.%s.runtime' % self.v_name
-        conf2 = self._traj.f_add_config(config_name, self._runtime,
-            comment='Runtime of whole experiment.')
+        if not self._traj.f_contains('config.' + config_name):
+            conf2 = self._traj.f_add_config(config_name, self._runtime,
+                comment='Runtime of whole experiment.')
+            conf_list.append(conf2)
 
-        self._traj.f_store_items([conf1, conf2])
+        if conf_list:
+            self._traj.f_store_items(conf_list)
+
 
         if self._sumatra_project is not None:
             self._finish_sumatra()
 
-        return prev_results + results
+        return results
                 
