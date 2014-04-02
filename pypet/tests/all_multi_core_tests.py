@@ -7,6 +7,8 @@ import os
 from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest, \
     MultiprocNoPoolLockTest,MultiprocNoPoolQueueTest,MultiprocNoPoolSortLockTest,MultiprocNoPoolSortQueueTest, CapTest
 
+from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
+
 from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
