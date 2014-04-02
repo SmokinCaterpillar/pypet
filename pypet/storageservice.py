@@ -1525,7 +1525,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group,'runs')
         actual_rows = run_table.nrows
-        self._trj_fill_run_table_with_dummys(traj, actual_rows)
+        self._all_fill_run_table_with_dummys(actual_rows, len(traj))
 
         add_table = self._overview_explored_parameters_runs
 
