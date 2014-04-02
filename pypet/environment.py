@@ -83,6 +83,8 @@ def _single_run(args):
 
         10. Whether to clean up after the run
 
+        11. Path for continue files, `None` if continue is not supported
+
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
@@ -102,6 +104,7 @@ def _single_run(args):
         runparams = args[8]
         kwrunparams = args[9]
         clean_up_after_run = args[10]
+        continue_path = args[11]
 
         use_pool = result_queue is None
 
@@ -150,6 +153,7 @@ def _single_run(args):
 
 
         root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
+
         # Store the single run
         traj.f_store()
 
@@ -161,10 +165,15 @@ def _single_run(args):
                   'Finished single run #%d of %d '
                   '\n===================================\n' % (idx,total_runs))
 
+        # Add the index to the result
+        result = (traj.v_idx, result)
+
+        if continue_path is not None:
+            # Trigger Snapshot
+            _trigger_result_snapshot(result, continue_path)
+
         if multiproc:
             root.removeHandler(handler)
-
-        result = (traj.v_idx, result)
 
         if not use_pool:
             result_queue.put(result)
@@ -202,6 +211,33 @@ def _queue_handling(handler, log_path, log_stdout):
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler.run()
 
+def _trigger_result_snapshot(result, continue_path):
+    """ Triggers a snapshot of the results for continuing
+
+    :param result:
+
+        Currently computed result
+
+    """
+    dump_dict = {}
+    timestamp = time.time()
+    timestamp_str = repr(timestamp).replace('.','_')
+    filename = 'result_%s' % timestamp_str
+    extension = '.ncnt'
+    dump_filename = os.path.join(continue_path,  filename+extension)
+    dump_dict['result'] = result
+    dump_dict['timestamp'] = timestamp
+
+    dump_file = open(dump_filename, 'wb')
+    dill.dump(dump_dict, dump_file, protocol=2)
+    dump_file.flush()
+    dump_file.close()
+
+    # We rename the file to be certain that the trajectory did not crash during taking
+    # the snapshot!
+    extension = '.rcnt'
+    rename_filename = os.path.join(continue_path, filename+extension)
+    shutil.move(dump_filename, rename_filename)
 
 class Environment(HasLogger):
     """ The environment to run a parameter exploration.
@@ -649,6 +685,7 @@ class Environment(HasLogger):
                  memory_cap=1.0,
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 immediate_postproc=False,
                  continuable=False,
                  continue_folder=None,
                  delete_continue=True,
@@ -678,23 +715,27 @@ class Environment(HasLogger):
 
         # First check if purge settings are valid
         if purge_duplicate_comments and not summary_tables:
-            raise RuntimeError('You cannot purge duplicate comments without having the'
+            raise ValueError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
         if continuable and use_pool:
-            raise RuntimeError('You cannot use `continuable=True` with a pool, please set '
+            raise ValueError('You cannot use `continuable=True` with a pool, please set '
                                '`use_pool=False`.')
 
         if continuable and dill is None:
-            raise RuntimeError('Please install `dill` if you want to use the feature to '
+            raise ValueError('Please install `dill` if you want to use the feature to '
                                'continue halted trajectories')
 
         if load_project is None and sumatra_project is not None:
-            raise RuntimeError('`sumatra` package has not been found, either install '
+            raise ValueError('`sumatra` package has not been found, either install '
                                '`sumatra` or set `sumatra_project=None`.')
 
         if sumatra_label is not None and '.' in sumatra_label:
-            raise RuntimeError('Your sumatra label is not allowed to contain dots.')
+            raise ValueError('Your sumatra label is not allowed to contain dots.')
+
+        if use_pool and immediate_postproc:
+            raise ValueError('You CANNOT perform immediate post-processing if you DO '
+                               'use a pool.')
 
         self._sumatra_project=sumatra_project
         self._sumatra_reason = sumatra_reason
@@ -707,6 +748,7 @@ class Environment(HasLogger):
         self._postproc = None
         self._postproc_args = ()
         self._postproc_kwargs = {}
+        self._immediate_postproc = immediate_postproc
         self._user_pipeline = False
 
         self._git_repository = git_repository
@@ -729,7 +771,6 @@ class Environment(HasLogger):
             self._traj.v_shortcuts = shortcuts
 
         else:
-
             self._traj = trajectory
 
             # If no new trajectory is created the time of the environment differs from the trajectory
@@ -839,8 +880,12 @@ class Environment(HasLogger):
         self._delete_continue = delete_continue
 
 
+        self._multiproc = multiproc
+        self._ncores = ncores
+        self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
+
 
         if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
             memory_cap <= 0.0 or memory_cap > 1.0 or
@@ -870,46 +915,45 @@ class Environment(HasLogger):
 
         if self._do_single_runs:
             config_name='environment.%s.multiproc' % self.v_name
-            self._traj.f_add_config(config_name, multiproc,
-                                    comment= 'Whether or not to use multiprocessing. If yes'
-                                             ' than everything must be pickable.').f_lock()
+            self._traj.f_add_config(config_name, self._multiproc,
+                                    comment= 'Whether or not to use multiprocessing.').f_lock()
 
 
-            if self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get():
+            if self._multiproc:
                 config_name='environment.%s.use_pool' % self.v_name
-                self._traj.f_add_config(config_name, use_pool,
+                self._traj.f_add_config(config_name, self._use_pool,
                                         comment='Whether to use a pool of processes or '
                                         'spawning individual processes for each run.').f_lock()
 
                 if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
                     config_name='environment.%s.cpu_cap' % self.v_name
-                    self._traj.f_add_config(config_name, cpu_cap,
+                    self._traj.f_add_config(config_name, self._cpu_cap,
                                         comment='Maximum cpu usage beyond which no new processes '
                                                 'are spawned').f_lock()
 
                     config_name='environment.%s.memory_cap' % self.v_name
-                    self._traj.f_add_config(config_name, memory_cap,
+                    self._traj.f_add_config(config_name, self._memory_cap,
                                         comment='Maximum RAM usage beyond which no new processes '
                                                 'are spawned').f_lock()
 
                     config_name='environment.%s.swap_cap' % self.v_name
-                    self._traj.f_add_config(config_name, swap_cap,
+                    self._traj.f_add_config(config_name, self._swap_cap,
                                         comment='Maximum Swap memory usage beyond which no new '
                                                 'processes are spawned').f_lock()
 
 
                 config_name='environment.%s.ncores' % self.v_name
-                self._traj.f_add_config(config_name,ncores,
+                self._traj.f_add_config(config_name, self._ncores,
                         comment='Number of processors in case of multiprocessing').f_lock()
 
 
                 config_name='environment.%s.wrap_mode' % self.v_name
-                self._traj.f_add_config(config_name, wrap_mode,
+                self._traj.f_add_config(config_name, self._wrap_mode,
                                             comment ='Multiprocessing mode (if multiproc),'
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
                                                      ' for thread/process safe storing').f_lock()
-            # # For future refernce
+            # # For future reference
             # else:
             #     config_name='environment.%s.clean_up_after_run' % self._name
             #     self._traj.f_add_config(config_name, self._clean_up_after_run,
@@ -975,69 +1019,73 @@ class Environment(HasLogger):
                                               'used to run the experiments'
 
         # Add HDF5 config in case the user wants the standard service
-        if (self._use_hdf5 and not self.v_trajectory.v_stored and
-                not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False)):
+        if self._use_hdf5:
+            if (not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False)):
 
-            # Print which file we use for storage
-            self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
+                # Print which file we use for storage
+                self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
 
-            for table_name in HDF5StorageService.NAME_TABLE_MAPPING.values():
+                for table_name in HDF5StorageService.NAME_TABLE_MAPPING.values():
 
-                self._traj.f_add_config('hdf5.overview.'+table_name,
-                                        True ,
-                                        comment='Whether or not to have an overview '
-                                                'table with that name')
-
-
-            self._traj.f_add_config('hdf5.overview.explored_parameters_runs', True,
-                                        comment='Whether there are overview tables about the '
-                                                'explored parameters in each run')
+                    self._traj.f_add_config('hdf5.overview.'+table_name,
+                                            True ,
+                                            comment='Whether or not to have an overview '
+                                                    'table with that name')
 
 
-            self._traj.f_add_config('hdf5.purge_duplicate_comments',purge_duplicate_comments,
-                                                comment='Whether comments of results and'
-                                                        ' derived parameters should only'
-                                                        ' be stored for the very first instance.'
-                                                        ' Works only if the summary tables are'
-                                                        ' active.')
+                self._traj.f_add_config('hdf5.overview.explored_parameters_runs', True,
+                                            comment='Whether there are overview tables about the '
+                                                    'explored parameters in each run')
+
+
+                self._traj.f_add_config('hdf5.purge_duplicate_comments',purge_duplicate_comments,
+                                                    comment='Whether comments of results and'
+                                                            ' derived parameters should only'
+                                                            ' be stored for the very first instance.'
+                                                            ' Works only if the summary tables are'
+                                                            ' active.')
 
 
 
-            self._traj.f_add_config('hdf5.results_per_run', results_per_run,
-                                        comment='Expected number of results per run,'
-                                            ' a good guess can increase storage performance')
+                self._traj.f_add_config('hdf5.results_per_run', results_per_run,
+                                            comment='Expected number of results per run,'
+                                                ' a good guess can increase storage performance')
 
 
-            self._traj.f_add_config('hdf5.derived_parameters_per_run', derived_parameters_per_run,
-                                        comment='Expected number of derived parameters per run,'
-                                            ' a good guess can increase storage performance')
+                self._traj.f_add_config('hdf5.derived_parameters_per_run', derived_parameters_per_run,
+                                            comment='Expected number of derived parameters per run,'
+                                                ' a good guess can increase storage performance')
 
-            self._traj.f_add_config('hdf5.complevel',complevel,
-                                        comment='Compression Level (0 no compression '
-                                                'to 9 highest compression)')
+                self._traj.f_add_config('hdf5.complevel',complevel,
+                                            comment='Compression Level (0 no compression '
+                                                    'to 9 highest compression)')
 
-            self._traj.f_add_config('hdf5.complib',complib,
-                                        comment='Compression Algorithm')
+                self._traj.f_add_config('hdf5.complib',complib,
+                                            comment='Compression Algorithm')
 
-            self._traj.f_add_config('hdf5.fletcher32',fletcher32,
-                                        comment='Whether to use fletcher 32 checksum')
+                self._traj.f_add_config('hdf5.fletcher32',fletcher32,
+                                            comment='Whether to use fletcher 32 checksum')
 
-            self._traj.f_add_config('hdf5.shuffle', shuffle,
-                                        comment='Whether to use shuffle filtering.')
+                self._traj.f_add_config('hdf5.shuffle', shuffle,
+                                            comment='Whether to use shuffle filtering.')
 
-            self._traj.f_add_config('hdf5.pandas_format', pandas_format,
-                                        comment='''How to store pandas data frames, either'''
-                                                ''' 'fixed' ('f') or 'table' ('t').''')
+                self._traj.f_add_config('hdf5.pandas_format', pandas_format,
+                                            comment='''How to store pandas data frames, either'''
+                                                    ''' 'fixed' ('f') or 'table' ('t').''')
 
-            self._traj.f_add_config('hdf5.pandas_append', pandas_append,
-                                        comment='If pandas frames are stored as tables, one can '
-                                                'enable append mode.')
+                self._traj.f_add_config('hdf5.pandas_append', pandas_append,
+                                            comment='If pandas frames are stored as tables, one can '
+                                                    'enable append mode.')
 
-            self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
+                self._traj.config.hdf5.v_comment='Settings for the standard HDF5 storage service'
 
-            self.f_set_summary(summary_tables)
-            self.f_set_small_overview(small_overview_tables)
-            self.f_set_large_overview(large_overview_tables)
+                self.f_set_summary(summary_tables)
+                self.f_set_small_overview(small_overview_tables)
+                self.f_set_large_overview(large_overview_tables)
+            else:
+                self._logger.warning('Your trajectory was already stored with an HDF5 storage '
+                                     'service before. I will use the old settings and ignore your '
+                                     'current HDF5 settings.')
 
 
         # Notify that in case of lazy debuggin we won't record anythin
@@ -1187,7 +1235,7 @@ class Environment(HasLogger):
         if continue_folder is not None:
             self._continue_folder = continue_folder
 
-        return self._do_runs(None)
+        return self._execute_runs(None)
 
     @ property
     def v_trajectory(self):
@@ -1356,7 +1404,7 @@ class Environment(HasLogger):
 
         """
         self._user_pipeline = True
-        return self._do_runs(pipeline)
+        return self._execute_runs(pipeline)
 
     def f_run(self, runfunc, *args,**kwargs):
         """ Runs the experiments and explores the parameter space.
@@ -1392,7 +1440,7 @@ class Environment(HasLogger):
 
         self._user_pipeline = False
 
-        return self._do_runs(pipeline)
+        return self._execute_runs(pipeline)
 
     def _trigger_continue_snapshot(self):
         ''' Makes the trajectory continuable in case the user wants that.'''
@@ -1404,6 +1452,8 @@ class Environment(HasLogger):
         prev_full_copy = self._traj.v_full_copy
         dump_dict['full_copy'] = prev_full_copy
         self._traj.v_full_copy=True
+        prev_storage_service = self._traj.v_storage_service
+        self._traj.v_storage_service = self._storage_service
         dump_dict['trajectory'] = self._traj
         dump_dict['args'] = self._args
         dump_dict['kwargs'] = self._kwargs
@@ -1419,27 +1469,7 @@ class Environment(HasLogger):
         dump_file.close()
 
         self._traj.v_full_copy=prev_full_copy
-
-
-    def _trigger_result_snapshot(self, result):
-        """ Triggers a snapshot of the results for continuing
-
-        :param result:
-
-            Currently computed result
-
-        """
-        dump_dict = {}
-        timestamp = time.time()
-        timestamp_str = repr(timestamp).replace('.','_')
-        dump_filename=os.path.join(self._continue_path, 'result_%s.rcnt' % timestamp_str )
-        dump_dict['result'] = result
-        dump_dict['timestamp'] = timestamp
-
-        dump_file = open(dump_filename, 'wb')
-        dill.dump(dump_dict, dump_file, protocol=2)
-        dump_file.flush()
-        dump_file.close()
+        self._traj.v_storage_service = prev_storage_service
 
 
     def _prepare_sumatra(self):
@@ -1581,9 +1611,8 @@ class Environment(HasLogger):
             result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
 
         # Sort according to counter
-        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])[:-1]
-        # to be on the safe side, we remove the very last result
-        result_list = [x[1] for x in result_tuple_list][:-1]
+        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
+        result_list = [x[1] for x in result_tuple_list]
 
         run_indices = [result[0] for result in result_list]
         # Remove incomplete runs
@@ -1642,9 +1671,9 @@ class Environment(HasLogger):
                             'Only added if runs are started, not continued.')
 
         if self._user_pipeline:
-            self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
-                                  '  STARTING PPREPROCESSING.'
-                              '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+            self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                  '  STARTING PPREPROCESSING'
+                              '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
         pip_result = pipeline(self._traj) # Call the pipeline function
 
@@ -1701,9 +1730,57 @@ class Environment(HasLogger):
         self._logger.info('Trajectory successfully stored.')
 
 
+    def _make_iterator(self, queue, result_queue, start_run_idx):
+        return ((self._traj._make_single_run(n),
+                 self._log_path,
+                 self._log_stdout,
+                 queue,
+                 self._runfunc, len(self._traj),
+                 self._multiproc,
+                 result_queue,
+                 self._args,
+                 self._kwargs,
+                 self._clean_up_after_run,
+                 self._continue_path)
+                    for n in xrange(start_run_idx, len(self._traj))
+                        if not self._traj.f_is_completed(n))
 
 
-    def _do_runs(self, pipeline):
+    def _execute_postproc(self, results):
+        repeat = False
+        start_run_idx = 0
+        new_runs = 0
+
+        old_traj_length = len(self._traj)
+        postproc_res = self._postproc(self._traj, results,
+                           *self._postproc_args, **self._postproc_kwargs)
+
+        new_traj_length = len(self._traj)
+
+        if new_traj_length != old_traj_length or isinstance(postproc_res, dict):
+            start_run_idx = old_traj_length
+            repeat = True
+
+            if self._continuable:
+                self._logger.error('Continuing a trajectory AND expanding it during runtime is '
+                                     'NOT supported!!!')
+
+            if isinstance(postproc_res, dict):
+                self._traj.f_expand(postproc_res)
+
+
+
+            new_traj_length = len(self._traj)
+            new_runs = new_traj_length - old_traj_length
+
+            if self._multiproc or self._clean_up_after_run:
+                self._traj._remove_run_data()
+
+
+
+        return repeat, start_run_idx, new_runs
+
+    def _execute_runs(self, pipeline):
         """ Starts the individual single runs.
 
         Starts runs sequentially or initiates multiprocessing.
@@ -1720,6 +1797,7 @@ class Environment(HasLogger):
         """
         self._start_timestamp = time.time()
 
+
         if self._sumatra_project is not None:
             self._prepare_sumatra()
 
@@ -1729,31 +1807,28 @@ class Environment(HasLogger):
         else:
             results = self._prepare_continue()
 
-        log_path = self._log_path
-        log_stdout = self._log_stdout
-
-        runfunc = self._runfunc
-        kwargs = self._kwargs
-        args = self._args
-
-        postproc = self._postproc
-        postproc_args = self._postproc_args
-        postproc_kwargs = self._postproc_kwargs
-
-        clean_up_after_run = self._clean_up_after_run
-        deep_copy_arguments = self._deep_copy_arguments
-
         start_run_idx = 0
+        repeat = False
 
+        conf_list=[]
 
         config_name='environment.%s.start_timestamp' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
             conf = self._traj.f_add_config(config_name, self._start_timestamp,
                 comment='Timestamp of starting of experiment (when the actual simulation was '
                         'started (either by calling `f_run`, `f_continue`, or `f_pipeline`).')
-            self._traj.f_store_item(conf)
+            conf_list.append(conf)
 
-        self._multiproc = self._traj.f_get('config.environment.%s.multiproc' % self.v_name).f_get()
+        if self._multiproc and self._postproc is not None:
+            config_name='environment.%s.immediate_postprocessing' % self.v_name
+            if not self._traj.f_contains('config.' + config_name):
+                conf = self._traj.f_add_config(config_name, self._immediate_postproc,
+                    comment='Whether to use immediate postprocessing, only added if '
+                            'postprocessing was used at all.')
+                conf_list.append(conf)
+
+        if conf_list:
+            self._traj.f_store_items(conf_list)
 
         result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
 
@@ -1762,21 +1837,20 @@ class Environment(HasLogger):
 
         expanded_by_postproc = False
 
+        if self._continuable:
+            self._trigger_continue_snapshot()
+
         while True:
-            if self._continuable:
-                self._trigger_continue_snapshot()
-
             if self._multiproc:
-
                 manager = multip.Manager()
-
-                self._use_pool = self._traj.f_get('config.environment.%s.use_pool'  % self.v_name).f_get()
-                self._wrap_mode = self._traj.f_get('config.environment.%s.wrap_mode'  % self.v_name).f_get()
 
                 if not self._use_pool:
                     # If we spawn a single process for each run, we need an additional queue
                     # for the results of `runfunc`
-                    result_queue = manager.Queue(maxsize=len(self._traj))
+                    if self._postproc is None:
+                        result_queue = manager.Queue(maxsize=len(self._traj))
+                    else:
+                        result_queue = manager.Queue()
 
                 # Prepare Multiprocessing
                 if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
@@ -1790,7 +1864,7 @@ class Environment(HasLogger):
 
                     # Start the queue process
                     queue_process = multip.Process(name='QueueProcess',target=_queue_handling,
-                                            args=(queue_writer,log_path, log_stdout))
+                                            args=(queue_writer,self._log_path, self._log_stdout))
                     queue_process.start()
 
                     # Replace the storage service of the trajectory by a sender.
@@ -1825,26 +1899,19 @@ class Environment(HasLogger):
                                         %(self._wrap_mode,pypetconstants.WRAP_MODE_QUEUE,
                                           pypetconstants.WRAP_MODE_LOCK))
 
-                # Number of processes to be started
-                ncores =  self._traj.f_get('config.environment.%s.ncores'  % self.v_name).f_get()
-
-
                 self._logger.info('\n************************************************************\n'
                                   '************************************************************\n'
                                   'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
                                   '\n************************************************************\n'
                                   '************************************************************\n' %
-                                  (self._traj.v_name, ncores))
+                                  (self._traj.v_name, self._ncores))
 
-                # Create a generator to generate the tasks for the mp-pool
-                iterator = ((self._traj._make_single_run(n), log_path, log_stdout,
-                             queue, runfunc, len(self._traj),
-                             self._multiproc, result_queue,  args, kwargs, True)
-                             for n in xrange(start_run_idx, len(self._traj)) if not self._traj.f_is_completed(n))
+                # Create a generator to generate the tasks for multiprocessing
+                iterator = self._make_iterator(queue, result_queue, start_run_idx)
 
 
                 if self._use_pool:
-                    mpool = multip.Pool(ncores)
+                    mpool = multip.Pool(self._ncores)
                     # Let the pool workers do their jobs provided by the generator
                     pool_results = mpool.imap(_single_run, iterator)
 
@@ -1856,9 +1923,6 @@ class Environment(HasLogger):
                     results.extend([result for result in pool_results])
 
                 else:
-                    self._cpu_cap = self._traj.f_get('config.environment.%s.cpu_cap'  % self.v_name).f_get()
-                    self._memory_cap = self._traj.f_get('config.environment.%s.memory_cap'  % self.v_name).f_get()
-                    self._swap_cap = self._traj.f_get('config.environment.%s.swap_cap'  % self.v_name).f_get()
 
                     check_usage = psutil is not None and (self._cpu_cap < 1.0 or
                                                           self._memory_cap < 1.0 or
@@ -1919,9 +1983,9 @@ class Environment(HasLogger):
                                                              (swap_usage, self._swap_cap))
                                         signal_cap = False
 
-                        # If we have less active processes than ncores and there is still
+                        # If we have less active processes than self._ncores and there is still
                         # a job to do, add another process
-                        if len(process_dict) < ncores and keep_running and no_cap:
+                        if len(process_dict) < self._ncores and keep_running and no_cap:
                             try:
                                 task = iterator.next()
                                 proc = multip.Process(target=_single_run,
@@ -1932,18 +1996,43 @@ class Environment(HasLogger):
                             except StopIteration:
                                 # All simulation runs have been started
                                 keep_running=False
+                                if self._postproc is not None and self._immediate_postproc:
+                                    while not result_queue.empty():
+                                        result = result_queue.get()
 
-                        time.sleep(0.1)
+                                        results.append(result)
+
+
+                                    self._logger.info(
+                                        '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                         '  STARTING IMMEDIATE POSTPROCESSING.'
+                                        '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+
+                                    keep_running, start_run_idx, new_runs =\
+                                        self._execute_postproc(results)
+
+                                    if keep_running:
+
+                                        expanded_by_postproc = True
+                                        self._logger.info(
+                                            '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                                            '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                            ' IMMEDIATE POSTPROCESSING expanded the '
+                                            'trajectory and added %d new runs'
+                                            '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+                                            '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' %
+                                            new_runs
+                                        )
+
+                                        iterator = self._make_iterator(queue, result_queue,
+                                                                   start_run_idx)
+                        time.sleep(0.01)
 
                         # Get all results from the result queue
                         while not result_queue.empty():
                             result = result_queue.get()
 
                             results.append(result)
-
-                            if self._continuable:
-                                self._trigger_result_snapshot(result)
-
 
                 # In case of queue mode, we need to signal to the queue writer that no more data
                 # will be put onto the queue
@@ -1960,7 +2049,7 @@ class Environment(HasLogger):
                                   'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
                                   '\n************************************************************\n'
                                   '************************************************************\n' %
-                                  (self._traj.v_name, ncores))
+                                  (self._traj.v_name, self._ncores))
 
             else:
                 # Single Processing
@@ -1974,29 +2063,32 @@ class Environment(HasLogger):
                 # Sequentially run all single runs and append the results to a queue
                 for n in xrange(start_run_idx, len(self._traj)):
                     if not self._traj.f_is_completed(n):
-                        if deep_copy_arguments: # This is so far not supported!!!! For future reference
+                        if self._deep_copy_arguments: # This is so far not supported!!!! For future reference
                             result = _single_run((cp.deepcopy(self._traj._make_single_run(n)),
-                                              log_path,
-                                              log_stdout,
-                                              None, runfunc,
+                                              self._log_path,
+                                              self._log_stdout,
+                                              None, self._runfunc,
                                               len(self._traj),
                                               self._multiproc,
-                                              None, cp.deepcopy(args), cp.deepcopy(kwargs),
-                                              clean_up_after_run))
+                                              None,
+                                              cp.deepcopy(self._args),
+                                              cp.deepcopy(self._kwargs),
+                                              self._clean_up_after_run,
+                                              self._continue_path))
                         else:
                             result = _single_run((self._traj._make_single_run(n),
-                                          log_path,
-                                          log_stdout,
-                                          None, runfunc,
+                                          self._log_path,
+                                          self._log_stdout,
+                                          None, self._runfunc,
                                           len(self._traj),
                                           self._multiproc,
-                                          None, args, kwargs,
-                                          clean_up_after_run))
+                                          None,
+                                          self._args,
+                                          self._kwargs,
+                                          self._clean_up_after_run,
+                                          self._continue_path))
 
                         results.append(result)
-                        if self._continuable:
-                            self._trigger_result_snapshot(result)
-
 
                 # Do some finalization
                 self._traj._finalize()
@@ -2014,34 +2106,20 @@ class Environment(HasLogger):
                                   '  STARTING POSTPROCESSING.'
                                   '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
-                old_traj_length = len(self._traj)
-                postproc_res = postproc(self._traj, results,
-                                   *postproc_args, **postproc_kwargs)
-
-                new_traj_length = len(self._traj)
-
-                if new_traj_length != old_traj_length or isinstance(postproc_res, dict):
-                    start_run_idx = old_traj_length
-                    repeat = True
-                    if isinstance(postproc_res, dict):
-                        self._traj.f_expand(postproc_res)
-
-                    self._traj.f_store(only_init=True)
-
-                    new_traj_length = len(self._traj)
-                    new_runs = new_traj_length - old_traj_length
-
-                    if self._multiproc or self._clean_up_after_run:
-                        self._traj._remove_run_data()
+                repeat, start_run_idx, new_runs = self._execute_postproc(results)
 
             if not repeat:
                 break
             else:
                 expanded_by_postproc = True
-                self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
-                                  '  POSTPROCESSING extended the trajectory and added %d new runs.'
-                                  '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n'
-                                  % new_runs)
+                self._logger.info(
+                    '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                    '  POSTPROCESSING expanded the trajectory and added %d new runs'
+                    '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' %
+                    new_runs
+                )
+
+        self._traj.f_store(only_init=True)
 
         if self._continuable and self._delete_continue:
             # We remove all continue files if the simulation was successfully completed

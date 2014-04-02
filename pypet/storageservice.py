@@ -1525,7 +1525,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group,'runs')
         actual_rows = run_table.nrows
-        self._trj_fill_run_table_with_dummys(traj,actual_rows)
+        self._trj_fill_run_table_with_dummys(traj, actual_rows)
 
         add_table = self._overview_explored_parameters_runs
 
@@ -1629,6 +1629,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if not as_new:
             traj._stored=True
+        else:
+            traj._stored=False
 
         # Loads meta data like the name, timestamps etc.
         self._trj_load_meta_data(traj,as_new,force)
@@ -1848,7 +1850,27 @@ class HDF5StorageService(StorageService, HasLogger):
 
     #################################### Storing a Trajectory ####################################
 
-    def _trj_fill_run_table_with_dummys(self, traj, start=0):
+    # def _trj_fill_run_table_with_dummys(self, traj, start=0):
+    #     """Fills the `run` overview table with dummy information.
+    #
+    #     The table is later on filled by the single runs with the real information.
+    #     `start` specifies how large the table is when calling this function.
+    #
+    #     The table might not be emtpy because a trajectory is enlarged due to expanding.
+    #
+    #     """
+    #     runtable = getattr(self._overview_group,'runs')
+    #
+    #     for idx in range(start, len(traj)):
+    #         name = traj.f_idx_to_run(idx)
+    #         insert_dict = traj.f_get_run_information(name)
+    #
+    #         self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,
+    #                                     flags=(HDF5StorageService.ADD_ROW,))
+    #
+    #     runtable.flush()
+
+    def _all_fill_run_table_with_dummys(self, start, stop):
         """Fills the `run` overview table with dummy information.
 
         The table is later on filled by the single runs with the real information.
@@ -1859,9 +1881,10 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         runtable = getattr(self._overview_group,'runs')
 
-        for idx in range(start, len(traj)):
-            name = traj.f_idx_to_run(idx)
-            insert_dict = traj.f_get_run_information(name)
+        for idx in range(start, stop):
+            insert_dict={}
+            insert_dict['idx'] = idx
+            insert_dict['name'] = pypetconstants.FORMATTED_RUN_NAME % idx
 
             self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,
                                         flags=(HDF5StorageService.ADD_ROW,))
@@ -1879,10 +1902,12 @@ class HDF5StorageService(StorageService, HasLogger):
         """
 
         # Description of the `info` table
-        descriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH, pos=0),
+        descriptiondict={'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH,
+                                              pos=0),
                          'time': pt.StringCol(len(traj.v_time), pos=1),
                          'timestamp' : pt.FloatCol(pos=3),
-                         'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH, pos=4),
+                         'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
+                                                  pos=4),
                          'length':pt.IntCol(pos=2),
                          'version' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5)}
                          # 'loaded_from' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
@@ -1892,10 +1917,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         insert_dict = self._all_extract_insert_dict(traj, infotable.colnames)
         self._all_add_or_modify_row(traj.v_name, insert_dict, infotable,index=0,
-                                    flags=(HDF5StorageService.ADD_ROW,HDF5StorageService.MODIFY_ROW))
+                                    flags=(HDF5StorageService.ADD_ROW,
+                                           HDF5StorageService.MODIFY_ROW))
 
         # Description of the `run` table
-        rundescription_dict = {'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=1),
+        rundescription_dict = {'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,
+                                                    pos=1),
                          'time': pt.StringCol(len(traj.v_time),pos=2),
                          'timestamp' : pt.FloatCol(pos=3),
                          'idx' : pt.IntCol(pos=0),
@@ -1910,6 +1937,15 @@ class HDF5StorageService(StorageService, HasLogger):
         runtable = self._all_get_or_create_table(where=self._overview_group,
                                                  tablename='runs',
                                                  description=rundescription_dict)
+        # try:
+        #     runtable.autoindex=True
+        # except AttributeError:
+        #     runtable.autoIndex=True
+        # if not runtable.indexed:
+        #     try:
+        #         runtable.cols.name.create_index()
+        #     except AttributeError:
+        #         runtable.cols.name.createIndex()
 
 
         hdf5_description_dict = {'complib' : pt.StringCol(7, pos=0),
@@ -1951,7 +1987,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Fill table with dummy entries starting from the current table size
         actual_rows = runtable.nrows
-        self._trj_fill_run_table_with_dummys(traj, actual_rows)
+        self._all_fill_run_table_with_dummys(actual_rows, len(traj))
 
         # Store the annotations in the trajectory node
         self._ann_store_annotations(traj,self._trajectory_group)
@@ -2056,7 +2092,10 @@ class HDF5StorageService(StorageService, HasLogger):
             # Index the summary tables for faster look up
             # They are searched by the individual runs later on
             if table_name.endswith('summary'):
-                paramtable.autoIndex=True
+                try:
+                    paramtable.autoindex=True
+                except AttributeError:
+                    paramtable.autoIndex=True
                 if not paramtable.indexed:
                     try:
                         paramtable.cols.location.create_index()
@@ -2439,13 +2478,19 @@ class HDF5StorageService(StorageService, HasLogger):
                                                     add_table)
 
         # Finally, add the real run information to the `run` table
-        table = getattr(self._overview_group,'runs')
+        runtable = getattr(self._overview_group,'runs')
 
-        insert_dict = self._all_extract_insert_dict(single_run, table.colnames)
+        # If the table is not large enough already (maybe because the trajectory got expanded
+        # We have to manually increase it here
+        actual_rows = runtable.nrows
+        if idx+1 > actual_rows:
+            self._all_fill_run_table_with_dummys(actual_rows, idx+1)
+
+        insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
         insert_dict['parameter_summary'] = run_summary
         insert_dict['completed'] = 1
 
-        self._all_add_or_modify_row(single_run, insert_dict, table,
+        self._all_add_or_modify_row(single_run, insert_dict, runtable,
                                     index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
 
