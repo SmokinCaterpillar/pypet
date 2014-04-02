@@ -30,11 +30,12 @@ keeps log files and can be used to distribute your simulations onto several cpus
 Note in case you use the environment there is no need to call
 :func:`~pypet.trajectory.Trajectory.f_store`
 for data storage, this will always be called before the runs and at the end of a
-single run automatically.
+single run automatically. Yet, be aware that if you use postprocessing (see :ref:`more-on-postproc`)
+or add any data after the single runs, these are *NOT* saved automatically.
 
 You start your simulations by creating an environment object:
 
->>> env = Environment(trajectory='trajectory',
+>>> env = Environment(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
@@ -42,7 +43,6 @@ You start your simulations by creating an environment object:
                  shortcuts=True,
                  backwards_search=True,
                  iter_recursive=True,
-                 store_before_runs=True,
                  log_folder=None,
                  log_level=logging.INFO,
                  log_stdout=True,
@@ -53,7 +53,10 @@ You start your simulations by creating an environment object:
                  memory_cap=1.0,
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                 continuable=1,
+                 immediate_postproc=False,
+                 continuable=False,
+                 continue_folder=None,
+                 delete_continue=True,
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
@@ -71,8 +74,11 @@ You start your simulations by creating an environment object:
                  derived_parameters_per_run=0,
                  git_repository = None,
                  git_message='',
+                 sumatra_project=None,
+                 sumatra_reason = '',
+                 sumatra_label = None,
                  do_single_runs=True,
-                 lazy_debug=False)::
+                 lazy_debug=False):
 
 You can pass the following arguments. Note usually you only have to change very few of these
 because most of the time the default settings are sufficient.
@@ -212,7 +218,7 @@ because most of the time the default settings are sufficient.
 * `wrap_mode`
 
      If `multiproc` is 1 (True), specifies how storage to disk is handled via
-     the storage service. Since HDF5 is not thread safe, the HDF5 storage service
+     the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
      needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
      There are two options:
@@ -234,6 +240,23 @@ because most of the time the default settings are sufficient.
 
      If you have no clue what I am talking about, you might want to take a look at multiprocessing_
      in python to learn more about locks, queues and thread safety and so forth.
+
+* `immediate_postproc`
+
+    If you use post- and multiprocessing, you can immediately start analysing the data
+    as soon as the trajectory runs out of tasks, i.e. is fully explored but the final runs
+    are not completed. Thus, while executing the last batch of parameter space points,
+    you can already analyse the finished runs. This is especially helpful if you perform some
+    sort of adaptive search within the parameter space.
+
+    The difference to normal post-processing is that you do not have to wait until all
+    single runs are finished, but your analysis already starts while there are still
+    runs being executed. This can be a huge time saver especially if your simulation time
+    differs a lot between individual runs. Accordingly, you don't have to wait for a very
+    long run to finish to start post-processing.
+
+    Note that after the execution of the final run, your post-processing routine will
+    be called again as usual.
 
 * `continuable`
 
@@ -260,9 +283,12 @@ because most of the time the default settings are sufficient.
     that is manipulated during runtime (like a multiprocessing manager list)
     in the positional and keyword arguments passed to the run function.
 
-    Note that `continuable=True` only works with `use_pool=False` in case of multiprocessing.
+    If you use postprocessing, the expansion of trajectories and continuing of trajectories
+    is NOT supported properly. There is no guarantee that both work together.
+
 
     .. _dill: https://pypi.python.org/pypi/dill
+
 
 * `continue_folder`
 
@@ -540,7 +566,7 @@ there is no support for purging comments in the other trajectory.
 All comments of the other trajectory's results and derived parameters will be kept and
 merged into your current one.
 
-**IMPORTANT** Purging of duplicate comments rqeuires overview tables. Since there are no
+**IMPORTANT** Purging of duplicate comments requires overview tables. Since there are no
 overview tables for *group* nodes, this feature does not work for comments in *group* nodes,
 only in *leaf* nodes (aka results and parameters)!
 So try to avoid to add comments in *group* nodes within single runs.
@@ -673,6 +699,32 @@ in your linux console!
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
+.. _more-on-sumatra:
+
+^^^^^^^^^^^^^^^^^^^^
+Sumatra Integration
+^^^^^^^^^^^^^^^^^^^^
+
+The environment can make use of a Sumatra_ experimental lab-book.
+
+Just pass the argument `sumatra_project` which should specify the path to your root
+sumatra folder to the :class:`~pypet.environment.Environment` constructor.
+You can additionally pass a `sumatra_reason`, a string describing the
+reason for you sumatra simulation. *pypet* will automatically add the name, comment, and
+the names of all explored parameters to the reason.
+You can also pick a `sumatra_label` (string),
+set this to `None` if you want Sumatra to pick a label for you.
+
+
+Note in contrast to the automatic git commits (see above)
+which are done as soon as the environment is created, a sumatra record is only created and
+stored if you actually perform single runs. So if you use one of the three:
+:func:`~pypet.environment.Environment.f_run`, or :func:`~pypet.environment.Environment.f_pipline`,
+or :func:`~pypet.environment.Environment.f_continue` and your simulation succeeds and does
+not crash.
+
+*pypet* automatically adds all parameters to the sumatra record. The explored parameters
+are added with their full range instead of the default values.
 
 .. _more-on-running:
 
@@ -688,9 +740,10 @@ and optionally other positional and keyword arguments of your choice.
 
 .. code-block:: python
 
-    def myjobfunc(traj,*args,**kwargs)
+    def myjobfunc(traj, *args, **kwargs)
         #Do some sophisticated simulations with your trajectory
         ...
+        return 'fortytwo'
 
 
 In order to run this simulation, you need to hand over the function to the environment,
@@ -710,11 +763,164 @@ a `~pypet.trajectory.SingleRun` (also see :ref:`more-on-single-runs`). There is 
 difference to a full *trajectory*. You have slightly less functionality and usually no access
 to the fully explored parameters but only to a single parameter space point.
 
+The :func:`~pypet.environment.Environment.f_run` will return a list of tuples.
+Whereas the first tuple entry is the index of the corresponding run and the second entry
+of the tuple
+is the result returned by your run function (for the example above this would simply always be
+the string ``'fortytwo'``). In case you use multiprocessing these tuples are **NOT** in the order
+of the run indices but in the order of their finishing time!
+
+
+.. _more-about-postproc:
+
+-----------------------------
+Adding Post-Processing
+-----------------------------
+
+You can add a post-processing function that should be called after the execution of all the single
+runs via :func:`pypet.environment.Environment.f_add_postproc`.
+
+Your post processing function must accept the trajectory container as the first argument,
+a list of tuples (containing the run indices and results) and arbitrary positional and
+keyword arguments. In order to pass arbitrary arguments to your post-processing function,
+simply pass these first ot the :func:`pypet.environment.Environment.f_add_postproc`.
+
+For example:
+
+.. code-block:: python
+
+    def mypostprocfunc(traj, result_list, extra_arg1, extra_arg2):
+        # do some postprocessing here
+        ...
+
+Whereas in your main script you can call
+
+.. code-block:: python
+
+    env.f_add_postproc(mypostprocfunc, 42, extra_arg2=42.5)
+
+
+which will later on pass `42` as `extra_arg1` and `42.4` as extra_arg2. It's actually the
+very same principle as before for your run function.
+The post-processing function will be called after the completion of all single runs.
+
+Note that if you add data to your trajectory during post-processing you have to manually
+save this to disk by calling :func:`~pypet.trajectory.Trajectory.f_store` or for single
+data items it might be more efficient to call :func:`~pypet.trajectory.Trajectory.f_store_items`,
+or for storing subtrees :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
+
+Note that your post-processing function should **NOT** return any results, since these
+will simply be lost. However, there is one particular result that can be returned,
+see below.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Expanding your Trajectory via Post-Processing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If your post-processing function expands the trajectory via
+:func:`~pypet.trajectory.Trajectory.f_expand` or if your post-processing function returns
+a dictionary of lists that can be interpreted to expand the trajectory,
+*pypet* will start the single runs again and explore the expanded trajectory.
+Of course, after this expanded exploration, your post-processing function will be
+called again. Likewise, you could potentially expand again, and after the next expansion
+post-processing will be executed again (and again, and again, and again, I guess you get it).
+
+Thus, you can use post-processing for an adaptive search within your parameter space.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Expanding your Trajectory and using Multiprocessing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you use multiprocessing and you want to adaptively expand your trajectory, it can
+be a waste of precious time to wait until all runs have finished.
+Accordingly, you can set the argument `immediate_postproc` to `True` when you create
+your environment. Then your post-processing function is called as soon as *pypet* runs
+out of jobs for single runs. Thus, you can expand your trajectory while the last batch
+of single runs is still being executed.
+
+To emphasize this a bit more and to not be misunderstood: Your post-processing function is **NOT**
+called as soon as a single run finishes and the first result is available but as soon as there
+are **no more** single runs available to start new processes!
+Still, that does not mean you have to wait
+until *ALL* single runs are finished (as for normal post-processing),
+but you can already add new single runs to the trajectory
+while the final `n` runs are still being executed. Where `n` is determined by the number of cores
+(`ncores`) and probably the *cap values* you have chosen (see :ref:`more-on-multiprocessing`).
+
+*pypet* will *NOT* start a new process for your post-processing. Your post-processing function
+is executed in the main process (this makes writing actual post-processing functions much easier
+because you don't have to wrap your head around dead-locks).
+
+Accordingly, post-processing should be rather quick in comparison to your single runs, otherwise
+post-processing will become the bottleneck in your parallel simulations.
+
+----------------------------
+Using a Experiment Pipeline
+----------------------------
+
+Usually, your numerical experiments work like the following: You add some parameters to
+your trajectory, you mark a few of these for exploration, and you pass your main function
+to the environment via :func:`~pypet.environment.Environment.f_run`. Accordingly, this
+function will be executed with all parameter combinations. Maybe you want some post-processing
+in the end and that's about it. However, sometimes even the addition of parameters can be
+fairly complex or you want this part under the supervision of an environment, too.
+For instance, because you have a Sumatra_ lab-book and adding of parameters should also account as
+runtime.
+
+Thus, to have your entire experiment and not only the exploration of the parameter space
+managed by *pypet* you can use the :func:`~pypet.environment.Environment.f_pipeline`
+function.
+
+You have to pass a so called *pipeline* function to
+:func:`~pypet.environment.Environment.f_pipeline` that defines your entire experiment.
+
+Your pipeline function is only allowed to take a single parameter, that is the trajectory
+container. Next, your pipeline function can fill in some parameters and do some pre-processing.
+
+Afterwards your pipeline function needs to return the run function, the corresponding arguments
+and potentially a post-processing function with arguments.
+To be more precise your pipeline function needs to return two tuples with at most 3 entries each,
+for example:
+
+.. code-block:: python
+
+    def myjobfunc(traj, extra_arg1, extra_arg2, extra_arg3)
+        # do some sophisticated simulation stuff
+        solve_p_equals_np(traj, extra_arg1)
+        disproof_spock(traj, extra_arg2, extra_arg3)
+        ...
+
+    def mypostproc(traj, postproc_arg1, postproc_arg2, postproc_arg3)
+        # do some analysis here
+        ...
+
+        exploration_dict={'ncards' : [100, 200]}
+
+        if maybe_i_should_explore_more_cards:
+            return exploration_dict
+        else
+            return None
+
+    def mypipeline(traj):
+        # add some parameters
+        traj.f_add_parameter('poker.ncards', 7, comment='Usually we play 7-card-stud')
+        ...
+        # Explore the trajectory
+        traj.f_explore({'ncards' : range(42)})
+
+        # Finally return the tuples
+        args = (myarg1, myarg2) # myargX can be anything form ints to strings to complex objects
+        kwargs = {'extra_arg3': myarg3}
+        postproc_args = (some_other_arg1,) # Check out the comma here! Important to make it a tuple
+        postproc_kwargs = {'postproc_arg2' : some_other_arg2,
+                           'postproc_arg3' : some_other_arg3}
+        return (myjobfunc, args, kwargs), (mypostproc, postproc_args, postproc_kwargs)
+
 .. _more-on-continuing:
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Resuming an Experiment
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------
+Continuing or Resuming a Crashed Experiment
+--------------------------------------------
 
 In order to use this feature you need dill_.
 
@@ -722,10 +928,9 @@ BE AWARE that *dill* is rather experimental and still in alpha status!
 
 If all of your data can be handled by dill (probably anything),
 you can use the config parameter `continuable=True` passed
-to the :class:`~pypet.environment.Environment` constructor. Note that `continuable=True`
-only works with `use_pool=False` in case of multiprocessing.
+to the :class:`~pypet.environment.Environment` constructor.
 
-This will create a continue directory (name spacified by you) and a sub-folder with the name
+This will create a continue directory (name specified by you) and a sub-folder with the name
 ot the trajectory. This folder is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
 lasting simulation was interrupted, you can resume it
@@ -734,7 +939,7 @@ hdf5 file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
 
-You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue_run`
+You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue`
 with the name of the continue folder (not the subfolder) and the name of the trajectory:
 
 .. code-block:: python
@@ -745,11 +950,11 @@ with the name of the continue folder (not the subfolder) and the name of the tra
                             continue_folder = './experiments/continue/')
 
 
-The neat thing here is, that you create a nove environment for the continuation. Accordingly,
+The neat thing here is, that you create a novel environment for the continuation. Accordingly,
 you can set different environmental settings, like changing the number of cores, etc.
 You CANNOT change any hdf5 settings or even change the whole storage service.
 
-When does continuing not work?
+When does continuing NOT work?
 
 Continuing will **NOT** work if your top-level simulation function or the arguments passed to your
 simulation function are altered between individual runs. For instance, if you use multiprocessing
@@ -758,7 +963,16 @@ and you want to write computed data into a shared data list
 these changes will be lost and cannot be captured by the continue snapshots.
 
 A work around here would be to not manipulate the arguments but pass these values as results
-of your top-level simulation function. Everything that is returned by your main function will be
-part of the snapshots.
+of your top-level simulation function. Everything that is returned by your top-level function
+will be part of the snapshots and can be reconstructed after a crash.
+
+Continuing *might not* work if you use post-processing that expands the trajectory.
+Since you are not limited in how you manipulate the trajectory within your post-processing,
+there are potentially many side effects that remain undetected by the continue snapshots.
+You can try to use both together, but there is **NO** guarantee whatsoever that continuing a
+crashed trajectory and post-processing with expanding will work together.
+
 
 .. _dill: https://pypi.python.org/pypi/dill
+
+.. _sumatra: http://neuralensemble.org/sumatra/

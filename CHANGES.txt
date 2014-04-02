@@ -106,9 +106,10 @@ pypet 0.1b.4
 *   Now one can specify CPU, RAM and Swap cap levels if no pool is used.
     If these cap levels are crossed *pypet* won't start new processes.
 
-*   `f_load` now has an argument `load_all` to quickly load all subtrees with the same setting
+*   `f_load` now has an argument `load_all` to quickly load all subtrees with the same setting.
+    Also `f_load` now accepts a filename as well
 
-
+*   New post-processing and pipeline modes!
 
 
 pypet 0.1b.3

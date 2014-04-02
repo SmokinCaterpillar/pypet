@@ -9,6 +9,12 @@ from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest
 
 from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 
+try:
+    from pypet.tests.hdf5_removal_and_continue_tests import ContinueMPTest, ContinueMPPoolTest
+except ImportError as e:
+    print repr(e) # We end up here if `dill` is not installed
+    pass
+
 from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian

@@ -47,34 +47,6 @@ class ContinueTest(TrajectoryComparator):
         simple_kwarg= 13.0
         env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
-    def make_run_mp(self,env):
-        env.f_run(multiply)
-
-
-    def make_environment_mp(self, idx, filename):
-
-
-
-        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
-        trajname = 'Test%d' % idx
-
-        env = Environment(trajectory=trajname,
-                          dynamically_imported_classes=[CustomParameter],
-                          filename=filename,
-                          file_title=trajname,
-                          log_folder=self.logfolder,
-                          continuable=True,
-                          continue_folder=self.cnt_folder,
-                          delete_continue=False,
-                          multiproc=True,
-                          ncores=2)
-
-
-        self.envs.append(env)
-        self.trajs.append( env.v_trajectory)
-
     def make_environment(self, idx, filename):
 
 
@@ -105,120 +77,7 @@ class ContinueTest(TrajectoryComparator):
 
         traj.f_explore(self.explored)
 
-    def explore_mp(self, traj):
-        self.explored={'x':[0.0, 1.0, 2.0, 3.0, 4.0], 'y':[0.1, 2.2, 3.3, 4.4, 5.5]}
 
-        traj.f_explore(cartesian_product(self.explored))
-
-    def test_continueing_mp2(self):
-        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
-
-
-
-        self.envs=[]
-        self.trajs = []
-
-        for irun,filename in enumerate(self.filenames):
-            if isinstance(filename,int):
-                filename = self.filenames[filename]
-
-            self.make_environment_mp( irun, filename)
-
-        self.param_dict={'x':1.0, 'y':2.0}
-
-
-
-        for irun in range(len(self.filenames)):
-            self.trajs[irun].f_add_parameter(CustomParameter,'x', 1.0)
-            self.trajs[irun].f_add_parameter(CustomParameter, 'y', 1.0)
-
-
-        self.explore_mp(self.trajs[0])
-        self.explore_mp(self.trajs[1])
-
-        arg=33
-        for irun in range(len(self.filenames)):
-
-            self.envs[irun].f_run(Multiply(), arg)
-
-
-
-        traj_name = self.trajs[0].v_name
-        continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
-        self._remove_nresults(3, continue_folder)
-        self.make_environment(0, self.filenames[0])
-        results = self.envs[-1].f_continue(trajectory_name = traj_name)
-        results = [result[1] for result in results]
-
-        self.trajs[-1]=self.envs[-1].v_trajectory
-
-
-        for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
-
-        self.compare_trajectories(self.trajs[-1],self.trajs[1])
-
-        for run_name in self.trajs[-1].f_iter_runs():
-            self.assertTrue(self.trajs[-1].z in results)
-
-        self.assertTrue(len(self.trajs[-1])== len(results))
-
-
-    def test_continueing_mp(self):
-        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
-
-
-
-        self.envs=[]
-        self.trajs = []
-
-        for irun,filename in enumerate(self.filenames):
-            if isinstance(filename,int):
-                filename = self.filenames[filename]
-
-            self.make_environment_mp( irun, filename)
-
-        self.param_dict={'x':1.0, 'y':2.0}
-
-
-
-        for irun in range(len(self.filenames)):
-            self.trajs[irun].f_add_parameter(CustomParameter,'x', 1.0)
-            self.trajs[irun].f_add_parameter(CustomParameter, 'y', 1.0)
-
-
-        self.explore_mp(self.trajs[0])
-        self.explore_mp(self.trajs[1])
-
-        for irun in range(len(self.filenames)):
-            self.envs[irun].f_run(multiply)
-
-
-
-        traj_name = self.trajs[0].v_name
-        continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
-        self._remove_nresults(3, continue_folder)
-        self.make_environment(0, self.filenames[0])
-        results = self.envs[-1].f_continue(trajectory_name = traj_name)
-        results = [result[1] for result in results]
-
-        self.trajs[-1]=self.envs[-1].v_trajectory
-
-        for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
-
-        self.compare_trajectories(self.trajs[-1],self.trajs[1])
-
-        for run_name in self.trajs[0].f_iter_runs():
-            self.assertTrue(self.trajs[0].z in results)
 
 
     def _remove_nresults(self, nresults, continue_folder):
@@ -388,6 +247,171 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[1].f_load_items(self.trajs[1].f_to_dict().itervalues(),only_empties=True)
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
+
+class ContinueMPTest(ContinueTest):
+
+    def make_run_mp(self,env):
+        env.f_run(multiply)
+
+
+    def make_environment_mp(self, idx, filename):
+        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        trajname = 'Test%d' % idx
+
+        env = Environment(trajectory=trajname,
+                          dynamically_imported_classes=[CustomParameter],
+                          filename=filename,
+                          file_title=trajname,
+                          log_folder=self.logfolder,
+                          continuable=True,
+                          continue_folder=self.cnt_folder,
+                          delete_continue=False,
+                          multiproc=True,
+                          ncores=2)
+
+
+        self.envs.append(env)
+        self.trajs.append( env.v_trajectory)
+
+    def explore_mp(self, traj):
+        self.explored={'x':[0.0, 1.0, 2.0, 3.0, 4.0], 'y':[0.1, 2.2, 3.3, 4.4, 5.5]}
+
+        traj.f_explore(cartesian_product(self.explored))
+
+    def test_continueing_mp2(self):
+        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
+
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment_mp( irun, filename)
+
+        self.param_dict={'x':1.0, 'y':2.0}
+
+
+
+        for irun in range(len(self.filenames)):
+            self.trajs[irun].f_add_parameter(CustomParameter,'x', 1.0)
+            self.trajs[irun].f_add_parameter(CustomParameter, 'y', 1.0)
+
+
+        self.explore_mp(self.trajs[0])
+        self.explore_mp(self.trajs[1])
+
+        arg=33
+        for irun in range(len(self.filenames)):
+
+            self.envs[irun].f_run(Multiply(), arg)
+
+
+
+        traj_name = self.trajs[0].v_name
+        continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
+        self._remove_nresults(3, continue_folder)
+        self.make_environment(0, self.filenames[0])
+        results = self.envs[-1].f_continue(trajectory_name = traj_name)
+        results = [result[1] for result in results]
+
+        self.trajs[-1]=self.envs[-1].v_trajectory
+
+
+        for irun in range(len(self.filenames)+1):
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA,
+                                    load_other_data=pypetconstants.UPDATE_DATA)
+
+        self.compare_trajectories(self.trajs[-1],self.trajs[1])
+
+        for run_name in self.trajs[-1].f_iter_runs():
+            self.assertTrue(self.trajs[-1].z in results)
+
+        self.assertTrue(len(self.trajs[-1])== len(results))
+
+
+    def test_continueing_mp(self):
+        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
+
+
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment_mp( irun, filename)
+
+        self.param_dict={'x':1.0, 'y':2.0}
+
+
+
+        for irun in range(len(self.filenames)):
+            self.trajs[irun].f_add_parameter(CustomParameter,'x', 1.0)
+            self.trajs[irun].f_add_parameter(CustomParameter, 'y', 1.0)
+
+
+        self.explore_mp(self.trajs[0])
+        self.explore_mp(self.trajs[1])
+
+        for irun in range(len(self.filenames)):
+            self.envs[irun].f_run(multiply)
+
+
+
+        traj_name = self.trajs[0].v_name
+        continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
+        self._remove_nresults(3, continue_folder)
+        self.make_environment(0, self.filenames[0])
+        results = self.envs[-1].f_continue(trajectory_name = traj_name)
+        results = [result[1] for result in results]
+
+        self.trajs[-1]=self.envs[-1].v_trajectory
+
+        for irun in range(len(self.filenames)+1):
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
+                                    load_results=pypetconstants.UPDATE_DATA,
+                                    load_other_data=pypetconstants.UPDATE_DATA)
+
+        self.compare_trajectories(self.trajs[-1],self.trajs[1])
+
+        for run_name in self.trajs[0].f_iter_runs():
+            self.assertTrue(self.trajs[0].z in results)
+
+class ContinueMPPoolTest(ContinueMPTest):
+
+    def make_environment_mp(self, idx, filename):
+        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        trajname = 'Test%d' % idx
+
+        env = Environment(trajectory=trajname,
+                          dynamically_imported_classes=[CustomParameter],
+                          filename=filename,
+                          file_title=trajname,
+                          log_folder=self.logfolder,
+                          continuable=True,
+                          continue_folder=self.cnt_folder,
+                          delete_continue=False,
+                          multiproc=True,
+                          use_pool=True,
+                          ncores=4)
+
+        self.envs.append(env)
+        self.trajs.append( env.v_trajectory)
 
 if __name__ == '__main__':
     make_run()

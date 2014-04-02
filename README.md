@@ -173,6 +173,9 @@ Main Features
 
 * Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
+* **Analyse** your data on-the-fly during multiprocessing for adaptive
+  exploration of the parameter space
+
 * **Dynamic Loading**, load only the parts of your data you currently need
 
 * **Resume** a crashed or halted simulation
@@ -180,6 +183,9 @@ Main Features
 * **Annotate** your parameters, results and groups
 
 * **Git Integration**, let *pypet* make automatic commits of your codebase
+
+* **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
+  Sumatra (http://neuralensemble.org/sumatra/)
 
 
 ======================

@@ -2185,6 +2185,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             load_other_data = pypetconstants.LOAD_NOTHING
 
         if filename:
+            self._filename = filename
             if self._storage_service is None:
                 self._storage_service = HDF5StorageService(filename=filename)
             else:

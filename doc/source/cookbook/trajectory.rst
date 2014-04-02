@@ -675,9 +675,14 @@ Sometimes you start your session not running an experiment, but loading an old t
 The first step in order to do that is to create a new empty trajectory - in case
 you have stored stuff into an HDF5 file, you can pass a `filename` to the
 :class:`~pypet.trajectory.Trajectory` constructor - and call
-:func:`~pypet.trajectory.Trajectory.f_load` on it. Give it a `name` or an `index` of the trajectory
-you want to select within the HDF5 file. For the index you can also count backwards, so
+:func:`~pypet.trajectory.Trajectory.f_load` on it. You can also directly pass
+the `filename` to :func:`~pypet.trajectory.Trajectory.f_load` if you want to.
+
+Give it a `name` or an `index` of the trajectory
+you want to select within the HDF5 file.
+For the index you can also count backwards, so
 `-1` would yield the last or newest trajectory in an HDF5 file.
+If you don't specify any of the two, the name of the current trajectory object is taken.
 
 There are two load modes depending on the argument `as_new`
 
@@ -693,7 +698,7 @@ There are two load modes depending on the argument `as_new`
     You want to load and old trajectory and analyse results you have obtained. The current name
     of your newly created trajectory will be changed to the name of the loaded one.
 
-If you choose tha latter load mode, you can specify how the individual subtrees *config*,*parameters*,
+If you choose the latter load mode, you can specify how the individual subtrees *config*,*parameters*,
 *derived_parameters*, and *results* are loaded:
 
 * :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
@@ -716,9 +721,7 @@ If you choose tha latter load mode, you can specify how the individual subtrees 
 
 * :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
 
-    As before, but non-empty leaves are emptied and reloaded.
-
-
+    As before, but non-empty nodes are emptied and reloaded.
 
 
 Compared to manual storage, you can also load single items manually via
@@ -739,8 +742,8 @@ in order to load whole subtrees.
 Automatic Loading
 ^^^^^^^^^^^^^^^^^^^^
 
-The trajectory supports the nice feature to automatically load data while you access it.
-Set `traj.v_auto_load=True` and you don't have to care about loading at all during data analyis.
+The trajectory supports the nice feature to automatically loading data while you access it.
+Set `traj.v_auto_load=True` and you don't have to care about loading at all during data analysis.
 
 Enabling automatic loading will make *pypet* do two things. If you try to access group nodes
 or leaf nodes that are currently not in your trajectory on RAM but stored to disk, it will
