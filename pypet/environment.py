@@ -926,7 +926,7 @@ class Environment(HasLogger):
                                   str(self._hexsha))
 
         self._do_single_runs = do_single_runs
-        self._store_before_runs = True # For future reference store_before_runs
+        self._automatic_storing = True # For future reference store_before_runs
         self._clean_up_after_run = True # For future reference clean_up_after_run
         self._deep_copy_arguments = False # For future reference deep_copy_arguments
 
@@ -1543,15 +1543,13 @@ class Environment(HasLogger):
         if not self._traj.f_contains('config.'+config_name):
             conf = self._traj.f_add_config(config_name, sumatra_label,
                                 comment='The label of the sumatra record')
-            conf_list.append(conf)
+
         if self._sumatra_reason:
             config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
             if not self._traj.f_contains('config.'+config_name):
                 conf = self._traj.f_add_config(config_name, self._sumatra_reason,
                         comment='Reason of sumatra run.')
-                conf_list.append(conf)
 
-        self._traj.f_store_items(conf_list)
         self._logger.info('Saved sumatra project.')
 
     def _prepare_continue(self):
@@ -1735,7 +1733,7 @@ class Environment(HasLogger):
 
         config_name='environment.%s.store_before_runs' % self.v_name
         if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-            self._traj.f_add_config(config_name, self._store_before_runs,
+            self._traj.f_add_config(config_name, self._automatic_storing,
                     comment='If the trajectory should automatically be saved before the '
                             'single runs start, otherwise the store is only initialised. '
                             'Only added if runs are started, not continued.')
@@ -1745,21 +1743,12 @@ class Environment(HasLogger):
                                   '  STARTING PPREPROCESSING'
                               '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
-
-
-
-        # # Check how many runs are about to be done
-        # count = 0
-        # for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
-        #     if not run_dict['completed']:
-        #         count +=1
-
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and store it.')
         self._traj._prepare_experiment()
 
-        self._traj.f_store(only_init = (not self._store_before_runs))
-        self._logger.info('Trajectory successfully stored.')
+        self._traj.f_store(only_init = True)
+
 
 
     def _make_iterator(self, queue, result_queue, start_run_idx):
@@ -1846,14 +1835,14 @@ class Environment(HasLogger):
 
         if self._runfunc is not None:
 
-            conf_list=[]
+
 
             config_name='environment.%s.start_timestamp' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
                 conf = self._traj.f_add_config(config_name, self._start_timestamp,
                     comment='Timestamp of starting of experiment (when the actual simulation was '
                             'started (either by calling `f_run`, `f_continue`, or `f_pipeline`).')
-                conf_list.append(conf)
+
 
             if self._multiproc and self._postproc is not None:
                 config_name='environment.%s.immediate_postprocessing' % self.v_name
@@ -1861,10 +1850,8 @@ class Environment(HasLogger):
                     conf = self._traj.f_add_config(config_name, self._immediate_postproc,
                         comment='Whether to use immediate postprocessing, only added if '
                                 'postprocessing was used at all.')
-                    conf_list.append(conf)
 
-            if conf_list:
-                self._traj.f_store_items(conf_list)
+
 
             result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
 
@@ -2158,21 +2145,27 @@ class Environment(HasLogger):
                 # We remove all continue files if the simulation was successfully completed
                 shutil.rmtree(self._continue_path)
 
-            self._finish_timestamp = time.time()
 
-            findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
-            startdatetime = datetime.datetime.fromtimestamp(self._start_timestamp)
 
-            self._runtime = str(findatetime-startdatetime)
-
-        conf_list = []
         if expanded_by_postproc:
             config_name='environment.%s.postproc_expand' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
-                conf0 = self._traj.f_add_config(config_name, True,
+                self._traj.f_add_config(config_name, True,
                     comment='Added if trajectory was expanded by postprocessing.')
-                conf_list.append(conf0)
 
+        if self._automatic_storing:
+            self._logger.info('Final storing of trajectory!')
+            self._traj.f_store()
+            self._logger.info('Trajectory successfully stored.')
+
+        self._finish_timestamp = time.time()
+
+        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
+        startdatetime = datetime.datetime.fromtimestamp(self._start_timestamp)
+
+        self._runtime = str(findatetime-startdatetime)
+
+        conf_list = []
         config_name='environment.%s.finish_timestamp' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
             conf1 = self._traj.f_add_config(config_name, self._finish_timestamp,
