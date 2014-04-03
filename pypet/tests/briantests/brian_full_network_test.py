@@ -20,6 +20,7 @@ import cProfile
 from brian import *
 from pypet.utils.explore import cartesian_product
 import shutil
+import time
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_run
 
 
@@ -122,8 +123,8 @@ class NetworkTest(TrajectoryComparator):
         logging.basicConfig(level = logging.INFO)
 
 
-        env = Environment(trajectory='Test',
-                          filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+        env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
+                          filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
                           file_title='test',
                           log_folder=make_temp_file('experiments/tests/briantests/log'),
                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
@@ -156,7 +157,7 @@ class NetworkTest(TrajectoryComparator):
         self.traj.f_load(load_derived_parameters=2, load_results=2)
 
         traj2 = Trajectory(name = self.traj.v_name, add_time=False,
-                           filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+                           filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
                            dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult])
 
@@ -173,8 +174,8 @@ class NetworkMPTest(NetworkTest):
         logging.basicConfig(level = logging.INFO)
 
 
-        env = Environment(trajectory='Test',
-                          filename=make_temp_file('experiments/tests/briantests/HDF5/test.hdf5'),
+        env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
+                          filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
                           file_title='test',
                           log_folder=make_temp_file('experiments/tests/briantests/log'),
                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
