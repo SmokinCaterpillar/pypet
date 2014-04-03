@@ -140,10 +140,10 @@ class ContinueTest(TrajectoryComparator):
 
         for irun in range(len(self.filenames)+1):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_derived_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_results=pypetconstants.OVERWRITE_DATA,
+                                    load_other_data=pypetconstants.OVERWRITE_DATA)
 
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
@@ -325,10 +325,10 @@ class ContinueMPTest(ContinueTest):
 
         for irun in range(len(self.filenames)+1):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_derived_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_results=pypetconstants.OVERWRITE_DATA,
+                                    load_other_data=pypetconstants.OVERWRITE_DATA)
 
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
@@ -380,10 +380,10 @@ class ContinueMPTest(ContinueTest):
 
         for irun in range(len(self.filenames)+1):
             self.trajs[irun].f_update_skeleton()
-            self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
+            self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_derived_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_results=pypetconstants.OVERWRITE_DATA,
+                                    load_other_data=pypetconstants.OVERWRITE_DATA)
 
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 

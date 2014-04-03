@@ -158,6 +158,8 @@ def _single_run(args):
             root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
             # Store the single run
             traj.f_store()
+        else:
+            traj.f_store(only_init=True)
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:

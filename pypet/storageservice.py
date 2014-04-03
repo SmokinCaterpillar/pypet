@@ -2316,6 +2316,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 # If we want to update data and the item already contains some we're good
                 if load_data == pypetconstants.OVERWRITE_DATA:
+                    if instance.v_is_parameter:
+                        instance.f_unlock()
                     instance.f_empty()
                     instance.v_annotations.f_empty()
 
@@ -2462,7 +2464,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self,single_run):
+    def _srn_store_single_run(self,single_run, only_init=False):
         """ Stores a single run instance to disk"""
 
         idx = single_run.v_idx
@@ -2470,12 +2472,14 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Store the two subbranches `results.runs.run_XXXXXXXXX` and 'derived_parameters.runs.run_XXXXXXXXX`
         # created by the current run
-        for branch in ('results.runs', 'derived_parameters.runs'):
-            branch_name = branch +'.'+single_run.v_name
-            if branch_name in single_run:
-                self._logger.info('Storing branch `%s`.' % branch_name)
-                self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
-                                           branch_name,self._trajectory_group)
+
+        if not only_init:
+            for branch in ('results.runs', 'derived_parameters.runs'):
+                branch_name = branch +'.'+single_run.v_name
+                if single_run.f_contains(branch_name):
+                    self._logger.info('Storing branch `%s`.' % branch_name)
+                    self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
+                                               branch_name,self._trajectory_group)
 
         add_table = self._overview_explored_parameters_runs
 

@@ -244,6 +244,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
 
         traj.f_add_result('myseries', myseries, comment='dd')
+        traj.f_store_item('myseries')
         traj.f_add_result('mypanel', mypanel, comment='dd')
         #traj.f_add_result('mypanel4d', p4d, comment='dd')
 

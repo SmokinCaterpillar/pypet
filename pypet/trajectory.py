@@ -561,9 +561,14 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def f_store(self):
-        """Stores the single run to disk."""
+    def f_store(self, only_init=False):
+        """Stores the single run to disk.
+
+        :param only_init: If no data should be stored but only meta data.
+
+        """
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+                                    only_init=only_init,
                                     trajectory_name=self.v_trajectory_name)
 
     def f_store_item(self, item, *args,**kwargs):
