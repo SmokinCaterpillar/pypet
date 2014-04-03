@@ -30,6 +30,12 @@ pypet 0.1b5
 
 *   Trajectories no longer accept a `file_tile` on initialisation
 
+*   One can now decide if trajectories should be automatically stored and if
+    data should be cleaned up after every run
+
+*   BUG FIX: Storage of individual items during a single run do no longer require
+    a full storage of the single run container.
+
 
 pypet 0.1b.4
 

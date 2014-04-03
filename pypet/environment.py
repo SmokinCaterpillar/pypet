@@ -151,14 +151,17 @@ def _single_run(args):
         # Run the job function of the user
         result =runfunc(traj,*runparams,**kwrunparams)
 
-        # Measure time of finishing
-        traj._set_finish_time()
+
 
         if automatic_storing:
             root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
             # Store the single run
             traj.f_store()
-        traj._store_final() # Still we have to store some meta data
+
+        # Measure time of finishing
+        traj._set_finish_time()
+        # And store some meta data
+        traj._store_final()
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
