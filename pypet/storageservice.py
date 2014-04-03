@@ -2442,6 +2442,15 @@ class HDF5StorageService(StorageService, HasLogger):
                                                     _newly_created=True)
         else:
             # Else store it as a group node
+
+            # We have to do the following check to be sure that the group node was not
+            # build on the fly via `f_store_item`.
+            store_new = (store_new  or
+                         (not traj_node.v_annotations.f_is_empty()
+                         and not HDF5StorageService.ANNOTATED in new_hdf5_group._v_attrs) or
+                         (traj_node.v_comment != '' and
+                         not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs) )
+
             if store_new:
                 self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
 
@@ -3210,7 +3219,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     changed = True
 
             if changed:
-                setattr(current_attrs,HDF5StorageService.ANNOTATED,True)
+                setattr(current_attrs, HDF5StorageService.ANNOTATED,True)
                 self._hdf5file.flush()
 
 
