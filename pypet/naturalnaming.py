@@ -833,10 +833,8 @@ class NaturalNamingInterface(HasLogger):
 
         if name in SHORTCUT_SET:
             if name == 'crun':
-                if self._root_instance._is_run:
-                    return self._root_instance.v_name
-                elif self._root_instance.v_as_run is not None:
-                    return self._root_instance.v_as_run
+                if self._root_instance._as_run is not None:
+                    return self._root_instance._as_run
                 else:
                     return name
 
@@ -1607,10 +1605,7 @@ class NaturalNamingInterface(HasLogger):
 
     def _get_as_run(self):
         """ Returns the run name in case of 'v_as_run' is set, otherwise None."""
-        if not self._root_instance._is_run:
-            return self._root_instance.v_as_run
-        else:
-            return None
+        return self._root_instance._as_run
 
     def _very_fast_search(self, node, key, as_run, total_depth = float('inf')):
         """Fast search for a node in the tree.

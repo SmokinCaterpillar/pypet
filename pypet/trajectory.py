@@ -107,6 +107,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._set_logger()
 
         self._is_run = True
+        self._as_run = self.v_name
 
         # Single Run objects can have no annotations at the root node of the tree.
         # The hdf5 file later on only has a single root node. This would require a
