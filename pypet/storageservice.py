@@ -730,6 +730,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 :param stuff_to_store: The single run to be stored
 
+                :param final: If final meta data should be stored
+
             * :const:`pypet.pypetconstants.LEAF`
 
                 Stores a parameter or result.
@@ -2464,16 +2466,17 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self,single_run, only_init=False):
+    def _srn_store_single_run(self,single_run, final=False):
         """ Stores a single run instance to disk"""
 
         idx = single_run.v_idx
-        self._logger.info('Start storing run %d with name %s.' % (idx,single_run.v_name))
 
-        # Store the two subbranches `results.runs.run_XXXXXXXXX` and 'derived_parameters.runs.run_XXXXXXXXX`
-        # created by the current run
+        if not final:
+            self._logger.info('Start storing run %d with name %s.' % (idx,single_run.v_name))
+            # Store the two subbranches `results.runs.run_XXXXXXXXX` and
+            # 'derived_parameters.runs.run_XXXXXXXXX`
+            # created by the current run
 
-        if not only_init:
             for branch in ('results.runs', 'derived_parameters.runs'):
                 branch_name = branch +'.'+single_run.v_name
                 if single_run.f_contains(branch_name):
@@ -2481,33 +2484,36 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
                                                branch_name,self._trajectory_group)
 
-        add_table = self._overview_explored_parameters_runs
+            self._logger.info('Finished storing run %d with name %s' % (idx,single_run.v_name))
 
-        # For better readability and if desired add the explored parameters to the results
-        # Also collect some summary information about the explored parameters
-        # So we can add this to the `run` table
-        run_summary = self._srn_add_explored_params(single_run.v_name,
-                                                    single_run._explored_parameters.values(),
-                                                    add_table)
+        else:
+            add_table = self._overview_explored_parameters_runs
 
-        # Finally, add the real run information to the `run` table
-        runtable = getattr(self._overview_group,'runs')
+            # For better readability and if desired add the explored parameters to the results
+            # Also collect some summary information about the explored parameters
+            # So we can add this to the `run` table
+            run_summary = self._srn_add_explored_params(single_run.v_name,
+                                                        single_run._explored_parameters.values(),
+                                                        add_table)
 
-        # If the table is not large enough already (maybe because the trajectory got expanded
-        # We have to manually increase it here
-        actual_rows = runtable.nrows
-        if idx+1 > actual_rows:
-            self._all_fill_run_table_with_dummys(actual_rows, idx+1)
+            # Finally, add the real run information to the `run` table
+            runtable = getattr(self._overview_group,'runs')
 
-        insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
-        insert_dict['parameter_summary'] = run_summary
-        insert_dict['completed'] = 1
+            # If the table is not large enough already (maybe because the trajectory got expanded
+            # We have to manually increase it here
+            actual_rows = runtable.nrows
+            if idx+1 > actual_rows:
+                self._all_fill_run_table_with_dummys(actual_rows, idx+1)
 
-        self._all_add_or_modify_row(single_run, insert_dict, runtable,
-                                    index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
+            insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
+            insert_dict['parameter_summary'] = run_summary
+            insert_dict['completed'] = 1
+
+            self._all_add_or_modify_row(single_run, insert_dict, runtable,
+                                        index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
 
-        self._logger.info('Finished storing run %d with name %s' % (idx,single_run.v_name))
+
 
 
 

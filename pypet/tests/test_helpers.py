@@ -224,8 +224,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.f_add_result_group('List', comment='Im a result group')
         traj.f_add_result_group('Iwiiremainempty.yo', comment='Empty group!')
+        traj.Iwiiremainempty.f_store_child('yo')
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
+        traj.List.f_store_child('Of', recursive=True)
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
         traj.f_add_result('ResMatrix',np.array([1.2,2.3]), comment='ResMatrix')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))

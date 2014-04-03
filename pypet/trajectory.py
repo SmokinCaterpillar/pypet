@@ -100,7 +100,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._max_depth = parent_trajectory._max_depth
         self._auto_load = parent_trajectory._auto_load
 
-        self._stored = False
+        self._stored = True
 
         self._dynamic_imports = parent_trajectory._dynamic_imports
 
@@ -561,14 +561,18 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def f_store(self, only_init=False):
+    def f_store(self):
         """Stores the single run to disk.
 
         :param only_init: If no data should be stored but only meta data.
 
         """
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    only_init=only_init,
+                                    trajectory_name=self.v_trajectory_name)
+
+    def _store_final(self):
+        """Signals the storage service that single run is completed"""
+        self._storage_service.store(pypetconstants.SINGLE_RUN, self, final=True,
                                     trajectory_name=self.v_trajectory_name)
 
     def f_store_item(self, item, *args,**kwargs):
@@ -650,8 +654,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
         if not self._stored:
             raise TypeError('Cannot store stuff for a trajectory that has never been '
-                                'stored to disk. Please call traj.f_store() first, which will '
-                                'actually cause the storage of all items in the trajectory.')
+                                'stored to disk. Please call traj.f_store(only_init=True) first.')
 
 
         fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)

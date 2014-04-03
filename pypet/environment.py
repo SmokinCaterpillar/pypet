@@ -158,8 +158,7 @@ def _single_run(args):
             root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
             # Store the single run
             traj.f_store()
-        else:
-            traj.f_store(only_init=True)
+        traj._store_final() # Still we have to store some meta data
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
@@ -1763,6 +1762,7 @@ class Environment(HasLogger):
                           'initialise the store.')
         self._traj._prepare_experiment()
 
+        self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init = True)
 
 
@@ -2168,7 +2168,8 @@ class Environment(HasLogger):
 
 
         config_name='environment.%s.automatic_storing' % self.v_name
-        self._traj.f_add_config(config_name, self.v_trajectory.v_name,
+        if not self._traj.f_contains('config.' + config_name):
+            self._traj.f_add_config(config_name, self.v_trajectory.v_name,
                                     comment ='If trajectory should be stored automatically in the '
                                              'end.').f_lock()
         if self._automatic_storing:
