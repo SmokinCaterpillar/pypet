@@ -29,20 +29,20 @@ keeps log files and can be used to distribute your simulations onto several cpus
 
 Note in case you use the environment there is no need to call
 :func:`~pypet.trajectory.Trajectory.f_store`
-for data storage, this will always be called before the runs and at the end of a
-single run automatically. Yet, be aware that if you use postprocessing (see :ref:`more-on-postproc`)
-or add any data after the single runs, these are *NOT* saved automatically.
+for data storage, this will always be called at the end of the simulation and at the end of a
+single run automatically (unless you set `automatic_storing` to `False`).
+Yet, be aware that if add any custom data during a single run not under
+`results.runs.run_XXXXXXXX` or `derived_parameters.runs.run_XXXXXXXXX` this data will not
+be immediately saved after the run completion. In case of multiprocessing this data will be
+lost if not manually stored.
 
 You start your simulations by creating an environment object:
 
->>> env = Environment(self, trajectory='trajectory',
+>>> env = Environment(trajectory='trajectory',
                  add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
-                 fast_access=True,
-                 shortcuts=True,
-                 backwards_search=True,
-                 iter_recursive=True,
+                 automatic_storing=True,
                  log_folder=None,
                  log_level=logging.INFO,
                  log_stdout=True,
@@ -54,6 +54,7 @@ You start your simulations by creating an environment object:
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  immediate_postproc=False,
+                 clean_up_runs=True,
                  continuable=False,
                  continue_folder=None,
                  delete_continue=True,
@@ -115,15 +116,12 @@ because most of the time the default settings are sufficient.
     two classes named `'MyCustomParameterClass'` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
-* `store_before_runs`
+* automatic_storing
 
-    I the whole trajectory should be stored before the runs are started. Otherwise
-    the storage will be only initialised. Be aware that you have to manually store
-    your trajectory at some point if you disable the automatic storage,
-    otherwise you will lose all information about items
-    that were added before the starting of the single runs. You are advised NOT to change
-    the default setting (`True` per default). Disable this feature ONLY if you have a very
-    sound reason to do so.
+    If `True` the trajectory will be stored at the end of the simulation and
+    single runs will be stored after their completion.
+    Be aware of data loss if you set this to `False` and not
+    manually store everything.
 
 * `log_folder`
 
@@ -240,6 +238,17 @@ because most of the time the default settings are sufficient.
 
      If you have no clue what I am talking about, you might want to take a look at multiprocessing_
      in python to learn more about locks, queues and thread safety and so forth.
+
+* `clean_up_runs`
+
+    In case of single core processing, whether all results under `results.runs.run_XXXXXXXX`
+    and `derived_parameters.runs.run_XXXXXXXX` should be removed after the completion of
+    the run. Note in case of multiprocessing this happens anyway since the single run
+    container will be destroyed after finishing of the process.
+
+    Moreover, if set to `True` after post-processing it is checked if there is still data
+    under `results.runs` and `derived_parameters.runs` and this data is removed if
+    the trajectory is expanded.
 
 * `immediate_postproc`
 
@@ -804,10 +813,6 @@ which will later on pass `42` as `extra_arg1` and `42.4` as extra_arg2. It's act
 very same principle as before for your run function.
 The post-processing function will be called after the completion of all single runs.
 
-Note that if you add data to your trajectory during post-processing you have to manually
-save this to disk by calling :func:`~pypet.trajectory.Trajectory.f_store` or for single
-data items it might be more efficient to call :func:`~pypet.trajectory.Trajectory.f_store_items`,
-or for storing subtrees :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
 Note that your post-processing function should **NOT** return any results, since these
 will simply be lost. However, there is one particular result that can be returned,

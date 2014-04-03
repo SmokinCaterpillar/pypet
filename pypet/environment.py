@@ -85,6 +85,8 @@ def _single_run(args):
 
         11. Path for continue files, `None` if continue is not supported
 
+        12. Whether or not the data should be automatically stored
+
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
@@ -105,6 +107,7 @@ def _single_run(args):
         kwrunparams = args[9]
         clean_up_after_run = args[10]
         continue_path = args[11]
+        automatic_storing = args[12]
 
         use_pool = result_queue is None
 
@@ -151,14 +154,13 @@ def _single_run(args):
         # Measure time of finishing
         traj._set_finish_time()
 
-
-        root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
-
-        # Store the single run
-        traj.f_store()
+        if automatic_storing:
+            root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
+            # Store the single run
+            traj.f_store()
 
         # Make some final adjustments to the single run before termination
-        if clean_up_after_run:
+        if clean_up_after_run and not multiproc:
             traj._finalize()
 
         root.info('\n===================================\n '
@@ -181,7 +183,8 @@ def _single_run(args):
             return result
 
     except:
-        errstr = "\n\n############## ERROR ##############\n"+"".join(traceback.format_exception(*sys.exc_info()))+"\n"
+        errstr = "\n\n############## ERROR ##############\n" +\
+                 "".join(traceback.format_exception(*sys.exc_info()))+"\n"
         logging.getLogger('STDERR').error(errstr)
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
@@ -271,6 +274,13 @@ class Environment(HasLogger):
           If you only have a single class to import, you do not need
           the list brackets:
           `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+
+    :param automatic_storing:
+
+        If `True` the trajectory will be stored at the end of the simulation and
+        single runs will be stored after their completion.
+        Be aware of data loss if you set this to `False` and not
+        manually store everything.
 
     :param log_folder:
 
@@ -389,6 +399,17 @@ class Environment(HasLogger):
 
          If you don't want wrapping at all use
          :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
+
+    :param clean_up_runs:
+
+        In case of single core processing, whether all results under `results.runs.run_XXXXXXXX`
+        and `derived_parameters.runs.run_XXXXXXXX` should be removed after the completion of
+        the run. Note in case of multiprocessing this happens anyway since the single run
+        container will be destroyed after finishing of the process.
+
+        Moreover, if set to `True` after post-processing it is checked if there is still data
+        under `results.runs` and `derived_parameters.runs` and this data is removed if
+        the trajectory is expanded.
 
     :param immediate_postproc:
 
@@ -689,10 +710,7 @@ class Environment(HasLogger):
                  add_time=True,
                  comment='',
                  dynamically_imported_classes=None,
-                 fast_access=True,
-                 shortcuts=True,
-                 backwards_search=True,
-                 iter_recursive=True,
+                 automatic_storing=True,
                  log_folder=None,
                  log_level=logging.INFO,
                  log_stdout=True,
@@ -703,6 +721,7 @@ class Environment(HasLogger):
                  memory_cap=1.0,
                  swap_cap=1.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 clean_up_runs=True,
                  immediate_postproc=False,
                  continuable=False,
                  continue_folder=None,
@@ -783,11 +802,6 @@ class Environment(HasLogger):
 
             self._timestamp = self.v_trajectory.v_timestamp # Timestamp of creation
             self._time = self.v_trajectory.v_time # Formatted timestamp
-
-            self._traj.v_fast_access = fast_access
-            self._traj.v_backwards_search = backwards_search
-            self._traj.v_iter_recursive = iter_recursive
-            self._traj.v_shortcuts = shortcuts
 
         else:
             self._traj = trajectory
@@ -926,13 +940,16 @@ class Environment(HasLogger):
                                   str(self._hexsha))
 
         self._do_single_runs = do_single_runs
-        self._automatic_storing = True # For future reference store_before_runs
-        self._clean_up_after_run = True # For future reference clean_up_after_run
+        self._automatic_storing = automatic_storing
+        self._clean_up_runs = clean_up_runs
         self._deep_copy_arguments = False # For future reference deep_copy_arguments
 
 
 
         if self._do_single_runs:
+
+
+
             config_name='environment.%s.multiproc' % self.v_name
             self._traj.f_add_config(config_name, self._multiproc,
                                     comment= 'Whether or not to use multiprocessing.').f_lock()
@@ -961,6 +978,7 @@ class Environment(HasLogger):
                                                 'processes are spawned').f_lock()
 
 
+
                 config_name='environment.%s.ncores' % self.v_name
                 self._traj.f_add_config(config_name, self._ncores,
                         comment='Number of processors in case of multiprocessing').f_lock()
@@ -972,18 +990,19 @@ class Environment(HasLogger):
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
                                                      ' for thread/process safe storing').f_lock()
-            # # For future reference
-            # else:
-            #     config_name='environment.%s.clean_up_after_run' % self._name
-            #     self._traj.f_add_config(config_name, self._clean_up_after_run,
-            #                         comment='Whether or not results should be removed after the '
-            #                                 'completion of a single run. Only important for '
-            #                                 'single processing, otherwise the removal will happen '
-            #                                 'due to the nature of multiprocessing. '
-            #                                 'You are not advised to set this '
-            #                                 'to `False`. Only do it if you know what you are '
-            #                                 'doing.').f_lock()
-            #
+
+
+            config_name='environment.%s.clean_up_runs' % self._name
+            self._traj.f_add_config(config_name, self._clean_up_runs,
+                                comment='Whether or not results should be removed after the '
+                                        'completion of a single run. Only important for '
+                                        'single processing, otherwise the removal will happen '
+                                        'due to the nature of multiprocessing. '
+                                        'You are not advised to set this '
+                                        'to `False`. Only do it if you know what you are '
+                                        'doing.').f_lock()
+
+            # For future reference
             #     config_name='environment.%s.deep_copy_arguments' % self._name
             #     self._traj.f_add_config(config_name, self._deep_copy_arguments,
             #                         comment='Whether or not all arguments '
@@ -1731,20 +1750,15 @@ class Environment(HasLogger):
             raise RuntimeError('Your continue folder `%s` needs to be empty to allow continuing!')
 
 
-        config_name='environment.%s.store_before_runs' % self.v_name
-        if not self._traj.f_contains('config.'+config_name, shortcuts=False):
-            self._traj.f_add_config(config_name, self._automatic_storing,
-                    comment='If the trajectory should automatically be saved before the '
-                            'single runs start, otherwise the store is only initialised. '
-                            'Only added if runs are started, not continued.')
-
         if self._user_pipeline:
             self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
                                   '  STARTING PPREPROCESSING'
                               '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
 
+
         # Make some preparations (locking of parameters etc) and store the trajectory
-        self._logger.info('I am preparing the Trajectory for the experiment and store it.')
+        self._logger.info('I am preparing the Trajectory for the experiment and '
+                          'initialise the store.')
         self._traj._prepare_experiment()
 
         self._traj.f_store(only_init = True)
@@ -1761,8 +1775,9 @@ class Environment(HasLogger):
                  result_queue,
                  self._args,
                  self._kwargs,
-                 self._clean_up_after_run,
-                 self._continue_path)
+                 self._clean_up_runs,
+                 self._continue_path,
+                 self._automatic_storing)
                     for n in xrange(start_run_idx, len(self._traj))
                         if not self._traj.f_is_completed(n))
 
@@ -1796,7 +1811,7 @@ class Environment(HasLogger):
             new_traj_length = len(self._traj)
             new_runs = new_traj_length - old_traj_length
 
-            if self._multiproc or self._clean_up_after_run:
+            if self._clean_up_runs:
                 self._traj._remove_run_data()
 
 
@@ -1820,7 +1835,6 @@ class Environment(HasLogger):
         """
         self._start_timestamp = time.time()
 
-
         if self._sumatra_project is not None:
             self._prepare_sumatra()
 
@@ -1834,8 +1848,6 @@ class Environment(HasLogger):
             results = self._prepare_continue()
 
         if self._runfunc is not None:
-
-
 
             config_name='environment.%s.start_timestamp' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
@@ -1851,10 +1863,7 @@ class Environment(HasLogger):
                         comment='Whether to use immediate postprocessing, only added if '
                                 'postprocessing was used at all.')
 
-
-
             result_queue = None # Queue for results of `runfunc` in case of multiproc without pool
-
             self._storage_service = self._traj.v_storage_service
 
             if self._continuable:
@@ -2093,8 +2102,9 @@ class Environment(HasLogger):
                                                   None,
                                                   cp.deepcopy(self._args),
                                                   cp.deepcopy(self._kwargs),
-                                                  self._clean_up_after_run,
-                                                  self._continue_path))
+                                                  self._clean_up_runs,
+                                                  self._continue_path,
+                                                  self._automatic_storing))
                             else:
                                 result = _single_run((self._traj._make_single_run(n),
                                               self._log_path,
@@ -2105,8 +2115,9 @@ class Environment(HasLogger):
                                               None,
                                               self._args,
                                               self._kwargs,
-                                              self._clean_up_after_run,
-                                              self._continue_path))
+                                              self._clean_up_runs,
+                                              self._continue_path,
+                                              self._automatic_storing))
 
                             results.append(result)
 
@@ -2153,6 +2164,11 @@ class Environment(HasLogger):
                 self._traj.f_add_config(config_name, True,
                     comment='Added if trajectory was expanded by postprocessing.')
 
+
+        config_name='environment.%s.automatic_storing' % self.v_name
+        self._traj.f_add_config(config_name, self.v_trajectory.v_name,
+                                    comment ='If trajectory should be stored automatically in the '
+                                             'end.').f_lock()
         if self._automatic_storing:
             self._logger.info('Final storing of trajectory!')
             self._traj.f_store()
