@@ -36,6 +36,9 @@ pypet 0.1b5
 *   BUG FIX: Storage of individual items during a single run do no longer require
     a full storage of the single run container.
 
+*   If automatic storage is enabled, trajectories are now stored at the end of the experiment,
+    no longer before the starting of the single runs
+
 
 pypet 0.1b.4
 

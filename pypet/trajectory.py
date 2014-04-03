@@ -1877,8 +1877,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                            trajectory_name=self.v_trajectory_name)
 
             except Exception:
-                self._logger.error('Could not erase explored parameter `%s` from disk for '
-                                     'expansion.' % param_name)
+                pass # We end up here if the parameter was not stored to disk, yetr
             self.f_store_item(param)
 
 
