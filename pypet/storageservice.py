@@ -2434,8 +2434,6 @@ class HDF5StorageService(StorageService, HasLogger):
             except AttributeError:
                 new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
         else:
-            self._logger.debug('Already found `%s` on disk I will not store it!' %
-                               traj_node.v_full_name)
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
         if traj_node.v_is_leaf:
@@ -2444,6 +2442,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._prm_store_parameter_or_result(store_msg, traj_node,
                                                     _hdf5_group=new_hdf5_group,
                                                     _newly_created=True)
+            else:
+                self._logger.debug('Already found `%s` on disk I will not store it!' %
+                               traj_node.v_full_name)
         else:
             # Else store it as a group node
 
@@ -2457,6 +2458,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if store_new:
                 self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
+            else:
+                self._logger.debug('Already found `%s` on disk I will not store it!' %
+                               traj_node.v_full_name)
 
             if recursive:
                 # And if desired store recursively the subtree

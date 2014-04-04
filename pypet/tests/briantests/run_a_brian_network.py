@@ -4,6 +4,8 @@ from brian import *
 
 def run_network():
 
+    clear(True, True)
+
     monitor_dict={}
     defaultclock.dt= 0.01*ms
 

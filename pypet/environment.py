@@ -143,7 +143,7 @@ def _single_run(args):
     
         root.info('\n===================================\n '
                   'Starting single run #%d of %d '
-                  '\n===================================\n' % (idx,total_runs))
+                  '\n===================================\n' % (idx, total_runs))
 
         # Measure start time
         traj._set_start_time()
@@ -154,9 +154,11 @@ def _single_run(args):
 
 
         if automatic_storing:
-            root.info('Evoke Storing (Either storing directly or sending trajectory to queue)')
+            root.info('Evoke Storing run %d '
+                      '(Either storing directly or sending trajectory to queue)' % idx)
             # Store the single run
             traj.f_store()
+            root.info('Finished Storing run %d' % idx)
 
         # Measure time of finishing
         traj._set_finish_time()
@@ -1525,9 +1527,9 @@ class Environment(HasLogger):
                    str(self._traj._explored_parameters.keys()))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
+        self._sumatra_reason = reason
         self._project = load_project(self._sumatra_project)
 
-        #
         if self._traj.f_contains('parameters'):
             param_dict = self._traj.parameters.f_to_dict(fast_access=False)
 
@@ -1953,6 +1955,8 @@ class Environment(HasLogger):
                         mpool.close()
                         mpool.join()
 
+                        del mpool
+
                         # We want to consistently return a list of results not an iterator
                         results.extend([result for result in pool_results])
 
@@ -2062,17 +2066,19 @@ class Environment(HasLogger):
                                                                        start_run_idx)
                             time.sleep(0.01)
 
-                            # Get all results from the result queue
-                            while not result_queue.empty():
-                                result = result_queue.get()
+                        # Get all results from the result queue
+                        while not result_queue.empty():
+                            result = result_queue.get()
 
-                                results.append(result)
+                            results.append(result)
+
 
                     # In case of queue mode, we need to signal to the queue writer that no more data
                     # will be put onto the queue
                     if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
                         self._traj.v_storage_service.send_done()
                         queue_process.join()
+
 
                     # Replace the wrapped storage service with the original one and do some finalization
                     self._traj.v_storage_service=self._storage_service

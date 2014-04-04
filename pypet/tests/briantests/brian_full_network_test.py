@@ -55,6 +55,8 @@ def add_params(traj):
     pass
 
 def run_net(traj):
+
+    clear(True, True)
     print traj.defaultclock
     defaultclock.dt=traj.defaultclock
 
@@ -116,7 +118,7 @@ def run_net(traj):
     traj.f_add_result('RecentStateMonitorwMean', MRecentStatewMean)
     traj.f_add_result('VanRossumMetric', VanRossum)
 
-class NetworkTest(TrajectoryComparator):
+class BrianFullNetworkTest(TrajectoryComparator):
 
 
     def setUp(self):
@@ -168,10 +170,10 @@ class NetworkTest(TrajectoryComparator):
 
 
 
-class NetworkMPTest(NetworkTest):
+class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
     def setUp(self):
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level = logging.DEBUG)
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),

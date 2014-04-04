@@ -6,6 +6,7 @@ __author__ = 'Robert Meyer'
 
 from pypet.tests.briantests.run_a_brian_network import run_network
 import pypet.utils.comparisons as comp
+import brian
 
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
@@ -13,7 +14,7 @@ from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
 
 from brian.fundamentalunits import Unit, Quantity, get_unit, get_unit_fast
 
-
+from brian import clear
 
 
 
@@ -22,6 +23,12 @@ class BrianMonitorTest(ResultTest):
     @classmethod
     def setUpClass(BrianMonitorTest):
         BrianMonitorResult.monitors=run_network()
+        pass
+
+    @classmethod
+    def tearDownClass(BrianMonitorTest):
+        clear(True, True)
+        reload(brian)
 
     def setUp(self):
         self.monitors = BrianMonitorResult.monitors
