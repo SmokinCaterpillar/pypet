@@ -137,10 +137,11 @@ TREE = 'TREE'
 
 
 ########## Names of Runs ####################
-
 FORMAT_ZEROS=8
 """ Number of leading zeros"""
 RUN_NAME = 'run_'
 """Name of a single run"""
+RUN_NAME_DUMMY = 'run_ALL'
+"""Dummy name if not created during run"""
 FORMATTED_RUN_NAME=RUN_NAME+'%0'+str(FORMAT_ZEROS)+'d'
 """Name formatted with leading zeros"""

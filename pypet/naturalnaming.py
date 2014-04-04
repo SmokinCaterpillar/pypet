@@ -87,7 +87,7 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 # a slow search with a full tree traversal is initiated.
 FAST_UPPER_BOUND = 2
 
-SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res', 'traj'])
+SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
 
 
 
@@ -212,13 +212,11 @@ class NNTreeNode(WithAnnotations):
 
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
-        if ( self._depth >= 3 and
-                     split_name[0] in ['results', 'derived_parameters'] and
-                     split_name[1] == 'runs' and
-                 split_name[2].startswith(pypetconstants.RUN_NAME) ):
-            self._creator_name = split_name[2]
-        else:
-            self._creator_name = 'trajectory'
+        self._creator_name = 'trajectory'
+        for name in split_name:
+            if name.startswith(pypetconstants.RUN_NAME) and name != pypetconstants.RUN_NAME_DUMMY:
+                self._creator_name = name
+                break
 
 
     def f_get_class_name(self):
@@ -713,6 +711,9 @@ class NaturalNamingInterface(HasLogger):
             elif full_name in root._other_leaves:
                 del root._other_leaves[full_name]
 
+            if full_name in root._run_parent_groups:
+                del root._run_parent_groups[full_name]
+
             if full_name in root._explored_parameters:
                 del root._explored_parameters[full_name]
 
@@ -726,6 +727,7 @@ class NaturalNamingInterface(HasLogger):
                                              'not shrunk!')
                     else:
                         root.f_shrink()
+
 
             del self._flat_leaf_storage_dict[full_name]
 
@@ -831,12 +833,17 @@ class NaturalNamingInterface(HasLogger):
                         if len(index) < pypetconstants.FORMAT_ZEROS:
                             return pypetconstants.FORMATTED_RUN_NAME % int(index)
 
-        if name in SHORTCUT_SET:
+        if name == '-1':
+            return pypetconstants.RUN_NAME_DUMMY
+        elif name.isdigit():
+            return pypetconstants.FORMATTED_RUN_NAME % int(name)
+
+        elif name in SHORTCUT_SET:
             if name == 'crun':
                 if self._root_instance._as_run is not None:
                     return self._root_instance._as_run
                 else:
-                    return name
+                    return pypetconstants.RUN_NAME_DUMMY
 
             if name == 'par':
                 return 'parameters'
@@ -917,7 +924,11 @@ class NaturalNamingInterface(HasLogger):
                 else:
                     raise RuntimeError('Why are you here?')
 
-            if (root._is_run and (group_type_name == RESULT_GROUP or
+
+            if '.$.' in name or name.endswith('.$') or name == '$':
+                pass
+
+            if name and (root._is_run and (group_type_name == RESULT_GROUP or
                                           group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
@@ -936,82 +947,6 @@ class NaturalNamingInterface(HasLogger):
         name = add + name
 
         return name
-
-
-    # def _add_from_leaf_instance(self, start_node, instance):
-    #     """Adds a given parameter or result instance to the tree.
-    #
-    #     Checks to which subtree the instances belongs and calls
-    #     :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
-    #     matching arguments
-    #
-    #     :param start_node: The parent node that was called to add the instance to
-    #
-    #     :param instance: The instance to add
-    #
-    #     :return: The added parameter or result
-    #
-    #     """
-    #     full_name = start_node.v_full_name
-    #
-    #     if full_name.startswith('results'):
-    #         group_type_name = RESULT_GROUP
-    #         type_name = RESULT
-    #
-    #     elif full_name.startswith('parameters'):
-    #         group_type_name = PARAMETER_GROUP
-    #         type_name = PARAMETER
-    #
-    #     elif full_name.startswith('derived_parameters'):
-    #         group_type_name = DERIVED_PARAMETER_GROUP
-    #         type_name = DERIVED_PARAMETER
-    #
-    #     elif full_name.startswith('config'):
-    #         group_type_name = CONFIG_GROUP
-    #         type_name = CONFIG
-    #
-    #     else:
-    #         raise RuntimeError('You shall not pass!')
-    #
-    #     return self._add_generic(start_node,type_name,group_type_name,[instance],{})
-    #
-    #
-    # def _add_from_group_name(self,start_node, name, comment):
-    #     """Adds a new group node to the tree based on the group's name.
-    #
-    #     Checks to which subtree the group belongs and calls
-    #     :func:`~pypet.naturalnaming.NaturalNamingInterface._add_generic` with the corresponding
-    #     matching arguments.
-    #
-    #     :param start_node: The parent node that was called to add the group to
-    #
-    #     :param instance: The name of the new group
-    #
-    #     :return: The new added group
-    #
-    #     """
-    #     full_name = start_node.v_full_name
-    #
-    #     if full_name.startswith('results'):
-    #         group_type_name = RESULT_GROUP
-    #
-    #
-    #     elif full_name.startswith('parameters'):
-    #         group_type_name = PARAMETER_GROUP
-    #
-    #
-    #     elif full_name.startswith('derived_parameters'):
-    #         group_type_name = DERIVED_PARAMETER_GROUP
-    #
-    #
-    #     elif full_name.startswith('config'):
-    #         group_type_name = CONFIG_GROUP
-    #
-    #
-    #     else:
-    #         raise RuntimeError('You shall not pass!')
-    #
-    #     return self._add_generic(start_node,group_type_name,group_type_name,[name,comment],{})
 
 
     @staticmethod
@@ -1130,9 +1065,19 @@ class NaturalNamingInterface(HasLogger):
         if add_prefix:
             name = self._add_prefix(name, start_node, group_type_name)
 
+        name = self._replace_wildcards(name)
+
         return self._add_to_tree(start_node, name, type_name, group_type_name, instance,
                                  constructor, args, kwargs)
 
+    def _replace_wildcards(self, name):
+        """Replaces the $ wildcards"""
+        if self._root_instance._is_run:
+            name = name.replace('$', self._root_instance.v_name)
+        else:
+            name = name.replace('$', pypetconstants.RUN_NAME_DUMMY)
+
+        return name
 
     def _add_to_tree(self, start_node, name, type_name, group_type_name,
                      instance, constructor, args, kwargs):
@@ -1185,7 +1130,7 @@ class NaturalNamingInterface(HasLogger):
         # First check if the naming of the new item is appropriate
         split_name = name.split('.')
 
-        faulty_names = self._check_names(split_name)
+        faulty_names = self._check_names(split_name, start_node)
 
         if faulty_names:
             raise ValueError(
@@ -1247,6 +1192,10 @@ class NaturalNamingInterface(HasLogger):
                             self._nodes_and_leaves_runs_sorted[name][run_name] \
                                 [new_node.v_full_name] = new_node
 
+                    if (name.startswith(pypetconstants.RUN_NAME) and
+                                name != pypetconstants.RUN_NAME_DUMMY):
+                        self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
+
                 else:
                     if idx == last_idx:
                         raise AttributeError('You already have a group/instance `%s` under '
@@ -1262,7 +1211,7 @@ class NaturalNamingInterface(HasLogger):
             raise
 
 
-    def _check_names(self, split_names):
+    def _check_names(self, split_names, parent_node=None):
         """Checks if a list contains strings with invalid names.
 
         Returns a description of the name violations. If names are correct the empty
@@ -1270,39 +1219,56 @@ class NaturalNamingInterface(HasLogger):
 
         :param split_names: List of strings
 
+        :param parent_node:
+
+            The parental node from where to start (only applicable for node names)
+
         """
+
+        if parent_node is None:
+            parent_length = 0
+            parent_run_count = 0
+        else:
+            parent_length = len(parent_node.v_full_name)
+            parent_run_count = parent_node.v_full_name.count(pypetconstants.RUN_NAME)
+
         faulty_names = ''
 
         for split_name in split_names:
             if split_name in self._not_admissible_names:
-                faulty_names = '%s %s is a method/attribute of the trajectory/treenode/naminginterface,' % \
+                faulty_names = '%s `%s` is a method/attribute of the trajectory/treenode/naminginterface,' % \
                                (faulty_names, split_name)
 
             if split_name[0] == '_':
-                faulty_names = '%s %s starts with a leading underscore,' % (
+                faulty_names = '%s `%s` starts with a leading underscore,' % (
                     faulty_names, split_name)
 
             if ' ' in split_name:
-                faulty_names = '%s %s f_contains white space(s),' % (faulty_names, split_name)
+                faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
 
             if not self._translate_into_shortcut(split_name) is None:
-                faulty_names = '%s %s is already an important shortcut,' % (
+                faulty_names = '%s `%s` is already an important shortcut,' % (
                     faulty_names, split_name)
 
-        name = split_names.pop()
-        location = '.'.join(split_names)
+        name = split_names[-1]
+        location = '.'.join(split_names[:-1])
         if len(name) >= pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
-            faulty_names = '%s %s is too long the name can only have %d characters but it has ' \
+            faulty_names = '%s `%s` is too long the name can only have %d characters but it has ' \
                            '%d,' % \
                            (faulty_names, name, len(name),
                             pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
 
-        if len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
-            faulty_names = '%s %s is too long the location can only have %d characters but it has %d,' % \
-                           (faulty_names, name, len(location),
+        if parent_length+ len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+            faulty_names = '%s `%s` is too long the location can only have %d characters but it has %d,' % \
+                           (faulty_names, location, len(location),
                             pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
 
-        split_names.append(name)
+        if (parent_run_count + name.count(pypetconstants.RUN_NAME) +
+                location.count(pypetconstants.RUN_NAME) > 1):
+            faulty_names = '%s `%s` contains a more than one branch with a run name starting with ' \
+                           '`%s`,' % (faulty_names,
+                                      parent_node.v_full_name+'.'+'.'.join(split_names),
+                                      pypetconstants.RUN_NAME)
         return faulty_names
 
 
@@ -1530,13 +1496,14 @@ class NaturalNamingInterface(HasLogger):
         that do not belong to the run are blinded out.
 
         """
-        if run_name is not None and node.v_depth in [1, 2] and run_name in node._children:
-            # Only consider one particular run and blind out the rest, but include the trajectory
-            # subbranch
+        if run_name is not None and run_name in node._children:
+            # Only consider one particular run and blind out the rest, but include
+            # all other subbranches
             node_list = [node._children[run_name]]
-            # For backwards compatibility
-            if 'trajectory' in node._children:
-                node_list.append(node._children['trajectory'])
+            for child_name in node._children:
+                if not (child_name.startswith(pypetconstants.RUN_NAME)
+                    and child_name != pypetconstants.RUN_NAME_DUMMY):
+                    node_list.append(node._children[child_name])
             return node_list
         else:
             return node._children.itervalues()
@@ -1922,7 +1889,6 @@ class NaturalNamingInterface(HasLogger):
 
             if len(split_name)== 1 and first in node._children:
                 result = node._children[first]
-
             else:
 
                 result = self._check_flat_dicts(node, split_name)

@@ -79,6 +79,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._explored_parameters = parent_trajectory._explored_parameters
         self._config = parent_trajectory._config
         self._groups=parent_trajectory._groups
+        self._run_parent_groups= parent_trajectory._run_parent_groups
         self._other_leaves = parent_trajectory._other_leaves
 
         # The single run takes over the nn_interface of the parent trajectory and
@@ -404,11 +405,10 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         of all runs.
 
         """
-        if self.f_contains('results.runs.'+ self.v_name):
-            self.results.runs.f_remove_child(self.v_name, recursive=True)
-
-        if self.f_contains('derived_parameters.runs.' + self.v_name):
-            self.derived_parameters.runs.f_remove_child(self.v_name, recursive=True)
+        for group_name in self._run_parent_groups:
+            group = self._run_parent_groups[group_name]
+            if group.f_contains(self.v_name):
+                group.f_remove_child(self.v_name, recursive=True)
 
 
     def f_to_dict(self,fast_access = False, short_names=False, copy = True):
@@ -562,17 +562,21 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         return self._return_item_dictionary(self._results, fast_access, copy)
 
     def f_store(self):
-        """Stores the single run to disk.
+        """Stores all data from the single run to disk.
 
-        :param only_init: If no data should be stored but only meta data.
+        Looks for new data that is added below a group called `run_XXXXXXXXXX` and
+        stores it where `XXXXXXXXX` is the index of this run.
 
         """
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name)
+        for group_name in self._run_parent_groups:
+            group = self._run_parent_groups[group_name]
+            if group.f_contains(self.v_name):
+                group.f_store_child(self.v_name, recursive=True)
+
 
     def _store_final(self):
         """Signals the storage service that single run is completed"""
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self, final=True,
+        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_trajectory_name)
 
     def f_store_item(self, item, *args,**kwargs):
@@ -1018,7 +1022,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._explored_parameters = {} # Contains all explored parameters
         self._config = {} # Contains all config parameters
         self._groups={} # Contains ALL groups regardless in which subtree they are
-        self._other_leaves={}
+        self._run_parent_groups={} # Contains all groups which are parents of run groups
+        self._other_leaves={} # Contains ALL other user added leaves
 
         self._changed_default_parameters = {} # Needed for paremeter presetting
 
@@ -2015,14 +2020,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             par.f_lock()
 
     def _remove_run_data(self):
-        group_names = ['results.runs', 'derived_parameters.runs']
-        for group_name in group_names:
-            if self.f_contains(group_name):
-                group = self.f_get(group_name)
-                for child_name in \
-                        group.f_get_children(copy=False).keys():
-
-                    if child_name.startswith(pypetconstants.RUN_NAME):
+        for group_name in self._run_parent_groups:
+            group = self._run_parent_groups[group_name]
+            for child_name in group.f_get_children(copy=False).keys():
+                if (child_name.startswith(pypetconstants.RUN_NAME) and
+                    child_name != pypetconstants.RUN_NAME_DUMMY):
                         group.f_remove_child(child_name, recursive=True)
 
     def _finalize(self):

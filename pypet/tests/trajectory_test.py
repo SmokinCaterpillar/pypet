@@ -487,6 +487,13 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('f_get')
 
         with self.assertRaises(ValueError):
+            self.traj.f_add_result('test.$.k.$')
+
+        self.traj.f_add_result_group('test.$.k')
+        with self.assertRaises(ValueError):
+            self.traj.res.k.f_add_result('$.jjj')
+
+        with self.assertRaises(ValueError):
             self.traj.f_add_parameter('e'*129)
 
         with self.assertRaises(ValueError):

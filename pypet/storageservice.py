@@ -730,8 +730,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 :param stuff_to_store: The single run to be stored
 
-                :param final: If final meta data should be stored
-
             * :const:`pypet.pypetconstants.LEAF`
 
                 Stores a parameter or result.
@@ -1251,15 +1249,20 @@ class HDF5StorageService(StorageService, HasLogger):
             run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
 
             old_split_name = old_name.split('.')
-            if len(old_split_name)>2 and old_split_name[2].startswith(pypetconstants.RUN_NAME):
-                old_split_name[2]=run_mask
-                old_mask_name = '.'.join(old_split_name)
+            for idx, name in enumerate(old_split_name):
+                add_to_count = False
+                if (name.startswith(pypetconstants.RUN_NAME)
+                        and name != pypetconstants.RUN_NAME_DUMMY):
+                    old_split_name[idx]=run_mask
+                    add_to_count = True
 
+                if add_to_count:
+                    old_mask_name = '.'.join(old_split_name)
 
-                if not old_mask_name in count_dict:
-                    count_dict[old_mask_name]=0
+                    if not old_mask_name in count_dict:
+                        count_dict[old_mask_name]=0
 
-                count_dict[old_mask_name] += 1
+                    count_dict[old_mask_name] += 1
 
 
         try:
@@ -2470,51 +2473,35 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self,single_run, final=False):
-        """ Stores a single run instance to disk"""
+    def _srn_store_single_run(self, single_run):
+        """ Stores a single run instance to disk (only meta data)"""
 
         idx = single_run.v_idx
 
-        if not final:
-            self._logger.info('Start storing run %d with name %s.' % (idx,single_run.v_name))
-            # Store the two subbranches `results.runs.run_XXXXXXXXX` and
-            # 'derived_parameters.runs.run_XXXXXXXXX`
-            # created by the current run
+        add_table = self._overview_explored_parameters_runs
 
-            for branch in ('results.runs', 'derived_parameters.runs'):
-                branch_name = branch +'.'+single_run.v_name
-                if single_run.f_contains(branch_name):
-                    self._logger.info('Storing branch `%s`.' % branch_name)
-                    self._tree_store_sub_branch(pypetconstants.LEAF, single_run,
-                                               branch_name,self._trajectory_group)
+        # For better readability and if desired add the explored parameters to the results
+        # Also collect some summary information about the explored parameters
+        # So we can add this to the `run` table
+        run_summary = self._srn_add_explored_params(single_run.v_name,
+                                                    single_run._explored_parameters.values(),
+                                                    add_table)
 
-            self._logger.info('Finished storing run %d with name %s' % (idx,single_run.v_name))
+        # Finally, add the real run information to the `run` table
+        runtable = getattr(self._overview_group,'runs')
 
-        else:
-            add_table = self._overview_explored_parameters_runs
+        # If the table is not large enough already (maybe because the trajectory got expanded
+        # We have to manually increase it here
+        actual_rows = runtable.nrows
+        if idx+1 > actual_rows:
+            self._all_fill_run_table_with_dummys(actual_rows, idx+1)
 
-            # For better readability and if desired add the explored parameters to the results
-            # Also collect some summary information about the explored parameters
-            # So we can add this to the `run` table
-            run_summary = self._srn_add_explored_params(single_run.v_name,
-                                                        single_run._explored_parameters.values(),
-                                                        add_table)
+        insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
+        insert_dict['parameter_summary'] = run_summary
+        insert_dict['completed'] = 1
 
-            # Finally, add the real run information to the `run` table
-            runtable = getattr(self._overview_group,'runs')
-
-            # If the table is not large enough already (maybe because the trajectory got expanded
-            # We have to manually increase it here
-            actual_rows = runtable.nrows
-            if idx+1 > actual_rows:
-                self._all_fill_run_table_with_dummys(actual_rows, idx+1)
-
-            insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
-            insert_dict['parameter_summary'] = run_summary
-            insert_dict['completed'] = 1
-
-            self._all_add_or_modify_row(single_run, insert_dict, runtable,
-                                        index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
+        self._all_add_or_modify_row(single_run, insert_dict, runtable,
+                                    index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
 
 
@@ -3315,7 +3302,10 @@ class HDF5StorageService(StorageService, HasLogger):
             creator_name = instance.v_creator_name
             if creator_name.startswith(pypetconstants.RUN_NAME):
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                split_name[2]=run_mask
+                for idx, name in enumerate(split_name):
+                    if name == creator_name:
+                        split_name[idx] = run_mask
+                        break
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
                 instance._rename(new_full_name)
@@ -3399,7 +3389,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                split_name[2]=run_mask
+                for idx, name in enumerate(split_name):
+                    if name == creator_name:
+                        split_name[idx] = run_mask
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
                 # Rename the item for easier storage
