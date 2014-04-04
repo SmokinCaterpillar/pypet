@@ -263,6 +263,7 @@ class StorageTest(TrajectoryComparator):
                          dynamically_imported_classes=None,
                          log_folder=None,
                          log_level=None,
+                         log_stdout=False,
                          multiproc=False,
                          ncores=3,
                          wrap_mode=pypetconstants.WRAP_MODE_LOCK,
@@ -444,6 +445,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False,
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -554,7 +556,8 @@ class EnvironmentTest(TrajectoryComparator):
 
 
         self.env = Environment(trajectory=self.traj,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False)
 
         self.traj = self.env.v_trajectory
 
@@ -826,6 +829,7 @@ class ResultSortTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False,
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
@@ -930,7 +934,8 @@ class ResultSortTest(TrajectoryComparator):
         traj_name = self.env.v_trajectory.v_name
         del self.env
         self.env = Environment(trajectory=self.traj,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False)
 
         self.traj = self.env.v_trajectory
 

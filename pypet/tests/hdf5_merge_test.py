@@ -43,7 +43,8 @@ class MergeTest(TrajectoryComparator):
         logfolder = make_temp_file('experiments/tests/Log')
         trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
-        env = Environment(trajectory=trajname,filename=filename,file_title=trajname, log_folder=logfolder)
+        env = Environment(trajectory=trajname,filename=filename,file_title=trajname,
+                          log_folder=logfolder, log_stdout=False)
 
 
         self.envs.append(env)
@@ -482,6 +483,7 @@ class TestMergeResultsSort(ResultSortTest):
 
         env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False,
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores)

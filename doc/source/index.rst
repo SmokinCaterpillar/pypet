@@ -177,10 +177,10 @@ create such a temporary folder.
 
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
-You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/` with
-`-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
+You can pass additional arguments as ``$ python all_tests.py -k --folder=myfolder/`` with
+``-k`` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
 they will be deleted after the completed tests),
-and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
+and ``--folder=`` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
 If you do not want to browse to your installation folder, you can also download the

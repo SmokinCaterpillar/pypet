@@ -151,7 +151,7 @@ class NetworkTest(TrajectoryComparator):
         self.traj = traj
 
 
-    def test_singleprocessing(self):
+    def test_net(self):
         self.env.f_run(run_net)
 
         self.traj.f_load(load_derived_parameters=2, load_results=2)

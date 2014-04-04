@@ -2176,9 +2176,19 @@ class Environment(HasLogger):
                                     comment ='If trajectory should be stored automatically in the '
                                              'end.').f_lock()
         if self._automatic_storing:
-            self._logger.info('Final storing of trajectory!')
+            self._logger.info('\n************************************************************\n'
+                                '************************************************************\n'
+                                'STARTING FINAL STORING of trajectory\n`%s`.'
+                                '\n************************************************************\n'
+                                 '************************************************************\n' %
+                                      self._traj.v_name)
             self._traj.f_store()
-            self._logger.info('Trajectory successfully stored.')
+            self._logger.info('\n************************************************************\n'
+                                '************************************************************\n'
+                                'FINISHED FINAL STORING of trajectory\n`%s`.'
+                                '\n************************************************************\n'
+                                 '************************************************************\n' %
+                                      self._traj.v_name)
 
         self._finish_timestamp = time.time()
 
