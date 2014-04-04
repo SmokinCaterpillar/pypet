@@ -2752,6 +2752,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         run_names = other_trajectory.f_get_run_names()
 
+        to_store_groups_with_annotations =[]
+
         for run_name in run_names:
             # Iterate through all used runs and store annotated groups and mark results and
             # derived parameters for merging
@@ -2794,11 +2796,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 count += 1
 
-                to_store_groups_with_annotations =[]
-
                 for node in nodes_iterator:
                     full_name = node.v_full_name
-                    new_full_name = self._rename_key(full_name, 2, new_runname)
+                    pos_list = []
+                    for idx, split in enumerate(full_name.split('.')):
+                        if split.startswith(pypetconstants.RUN_NAME):
+                            pos_list.append(idx)
+                    new_full_name = self._rename_key(full_name, pos_list, new_runname)
 
                     if node.v_is_leaf:
                         # Create new empty result/derived param instance
@@ -2838,73 +2842,49 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
     @staticmethod
-    def _rename_key(key, pos, new_name):
-        """Renames a specific position of a key string with colon separation.
+    def _rename_key(key, pos_list, new_name):
+        """Rename positions of a key string with colon separation.
 
         Example usage:
 
-        >>> Trajectory._rename_key('pos0.pos1.pos2', pos=1, new_name='homer')
+        >>> Trajectory._rename_key('pos0.pos1.pos2', pos_list=[1], new_name='homer')
         'po0.homer.pos2'
 
         """
         split_key = key.split('.')
-        split_key[pos] = new_name
+        for pos in pos_list:
+            split_key[pos] = new_name
         renamed_key = '.'.join(split_key)
         return renamed_key
 
     @staticmethod
     def _get_traj_dpars_or_results(traj, where):
-        """Extracts all parameters or results that are not below XXXX.runs.run_XXXXXXX"""
+        """Extracts all parameters or results that are not below any group called run_XXXXXXXX"""
         result_dict = {}
         if where not in ['results', 'derived_parameters']:
             raise RuntimeError('You shall not pass!')
 
-        if where in traj._children:
-            outer_node = traj._children[where]
-            for inner_node in outer_node:
-                if inner_node.v_name != 'runs':
-                    if inner_node.v_is_leaf:
-                        result_dict[inner_node.v_full_name] = inner_node
-                    else:
-                        result_dict.update(inner_node.f_to_dict())
-
-            if 'runs' in outer_node._children:
-                inner_node = outer_node._children['runs']
-                for run_node in inner_node:
-                    if not run_node.v_name.startswith(pypetconstants.RUN_NAME):
-                        if run_node.v_is_leaf:
-                            result_dict[run_node.v_full_name] = run_node
-                        else:
-                            result_dict.update(run_node.f_to_dict())
+        if traj.f_contains(where):
+            group = traj[where]
+            for leaf in group.f_iter_leaves():
+                if leaf.v_creator_name == 'trajectory':
+                    result_dict[leaf.v_full_name] = leaf
 
         return result_dict
 
     @staticmethod
     def _get_traj_dpars_or_results_node_iterator(traj, where):
+        """Returns an iterator over all nodes not hanging below `run_XXXXXXXX`"""
 
-        iterlist = []
         if where not in ['results', 'derived_parameters']:
             raise RuntimeError('You shall not pass!')
 
-        if where in traj._children:
-            outer_node = traj._children[where]
-            for inner_node in outer_node:
-                if inner_node.v_name != 'runs':
-                    if inner_node.v_is_leaf:
-                        iterlist.append([inner_node])
-                    else:
-                        iterlist.append(inner_node.f_iter_nodes(recursive=True))
-
-            if 'runs' in outer_node._children:
-                inner_node = outer_node._children['runs']
-                for run_node in inner_node:
-                    if not run_node.v_name.startswith(pypetconstants.RUN_NAME):
-                        if run_node.v_is_leaf:
-                            iterlist.append([inner_node])
-                        else:
-                            iterlist.append(run_node.f_iter_nodes(recursive=True))
-
-        return itools.chain(*iterlist)
+        if traj.f_contains(where):
+            group = traj[where]
+            predicate = lambda x: x.v_creator_name == 'trajectory'
+            return itools.ifilter(predicate, group.f_iter_nodes(recursive=True))
+        else:
+            return iter([])
 
     def _merge_parameters(self, other_trajectory, remove_duplicates=False,
                           trial_parameter_name=None,
