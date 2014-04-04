@@ -925,10 +925,10 @@ class NaturalNamingInterface(HasLogger):
                     raise RuntimeError('Why are you here?')
 
 
-            if '.$.' in name or name.endswith('.$') or name == '$':
+            if '.$.' in name or name.startswith('$.') or name.endswith('.$') or name == '$':
                 pass
 
-            if name and (root._is_run and (group_type_name == RESULT_GROUP or
+            elif name and (root._is_run and (group_type_name == RESULT_GROUP or
                                           group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
@@ -1134,7 +1134,7 @@ class NaturalNamingInterface(HasLogger):
 
         if faulty_names:
             raise ValueError(
-                'Your Parameter/Result/Node `%s` f_contains the following not admissible names: '
+                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
                 '%s please choose other names.'
                 % (name, faulty_names))
 

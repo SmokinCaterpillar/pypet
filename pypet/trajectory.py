@@ -2759,19 +2759,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             # derived parameters for merging
             idx = other_trajectory.f_get_run_information(run_name)['idx']
             if used_runs[idx]:
-                try:
-                    other_result_nodes = other_trajectory.f_get(
-                        'results.runs.' + run_name).f_iter_nodes(recursive=True)
-                except AttributeError:
-                    other_result_nodes = []
+                iter_list=[]
+                for parent_group in other_trajectory._run_parent_groups.itervalues():
+                    if parent_group.f_contains(run_name):
+                        node = parent_group.f_get(run_name)
+                        if node.v_is_leaf:
+                            nodes_iterator = iter([node])
+                        else:
+                            nodes_iterator = node.f_iter_nodes(recursive=True)
+                        iter_list.append(nodes_iterator)
 
-                try:
-                    other_derived_param_nodes = other_trajectory.f_get(
-                        'derived_parameters.runs.' + run_name).f_iter_nodes(recursive=True)
-                except AttributeError:
-                    other_derived_param_nodes = []
-
-                nodes_iterator= itools.chain(other_result_nodes, other_derived_param_nodes)
+                nodes_iterator = itools.chain(*iter_list)
 
                 # Update the run information dict of the current trajectory
                 other_info_dict = other_trajectory.f_get_run_information(run_name)

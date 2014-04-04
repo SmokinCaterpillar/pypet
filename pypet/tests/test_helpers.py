@@ -174,12 +174,17 @@ def add_params(traj,param_dict):
 
 
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
+    traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test')
+    traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test')
+
+
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
 
     traj.results.f_add_leaf('Test', 42, comment='NC')
     traj.f_add_group('derived_parameters.uo', comment='Yeah, this is unsuals')
     traj.dpar.f_add_leaf('uo.adsad', 3333, comment='Yo')
     traj.derived_parameters.f_add_leaf('Test2', 42, comment='sfsdf')
+
     traj.par.f_add_leaf('er.Test3', 42, comment='sdfds')
 
     for irun in range(13):
@@ -271,6 +276,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.f_add_result('object.table', myobjtab, comment='k').v_annotations.f_set(test=42)
         traj.object.f_set_annotations(test2=42.42)
+
+        traj.f_add_result('$.here', 77, comment='huhu')
+        traj.f_add_result('or.not.$', 77, comment='duh!')
+        traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print '<<<<<<Finished Simple Calculations'
