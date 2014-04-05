@@ -728,7 +728,8 @@ class EnvironmentTest(TrajectoryComparator):
 
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
-                    if 'run_' in node._v_pathname:
+                    if ('run_' in node._v_pathname and
+                            not pypetconstants.RUN_NAME_DUMMY in node._v_pathname):
                         #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
                         comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:
@@ -767,7 +768,8 @@ class EnvironmentTest(TrajectoryComparator):
 
             for node in traj_group._f_walkGroups():
                 if 'SRVC_LEAF' in node._v_attrs:
-                    if 'run_' in node._v_pathname:
+                    if ('run_' in node._v_pathname and
+                            not pypetconstants.RUN_NAME_DUMMY in node._v_pathname):
                         comment_run_name = 'run_00000000'
                         if comment_run_name in node._v_pathname:
                             self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,

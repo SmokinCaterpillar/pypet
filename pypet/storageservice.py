@@ -3367,139 +3367,136 @@ class HDF5StorageService(StorageService, HasLogger):
         where = split_name[0]
 
         # Check if we are in the subtree that has runs overview tables
-        if where in['derived_parameters', 'results'] and len(split_name)>2:
+        creator_name = instance.v_creator_name
+        if creator_name.startswith(pypetconstants.RUN_NAME):
 
-            creator_name = instance.v_creator_name
+            try:
+                # Get the overview table
+                table_name = where+'_runs_summary'
 
-            # Check sub-subtree
-            if creator_name.startswith(pypetconstants.RUN_NAME):
-
-                try:
-                    # Get the overview table
-                    table_name = where+'_runs_summary'
-
-                    # Check if the overview table exists, otherwise skip the rest of
-                    # the meta adding
-                    if table_name in self._overview_group:
-                        table = getattr(self._overview_group, table_name)
-                    else:
-                        return where, definitely_store_comment
-                except  pt.NoSuchNodeError:
+                # Check if the overview table exists, otherwise skip the rest of
+                # the meta adding
+                if table_name in self._overview_group:
+                    table = getattr(self._overview_group, table_name)
+                else:
                     return where, definitely_store_comment
+            except  pt.NoSuchNodeError:
+                return where, definitely_store_comment
 
-                # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
-                run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                for idx, name in enumerate(split_name):
-                    if name == creator_name:
-                        split_name[idx] = run_mask
-                new_full_name = '.'.join(split_name)
-                old_full_name = instance.v_full_name
-                # Rename the item for easier storage
-                instance._rename(new_full_name)
+            # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
+            run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
+            for idx, name in enumerate(split_name):
+                if name == creator_name:
+                    split_name[idx] = run_mask
+                    break # We can skip the rest, since one can only branch once
+            new_full_name = '.'.join(split_name)
+            old_full_name = instance.v_full_name
+            # Rename the item for easier storage
+            instance._rename(new_full_name)
+            try:
+
+                # True if comment must be moved upwards to lower index
+                erase_old_comment=False
+
+                # Find the overview table entry
+
+                row_iterator = \
+                     self._all_find_param_or_result_entry_and_return_iterator(instance, table)
+
+
+                row = None
                 try:
+                    row = row_iterator.next()
+                except StopIteration:
+                    pass
 
-                    # True if comment must be moved upwards to lower index
-                    erase_old_comment=False
+                if row is not None:
+                    # If row found we need to increase the number of items
+                    nitems = row['number_of_items']+1
 
-                    # Find the overview table entry
+                    # Get the run name of the example
+                    example_item_run_name = row['example_item_run_name']
 
-                    row_iterator = \
-                         self._all_find_param_or_result_entry_and_return_iterator(instance, table)
-
-
-                    row = None
+                    # Get the old comment:
+                    location_string = row['location']
+                    other_parent_node_name = location_string.replace(run_mask,example_item_run_name)
+                    other_parent_node_name = '/' + self._trajectory_name + '/' + \
+                                             other_parent_node_name.replace('.','/')
                     try:
-                        row = row_iterator.next()
+                        example_item_node = self._hdf5file.get_node(where=other_parent_node_name,
+                                                                               name=instance.v_name)
+                    except AttributeError:
+                        example_item_node = self._hdf5file.getNode(where=other_parent_node_name,
+                                                                              name = instance.v_name)
+
+                    # Check if comment is obsolete
+                    example_comment = ''
+                    if HDF5StorageService.COMMENT in example_item_node._v_attrs:
+                        example_comment = str(example_item_node._v_attrs[HDF5StorageService.COMMENT])
+                    definitely_store_comment=instance.v_comment != example_comment
+
+                    # We can rely on lexicographic comparisons with run indices
+                    if creator_name < example_item_run_name:
+                        # In case the statement is true and the comments are equal, we need
+                        # to move the comment to a result or derived parameter with a lower
+                        # run name:
+                        if not definitely_store_comment:
+
+                            # We need to purge the comment in the other result or derived parameter
+                            erase_old_comment=True
+                            definitely_store_comment=True
+
+                            row['example_item_run_name']=creator_name
+
+                            row['value'] = self._all_cut_string(instance.f_val_to_str(),
+                                                pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                                                self._logger)
+                        else:
+                            self._logger.warning('Your example value and comment in the overview'
+                                     ' table cannot be set to the lowest index'
+                                     ' item because results or derived parameters'
+                                     ' with lower indices have '
+                                     ' a different comment! The comment of `%s` '
+                                     ' in run `%s'
+                                     ' differs from the current result or'
+                                     ' derived parameter in run `%s`.' %
+                                       (instance.v_name, creator_name, example_item_run_name))
+
+
+                    row['number_of_items'] = nitems
+                    row.update()
+
+                    try:
+                        row_iterator.next()
+                        raise RuntimeError('There is something completely wrong, '
+                                           'found `%s` twice in a table!' %
+                                        instance.v_full_name)
                     except StopIteration:
                         pass
 
-                    if row is not None:
-                        # If row found we need to increase the number of items
-                        nitems = row['number_of_items']+1
 
-                        # Get the run name of the example
-                        example_item_run_name = row['example_item_run_name']
+                    table.flush()
 
-                        # Get the old comment:
-                        location_string = row['location']
-                        other_parent_node_name = location_string.replace(run_mask,example_item_run_name)
-                        other_parent_node_name = '/' + self._trajectory_name + '/' + \
-                                                 other_parent_node_name.replace('.','/')
-                        try:
-                            example_item_node = self._hdf5file.get_node(where=other_parent_node_name,
-                                                                                   name=instance.v_name)
-                        except AttributeError:
-                            example_item_node = self._hdf5file.getNode(where=other_parent_node_name,
-                                                                                  name = instance.v_name)
+                    if (self._purge_duplicate_comments and erase_old_comment and
+                            HDF5StorageService.COMMENT in example_item_node._v_attrs):
+                        del example_item_node._v_attrs[HDF5StorageService.COMMENT]
 
-                        # Check if comment is obsolete
-                        example_comment = ''
-                        if HDF5StorageService.COMMENT in example_item_node._v_attrs:
-                            example_comment = str(example_item_node._v_attrs[HDF5StorageService.COMMENT])
-                        definitely_store_comment=instance.v_comment != example_comment
+                    self._hdf5file.flush()
+                    pass
+                else:
+                    self._all_store_param_or_result_table_entry(instance,table,
+                                        flags=(HDF5StorageService.ADD_ROW,),
+                                        additional_info={'example_item_run_name': creator_name})
 
-                        # We can rely on lexicographic comparisons with run indices
-                        if creator_name < example_item_run_name:
-                            # In case the statement is true and the comments are equal, we need
-                            # to move the comment to a result or derived parameter with a lower
-                            # run name:
-                            if not definitely_store_comment:
-
-                                # We need to purge the comment in the other result or derived parameter
-                                erase_old_comment=True
-                                definitely_store_comment=True
-
-                                row['example_item_run_name']=creator_name
-
-                                row['value'] = self._all_cut_string(instance.f_val_to_str(),
-                                                    pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                                    self._logger)
-                            else:
-                                self._logger.warning('Your example value and comment in the overview'
-                                         ' table cannot be set to the lowest index'
-                                         ' item because results or derived parameters'
-                                         ' with lower indices have '
-                                         ' a different comment! The comment of `%s` '
-                                         ' in run `%s'
-                                         ' differs from the current result or'
-                                         ' derived parameter in run `%s`.' %
-                                           (instance.v_name, creator_name, example_item_run_name))
-
-
-                        row['number_of_items'] = nitems
-                        row.update()
-
-                        try:
-                            row_iterator.next()
-                            raise RuntimeError('There is something completely wrong, '
-                                               'found `%s` twice in a table!' %
-                                            instance.v_full_name)
-                        except StopIteration:
-                            pass
-
-
-                        table.flush()
-
-                        if (self._purge_duplicate_comments and erase_old_comment and
-                                HDF5StorageService.COMMENT in example_item_node._v_attrs):
-                            del example_item_node._v_attrs[HDF5StorageService.COMMENT]
-
-                        self._hdf5file.flush()
-                        pass
-                    else:
-                        self._all_store_param_or_result_table_entry(instance,table,
-                                            flags=(HDF5StorageService.ADD_ROW,),
-                                            additional_info={'example_item_run_name': creator_name})
-
-                        definitely_store_comment=True
-
-                #There are 2 cases of exceptions, either the table is switched off, or
-                #the entry already exists, in both cases we won't have to store the comments
-                except  pt.NoSuchNodeError:
                     definitely_store_comment=True
-                finally:
-                    # Get the old name back
-                    instance._rename(old_full_name)
+
+            #There are 2 cases of exceptions, either the table is switched off, or
+            #the entry already exists, in both cases we  have to store the comments
+            except  pt.NoSuchNodeError:
+                definitely_store_comment=True
+            finally:
+                # Get the old name back
+                instance._rename(old_full_name)
 
         return where, definitely_store_comment
 
@@ -3606,7 +3603,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # If we still have data in `store_dict` about which we do not know how to store
             # it, pick default storage flags
-            self._prm_extract_missing_flags(store_dict,store_flags)
+            self._prm_extract_missing_flags(store_dict, store_flags)
 
             if isinstance(overwrite, basestring):
                 overwrite = [overwrite]
