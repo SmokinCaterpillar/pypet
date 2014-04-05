@@ -278,7 +278,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.object.f_set_annotations(test2=42.42)
 
         traj.f_add_result('$.here', 77, comment='huhu')
-        traj.f_add_result('or.not.$', 77, comment='duh!')
+        #traj.f_add_result('or.not.$', 77, comment='duh!')
         traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
