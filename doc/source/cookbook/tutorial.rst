@@ -108,7 +108,7 @@ Yet, we will shortly discuss the most important ones here.
 * `log_folder`
 
     The environment makes use of logging. You can specify a folder where all
-    log-files should be stored. Default is `current_woring_directory/logs/`.
+    log-files should be stored. Default is `current_working_directory/logs/`.
 
 * `log_level`
 
@@ -117,7 +117,7 @@ Yet, we will shortly discuss the most important ones here.
 * `log_stdout`:
 
     *pypet* will log all console output. So even if you don't use the logging module
-    but simple `print` statements in your python script, pypet will write these statements
+    but simple `print` statements in your python script, *pypet* can write these statements
     into the log files if you enable `log_stdout`.
 
 .. _logging: https://docs.python.org/2/library/logging.html
