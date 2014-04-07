@@ -407,14 +407,13 @@ class Environment(HasLogger):
 
     :param clean_up_runs:
 
-        In case of single core processing, whether all results under `results.runs.run_XXXXXXXX`
-        and `derived_parameters.runs.run_XXXXXXXX` should be removed after the completion of
+        In case of single core processing, whether all results under groups named `run_XXXXXXXX`
+        should be removed after the completion of
         the run. Note in case of multiprocessing this happens anyway since the single run
         container will be destroyed after finishing of the process.
 
         Moreover, if set to `True` after post-processing it is checked if there is still data
-        under `results.runs` and `derived_parameters.runs` and this data is removed if
-        the trajectory is expanded.
+        under `run_XXXXXXXX` and this data is removed if the trajectory is expanded.
 
     :param immediate_postproc:
 

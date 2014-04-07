@@ -1066,7 +1066,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._standard_result = Result
         self._standard_leaf = Result
 
-        self._stored = False
+
         self._full_copy = False
 
         self._dynamic_imports = ['pypet.parameter.PickleParameter']
@@ -2218,11 +2218,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if as_new:
             for param in self._parameters.itervalues():
                 param.f_unlock()
-            self._stored=False
         else:
             self.f_lock_parameters()
             self.f_lock_derived_parameters()
-            self._stored=True
 
 
     def _check_if_both_have_same_parameters(self, other_trajectory,

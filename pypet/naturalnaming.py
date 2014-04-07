@@ -2124,8 +2124,8 @@ class NNGroupNode(NNTreeNode):
         If you are operating within these subtrees this simply calls the corresponding adding
         function.
 
-        Be aware that if you are within a single run and you add items not below
-        `derived_parameters.run_XXXXXXXX` or `results.run_XXXXXXXXX` that you have to manually
+        Be aware that if you are within a single run and you add items not below a group
+        `run_XXXXXXXX` that you have to manually
         save the items. Otherwise they will be lost after the single run is completed.
 
         """
@@ -2144,8 +2144,8 @@ class NNGroupNode(NNTreeNode):
         If you are operating within these subtrees this simply calls the corresponding adding
         function.
 
-        Be aware that if you are within a single run and you add items not below
-        `derived_parameters.run_XXXXXXXX` or `results.run_XXXXXXXXX` that you have to manually
+        Be aware that if you are within a single run and you add items not below a group
+        `run_XXXXXXXX` that you have to manually
         save the items. Otherwise they will be lost after the single run is completed.
 
         """

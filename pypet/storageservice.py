@@ -2013,7 +2013,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._all_fill_run_table_with_dummys(actual_rows, len(traj))
 
         # Store the annotations in the trajectory node
-        self._ann_store_annotations(traj,self._trajectory_group)
+        self._ann_store_annotations(traj, self._trajectory_group)
 
         # Prepare the overview tables
         tostore_tables=[]
@@ -2182,6 +2182,8 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
             self._logger.info('Finished initialising the storage for `%s`.' % self._trajectory_name)
+
+        traj._stored=True
 
     def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True):
         """Stores data starting from a node along a branch and starts recursively loading
