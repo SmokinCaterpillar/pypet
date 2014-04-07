@@ -63,3 +63,13 @@ class TooManyGroupsError(TypeError):
 
     def __str__(self):
         return repr(self._msg)
+
+
+class DataNotInStorageError(IOError):
+    """Excpetion raise by Storage Service if data that is supposed to be loaded cannot
+    be found on disk."""
+    def __init__(self,msg):
+        self._msg=msg
+
+    def __str__(self):
+        return repr(self._msg)

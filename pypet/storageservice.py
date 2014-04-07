@@ -615,7 +615,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 Analogous to :ref:`storing lists <store-lists>`
 
-        :raises: NoSuchServiceError if message or data is not understood
+        :raises:
+
+            NoSuchServiceError if message or data is not understood
+
+            DataNotInStorageError if data to be loaded cannot be found on disk
 
         """
         opened = True
@@ -643,11 +647,14 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
             self._srvc_closing_routine(opened)
+        except pt.NoSuchNodeError as e:
+            self._srvc_closing_routine(opened)
+            self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
+            raise pex.DataNotInStorageError(e.message)
         except:
             self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
-
 
     def store(self,msg,stuff_to_store,*args,**kwargs):
         """ Stores a particular item to disk.

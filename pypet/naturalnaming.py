@@ -939,8 +939,10 @@ class NaturalNamingInterface(HasLogger):
                 else:
                     raise RuntimeError('Why are you here?')
 
-
-            if '.$.' in name or name.startswith('$.') or name.endswith('.$') or name == '$':
+            # Check if we have to add
+            if ('.$.' in name or name.startswith('$.') or name.endswith('.$') or name == '$' or
+                    '.'+pypetconstants.RUN_NAME in name or
+                    name.startswith(pypetconstants.RUN_NAME)):
                 pass
 
             elif name and (root._is_run and (group_type_name == RESULT_GROUP or
@@ -1865,8 +1867,9 @@ class NaturalNamingInterface(HasLogger):
 
         :raises:
 
-            AttributeError if no node with the given name can be found
-            Raises errors that are raiesd by the storage service if `auto_load=True`
+            AttributeError if no node with the given name can be found.
+            Raises errors that are raised by the storage service if `auto_load=True` and
+            item cannot be found.
 
         """
         if isinstance(name, (tuple, list)):
@@ -1883,7 +1886,8 @@ class NaturalNamingInterface(HasLogger):
             raise ValueError('Name of node to search for (%s) is longer thant the maximum depth %d' %
                              (str(name), max_depth))
 
-        try_auto_load_directly = False
+        try_auto_load_directly1 = False
+        try_auto_load_directly2 = False
         wildcard_pos = -1
 
         ## Rename shortcuts and check keys:
@@ -1898,38 +1902,34 @@ class NaturalNamingInterface(HasLogger):
                                      'names. Cannot return %s.' % key)
 
             if not key in self._nodes_and_leaves and key != '$':
-                if not auto_load:
-                    raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
-                                         str(name))
-                else:
-                    try_auto_load_directly=True
+                try_auto_load_directly1=True
+                try_auto_load_directly2=True
 
             if key == '$':
                 wildcard_pos = idx
-                if (not pypetconstants.RUN_NAME_DUMMY in self._nodes_and_leaves and
-                    not self._root_instance._as_run in self._nodes_and_leaves):
-                    if not auto_load:
-                        raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
-                                             str(name))
-                    else:
-                        try_auto_load_directly=True
+                if self._root_instance._as_run not in self._nodes_and_leaves:
+                    try_auto_load_directly1=True
+                elif pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
+                    try_auto_load_directly2=True
+
+        if (try_auto_load_directly1 or try_auto_load_directly2) and not auto_load:
+                raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
+                                         str(name))
 
         if wildcard_pos > -1:
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
+
             try:
                 split_name[wildcard_pos] = self._root_instance._as_run
                 result = self._perform_get(node, split_name, fast_access, backwards_search,
-                            shortcuts, max_depth, auto_load, try_auto_load_directly)
+                            shortcuts, max_depth, auto_load, try_auto_load_directly1)
                 return result
-            except Exception:
-                # Not so nice to catch all exceptions here, but this is
-                # rather practical. Anyway all exceptions caught here should be
-                # re-raised in the next statement below anyway if the node cannot be found
+            except (pex.DataNotInStorageError, AttributeError):
                 split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
 
         return self._perform_get(node, split_name, fast_access, backwards_search,
-                shortcuts, max_depth, auto_load, try_auto_load_directly)
+                shortcuts, max_depth, auto_load, try_auto_load_directly2)
 
 
     def _perform_get(self, node, split_name, fast_access, backwards_search,

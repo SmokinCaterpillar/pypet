@@ -111,12 +111,21 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_add_result('wc2test.$.hhh', 333)
         traj.f_add_leaf('results.wctest.run_00000000.jjj', 42)
-        traj.f_add_leaf('results.wctest.run_00000001.jjj', 43)
+        traj.f_add_result('results.wctest.run_00000001.jjj', 43)
 
         traj.v_as_run = 1
 
-        self.assertTrue(traj.wctest['$'].jjj==43)
-        self.assertTrue(traj.wc2test.crun.hhh==333)
+        self.assertTrue(traj.results.wctest['$'].jjj==43)
+        self.assertTrue(traj.results.wc2test.crun.hhh==333)
+
+        traj.f_store()
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.v_auto_load = True
+
+        self.assertTrue(traj.results.wctest['$'].jjj==43)
+        self.assertTrue(traj.results.wc2test.crun.hhh==333)
 
     def test_auto_load(self):
 
@@ -126,6 +135,7 @@ class StorageTest(TrajectoryComparator):
         traj.v_auto_load = True
 
         traj.f_add_result('I.am.$.a.mean.resu', 42, comment='Test')
+
         traj.f_add_derived_parameter('ffa', 42)
 
         traj.f_store()
