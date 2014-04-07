@@ -1915,7 +1915,7 @@ class NaturalNamingInterface(HasLogger):
                         try_auto_load_directly=True
 
         if wildcard_pos > -1:
-            # If we cound the wildcard we have to perform the search twice,
+            # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
             try:
                 split_name[wildcard_pos] = self._root_instance._as_run

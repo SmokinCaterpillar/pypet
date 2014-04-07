@@ -35,7 +35,6 @@ except ImportError:
 
 try:
     import dill
-    logging.getLogger(dill.__name__).setLevel(logging.WARNING)
 except ImportError:
     dill = None
 
@@ -895,6 +894,10 @@ class Environment(HasLogger):
             log_path = os.path.join(log_path, self.v_name)
             # Create the loggers
             self._make_logging_handlers(log_path, log_level, log_stdout)
+
+        if dill is not None:
+            # If you do not set this log-level dill will flood any logging file :-(
+            logging.getLogger(dill.__name__).setLevel(logging.WARNING)
 
         self._set_logger()
 
