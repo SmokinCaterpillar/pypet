@@ -1909,10 +1909,10 @@ class NaturalNamingInterface(HasLogger):
                 wildcard_pos = idx
                 if self._root_instance._as_run not in self._nodes_and_leaves:
                     try_auto_load_directly1=True
-                elif pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
+                if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
                     try_auto_load_directly2=True
 
-        if (try_auto_load_directly1 or try_auto_load_directly2) and not auto_load:
+        if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
                 raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
                                          str(name))
 

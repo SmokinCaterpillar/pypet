@@ -727,7 +727,6 @@ class Environment(HasLogger):
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  clean_up_runs=True,
                  immediate_postproc=False,
-                 deep_copy_data=False,
                  continuable=False,
                  continue_folder=None,
                  delete_continue=True,
@@ -1021,16 +1020,6 @@ class Environment(HasLogger):
                                         'to `False`. Only do it if you know what you are '
                                         'doing.').f_lock()
 
-            # For future reference
-            #     config_name='environment.%s.deep_copy_arguments' % self._name
-            #     self._traj.f_add_config(config_name, self._deep_copy_arguments,
-            #                         comment='Whether or not all arguments '
-            #                                 '(including the trajectory) passed to your runfunction '
-            #                                 'should be copied before passing. This ensures '
-            #                                 'that single processing is equivalent to '
-            #                                 'multiprocessing. Yet requires everything to be '
-            #                                 ' picklable.').f_lock()
-
 
             config_name='environment.%s.continuable' % self._name
             self._traj.f_add_config(config_name, self._continuable,
@@ -1038,13 +1027,6 @@ class Environment(HasLogger):
                                             ' be created. If yes, everything is'
                                             ' handled by `dill`.').f_lock()
 
-            # # For future reference
-            # config_name='environment.%s.store_before_runs' % self._name
-            # self._traj.f_add_config(config_name, self._store_before_runs,
-            #                         comment='Whether or not a the trajectory should be stored '
-            #                                 'before the runs. You are not advised to set this '
-            #                                 'to `False`. Only do it if you know what you are '
-            #                                 'doing.').f_lock()
 
         config_name='environment.%s.trajectory.name' % self.v_name
         self._traj.f_add_config(config_name, self.v_trajectory.v_name,
