@@ -31,8 +31,8 @@ Note in case you use the environment there is no need to call
 :func:`~pypet.trajectory.Trajectory.f_store`
 for data storage, this will always be called at the end of the simulation and at the end of a
 single run automatically (unless you set `automatic_storing` to `False`).
-Yet, be aware that if add any custom data during a single run not under
-`results.runs.run_XXXXXXXX` or `derived_parameters.runs.run_XXXXXXXXX` this data will not
+Yet, be aware that if add any custom data during a single run not under a group named
+`run_XXXXXXXX` this data will not
 be immediately saved after the run completion. In case of multiprocessing this data will be
 lost if not manually stored.
 

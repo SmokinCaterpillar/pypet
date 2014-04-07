@@ -853,7 +853,7 @@ class NaturalNamingInterface(HasLogger):
                         if len(index) < pypetconstants.FORMAT_ZEROS:
                             return pypetconstants.FORMATTED_RUN_NAME % int(index)
 
-        elif name in SHORTCUT_SET:
+        if name in SHORTCUT_SET:
             if name == 'crun':
                 if self._root_instance._as_run is not None:
                     return '$'

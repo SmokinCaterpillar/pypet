@@ -24,7 +24,7 @@ import traceback
 import hashlib
 import time
 import datetime
-import copy as cp
+import pickle
 
 try:
     from sumatra.projects import load_project
@@ -952,11 +952,7 @@ class Environment(HasLogger):
         self._clean_up_runs = clean_up_runs
         self._deep_copy_arguments = False # For future reference deep_copy_arguments
 
-
-
         if self._do_single_runs:
-
-
 
             config_name='environment.%s.multiproc' % self.v_name
             self._traj.f_add_config(config_name, self._multiproc,
@@ -1175,9 +1171,6 @@ class Environment(HasLogger):
 
         for handler in root.handlers:
             handler.setFormatter(f)
-
-
-
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
@@ -2094,6 +2087,14 @@ class Environment(HasLogger):
                                       (self._traj.v_name, self._ncores))
 
                 else:
+                    if self._deep_copy_arguments: # For future reference not supported atm
+                        deep_copied_data = []
+                        deep_copied_data.append(self._runfunc,
+                                                 self._traj, self._args, self._kwargs)
+                        if dill is not None:
+                            deep_copy_dump = dill.dumps(deep_copied_data)
+                        else:
+                            deep_copy_dump = pickle.dumps(deep_copied_data)
                     # Single Processing
                     self._logger.info('\n************************************************************\n'
                                       '************************************************************\n'
@@ -2106,15 +2107,21 @@ class Environment(HasLogger):
                     for n in xrange(start_run_idx, len(self._traj)):
                         if not self._traj.f_is_completed(n):
                             if self._deep_copy_arguments: # This is so far not supported!!!! For future reference
-                                result = _single_run((cp.deepcopy(self._traj._make_single_run(n)),
+
+                                if dill is not None:
+                                    deep_copied_data = dill.loads(deep_copy_dump)
+                                else:
+                                    deep_copied_data = pickle.loads(deep_copy_dump)
+
+                                result = _single_run((deep_copied_data[1]._make_single_run(n),
                                                   self._log_path,
                                                   self._log_stdout,
-                                                  None, self._runfunc,
+                                                  None, deep_copied_data[0],
                                                   len(self._traj),
                                                   self._multiproc,
                                                   None,
-                                                  cp.deepcopy(self._args),
-                                                  cp.deepcopy(self._kwargs),
+                                                  deep_copied_data[2],
+                                                  deep_copied_data[3],
                                                   self._clean_up_runs,
                                                   self._continue_path,
                                                   self._automatic_storing))
