@@ -3,6 +3,7 @@ __author__ = 'Robert Meyer'
 
 
 import numpy as np
+import warnings
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -24,6 +25,16 @@ from pypet.utils.explore import cartesian_product
 
 
 class ParameterTest(unittest.TestCase):
+
+    def test_throw_warning_if_stored_and_changed(self):
+        for param in self.param.values():
+            param._stored = True
+
+            with warnings.catch_warnings(record=True) as w:
+                param.f_unlock()
+                if param.f_has_range():
+                    param._shrink()
+                param.f_set(3)
 
     def test_type_error_for_not_supported_data(self):
 
@@ -620,6 +631,12 @@ class ResultTest(unittest.TestCase):
 
     def make_constructor(self):
         self.Constructor=Result
+
+    def test_warning(self):
+        for res in self.results.values():
+            with warnings.catch_warnings(record=True) as w:
+                res._stored=True
+                res.XxxXXXXxxxx = 14
 
     def test_f_get_many_items(self):
         for res in self.results.values():

@@ -39,6 +39,14 @@ pypet 0.1b5
 *   If automatic storage is enabled, trajectories are now stored at the end of the experiment,
     no longer before the starting of the single runs
 
+*   You can use the `$` character to decide where the file should branch out for the
+    individual runs
+
+*   `v_creator_name` is now called `v_run_branch` (since single runs can alos create
+    items that are not part of a run branch, so this is no longer misleading`.
+
+*   Results and parameters now issue a warning when they have been stored
+
 
 pypet 0.1b.4
 

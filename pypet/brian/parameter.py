@@ -749,6 +749,12 @@ class BrianMonitorResult(Result):
         """
 
         if isinstance(item, (Monitor, MultiStateMonitor)):
+
+            if self.v_stored:
+                self._logger.warning('You are changing an already stored result. If '
+                                 'you not explicitly overwrite the data on disk, this change '
+                                 'might be lost and not propagated to disk.')
+
             self._extract_monitor_data(item)
         else:
             super(BrianMonitorResult,self).f_set_single(name,item)

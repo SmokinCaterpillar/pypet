@@ -101,9 +101,15 @@ class NNTreeNode(WithAnnotations):
 
         self._leaf = leaf # Whether or not a node is a leaf, aka terminal node.
 
+        self._stored = False
         self._comment = ''
         self.v_comment = comment
 
+
+    @property
+    def v_stored(self):
+        """Whether or not this tree node has been stored to disk before."""
+        return self._stored
 
     @property
     def v_comment(self):
@@ -174,14 +180,14 @@ class NNTreeNode(WithAnnotations):
         return self._full_name[:-len(self._name) - 1]
 
     @property
-    def v_creator_name(self):
-        """ The name of the creator of the node.
+    def v_run_branch(self):
+        """ If this node is hanging below a branch named `run_XXXXXXXXX`.
 
-        The creator name is either the name of a single run
+        The branch name is either the name of a single run
         (e.g. 'run_00000009') or 'trajectory'.
 
         """
-        return self._creator_name
+        return self._run_branch
 
     @property
     def v_branch(self):
@@ -212,10 +218,10 @@ class NNTreeNode(WithAnnotations):
 
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
-        self._creator_name = 'trajectory'
+        self._run_branch = 'trajectory'
         for name in split_name:
             if name.startswith(pypetconstants.RUN_NAME) and name != pypetconstants.RUN_NAME_DUMMY:
-                self._creator_name = name
+                self._run_branch = name
                 break
 
 
@@ -687,7 +693,7 @@ class NaturalNamingInterface(HasLogger):
         """
         full_name = node.v_full_name
         name = node.v_name
-        run_name = node.v_creator_name
+        run_name = node.v_run_branch
 
         root = self._root_instance
 
@@ -1180,7 +1186,7 @@ class NaturalNamingInterface(HasLogger):
                     else:
                         self._nodes_and_leaves[name][new_node.v_full_name] = new_node
 
-                    run_name = new_node._creator_name
+                    run_name = new_node._run_branch
                     if not name in self._nodes_and_leaves_runs_sorted:
                         self._nodes_and_leaves_runs_sorted[name] = {run_name:
                                                                 {new_node.v_full_name: new_node}}
@@ -2214,7 +2220,8 @@ class NNGroupNode(NNTreeNode):
         Per default the item is returned and fast access is applied.
 
         """
-        return self.__getattr__(item)
+
+        return self.__getattr__(str(item))
 
 
 

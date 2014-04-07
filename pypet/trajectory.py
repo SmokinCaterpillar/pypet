@@ -203,10 +203,6 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         # We retrieve the Class from the module
         return getattr(module, class_str)
 
-    @property
-    def v_stored(self):
-        """Whether or not the trajectory or run has been stored to disk before."""
-        return self._stored
 
     @property
     def v_shortcuts(self):
@@ -2051,7 +2047,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         and load annotations.
 
         """
-        self.f_load(self.v_name, None, False,
+        self.f_load(self.v_name, as_new=False,
                     load_parameters=pypetconstants.LOAD_SKELETON,
                     load_derived_parameters=pypetconstants.LOAD_SKELETON,
                     load_results=pypetconstants.LOAD_SKELETON,
@@ -2865,7 +2861,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if traj.f_contains(where):
             group = traj[where]
             for leaf in group.f_iter_leaves():
-                if leaf.v_creator_name == 'trajectory':
+                if leaf.v_run_branch == 'trajectory':
                     result_dict[leaf.v_full_name] = leaf
 
         return result_dict
@@ -2879,7 +2875,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if traj.f_contains(where):
             group = traj[where]
-            predicate = lambda x: x.v_creator_name == 'trajectory'
+            predicate = lambda x: x.v_run_branch == 'trajectory'
             return itools.ifilter(predicate, group.f_iter_nodes(recursive=True))
         else:
             return iter([])

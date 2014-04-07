@@ -869,6 +869,11 @@ class Parameter(BaseParameter):
         if self.f_has_range():
             raise AttributeError('Your Parameter is an explored array can no longer change values!')
 
+        if self.v_stored:
+            self._logger.warning('You are changing an already stored parameter. If '
+                                 'you not explicitly overwrite the data on disk, this change '
+                                 'might be lost and not propagated to disk.')
+
         val = self._convert_data(data)
 
         if not self.f_supports(val):
@@ -2052,6 +2057,12 @@ class Result(BaseResult):
         42
 
         """
+
+        if self.v_stored:
+            self._logger.warning('You are changing an already stored result. If '
+                                 'you not explicitly overwrite the data on disk, this change '
+                                 'might be lost and not propagated to disk.')
+
         if self._supports(item):
 
             self._check_if_empty(item, name)
@@ -2307,6 +2318,12 @@ class PickleResult(Result):
          Note that it is NOT checked if the item can be pickled!
 
         """
+
+        if self.v_stored:
+            self._logger.warning('You are changing an already stored result. If '
+                                 'you not explicitly overwrite the data on disk, this change '
+                                 'might be lost and not propagated to disk.')
+
         self._data[name] = item
 
 
