@@ -3321,10 +3321,9 @@ class HDF5StorageService(StorageService, HasLogger):
             creator_name = instance.v_run_branch
             if creator_name.startswith(pypetconstants.RUN_NAME):
                 run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-                for idx, name in enumerate(split_name):
-                    if name == creator_name:
-                        split_name[idx] = run_mask
-                        break
+
+                split_name[instance._run_branch_pos] = run_mask
+
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
                 instance._rename(new_full_name)
@@ -3404,10 +3403,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
             run_mask = pypetconstants.RUN_NAME+'X'*pypetconstants.FORMAT_ZEROS
-            for idx, name in enumerate(split_name):
-                if name == creator_name:
-                    split_name[idx] = run_mask
-                    break # We can skip the rest, since one can only branch once
+
+            split_name[instance._run_branch_pos] = run_mask
+
             new_full_name = '.'.join(split_name)
             old_full_name = instance.v_full_name
             # Rename the item for easier storage
@@ -3438,15 +3436,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     # Get the old comment:
                     location_string = row['location']
-                    other_parent_node_name = location_string.replace(run_mask,example_item_run_name)
+                    other_parent_node_name = location_string.replace(run_mask, example_item_run_name)
                     other_parent_node_name = '/' + self._trajectory_name + '/' + \
                                              other_parent_node_name.replace('.','/')
+
+                    # If the instance actually has the name of the run as it's own name
+                    # We need this replacement as well:
+                    instance_name = instance.v_name.replace(run_mask, example_item_run_name)
                     try:
                         example_item_node = self._hdf5file.get_node(where=other_parent_node_name,
-                                                                               name=instance.v_name)
+                                                                               name=instance_name)
                     except AttributeError:
                         example_item_node = self._hdf5file.getNode(where=other_parent_node_name,
-                                                                              name = instance.v_name)
+                                                                        name = instance_name)
 
                     # Check if comment is obsolete
                     example_comment = ''
@@ -3537,7 +3539,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             # Update the summary overview table
-            table_name = self._all_get_table_name(where,instance.v_run_branch)
+            table_name = self._all_get_table_name(where, instance.v_run_branch)
 
             table = getattr(self._overview_group,table_name)
 

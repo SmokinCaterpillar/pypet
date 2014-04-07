@@ -219,10 +219,14 @@ class NNTreeNode(WithAnnotations):
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
         self._run_branch = 'trajectory'
-        for name in split_name:
-            if name.startswith(pypetconstants.RUN_NAME) and name != pypetconstants.RUN_NAME_DUMMY:
-                self._run_branch = name
-                break
+        self._run_branch_pos = -1 # Remebrers at which position the branching occured
+        # -1 if there is no branching
+        for idx, name in enumerate(split_name):
+            if name.startswith(pypetconstants.RUN_NAME):
+                self._run_branch_pos = idx
+                if name != pypetconstants.RUN_NAME_DUMMY:
+                    self._run_branch = name
+                    break
 
 
     def f_get_class_name(self):
@@ -1236,7 +1240,7 @@ class NaturalNamingInterface(HasLogger):
             parent_run_count = 0
         else:
             parent_length = len(parent_node.v_full_name)
-            parent_run_count = parent_node.v_full_name.count(pypetconstants.RUN_NAME)
+            parent_run_count = int(parent_node._run_branch_pos >= 0)
 
         faulty_names = ''
 
