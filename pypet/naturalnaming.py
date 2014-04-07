@@ -843,15 +843,20 @@ class NaturalNamingInterface(HasLogger):
                         if len(index) < pypetconstants.FORMAT_ZEROS:
                             return pypetconstants.FORMATTED_RUN_NAME % int(index)
 
-        if name == '-1':
+        if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
-        elif name.isdigit():
+        elif name == -2:
+            if self._root_instance._as_run is not None:
+                return '$'
+            else:
+                return pypetconstants.RUN_NAME_DUMMY
+        elif isinstance(name, int):
             return pypetconstants.FORMATTED_RUN_NAME % int(name)
 
         elif name in SHORTCUT_SET:
             if name == 'crun':
                 if self._root_instance._as_run is not None:
-                    return self._root_instance._as_run
+                    return '$'
                 else:
                     return pypetconstants.RUN_NAME_DUMMY
 
@@ -1861,13 +1866,15 @@ class NaturalNamingInterface(HasLogger):
         :raises:
 
             AttributeError if no node with the given name can be found
+            Raises errors that are raiesd by the storage service if `auto_load=True`
 
         """
-
-        split_name = name.split('.')
-
-        try_auto_load_directly=False
-        result = None
+        if isinstance(name, (tuple, list)):
+            split_name = name
+        elif isinstance(name, int):
+            split_name = [name]
+        else:
+            split_name = name.split('.')
 
         if max_depth is None:
             max_depth = float('inf')
@@ -1875,6 +1882,9 @@ class NaturalNamingInterface(HasLogger):
         if len(split_name)> max_depth and shortcuts:
             raise ValueError('Name of node to search for (%s) is longer thant the maximum depth %d' %
                              (name, max_depth))
+
+        try_auto_load_directly = False
+        wildcard_pos = -1
 
         ## Rename shortcuts and check keys:
         for idx, key in enumerate(split_name):
@@ -1887,12 +1897,70 @@ class NaturalNamingInterface(HasLogger):
                 raise AttributeError('Leading underscores are not allowed for group or parameter '
                                      'names. Cannot return %s.' % key)
 
-            if not key in self._nodes_and_leaves:
+            if not key in self._nodes_and_leaves and key != '$':
                 if not auto_load:
                     raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
                 else:
                     try_auto_load_directly=True
                     break
+
+            if key == '$':
+                wildcard_pos = idx
+
+        if wildcard_pos > -1:
+            try:
+                split_name[wildcard_pos] = self._root_instance._as_run
+                return self._perform_get(node, split_name, fast_access, backwards_search,
+                            shortcuts, max_depth, auto_load, try_auto_load_directly)
+            except Exception:
+                split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+
+        return self._perform_get(node, split_name, fast_access, backwards_search,
+                shortcuts, max_depth, auto_load, try_auto_load_directly)
+
+
+    def _perform_get(self, node, split_name, fast_access, backwards_search,
+             shortcuts, max_depth, auto_load, try_auto_load_directly):
+        """Searches for an item (parameter/result/group node) with the given `split_name`.
+
+        :param node: The node below which the search is performed
+
+        :param split_name: Name split into list according to '.'
+
+        :param fast_access: If the result is a parameter, whether fast access should be applied.
+
+        :param backwards_search:
+
+            If the tree should be searched backwards in case more than one name/location is given.
+            For instance, `groupA,groupC,valD` can be used for backwards search.
+            The starting group will look for `valD` first and try to find a way back
+            and check if it passes by `groupA` and `groupC`.
+
+        :param max_depth:
+
+            Maximum search depth relative to start node.
+
+        :param auto_load:
+
+            If data should be automatically loaded
+
+        :param try_auto_load_directly:
+
+            If one should skip search and directly try auto_loading
+
+        :return:
+
+            The found instance (result/parameter/group node) or if fast access is True and you
+            found a parameter or result that supports fast access, the contained value is returned.
+
+        :raises:
+
+            AttributeError if no node with the given name can be found
+            Raises errors that are raiesd by the storage service if `auto_load=True`
+
+        """
+
+        result = None
 
         if shortcuts and not try_auto_load_directly:
             first = split_name[0]
@@ -2224,8 +2292,8 @@ class NNGroupNode(NNTreeNode):
         Per default the item is returned and fast access is applied.
 
         """
+        return self.__getattr__(item)
 
-        return self.__getattr__(str(item))
 
 
 
