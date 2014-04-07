@@ -127,6 +127,20 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)
 
+        traj.f_remove_child('results', recursive=True)
+
+        traj.v_auto_load = True
+
+        self.assertTrue(traj.results.wctest[-2].jjj==43)
+        self.assertTrue(traj.results.wc2test[-2].hhh==333)
+
+        traj.f_remove_child('results', recursive=True)
+
+        traj.v_auto_load = True
+
+        self.assertTrue(traj.results.wctest[1].jjj==43)
+        self.assertTrue(traj.results.wc2test[-1].hhh==333)
+
     def test_auto_load(self):
 
 

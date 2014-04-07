@@ -834,15 +834,6 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if name.startswith('r'):
-            if name.startswith('run_') or name.startswith('r_'):
-                split_name = name.split('_')
-                if len(split_name) == 2:
-                    index = split_name[1]
-                    if index.isdigit():
-                        if len(index) < pypetconstants.FORMAT_ZEROS:
-                            return pypetconstants.FORMATTED_RUN_NAME % int(index)
-
         if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
         elif name == -2:
@@ -852,6 +843,15 @@ class NaturalNamingInterface(HasLogger):
                 return pypetconstants.RUN_NAME_DUMMY
         elif isinstance(name, int):
             return pypetconstants.FORMATTED_RUN_NAME % name
+
+        if name.startswith('r'):
+            if name.startswith('run_') or name.startswith('r_'):
+                split_name = name.split('_')
+                if len(split_name) == 2:
+                    index = split_name[1]
+                    if index.isdigit():
+                        if len(index) < pypetconstants.FORMAT_ZEROS:
+                            return pypetconstants.FORMATTED_RUN_NAME % int(index)
 
         elif name in SHORTCUT_SET:
             if name == 'crun':
@@ -2308,11 +2308,8 @@ class NNGroupNode(NNTreeNode):
         """
         return self.__getattr__(item)
 
-
-
-
     def __getattr__(self, name):
-        if name.startswith('_'):
+        if isinstance(name, basestring) and name.startswith('_'):
             raise AttributeError('Trajectory node does not contain `%s`' % name)
 
         if not '_nn_interface' in self.__dict__:

@@ -301,6 +301,7 @@ class TrajectoryTest(unittest.TestCase):
     def test_get_item(self):
 
         self.assertEqual(self.traj.markus.yve, self.traj['markus.yve'])
+        self.assertEqual(self.traj.markus.yve, self.traj['markus','yve'])
 
     # def test_round_brackets(self):
     #     x='markus'
