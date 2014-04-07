@@ -2186,12 +2186,12 @@ class Environment(HasLogger):
         if self._automatic_storing:
             self._logger.info('\n************************************************************\n'
                                 'STARTING FINAL STORING of trajectory\n`%s`'
-                                 '************************************************************\n' %
+                                 '\n************************************************************\n' %
                                       self._traj.v_name)
             self._traj.f_store()
             self._logger.info('\n************************************************************\n'
                                 'FINISHED FINAL STORING of trajectory\n`%s`.'
-                                 '************************************************************\n' %
+                                 '\n************************************************************\n' %
                                       self._traj.v_name)
 
         self._finish_timestamp = time.time()

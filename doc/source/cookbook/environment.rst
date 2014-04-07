@@ -7,9 +7,10 @@ To avoid confusion with natural naming scheme and the functionality provided by 
 parameters, and so on, I followed the idea by PyTables to use prefixes:
 `f_` for functions and `v_` for python variables/attributes/properties.
 
-For instance, given a result instance `res`, `res.v_comment` is the object's comment attribute and
-`res.f_set(mydata=42)` is the function for adding data to the result container.
-Whereas `res.mydata` might refer to a data item named `mydata` added by the user.
+For instance, given a result instance `myresult`, `myresult.v_comment` is the object's
+comment attribute and
+`myresult.f_set(mydata=42)` is the function for adding data to the result container.
+Whereas `myresult.mydata` might refer to a data item named `mydata` added by the user.
 
 
 .. _more-on-environment:
@@ -31,9 +32,9 @@ Note in case you use the environment there is no need to call
 :func:`~pypet.trajectory.Trajectory.f_store`
 for data storage, this will always be called at the end of the simulation and at the end of a
 single run automatically (unless you set `automatic_storing` to `False`).
-Yet, be aware that if add any custom data during a single run not under a group named
+Yet, be aware that if you add any custom data during a single run not under a group named
 `run_XXXXXXXX` this data will not
-be immediately saved after the run completion. In case of multiprocessing this data will be
+be immediately saved after the completion of the run. In case of multiprocessing this data will be
 lost if not manually stored.
 
 You start your simulations by creating an environment object:
@@ -549,12 +550,12 @@ If you added a result with the same name and same comment in every single run, t
 a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
 For instance,
 during a single run you call `traj.f_add_result('my_result', 42, comment='Mostly harmless!')`
-and the result will be renamed to `results.run_00000000.my_result`. After storage
+and the result will be renamed to `results.runs.run_00000000.my_result`. After storage
 in the node associated with this result in your HDF5 file, you will find the comment
 `'Mostly harmless!'`.
 If you call `traj.f_add_result('my_result',-55, comment='Mostly harmless!')`
 in another run again, let's say run_00000001, the name will be mapped to
-`results.run_00000001.my_result`. But this time the comment will not be saved to disk,
+`results.runs.run_00000001.my_result`. But this time the comment will not be saved to disk,
 since `'Mostly harmless!'` is already part of the very first result with the name 'my_result'.
 Note that comments will be compared and storage will only be discarded if the strings
 are exactly the same. Moreover, the comment will only be compared to the comment of the very
@@ -564,8 +565,8 @@ will be stored!
 In order to allow the purge of duplicate comments you need the `summary` overview tables.
 
 Furthermore, consider if you reload your data from the example above,
-the result instance `results.run_00000001.my_result`
-won't have a comment only the instance `results.run_00000000.my_result`.
+the result instance `results.runs.run_00000001.my_result`
+won't have a comment only the instance `results.runs.run_00000000.my_result`.
 
 **IMPORTANT**: If you use multiprocessing, the storage service will take care that the comment for
 the result or derived parameter with the lowest run index will be considered, regardless
