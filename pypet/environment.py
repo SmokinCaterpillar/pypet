@@ -727,6 +727,7 @@ class Environment(HasLogger):
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  clean_up_runs=True,
                  immediate_postproc=False,
+                 deep_copy_data=False,
                  continuable=False,
                  continue_folder=None,
                  delete_continue=True,
@@ -950,7 +951,7 @@ class Environment(HasLogger):
         self._do_single_runs = do_single_runs
         self._automatic_storing = automatic_storing
         self._clean_up_runs = clean_up_runs
-        self._deep_copy_arguments = False # For future reference deep_copy_arguments
+        self._deep_copy_data = False #deep_copy_data # For future reference deep_copy_arguments
 
         if self._do_single_runs:
 
@@ -994,14 +995,28 @@ class Environment(HasLogger):
                                                      ' i.e. whether to use QUEUE'
                                                      ' or LOCK or NONE'
                                                      ' for thread/process safe storing').f_lock()
+            # else:
+            #     config_name='environment.%s.deep_copy_data' % self._name
+            #     self._traj.f_add_config(config_name, self._deep_copy_data,
+            #                     comment='Only important for single processing. If data should '
+            #                             'be copied before the beginning of each run. '
+            #                             'Uses dill is installed, otherwise pickle.').f_lock()
+            #
+            #     if self._deep_copy_data:
+            #         if dill is not None:
+            #             method = 'dill'
+            #         else:
+            #             method = 'pickle'
+            #         config_name='environment.%s.deep_copy_method' % self._name
+            #         self._traj.f_add_config(config_name, method,
+            #                     comment='Wich method was used for deep copying, either '
+            #                             '`dill` or `pickle`').f_lock()
 
 
             config_name='environment.%s.clean_up_runs' % self._name
             self._traj.f_add_config(config_name, self._clean_up_runs,
                                 comment='Whether or not results should be removed after the '
-                                        'completion of a single run. Only important for '
-                                        'single processing, otherwise the removal will happen '
-                                        'due to the nature of multiprocessing. '
+                                        'completion of a single run. '
                                         'You are not advised to set this '
                                         'to `False`. Only do it if you know what you are '
                                         'doing.').f_lock()
@@ -2083,14 +2098,17 @@ class Environment(HasLogger):
                                       (self._traj.v_name, self._ncores))
 
                 else:
-                    if self._deep_copy_arguments: # For future reference not supported atm
-                        deep_copied_data = []
-                        deep_copied_data.append(self._runfunc,
-                                                 self._traj, self._args, self._kwargs)
+                    if self._deep_copy_data: # Not supported ATM, here for future reference
+                        old_full_copy = self._traj.v_full_copy
+                        self._traj.v_full_copy=True
+                        deep_copied_data=[self._runfunc,
+                                          self._traj, self._args, self._kwargs]
                         if dill is not None:
                             deep_copy_dump = dill.dumps(deep_copied_data)
                         else:
                             deep_copy_dump = pickle.dumps(deep_copied_data)
+                        self._traj.v_full_copy=old_full_copy
+
                     # Single Processing
                     self._logger.info('\n************************************************************\n'
                                       'STARTING runs of trajectory\n`%s`.'
@@ -2100,13 +2118,13 @@ class Environment(HasLogger):
                     # Sequentially run all single runs and append the results to a queue
                     for n in xrange(start_run_idx, len(self._traj)):
                         if not self._traj.f_is_completed(n):
-                            if self._deep_copy_arguments: # This is so far not supported!!!! For future reference
 
+                            if self._deep_copy_data: # Not supported ATM, here for future reference
                                 if dill is not None:
                                     deep_copied_data = dill.loads(deep_copy_dump)
                                 else:
                                     deep_copied_data = pickle.loads(deep_copy_dump)
-
+                                deep_copied_data[1].v_full_copy = old_full_copy
                                 result = _single_run((deep_copied_data[1]._make_single_run(n),
                                                   self._log_path,
                                                   self._log_stdout,

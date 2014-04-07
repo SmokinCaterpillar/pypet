@@ -1037,6 +1037,65 @@ class ResultSortTest(TrajectoryComparator):
         traj.v_idx=-1
 
 
+def test_runfunc(traj, list_that_changes):
+    traj.f_add_result('kkk', list_that_changes[traj.v_idx] + traj.v_idx)
+    list_that_changes[traj.v_idx] = 1000
+
+class DeepCopyTest(TrajectoryComparator):
+
+    def test_deep_copy_data(self):
+
+        self.filename = make_temp_file('experiments/tests/HDF5/testcopy.hdf5')
+        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.trajname = make_trajectory_name(self)
+
+        env = Environment(trajectory=self.trajname,filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False,
+                          multiproc=False,
+                          deep_copy_data=True)
+
+        traj = env.v_trajectory
+
+        traj.f_add_parameter('dummy', 1)
+        traj.f_explore({'dummy':[12, 3, 3, 4]})
+
+        list_that_should_not_change = [42, 42, 42, 42]
+
+        env.f_run(test_runfunc, list_that_should_not_change)
+
+        traj.v_auto_load=True
+
+        for irun, val in enumerate(list_that_should_not_change):
+            self.assertTrue(list_that_should_not_change[irun] == 42)
+            x=traj.results.runs[irun].kkk
+            self.assertTrue(x==42+irun)
+
+    def test_not_deep_copy_data(self):
+        self.filename = make_temp_file('experiments/tests/HDF5/testcoyp2.hdf5')
+        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.trajname = make_trajectory_name(self)
+
+        env = Environment(trajectory=self.trajname,filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False,
+                          multiproc=False,
+                          deep_copy_data=False)
+
+        traj = env.v_trajectory
+
+        traj.f_add_parameter('dummy', 1)
+        traj.f_explore({'dummy':[12, 3, 3, 4]})
+
+        list_that_should_change = [42, 42, 42, 42]
+
+        env.f_run(test_runfunc, list_that_should_change)
+
+        traj.v_auto_load=True
+
+        for irun, val in enumerate(list_that_should_change):
+            self.assertTrue(list_that_should_change[irun] == 1000)
+
 
 
 if __name__ == '__main__':
