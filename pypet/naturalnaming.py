@@ -851,7 +851,7 @@ class NaturalNamingInterface(HasLogger):
             else:
                 return pypetconstants.RUN_NAME_DUMMY
         elif isinstance(name, int):
-            return pypetconstants.FORMATTED_RUN_NAME % int(name)
+            return pypetconstants.FORMATTED_RUN_NAME % name
 
         elif name in SHORTCUT_SET:
             if name == 'crun':
@@ -1881,7 +1881,7 @@ class NaturalNamingInterface(HasLogger):
 
         if len(split_name)> max_depth and shortcuts:
             raise ValueError('Name of node to search for (%s) is longer thant the maximum depth %d' %
-                             (name, max_depth))
+                             (str(name), max_depth))
 
         try_auto_load_directly = False
         wildcard_pos = -1
@@ -1899,20 +1899,33 @@ class NaturalNamingInterface(HasLogger):
 
             if not key in self._nodes_and_leaves and key != '$':
                 if not auto_load:
-                    raise AttributeError('%s is not part of your trajectory or it\'s tree.' % name)
+                    raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
+                                         str(name))
                 else:
                     try_auto_load_directly=True
-                    break
 
             if key == '$':
                 wildcard_pos = idx
+                if (not pypetconstants.RUN_NAME_DUMMY in self._nodes_and_leaves and
+                    not self._root_instance._as_run in self._nodes_and_leaves):
+                    if not auto_load:
+                        raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
+                                             str(name))
+                    else:
+                        try_auto_load_directly=True
 
         if wildcard_pos > -1:
+            # If we cound the wildcard we have to perform the search twice,
+            # one with a run name and one with the dummy:
             try:
                 split_name[wildcard_pos] = self._root_instance._as_run
-                return self._perform_get(node, split_name, fast_access, backwards_search,
+                result = self._perform_get(node, split_name, fast_access, backwards_search,
                             shortcuts, max_depth, auto_load, try_auto_load_directly)
+                return result
             except Exception:
+                # Not so nice to catch all exceptions here, but this is
+                # rather practical. Anyway all exceptions caught here should be
+                # re-raised in the next statement below anyway if the node cannot be found
                 split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
 
         return self._perform_get(node, split_name, fast_access, backwards_search,
@@ -1921,7 +1934,7 @@ class NaturalNamingInterface(HasLogger):
 
     def _perform_get(self, node, split_name, fast_access, backwards_search,
              shortcuts, max_depth, auto_load, try_auto_load_directly):
-        """Searches for an item (parameter/result/group node) with the given `split_name`.
+        """Searches for an item (parameter/result/group node) with the given `name`.
 
         :param node: The node below which the search is performed
 
@@ -1961,6 +1974,7 @@ class NaturalNamingInterface(HasLogger):
         """
 
         result = None
+        name = '.'.join(split_name)
 
         if shortcuts and not try_auto_load_directly:
             first = split_name[0]

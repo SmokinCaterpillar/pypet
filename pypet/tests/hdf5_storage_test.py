@@ -102,6 +102,21 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(new_traj.results.I.am.a.mean.resu == 42)
 
+    def test_wildcard_search(self):
+
+        traj = Trajectory(name='Test', filename=make_temp_file('wilcard.hdf5'))
+
+        traj.f_add_parameter('expl', 2)
+        traj.f_explore({'expl':[1,2,3,4]})
+
+        traj.f_add_result('wc2test.$.hhh', 333)
+        traj.f_add_leaf('results.wctest.run_00000000.jjj', 42)
+        traj.f_add_leaf('results.wctest.run_00000001.jjj', 43)
+
+        traj.v_as_run = 1
+
+        self.assertTrue(traj.wctest['$'].jjj==43)
+        self.assertTrue(traj.wc2test.crun.hhh==333)
 
     def test_auto_load(self):
 
@@ -110,7 +125,7 @@ class StorageTest(TrajectoryComparator):
 
         traj.v_auto_load = True
 
-        traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
+        traj.f_add_result('I.am.$.a.mean.resu', 42, comment='Test')
         traj.f_add_derived_parameter('ffa', 42)
 
         traj.f_store()
@@ -123,7 +138,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_remove_child('results', recursive=True)
 
         # check auto load
-        val = traj.res.I.am.a.mean.resu
+        val = traj.res.I.am.crun.a.mean.resu
 
         self.assertTrue(val==42)
 
