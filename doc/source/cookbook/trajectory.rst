@@ -1,4 +1,17 @@
 
+====================
+Naming Convention
+====================
+
+To avoid confusion with natural naming scheme and the functionality provided by the trajectory,
+parameters, and so on, I followed the idea by PyTables to use prefixes:
+`f_` for functions and `v_` for python variables/attributes/properties.
+
+For instance, given a result instance `myresult`, `myresult.v_comment` is the object's
+comment attribute and
+`myresult.f_set(mydata=42)` is the function for adding data to the result container.
+Whereas `myresult.mydata` might refer to a data item named `mydata` added by the user.
+
 .. _more-on-trajectories:
 
 ======================================
@@ -12,7 +25,7 @@ Trajectory
 For some example code on on topics discussed here
 see the :ref:`example-02` script.
 
-The :class:`~pypet.trajectory.Trajectory` is the top-level or root container for all
+The :class:`~pypet.trajectory.Trajectory` is the container for all
 results and parameters (see :ref:`more-on-parameters`) of your numerical experiments.
 Throughout the documentation instantiated objects of the
 :class:`~pypet.trajectory.Trajectory` class are usually labeled `traj`.
@@ -81,14 +94,6 @@ Moreover, a trajectory contains 4 major branches of its tree.
     by some parameters, one could think of some kernel parameters and a random seed, but still
     you actually need the connection matrix to build the final network.
 
-    Derived parameters can be introduced at any time during your simulation. If you add
-    a derived parameter before starting individual runs that explore the parameter space,
-    they will be directly put into the subbranch `derived_parameters`. If you
-    introduce a derived parameter within a single run, they are sorted into the subbranch
-    `derived_parameters.runs.run_XXXXXXXX`, where *XXXXXXXX* is the index of the single run.
-    For example adding, a derived parameter in the second run will add it to the subbranch
-    `derived_parameters.runs.run_00000001`.
-
     Any leaf added under *derived_parameters*
     is a :class:`~pypet.parameter.Parameter` object (or descendant of the corresponding
     base class :class:`~pypet.parameter.BaseParameter`).
@@ -97,8 +102,7 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     I guess results are rather self explanatory. Any leaf added under *results*
     is a :class:`~pypet.parameters.Results` object (or descendant of the corresponding
-    base class :class:`~pypet.parameter.BaseResult`). Results added during a single run
-    are sorted into `results.runs.run_XXXXXXXX`.
+    base class :class:`~pypet.parameter.BaseResult`).
 
 Note that all nodes provide the field 'v_comment', which can be filled manually or on
 construction via `'comment='`. To allow others to understand your simulations it is very
@@ -205,10 +209,59 @@ the full name will be extended by the *full name* of the group you added it to:
 
 The *full name* of the new parameter is going to be `parameters.traffic.street.nzebras`.
 If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
-the group names `parameters`, `config`, `derived_parameters`,
-`derived_parameters.runs.run_XXXXXXX`,
-`results`, or  `results.runs.run_XXXXXXX` will be automatically added (of course,
+the group names `parameters`, `config`, `derived_parameters`will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
+
+If you add a result or derived parameters during a single run, the name will be changed to
+include the current name of the run.
+
+For instance, if you add a result during a single run (let's assume it's the first run) like
+``traj.f_add_result('mygroup.myresult', 42, comment='An important result')``,
+the result will be renamed to `results.runs.run_00000000.mygroup.myresult`.
+Accordingly, all results (and derived parameters) of all runs are stored into different
+parts of the tree and are kept independent.
+
+If this sorting does not really suit you, and you don't want your results and derived
+parameters to be put in the sub-branches `runs.run_XXXXXXXXX` (with `XXXXXXXX` the index of the
+current run), you can make use of the wildcard character `$`.
+If you add this character to the name of your new result or derived parameter, *pypet*
+will automatically replace this wildcard character with the name of the current run.
+
+For instance, if you add a result during a single run (let's assume again the first one)
+via ``traj.f_add_result('mygroup.$.myresult', 42, comment='An important result')``
+the result will be renamed to `results.mygroup.run_00000000.myresult`.
+Thus, the branching of your tree happens on a lower level than before.
+Note that even ``traj.f_add_result('mygroup.mygroup.$', myresult=42, comment='An important result')``
+is allowed.
+
+You can also use the wildcard character in the preprocessing stage. Let's assume you add
+the following derived parameter BEFORE the actual single runs via
+ ``traj.f_add_derived_parameter('mygroup.$.myparam', 42, comment='An important parameter')``.
+If that happend DURING a single run `$` would be renamed to `run_XXXXXXXX` (with `XXXXXXXX`
+the index of the run). Yet, if you add the paremter BEFORE the single runs,
+`$` will be replaced by the placeholder name `run_ALL`.
+So your new derived parameter here is now called 'mygroup.run_All.myparam`.
+
+Why is this useful?
+
+Well, this is in particular useful if you pre-compute derived parameters before the single
+runs which depend on parameters that might be explored in the near future.
+
+For example you have parameter `seed` and `n` and which you use to draw a vector of random numbers.
+You keep this vector as a derived parameter. As long as you do not explore different
+seeds or values of `n` you can compute the random numbers before the single runs
+to save time. Now, if you use the `$` statement right from the beginning it would not make
+a difference if the following statement was executed during the pre-processing stage
+or during the single runs:
+
+::
+
+    np.random.seed(traj.parameters.seed)
+    traj.f_add_derived_parameter('random_vector.$', np.random(traj.paramaters.n))
+
+Accordingly, you have to write less code and post-processing and data analysis can become
+much easier.
+
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Generic Addition
@@ -223,7 +276,7 @@ reserved. Thus, if you add anything below one of the four, the corresponding
 speciality functions from above are called instead of the generic ones.
 
 Note however, if you add any items during a single run, which are not located below
-`derived_parameter.runs.run_XXXXXXXX` and `results.runs.run_XXXXXXXX` (where *run_XXXXXXXXX* is
+a group called `run_XXXXXXXX` (where *run_XXXXXXXXX* is
  the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
 via :func:`~pypet.trajectory.SingleRun.f_store_items`.

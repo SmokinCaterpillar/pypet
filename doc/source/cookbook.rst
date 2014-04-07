@@ -9,8 +9,8 @@ Here you can find some more explanations on various concepts of *pypet*.
 
 
 .. toctree::
-      cookbook/environment
       cookbook/trajectory
+      cookbook/environment
       cookbook/parameter
       cookbook/concept
       cookbook/brian.rst

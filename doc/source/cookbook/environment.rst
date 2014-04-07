@@ -1,16 +1,4 @@
 
-====================
-Naming Convention
-====================
-
-To avoid confusion with natural naming scheme and the functionality provided by the trajectory,
-parameters, and so on, I followed the idea by PyTables to use prefixes:
-`f_` for functions and `v_` for python variables/attributes/properties.
-
-For instance, given a result instance `myresult`, `myresult.v_comment` is the object's
-comment attribute and
-`myresult.f_set(mydata=42)` is the function for adding data to the result container.
-Whereas `myresult.mydata` might refer to a data item named `mydata` added by the user.
 
 
 .. _more-on-environment:
