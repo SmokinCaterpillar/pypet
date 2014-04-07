@@ -1752,9 +1752,10 @@ class Environment(HasLogger):
 
 
         if self._user_pipeline:
-            self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
-                                  '  STARTING PPREPROCESSING'
-                              '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+            self._logger.info('\n************************************************************\n'
+                                '        STARTING PPREPROCESSING for trajectory\n`%s`'
+                              '\n************************************************************\n'%
+                                self._traj.v_name)
 
 
         # Make some preparations (locking of parameters etc) and store the trajectory
@@ -1931,10 +1932,8 @@ class Environment(HasLogger):
                                               pypetconstants.WRAP_MODE_LOCK))
 
                     self._logger.info('\n************************************************************\n'
-                                      '************************************************************\n'
                                       'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
-                                      '\n************************************************************\n'
-                                      '************************************************************\n' %
+                                      '\n************************************************************\n' %
                                       (self._traj.v_name, self._ncores))
 
                     # Create a generator to generate the tasks for multiprocessing
@@ -2037,9 +2036,10 @@ class Environment(HasLogger):
 
 
                                         self._logger.info(
-                                            '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
-                                             '  STARTING IMMEDIATE POSTPROCESSING.'
-                                            '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+                                            '\n************************************************************\n'
+                                             '  STARTING IMMEDIATE POSTPROCESSING. for trajectory\n`%s`'
+                                            '\n************************************************************\n' %
+                                            self._traj.v_name)
 
                                         keep_running, start_run_idx, new_runs =\
                                             self._execute_postproc(results)
@@ -2048,12 +2048,10 @@ class Environment(HasLogger):
 
                                             expanded_by_postproc = True
                                             self._logger.info(
-                                                '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-                                                '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                                                '\n************************************************************\n'
                                                 ' IMMEDIATE POSTPROCESSING expanded the '
                                                 'trajectory and added %d new runs'
-                                                '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-                                                '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' %
+                                                '\n************************************************************\n' %
                                                 new_runs
                                             )
 
@@ -2080,10 +2078,8 @@ class Environment(HasLogger):
                     self._traj._finalize()
 
                     self._logger.info('\n************************************************************\n'
-                                      '************************************************************\n'
                                       'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
-                                      '\n************************************************************\n'
-                                      '************************************************************\n' %
+                                      '\n************************************************************\n' %
                                       (self._traj.v_name, self._ncores))
 
                 else:
@@ -2097,10 +2093,8 @@ class Environment(HasLogger):
                             deep_copy_dump = pickle.dumps(deep_copied_data)
                     # Single Processing
                     self._logger.info('\n************************************************************\n'
-                                      '************************************************************\n'
                                       'STARTING runs of trajectory\n`%s`.'
-                                      '\n************************************************************\n'
-                                      '************************************************************\n' %
+                                      '\n************************************************************\n' %
                                       self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
@@ -2145,17 +2139,16 @@ class Environment(HasLogger):
                     self._traj._finalize()
 
                     self._logger.info('\n************************************************************\n'
-                                      '************************************************************\n'
                                       'FINISHED all runs of trajectory\n`%s`.'
-                                      '\n************************************************************\n'
-                                      '************************************************************\n' %
+                                      '\n************************************************************\n' %
                                       self._traj.v_name)
 
                 repeat = False
                 if self._postproc is not None:
-                    self._logger.info('\n>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
-                                      '  STARTING POSTPROCESSING.'
-                                      '\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n')
+                    self._logger.info('\n************************************************************\n'
+                                  '  STARTING POSTPROCESSING for trajectory\n`%s`'
+                                '\n************************************************************\n' %
+                                self._traj.v_name)
 
                     repeat, start_run_idx, new_runs = self._execute_postproc(results)
 
@@ -2164,9 +2157,9 @@ class Environment(HasLogger):
                 else:
                     expanded_by_postproc = True
                     self._logger.info(
-                        '\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                        '\n************************************************************\n'
                         '  POSTPROCESSING expanded the trajectory and added %d new runs'
-                        '\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' %
+                        '\n************************************************************\n' %
                         new_runs
                     )
 
@@ -2192,16 +2185,12 @@ class Environment(HasLogger):
                                              'end.').f_lock()
         if self._automatic_storing:
             self._logger.info('\n************************************************************\n'
-                                '************************************************************\n'
-                                'STARTING FINAL STORING of trajectory\n`%s`.'
-                                '\n************************************************************\n'
+                                'STARTING FINAL STORING of trajectory\n`%s`'
                                  '************************************************************\n' %
                                       self._traj.v_name)
             self._traj.f_store()
             self._logger.info('\n************************************************************\n'
-                                '************************************************************\n'
                                 'FINISHED FINAL STORING of trajectory\n`%s`.'
-                                '\n************************************************************\n'
                                  '************************************************************\n' %
                                       self._traj.v_name)
 
