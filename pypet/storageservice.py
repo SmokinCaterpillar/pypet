@@ -382,9 +382,7 @@ class HDF5StorageService(StorageService, HasLogger):
     COMMENT = INIT_PREFIX+'COMMENT'
     ''' Comment of parameter or result'''
     LENGTH = INIT_PREFIX+'LENGTH'
-    ''' Length of a parameter if it is an array'''
-
-
+    ''' Length of a parameter if it is explored'''
     LEAF = 'SRVC_LEAF'
     ''' Whether an hdf5 node is a leaf node'''
 
@@ -1960,15 +1958,6 @@ class HDF5StorageService(StorageService, HasLogger):
         runtable = self._all_get_or_create_table(where=self._overview_group,
                                                  tablename='runs',
                                                  description=rundescription_dict)
-        # try:
-        #     runtable.autoindex=True
-        # except AttributeError:
-        #     runtable.autoIndex=True
-        # if not runtable.indexed:
-        #     try:
-        #         runtable.cols.name.create_index()
-        #     except AttributeError:
-        #         runtable.cols.name.createIndex()
 
 
         hdf5_description_dict = {'complib' : pt.StringCol(7, pos=0),
@@ -2027,7 +2016,6 @@ class HDF5StorageService(StorageService, HasLogger):
             if getattr(self, name):
                 tostore_tables.append(table_name)
 
-
         self._srvc_make_overview_tables(tostore_tables, traj)
 
 
@@ -2041,9 +2029,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Every overview table has a name and location column
             paramdescriptiondict['location']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH,
-                                                           pos=1)
+                                                           pos=0)
             paramdescriptiondict['name']= pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,
-                                                       pos=0)
+                                                       pos=1)
             if not table_name == 'explored_parameters' and not 'groups' in table_name:
                 paramdescriptiondict['value']=pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
@@ -2136,7 +2124,11 @@ class HDF5StorageService(StorageService, HasLogger):
         Stores all groups, parameters and results
 
         """
-        self._logger.info('Start storing Trajectory `%s`.' % self._trajectory_name)
+        if not only_init:
+            self._logger.info('Start storing Trajectory `%s`.' % self._trajectory_name)
+        else:
+            self._logger.info('Initialising storage or updating meta data of Trajectory `%s`.' %
+                         self._trajectory_name)
 
         # In case we accidentally chose a trajectory name that already exist
         # We do not want to mess up the stored trajectory but raise an Error
@@ -2181,7 +2173,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
-            self._logger.info('Finished initialising the storage for `%s`.' % self._trajectory_name)
+            self._logger.info('Finished init or meta data update for `%s`.' %
+                              self._trajectory_name)
 
         traj._stored=True
 
@@ -2369,9 +2362,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 if comment is None:
                     comment = ''
 
-                range_length = self._all_get_from_attrs(hdf5group,HDF5StorageService.LENGTH)
+                range_length = self._all_get_from_attrs(hdf5group, HDF5StorageService.LENGTH)
 
-                if not range_length is None and range_length >1 and range_length != len(traj):
+                if not range_length is None and range_length != len(traj):
                         raise RuntimeError('Something is completely odd. You load parameter'
                                                ' `%s` of length %d into a trajectory of length'
                                                ' %d. They should be equally long!'  %
@@ -2384,6 +2377,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                              comment=comment)
 
                 instance._stored = not as_new
+                if instance.v_is_parameter:
+                    instance._explored = range_length is not None
 
                 # Add the instance to the trajectory tree
                 parent_traj_node._nn_interface._add_generic(parent_traj_node,
@@ -3564,16 +3559,17 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Add class name and whether node is a leaf to the HDF5 attributes
         setattr(group._v_attrs, HDF5StorageService.CLASS_NAME, instance.f_get_class_name())
-        setattr(group._v_attrs,HDF5StorageService.LEAF,1)
+        setattr(group._v_attrs, HDF5StorageService.LEAF, 1)
+
 
         if instance.v_is_parameter and instance.f_has_range():
             # If the stored parameter was an explored one we need to mark this in the
             # explored overview table
-            setattr(group._v_attrs, HDF5StorageService.LENGTH,len(instance))
+            setattr(group._v_attrs, HDF5StorageService.LENGTH, len(instance))
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group,tablename)
-                self._all_store_param_or_result_table_entry(instance,table,
+                self._all_store_param_or_result_table_entry(instance, table,
                                                         flags=flags)
             except pt.NoSuchNodeError:
                 pass
@@ -3614,7 +3610,8 @@ class HDF5StorageService(StorageService, HasLogger):
             # Get the data to store from the instance
             if not instance.f_is_empty():
                 store_dict = instance._store()
-            else: store_dict = {}
+            else:
+                store_dict = {}
 
             # If the user did not supply storage flags, we need to set it to the empty dictionary
             if store_flags is None:
@@ -3884,7 +3881,6 @@ class HDF5StorageService(StorageService, HasLogger):
             if key in group:
                 raise ValueError('DataFrame `%s` already exists in `%s`. Appending is not supported (yet).')
 
-
             name = group._v_pathname+'/' +key
             data.to_hdf(self._filename, name,
                         format=self.pandas_format,
@@ -3950,7 +3946,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             #try using pytables 3.0.0 API
             try:
-                carray=self._hdf5file.create_carray(where=group, name=key,obj=data, filters=self._filters)
+                carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._filters)
             except AttributeError:
                 #if it does not work, create carray with old api
                 atom = pt.Atom.from_dtype(data.dtype)

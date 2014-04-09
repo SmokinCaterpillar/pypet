@@ -112,9 +112,6 @@ it is not shown in the result and derived parameter overview tables, see also
 :ref:`more-on-overview`). It can also be found
 as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true for all *leaves*).
 
-If you using an older version of pypet, your tree structure might be slightly different, to
-update your files to the new format, see :ref:`tree-migrating`.
-
 .. [#]
 
     As a side remark, programming-wise the :class:`~pypet.trajectory.Trajectory` class
@@ -236,10 +233,10 @@ is allowed.
 
 You can also use the wildcard character in the preprocessing stage. Let's assume you add
 the following derived parameter BEFORE the actual single runs via
- ``traj.f_add_derived_parameter('mygroup.$.myparam', 42, comment='An important parameter')``.
-If that happend DURING a single run `$` would be renamed to `run_XXXXXXXX` (with `XXXXXXXX`
+``traj.f_add_derived_parameter('mygroup.$.myparam', 42, comment='An important parameter')``.
+If that happend DURING a single run ``$`` would be renamed to `run_XXXXXXXX` (with `XXXXXXXX`
 the index of the run). Yet, if you add the paremter BEFORE the single runs,
-`$` will be replaced by the placeholder name `run_ALL`.
+``$`` will be replaced by the placeholder name `run_ALL`.
 So your new derived parameter here is now called 'mygroup.run_All.myparam`.
 
 Why is this useful?
@@ -416,7 +413,7 @@ If you don't want to allow this shortcutting through the tree use `f_get(target,
 or set the trajectory attribute `v_shortcuts=False` to forbid the shortcuts for natural naming
 and *getitem* access.
 
-There also exit nice naming shortcuts for already present groups (these are always active and
+There also exist nice naming shortcuts for already present groups (these are always active and
 cannot be switched off):
 
 * `'par'`  is mapped to `'parameters'`, i.e. `traj.parameters` is the same group as `traj.par`
@@ -442,10 +439,12 @@ Backwards search
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Finally, there exists the possibility to perform bottom up search within the tree.
-If you use the square bracket notation or
+If you enable backwards search (set `traj.v_backwards_search=True`) and use the
+square bracket notation or
 :func:`~pypet.trajectory.Trajectory.f_get` and don't pass a single name but a grouped
-name separated via colons like `traj['groubA.groupB.paramC']` or
-`traj.f_get('groubA.groupB.paramC', backwards_search=True)` (`backwards_search` is `True` by default)
+name separated via colons like
+and using `traj['groubA.groupB.paramC']` or
+`traj.f_get('groubA.groupB.paramC', backwards_search=True)`
 you can make *pypet* search the tree bottom up.
 Thus, *pypet* won't look for *groupA* first and than start looking for *grougB* from there and
 finally search for *paramC*. But since it keeps internal indices and links to all it's nodes
@@ -468,6 +467,7 @@ For instance:
 ::
 
     traj.f_add_parameters('groupA.groupB.paramC')
+    traj.v_backwards_search = True
     traj['groupB.paramC'] # this will trigger backwards search
     traj.parameters['groupA.groupB.paramC'] # this won't because
     # 'parameters.groupA.groupB.paramC' is the real full name of the parameter
@@ -485,40 +485,10 @@ Why? `traj.groupZ.paramA` will initiate a breadth first forward tree traversal. 
 precise, it will do so twice: At first *pypet* finds
 the group `groupZ` directly below `groupX` and, next, it tries to locate `paramA` from there.
 However, in `groupX.groupZ` it can only find `paramB`.
-Yet, if you call `traj['groupZ.paramA']`, *pypet* directly looks for `paramA` and then moves
+Yet, if you enable backwards search and call `traj['groupZ.paramA']`,
+*pypet* directly looks for `paramA` and then moves
 up the tree back to the root note. It will find `groupZ` (the one below `groupY`) on the way and,
 therefore, knows that it has found the proper `paramA`.
-
-Phew, that is complicated. Why do you need such a complicated search mechanism, anyway?
-Well, there is a particular advantage when you use the same grouping within derived and
-regular parameters.
-For example, you have a derived parameter `lottery_numbers` that depends on a parameter
-`lottery_seed`, `nnumbers` and `highest_number` all of them grouped into a `lottery` group.
-
-::
-
-    import numpy as np
-
-    traj.f_add_parameter('lottery.lottery_seed', 42, comment='RNG seed')
-    traj.f_add_parameter('lottery.nnumbers', 6, comment='Amount of random numbers')
-    traj.f_add_parameter('lottery.highest_number', 49, comment='Largest number of distribution')
-
-    ...
-
-    #Sometime later you calculate the derived lottery numbers:
-    np.seed(traj.lottery_seed)
-    lottery_numbers = tuple(np.random.random_integers(traj.highest_number, size=(traj.nnumbers,)))
-    traj.f_add_derived_parameter('lottery.lottery_numbers', lottery_numbers,
-                        comment='Lottery numbers, drawn with numpy')
-
-
-
-Now calling `traj.lottery.lottery_numbers` does not work, since you have
-a `lottery` group under `traj.parameters` as well as `traj.derived_parameters`.
-However, you can make your life
-much easier and call `traj['lottery.lottery_numbers']` using backwards search
-instead of tediously typing `traj.derived_parameters.lottery.lottery_numbers` which is, of course,
-a unique forward path down the tree.
 
 .. _parameter-exploration:
 

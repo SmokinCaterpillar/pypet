@@ -1750,7 +1750,7 @@ class Environment(HasLogger):
 
         if self._user_pipeline:
             self._logger.info('\n************************************************************\n'
-                                '        STARTING PPREPROCESSING for trajectory\n`%s`'
+                                'STARTING PPREPROCESSING for trajectory\n`%s`'
                               '\n************************************************************\n'%
                                 self._traj.v_name)
 
@@ -1763,9 +1763,8 @@ class Environment(HasLogger):
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init = True)
 
-
-
     def _make_iterator(self, queue, result_queue, start_run_idx):
+        """Returns an iterator over all runs for multiprocessing"""
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._log_stdout,
@@ -1781,8 +1780,20 @@ class Environment(HasLogger):
                     for n in xrange(start_run_idx, len(self._traj))
                         if not self._traj.f_is_completed(n))
 
-
     def _execute_postproc(self, results):
+        """Executes a postprocessing function
+
+        :param results:
+
+            List of tuples containing the run indices and the results
+
+        :return:
+
+            1. Whether to new single runs, since the trajectory was enlarged
+            2. Index of next new run
+            3. Number of new runs
+
+        """
         repeat = False
         start_run_idx = 0
         new_runs = 0
@@ -1813,8 +1824,6 @@ class Environment(HasLogger):
 
             if self._clean_up_runs:
                 self._traj._remove_run_data()
-
-
 
         return repeat, start_run_idx, new_runs
 
@@ -2034,7 +2043,7 @@ class Environment(HasLogger):
 
                                         self._logger.info(
                                             '\n************************************************************\n'
-                                             '  STARTING IMMEDIATE POSTPROCESSING. for trajectory\n`%s`'
+                                             'STARTING IMMEDIATE POSTPROCESSING. for trajectory\n`%s`'
                                             '\n************************************************************\n' %
                                             self._traj.v_name)
 
@@ -2146,7 +2155,7 @@ class Environment(HasLogger):
                 repeat = False
                 if self._postproc is not None:
                     self._logger.info('\n************************************************************\n'
-                                  '  STARTING POSTPROCESSING for trajectory\n`%s`'
+                                  'STARTING POSTPROCESSING for trajectory\n`%s`'
                                 '\n************************************************************\n' %
                                 self._traj.v_name)
 
@@ -2163,13 +2172,9 @@ class Environment(HasLogger):
                         new_runs
                     )
 
-            self._traj.f_store(only_init=True)
-
             if self._continuable and self._delete_continue:
                 # We remove all continue files if the simulation was successfully completed
                 shutil.rmtree(self._continue_path)
-
-
 
         if expanded_by_postproc:
             config_name='environment.%s.postproc_expand' % self.v_name

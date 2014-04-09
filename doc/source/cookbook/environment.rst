@@ -941,7 +941,7 @@ with the name of the continue folder (not the subfolder) and the name of the tra
 
     env = Environment(continuable=True)
 
-    env.f_continue_run(trajectory_name = my_traj_2015_10_21_04h29m00s,
+    env.f_continue(trajectory_name = my_traj_2015_10_21_04h29m00s,
                             continue_folder = './experiments/continue/')
 
 
