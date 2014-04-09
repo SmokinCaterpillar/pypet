@@ -1808,9 +1808,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
 
-        Note that after expanding `:func:`~pypet.trajectory.Trajectory.f_store` needs to be
-        called at least once!
-
         :raises:
 
             TypeError: If not all explored parameters are enlarged
@@ -1893,6 +1890,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         A ValueError is also raised if the names from the dictionary map to groups or results
         and not parameters.
 
+        If your trajectory is already explored but not stored yet and your parameters are
+        not locked you can add new explored parameters to the current ones if their
+        iterables match the current length of the trajectory.
+
         Raises an AttributeError if the names from the dictionary are not found at all in
         the trajectory and NotUniqueNodeError if the keys not unambiguously map
         to single parameters.
@@ -1900,10 +1901,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         Raises a TypeError if the trajectory has been stored already, please use
         :func:`~pypet.trajectory.Trajectory.f_expand` then instead.
 
-        Example:
+        Example usage:
 
         >>> traj.explore({'groupA.param1' : [1,2,3,4,5], 'groupA.param2':['a','b','c','d','e']})
-
 
         NOTE:
 
@@ -1944,9 +1944,15 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
 
-        if len(self._explored_parameters)>0:
-            raise TypeError('Cannot explore an already explored trajectory, '
+        if self._stored:
+            raise TypeError('Cannot explore an already stored trajectory, '
                             'please use `f_expand` instead.')
+
+        if len(self._explored_parameters)>0:
+            self._logger.info('Your trajectory is already explored. But if the parameters'
+                                     ' you want to explore matche the current trajectory length.'
+                                     ' I will add them to'
+                                     ' the existing explored parameters.')
 
         count = 0
         for key, builditerable in build_dict.items():
@@ -1964,16 +1970,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if count == 0 and len(self) == 1:
                 length = len(act_param)
             elif len(self) > 1:
-                # Explore allows you to add new explored parameters if they have the same length
-                # as the already explored ones
+                # We end up here if we increase the explored parameters
                 length = len(self)
-                self._logger.warning('Your trajectory is already explored. But the parameter `%s`'
-                                     ' you want to explore matches the current trajectory length.'
-                                     ' I will add it to'
-                                     ' the existing explored parameters' % key)
 
             if not length == len(act_param):
                 raise ValueError('The parameters to explore have not the same size!')
+
+
             count+=1
 
         for irun in range(length):

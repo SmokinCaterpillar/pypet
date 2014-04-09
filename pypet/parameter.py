@@ -150,6 +150,7 @@ class BaseParameter(NNLeafNode):
 
         # Whether to keep the full range array when pickled or not
         self._full_copy = False
+        self._explored = False # If explored or not
 
     def f_supports(self, data):
         """Checks whether the data is supported by the parameter."""
@@ -168,6 +169,16 @@ class BaseParameter(NNLeafNode):
         """
         return not self.f_is_empty()
 
+    @property
+    def v_explored(self):
+        """Whether parameter is explored.
+
+        Does not necessarily have to be similar to
+        :func:`~pypet.parameter.BaseParameter.f_has_range` since the range can be
+        deleted on pickling and the parameter remains explored.
+
+        """
+        return self._explored
 
     @property
     def v_full_copy(self):
@@ -222,7 +233,9 @@ class BaseParameter(NNLeafNode):
         return self.f_has_range()
 
     def f_has_range(self):
-        """Returns true if the parameter is explored and contains a range array.
+        """Returns true if the parameter contains a range array.
+        Not necessarily equal to `v_explored` if the range is removed on
+        pickling due to `v_full_copy=False`.
 
         ABSTRACT: Needs to be defined in subclass
 
@@ -750,6 +763,13 @@ class Parameter(BaseParameter):
 
     @copydoc(BaseParameter.f_has_range)
     def f_has_range(self):
+        """If the parameter has a range.
+
+        Does not have to be `True` if the parameter is explored.
+        The range might be removed during pickling to save memory.
+        Accordingly, `v_explored` remains `True` whereas `f_has_range` is `False`.
+
+        """
         return len(self._explored_range)>0
        
     def __getstate__(self):
@@ -954,6 +974,7 @@ class Parameter(BaseParameter):
         data_tuple = self._data_sanity_checks(explore_iterable)
 
         self._explored_range = data_tuple
+        self._explored = True
         self.f_lock()
 
     def _expand(self,explore_iterable):
@@ -1055,6 +1076,7 @@ class Parameter(BaseParameter):
         if 'explored_data' in load_dict:
             self._explored_range = tuple([self._convert_data(x)
                                    for x in load_dict['explored_data']['data'].tolist()])
+            self._explored = True
 
     @copydoc(BaseParameter.f_get)
     def f_get(self):
@@ -1078,6 +1100,7 @@ class Parameter(BaseParameter):
 
         del self._explored_range
         self._explored_range={}
+        self._explored=False
 
     @copydoc(BaseParameter.f_empty)
     def f_empty(self):
@@ -1092,6 +1115,7 @@ class Parameter(BaseParameter):
         del self._default
         self._data=None
         self._default=None
+        self._explored=False
 
 
 class ArrayParameter(Parameter):
@@ -1214,6 +1238,7 @@ class ArrayParameter(Parameter):
                     explore_list.append(load_dict[arrayname])
 
                 self._explored_range=tuple([self._convert_data(x) for x in explore_list])
+                self._explored = True
 
         except KeyError:
             super(ArrayParameter,self)._load(load_dict)
@@ -1535,6 +1560,7 @@ class SparseParameter(ArrayParameter):
                     explore_list.append(matrix)
 
                 self._explored_range=tuple(explore_list)
+                self._explored = True
 
 
         except KeyError:
@@ -1681,6 +1707,7 @@ class PickleParameter(Parameter):
                     explore_list.append(loaded)
 
                 self._explored_range=tuple(explore_list)
+                self._explored = True
 
 
         self._default=self._data

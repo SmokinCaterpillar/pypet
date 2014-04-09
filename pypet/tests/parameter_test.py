@@ -298,6 +298,7 @@ class ParameterTest(unittest.TestCase):
                 self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
 
             param._restore_default()
+            self.assertTrue(param.v_explored and param.f_has_range(), 'Error for %s' % key)
             val = self.data[key]
             self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
 
@@ -361,6 +362,9 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_pickling_with_mocking_multiprocessing(self):
+
+        self.test_exploration()
+
         for key, param in self.param.items():
             param.f_unlock()
             param.v_full_copy=False
@@ -373,11 +377,16 @@ class ParameterTest(unittest.TestCase):
 
             self.param[key] = newParam
 
+            if key in self.explore_dict:
+                self.assertTrue(not newParam.f_has_range() and newParam.v_explored)
+
         #self.test_exploration()
 
         self.test_the_insertion_made_implicetly_in_setUp()
 
         self.test_meta_settings()
+
+
 
     def test_resizing_and_deletion(self):
 

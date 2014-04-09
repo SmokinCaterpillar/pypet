@@ -68,11 +68,29 @@ Moreover, *pypet* has an :class:`~pypet.envrionemnt.Environment` that takes care
 and allows easy parallel exploration of the parameter space.
 
 We will see how we can use both in our numerical experiment and the different stages.
-In this tutorial we will simulate the `Lorenz Attractor`_ with a simple Euler scheme
-similar to :ref:`example-05`.
+In this tutorial we will simulate a simple neuron model. We will numerically integrate the
+equation:
+
+.. math::
+
+    \frac{dV}{dt} = -\frac{1}{\tau_V} + I
 
 
-.. _`Lorenz Attractor`: https://en.wikipedia.org/wiki/Lorenz_attractor
+With an additional reset rule :math:`V \leftarrow 0` if :math`V \geq 1` and we will have
+an additional refractory period of :math:`\tau_{ref}`. This means if we detect a so called
+action potential, i.e. math:`V \geq V_T`, we will keep the voltage :math:`V` clamped at 0
+for this period of time after the threshold crossing and freeze the differential equation.
+We will keep the
+neuron's time constant :math:`\frac{1}{\tau_V}=10ms` fixed and explore the parameter space
+by varying different input currents :math:`I` and different length of the refractory periods
+:math:`\tau_{ref}`. During the single runs, we will record the development of the variable
+:math:`V` over time and count the number of threshold crossing to estimate the so called
+firing rate of the neuron.
+In the post processing phase we will collect these firing rates and write them into a numpy
+array to compute a 2D heat map of firing rates depending on the input current and the refractory
+period.
+
+
 
 ^^^^^^^^^^^^^^^^^^^
 Naming convention
@@ -92,7 +110,7 @@ Whereas `myresult.mydata` might refer to a data item named `mydata` added by the
 #1 Pre-processing
 -------------------------
 
-Your experiment usually starts with the creation of an :class:`~pypet.environemnt.Environment`.
+Your experiment usually starts with the creation of an :class:`~pypet.environment.Environment`.
 Don't worry about the huge amount of parameters you can pass to the constructor,
 these are more for tweaking of your experiment and the default settings are usually
 suitable.
@@ -104,6 +122,13 @@ Yet, we will shortly discuss the most important ones here.
     Here you can either pass an already existing trajectory container or simply a string
     specifying the name of a new trajectory. The environment will create a trajectory
     container for you than.
+
+* `add_time`
+
+    If `True` and the environment creates a new trajectory container, it will add the current time
+    to the name in the format *_XXXX_XX_XX_XXhXXmXXs*.
+    So for instance if you set `trajectory='Gigawatts_Experiment'` and `add_time=true`,
+    your trajectory's name will be `Gigawatts_Experiment_2015_10_21_04h23m00s`).
 
 * `log_folder`
 
@@ -120,7 +145,45 @@ Yet, we will shortly discuss the most important ones here.
     but simple `print` statements in your python script, *pypet* can write these statements
     into the log files if you enable `log_stdout`.
 
+* `multiproc`
+
+    If we want to use multiprocessing. We sure do so, so we set this to `True`.
+
+* `ncores`
+
+    The number of cpu cores we want to utilize. More precisely the number of processes we
+    start at the same time to calculate the single runs. Btw, there's usually no benefit to
+    setting this value higher than the actual number of cores your computer has.
+
+* `filename`
+
+    We can specify the name of the resulting HDF5 file where all data will be stored.
+    We don't have to give a filename per se, we can also specify a folder `'./results/'` and
+    the new file will have the name of the trajectory.
+
+* `git_repository`
+
+    If your code base is under git_ version control (it's not? Stop reading and get git_ NOW!),
+    you can specify the path to your root git
+    folder here. If you do this, *pypet* will a) trigger a new commit if it detects changes
+    of in working copy of your code and b) write the corresponding commit code into
+    your trajectory so you can immediately see with which version you did your experiments.
+
+* `sumatra_project`
+
+    If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
+    root folder here. *pypet* will automatically trigger the recording of your experiments
+    if you use :func:`~pypet.environment.f_run`, :func:`~pypet.environment.f_continue` or
+    :func:`~pypet.environment.f_pipeline` to start your single runs or whole experiment.
+    If you use *pypet* + git_ + sumatra_ there's no doubt that you ensure
+    the repeatability of your experiments!
+
+
 .. _logging: https://docs.python.org/2/library/logging.html
+
+.. _git: http://git-scm.com/
+
+.. _sumatra: http://neuralensemble.org/sumatra/
 
 -------------------------
 The Trajectory container
@@ -131,16 +194,16 @@ It's basically instantiates a tree and data can be accessed in several ways. Let
 we already have a trajectory container called `traj` with some nested data in it.
 
 You can, for instance, access data via *natural naming*:
-``traj.parameters.diffeq.sigma`` or square brackets ``traj['parameters']['diffeq']['sigma']``
-or ``traj['parameters.diffeq.sigma']``, or use the
+``traj.parameters.neuron.tau_ref`` or square brackets ``traj['parameters']['neuron']['tau_ref']``
+or ``traj['parameters.neuron.tau_ref']``, or use the
 :func:`~pypet.naturalnaming.NNGroupNode.f_get` method.
 
 As long as your tree nodes are unique, you can shortcut through the tree. If there's only
-one parameter `sigma`, ``traj.sigma`` is equivalent to ``traj.parameters.diffeq.sigma``.
+one parameter `tau_ref`, ``traj.tau_ref`` is equivalent to ``traj.parameters.neuron.tau_ref``.
 
 The tree contains two types of nodes, group nodes
-(here for example `parameters`, `diffeq`) and leaf nodes
-(here `sigma`). Group nodes can, as you have seen, contain other group or leaf nodes, whereas
+(here for example `parameters`, `neuron`) and leaf nodes
+(here `tau_ref`). Group nodes can, as you have seen, contain other group or leaf nodes, whereas
 leaf nodes are terminal and do not contain more groups or leaves.
 The leaf nodes are abstract containers for your actual data. Basically,
 there exist two sub-types of these leaves :class:`~pypet.parameter.Parameter`
@@ -154,8 +217,8 @@ different runs.
 Moreover, since a :class:`~pypet.parameter.Parameter` only contains a single value (apart
 from the range),
 *pypet* will assume that you usually don't care about the actual container but just about
-the data. Thus, ``traj.parameters.diffeq.sigma`` will immediatly return the data value
-for `sigma` and not the corresponding :class:`~pypet.parameter.Parameter` container.
+the data. Thus, ``traj.parameters.neuron.tau_ref`` will immediatly return the data value
+for `tau_ref` and not the corresponding :class:`~pypet.parameter.Parameter` container.
 
 A :class:`~pypet.parameter.Result` container can manage several results. You can think of it
 as non-nested dictionary. Actual data can also be accessed via natural naming or squared

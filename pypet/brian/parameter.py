@@ -205,6 +205,7 @@ class BrianParameter(Parameter):
                         explore_list.append(brian_quantity)
 
                     self._explored_range=tuple(explore_list)
+                    self._explored = True
             elif self._storage_mode == BrianParameter.FLOAT_MODE:
 
                 # Recreate the brain units from the vale as float and unit as string:
@@ -221,7 +222,8 @@ class BrianParameter(Parameter):
                         brian_quantity = value*unit
                         explore_list.append(brian_quantity)
 
-                    self._explored_range=tuple(explore_list)
+                    self._explored_range = tuple(explore_list)
+                    self._explored = True
 
 
         except KeyError:

@@ -39,13 +39,17 @@ pypet 0.1b5
 *   If automatic storage is enabled, trajectories are now stored at the end of the experiment,
     no longer before the starting of the single runs
 
-*   You can use the `$` character to decide where the file should branch out for the
+*   You can use the `$` character to decide where the HDF5 file tree should branch out for the
     individual runs
 
-*   `v_creator_name` is now called `v_run_branch` (since single runs can alos create
+*   `v_creator_name` is now called `v_run_branch` (since single runs can also create
     items that are not part of a run branch, so this is no longer misleading`.
 
-*   Results and parameters now issue a warning when they have been stored
+*   Results and parameters now issue a warning when they have been stored and you
+    change their data
+
+*   Parameters now have a property `v_explored` which is True for explored parameters
+    even if the range has been removed
 
 
 pypet 0.1b.4

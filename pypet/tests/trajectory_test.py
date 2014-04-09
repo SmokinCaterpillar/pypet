@@ -285,7 +285,18 @@ class TrajectoryTest(unittest.TestCase):
             self.assertTrue(comp.nested_equal(self.traj.f_get(key,fast_access=True),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
+    def test_increase_exploration(self):
 
+        self.explore_dict = {'IntParam':[2,1,1,3]}
+
+        self.traj.f_explore(self.explore_dict)
+
+        self.assertTrue(len(self.traj._explored_parameters)==2)
+
+        self.traj._stored=True
+
+        with self.assertRaises(TypeError):
+            self.traj.f_explore(self.explore_dict)
 
     def test_f_get(self):
         self.traj.v_fast_access=True

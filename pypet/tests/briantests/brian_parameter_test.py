@@ -51,6 +51,7 @@ class BrianParameterTest(ParameterTest):
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
             self.param[key]._explore(vallist)
+            self.assertTrue(self.param[key].v_explored and self.param[key].f_has_range())
 
 
 class BrianParameterStringModeTest(BrianParameterTest):
