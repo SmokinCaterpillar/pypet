@@ -490,7 +490,7 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.resulttest2', 444)
 
         with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_get_from_runs('sub.sub.resulttest2')
+            self.traj.f_get_from_runs('sub.sub.resulttest2', backwards_search=True)
 
         with self.assertRaises(ValueError):
             self.traj.f_get_from_runs('test', where='Portland')
@@ -712,7 +712,7 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(self.traj.findme==43)
 
         with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_get('depth0.findme')
+            self.traj.f_get('depth0.findme', backwards_search=True)
 
 
     def test_contains_item_identity(self):

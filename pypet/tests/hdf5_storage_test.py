@@ -155,6 +155,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_store()
 
         ffa=traj.f_get('ffa')
+        ffa.f_unlock()
         ffa.f_empty()
 
         self.assertTrue(ffa.f_is_empty())
