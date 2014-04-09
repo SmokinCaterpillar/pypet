@@ -132,9 +132,9 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_backwards_search(self):
 
-        x=self.traj.peter.f_get('paul.peter')
+        x=self.traj.peter.f_get('paul.peter', backwards_search=False)
 
-        y=self.traj.f_get('peter.peter')
+        y=self.traj.f_get('peter.peter', backwards_search=True)
 
         self.assertTrue(x is y)
     #

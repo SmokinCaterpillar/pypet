@@ -1037,7 +1037,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access=True
-        self._backwards_search = True
+        self._backwards_search = False
         self._shortcuts = True
         self._iter_recursive = False
         self._max_depth = None
@@ -1604,7 +1604,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         runs.f_remove_child(node_name,recursive=True)
 
     def f_get_from_runs(self, name, where='results', use_indices=False,
-                           fast_access=False, backwards_search=True,
+                           fast_access=False, backwards_search=False,
                            shortcuts=True, max_depth=None, auto_load=False):
         """Searches for all occurrences of `name` in each run.
 

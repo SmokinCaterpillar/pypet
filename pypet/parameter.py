@@ -1060,6 +1060,7 @@ class Parameter(BaseParameter):
         if self.f_has_range():
             store_dict['explored_data'] = ObjectTable(data={'data':self._explored_range})
 
+        self._locked = True
 
         return store_dict
 
@@ -1073,10 +1074,13 @@ class Parameter(BaseParameter):
         """
         self._data = self._convert_data(load_dict['data']['data'][0])
         self._default=self._data
+
         if 'explored_data' in load_dict:
             self._explored_range = tuple([self._convert_data(x)
                                    for x in load_dict['explored_data']['data'].tolist()])
             self._explored = True
+
+        self._locked = True
 
     @copydoc(BaseParameter.f_get)
     def f_get(self):
@@ -1199,6 +1203,8 @@ class ArrayParameter(Parameter):
                         smart_dict[hash_elem] = name_idx
                         count +=1
 
+            self._locked = True
+
             return store_dict
 
     def _build_name(self,name_idx):
@@ -1212,7 +1218,7 @@ class ArrayParameter(Parameter):
         return 'xa%s%08d' % (ArrayParameter.IDENTIFIER, name_idx)
 
 
-    def _load(self,load_dict):
+    def _load(self, load_dict):
         """Reconstructs the data and exploration array.
 
         Checks if it can find the array identifier in the `load_dict`, i.e. '__rr__'.
@@ -1244,6 +1250,7 @@ class ArrayParameter(Parameter):
             super(ArrayParameter,self)._load(load_dict)
 
         self._default=self._data
+        self._locked=True
 
 
     def _values_of_same_type(self,val1, val2):
@@ -1465,7 +1472,6 @@ class SparseParameter(ArrayParameter):
 
                     store_dict['explored_data'+SparseParameter.IDENTIFIER]['is_dia'][idx] = is_dia
 
-
                     if add:
 
                         for irun,name in enumerate(rename_list):
@@ -1473,6 +1479,8 @@ class SparseParameter(ArrayParameter):
 
                         smart_dict[hash_tuple] = name_idx
                         count +=1
+
+            self._locked = True
 
             return store_dict
 
@@ -1517,7 +1525,7 @@ class SparseParameter(ArrayParameter):
         else:
             raise RuntimeError('You shall not pass!')
 
-    def _load(self,load_dict):
+    def _load(self, load_dict):
         """Reconstructs the data and exploration array
 
         Checks if it can find the array identifier in the `load_dict`, i.e. '__spsp__'.
@@ -1562,11 +1570,11 @@ class SparseParameter(ArrayParameter):
                 self._explored_range=tuple(explore_list)
                 self._explored = True
 
-
         except KeyError:
             super(SparseParameter,self)._load(load_dict)
 
-        self._default=self._data
+        self._default = self._data
+        self._locked = True
 
 
 class PickleParameter(Parameter):
@@ -1671,6 +1679,8 @@ class PickleParameter(Parameter):
                     smart_dict[obj_id] = name_id
                     count +=1
 
+        self._locked = True
+
         return store_dict
 
     @staticmethod
@@ -1711,6 +1721,7 @@ class PickleParameter(Parameter):
 
 
         self._default=self._data
+        self._locked = True
 
 
 class BaseResult(NNLeafNode):

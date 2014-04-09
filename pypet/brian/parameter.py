@@ -142,8 +142,7 @@ class BrianParameter(Parameter):
             if self._storage_mode == BrianParameter.STRING_MODE:
 
                 valstr = self._data.in_best_unit(python_code=True)
-                store_dict['data'+BrianParameter.IDENTIFIER] = ObjectTable(data={'data':[valstr],
-                                                       'mode' :[self._storage_mode] })
+                store_dict['data'+BrianParameter.IDENTIFIER] = ObjectTable(data={'data':[valstr]})
 
 
                 if self.f_has_range():
@@ -160,8 +159,7 @@ class BrianParameter(Parameter):
                 unitstr = repr(get_unit_fast(self._data))
                 value = float(self._data)
                 store_dict['data'+BrianParameter.IDENTIFIER] = ObjectTable(data={'value':[value],
-                                                       'unit':[unitstr],
-                                                       'mode':[self._storage_mode]})
+                                                       'unit':[unitstr]})
 
                 if self.f_has_range():
                     value_list = []
@@ -176,19 +174,23 @@ class BrianParameter(Parameter):
             else:
                 raise RuntimeError('You shall not pass!')
 
-
-
+            self._locked = True
 
             return store_dict
         else:
             return super(BrianParameter,self)._store()
 
 
-    def _load(self,load_dict):
+    def _load(self, load_dict):
 
         try:
             data_table = load_dict['data'+BrianParameter.IDENTIFIER]
-            self._storage_mode = data_table['mode'][0]
+
+            if 'unit' in data_table:
+                self._storage_mode = BrianParameter.FLOAT_MODE
+            else:
+                self._storage_mode = BrianParameter.STRING_MODE
+
             if self._storage_mode == BrianParameter.STRING_MODE:
                 valstr = data_table['data'][0]
 
@@ -206,6 +208,7 @@ class BrianParameter(Parameter):
 
                     self._explored_range=tuple(explore_list)
                     self._explored = True
+
             elif self._storage_mode == BrianParameter.FLOAT_MODE:
 
                 # Recreate the brain units from the vale as float and unit as string:
@@ -230,6 +233,7 @@ class BrianParameter(Parameter):
             super(BrianParameter,self)._load(load_dict)
 
         self._default = self._data
+        self._locked = True
 
 class BrianDurationParameter(BrianParameter):
     """Special BRIAN parameter to specify orders and durations of subruns.
@@ -353,15 +357,13 @@ class BrianResult(Result):
                 if self._storage_mode == BrianResult.STRING_MODE:
 
                     valstr = val.in_best_unit(python_code=True)
-                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'data':[valstr],
-                                                           'mode' :[self._storage_mode] })
+                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'data':[valstr] })
 
                 elif self._storage_mode == BrianResult.FLOAT_MODE:
                     unitstr = repr(get_unit_fast(val))
                     value = float(val)
                     store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'value':[value],
-                                                           'unit':[unitstr],
-                                                           'mode':[self._storage_mode]})
+                                                           'unit':[unitstr]})
 
                 else:
                     raise RuntimeError('You shall not pass!')
@@ -377,7 +379,12 @@ class BrianResult(Result):
         for key in load_dict:
             if BrianResult.IDENTIFIER in key:
                 data_table = load_dict[key]
-                self._storage_mode = data_table['mode'][0]
+
+                if 'unit' in data_table:
+                    self._storage_mode = BrianResult.FLOAT_MODE
+                else:
+                    self._storage_mode = BrianResult.STRING_MODE
+
                 new_key = key.split(BrianResult.IDENTIFIER)[0]
 
                 if self._storage_mode == BrianResult.STRING_MODE:
@@ -385,7 +392,7 @@ class BrianResult(Result):
 
                     self._data[new_key] = eval(valstr)
 
-                elif self._storage_mode == BrianParameter.FLOAT_MODE:
+                elif self._storage_mode == BrianResult.FLOAT_MODE:
 
                     # Recreate the brain units from the vale as float and unit as string:
                     unit = eval(data_table['unit'][0])

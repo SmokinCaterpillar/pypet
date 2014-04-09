@@ -2215,7 +2215,7 @@ class NNGroupNode(NNTreeNode):
                 self._nn_interface._remove_subtree(self, name)
 
 
-    def f_contains(self, item, backwards_search = True,
+    def f_contains(self, item, backwards_search=False,
                    shortcuts = False, max_depth=None):
         """Checks if the node contains a specific parameter or result.
 
@@ -2363,7 +2363,7 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._get_all(self, name, max_depth = max_depth)
 
-    def f_get(self, name, fast_access=False, backwards_search=True,
+    def f_get(self, name, fast_access=False, backwards_search=False,
               shortcuts=True, max_depth=None, auto_load=False):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 

@@ -51,6 +51,10 @@ pypet 0.1b5
 *   Parameters now have a property `v_explored` which is True for explored parameters
     even if the range has been removed
 
+*   By default `backwards_search` is turned off!
+
+*   Brian parameters no longer store the `storage_mode` explicitly
+
 
 pypet 0.1b.4
 
