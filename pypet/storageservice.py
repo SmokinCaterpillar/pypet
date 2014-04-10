@@ -2249,7 +2249,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         except pt.NoSuchNodeError:
             self._logger.warning('Cannot store `%s` the parental hdf5 node with path `%s` does '
-                               'not exist on disk! Please store parental node first.' %
+                               'not exist on disk.' %
                                (traj_node.v_name,hdf5_location))
 
 

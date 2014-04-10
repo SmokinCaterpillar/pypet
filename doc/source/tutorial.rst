@@ -95,9 +95,9 @@ input current :math:`I`.
 Don't worry if you are not familiar with pandas, basically a pandas_ DataFrame instantiates
 a table, like a 2D numpy array, but we can index into the table by more than just integers.
 
-^^^^^^^^^^^^^^^^^^^
+-------------------
 Naming convention
--------------------------
+-------------------
 
 To avoid confusion with natural naming scheme (see below)
 and the functionality provided by the environment, trajectory,
@@ -607,9 +607,78 @@ the end of the experiment. Everything you add
 during the run phase under a group node called `run_XXXXXXXX` (where this is the name of the
 current run) will be stored at the end of this particular run.
 
------------------
-#2 Post processing
------------------
+-------------------
+#3 Post-processing
+-------------------
+
+Each single run of our `run_neuron` function returned an estimate of the firing rate.
+In the post processing phase we want to collect these estimates and sort them into a
+table according to the value of `I` and `tau_ref. As an appropriate table we choose a
+pandas_ DataFrame. Again this is not *pypet* specific but pandas_ offers neat
+containers for series data, tables and multidimensional panel data.
+The neat thing about pandas_ containers is, that they except all forms of indices, and not
+only integer indices like python lists or numpy arrays.
+
+So this is our post processing function, it has to take at least two arguments.
+First one is the trajectory, second one is the list of results.
+This list actually contains two-dimensional tuples. First entry of the tuple is the index
+of the run as an integer, and second entry is the result returned by our job-function
+`run_neuron` in the corresponding run. Be aware that since we use multiprocessing,
+the list is not ordered according to the run indices, but according to the time the
+single runs did finish.
+
+
+.. code-block::python
+
+    def neuron_postproc(traj, result_list):
+        """Postprocessing, sorts computed firing rates into a table
+
+        :param traj:
+
+            Container for results and parameters
+
+        :param result_list:
+
+            List of tuples, where first entry is the run index and second is the actual
+            result of the corresponding run.
+
+        :return:
+        """
+
+        # Let's create a pandas DataFrame to sort the computed firing rate according to the
+        # parameters. We could have also used a 2D numpy array.
+        # But a pandas DataFrame has the advantage that we can index into directly with
+        # the parameter values without translating these into integer indices.
+        I_range = traj.par.neuron.f_get('I').f_get_range()
+        ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
+
+        I_index = sorted(set(I_range))
+        ref_index = sorted(set(ref_range))
+        rates_frame = pd.DataFrame(columns=ref_index, index=I_index)
+        # This frame is basically a two dimensional table that we can index with our
+        # parameters
+
+        # Now iterate over the results. The result list is a list of tuples, with the
+        # run index at first position and our result at the second
+        for result_tuple in result_list:
+            run_idx = result_tuple[0]
+            firing_rates = result_tuple[1]
+            I_val = I_range[run_idx]
+            ref_val = ref_range[run_idx]
+            rates_frame.loc[I_val, ref_val] = firing_rates # Put the firing rate into the
+            # data frame
+
+        # Finally we going to store our new firing rate table into the trajectory
+        traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
+                          comment='Contains a pandas data frame with all firing rates.')
+
+
+Ok, we will go through it one by one.
+At first we extract the range of parameters we used:
+
+.. code-block::python
+
+
 
 .. _logging: https://docs.python.org/2/library/logging.html
 

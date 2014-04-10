@@ -184,6 +184,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                                                         BrianMonitorResult],
                           multiproc=True,
                           use_pool=False,
+                          wrap_mode='QUEUE',
                           ncores=2)
 
         traj = env.v_trajectory
@@ -206,4 +207,4 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
         self.traj = traj
 
 if __name__ == '__main__':
-    make_run()
+    make_run(remove=False)

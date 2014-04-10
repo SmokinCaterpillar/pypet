@@ -803,6 +803,11 @@ which will later on pass `42` as `extra_arg1` and `42.4` as extra_arg2. It's act
 very same principle as before for your run function.
 The post-processing function will be called after the completion of all single runs.
 
+Moreover, please note that your trajectory will **NOT** contain the data computed
+during the single runs, since this has been removed after the single runs to save RAM.
+If your post-processing needs access to this data, you can simply load it via one of
+the many loading functions (:func:`~pypet.naturalnaming.NNGroupNode.f_load_child`,
+:func:`~pypet.naturalnaming.NNGroupNode.f_load_item`) or even turn on auto-loading.
 
 Note that your post-processing function should **NOT** return any results, since these
 will simply be lost. However, there is one particular result that can be returned,
