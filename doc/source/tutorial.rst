@@ -433,9 +433,9 @@ So here is our top-level simulation function:
         V_init = traj.par.neuron.V_init
         I = traj.par.neuron.I
         tau_V = traj.par.neuron.tau_V
-        dt = traj.par.simulation.dt
         tau_ref = traj.par.neuron.tau_ref
-        duration = traj.par.neuron.duration
+        dt = traj.par.simulation.dt
+        duration = traj.par.simulation.duration
 
         steps = int(duration / float(dt))
         # Create some containers for the Euler integration
@@ -463,13 +463,11 @@ So here is our top-level simulation function:
         print 'Finished Euler Integration'
 
         # Add the voltage trace and spike times
-        traj.f_add_result('neuron.$', V=V_array, spiketimes = spiketimes, nspikes=len(spiketimes),
-                          comment='Contains the development of the membrane potential over time '
-                                  'as well as a list of spike times.')
+        traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
+                      comment='Contains the development of the membrane potential over time '
+                              'as well as the number of spikes.')
         # This result will be renamed to `traj.results.neuron.run_XXXXXXXX`.
-        # Moreover, be aware that spiketimes will ONLY be stored if the list is non-empty,
-        # PyTables cannot store empty lists! If there are no spikes detected, the list is
-        # ignored and not stored
+
 
         # And finally we return the estimate of the firing rate
         return len(spiketimes) / float(traj.par.simulation.duration) *1000
@@ -497,9 +495,9 @@ Let's take a look at the first few instructions
     V_init = traj.par.neuron.V_init
     I = traj.par.neuron.I
     tau_V = traj.par.neuron.tau_V
-    dt = traj.par.simulation.dt
     tau_ref = traj.par.neuron.tau_ref
-    duration = traj.par.neuron.duration
+    dt = traj.par.simulation.dt
+    duration = traj.par.simulation.duration
 
 
 So here we will simply extract the parameter values from `traj`.
@@ -507,7 +505,7 @@ As said before *pypet* is smart to directly return the data value instead of
 a :class:`~pypet.parameter.Parameter` container. Moreover, remember all parameters
 will have their default values except `tau_ref` and `I`.
 
-Next, we create a numpy array and list and compute the number of steps. This is
+Next, we create a numpy array and a python list and compute the number of steps. This is
 not specific to *pypet* but simply needed for our neuron simulation:
 
 .. code-block::python
@@ -521,8 +519,7 @@ not specific to *pypet* but simply needed for our neuron simulation:
 
 Also the following steps have nothing to do with *pypet*, so don't worry if you not
 fully understand what's going on here.
-T
-his is the core of our neuron simulation:
+This is the core of our neuron simulation:
 
 .. code-block::python
 
@@ -545,20 +542,25 @@ his is the core of our neuron simulation:
 
     print 'Finished Euler Integration'
 
+That is simply the python description of the following set of equations:
+
+.. math::
+
+    \frac{dV}{dt} = -\frac{1}{\tau_V} V + I
+
+and :math:`V \leftarrow 0 \text{if} V \geq 1 \ŧext{or} t-t_s \leq \ŧau_{ref}`.
 
 Ok now we have finished one particular run ouf our simulation. We computed the development
-of the membrane potential `V` over time and put it in `V_array`. The times of
-action potentials, i.e. threshold crossings and voltage resets are added to the
-list `spiketimes`.
+of the membrane potential `V` over time and put it in `V_array`.
 
-Next, we hand over these data to our trajectory, since we want to keep them and write them
+Next, we hand over this data to our trajectory, since we want to keep them and write them
 into the final HDF5 file:
 
 .. code-block::python
 
-    traj.f_add_result('neuron.$', V=V_array, spiketimes = spiketimes, nspikes=len(spiketimes),
-                          comment='Contains the development of the membrane potential over time '
-                                  'as well as a list of spike times.')
+    traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
+                      comment='Contains the development of the membrane potential over time '
+                              'as well as the number of spikes.')
 
 
 This statement looks similar to the addition of parameters we had before. Yet, there
@@ -567,14 +569,15 @@ If we pass them via `NAME=value`, we can later on recall them from the result wi
 Secondly there is this odd `'$'` character in the name.
 Well, recall that we are currently operating in the run phase, accordingly the `run_neuron`
 function will be executed many times. Accordingly, we also gather the
-data `V_array` and `spiketimes` data many times. Hence,
-we need to store these every time under a different
+data `V_array` data many times. Hence,
+we need to store this every time under a different
 name in our trajectory tree. `'$'` is a wildcard character that is replaced by the name
 of the current run. Thus, if we were in the second run, we would store everything under
 `traj.results.neuron.run_00000001` and the in the third run under
 `traj.results.neuron.run_00000002` and so on and so forth.
 Consequently, `traj.results.neuron.run_00000001.V` will return our membrane voltage array
 of the second run.
+
 
 You are not limited to place the `'$'` at the end, for example:
 
@@ -588,7 +591,7 @@ As a side remark, if you add a result or derived parameter during the run phase 
 **not** use the `'$'` wildcard. *pypet* will add `runs.'$'` to the beginning of your
 result or derived parameter name.
 
-So executing the following statement during the run phase:
+So executing the following statement during the run phase
 
 .. code-block::python
 
@@ -597,8 +600,16 @@ So executing the following statement during the run phase:
 will yield a renaming to `results.runs.run_XXXXXXXXX.fundamental.wisdom.answer`.
 Where `run_XXXXXXXXX` is the name of the corresponding run, of course.
 
+Moreover, it's worth noticing that you don't have to explicitly write the trajectory to disk.
+Everything you add during pre-processing, post-processing (see below) is
+automatically stored at
+the end of the experiment. Everything you add
+during the run phase under a group node called `run_XXXXXXXX` (where this is the name of the
+current run) will be stored at the end of this particular run.
 
-
+-----------------
+#2 Post processing
+-----------------
 
 .. _logging: https://docs.python.org/2/library/logging.html
 

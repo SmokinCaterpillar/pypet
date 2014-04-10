@@ -3933,16 +3933,16 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError('CArray `%s` already exists in `%s`. Appending is not supported (yet).')
 
 
-            # if isinstance(data, np.ndarray):
-            #     size = data.size
-            if hasattr(data,'__len__'):
-                size = len(data)
-            else:
-                size = 1
-
-            if size == 0:
-                self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
-                return
+            # # if isinstance(data, np.ndarray):
+            # #     size = data.size
+            # if hasattr(data,'__len__'):
+            #     size = len(data)
+            # else:
+            #     size = 1
+            #
+            # if size == 0:
+            #     self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
+            #     return
 
             #try using pytables 3.0.0 API
             try:
@@ -3991,14 +3991,14 @@ class HDF5StorageService(StorageService, HasLogger):
             if key in group:
                 raise ValueError('Array `%s` already exists in `%s`. Appending is not supported (yet).')
 
-            if hasattr(data,'__len__'):
-                size = len(data)
-            else:
-                size = 1
-
-            if size == 0:
-                self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
-                return
+            # if hasattr(data,'__len__'):
+            #     size = len(data)
+            # else:
+            #     size = 1
+            #
+            # if size == 0:
+            #     self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
+            #     return
 
             try:
                 array=self._hdf5file.create_array(where=group, name=key,obj=data)

@@ -17,13 +17,8 @@ def main():
     # We'll simply use auto loading so all data will be loaded when needed.
     traj.v_auto_load = True
 
-    rates_frame = traj.res.summary.firing_rates # Let's get the firing rate data frame.
-    # There are actually two concepts at work here:
-    # a) we automatically load the data on the fly
-    # b) we use fast access since the result object `firing_rates` contains only a single
-    # entry, the data frame.
-    # Accordingly, pypet does not return the result object, but directly the data.
-
+    rates_frame = traj.res.summary.firing_rates.rates_frame
+    # Here we load the data automatically on the fly
 
     plt.figure()
     plt.subplot(2,1,1)

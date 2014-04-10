@@ -23,9 +23,9 @@ def run_neuron(traj):
     V_init = traj.par.neuron.V_init
     I = traj.par.neuron.I
     tau_V = traj.par.neuron.tau_V
-    dt = traj.par.simulation.dt
     tau_ref = traj.par.neuron.tau_ref
-    duration = traj.par.neuron.duration
+    dt = traj.par.simulation.dt
+    duration = traj.par.simulation.duration
 
     steps = int(duration / float(dt))
     # Create some containers for the Euler integration
@@ -53,13 +53,10 @@ def run_neuron(traj):
     print 'Finished Euler Integration'
 
     # Add the voltage trace and spike times
-    traj.f_add_result('neuron.$', V=V_array, spiketimes = spiketimes, nspikes=len(spiketimes),
+    traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
                       comment='Contains the development of the membrane potential over time '
-                              'as well as a list of spike times.')
+                              'as well as the number of spikes.')
     # This result will be renamed to `traj.results.neuron.run_XXXXXXXX`.
-    # Moreover, be aware that spiketimes will ONLY be stored if the list is non-empty,
-    # PyTables cannot store empty lists! If there are no spikes detected, the list is
-    # ignored and not stored
 
     # And finally we return the estimate of the firing rate
     return len(spiketimes) / float(traj.par.simulation.duration) *1000
@@ -105,7 +102,7 @@ def neuron_postproc(traj, result_list):
         # data frame
 
     # Finally we going to store our new firing rate table into the trajectory
-    traj.f_add_result('summary.firing_rates', rates_frame,
+    traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
                       comment='Contains a pandas data frame with all firing rates.')
 
 def add_parameters(traj):
