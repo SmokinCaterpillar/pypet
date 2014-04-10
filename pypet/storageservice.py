@@ -14,7 +14,7 @@ import os
 import warnings
 
 import numpy as np
-from pandas import DataFrame, read_hdf, Series, Panel, Panel4D
+from pandas import DataFrame, read_hdf, Series, Panel, Panel4D, HDFStore
 
 from pypet import pypetconstants
 import pypet.pypetexceptions as pex
@@ -393,6 +393,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._trajectory_name = None
         self._trajectory_index = None
         self._hdf5file = None
+        self._hdf5store = None
         self._trajectory_group = None # link to the top group in hdf5 file which is the start
         # node of a trajectory
          # remembers whether to purge duplicate comments
@@ -1031,103 +1032,103 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         if self._hdf5file is None:
 
-                if 'a' in mode or 'w' in mode:
-                    (path, filename)=os.path.split(self._filename)
-                    if not os.path.exists(path):
-                        os.makedirs(path)
+            if 'a' in mode or 'w' in mode:
+                (path, filename)=os.path.split(self._filename)
+                if not os.path.exists(path):
+                    os.makedirs(path)
 
-                    # All following try-except blocks of this form are there to allow
-                    # compatibility for PyTables 2.3.1 as well as 3.0+
+                # All following try-except blocks of this form are there to allow
+                # compatibility for PyTables 2.3.1 as well as 3.0+
+                try:
+                    # PyTables 3 API
+                    self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
+                                             title=self._file_title)
+                except AttributeError:
+                    #PyTables 2 API
+                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
+                                             title=self._file_title)
+
+                self._hdf5store = HDFStore(self._filename, mode=mode)
+
+                if not ('/'+self._trajectory_name) in self._hdf5file:
+                    # If we want to store individual items we we have to check if the
+                    # trajectory has been stored before
+                    if not msg == pypetconstants.TRAJECTORY:
+                        raise ValueError('Your trajectory cannot be found in the hdf5file, '
+                                         'please use >>traj.f_store()<< before storing anyhting else.')
+
+                    # If we want to store a trajectory it has not been stored before
+                    # create a new trajectory group
                     try:
-                        # PyTables 3 API
-                        self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
+                        self._hdf5file.create_group(where='/', name= self._trajectory_name,
+                                               title=self._trajectory_name)
                     except AttributeError:
-                        #PyTables 2 API
-                        self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
+                        self._hdf5file.createGroup(where='/', name= self._trajectory_name,
+                                               title=self._trajectory_name)
 
+                # Store a reference to the top trajectory node
+                try:
+                    self._trajectory_group = self._hdf5file.get_node('/'+self._trajectory_name)
+                except AttributeError:
+                    self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
 
+            elif mode == 'r':
+
+                if not self._trajectory_name is None and not self._trajectory_index is None:
+
+                    raise ValueError('Please specify either a name of a trajectory or an index, '
+                                 'but not both at the same time.')
+
+                if not os.path.isfile(self._filename):
+                    raise ValueError('File `' + self._filename + '` does not exist.')
+
+                try:
+                    self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
+                                             title=self._file_title)
+                except AttributeError:
+                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
+                                             title=self._file_title)
+
+                self._hdf5store = HDFStore(self._filename, mode=mode)
+
+                if not self._trajectory_index is None:
+                    # If an index is provided pick the trajectory at the corresponding
+                    # position in the trajectory node list
+                    try:
+                        nodelist = self._hdf5file.list_nodes(where='/')
+                    except AttributeError:
+                        nodelist = self._hdf5file.listNodes(where='/')
+
+                    if (self._trajectory_index >= len(nodelist) or
+                                self._trajectory_index  < -len(nodelist)):
+
+                        raise ValueError('Trajectory No. %d does not exists, there are only '
+                                         '%d trajectories in %s.'
+                                    % (self._trajectory_index,len(nodelist),self._filename))
+
+                    self._trajectory_group = nodelist[self._trajectory_index]
+                    self._trajectory_name = self._trajectory_group._v_name
+
+                elif not self._trajectory_name is None:
+                    # Otherwise pick the trajectory group by name
                     if not ('/'+self._trajectory_name) in self._hdf5file:
-                        # If we want to store individual items we we have to check if the
-                        # trajectory has been stored before
-                        if not msg == pypetconstants.TRAJECTORY:
-                            raise ValueError('Your trajectory cannot be found in the hdf5file, '
-                                             'please use >>traj.f_store()<< before storing anyhting else.')
-
-                        # If we want to store a trajectory it has not been stored before
-                        # create a new trajectory group
-                        try:
-                            self._hdf5file.create_group(where='/', name= self._trajectory_name,
-                                                   title=self._trajectory_name)
-                        except AttributeError:
-                            self._hdf5file.createGroup(where='/', name= self._trajectory_name,
-                                                   title=self._trajectory_name)
-
-                    # Store a reference to the top trajectory node
-                    try:
-                        self._trajectory_group = self._hdf5file.get_node('/'+self._trajectory_name)
-                    except AttributeError:
-                        self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
-
-                elif mode == 'r':
-
-                    if not self._trajectory_name is None and not self._trajectory_index is None:
-
-                        raise ValueError('Please specify either a name of a trajectory or an index, '
-                                     'but not both at the same time.')
-
-                    # Bad Pandas, we have to wait until the next release until opening in 'r' is
-                    # supported, so we need to open in 'a' mode
-                    mode = 'a'
-                    if not os.path.isfile(self._filename):
-                        raise ValueError('File `' + self._filename + '` does not exist.')
+                        raise ValueError('File %s does not contain trajectory %s.'
+                                         % (self._filename, self._trajectory_name))
 
                     try:
-                        self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
+                        self._trajectory_group = self._hdf5file.get_node('/'+
+                                                                        self._trajectory_name)
                     except AttributeError:
-                        self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
-                                                 title=self._file_title)
-
-                    if not self._trajectory_index is None:
-                        # If an index is provided pick the trajectory at the corresponding
-                        # position in the trajectory node list
-                        try:
-                            nodelist = self._hdf5file.list_nodes(where='/')
-                        except AttributeError:
-                            nodelist = self._hdf5file.listNodes(where='/')
-
-                        if (self._trajectory_index >= len(nodelist) or
-                                    self._trajectory_index  < -len(nodelist)):
-
-                            raise ValueError('Trajectory No. %d does not exists, there are only '
-                                             '%d trajectories in %s.'
-                                        % (self._trajectory_index,len(nodelist),self._filename))
-
-                        self._trajectory_group = nodelist[self._trajectory_index]
-                        self._trajectory_name = self._trajectory_group._v_name
-
-                    elif not self._trajectory_name is None:
-                        # Otherwise pick the trajectory group by name
-                        if not ('/'+self._trajectory_name) in self._hdf5file:
-                            raise ValueError('File %s does not contain trajectory %s.'
-                                             % (self._filename, self._trajectory_name))
-
-                        try:
-                            self._trajectory_group = self._hdf5file.get_node('/'+
-                                                                            self._trajectory_name)
-                        except AttributeError:
-                            self._trajectory_group = self._hdf5file.getNode('/'+
-                                                                            self._trajectory_name)
-                    else:
-                        raise ValueError('Please specify a name of a trajectory to load or its '
-                                         'index, otherwise I cannot open one.')
-
+                        self._trajectory_group = self._hdf5file.getNode('/'+
+                                                                        self._trajectory_name)
                 else:
-                    raise RuntimeError('You shall not pass!')
+                    raise ValueError('Please specify a name of a trajectory to load or its '
+                                     'index, otherwise I cannot open one.')
 
-                return True
+            else:
+                raise RuntimeError('You shall not pass!')
+
+            return True
         else:
             return False
 
@@ -1140,8 +1141,17 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if closing and self._hdf5file is not None and self._hdf5file.isopen:
+            f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
+            os.fsync(f_fd)
+            try:
+                self._hdf5store.flush(fsync=True)
+            except TypeError:
+                f_fd = self._hdf5store._handle.fileno()
+                self._hdf5store.flush()
+                os.fsync(f_fd)
             self._hdf5file.close()
+            self._hdf5store.close()
             self._hdf5file = None
             self._trajectory_group = None
             self._trajectory_name = None
@@ -2521,13 +2531,9 @@ class HDF5StorageService(StorageService, HasLogger):
         insert_dict['parameter_summary'] = run_summary
         insert_dict['completed'] = 1
 
+        self._hdf5file.flush()
         self._all_add_or_modify_row(single_run, insert_dict, runtable,
                                     index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
-
-
-
-
-
 
     def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
         """If desired adds an explored parameter overview table to the results in each
@@ -3789,6 +3795,8 @@ class HDF5StorageService(StorageService, HasLogger):
                         complib=self._complib,
                         fletcher32 = self.fletcher32,
                         shuffle= self.shuffle)
+            self._hdf5store.flush()
+            self._hdf5file.flush()
 
             try:
                 frame_group = group._f_get_child(key)
@@ -3840,6 +3848,8 @@ class HDF5StorageService(StorageService, HasLogger):
                         complib=self.complib,
                         fletcher32 = self.fletcher32,
                         shuffle= self.shuffle)
+            self._hdf5store.flush()
+            self._hdf5file.flush()
 
             try:
                 frame_group = group._f_get_child(key)
@@ -3891,6 +3901,8 @@ class HDF5StorageService(StorageService, HasLogger):
                         complib=self.complib,
                         fletcher32 = self.fletcher32,
                         shuffle= self.shuffle)
+            self._hdf5store.flush()
+            self._hdf5file.flush()
 
             try:
                 frame_group = group._f_get_child(key)
@@ -3899,6 +3911,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
+
         except:
             self._logger.error('Failed storing DataFrame `%s` of `%s`.' %(key,fullname))
             raise
@@ -3956,7 +3969,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data,carray,HDF5StorageService.DATA_PREFIX)
-            setattr(carray._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
+            setattr(carray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
             self._hdf5file.flush()
         except:
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
@@ -4437,7 +4450,7 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
-            pandas_data = read_hdf(self._filename, pathname, mode='a')
+            pandas_data = self._hdf5store.get(pathname)
             load_dict[name] = pandas_data
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))

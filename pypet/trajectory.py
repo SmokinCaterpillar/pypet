@@ -1431,6 +1431,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             Number of runs that were supposed to be executed with this environment
 
+        :return
+
+            List of indices that were completed
+
         """
         self._logger.info('Removing incomplete runs.')
 
@@ -1445,6 +1449,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             name = info_dict['name']
             if completed and timestamp >= start_timestamp and idx not in index_set:
                 self._run_information[name]['completed'] = 0
+
+        cleaned_run_indices = []
+        for index in run_indices:
+            if self.f_is_completed(index):
+                cleaned_run_indices.append(index)
 
         # Next, delete all the data for not completed runs
         for run_name, info_dict in self._run_information.iteritems():
@@ -1482,6 +1491,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         if (self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False)
                             and self.f_get('%s.runs.%s').f_has_children()):
                             raise RuntimeError('Something is wrong!')
+
+        return cleaned_run_indices
 
 
 

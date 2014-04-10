@@ -778,6 +778,9 @@ class Environment(HasLogger):
             raise ValueError('You CANNOT perform immediate post-processing if you DO '
                                'use a pool.')
 
+        if wrap_mode == pypetconstants.WRAP_MODE_QUEUE and immediate_postproc:
+            raise ValueError('You CANNOT perform immediate post-processing if you DO use a pool.')
+
 
         self._sumatra_project=sumatra_project
         self._sumatra_reason = sumatra_reason
@@ -1633,30 +1636,36 @@ class Environment(HasLogger):
 
         # Now we have to reconstruct previous results
         result_tuple_list = []
+        full_filename_list=[]
         for filename in os.listdir(self._continue_path):
             _, ext = os.path.splitext(filename)
 
             if ext != '.rcnt':
                 continue
 
-            cnt_file = open(os.path.join(self._continue_path, filename), 'rb')
+            full_filename = os.path.join(self._continue_path, filename)
+            cnt_file = open(full_filename, 'rb')
             result_dict = dill.load(cnt_file)
             cnt_file.close()
             result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
+            full_filename_list.append(full_filename)
 
         # Sort according to counter
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
         result_list = [x[1] for x in result_tuple_list]
 
         run_indices = [result[0] for result in result_list]
-        # Remove incomplete runs
-        self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
+        # Remove incomplete runs and check which result snapshots need to be removed
+        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
+        cleaned_run_indices_set = set(cleaned_run_indices)
 
-        # Check how many runs are about to be done
-        count = 0
-        for run_dict in self._traj.f_get_run_information(copy=False).itervalues():
-            if not run_dict['completed']:
-                count += 1
+        new_result_list = []
+        for idx, result_tuple in enumerate(result_list):
+            index = result_tuple[0]
+            if index in cleaned_run_indices_set:
+                new_result_list.append(result_tuple)
+            else:
+                os.remove(full_filename_list[idx])
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name='environment.%s.continued' % self.v_name
@@ -1666,7 +1675,7 @@ class Environment(HasLogger):
 
         self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
 
-        return result_list
+        return new_result_list
 
 
     def _prepare_runs(self, pipeline):

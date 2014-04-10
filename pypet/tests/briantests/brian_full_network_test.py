@@ -103,13 +103,14 @@ def run_net(traj):
     run(25*msecond,report='text')
 
     traj.v_standard_result = BrianMonitorResult
-    traj.f_add_result('SpikeMonitor',MSpike)
     traj.f_add_result('SpikeMonitorAr',MSpike, storage_mode = BrianMonitorResult.ARRAY_MODE)
+    traj.f_add_result('SpikeMonitor', MSpike)
     traj.f_add_result('PopulationSpikeCounter', MPopSpike)
     traj.f_add_result('PopulationRateMonitor',MPopRate)
     traj.f_add_result('StateMonitorV', MStateV)
     traj.f_add_result('StateMonitorwMean', MStatewMean)
     traj.f_add_result('Counts',MCounts)
+
     traj.f_add_result('StateSpikevmw', MStateSpike)
     traj.f_add_result('StateSpikevmwAr', MStateSpike,storage_mode = BrianMonitorResult.ARRAY_MODE)
     traj.f_add_result('MultiState',MMultiState)
@@ -183,7 +184,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=True,
-                          use_pool=False,
+                          use_pool=True,
                           wrap_mode='QUEUE',
                           ncores=2)
 

@@ -11,6 +11,7 @@ from pypet.parameter import Parameter
 import logging
 import multiprocessing as mp
 import pickle
+import tables
 
 import os
 import dill
@@ -79,7 +80,18 @@ class ContinueTest(TrajectoryComparator):
         traj.f_explore(self.explored)
 
 
+    def _remove_nresults_from_traj(self, nresults):
 
+        hdf5_file = tables.openFile(self.filenames[0], mode='a')
+        runtable = hdf5_file.getNode('/'+self.trajs[0].v_name +'/overview/runs')
+
+        for row in runtable.iterrows(0, nresults, 1):
+            row['completed'] = 0
+            row.update()
+
+        runtable.flush()
+        hdf5_file.flush()
+        hdf5_file.close()
 
     def _remove_nresults(self, nresults, continue_folder):
 
@@ -147,6 +159,49 @@ class ContinueTest(TrajectoryComparator):
                                     load_other_data=pypetconstants.OVERWRITE_DATA)
 
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
+
+    def test_continueing_remove_completed(self):
+        self.filenames = [make_temp_file('test_removal_comp.hdf5'), 0]
+
+        self.envs=[]
+        self.trajs = []
+
+        for irun,filename in enumerate(self.filenames):
+            if isinstance(filename,int):
+                filename = self.filenames[filename]
+
+            self.make_environment( irun, filename)
+
+        self.param_dict={}
+        create_param_dict(self.param_dict)
+
+        for irun in range(len(self.filenames)):
+            add_params(self.trajs[irun], self.param_dict)
+
+
+        self.explore(self.trajs[0])
+        self.explore(self.trajs[1])
+
+        for irun in range(len(self.filenames)):
+            self.make_run(self.envs[irun])
+
+        traj_name = self.trajs[0].v_name
+        continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
+        self._remove_nresults_from_traj(2)
+        self.make_environment(0, self.filenames[0])
+        self.envs[-1].f_continue(trajectory_name = traj_name)
+
+        self.trajs[-1]=self.envs[-1].v_trajectory
+
+        for irun in range(len(self.filenames)+1):
+            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_derived_parameters=pypetconstants.OVERWRITE_DATA,
+                                    load_results=pypetconstants.OVERWRITE_DATA,
+                                    load_other_data=pypetconstants.OVERWRITE_DATA)
+
+        self.compare_trajectories(self.trajs[-1],self.trajs[1])
+
 
     def test_removal(self):
         self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]

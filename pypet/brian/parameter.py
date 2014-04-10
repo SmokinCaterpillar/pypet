@@ -867,8 +867,6 @@ class BrianMonitorResult(Result):
         if self._storage_mode==BrianMonitorResult.TABLE_MODE:
             spike_dict={}
 
-
-
             if len(monitor.spikes)>0:
                 zip_lists = zip(*monitor.spikes)
                 time_list = zip_lists[1]
@@ -909,7 +907,8 @@ class BrianMonitorResult(Result):
                         self.f_set(**{key:spikes})
 
                 spiked_neurons = sorted(list(spiked_neurons))
-                self.f_set(neurons_with_spikes=spiked_neurons)
+                if spiked_neurons:
+                    self.f_set(neurons_with_spikes=spiked_neurons)
 
                 for varname in varnames:
                      for neuron in range(len(monitor.source)):
@@ -917,13 +916,9 @@ class BrianMonitorResult(Result):
                          if len(values)>0:
                              key = varname+'_' + format_string % neuron
                              self.f_set(**{key:values})
-
-
         else:
                 raise RuntimeError('You shall not pass!')
 
-
-     
     def _extract_spike_monitor(self,monitor):
         
         #assert isinstance(monitor, SpikeMonitor)
@@ -971,10 +966,11 @@ class BrianMonitorResult(Result):
                         spiked_neurons.add(neuron)
 
                         key = 'spiketimes_' +format_string % neuron
-                        self.f_set(**{key:spikes})
+                        self.f_set(**{key: spikes})
 
                 spiked_neurons = sorted(list(spiked_neurons))
-                self.f_set(neurons_with_spikes=spiked_neurons)
+                if spiked_neurons:
+                    self.f_set(neurons_with_spikes=spiked_neurons)
 
         else:
                 raise RuntimeError('You shall not pass!')
