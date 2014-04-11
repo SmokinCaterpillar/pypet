@@ -73,6 +73,9 @@ CONFIG_GROUP = 'CONFIG_GROUP'
 GROUP = 'GROUP'
 LEAF = 'LEAF'
 
+# Types are not allowed to be added during single runs
+SENSITIVE_TYPES = set([PARAMETER, PARAMETER_GROUP, CONFIG, CONFIG_GROUP])
+
 LENGTH_WARNING_THRESHOLD = 100
 
 #SUBTREE Mapping
@@ -1077,6 +1080,11 @@ class NaturalNamingInterface(HasLogger):
 
             if group_type_name == GROUP:
                 group_type_name, type_name = self._determine_types(start_node, name, True)
+
+        # Check if we are allowed to add the data
+        if self._root_instance._is_run and type_name in SENSITIVE_TYPES:
+            raise TypeError('You are not allowed to add config or parameter data or groups '
+                            'during a single run.')
 
         # Check if the name fulfils the prefix conditions, if not change the name accordingly.
         if add_prefix:
@@ -2322,6 +2330,13 @@ class NNGroupNode(NNTreeNode):
                                        max_depth=self._nn_interface._get_max_depth(),
                                        auto_load=self._nn_interface._get_auto_load())
 
+    def f_get_root(self):
+        """Returns the root node of the tree.
+
+        Either a full trajectory or a single run container.
+
+        """
+        return self._nn_interface._root_instance
 
     def f_iter_nodes(self, recursive=True):
         """Iterates recursively (default) over nodes hanging below this group.

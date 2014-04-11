@@ -170,8 +170,6 @@ class BrianFullNetworkTest(TrajectoryComparator):
         self.compare_trajectories(self.traj, traj2)
 
 
-
-
 class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
     def setUp(self):
@@ -186,6 +184,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                                                         BrianMonitorResult],
                           multiproc=True,
                           use_pool=True,
+                          complib='blosc',
                           wrap_mode='QUEUE',
                           ncores=2)
 

@@ -552,6 +552,33 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertFalse(contains)
 
+    def test_root_getting(self):
+
+        traj = Trajectory()
+
+        traj.f_add_config_group('ff')
+
+        root = traj.ff.f_get_root()
+
+        self.assertTrue(root is traj)
+
+    def test_not_adding_pars_during_single_run(self):
+        traj = Trajectory()
+
+        traj._is_run = True
+
+        with self.assertRaises(TypeError):
+            traj.f_add_parameter('dd')
+
+        with self.assertRaises(TypeError):
+            traj.f_add_parameter_group('dd')
+
+        with self.assertRaises(TypeError):
+            traj.f_add_config('dd')
+
+        with self.assertRaises(TypeError):
+            traj.f_add_config_group('dd')
+
     def test_attribute_error_raises_when_leaf_and_group_with_same_name_are_added(self):
 
         self.traj = Trajectory()

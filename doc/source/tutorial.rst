@@ -95,6 +95,8 @@ input current :math:`I`.
 Don't worry if you are not familiar with pandas, basically a pandas_ DataFrame instantiates
 a table, like a 2D numpy array, but we can index into the table by more than just integers.
 
+The entire source code of this example can be found here: ref:`example-13`.
+
 -------------------
 Naming convention
 -------------------
@@ -189,6 +191,7 @@ Ok, so let's start with creating an environment:
 
 .. code-block::python
 
+    from pypet.environment import Environment
     env = Environment(trajectory='FiringRate',
                       comment='Experiment to measure the firing rate '
                             'of a leaky integrate and fire neuron. '
@@ -377,6 +380,8 @@ Here is our exploration, we try dimensionless currents `I` from 0 to 1.5 in step
 different refractory periods `tau_ref`:
 
 .. code-block::python
+
+    from pypet.utils.explore import cartesian_product
 
     explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
                     'neuron.tau_ref': [5.0, 7.5, 10.0]}
@@ -678,6 +683,308 @@ At first we extract the range of parameters we used:
 
 .. code-block::python
 
+    I_range = traj.par.neuron.f_get('I').f_get_range()
+    ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
+
+Note that we use `f_get` here since we are interested in the parameter container not the
+data value. We can directly extract the parameter range from the container.
+
+Next, we create a two dimensional table aka pandas_ data frame with the currents as the
+row indices and the refractory periods as column indices.
+
+.. code-block::python
+
+    I_index = sorted(set(I_range))
+    ref_index = sorted(set(ref_range))
+    rates_frame = pd.DataFrame(columns=ref_index, index=I_index)
+
+
+Now we iterate through the result tuples and sort them according write the
+firing rates into the table according to the parameter settings in this run.
+
+.. code-block::python
+
+    for result_tuple in result_list:
+            run_idx = result_tuple[0]
+            firing_rates = result_tuple[1]
+            I_val = I_range[run_idx]
+            ref_val = ref_range[run_idx]
+            rates_frame.loc[I_val, ref_val] = firing_rates # Put the firing rate into the
+
+
+Finally, we add the filled data frame to the trajectory.
+
+.. code-block::python
+
+    traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
+                          comment='Contains a pandas data frame with all firing rates.')
+
+Since we are no longer in the run phase, this result will be found in
+`traj.results.summary.firing_rate`.
+
+So this is our post processing where we simply collected all firing rates and sorted
+them into a table. You can do much more in the post processing phase. You could even
+expand the trajectory to trigger a new run phase. Accordingly, you can adaptively
+and iteratively search the parameter space. You can even do this on the fly, while there
+are still single runs being executed, see :ref:`more-about-postproc`.
+
+--------------------------------------
+Final steps in the main script
+--------------------------------------
+
+Still we actually need to make the environment execute all the stuff, so this is our main
+script after we generated the environment and added the parameters.
+First, we add the post-processing function. Secondly we tell the environment to
+run our function `run_neuron`. Our postprocessing function will be automatically called
+after all runs have finished.
+
+.. code-block::python
+
+    # Ad the postprocessing function
+    env.f_add_postprocessing(neuron_postproc)
+
+    # Run the experiment
+    env.f_run(run_neuron)
+
+
+Both function take additional arguments which will be automatically passed to the job and
+post-processing function.
+
+For instance:
+
+.. code-block::python
+
+    env.f_run(myjob, 42, 'fortytwo', test=33.3)
+
+Will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.3`` as the
+keyword argument `test` to your run function. So the definition of the run function could look
+like this:
+
+.. code-block::python
+
+    def myjob(traj, number, text, test):
+        # do something
+
+Remember that the trajectory will always be passed as first argument.
+This works analogously for the
+post-processing function as well. Yet, there is the slight difference that your post-processing
+function needs to accept the result list as second positional argument followed by your
+positional and keyword arguments.
+
+^^^^^^^^^^^^^^^^^^
+Pipelining
+^^^^^^^^^^^^^^^^^^
+
+Since these three steps pre-processing, run-phase, post-processing define a common pipeline,
+you can actually also make *pypet* supervise all three steps at once.
+
+You can define a pipeline function, that does the pre-processing and returns
+the job to do plus some optional additional arguments and the post-processing function
+and some optional additional arguments.
+
+So you could define the following pipeline function:
+
+.. code-block::python
+
+    def mypipeline(traj):
+        """A pipeline function that defines the entire experiment
+
+        :param traj:
+
+            Container for results and parameters
+
+        :return:
+
+            Two tuples. First tuple contains the actual run function plus additional
+            arguments (yet we have none). Second tuple contains the
+            postprocessing function including additional arguments.
+
+        """
+        traj.f_add_parameter('neuron.V_init', 0.0,
+                         comment='The initial condition for the '
+                                    'membrane potential')
+        traj.f_add_parameter('neuron.I', 0.0,
+                             comment='The externally applied current.')
+        traj.f_add_parameter('neuron.tau_V', 10.0,
+                             comment='The membrane time constant in milliseconds')
+        traj.f_add_parameter('neuron.tau_ref', 5.0,
+                            comment='The refractory period in milliseconds '
+                                    'where the membrane potnetial '
+                                    'is clamped.')
+
+        traj.f_add_parameter('simulation.duration', 1000.0,
+                             comment='The duration of the experiment in '
+                                    'milliseconds.')
+        traj.f_add_parameter('simulation.dt', 0.1,
+                             comment='The step size of an Euler integration step.')
+        explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
+                    'neuron.tau_ref': [5.0, 7.5, 10.0]}
+
+        explore_dict = cartesian_product(explore_dict, ('neuron.tau_ref', 'neuron.I'))
+        # The second argument, the tuple, specifies the order of the cartesian product,
+        # The variable on the right most side changes fastest and defines the
+        # 'inner for-loop' of the cartesian product
+
+        traj.f_explore(explore_dict)
+        return (run_neuron,(),{}), (neuron_postproc,(),{})
+
+The pipeline function has to only accept the trajectory as first argument and
+has to return 2 tuples, one for the run function and one for the
+post-processing. Since none of our functions takes any other arguments than the trajectory
+(and the pos-processing function the result list) we simply return an empty
+tuple ``()`` for no arguments and an empty dictionary ``{}`` for no keyword arguments.
+
+The entire main script then simply boils down to:
+
+.. code-block::python
+
+     env = Environment(trajectory='FiringRatePipeline',
+                      comment='Experiment to measure the firing rate '
+                            'of a leaky integrate and fire neuron. '
+                            'Exploring different input currents, '
+                            'as well as refractory periods',
+                      add_time=False, # We don't want to add the current time to the name,
+                      log_folder='./logs/',
+                      log_level=logging.INFO,
+                      log_stdout=True,
+                      multiproc=True,
+                      ncores=2, #My laptop has 2 cores ;-)
+                      filename='./hdf5/', # We only pass a folder here, so the name is chosen
+                      # automatically to be the same as the Trajectory
+                      )
+
+    env.f_pipeline(mypipeline)
+
+And that's it, than everything including the pre-processing and addition of parameters
+is supervised by pypet.
+
+--------------
+#4 Analysis
+--------------
+
+The final stage of our experiment encompasses the analysis of our raw data. We won't do much
+here, simply plot our firing rate table and show one example voltage trace.
+All this analysis happens in a completely different script and is executed independently
+of the previous three steps except that we need the data from them in form of a trajectory.
+
+We will make use of the auto load functionality and load results in the background as
+we need them. Since we don't want to do any more single runs, we can spare us an
+environment and only use a trajectory container.
+
+
+.. code-block::python
+
+    from pypet.trajectory import Trajectory
+    import matplotlib.pyplot as plt
+
+    # This time we don't need an environment since we just going to look
+    # at data in the trajectory
+    traj = Trajectory('FiringRate', add_time=False)
+
+    # Let's load the trajectory from the file
+    # Only load the parameters, we will load the results on the fly as we need them
+    traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
+                load_results=0, load_derived_parameters=0)
+
+    # We'll simply use auto loading so all data will be loaded when needed.
+    traj.v_auto_load = True
+
+    rates_frame = traj.res.summary.firing_rates.rates_frame
+    # Here we load the data automatically on the fly
+
+    plt.figure()
+    plt.subplot(2,1,1)
+    #Let's iterate through the columns and plot the different firing rates :
+    for tau_ref, I_col in rates_frame.iteritems():
+        plt.plot(I_col.index, I_col, label='Avg. Rate for tau_ref=%s' % str(tau_ref))
+
+    # Label the plot
+    plt.xlabel('I')
+    plt.ylabel('f[Hz]')
+    plt.title('Firing as a function of input current `I`')
+    plt.legend()
+
+    # Also let's plot an example run, how about run 13 ?
+    example_run = 13
+
+    traj.v_idx = example_run # We make the trajectory behave as a single run container.
+    # This short statement has two major effects:
+    # a) all explored parameters are set to the value of run 13,
+    # b) if there are tree nodes with names other than the current run aka `run_00000013`
+    # they are simply ignored, if we use the `$` sign or the `crun` statement,
+    # these are translated into `run_00000013`.
+
+    # Get the example data
+    example_I = traj.I
+    example_tau_ref = traj.tau_ref
+    example_V = traj.results.neuron.crun.V # Here crun stands for run_00000013
+
+    # We need the time step...
+    dt = traj.dt
+    # ...to create an x-axis for the plot
+    dt_array = [irun * dt for irun in range(len(example_V))]
+
+    # And plot the development of V over time,
+    # Since this is rather repetitive, we only
+    # plot the first eighth of it.
+    plt.subplot(2,1,2)
+    plt.plot(dt_array, example_V)
+    plt.xlim((0, dt*len(example_V)/8))
+
+    # Label the axis
+    plt.xlabel('t[ms]')
+    plt.ylabel('V')
+    plt.title('Example of development of V for I=%s, tau_ref=%s in run %d' %
+              (str(example_I), str(example_tau_ref), traj.v_idx))
+
+    # And let's take a look at it
+    plt.show()
+
+    # Finally revoke the `traj.v_idx=13` statement and set everything back to normal.
+    # Since our analysis is done here, we could skip that, but it is always a good idea
+    # to do that.
+    traj.f_restore_default()
+
+Finally, I just want to go make some final remarks on this script.
+
+.. code-block::python
+
+    traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
+                load_results=0, load_derived_parameters=0)
+
+Describes how the different subtrees of the trajectory are loaded (`load_parameters`
+also includes the `config` branch). 0 means no data at all is loaded,
+1 means only the containers are loaded but without any data and 2 means the
+container including the data is loaded. So here we load all parameters
+and all config parameters with data and no results whatsoever.
+
+Yet since we say ``traj.v_auto_load = True`` the statement
+``rates_frame = traj.res.summary.firing_rates.rates_frame`` will return our
+2D table of firing rates because the data is loaded in the background while we
+request it.
+
+
+.. code-block::python
+
+    traj.v_idx = example_run
+
+Is an important line in the code. Setting the properties `v_idx` or `v_as_run` or
+using the function func:`~pypet.trajectory.Trajectory.f_as_run` are equivalent.
+These give you a powerful tool in data analysis because they make your trajectory
+behave like a particular single run. Thus, all explored parameter's values will be
+set to the corresponding values of that particular run and all iterator functions
+like :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` will be affected to spare
+all data below groups `run_XXXXXXXX` except for the current chosen run
+and won't enumerate their children.
+
+To restore everythin back to normal simply call
+:func:`~pypet.trajectory.Trajectory.f_restore_default`.
+
+This concludes our small tutorial. If you are interested in more advance concepts
+look into the cookbook or check out the code snippets in the example section.
+
+Cheers,
+    Robert
 
 
 .. _logging: https://docs.python.org/2/library/logging.html
