@@ -95,7 +95,7 @@ def main():
                                                           # again the lorenz attractor
     add_parameters(traj)
 
-    # 2nd phase preparation
+    # 1st phase preparation
     # Let's check which function we want to use
     if traj.diff_name=='diff_lorenz':
         diff_eq = diff_lorenz
@@ -115,14 +115,15 @@ def main():
     ]})
     # 3 different conditions are enough for now
 
-    # 3rd phase let's run the experiment
+    # 2nd phase let's run the experiment
     # We pass 'euler_scheme' as our top-level simulation function and
     # the Roessler function as an additional argument
     env.f_run(euler_scheme, diff_eq)
 
+    # Again no post-processing
 
-    # 4th phase post-processing.
-    # I would recommend to do post-processing completely independent from the simulation
+    # 4th phase analysis.
+    # I would recommend to do the analysis completely independent from the simulation
     # but for simplicity let's do it here.
     # We won't reload the trajectory this time but simply update the skeleton
     traj.f_update_skeleton()

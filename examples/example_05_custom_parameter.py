@@ -162,7 +162,7 @@ def main():
     # 1st phase parameter addition
     add_parameters(traj)
 
-    # 2nd phase preparation
+    # 1st phase preparation
     # We will add the differential equation (well, its source code only) as a derived parameter
     traj.f_add_derived_parameter(FunctionParameter,'diff_eq', diff_lorenz,
                                  comment='Source code of our equation!')
@@ -175,13 +175,14 @@ def main():
     ]})
     # 3 different conditions are enough for an illustrative example
 
-    # 3rd phase let's run the experiment
+    # 2nd phase let's run the experiment
     # We pass `euler_scheme` as our top-level simulation function and
     # the Lorenz equation 'diff_lorenz' as an additional argument
     env.f_run(euler_scheme, diff_lorenz)
 
+    # We don't have a 3rd phase of post-processing here
 
-    # 4th phase post-processing.
+    # 4th phase analysis.
     # I would recommend to do post-processing completely independent from the simulation,
     # but for simplicity let's do it here.
 

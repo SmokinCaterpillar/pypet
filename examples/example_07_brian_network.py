@@ -105,11 +105,11 @@ def main():
     # 1st Add the parameters
     add_params(traj)
 
-    # 2nd prepare, we want to explore the different network sizes and different tauw time scales
+    # 1st prepare, we want to explore the different network sizes and different tauw time scales
     traj.f_explore(cartesian_product({traj.f_get('N').v_full_name:[50,60],
                            traj.f_get('tauw').v_full_name:[30*ms,40*ms]}))
 
-    # 3rd let's run our experiment
+    # 2nd let's run our experiment
     env.f_run(run_net)
 
     # You can take a look at the results in the hdf5 file if you want!

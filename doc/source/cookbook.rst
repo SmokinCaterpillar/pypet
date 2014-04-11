@@ -12,5 +12,4 @@ Here you can find some more explanations on various concepts of *pypet*.
       cookbook/trajectory
       cookbook/environment
       cookbook/parameter
-      cookbook/concept
       cookbook/brian.rst
