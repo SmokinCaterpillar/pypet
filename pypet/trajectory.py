@@ -564,16 +564,21 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         stores it where `XXXXXXXXX` is the index of this run.
 
         """
-        for group_name in self._run_parent_groups:
-            group = self._run_parent_groups[group_name]
-            if group.f_contains(self.v_name):
-                group.f_store_child(self.v_name, recursive=True)
-
-
-    def _store_final(self):
-        """Signals the storage service that single run is completed"""
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name)
+                                    trajectory_name=self.v_trajectory_name,
+                                    store_final=False, store_data = True)
+
+
+
+    def _store_final(self, store_data=False):
+        """Signals the storage service that single run is completed
+
+        :param store_data: If all data should be stored as in `f_store`.
+
+        """
+        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+                                    trajectory_name=self.v_trajectory_name,
+                                    store_final=True, store_data = store_data)
 
     def f_store_item(self, item, *args,**kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""

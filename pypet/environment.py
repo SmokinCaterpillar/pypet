@@ -151,18 +151,10 @@ def _single_run(args):
         result =runfunc(traj,*runparams,**kwrunparams)
 
 
-
-        if automatic_storing:
-            root.info('Evoke Storing run %d '
-                      '(Either storing directly or sending trajectory to queue)' % idx)
-            # Store the single run
-            traj.f_store()
-            root.info('Finished Storing run %d' % idx)
-
         # Measure time of finishing
         traj._set_finish_time()
-        # And store some meta data
-        traj._store_final()
+        # And store some meta data and all other data if desired
+        traj._store_final(store_data=automatic_storing)
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
@@ -2231,6 +2223,17 @@ class Environment(HasLogger):
 
         if conf_list:
             self._traj.f_store_items(conf_list)
+
+        #Final check if traj was successfully completed
+        self._traj.f_load(load_all=pypetconstants.LOAD_NOTHING)
+        all_completed = True
+        for run_name in self._traj.f_get_run_names():
+            if not self._traj.f_is_completed(run_name):
+                all_completed = False
+                self._logger.error('Run `%s` did NOT completed!' % run_name)
+        if all_completed:
+            self._logger.info('All runs of trajectory `%s` were completed succesfully.' %
+                              self._traj.v_name)
 
         if self._sumatra_project is not None:
             self._finish_sumatra()

@@ -439,7 +439,7 @@ class HDF5StorageService(StorageService, HasLogger):
     @complib.setter
     def complib(self, complib):
         self._complib = complib
-        self._make_filters()
+        self._filters=None
 
     @property
     def complevel(self):
@@ -449,7 +449,7 @@ class HDF5StorageService(StorageService, HasLogger):
     @complevel.setter
     def complevel(self, complevel):
         self._complevel = complevel
-        self._make_filters()
+        self._filters=None
 
 
     @property
@@ -460,7 +460,7 @@ class HDF5StorageService(StorageService, HasLogger):
     @fletcher32.setter
     def fletcher32(self, fletcher32):
         self._fletcher32 = bool(fletcher32)
-        self._make_filters()
+        self._filters=None
 
     @property
     def shuffle(self):
@@ -470,7 +470,7 @@ class HDF5StorageService(StorageService, HasLogger):
     @shuffle.setter
     def shuffle(self, shuffle):
         self._shuffle = bool(shuffle)
-        self._make_filters()
+        self._filters=None
 
     @property
     def pandas_append(self):
@@ -509,9 +509,13 @@ class HDF5StorageService(StorageService, HasLogger):
         """Direct link to the overview group"""
         return self._all_create_or_get_groups('overview')[0]
 
-    def _make_filters(self):
-        self._filters = pt.Filters(complib=self._complib, complevel=self._complevel,
-                                   shuffle=self._shuffle, fletcher32=self._fletcher32)
+    def _get_filters(self):
+        """Makes filter and closes pandas store"""
+        if self._filters is None:
+            self._filters = pt.Filters(complib=self._complib, complevel=self._complevel,
+                                       shuffle=self._shuffle, fletcher32=self._fletcher32)
+            self._srvc_close_pandas_store()
+
         return self._filters
 
 
@@ -735,6 +739,10 @@ class HDF5StorageService(StorageService, HasLogger):
             * :const:`pypet.pypetconstants.SINGLE_RUN` ('SINGLE_RUN')
 
                 :param stuff_to_store: The single run to be stored
+
+                :param store_data: If all data belwo `run_XXXXXXXX` should be stored
+
+                :param store_final: If final meta info should be stored
 
             * :const:`pypet.pypetconstants.LEAF`
 
@@ -976,7 +984,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._logger.warning('Could not find `%s` in traj, '
                                      'using default value.' % name)
 
-        self._make_filters()
+        self._filters=None
 
 
 
@@ -1030,6 +1038,7 @@ class HDF5StorageService(StorageService, HasLogger):
             `False` if the file was already open before calling this function
 
         """
+        self._mode = mode
         if self._hdf5file is None:
 
             if 'a' in mode or 'w' in mode:
@@ -1048,7 +1057,6 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
                                              title=self._file_title)
 
-                self._hdf5store = HDFStore(self._filename, mode=mode)
 
                 if not ('/'+self._trajectory_name) in self._hdf5file:
                     # If we want to store individual items we we have to check if the
@@ -1089,7 +1097,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
                                              title=self._file_title)
 
-                self._hdf5store = HDFStore(self._filename, mode=mode)
+
 
                 if not self._trajectory_index is None:
                     # If an index is provided pick the trajectory at the corresponding
@@ -1132,6 +1140,32 @@ class HDF5StorageService(StorageService, HasLogger):
         else:
             return False
 
+    def _srvc_open_pandas_store(self):
+        """Opens a pandas storage if this has not happened before"""
+        if self._hdf5store is None:
+            self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
+                                   complevel=self._complevel, fletcher32= self._fletcher32)
+
+    def srvc_get_pandas_store(self):
+        """Returns the hdf5 store, opens one if None"""
+        if self._hdf5store is None:
+            self._srvc_open_pandas_store()
+        return self._hdf5store
+
+    def _srvc_close_pandas_store(self):
+        """Closes a pandas store if it exists"""
+        if self._hdf5store is not None:
+            if self._hdf5store is not None:
+                try:
+                    self._hdf5store.flush(fsync=True)
+                except TypeError:
+                    f_fd = self._hdf5store._handle.fileno()
+                    self._hdf5store.flush()
+                    os.fsync(f_fd)
+                self._hdf5store.close()
+                self._hdf5store = None
+
+
     def _srvc_closing_routine(self, closing):
         """Routine to close an hdf5 file
 
@@ -1144,14 +1178,8 @@ class HDF5StorageService(StorageService, HasLogger):
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
             os.fsync(f_fd)
-            try:
-                self._hdf5store.flush(fsync=True)
-            except TypeError:
-                f_fd = self._hdf5store._handle.fileno()
-                self._hdf5store.flush()
-                os.fsync(f_fd)
+            self._srvc_close_pandas_store()
             self._hdf5file.close()
-            self._hdf5store.close()
             self._hdf5file = None
             self._trajectory_group = None
             self._trajectory_name = None
@@ -2504,36 +2532,45 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, single_run):
+    def _srn_store_single_run(self, single_run, store_data, store_final):
         """ Stores a single run instance to disk (only meta data)"""
 
-        idx = single_run.v_idx
+        if store_data:
+            self._logger.info('Storing Data of single run `%s`.' % single_run.v_name)
+            for group_name in single_run._run_parent_groups:
+                group = single_run._run_parent_groups[group_name]
+                if group.f_contains(single_run.v_name):
+                    self._tree_store_tree(group, single_run.v_name, recursive=True)
 
-        add_table = self._overview_explored_parameters_runs
+        if store_final:
+            self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
+            idx = single_run.v_idx
 
-        # For better readability and if desired add the explored parameters to the results
-        # Also collect some summary information about the explored parameters
-        # So we can add this to the `run` table
-        run_summary = self._srn_add_explored_params(single_run.v_name,
-                                                    single_run._explored_parameters.values(),
-                                                    add_table)
+            add_table = self._overview_explored_parameters_runs
 
-        # Finally, add the real run information to the `run` table
-        runtable = getattr(self._overview_group,'runs')
+            # For better readability and if desired add the explored parameters to the results
+            # Also collect some summary information about the explored parameters
+            # So we can add this to the `run` table
+            run_summary = self._srn_add_explored_params(single_run.v_name,
+                                                        single_run._explored_parameters.values(),
+                                                        add_table)
 
-        # If the table is not large enough already (maybe because the trajectory got expanded
-        # We have to manually increase it here
-        actual_rows = runtable.nrows
-        if idx+1 > actual_rows:
-            self._all_fill_run_table_with_dummys(actual_rows, idx+1)
+            # Finally, add the real run information to the `run` table
+            runtable = getattr(self._overview_group,'runs')
 
-        insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
-        insert_dict['parameter_summary'] = run_summary
-        insert_dict['completed'] = 1
+            # If the table is not large enough already (maybe because the trajectory got expanded
+            # We have to manually increase it here
+            actual_rows = runtable.nrows
+            if idx+1 > actual_rows:
+                self._all_fill_run_table_with_dummys(actual_rows, idx+1)
 
-        self._hdf5file.flush()
-        self._all_add_or_modify_row(single_run, insert_dict, runtable,
-                                    index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
+            insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
+            insert_dict['parameter_summary'] = run_summary
+            insert_dict['completed'] = 1
+
+            self._hdf5file.flush()
+            self._all_add_or_modify_row(single_run, insert_dict, runtable,
+                                        index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
     def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
         """If desired adds an explored parameter overview table to the results in each
@@ -2594,13 +2631,13 @@ class HDF5StorageService(StorageService, HasLogger):
                                                             name='explored_parameters',
                                                             description=paramdescriptiondict,
                                                             title='explored_parameters',
-                                                            filters=self._filters)
+                                                            filters=self._get_filters())
                 except AttributeError:
                     paramtable = self._hdf5file.createTable(where=rungroup,
                                                             name='explored_parameters',
                                                             description=paramdescriptiondict,
                                                             title='explored_parameters',
-                                                            filters=self._filters)
+                                                            filters=self._get_filters())
 
         runsummary = ''
         paramlist = sorted(paramlist, key= lambda name: name.v_name + name.v_location)
@@ -2739,21 +2776,21 @@ class HDF5StorageService(StorageService, HasLogger):
                     table = self._hdf5file.create_table(where=where_node, name=tablename,
                                                    description=description, title=tablename,
                                                    expectedrows=expectedrows,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
                 except AttributeError:
                     table = self._hdf5file.createTable(where=where_node, name=tablename,
                                                    description=description, title=tablename,
                                                    expectedrows=expectedrows,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
             else:
                 try:
                     table = self._hdf5file.create_table(where=where_node, name=tablename,
                                                    description=description, title=tablename,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
                 except AttributeError:
                     table = self._hdf5file.createTable(where=where_node, name=tablename,
                                                    description=description, title=tablename,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
         else:
             try:
                 table = where_node._f_get_child(tablename)
@@ -3212,9 +3249,11 @@ class HDF5StorageService(StorageService, HasLogger):
         for name in split_key:
             if not name in newhdf5group:
                 try:
-                    newhdf5group=self._hdf5file.create_group(where=newhdf5group, name=name, title=name)
+                    newhdf5group=self._hdf5file.create_group(where=newhdf5group, name=name,
+                                                             title=name, filters=self._get_filters())
                 except AttributeError:
-                    newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name, title=name)
+                    newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name,
+                                                            title=name, filters=self._get_filters())
                 created = True
             else:
                 try:
@@ -3790,12 +3829,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
             name = group._v_pathname+'/' +key
-            data.to_hdf(self._filename, name,
-                        complevel=self._complevel,
-                        complib=self._complib,
-                        fletcher32 = self.fletcher32,
-                        shuffle= self.shuffle)
-            self._hdf5store.flush()
+            pandas_store = self.srvc_get_pandas_store()
+            pandas_store.put(name, data)
+            pandas_store.flush()
             self._hdf5file.flush()
 
             try:
@@ -3840,15 +3876,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
             name = group._v_pathname+'/' +key
-            data.to_hdf(self._filename,
-                        name,
-                        format=self.pandas_format,
-                        append= self.pandas_append,
-                        complevel=self.complevel,
-                        complib=self.complib,
-                        fletcher32 = self.fletcher32,
-                        shuffle= self.shuffle)
-            self._hdf5store.flush()
+            pandas_store = self.srvc_get_pandas_store()
+            pandas_store.put(name, data,
+                             format=self.pandas_format,
+                            append= self.pandas_append)
+            pandas_store.flush()
             self._hdf5file.flush()
 
             try:
@@ -3892,16 +3924,12 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError('DataFrame `%s` already exists in `%s`. Appending is not supported (yet).')
 
             name = group._v_pathname+'/' +key
-            data.to_hdf(self._filename, name,
-                        format=self.pandas_format,
-                        append=self.pandas_append,
-                        data_columns=True,
-                        expected_rows=data.shape[0],
-                        complevel=self.complevel,
-                        complib=self.complib,
-                        fletcher32 = self.fletcher32,
-                        shuffle= self.shuffle)
-            self._hdf5store.flush()
+            pandas_store = self.srvc_get_pandas_store()
+            pandas_store.put(name, data,
+                             format=self.pandas_format,
+                            append= self.pandas_append,
+                            expected_rows=data.shape[0])
+            pandas_store.flush()
             self._hdf5file.flush()
 
             try:
@@ -3959,12 +3987,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
             #try using pytables 3.0.0 API
             try:
-                carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._filters)
+                carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._get_filters())
             except AttributeError:
                 #if it does not work, create carray with old api
                 atom = pt.Atom.from_dtype(data.dtype)
                 carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
-                                                   shape=data.shape, filters=self._filters)
+                                                   shape=data.shape, filters=self._get_filters())
                 carray[:]=data[:]
 
             # Remember the types of the original data to recall them on loading
@@ -4173,13 +4201,13 @@ class HDF5StorageService(StorageService, HasLogger):
                                                    description=description_dict,
                                                    title=tablename,
                                                    expectedrows=datasize,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
             except AttributeError:
                 table = self._hdf5file.createTable(where=hdf5group, name=tablename,
                                                    description=description_dict,
                                                    title=tablename,
                                                    expectedrows=datasize,
-                                                   filters=self._filters)
+                                                   filters=self._get_filters())
             nstart = 0
             row = table.row
 
@@ -4450,7 +4478,8 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
-            pandas_data = self._hdf5store.get(pathname)
+            pandas_store = self.srvc_get_pandas_store()
+            pandas_data = pandas_store.get(pathname)
             load_dict[name] = pandas_data
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))

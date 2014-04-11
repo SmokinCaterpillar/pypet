@@ -877,18 +877,19 @@ class BrianMonitorResult(Result):
                 spike_dict['neuron'] = list(zip_lists[0])
 
                 spiked_neurons = sorted(list(set(spike_dict['neuron'])))
-                self.f_set(neurons_with_spikes=spiked_neurons)
+                if spiked_neurons:
+                    self.f_set(neurons_with_spikes=spiked_neurons)
 
-                count = 2
-                for varname in varnames:
+                    count = 2
+                    for varname in varnames:
 
-                    var_list = list(zip_lists[count])
+                        var_list = list(zip_lists[count])
 
-                    nounit_list = [np.float64(var) for var in var_list]
-                    spike_dict[varname] = nounit_list
-                    count += 1
+                        nounit_list = [np.float64(var) for var in var_list]
+                        spike_dict[varname] = nounit_list
+                        count += 1
 
-                self.f_set(spikes=pd.DataFrame(data=spike_dict))
+                    self.f_set(spikes=pd.DataFrame(data=spike_dict))
 
         elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
 
@@ -919,7 +920,7 @@ class BrianMonitorResult(Result):
         else:
                 raise RuntimeError('You shall not pass!')
 
-    def _extract_spike_monitor(self,monitor):
+    def _extract_spike_monitor(self, monitor):
         
         #assert isinstance(monitor, SpikeMonitor)
 
@@ -949,10 +950,11 @@ class BrianMonitorResult(Result):
                 spike_dict['neuron'] = list(zip_lists[0])
 
                 spiked_neurons = sorted(list(set(spike_dict['neuron'])))
-                self.f_set(neurons_with_spikes=spiked_neurons)
+                if spiked_neurons:
+                    self.f_set(neurons_with_spikes=spiked_neurons)
 
-                spikeframe = pd.DataFrame(data=spike_dict)
-                self.f_set(spikes=spikeframe)
+                    spikeframe = pd.DataFrame(data=spike_dict)
+                    self.f_set(spikes=spikeframe)
 
         elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
                 format_string = self._get_format_string(monitor)
