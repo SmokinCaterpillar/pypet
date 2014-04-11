@@ -382,6 +382,17 @@ class StorageTest(TrajectoryComparator):
         self.compare_trajectories(traj,traj2)
 
 
+def add_large_data(traj):
+    np_array = np.random.rand(100,1000,10)
+    traj.f_add_result('l4rge', np_array)
+    traj.f_store_item('l4rge')
+    traj.f_remove_item('l4rge')
+
+    array_list = []
+    for irun in range(1000):
+        array_list.append(np.random.rand(10))
+    traj.f_add_result('m4ny', *array_list)
+
 class EnvironmentTest(TrajectoryComparator):
 
 
@@ -470,6 +481,10 @@ class EnvironmentTest(TrajectoryComparator):
 
         traj.f_explore(cartesian_product(self.explored))
 
+    def explore_large(self, traj):
+        self.explored ={'Normal.trial': [0,1]}
+        traj.f_explore(cartesian_product(self.explored))
+
 
 
     def setUp(self):
@@ -477,11 +492,12 @@ class EnvironmentTest(TrajectoryComparator):
 
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
+
         self.logfolder = make_temp_file('experiments/tests/Log')
 
         random.seed()
         self.trajname = make_trajectory_name(self)
+        self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname)
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
@@ -513,7 +529,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj = traj
         self.env = env
 
-
+    def make_run_large_data(self):
+        self.env.f_run(add_large_data)
 
     def make_run(self):
 
@@ -521,6 +538,17 @@ class EnvironmentTest(TrajectoryComparator):
         simple_arg = -13
         simple_kwarg= 13.0
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+
+    def test_a_large_run(self):
+        self.traj.f_add_parameter('TEST', 'test_run')
+        ###Explore
+        self.explore_large(self.traj)
+        self.make_run_large_data()
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
