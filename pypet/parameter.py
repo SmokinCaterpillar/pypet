@@ -234,6 +234,7 @@ class BaseParameter(NNLeafNode):
 
     def f_has_range(self):
         """Returns true if the parameter contains a range array.
+
         Not necessarily equal to `v_explored` if the range is removed on
         pickling due to `v_full_copy=False`.
 
@@ -761,7 +762,6 @@ class Parameter(BaseParameter):
         else:
             return 1
 
-    @copydoc(BaseParameter.f_has_range)
     def f_has_range(self):
         """If the parameter has a range.
 

@@ -2,7 +2,7 @@
 .. _tutorial:
 
 ================
-pypet Tutorial
+Tutorial
 ================
 
 --------------------------------------------
@@ -38,13 +38,13 @@ set of parameters and explore the parameter space and try a bunch of different s
 Probably you want to do a sensitivity analysis and determine the effect of changing
 a critical subset of your parameters.
 
-The second stage, the *run phase* is the actual execution of your numerical simulation.
+The second stage, the *run phase*, is the actual execution of your numerical simulation.
 Here you perform the search or exploration of the parameter space. You try all
 different parameter settings you have specified before for exploration and obtain the
 corresponding results. Since this stage is most likely the computational expensive one, you
-probably want to parallelize your simulations! I will refer to an individual simulation run
+probably want to parallelize your simulations. I will refer to an individual simulation run
 with one particular parameter combination as a **single run** of your simulation.
-Since these **single runs** are different individual simulation with different parameter
+Since these **single runs** are different individual simulations with different parameter
 settings, they are completely independent of each other. The results and outcomes of
 one **single run** should not influence another. Sticking to this assumption makes the
 parallelization of your experiments much easier.
@@ -55,11 +55,11 @@ This could encompass merging or collecting of results of individual single runs
 and/or deconstructing some sensitive python objects, etc.
 
 Finally, you do further analysis of the raw results of your numerical
-simulation. Like generating plots and meta statistics, etc.
+simulation, like generating plots and meta statistics, etc.
 Personally, I would strictly separate this final phase from
 the previous three. Thus, using a complete different python script than for the phases before.
 
-This conceptualization is depicted in the figure below.
+This conceptualization is depicted in the figure below:
 
 .. image:: figures/experiment_phases.png
     :width: 850
@@ -68,11 +68,20 @@ This conceptualization is depicted in the figure below.
 *pypet* gives is you a tool to make the stages much easier to handle. *pypet*
 offers a novel tree data container called :class:`~pypet.trajectory.Trajectory`
 that can be used to store all parameters and results of your numerical simulations.
-Moreover, *pypet* has an :class:`~pypet.envrionemnt.Environment` that
+Moreover, *pypet* has an :class:`~pypet.envrionment.Environment` that
 allows easy parallel exploration of the parameter space.
 
 We will see how we can use both in our numerical experiment and the different stages.
-In this tutorial we will simulate a simple neuron model. We will numerically integrate the
+In this tutorial we will simulate a simple neuron model.
+Our neuron model is given by a dynamical variable :math:`V` that describes the development
+of the so called *membrane potential* over time. Every time this potential crosses
+a particular threshold our neuron is *activated* and emits an electrical pulse. These
+pules called action potentials are the sources of information transmission in the brain.
+We will stimulate our neuron with an experimental current :math:`I` and see how this current
+affects the emission of action potentials. For simplicity we assume a dimensionless system
+without any units except for time in milliseconds.
+
+We will numerically integrate the linear differential
 equation:
 
 .. math::
@@ -80,14 +89,14 @@ equation:
     \frac{dV}{dt} = -\frac{1}{\tau_V} V + I
 
 
-With an additional reset rule :math:`V \leftarrow 0` if :math:`V \geq 1` and we will have
-an additional refractory period of :math:`\tau_{ref}`. This means if we detect a so called
-action potential, i.e. :math:`V \geq V_T`, we will keep the voltage :math:`V` clamped at 0
-for this period of time after the threshold crossing and freeze the differential equation.
+with a non-linear reset rule :math:`V \leftarrow 0` if :math:`V \geq 1` and
+an additional refractory period of :math:`\tau_{ref}`. If we detect an
+action potential, i.e. :math:`V \geq 1`, we will keep the voltage :math:`V` clamped to 0
+for the refractory period after the threshold crossing and freeze the differential equation.
 
 Regarding parameter exploration, we will hold the
 neuron's time constant :math:`\frac{1}{\tau_V}=10ms` fixed and explore the parameter space
-by varying different input currents :math:`I` and different length of the refractory period
+by varying different input currents :math:`I` and different lengths of the refractory period
 :math:`\tau_{ref}`.
 
 During the single runs we will record the development of the variable
@@ -101,10 +110,10 @@ a table. It's like a 2D numpy array, but we can index into the table by more tha
 Finally, during the analysis, we will plot the neuron's rate as a function of the
 input current :math:`I` and the refractory period :math:`\tau_{ref}`.
 
-The entire source code of this example can be found here: ref:`example-13`.
+The entire source code of this example can be found here: :ref:`example-13`.
 
 -------------------
-Naming convention
+Naming Convention
 -------------------
 
 To avoid confusion with natural naming scheme (see below)
@@ -131,8 +140,8 @@ Yet, we will shortly discuss the most important ones here.
 * `trajectory`
 
     Here you can either pass an already existing trajectory container or simply a string
-    specifying the name of a new trajectory. The environment will create a trajectory
-    container for you than.
+    specifying the name of a new trajectory. In the latter case the environment will
+    create a trajectory container for you.
 
 * `add_time`
 
@@ -143,11 +152,11 @@ Yet, we will shortly discuss the most important ones here.
 
 * `comment`
 
-    A nice descriptive comment about what you are going to do in your experiment.
+    A nice descriptive comment about what you are going to do in your numerical experiment.
 
 * `log_folder`
 
-    The environment makes use of logging. You can specify a folder where all
+    The environment makes use of logging_. You can specify a folder where all
     log-files should be stored. Default is `current_working_directory/logs/`.
 
 * `multiproc`
@@ -157,7 +166,7 @@ Yet, we will shortly discuss the most important ones here.
 * `ncores`
 
     The number of cpu cores we want to utilize. More precisely, the number of processes we
-    start at the same time to calculate the single runs. There's usually no benefit to
+    start at the same time to calculate the single runs. There's usually no benefit in
     setting this value higher than the actual number of cores your computer has.
 
 * `filename`
@@ -168,7 +177,7 @@ Yet, we will shortly discuss the most important ones here.
 
 * `git_repository`
 
-    If your code base is under git_ version control (it's not? Stop reading and get git_ NOW!),
+    If your code base is under git_ version control (it's not? Stop reading and get git_ NOW! ;-),
     you can specify the path to your root git
     folder here. If you do this, *pypet* will a) trigger a new commit if it detects changes
     in the working copy of your code and b) write the corresponding commit code into
@@ -178,14 +187,14 @@ Yet, we will shortly discuss the most important ones here.
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
     root folder here. *pypet* will automatically trigger the recording of your experiments
-    if you use :func:`~pypet.environment.f_run`, :func:`~pypet.environment.f_continue` or
-    :func:`~pypet.environment.f_pipeline` to start your single runs or whole experiment.
+    if you use :func:`~pypet.environment.Environment.f_run`, :func:`~pypet.environment.Environment.f_continue` or
+    :func:`~pypet.environment.Environment.f_pipeline` to start your single runs or whole experiment.
     If you use *pypet* + git_ + sumatra_ there's no doubt that you ensure
     the repeatability of your experiments!
 
 Ok, so let's start with creating an environment:
 
-.. code-block::python
+.. code-block:: python
 
     from pypet.environment import Environment
     env = Environment(trajectory='FiringRate',
@@ -204,7 +213,7 @@ Ok, so let's start with creating an environment:
 
 The environment provides a new trajectory container for us:
 
-.. code-block::python
+.. code-block:: python
 
     traj = env.v_trajectory
 
@@ -220,7 +229,7 @@ This tree has four major branches: *config* (parameters), *parameters*,
 
 Parameters stored under *config* do not specify the outcome of your simulations but
 only the way how the simulations are carried out. For instance, this might encompass
-the number of cpu cores for multiprocessing. In fact, the environment from above did add
+the number of cpu cores for multiprocessing. In fact, the environment from above has already added
 the config data we specified before to the trajectory:
 
     >>> traj.config.multiproc
@@ -247,9 +256,9 @@ Adding of Parameters
 Ok, for the moment let's fill the trajectory with parameters for our simulation.
 
 Let's fill it using the
-:func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter` function:
+:func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter` function:
 
-.. code-block::python
+.. code-block:: python
 
     traj.f_add_parameter('neuron.V_init', 0.0,
                          comment='The initial condition for the '
@@ -274,10 +283,10 @@ Again we can provide descriptive comments.
 All these parameters will be added to the branch *parameters*.
 
 Note that we can *group* the parameters. For instance, we have a group `neuron` that contains
-parameters defining our neuron model and *simulation* that defines the details of the simulation,
+parameters defining our neuron model and a group *simulation* that defines the details of the simulation,
 like the euler step size and the whole runtime.
-If these groups do not exist add the time of parameter creation, *pypet* will automatically
-create these for you.
+If a group does not exist add the time of a parameter creation, *pypet* will automatically
+create the groups on the fly.
 
 There's no limit to grouping, and it can be nested:
 
@@ -286,33 +295,33 @@ There's no limit to grouping, and it can be nested:
 
 There are analogue functions for *config* data, *results* and *derived_parameters*:
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_config`
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_result`
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_derived_parameters`
+* :func:`~pypet.naturalnaming.ConfigGroup.f_add_config`
+* :func:`~pypet.naturalnaming.ResultGroup.f_add_result`
+* :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter`
 
-If you don't want to stick to these four major branches there is the generic addition
+If you don't want to stick to these four major branches there is the generic addition:
 
 * :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf`
 
-Btw you can add particular groups directly with:
+By the way, you can add particular groups directly with:
 
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter_group`
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_config_group`
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_result_group`
-* :func:`~pypet.naturalnaming.NNGroupNode.f_add_derived_parameters_group`
+* :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter_group`
+* :func:`~pypet.naturalnaming.ConfigGroup.f_add_config_group`
+* :func:`~pypet.naturalnaming.ResultGroup.f_add_result_group`
+* :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
 
 and the generic one:
 
 * :func:`~pypet.naturalnaming.NNGroupNode.f_add_group`
 
-As said before, the tree contains two types of nodes, group nodes
+Your trajectory tree contains two types of nodes, group nodes
 and leaf nodes. Group nodes can, as you have seen, contain other group or leaf nodes, whereas
 leaf nodes are terminal and do not contain more groups or leaves.
 
 The leaf nodes are abstract containers for your actual data. Basically,
 there exist two sub-types of these leaves :class:`~pypet.parameter.Parameter`
 containers for your config data, parameters,
-and derived parameters and :class:`~pypet.parameter.Result` for your results.
+and derived parameters and :class:`~pypet.parameter.Result` containers for your results.
 
 A :class:`~pypet.parameter.Parameter` can only contain a single data item plus potentially
 a **range** or list of different values describing how the parameter should be explored in
@@ -325,7 +334,7 @@ brackets.
 Both leaf containers (:class:`~pypet.parameter.Parameter`, :class:`~pypet.parameter.Result`)
 support a rich variety of data types. There also exist more specialized versions if the
 standard ones cannot hold your data, just take
-a look at :ref:`more-on-parameters`. Btw if you are still missing some functionality for
+a look at :ref:`more-on-parameters`. If you are still missing some functionality for
 your particular needs you can simply
 implement your own leaf containers and put them into the *trajectory*.
 
@@ -357,13 +366,13 @@ Exploring the Data
 
 Next, we can tell the trajectory which parameters we want to explore. We simply need
 need to pass a dictionary of lists (or other iterables) of the **same length** with
-arbitrary entries to
+arbitrary entries to the trajectory function
 :func:`~pypet.trajectory.Trajectory.f_explore`.
 
 Every single run in the run phase will contain one setting of parameters
 in the list. For instance, if our exploration dictionary looks like
 ``{'x':[1,2,3], 'y':[1,1,2]}`` the first run will be with parameter `x` set to 1 and `y` to 1,
-the second with `x` set to 2 and `y` set to 1 and the final third one with `x=3` and `y=2`.
+the second with `x` set to 2 and `y` set to 1, and the final third one with `x=3` and `y=2`.
 
 If you want to explore the cartesion product of two iterables not having the same length
 you can use the :func:`~pypet.utils.explore.cartesian_product` builder function.
@@ -373,7 +382,7 @@ the parameters.
 Here is our exploration, we try dimensionless currents `I` rangin from 0 to 1.5 in steps of 0.02
 for three different refractory periods `tau_ref`:
 
-.. code-block::python
+.. code-block:: python
 
     from pypet.utils.explore import cartesian_product
 
@@ -389,7 +398,7 @@ for three different refractory periods `tau_ref`:
 
 
 Note that in case we explore some parameters their default values that we passed before
-via :func:`~pypet.naturalnaming.NNGroupNode.f_add_parameter` are no longer used.
+via :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter` are no longer used.
 If you still want to simulate these, make sure they are part of the lists in the
 exploration dictionary.
 
@@ -403,17 +412,17 @@ This function will be called and executed with every parameter combination we sp
 with :func:`~pypet.trajectory.Trajectory.f_explore` in
 the trajectory container.
 
-We will have 225 different runs of our simulation and each run has particular index
+In our neuron simulation we have 225 different runs of our simulation and each run has particular index
 ranging from 0 to 224 and a particular name that follows the structure `run_XXXXXXXX`
-where `XXXXXXXX` is replaced with the index and some trailing zeros. Our runs will have the
-names `run_00000000` tp `run_00000224`.
+where `XXXXXXXX` is replaced with the index and some trailing zeros. Thus, our runs names
+range from `run_00000000` to `run_00000224`.
 
 To emphasize this, we start counting with 0, so the second run is called
 `run_00000001` and has index 1!
 
-So here is our run function:
+So here is our top-level simulation or run function:
 
-.. code-block::python
+.. code-block:: python
 
     def run_neuron(traj):
         """Runs a simulation of a model neuron.
@@ -477,18 +486,20 @@ So here is our run function:
 
 Our function has to accept at least one argument and this is our `traj` container.
 To be precise here the `traj` variable here refers no longer to the full
-:class:`~pypet.trajectory.Trajectory` but instead is a
-:class:`~pypet.trajectory.SingleRun` container. The differences are rather small. This
+:class:`~pypet.trajectory.Trajectory` but is a
+:class:`~pypet.trajectory.SingleRun` container instead. The differences are rather small. This
 type of container has a little less functionality than a full :class:`~pypet.trajectory.Trajectory`
-and all explored parameters are set to the values for this particular run.
-Thus, if we currently execute the second run (aka `run_00000001`)
+and all explored parameters are set to the values for a particular run.
+For simplicity, I will stick to the variable name `traj` here.
+
+For instance, if we currently execute the second run (aka `run_00000001`)
 all parameters will contain their default values, except `tau_ref` and `I`, they will
 be set to 5.0 and 0.02, respectively.
-For simplicity, I will stick to the variable name `traj` here.
+
 
 Let's take a look at the first few instructions
 
-.. code-block::python
+.. code-block:: python
 
     # Extract all parameters from `traj`
     V_init = traj.par.neuron.V_init
@@ -507,7 +518,7 @@ will have their default values except `tau_ref` and `I`.
 Next, we create a numpy array and a python list and compute the number of steps. This is
 not specific to *pypet* but simply needed for our neuron simulation:
 
-.. code-block::python
+.. code-block:: python
 
     steps = int(duration / float(dt))
     # Create some containers for the Euler integration
@@ -518,9 +529,9 @@ not specific to *pypet* but simply needed for our neuron simulation:
 
 Also the following steps have nothing to do with *pypet*, so don't worry if you not
 fully understand what's going on here.
-This is the core of our neuron simulation:
+This is just the core of our neuron simulation:
 
-.. code-block::python
+.. code-block:: python
 
     # Do the Euler integration:
     print 'Starting Euler Integration'
@@ -541,56 +552,56 @@ This is the core of our neuron simulation:
 
     print 'Finished Euler Integration'
 
-That is simply the python description of the following set of equations:
+This is simply the python description of the following set of equations:
 
 .. math::
 
     \frac{dV}{dt} = -\frac{1}{\tau_V} V + I
 
-and :math:`V \leftarrow 0 \text{if} V \geq 1 \ŧext{or} t-t_s \leq \ŧau_{ref}`.
+and :math:`V \leftarrow 0`` **if** :math:`V \geq 1`  **or** :math:`t-t_s \leq \tau_{ref}`.
 
-Ok, now we have finished one particular run ouf our simulation. We computed the development
-of the membrane potential `V` over time and put it in `V_array`.
+Ok, for now we have finished one particular run ouf our simulation. We computed the development
+of the membrane potential `V` over time and put it into `V_array`.
 
 Next, we hand over this data to our trajectory, since we want to keep it and write it
 into the final HDF5 file:
 
-.. code-block::python
+.. code-block:: python
 
     traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
                       comment='Contains the development of the membrane potential over time '
                               'as well as the number of spikes.')
 
 
-This statement looks similar to the addition of parameters we had before. Yet, there
+This statement looks similar to the addition of parameters we have seen before. Yet, there
 are some subtle differences. As we can see, a result can contain several data items.
 If we pass them via `NAME=value`, we can later on recall them from the result with `result.NAME`.
-Secondly there is this odd `'$'` character in the name.
+Secondly, there is this odd `'$'` character in the result's name.
 Well, recall that we are currently operating in the run phase, accordingly the `run_neuron`
 function will be executed many times. Thus, we also gather the
 data `V_array` data many times. We need to store this every time under a different
 name in our trajectory tree. `'$'` is a wildcard character that is replaced by the name
-of the current run. Thus, if we were in the second run, we would store everything under
+of the current run. If we were in the second run, we would store everything under
 `traj.results.neuron.run_00000001` and in the third run under
 `traj.results.neuron.run_00000002` and so on and so forth.
-Consequently, `traj.results.neuron.run_00000001.V` will return our membrane voltage array
+Consequently, calling `traj.results.neuron.run_00000001.V` will return our membrane voltage array
 of the second run.
 
 You are not limited to place the `'$'` at the end, for example
 
-.. code-block::python
+.. code-block:: python
 
    traj.f_add_result('fundamental.wisdom.$.answer', 42, comment='The answer')
 
 would be possible as well.
 
 As a side remark, if you add a result or derived parameter during the run phase but
-**not** use the `'$'` wildcard. *pypet* will add `runs.'$'` to the beginning of your
-result or derived parameter name.
+**not** use the `'$'` wildcard, *pypet* will add `runs.'$'` to the beginning of your
+result's or derived parameter's name.
 
 So executing the following statement during the run phase
 
-.. code-block::python
+.. code-block:: python
 
     traj.f_add_result('fundamental.wisdom.answer', 42, comment='The answer')
 
@@ -602,7 +613,8 @@ Everything you add during pre-processing, post-processing (see below) is
 automatically stored at
 the end of the experiment. Everything you add
 during the run phase under a group node called `run_XXXXXXXX` (where this is the name of the
-current run) will be stored at the end of this particular run.
+current run, which will be automatically chosen if you use the `'$'` wildcard)
+will be stored at the end of the particular run.
 
 -------------------
 #3 Post-processing
@@ -613,7 +625,7 @@ In the post processing phase we want to collect these estimates and sort them in
 table according to the value of `I` and `tau_ref`. As an appropriate table we choose a
 pandas_ DataFrame. Again this is not *pypet* specific but pandas_ offers neat
 containers for series, tables and multidimensional panel data.
-The nice thing about pandas_ containers is, that they except all forms of indices, and not
+The nice thing about pandas_ containers is that they except all forms of indices and not
 only integer indices like python lists or numpy arrays.
 
 So here comes our post processing function.
@@ -626,7 +638,7 @@ of the run as an integer, and second entry is the result returned by our job-fun
 the list is not ordered according to the run indices, but according to the time the
 single runs did actually finish.
 
-.. code-block::python
+.. code-block:: python
 
     def neuron_postproc(traj, result_list):
         """Postprocessing, sorts computed firing rates into a table
@@ -674,7 +686,7 @@ single runs did actually finish.
 Ok, we will go through it one by one.
 At first we extract the range of parameters we used:
 
-.. code-block::python
+.. code-block:: python
 
     I_range = traj.par.neuron.f_get('I').f_get_range()
     ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
@@ -682,10 +694,10 @@ At first we extract the range of parameters we used:
 Note that we use `f_get` here since we are interested in the parameter container not the
 data value. We can directly extract the parameter range from the container.
 
-Next, we create a two dimensional table aka pandas_ dataFrame with the currents as the
+Next, we create a two dimensional table aka pandas_ DataFrame with the currents as the
 row indices and the refractory periods as column indices.
 
-.. code-block::python
+.. code-block:: python
 
     I_index = sorted(set(I_range))
     ref_index = sorted(set(ref_range))
@@ -697,7 +709,7 @@ firing rates into the table according to the parameter settings in this run.
 As I said before, the neat thing about pandas_ is that we can use the values of
 `I` and `tau_ref` as indices for our table.
 
-.. code-block::python
+.. code-block:: python
 
     for result_tuple in result_list:
             run_idx = result_tuple[0]
@@ -709,7 +721,7 @@ As I said before, the neat thing about pandas_ is that we can use the values of
 
 Finally, we add the filled DataFrame to the trajectory.
 
-.. code-block::python
+.. code-block:: python
 
     traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
                           comment='Contains a pandas data frame with all firing rates.')
@@ -718,10 +730,10 @@ Since we are no longer in the run phase, this result will be found in
 `traj.results.summary.firing_rate` and **no** name of any single run will be added.
 
 So this was our post-processing where we simply collected all firing rates and sorted
-them into a table. You can do much more in the post processing phase. You could
+them into a table. You can do much more in the post processing phase. You can
 load all computed data and look at it.
-You could even expand the trajectory to trigger a new run phase. Accordingly, you can adaptively
-and iteratively search the parameter space. You can even do this on the fly, while there
+You can even expand the trajectory to trigger a new run phase. Accordingly, you can adaptively
+and iteratively search the parameter space. You may even do this on the fly while there
 are still single runs being executed, see :ref:`more-about-postproc`.
 
 --------------------------------------
@@ -730,11 +742,11 @@ Final steps in the main script
 
 Still we actually need to make the environment execute all the stuff, so this is our main
 script after we generated the environment and added the parameters.
-First, we add the post-processing function. Secondly we tell the environment to
+First, we add the post-processing function. Secondly, we tell the environment to
 run our function `run_neuron`. Our postprocessing function will be automatically called
 after all runs have finished.
 
-.. code-block::python
+.. code-block:: python
 
     # Ad the postprocessing function
     env.f_add_postprocessing(neuron_postproc)
@@ -748,7 +760,7 @@ post-processing functions.
 
 For instance,
 
-.. code-block::python
+.. code-block:: python
 
     env.f_run(myjob, 42, 'fortytwo', test=33.3)
 
@@ -756,7 +768,7 @@ will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.
 keyword argument `test` to your run function. So the definition of the run function could look
 like this:
 
-.. code-block::python
+.. code-block:: python
 
     def myjob(traj, number, text, test):
         # do something
@@ -775,12 +787,12 @@ Since these three steps pre-processing, run-phase, post-processing define a comm
 you can actually also make *pypet* supervise all three steps at once.
 
 You can define a pipeline function, that does the pre-processing and returns
-the job function plus some optional additional arguments and the post-processing function
-with some optional additional arguments.
+the job function plus some optional arguments and the post-processing function
+with some other optional arguments.
 
-So you could define the following pipeline function:
+So, you could define the following pipeline function:
 
-.. code-block::python
+.. code-block:: python
 
     def mypipeline(traj):
         """A pipeline function that defines the entire experiment
@@ -832,7 +844,7 @@ tuple ``()`` for no arguments and an empty dictionary ``{}`` for no keyword argu
 
 The entire main script then simply boils down to:
 
-.. code-block::python
+.. code-block:: python
 
      env = Environment(trajectory='FiringRatePipeline',
                       comment='Experiment to measure the firing rate '
@@ -865,7 +877,7 @@ We will make use of the auto load functionality and load results in the backgrou
 we need them. Since we don't want to do any more single runs, we can spare us an
 environment and only use a trajectory container.
 
-.. code-block::python
+.. code-block:: python
 
     from pypet.trajectory import Trajectory
     import matplotlib.pyplot as plt
@@ -945,15 +957,15 @@ The outcome of your little experiment should be the following image:
 
 Finally, I just want to make some final remarks on the analysis script.
 
-.. code-block::python
+.. code-block:: python
 
     traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
                 load_results=0, load_derived_parameters=0)
 
-Describes how the different subtrees of the trajectory are loaded (`load_parameters`
+describes how the different subtrees of the trajectory are loaded (`load_parameters`
 also includes the `config` branch). 0 means no data at all is loaded,
 1 means only the containers are loaded but without any data and 2 means the
-container including the data are loaded. So here we load all parameters
+containers including the data are loaded. So here we load all parameters
 and all config parameters with data and no results whatsoever.
 
 Yet, since we say ``traj.v_auto_load = True`` the statement
@@ -963,16 +975,16 @@ request it.
 
 Furthermore,
 
-.. code-block::python
+.. code-block:: python
 
     traj.v_idx = example_run
 
 is an important statement in the code.
 Setting the properties `v_idx` or `v_as_run` or
-using the function func:`~pypet.trajectory.Trajectory.f_as_run` are equivalent.
+using the function :func:`~pypet.trajectory.Trajectory.f_as_run` are equivalent.
 These give you a powerful tool in data analysis because they make your trajectory
 behave like a particular single run. Thus, all explored parameter's values will be
-set to the corresponding values of that particular run and all iterator functions
+set to the corresponding values of one particular run and all iterator functions
 like :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` will be affected to spare
 all data below groups `run_XXXXXXXX` except for the current chosen run
 and won't enumerate their children.

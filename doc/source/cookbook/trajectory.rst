@@ -202,11 +202,11 @@ but contains the user chosen name of the trajectory.
 Note that if you add a parameter/result/group with `f_add_XXXXXX`
 the full name will be extended by the *full name* of the group you added it to:
 
->>> traj.parameters.traffic.f_add_parameter('street.nzebras')
+    >>> traj.parameters.traffic.f_add_parameter('street.nzebras')
 
 The *full name* of the new parameter is going to be `parameters.traffic.street.nzebras`.
 If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
-the group names `parameters`, `config`, `derived_parameters`will be automatically added (of course,
+the group names `parameters`, `config`, `derived_parameters` will be automatically added (of course,
 depending on what you add, config, a parameter etc.).
 
 If you add a result or derived parameters during a single run, the name will be changed to
@@ -274,7 +274,7 @@ speciality functions from above are called instead of the generic ones.
 
 Note however, if you add any items during a single run, which are not located below
 a group called `run_XXXXXXXX` (where *run_XXXXXXXXX* is
- the name of your current run) these items
+the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
 via :func:`~pypet.trajectory.SingleRun.f_store_items`.
 
@@ -385,20 +385,7 @@ with the same name and same depth. If there happen to be
 two or more items with the same name and with the same depth in the tree, *pypet* will
 raise a `NotUniqueNodeError` since *pypet* cannot know which of the two items you want. [#previous]_
 
-.. _[#previous]:
 
-    In previous versions, *pypet* would stop immediately after the first encounter of a matching node.
-    You had to force the lookup of unique matchings via `v_check_uniqueness`.
-    This feature has been abolished
-    since the behavior is inconsistent within different simulations. There is no ordering
-    in nodes. So the children of a node are traversed arbitrarily since they are stored
-    in dictionaries. Searching for one node could yield
-    different results every time it was performed if two or more nodes happened to
-    have the same name and were found within the same depth in the tree.
-    Also in previous versions, you could choose
-    depth first search instead of breadth first search. Yet, again since nodes are in arbitrary
-    order, this search strategy is rather useless because the user cannot determine the
-    traversal order of tree nodes.
 
 
 The method that performs the natural naming search in the tree can be called directly, it is
@@ -562,7 +549,7 @@ you should define all parameters used during your simulations.
 Usually you could do this by parsing a config file (Write your own parser or hope that I'll
 develop one soon :-D), or simply by executing some sort of a config file in python that
 simply adds the parameters to your trajectory
-(see also :ref:`more-on-concept`).
+(see also :ref:`tutorial`).
 
 If you have some complex simulations where you might use only parts of your parameters or
 you want to exclude a set of parameters and include some others, you can make use
@@ -1080,3 +1067,19 @@ whatever is stored to disk is set in stone!
 
 
 
+.. rubric: Footnotes
+
+.. [#previous]
+
+    In previous versions, *pypet* would stop immediately after the first encounter of a matching node.
+    You had to force the lookup of unique matchings via `v_check_uniqueness`.
+    This feature has been abolished
+    since the behavior is inconsistent within different simulations. There is no ordering
+    in nodes. So the children of a node are traversed arbitrarily since they are stored
+    in dictionaries. Searching for one node could yield
+    different results every time it was performed if two or more nodes happened to
+    have the same name and were found within the same depth in the tree.
+    Also in previous versions, you could choose
+    depth first search instead of breadth first search. Yet, again since nodes are in arbitrary
+    order, this search strategy is rather useless because the user cannot determine the
+    traversal order of tree nodes.
