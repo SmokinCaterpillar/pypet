@@ -16,8 +16,7 @@ from pypet.environment import Environment
 def main():
 
     folder = 'experiments/example_11/HDF5/'
-    filename = 'Clustered_Network_2014_03_24_16h51m59s.hdf5' # Change this to the name of your
-    # hdf5 file. The very first trajectory in this file is loaded.
+    filename = 'Clustered_Network.hdf5'
 
     filename = os.path.join(folder, filename)
     # If we pass a filename to the trajectory a new HDF5StorageService will

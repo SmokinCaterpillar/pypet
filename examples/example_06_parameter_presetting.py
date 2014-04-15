@@ -85,7 +85,7 @@ def main():
 
     traj = env.v_trajectory
 
-    # 1st  phase parameter addition
+    # 1st a) phase parameter addition
     # Remember we have some control flow in the `add_parameters` function, the default parameter
     # set we choose is the `'diff_lorenz'` one, but we want to deviate from that and use the
     # `'diff_roessler'`.
@@ -95,7 +95,7 @@ def main():
                                                           # again the lorenz attractor
     add_parameters(traj)
 
-    # 1st phase preparation
+    # 1st b) phase preparation
     # Let's check which function we want to use
     if traj.diff_name=='diff_lorenz':
         diff_eq = diff_lorenz

@@ -37,8 +37,28 @@ Analysis
 .. literalinclude:: ../../../examples/example_13_post_processing/analysis.py
 
 
----------
-Pipeline
----------
+-----------
+Pipelining
+-----------
+
+Additionally, you can use pipelining.
+
+Since these three steps pre-processing, run-phase, post-processing define a common pipeline,
+you can actually also make *pypet* supervise all three steps at once.
+
+You can define a pipeline function, that does the pre-processing and returns
+the job function plus some optional arguments and the post-processing function
+with some other optional arguments.
+
+So, you could define the following pipeline function.
+The pipeline function has to only accept the trajectory as first argument and
+has to return 2 tuples, one for the run function and one for the
+post-processing. Since none of our functions takes any other arguments than the trajectory
+(and the pos-processing function the result list) we simply return an empty
+tuple ``()`` for no arguments and an empty dictionary ``{}`` for no keyword arguments.
+
+
+And that's it, than everything including the pre-processing and addition of parameters
+is supervised by *pypet*. Check out the source code below:
 
 .. literalinclude:: ../../../examples/example_13_post_processing/pipeline.py

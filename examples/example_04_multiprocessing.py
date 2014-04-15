@@ -16,8 +16,6 @@ def multiply(traj):
 
 # Create an environment that handles running.
 # Let's enable multiprocessing with 2 workers.
-# Since we want to explore a rather large trajectory, we switch off
-# the large overview tables.
 env = Environment(trajectory='Example_04_MP',
                   filename='experiments/example_04/HDF5/example_04.hdf5',
                   file_title='Example_04_MP',
@@ -26,8 +24,7 @@ env = Environment(trajectory='Example_04_MP',
                   multiproc=True,
                   ncores=2,
                   use_pool=True,
-                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                  large_overview_tables=False)
+                  wrap_mode=pypetconstants.WRAP_MODE_LOCK)
 
 # Get the trajectory from the environment
 traj = env.v_trajectory

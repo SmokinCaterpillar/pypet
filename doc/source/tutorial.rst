@@ -6,7 +6,7 @@ Tutorial
 ================
 
 --------------------------------------------
-Conceptualization of A Numerical Experiment
+Conceptualization of a Numerical Experiment
 --------------------------------------------
 
 I will give a simple but comprehensive tutorial on *pypet* and how to use it for parameter
@@ -779,90 +779,6 @@ post-processing function as well. Yet, there is the slight difference that your 
 function needs to accept the result list as second positional argument followed by your
 positional and keyword arguments.
 
-^^^^^^^^^^^^^^^^^^
-Pipelining
-^^^^^^^^^^^^^^^^^^
-
-Since these three steps pre-processing, run-phase, post-processing define a common pipeline,
-you can actually also make *pypet* supervise all three steps at once.
-
-You can define a pipeline function, that does the pre-processing and returns
-the job function plus some optional arguments and the post-processing function
-with some other optional arguments.
-
-So, you could define the following pipeline function:
-
-.. code-block:: python
-
-    def mypipeline(traj):
-        """A pipeline function that defines the entire experiment
-
-        :param traj:
-
-            Container for results and parameters
-
-        :return:
-
-            Two tuples. First tuple contains the actual run function plus additional
-            arguments (yet we have none). Second tuple contains the
-            postprocessing function including additional arguments.
-
-        """
-        traj.f_add_parameter('neuron.V_init', 0.0,
-                         comment='The initial condition for the '
-                                    'membrane potential')
-        traj.f_add_parameter('neuron.I', 0.0,
-                             comment='The externally applied current.')
-        traj.f_add_parameter('neuron.tau_V', 10.0,
-                             comment='The membrane time constant in milliseconds')
-        traj.f_add_parameter('neuron.tau_ref', 5.0,
-                            comment='The refractory period in milliseconds '
-                                    'where the membrane potnetial '
-                                    'is clamped.')
-
-        traj.f_add_parameter('simulation.duration', 1000.0,
-                             comment='The duration of the experiment in '
-                                    'milliseconds.')
-        traj.f_add_parameter('simulation.dt', 0.1,
-                             comment='The step size of an Euler integration step.')
-        explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
-                    'neuron.tau_ref': [5.0, 7.5, 10.0]}
-
-        explore_dict = cartesian_product(explore_dict, ('neuron.tau_ref', 'neuron.I'))
-        # The second argument, the tuple, specifies the order of the cartesian product,
-        # The variable on the right most side changes fastest and defines the
-        # 'inner for-loop' of the cartesian product
-
-        traj.f_explore(explore_dict)
-        return (run_neuron,(),{}), (neuron_postproc,(),{})
-
-The pipeline function has to only accept the trajectory as first argument and
-has to return 2 tuples, one for the run function and one for the
-post-processing. Since none of our functions takes any other arguments than the trajectory
-(and the pos-processing function the result list) we simply return an empty
-tuple ``()`` for no arguments and an empty dictionary ``{}`` for no keyword arguments.
-
-The entire main script then simply boils down to:
-
-.. code-block:: python
-
-     env = Environment(trajectory='FiringRatePipeline',
-                      comment='Experiment to measure the firing rate '
-                            'of a leaky integrate and fire neuron. '
-                            'Exploring different input currents, '
-                            'as well as refractory periods',
-                      add_time=False, # We don't want to add the current time to the name,
-                      log_folder='./logs/',
-                      multiproc=True,
-                      ncores=2, #My laptop has 2 cores ;-)
-                      filename='./hdf5/', # We only pass a folder here, so the name is chosen
-                      # automatically to be the same as the Trajectory
-                      )
-
-    env.f_pipeline(mypipeline)
-
-And that's it, than everything including the pre-processing and addition of parameters
-is supervised by *pypet*.
 
 --------------
 #4 Analysis

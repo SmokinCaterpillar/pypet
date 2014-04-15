@@ -20,6 +20,7 @@ from clusternet import CNMonitorAnalysis, CNNeuronGroup, CNNetworkRunner, CNConn
 def main():
 
     env = Environment(trajectory='Clustered_Network',
+                      add_time=False,
                       filename='experiments/example_11/HDF5/',
                       log_folder='experiments/example_11/LOGS/',
                       continuable=False,

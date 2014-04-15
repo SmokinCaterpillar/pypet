@@ -7,7 +7,7 @@ from pypet.pypetexceptions import NotUniqueNodeError
 
 # We first generate a new Trajectory
 traj = Trajectory('Example', filename='experiments/example_02/HDF5/example_02.hdf5',
-                  file_title='Example02', comment='Access and Storage!')
+                  comment='Access and Storage!')
 
 
 # We add our first parameter with the data 'Harrison Ford'
@@ -36,13 +36,7 @@ print 'The full name of the new Skywalker Parameter is %s' % \
 #Lets see what happens if we have not unique entries:
 traj.f_add_parameter_group('spaceballs.characters')
 
-#We can still use shortcuts
-characters = traj.characters
-
-#But we cannot be sure which characters we have, to be on the safe side, let's check if
-# we perform unique search
-traj.v_check_uniqueness=True
-
+# Now our shortcuts no longer work, since we have two character groups!
 try:
     traj.characters
 except NotUniqueNodeError as e:

@@ -2605,9 +2605,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             git_node = other_trajectory.f_get('config.git')
             param_list = []
             for param in git_node.f_iter_leaves():
-                param_list.append(self.f_add_config(param))
+                if not param.v_full_name in self:
+                    param_list.append(self.f_add_config(param))
 
-            self.f_store_items(param_list)
+            if param_list:
+                self.f_store_items(param_list)
 
             self._logger.info('Merging git commits successful!')
 
@@ -2618,9 +2620,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             env_node = other_trajectory.f_get('config.environment')
             param_list = []
             for param in env_node.f_iter_leaves():
-                param_list.append(self.f_add_config(param))
+                if not param.v_full_name in self:
+                    param_list.append(self.f_add_config(param))
 
-            self.f_store_items(param_list)
+            if param_list:
+                self.f_store_items(param_list)
 
             self._logger.info('Merging config successful!')
 
@@ -2631,9 +2635,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             merge_node = other_trajectory.f_get('config.merge')
             param_list = []
             for param in merge_node.f_iter_leaves():
-                param_list.append(self.f_add_config(param))
+                if not param.v_full_name in self:
+                    param_list.append(self.f_add_config(param))
 
-            self.f_store_items(param_list)
+            if param_list:
+                self.f_store_items(param_list)
 
             self._logger.info('Merging config successful!')
 

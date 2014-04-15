@@ -102,10 +102,10 @@ def main():
 
     traj = env.v_trajectory
 
-    # 1st Add the parameters
+    # 1st a) add the parameters
     add_params(traj)
 
-    # 1st prepare, we want to explore the different network sizes and different tauw time scales
+    # 1st b) prepare, we want to explore the different network sizes and different tauw time scales
     traj.f_explore(cartesian_product({traj.f_get('N').v_full_name:[50,60],
                            traj.f_get('tauw').v_full_name:[30*ms,40*ms]}))
 

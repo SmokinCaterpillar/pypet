@@ -159,10 +159,10 @@ def main():
     traj = env.v_trajectory
     trajectory_name = traj.v_name
 
-    # 1st phase parameter addition
+    # 1st a) phase parameter addition
     add_parameters(traj)
 
-    # 1st phase preparation
+    # 1st b) phase preparation
     # We will add the differential equation (well, its source code only) as a derived parameter
     traj.f_add_derived_parameter(FunctionParameter,'diff_eq', diff_lorenz,
                                  comment='Source code of our equation!')
