@@ -1,3 +1,8 @@
+pypet 0.1b.6
+
+*   BUG FIX: Wildcard character now alway defaults to `run_ALL` if trajectory is not set
+    to particular run
+
 pypet 0.1b5
 
 *   New auto load feature

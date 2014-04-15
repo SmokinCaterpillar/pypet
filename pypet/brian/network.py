@@ -308,8 +308,8 @@ class NetworkRunner(NetworkComponent):
 
     """
     def __init__(self, report='text', report_period=None,
-                 durations_group_name = 'parameters.simulation.durations',
-                 pre_durations_group_name = 'parameters.simulation.pre_durations'):
+                 durations_group_name = 'simulation.durations',
+                 pre_durations_group_name = 'simulation.pre_durations'):
 
         if report_period is None:
             report_period=10 * second
@@ -448,34 +448,34 @@ class NetworkRunner(NetworkComponent):
 
         """
         if pre_run:
-            durations = traj.f_get(self._pre_durations_group_name)
+            durations_list = traj.f_get_all(self._pre_durations_group_name)
         else:
-            durations = traj.f_get(self._durations_group_name)
+            durations_list = traj.f_get_all(self._durations_group_name)
 
 
         subruns = {}
         orders = []
 
 
+        for durations in durations_list:
+            for duration_param in durations.f_iter_leaves():
 
-        for duration_param in durations.f_iter_leaves():
+                if isinstance(duration_param, BrianDurationParameter):
+                    self._logger.warning('BrianDurationParameters are deprecated. Please use a normal '
+                                        'BrianParameter and specify the order in `v_annotations.order`!')
 
-            if isinstance(duration_param, BrianDurationParameter):
-                self._logger.warning('BrianDurationParameters are deprecated. Please use a normal '
-                                    'BrianParameter and specify the order in `v_annotations.order`!')
+                if 'order' in duration_param.v_annotations:
+                    order= duration_param.v_annotations.order
+                else:
+                    raise RuntimeError('Your duration parameter %s has no order. Please add '
+                                       'an order in `v_annotations.order`.' % duration_param.v_full_name)
 
-            if 'order' in duration_param.v_annotations:
-                order= duration_param.v_annotations.order
-            else:
-                raise RuntimeError('Your duration parameter %s has no order. Please add '
-                                   'an order in `v_annotations.order`.' % duration_param.v_full_name)
-
-            if order in subruns:
-                raise RuntimeError('Your durations must differ in their order, there are two '
-                                   'with order %d.' % order)
-            else:
-                subruns[order]=duration_param
-                orders.append(order)
+                if order in subruns:
+                    raise RuntimeError('Your durations must differ in their order, there are two '
+                                       'with order %d.' % order)
+                else:
+                    subruns[order]=duration_param
+                    orders.append(order)
 
         return [subruns[order] for order in sorted(orders)]
 

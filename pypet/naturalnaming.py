@@ -1929,7 +1929,11 @@ class NaturalNamingInterface(HasLogger):
             # one with a run name and one with the dummy:
 
             try:
-                split_name[wildcard_pos] = self._root_instance._as_run
+                as_run = self._root_instance._as_run
+                if as_run is None:
+                    # If our trajectory is not set to a particular run we can skip this part
+                    raise AttributeError
+                split_name[wildcard_pos] = as_run
                 result = self._perform_get(node, split_name, fast_access, backwards_search,
                             shortcuts, max_depth, auto_load, try_auto_load_directly1)
                 return result
