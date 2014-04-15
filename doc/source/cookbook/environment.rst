@@ -360,7 +360,7 @@ because most of the time the default settings are sufficient.
     parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
     you set a comment, normally that comment would be attached to each and every instance.
     This can produce a lot of unnecessary overhead if the comment is the same for every
-    result over all runs. If `hdf5.purge_duplicate_comments=1` than only the comment of the
+    result over all runs. If `hdf5.purge_duplicate_comments=True` than only the comment of the
     first result or derived parameter instance created is stored, or comments
     that differ from this first comment. You might want to take a look at
     :ref:`more-on-duplicate-comments`.
@@ -500,9 +500,9 @@ The following tables are created:
         If you use this table, you can purge duplicate comments,
         see :ref:`more-on-duplicate-comments`.
 
-    `results_trajectroy`
+    `results_trajectory`
 
-        All results created directly with the trajectory and not within single runs
+        All results created not within single runs
 
     `derived_parameters_trajectory`
 
@@ -518,11 +518,6 @@ The following tables are created:
   the values in each run.
   Per default these tables are switched off, to enable it pass `large_overview_tables=True`
   to your environment.
-
-However, if you have many *runs* and *results* and *derived_parameters*,
-I would advice you to switch of the result, derived parameter
-and explored parameter overview in each single run. These tables are switched off if you
-pass `large_overview_tables=False` as a parameter at environment construction (see above).
 
 
 .. _more-on-duplicate-comments:
@@ -549,7 +544,7 @@ will be stored!
 
 In order to allow the purge of duplicate comments you need the `summary` overview tables.
 
-Furthermore, consider if you reload your data from the example above,
+Furthermore, if you reload your data from the example above,
 the result instance `results.runs.run_00000001.my_result`
 won't have a comment only the instance `results.runs.run_00000000.my_result`.
 
@@ -598,7 +593,7 @@ The following code snippet shows how to enable multiprocessing with 4 cpus, a po
 Setting `use_pool=True` will create a pool of `ncores` worker processes which perform your
 simulation runs.
 
-IMPORTANT: In order to allow multiprocessing with a pool, all your data and objects of your
+**IMPORTANT**: In order to allow multiprocessing with a pool, all your data and objects of your
 simulation need to be serialized with pickle_.
 But don't worry, most of the python stuff you use is automatically *picklable*.
 
@@ -606,16 +601,16 @@ If you come across the situation that your data cannot be pickled (which is the 
 for some BRIAN networks, for example), don't worry either. Set `use_pool=False`
 (and also `continuable=False`) and for every simulation run
 *pypet* will spawn an entirely new subprocess.
-The data is than passed to the subprocess by inheritance and not by pickling.
+The data is than passed to the subprocess by forking on OS level and not by pickling.
 
 Moreover, if you **ENABLE** multiprocessing and **DISABLE** pool usage, besides the maximum number of
-utilized processors `ncores`, you can specify other usage cap levels with `cpu_cap`, `memory_cap`,
+utilized processors `ncores`, you can specify usage cap levels with `cpu_cap`, `memory_cap`,
 and `swap_cap` as fractions of the maximum capacity.
 Values must be chosen larger than 0.0 and smaller or equal to 1.0. If any of these thresholds is
 crossed no new processes will be started by *pypet*. For instance, if you want to use 3 cores
 aka `ncores=3` and set a memory cap of `memory_cap=0.9` and let's assume that currently only
 2 processes are started. Moreover, let's say currently 95 percent of you RAM are occupied.
-Accordingly, papet will *NOT* start the third process until RAM usage drops again below
+Accordingly, *pypet* will *NOT* start the third process until RAM usage drops again below
 (or equal to) 90 percent.
 
 Be aware that all three thresholds are combined. So if just one of them is crossed, *pypet*
@@ -729,8 +724,9 @@ Running an Experiment
 ---------------------------------
 
 In order to run an experiment, you need to define a job or a top level function that specifies
-your simulation. This function gets as first positional argument the *trajectory*, or to be
-more precise a *single run*
+your simulation. This function gets as first positional argument the :
+:class:`~pypet.trajectory.Trajectory` container,
+or to be more precise a :class:`~pypet.trajectory.SingleRun` container
 (see :ref:`more-on-trajectories` and :class:`~pypet.trajectory.SingleRun`),
 and optionally other positional and keyword arguments of your choice.
 
@@ -752,12 +748,6 @@ where you can also specify the additional arguments and keyword arguments using
 
 The argument list `args` and keyword dictionary `kwargs` are directly handed over to the
 `myjobfunc` during runtime.
-
-Note that the first postional argument used by `myjobfunc` is not a
-full :class:`pypet.trajectory.Trajectory` but only
-a `~pypet.trajectory.SingleRun` (also see :ref:`more-on-single-runs`). There is not much
-difference to a full *trajectory*. You have slightly less functionality and usually no access
-to the fully explored parameters but only to a single parameter space point.
 
 The :func:`~pypet.environment.Environment.f_run` will return a list of tuples.
 Whereas the first tuple entry is the index of the corresponding run and the second entry
@@ -796,7 +786,7 @@ Whereas in your main script you can call
     env.f_add_postproc(mypostprocfunc, 42, extra_arg2=42.5)
 
 
-which will later on pass `42` as `extra_arg1` and `42.4` as extra_arg2. It's actually the
+which will later on pass `42` as `extra_arg1` and `42.4` as `extra_arg2`. It is the
 very same principle as before for your run function.
 The post-processing function will be called after the completion of all single runs.
 
@@ -823,6 +813,10 @@ called again. Likewise, you could potentially expand again, and after the next e
 post-processing will be executed again (and again, and again, and again, I guess you get it).
 
 Thus, you can use post-processing for an adaptive search within your parameter space.
+
+**IMPORTANT**: All changes you apply to your trajectory, like setting auto-loading or changing fast
+access will be propagated to the new single runs. So try to undo all changes before finishing
+the post-processing if you plan to trigger new single runs.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Expanding your Trajectory and using Multiprocessing
@@ -866,7 +860,7 @@ runtime.
 
 Thus, to have your entire experiment and not only the exploration of the parameter space
 managed by *pypet* you can use the :func:`~pypet.environment.Environment.f_pipeline`
-function.
+function, see also :ref:`example-13`.
 
 You have to pass a so called *pipeline* function to
 :func:`~pypet.environment.Environment.f_pipeline` that defines your entire experiment.
@@ -913,6 +907,22 @@ for example:
                            'postproc_arg3' : some_other_arg3}
         return (myjobfunc, args, kwargs), (mypostproc, postproc_args, postproc_kwargs)
 
+
+The first entry of the first tuple is you run or top-level execution function, followed by
+a list or tuple defining the positional arguments and, thirdly, a dictionary defining the
+keyword arguments. The second tuple has to contain the post-processing function and positional
+arguments and keyword arguments. If you do not have any positional arguments pass an
+empty tuple `()`, if you do not have any keyword arguments pass an empty dictionary `{}`.
+
+If you do not need postprocessing at all, your pipeline function can simply return
+the run function followed by the positional and keyword arguments:
+
+.. code-block:: python
+
+    def mypipeline(traj):
+        #...
+        return myjobfunc, args, kwargs
+
 .. _more-on-continuing:
 
 --------------------------------------------
@@ -932,7 +942,7 @@ ot the trajectory. This folder is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
 lasting simulation was interrupted, you can resume it
 without recomputing already obtained results. Note that this works only if the
-hdf5 file is not corrupted and for interruptions due
+HDF% file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
 
@@ -949,7 +959,7 @@ with the name of the continue folder (not the subfolder) and the name of the tra
 
 The neat thing here is, that you create a novel environment for the continuation. Accordingly,
 you can set different environmental settings, like changing the number of cores, etc.
-You CANNOT change any hdf5 settings or even change the whole storage service.
+You CANNOT change any HDF5 settings or even change the whole storage service.
 
 When does continuing NOT work?
 
@@ -968,6 +978,7 @@ Since you are not limited in how you manipulate the trajectory within your post-
 there are potentially many side effects that remain undetected by the continue snapshots.
 You can try to use both together, but there is **NO** guarantee whatsoever that continuing a
 crashed trajectory and post-processing with expanding will work together.
+
 
 
 .. _dill: https://pypi.python.org/pypi/dill

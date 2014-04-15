@@ -36,7 +36,7 @@ If you carry out an experiment and actively explore the parameter space,
 you will encounter a second class of top-level container called
 :class:`~pypet.trajectory.SingleRun`. This one is derived or created by the original *trajectory*
 [#]_ and is used during the individual runs of your experiment. *Single runs* are not much
-different from *tractories* except that they provide a little bit less functionality and
+different from *trajectories* except that they provide a little bit less functionality and
 only contain on particular parameter combination out of the full explored ranges.
 Since they are not much different from the original *trajectory*, within code they are
 also labeled with `traj`. We will come back to *single runs* later, but for now let's focus
@@ -48,7 +48,7 @@ There are two types of objects that can be *leaves*, *parameters* and *results*.
 Both follow particular APIs (see :class:`~pypet.parameters.Parameter` and
 :class:`~pypet.parameters.Result` as well as their abstract base classes
 :class:`~pypet.parameter.BaseParameter`, :class:`~pypet.parameter.BaseResult`).
-Every parameters contains a single value and optionally a ranges of values for exploration.
+Every parameters contains a single value and optionally a range of values for exploration.
 In contrast, results can contain several heterogeneous data items
 (see :ref:`more-on-parameters`).
 
@@ -143,12 +143,12 @@ this is analogous.
 There are two ways to add these objects, either you already have an instantiation of the
 object, i.e. you add a given parameter:
 
-    >>> my_param = Parameter('subgroup1.subgroup2.myparam', data = 42, comment='I am an example')
+    >>> my_param = Parameter('subgroup1.subgroup2.myparam',42, comment='I am an example')
     >>> traj.f_add_parameter(my_param)
 
 Or you let the trajectory create the parameter, where the name is the first positional argument:
 
-    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', data = 42, comment='I am an example')
+    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', 42, comment='I am an example')
 
 There exists a standard constructor that is called in case you let the trajectory create the
 parameter. The standard constructor can be changed via the `v_standard_parameter` property.
@@ -158,7 +158,7 @@ If you only want to add a different type of parameter once, but not change the s
 constructor in general, you can add the constructor as
 the first positional argument followed by the name as the second argument:
 
-    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', data = 42, comment='I am an example')
+    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', 42, comment='I am an example')
 
 Derived parameters, config and results work analogously.
 
@@ -228,14 +228,14 @@ For instance, if you add a result during a single run (let's assume again the fi
 via ``traj.f_add_result('mygroup.$.myresult', 42, comment='An important result')``
 the result will be renamed to `results.mygroup.run_00000000.myresult`.
 Thus, the branching of your tree happens on a lower level than before.
-Note that even ``traj.f_add_result('mygroup.mygroup.$', myresult=42, comment='An important result')``
+Even ``traj.f_add_result('mygroup.mygroup.$', myresult=42, comment='An important result')``
 is allowed.
 
 You can also use the wildcard character in the preprocessing stage. Let's assume you add
-the following derived parameter BEFORE the actual single runs via
+the following derived parameter **BEFORE** the actual single runs via
 ``traj.f_add_derived_parameter('mygroup.$.myparam', 42, comment='An important parameter')``.
 If that happend DURING a single run ``$`` would be renamed to `run_XXXXXXXX` (with `XXXXXXXX`
-the index of the run). Yet, if you add the paremter BEFORE the single runs,
+the index of the run). Yet, if you add the parameter BEFORE the single runs,
 ``$`` will be replaced by the placeholder name `run_ALL`.
 So your new derived parameter here is now called 'mygroup.run_All.myparam`.
 
@@ -296,8 +296,6 @@ To access data that you have put into your trajectory you can use
 
 *   Use the square brackets - as you do with dictionaries - like `traj['nzebras']` which is
     similar to calling `traj.nzebras`.
-    Check out below what happens if you ask for `traj['zoo.nzebras']`, i.e. passing more than
-    a single name to the trajectory.
 
 
 ^^^^^^^^^^^^^^^
@@ -386,8 +384,6 @@ two or more items with the same name and with the same depth in the tree, *pypet
 raise a `NotUniqueNodeError` since *pypet* cannot know which of the two items you want. [#previous]_
 
 
-
-
 The method that performs the natural naming search in the tree can be called directly, it is
 :func:`~pypet.naturalnaming.NNGroupNode.f_get`.
 
@@ -426,8 +422,8 @@ Backwards search
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Finally, there exists the possibility to perform bottom up search within the tree.
-If you enable backwards search (set `traj.v_backwards_search=True`) and use the
-square bracket notation or
+If you enable backwards search (set `traj.v_backwards_search=True`, default is `False`)
+and use the square bracket notation or
 :func:`~pypet.trajectory.Trajectory.f_get` and don't pass a single name but a grouped
 name separated via colons like
 and using `traj['groubA.groupB.paramC']` or
@@ -523,7 +519,7 @@ For instance, the following code snippet won't work:
 This will result in a `TypeError` because your exploration iterable `np.arange(42.0, 44.876, 0.23)`
 contains `numpy.float64` values whereas you parameter is supposed to use standard python floats.
 
-Yet, you can use Numpys `tolist()` function to overcome this problem:
+Yet, you can use numpy's `tolist()` function to overcome this problem:
 
 ::
 
@@ -546,8 +542,8 @@ Presetting of Parameters
 
 I suggest that before you calculate any results or derived parameters,
 you should define all parameters used during your simulations.
-Usually you could do this by parsing a config file (Write your own parser or hope that I'll
-develop one soon :-D), or simply by executing some sort of a config file in python that
+Usually you could do this by parsing a config file,
+or simply by executing some sort of a config file in python that
 simply adds the parameters to your trajectory
 (see also :ref:`tutorial`).
 
@@ -644,7 +640,7 @@ the HDF5 file!
 In addition, there will be some overview tables summarizing what you stored into the HDF5 file.
 They can be found under the top-group `overview`, the different tables are listed in the
 :ref:`more-on-overview` section.
-Btw, you can switch the creation of these tables off passing the appropriate arguments to the
+By the way, you can switch the creation of these tables off passing the appropriate arguments to the
 :class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -671,8 +667,6 @@ ensure that you do not have any external reference of your own in your code to t
 To avoid re-opening an closing of the HDF5 file over and over again there is also the
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
-
-
 
 
 .. _more-on-loading:
@@ -782,7 +776,7 @@ For instance:
 
     # Now we can happily recall the result, since it is loaded while we access it.
     # Stating `results` here is important. We removed the results node above, so
-    # we have to explicitly name it here to relaod it, too. There are no shortcuts allowed
+    # we have to explicitly name it here to reload it, too. There are no shortcuts allowed
     # for nodes that have to be loaded on the fly and that did not exist in memory before.
     answer= traj.results.mygroupA,mygroupB.myresult
     # And answer will be 42
@@ -794,22 +788,21 @@ For instance:
     # Btw we have to use `f_get` here to get the result itself and not the data `42` via fast
     # access
 
-    # If we now access myresult again through the trajectory, it will be automatically loaded.
-    # Since the result itsel is still in RAM but empty, we can shortcut through the tree:
+    # If we now access `myresult` again through the trajectory, it will be automatically loaded.
+    # Since the result itself is still in RAM but empty, we can shortcut through the tree:
     answer = traj.myresult
     # And again the answer will be 42
 
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Logging and Git Commits during data analysis
+Logging and Git Commits during Data Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Automated logging and git commits are often very handy features. Probably you do not want
 to miss these while you do your data analysis. To enable these in case you simply want to
 load an old trajectory for data analysis without doing any more single runs, you can
 again use an :class:`~pypet.environment.Environment`.
-
 
 
 First, load the trajectory with :func:`~pypet.trajectory.Trajectory.f_load`,
@@ -908,7 +901,7 @@ instead of `singlerun`.
 
 
 A run is identified by it's index and position in your trajectory, you can access this via
-`v_idx`. As a proper informatics guy, if you have N runs, than your first run's index is 0
+`v_idx`. As a proper informatics nerd, if you have N runs, than your first run's index is 0
 and the last is indexed as N-1! Also each run has a name `run_XXXXXXXX` where `XXXXXXXX` is the
 index of the run with some leading zeros, like `run_00000007`.
 
@@ -923,9 +916,7 @@ Conceptually one should regard all single runs to be *independent*. As a consequ
 you should **NOT** load data during a particular run that was computed by a previous one.
 You should **NOT** make a run manipulate data in the trajectory that was not added during the
 particular single run. This is **very important**!
-First of all, the trajectory is stored before the runs start.
-Accordingly, manipulating data in the trajectory after storage is impossible since the changes
-will not be saved to disk! Secondly, when it comes to multiprocessing, manipulating data
+When it comes to multiprocessing, manipulating data
 put into the trajectory before the single runs is even more useless. Because the trajectory is
 either pickled or the whole memory space of the trajectory is forked by the OS, changing stuff
 within the trajectory will not be noticed by any other process or even the main script!

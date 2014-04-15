@@ -1708,11 +1708,14 @@ class Environment(HasLogger):
                 raise_error = True
 
             postproc_tuple = pip_result[1]
-            self._postproc = postproc_tuple[0]
+            if len(postproc_tuple)>0:
+                self._postproc = postproc_tuple[0]
             if len(postproc_tuple)>1:
                 self._postproc_args = postproc_tuple[1]
             if len(postproc_tuple)>2:
                 self._postproc_kwargs = postproc_tuple[2]
+            if len(run_tuple) > 3:
+                raise_error = True
 
         elif len(pip_result) <= 3:
             self._runfunc = pip_result[0]
