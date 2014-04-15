@@ -10,9 +10,9 @@ Welcome to pypet's documentation!
 The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
 
-Latest version: `0.1b.4`_
+Latest version: `0.1b.5`_
 
-.. _`0.1b.4`: https://pypi.python.org/pypi/pypet
+.. _`0.1b.5`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
@@ -188,8 +188,8 @@ If you do not want to browse to your installation folder, you can also download 
 :download:`all_tests.py <../../pypet/tests/all_tests.py>` script.
 
 Running all tests can take up to 15 minutes and might temporarily take up to
-8 GB of disk space. The test suite encompasses more than **300** tests
-(including the BRIAN based tests) and has a code coverage of more than **90%**!
+8 GB of disk space. The test suite encompasses more than **400** tests
+(including the BRIAN based tests) and has a code coverage of about *90%*!
 
 =====================
 Contact

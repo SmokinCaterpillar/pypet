@@ -558,7 +558,8 @@ This is simply the python description of the following set of equations:
 
     \frac{dV}{dt} = -\frac{1}{\tau_V} V + I
 
-and :math:`V \leftarrow 0`` **if** :math:`V \geq 1`  **or** :math:`t-t_s \leq \tau_{ref}`.
+and :math:`V \leftarrow 0`` **if** :math:`V \geq 1`  **or** :math:`t-t_{ap} \leq \tau_{ref}`
+(with :math:`t` the current time and :math:`t_{ap}` time of the last action potential).
 
 Ok, for now we have finished one particular run ouf our simulation. We computed the development
 of the membrane potential `V` over time and put it into `V_array`.

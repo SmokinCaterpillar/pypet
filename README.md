@@ -359,7 +359,7 @@ and `--folder=` to specify a folder where to store the HDF5 files instead of the
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
 Running all tests can take up to 15 minutes. The test suite encompasses more than **400** tests
-(including the BRIAN based tests) and has a code coverage of more than **90%**!
+(including the BRIAN based tests) and has a code coverage of about *90%*!
 
 ------------------------------------
 License
