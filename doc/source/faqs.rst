@@ -32,9 +32,6 @@ What should I do?
     If ``pip install GitPython`` still downloads the old version, try ``pip install --pre GitPython``
     or if you simply want to upgrade use ``pip install --upgrade --pre GitPython``.
 
-**Q:**  I am still using the old tree structure how can I update my hdf5files to the new one?
-
-    **A:** See :ref:`tree-migrating`
 
 **Q:**  If I create and environment in an *IPython* console everything becomes gibberish!?
 

@@ -10,6 +10,6 @@ Here you can find some more explanations on various concepts of *pypet*.
 
 .. toctree::
       cookbook/trajectory
-      cookbook/environment
       cookbook/parameter
+      cookbook/environment
       cookbook/brian.rst
