@@ -63,7 +63,7 @@ that are derived from these data types.
 Why so very restrictive? Well, the reason is that we store these values to disk into
 HDF5 later on. We want to recall them occasionally, and maybe even rerun our experiments.
 However, as soon as you store data into an HDF5 files, most often information about the exact type
-is lost. So if you store, for instance, a numpy matrix via pytables and recall it, you will get
+is lost. So if you store, for instance, a numpy matrix via PyTables and recall it, you will get
 a numpy array instead.
 
 The storage service that comes with this package will take care
@@ -109,10 +109,10 @@ So far, the following parameters exist:
     numpy.array([1,2,3]),numpy.array([3,4,3])]`
     So you reuse `numpy.array([1,2,3])` and `numpy.array([3,4,3])` twice. If you would
     put this data into the standard Parameter, the full list `[numpy.array([1,2,3]),numpy.array([3,4,3]),
-    numpy.array([1,2,3]),numpy.array([3,4,3])` would be stored to disk.
+    numpy.array([1,2,3]), numpy.array([3,4,3])` would be stored to disk.
     The ArrayParameter is smarter. It will ask the storage service only to store
     `numpy.array([1,2,3])` and `numpy.array([3,4,3])` once and in addition a list of references
-    `[ref_to_array_1,ref_to_array_2,ref_to_array_1,ref_to_array_2]`.
+    `[ref_to_array_1, ref_to_array_2, ref_to_array_1, ref_to_array_2]`.
 
     Subclasses the standard Parameter and, therefore, supports also native python data.
 
@@ -202,19 +202,22 @@ The following results exist:
           np.complex, np.str
 
 
-        * python lists and tuples (non-nested!) with homogeneous data of the previous types.
+        * python lists and tuples
 
-        *
-            python dictionaries (non-nested)  with strings as keys. Values must be of the
+            Non nested with homogeneous data of the previous types.
+
+        * python dictionaries
+
+            Non-nested  with strings as keys; values must be of the
             previously listed types (including numpy arrays and matrices) and
             can be heterogeneous.
 
-        * pandas_ DataFrames
+        * pandas_ DataFrames, Series, Panels
 
         * :class:`~pypet.parameter.ObjectTable`
 
-                Object tables are special pandas_ DataFrames with `dtype=object`, i.e. everything
-                you keep in object tables will keep its type and won't be auto-converted py pandas.
+            Object tables are special pandas_ DataFrames with `dtype=object`, i.e. everything
+            you keep in object tables will keep its type and won't be auto-converted py pandas.
 
 * :class:`~pypet.parameter.SparseResult`
 

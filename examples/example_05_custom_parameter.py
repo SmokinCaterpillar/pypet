@@ -55,7 +55,8 @@ def euler_scheme(traj, diff_func):
 # Ok, now we want to make our own (derived) parameter that stores source code of python functions.
 # We do NOT want a parameter that stores an executable function. This would complicate
 # the problem a lot. If you have something like that in mind, you might wanna take a look
-# at the marshal (http://docs.python.org/2/library/marshal) module.
+# at the marshal (http://docs.python.org/2/library/marshal) module
+# or dill (https://pypi.python.org/pypi/dill) package.
 # Our intention here is to define a parameter that we later on use as a derived parameter
 # to simply keep track of the source code we use ('git' would be, of course, the better solution
 # but this is just an illustrative example)
