@@ -127,7 +127,7 @@ comment attribute and
 Whereas `myresult.mydata` might refer to a data item named `mydata` added by the user.
 
 -------------------------
-#1 Pre-processing
+#1 Pre-Processing
 -------------------------
 
 Your experiment usually starts with the creation of an :class:`~pypet.environment.Environment`.
@@ -218,7 +218,7 @@ The environment provides a new trajectory container for us:
     traj = env.v_trajectory
 
 -------------------------
-The Trajectory container
+The Trajectory Container
 -------------------------
 
 A :class:`~pypet.trajectory.Trajectory` is the container for your parameters and results.
@@ -618,7 +618,7 @@ current run, which will be automatically chosen if you use the `'$'` wildcard)
 will be stored at the end of the particular run.
 
 -------------------
-#3 Post-processing
+#3 Post-Processing
 -------------------
 
 Each single run of our `run_neuron` function returned an estimate of the firing rate.
@@ -738,7 +738,7 @@ and iteratively search the parameter space. You may even do this on the fly whil
 are still single runs being executed, see :ref:`more-about-postproc`.
 
 --------------------------------------
-Final steps in the main script
+Final Steps in the Main Script
 --------------------------------------
 
 Still we actually need to make the environment execute all the stuff, so this is our main
