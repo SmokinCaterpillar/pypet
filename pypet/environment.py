@@ -463,9 +463,6 @@ class Environment(HasLogger):
     :param delete_continue:
 
         If true, *pypet* will delete the continue files after a successful simulation.
-        *pypet* will delete all files and the sub-folder with the name of the trajectory.
-        If other folders apart from the trajectory were created before, *pypet* will not
-        erase these.
 
     :param use_hdf5:
 
@@ -2173,9 +2170,9 @@ class Environment(HasLogger):
                         new_runs
                     )
 
-            if self._continuable and self._delete_continue:
-                # We remove all continue files if the simulation was successfully completed
-                shutil.rmtree(self._continue_path)
+        if self._continuable and self._delete_continue:
+            # We remove all continue files if the simulation was successfully completed
+            shutil.rmtree(self._continue_path)
 
         if expanded_by_postproc:
             config_name='environment.%s.postproc_expand' % self.v_name

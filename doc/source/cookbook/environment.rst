@@ -150,7 +150,7 @@ because most of the time the default settings are sufficient.
 
 * `ncores`
 
-    If `multiproc` is 1 (True), this specifies the number of processes that will be spawned
+    If `multiproc` is `True`, this specifies the number of processes that will be spawned
     to run your experiment. Note if you use `'QUEUE'` mode (see below) the queue process
     is not included in this number and will add another extra process for storing.
 
@@ -166,23 +166,23 @@ because most of the time the default settings are sufficient.
 
     Thus, if your simulation data cannot be pickled (which is the case for some BRIAN networks,
     for instance), choose `use_pool=False` and continuable=`False` (see below).
-    Be aware that you will have an individual logfile for every process you spawn.
 
 * `cpu_cap`
 
     If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
     0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
     usage is above the specified level (averaged across all cores),
-    pypet will not spawn a new process and wait until
+    *pypet* will not spawn a new process and wait until
     activity falls below the threshold again. Note that in order to avoid dead-lock at least
     one process will always be running regardless of the current utilization.
     If the threshold is crossed a warning will be issued. The warning won't be repeated as
     long as the threshold remains crossed.
 
-    For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
-    used. Moreover, let's assume that at the moment only 2 processes are
+    For example let us assume you chose`cpu_cap=0.7`, `ncores=3`,
+    and currently on average 80 percent of your cpu are
+    used. Moreover, at the moment only 2 processes are
     computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
-    pypet will wait until cpu usage drops below (or equal to) 70 percent again
+    *pypet* will wait until cpu usage drops below (or equal to) 70 percent again
     until it starts a third process to carry out another single run.
 
     The parameters `memory_cap` and `swap_cap` are analogous. These three thresholds are
@@ -205,7 +205,7 @@ because most of the time the default settings are sufficient.
 
 * `wrap_mode`
 
-     If `multiproc` is 1 (True), specifies how storage to disk is handled via
+     If `multiproc` is `True`, specifies how storage to disk is handled via
      the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
      needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
@@ -262,9 +262,9 @@ because most of the time the default settings are sufficient.
     Whether the environment should take special care to allow to resume or continue
     crashed trajectories. Default is `False`.
 
-    You need to install dill_ to use this feature. *dill* will make snapshots
+    You need to install dill_ to use this feature. dill_ will make snapshots
     of your simulation function as well as the passed arguments.
-    BE AWARE that dill is still rather experimental!
+    BE AWARE that dill_ is still rather experimental!
 
     Assume you run experiments that take a lot of time.
     If during your experiments there is a power failure,
@@ -297,9 +297,6 @@ because most of the time the default settings are sufficient.
 * `delete_continue`
 
     If true, *pypet* will delete the continue files after a successful simulation.
-    *pypet* will delete all files and the sub-folder with the name of the trajectory.
-    If other folders apart from the trajectory were created before, *pypet* will not
-    erase these.
 
 * `use_hdf5`
 
