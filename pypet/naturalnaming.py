@@ -1288,8 +1288,8 @@ class NaturalNamingInterface(HasLogger):
                            (faulty_names, location, len(location),
                             pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
 
-        if (parent_run_count + name.count(pypetconstants.RUN_NAME) +
-                location.count(pypetconstants.RUN_NAME) > 1):
+        if (parent_run_count + name.count('.'+pypetconstants.RUN_NAME) +
+                location.count('.'+pypetconstants.RUN_NAME) > 1):
             faulty_names = '%s `%s` contains a more than one branch with a run name starting with ' \
                            '`%s`,' % (faulty_names,
                                       parent_node.v_full_name+'.'+'.'.join(split_names),
