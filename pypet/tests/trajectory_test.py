@@ -504,6 +504,10 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_result('test.$.k.$')
 
+        rg=self.traj.f_add_result_group('ggg.$')
+        with self.assertRaises(ValueError):
+            rg.f_add_result('$.fff')
+
         self.traj.f_add_result_group('test.$.k')
         with self.assertRaises(ValueError):
             self.traj.res.k.f_add_result('$.jjj')
