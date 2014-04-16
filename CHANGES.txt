@@ -1,10 +1,3 @@
-pypet 0.1b.6
-
-*   BUG FIX: Wildcard character now alway defaults to `run_ALL` if trajectory is not set
-    to particular run
-
-*   BUG FIX: Now names with XXXrun_ are again allowed only `run_` are forbidden.
-
 pypet 0.1b5
 
 *   New auto load feature
@@ -61,6 +54,11 @@ pypet 0.1b5
 *   By default `backwards_search` is turned off!
 
 *   Brian parameters no longer store the `storage_mode` explicitly
+
+*   BUG FIX: Wildcard character now alway defaults to `run_ALL` if trajectory is not set
+    to particular run
+
+*   BUG FIX: Now names with XXXrun_ are again allowed only `run_` are forbidden.
 
 
 pypet 0.1b.4
