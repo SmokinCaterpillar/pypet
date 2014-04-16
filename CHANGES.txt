@@ -55,10 +55,10 @@ pypet 0.1b5
 
 *   Brian parameters no longer store the `storage_mode` explicitly
 
-*   BUG FIX: Wildcard character now alway defaults to `run_ALL` if trajectory is not set
+*   BUG FIX: Wildcard character now always defaults to `run_ALL` if trajectory is not set
     to particular run
 
-*   BUG FIX: Now names with XXXrun_ are again allowed only `run_` are forbidden.
+*   BUG FIX: Now names with `XXXrun_` are again allowed only `run_` are forbidden.
 
 
 pypet 0.1b.4
