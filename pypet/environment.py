@@ -1383,12 +1383,13 @@ class Environment(HasLogger):
 
             return runfunc, args, kwargs
 
-        Or simply:
+        Or
 
         ::
+
             return runfunc, args
 
-        Or only
+        Or
 
         ::
 
@@ -1401,7 +1402,7 @@ class Environment(HasLogger):
 
         ::
 
-            (runfunc, args), (postproc,)
+            return (runfunc, args), (postproc,)
 
         work as well.
 
@@ -1420,7 +1421,7 @@ class Environment(HasLogger):
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
-            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            potentially after calling :func:`~pypet.trajectory.Trajectory.f_update_skeleton`
             and loading all results at once with :func:`~pypet.trajectory.f_load`
             or loading manually with :func:`~pypet.trajectory.f_load_items`.
 

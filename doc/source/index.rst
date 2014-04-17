@@ -73,11 +73,15 @@ If you use Python 2.6 you also need
 
 .. _ordereddict: https://pypi.python.org/pypi/ordereddict
 
+Automatic sumatra records are supported for
+
+* sumatra_ >= 0.5.3
+
+.. _sumatra: http://neuralensemble.org/sumatra/
+
 ==========================
 ToC
 ==========================
-
-Contents:
 
 .. toctree::
    :maxdepth: 2
