@@ -1522,7 +1522,7 @@ class NaturalNamingInterface(HasLogger):
         that do not belong to the run are blinded out.
 
         """
-        if run_name is not None and run_name in node._children:
+        if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
             # Only consider one particular run and blind out the rest, but include
             # all other subbranches
             node_list = [node._children[run_name]]

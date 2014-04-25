@@ -985,7 +985,7 @@ class ResultSortTest(TrajectoryComparator):
                                                   (str(newtraj.z),str(traj.x),str(traj.y)))
 
         self.assertTrue(traj.v_idx == -1)
-        self.assertTrue(traj.v_as_run is None)
+        self.assertTrue(traj.v_as_run == 'run_ALL')
         self.assertTrue(newtraj.v_idx == idx)
 
 
