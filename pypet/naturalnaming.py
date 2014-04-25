@@ -840,7 +840,7 @@ class NaturalNamingInterface(HasLogger):
         if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
         elif name == -2:
-            if self._root_instance._as_run is not None:
+            if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
                 return '$'
             else:
                 return pypetconstants.RUN_NAME_DUMMY
@@ -858,7 +858,7 @@ class NaturalNamingInterface(HasLogger):
 
         if name in SHORTCUT_SET:
             if name == 'crun':
-                if self._root_instance._as_run is not None:
+                if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
                     return '$'
                 else:
                     return pypetconstants.RUN_NAME_DUMMY
@@ -1578,7 +1578,7 @@ class NaturalNamingInterface(HasLogger):
 
     def _get_candidate_dict(self, key, as_run, use_upper_bound=True):
         # First find all nodes where the key matches the (short) name of the node
-        if as_run is None:
+        if as_run == pypetconstants.RUN_NAME_DUMMY:
             return self._nodes_and_leaves[key]
         else:
             temp_dict = {}
@@ -1931,7 +1931,7 @@ class NaturalNamingInterface(HasLogger):
 
             try:
                 as_run = self._root_instance._as_run
-                if as_run is None:
+                if as_run == pypetconstants.RUN_NAME_DUMMY:
                     # If our trajectory is not set to a particular run we can skip this part
                     raise AttributeError
                 split_name[wildcard_pos] = as_run

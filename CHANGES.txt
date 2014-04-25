@@ -1,3 +1,7 @@
+pypet 0.1b.6
+
+*   v_as_run is not longer None for a trajectory but `run_ALL`
+
 pypet 0.1b5
 
 *   New auto load feature
