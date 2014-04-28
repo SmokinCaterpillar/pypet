@@ -52,7 +52,7 @@ from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 
-from pypet.pypetlogging import HasLogger
+from pypet.pypetlogging import HasLogger, DisableLogger
 
 
 #For fetching:
@@ -423,6 +423,9 @@ class NaturalNamingInterface(HasLogger):
         # List of names that are taboo. The user cannot create parameters or results that
         # contain these names.
         self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
+
+        # Context Manager to disable logging for auto-loading
+        self._disable_logger = DisableLogger()
 
 
     def _map_type_to_dict(self, type_name):
@@ -1929,17 +1932,18 @@ class NaturalNamingInterface(HasLogger):
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
 
-            try:
-                as_run = self._root_instance._as_run
-                if as_run == pypetconstants.RUN_NAME_DUMMY:
-                    # If our trajectory is not set to a particular run we can skip this part
-                    raise AttributeError
-                split_name[wildcard_pos] = as_run
-                result = self._perform_get(node, split_name, fast_access, backwards_search,
-                            shortcuts, max_depth, auto_load, try_auto_load_directly1)
-                return result
-            except (pex.DataNotInStorageError, AttributeError):
-                split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+            with self._disable_logger:
+                try:
+                    as_run = self._root_instance._as_run
+                    if as_run == pypetconstants.RUN_NAME_DUMMY:
+                        # If our trajectory is not set to a particular run we can skip this part
+                        raise AttributeError
+                    split_name[wildcard_pos] = as_run
+                    result = self._perform_get(node, split_name, fast_access, backwards_search,
+                                shortcuts, max_depth, auto_load, try_auto_load_directly1)
+                    return result
+                except (pex.DataNotInStorageError, AttributeError):
+                    split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
 
         return self._perform_get(node, split_name, fast_access, backwards_search,
                 shortcuts, max_depth, auto_load, try_auto_load_directly2)
