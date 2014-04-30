@@ -106,7 +106,11 @@ class ParameterTest(unittest.TestCase):
     def test_parameter_locking(self):
         for param in self.param.itervalues():
 
-            param.f_lock()
+            if not param.v_explored:
+                self.assertFalse(param.v_locked, 'Param %s is locked' % param.v_full_name)
+                param.f_lock()
+            else:
+                self.assertTrue(param.v_locked, 'Param %s is locked' % param.v_full_name)
 
             with self.assertRaises(pex.ParameterLockedException):
                 param.f_set(3)
