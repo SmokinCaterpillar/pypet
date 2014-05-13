@@ -2003,7 +2003,7 @@ class Environment(HasLogger):
                                         no_cap = False
                                         if signal_cap:
                                             self._logger.warning('Could not start next process immediately.'
-                                                                 'CPU Cap reached, %.2f > %.2f.' %
+                                                                 'CPU Cap reached, %.2f >= %.2f.' %
                                                                  (cpu_usage, self._cpu_cap))
                                             signal_cap = False
                                     elif memory_usage > self._memory_cap:
@@ -2011,7 +2011,7 @@ class Environment(HasLogger):
                                         if signal_cap:
                                             self._logger.warning('Could not start next process '
                                                                  'immediately. Memory Cap reached, '
-                                                                 '%.2f > %.2f.' %
+                                                                 '%.2f >= %.2f.' %
                                                                  (memory_usage, self._memory_cap))
                                             signal_cap = False
                                     elif swap_usage > self._swap_cap:
@@ -2019,7 +2019,7 @@ class Environment(HasLogger):
                                         if signal_cap:
                                             self._logger.warning('Could not start next process '
                                                                  'immediately. Swap Cap reached, '
-                                                                 '%.2f > %.2f.' %
+                                                                 '%.2f >= %.2f.' %
                                                                  (swap_usage, self._swap_cap))
                                             signal_cap = False
 
