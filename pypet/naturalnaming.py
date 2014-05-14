@@ -222,14 +222,15 @@ class NNTreeNode(WithAnnotations):
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
         self._run_branch = 'trajectory'
-        self._run_branch_pos = -1 # Remebrers at which position the branching occured
+        self._run_branch_pos = -1 # Remembers at which position the branching occured
         # -1 if there is no branching
-        for idx, name in enumerate(split_name):
-            if name.startswith(pypetconstants.RUN_NAME):
-                self._run_branch_pos = idx
-                if name != pypetconstants.RUN_NAME_DUMMY:
-                    self._run_branch = name
-                    break
+        if pypetconstants.RUN_NAME in full_name:
+            head, tail = full_name.split(pypetconstants.RUN_NAME)
+            self._run_branch_pos = head.count('.')
+            branch = pypetconstants.RUN_NAME + tail.split('.')[0]
+            if branch != pypetconstants.RUN_NAME_DUMMY:
+                self._run_branch = branch
+
 
 
     def f_get_class_name(self):

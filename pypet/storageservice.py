@@ -12,6 +12,7 @@ import logging
 import tables as pt
 import os
 import warnings
+import Queue
 
 import numpy as np
 from pandas import DataFrame, read_hdf, Series, Panel, Panel4D, HDFStore
@@ -76,12 +77,12 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
              try:
                 self._logger.error('Failed sending task %s to queue, I will try again.' %
                                                 str(('STORE',args,kwargs)) )
-                self.queue.put(('STORE',args,kwargs))
+                self.queue.put(('STORE',args, kwargs))
                 self._logger.error('Second queue sending try was successful!')
              except IOError:
                 self._logger.error('Failed sending task %s to queue, I will try one last time.' %
                                                 str(('STORE',args,kwargs)) )
-                self.queue.put(('STORE',args,kwargs))
+                self.queue.put(('STORE',args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
 
 
@@ -94,23 +95,60 @@ class QueueStorageServiceWriter(object):
     def __init__(self, storage_service, queue):
         self._storage_service = storage_service
         self._queue = queue
+        self._trajectory_name = None
 
     def run(self):
         """Starts listening to the queue."""
         while True:
             try:
-                msg,args,kwargs = self._queue.get()
+                to_store_list = []
+                stop_listening=False
+                while True:
+                    # We try to grap more data from the queue to avoid reopneing the
+                    # hdf5 file all the time
+                    try:
+                        msg,args,kwargs = self._queue.get(False)
+                        if msg == 'DONE':
+                            stop_listening=True
+                        elif msg == 'STORE':
+                            if 'msg' in kwargs:
+                                store_msg = kwargs.pop('msg')
+                            else:
+                                store_msg = args[0]
+                                args = args[1:]
+                            if 'stuff_to_store' in kwargs:
+                                stuff_to_store = kwargs.pop('stuff_to_store')
+                            else:
+                                stuff_to_store = args[0]
+                                args = args[1:]
+                            trajectory_name = kwargs.pop('trajectory_name')
+                            if self._trajectory_name is None:
+                                self._trajectory_name = trajectory_name
+                            elif self._trajectory_name != trajectory_name:
+                                raise RuntimeError('Cannot store into two different trajectories. '
+                                        'I am supposed to store into %s, but I should also '
+                                        'store into %s.' % (self._trajectory_name, trajectory_name))
 
-                if msg == 'DONE':
+                            to_store_list.append((store_msg, stuff_to_store, args, kwargs))
+                        else:
+                            raise RuntimeError('You queued something that was not intended to be queued!')
+
+                    except Queue.Empty:
+                        break
+
+                if to_store_list:
+                    self._storage_service.store(pypetconstants.LIST, to_store_list,
+                                                trajectory_name=self._trajectory_name)
+                if stop_listening:
                     break
-                elif msg == 'STORE':
-                    self._storage_service.store(*args, **kwargs)
-                else:
-                    raise RuntimeError('You queued something that was not intended to be queued!')
+
             except:
                 raise
             finally:
-                self._queue.task_done()
+                try:
+                    self._queue.task_done()
+                except ValueError:
+                    pass
 
 class LockWrapper(MultiprocWrapper, HasLogger):
     """For multiprocessing in :const:`~pypet.pypetconstants.WRAP_MODE_LOCK` mode,
@@ -659,7 +697,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
 
-    def store(self,msg,stuff_to_store,*args,**kwargs):
+    def store(self, msg, stuff_to_store, *args, **kwargs):
         """ Stores a particular item to disk.
 
         The storage service always accepts these parameters:
@@ -989,7 +1027,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
 
-    def _srvc_store_several_items(self,iterable,*args,**kwargs):
+    def _srvc_store_several_items(self, iterable, *args, **kwargs):
         """Stores several items from an iterable
 
         Iterables are supposed to be of a format like `[(msg, item, args, kwarg),...]`
@@ -2147,11 +2185,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     paramtable.autoIndex=True
                 if not paramtable.indexed:
                     try:
-                        paramtable.cols.location.create_index()
-                        paramtable.cols.name.create_index()
+                        paramtable.cols.location.create_index(optlevel=8, kind='full')
+                        paramtable.cols.name.create_index(optlevel=8, kind='full')
                     except AttributeError:
-                        paramtable.cols.location.createIndex()
-                        paramtable.cols.name.createIndex()
+                        paramtable.cols.location.createIndex(optlevel=8, kind='full')
+                        paramtable.cols.name.createIndex(optlevel=8, kind='full')
 
 
             paramtable.flush()
@@ -2531,7 +2569,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
     ######################## Storing a Single Run ##########################################
-
     def _srn_store_single_run(self, single_run, store_data, store_final):
         """ Stores a single run instance to disk (only meta data)"""
 
@@ -2812,14 +2849,21 @@ class HDF5StorageService(StorageService, HasLogger):
     @staticmethod
     def _all_attr_equals(ptitem, name,value):
         """Checks if a given hdf5 node attribute exists and if so if it matches the `value`."""
-        return name in ptitem._v_attrs and ptitem._v_attrs[name] == value
+        try:
+            return ptitem._v_attrs[name] == value
+        except KeyError:
+            return False
 
     @staticmethod
-    def _all_get_from_attrs(ptitem,name):
+    def _all_get_from_attrs(ptitem, name):
         """Gets an attribute `name` from `ptitem`, returns None if attribute does not exist."""
-        if name in ptitem._v_attrs:
+        # if name in ptitem._v_attrs:
+        #     return ptitem._v_attrs[name]
+        # else:
+        #     return None
+        try:
             return ptitem._v_attrs[name]
-        else:
+        except KeyError:
             return None
 
     def _all_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):

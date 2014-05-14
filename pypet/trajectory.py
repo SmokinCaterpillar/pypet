@@ -1998,7 +1998,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for irun in range(length):
             self._add_run_info(irun)
 
-
     def _add_run_info(self, idx):
         """Adds a new run to the `_run_information` dict.
 

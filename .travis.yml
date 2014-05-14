@@ -2,8 +2,7 @@ language: python
 python:
   - 2.7
   - 2.6
-virtualenv:
-  system_site_packages: true
+
 env:
   matrix:
     - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF
