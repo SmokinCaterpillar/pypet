@@ -2176,20 +2176,20 @@ class HDF5StorageService(StorageService, HasLogger):
                                                            tablename=table_name,
                                                            description=paramdescriptiondict)
 
-            # Index the summary tables for faster look up
-            # They are searched by the individual runs later on
-            if table_name.endswith('summary'):
-                try:
-                    paramtable.autoindex=True
-                except AttributeError:
-                    paramtable.autoIndex=True
-                if not paramtable.indexed:
-                    try:
-                        paramtable.cols.location.create_index(optlevel=8, kind='full')
-                        paramtable.cols.name.create_index(optlevel=8, kind='full')
-                    except AttributeError:
-                        paramtable.cols.location.createIndex(optlevel=8, kind='full')
-                        paramtable.cols.name.createIndex(optlevel=8, kind='full')
+            # # Index the summary tables for faster look up
+            # # They are searched by the individual runs later on
+            # if table_name.endswith('summary'):
+            #     try:
+            #         paramtable.autoindex=True
+            #     except AttributeError:
+            #         paramtable.autoIndex=True
+            #     if not paramtable.indexed:
+            #         try:
+            #             paramtable.cols.location.create_index(optlevel=8, kind='full')
+            #             paramtable.cols.name.create_index(optlevel=8, kind='full')
+            #         except AttributeError:
+            #             paramtable.cols.location.createIndex(optlevel=8, kind='full')
+            #             paramtable.cols.name.createIndex(optlevel=8, kind='full')
 
 
             paramtable.flush()
