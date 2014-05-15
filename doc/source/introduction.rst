@@ -228,7 +228,7 @@ Let's take a look at the snippet at once:
 
 
     # Create an environment that handles running our simulation
-    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5'',
+    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
                       comment='I am a simple example!')
 
