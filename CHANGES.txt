@@ -7,7 +7,7 @@ pypet 0.1b.6
 
 *   Faster Loading of data
 
-pypet 0.1b5
+pypet 0.1b.5
 
 *   New auto load feature
 

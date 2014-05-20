@@ -30,15 +30,12 @@ def run_experiments():
     logfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'logs')
     pathfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'hdf5')
 
-    temp_dir = 'py'
 
-
-
-    exponents = np.arange(0, 4, 1)
+    exponents = np.arange(0, 8, 1)
     res_per_run = 100
     traj_names = []
     filenames = []
-    runs = (np.ones(len(exponents))*10) ** exponents
+    runs = (np.ones(len(exponents))*2) ** exponents
     for adx, nruns in enumerate(runs):
         env = Environment(log_folder=logfolder, filename=pathfolder,
                           ncores=2, multiproc=True,
@@ -98,11 +95,6 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
     logfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'logs')
     pathfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'hdf5')
 
-    temp_dir = 'py'
-
-
-
-    exponents = np.arange(0, 4, 1)
     res_per_run = 100
 
     env = Environment(log_folder=logfolder, filename=pathfolder,
@@ -141,8 +133,8 @@ def main():
 
     try:
         profile_single_storing(True, True)
-        # filenames, traj_names, path_folder = run_experiments()
-        # test_loading(filenames, traj_names)
+        filenames, traj_names, path_folder = run_experiments()
+        test_loading(filenames, traj_names)
     finally:
         shutil.rmtree(os.path.join(tempfile.gettempdir(), TEMPDIR),True)
 

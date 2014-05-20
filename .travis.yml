@@ -11,7 +11,7 @@ env:
 matrix:
   include:
     - python: 2.7
-      env: PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=ON
+      env: PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON
 
 # Install dependencies for PyTables
 # command to install dependencies
