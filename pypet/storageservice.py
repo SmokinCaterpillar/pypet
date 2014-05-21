@@ -246,14 +246,14 @@ class NodeProcessingTimer(HasLogger):
         dt = current_time - self._last_time
         if dt > self._display_time:
             dfullt = current_time-self._start_time
-            seconds = int(dt)%60
-            minutes = int(dt)/60
+            seconds = int(dfullt)%60
+            minutes = int(dfullt)/60
             if minutes == 0:
                 formatted_time = '%ds' % seconds
             else:
                 formatted_time = '%dm%d%s' %(minutes, seconds)
             nodespersecond = self._updates/dfullt
-            message = 'Processed %d nodes in %s (%.2f nodes/s)' % \
+            message = 'Processed %d nodes in %s (%.2f nodes/s).' % \
                       (self._updates, formatted_time, nodespersecond)
             self._logger.info(message)
             self._last_time=current_time
