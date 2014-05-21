@@ -247,7 +247,7 @@ class NodeProcessingTimer(HasLogger):
             nodespersecond = dt/float(self._updates)
             message = 'Processed %d nodes in %s (%.2f/s)' % \
                       (self._updates, formatted_time, nodespersecond)
-            self._logger.INFO(message)
+            self._logger.info(message)
             self._last_time=current_time
 
 
