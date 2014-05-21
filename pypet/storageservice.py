@@ -251,7 +251,7 @@ class NodeProcessingTimer(HasLogger):
             if minutes == 0:
                 formatted_time = '%ds' % seconds
             else:
-                formatted_time = '%dm%d%s' %(minutes, seconds)
+                formatted_time = '%dm%ds' %(minutes, seconds)
             nodespersecond = self._updates/dfullt
             message = 'Processed %d nodes in %s (%.2f nodes/s).' % \
                       (self._updates, formatted_time, nodespersecond)
