@@ -12,6 +12,8 @@ import logging
 import tables as pt
 import os
 import warnings
+import time
+import datetime
 import Queue
 
 import numpy as np
@@ -222,6 +224,36 @@ class LazyStorageService(StorageService):
         """Do whatever you want, I won't store anything!"""
         pass
 
+
+class NodeProcessingTimer(HasLogger):
+    """Simple Class to display the processing of nodes"""
+    def __init__(self, display_time=30, logger_name=None):
+        self._last_time = time.time()
+        self._display_time = display_time
+        self._set_logger(logger_name)
+        self._updates=0
+
+    def signal_update(self):
+        """Signals the process timer.
+
+        If more time than the display time has passed a message is emitted.
+
+        """
+        self._updates+=1
+        current_time = time.time()
+        dt = current_time - self._last_time
+        if dt > self._display_time:
+            formatted_time = datetime.datetime.fromtimestamp(dt).strftime('%Mm%Ss')
+            nodespersecond = dt/float(self._updates)
+            message = 'Processed %d nodes in %s (%.2f/s)' % \
+                      (self._updates, formatted_time, nodespersecond)
+            self._logger.INFO(message)
+            self._last_time=current_time
+
+
+
+
+
 class HDF5StorageService(StorageService, HasLogger):
     """Storage Service to handle the storage of a trajectory/parameters/results into hdf5 files.
 
@@ -425,7 +457,7 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Whether an hdf5 node is a leaf node'''
 
 
-    def __init__(self, filename=None, file_title='Experiment'):
+    def __init__(self, filename=None, file_title='Experiment', display_time=30):
         self._filename = filename
         self._file_title = file_title
         self._trajectory_name = None
@@ -441,7 +473,9 @@ class HDF5StorageService(StorageService, HasLogger):
         self._fletcher32 = False
         self._shuffle = True
 
+        self._node_processing_timer = None
 
+        self._display_time = display_time
 
         self._pandas_append = False
         self._pandas_format = 'fixed'
@@ -467,7 +501,14 @@ class HDF5StorageService(StorageService, HasLogger):
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
 
+    @property
+    def display_time(self):
+        """Time interval in seconds, when to display the storage or loading of nodes"""
+        return self._display_time
 
+    @display_time.setter
+    def display_time(self, display_time):
+        self._display_time = display_time
 
     @property
     def complib(self):
@@ -481,7 +522,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     @property
     def complevel(self):
-        "Compression level used"
+        """Compression level used"""
         return self._complevel
 
     @complevel.setter
@@ -1165,6 +1206,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             else:
                 raise RuntimeError('You shall not pass!')
+
+            self._node_processing_timer=NodeProcessingTimer(display_time=self._display_time,
+                        logger_name=self._logger.name)
 
             return True
         else:
@@ -2446,6 +2490,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Load data into the instance
                 self._prm_load_parameter_or_result(instance, _hdf5_group=hdf5group)
 
+            self._node_processing_timer.signal_update()
+
         else:
             # Else we are dealing with a group node
             if not name in parent_traj_node._children:
@@ -2474,6 +2520,8 @@ class HDF5StorageService(StorageService, HasLogger):
             # Load annotations if they are empty
             if new_traj_node.v_annotations.f_is_empty():
                 self._ann_load_annotations(new_traj_node, hdf5group)
+
+            self._node_processing_timer.signal_update()
 
             if recursive:
                 # We load recursively everything below it
@@ -2518,6 +2566,9 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
                                traj_node.v_full_name)
+
+            self._node_processing_timer.signal_update()
+
         else:
             # Else store it as a group node
 
@@ -2534,6 +2585,8 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
                                traj_node.v_full_name)
+
+            self._node_processing_timer.signal_update()
 
             if recursive:
                 # And if desired store recursively the subtree
