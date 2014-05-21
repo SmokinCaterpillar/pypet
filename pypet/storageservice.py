@@ -552,7 +552,10 @@ class HDF5StorageService(StorageService, HasLogger):
         if self._filters is None:
             self._filters = pt.Filters(complib=self._complib, complevel=self._complevel,
                                        shuffle=self._shuffle, fletcher32=self._fletcher32)
-            self._srvc_close_pandas_store()
+            self._hdf5store._filters=self._filters
+            self._hdf5store._complevel = self._complevel
+            self._hdf5store._complib=self._complib
+            self._hdf5store._fletcher32 = self._fletcher32
 
         return self._filters
 
@@ -1084,17 +1087,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 if not os.path.exists(path):
                     os.makedirs(path)
 
-                # All following try-except blocks of this form are there to allow
-                # compatibility for PyTables 2.3.1 as well as 3.0+
-                try:
-                    # PyTables 3 API
-                    self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
-                                             title=self._file_title)
-                except AttributeError:
-                    #PyTables 2 API
-                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
-                                             title=self._file_title)
-
+                self._hdf5store = HDFStore(self._filename, self._mode, complib=self._complib,
+                                           complevel=self._complevel, fletcher32=self._fletcher32)
+                self._hdf5file = self._hdf5store._handle
+                self._hdf5file.title = self._file_title
 
                 if not ('/'+self._trajectory_name) in self._hdf5file:
                     # If we want to store individual items we we have to check if the
@@ -1128,13 +1124,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 if not os.path.isfile(self._filename):
                     raise ValueError('File `' + self._filename + '` does not exist.')
 
-                try:
-                    self._hdf5file = pt.open_file(filename=self._filename, mode=mode,
-                                             title=self._file_title)
-                except AttributeError:
-                    self._hdf5file = pt.openFile(filename=self._filename, mode=mode,
-                                             title=self._file_title)
-
+                self._hdf5store = HDFStore(self._filename, self._mode, complib=self._complib,
+                                           complevel=self._complevel, fletcher32=self._fletcher32)
+                self._hdf5file = self._hdf5store._handle
 
 
                 if not self._trajectory_index is None:
@@ -1178,31 +1170,6 @@ class HDF5StorageService(StorageService, HasLogger):
         else:
             return False
 
-    def _srvc_open_pandas_store(self):
-        """Opens a pandas storage if this has not happened before"""
-        if self._hdf5store is None:
-            self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
-                                   complevel=self._complevel, fletcher32= self._fletcher32)
-
-    def srvc_get_pandas_store(self):
-        """Returns the hdf5 store, opens one if None"""
-        if self._hdf5store is None:
-            self._srvc_open_pandas_store()
-        return self._hdf5store
-
-    def _srvc_close_pandas_store(self):
-        """Closes a pandas store if it exists"""
-        if self._hdf5store is not None:
-            if self._hdf5store is not None:
-                try:
-                    self._hdf5store.flush(fsync=True)
-                except TypeError:
-                    f_fd = self._hdf5store._handle.fileno()
-                    self._hdf5store.flush()
-                    os.fsync(f_fd)
-                self._hdf5store.close()
-                self._hdf5store = None
-
 
     def _srvc_closing_routine(self, closing):
         """Routine to close an hdf5 file
@@ -1216,8 +1183,14 @@ class HDF5StorageService(StorageService, HasLogger):
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
             os.fsync(f_fd)
-            self._srvc_close_pandas_store()
-            self._hdf5file.close()
+            try:
+                self._hdf5store.flush(fsync=True)
+            except TypeError:
+                f_fd = self._hdf5store._handle.fileno()
+                self._hdf5store.flush()
+                os.fsync(f_fd)
+            self._hdf5store.close()
+            self._hdf5store = None
             self._hdf5file = None
             self._trajectory_group = None
             self._trajectory_name = None
@@ -3873,7 +3846,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
             name = group._v_pathname+'/' +key
-            pandas_store = self.srvc_get_pandas_store()
+            pandas_store = self._hdf5store
             pandas_store.put(name, data)
             pandas_store.flush()
             self._hdf5file.flush()
@@ -3920,7 +3893,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
             name = group._v_pathname+'/' +key
-            pandas_store = self.srvc_get_pandas_store()
+            pandas_store = self._hdf5store
             pandas_store.put(name, data,
                              format=self.pandas_format,
                             append= self.pandas_append)
@@ -3968,7 +3941,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError('DataFrame `%s` already exists in `%s`. Appending is not supported (yet).')
 
             name = group._v_pathname+'/' +key
-            pandas_store = self.srvc_get_pandas_store()
+            pandas_store = self._hdf5store
             pandas_store.put(name, data,
                              format=self.pandas_format,
                             append= self.pandas_append,
@@ -4522,7 +4495,7 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             name = pd_node._v_name
             pathname = pd_node._v_pathname
-            pandas_store = self.srvc_get_pandas_store()
+            pandas_store = self._hdf5store
             pandas_data = pandas_store.get(pathname)
             load_dict[name] = pandas_data
         except:
