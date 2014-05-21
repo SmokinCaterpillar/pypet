@@ -1,5 +1,7 @@
 pypet 0.1b.6
 
+*   The storage service prints status updates for loading and storing trees
+
 *   v_as_run is not longer None for a trajectory but `run_ALL`
 
 *   The Queue storage writer now stores batches of single runs to avoid
