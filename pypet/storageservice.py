@@ -228,10 +228,12 @@ class LazyStorageService(StorageService):
 class NodeProcessingTimer(HasLogger):
     """Simple Class to display the processing of nodes"""
     def __init__(self, display_time=30, logger_name=None):
-        self._last_time = time.time()
+        self._start_time = time.time()
+        self._last_time = self._start_time
         self._display_time = display_time
         self._set_logger(logger_name)
         self._updates=0
+        self._last_updates=0
 
     def signal_update(self):
         """Signals the process timer.
@@ -244,7 +246,7 @@ class NodeProcessingTimer(HasLogger):
         dt = current_time - self._last_time
         if dt > self._display_time:
             formatted_time = datetime.datetime.fromtimestamp(dt).strftime('%Mm%Ss')
-            nodespersecond = dt/float(self._updates)
+            nodespersecond = self._updates/(current_time-self._start_time)
             message = 'Processed %d nodes in %s (%.2f/s)' % \
                       (self._updates, formatted_time, nodespersecond)
             self._logger.info(message)
