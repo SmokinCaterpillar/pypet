@@ -15,6 +15,7 @@ care of organizational issues like logging.
 
 __author__ = 'Robert Meyer'
 
+import __main__ as main
 import os
 import sys
 import logging
@@ -1036,6 +1037,10 @@ class Environment(HasLogger):
         config_name='environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment').f_lock()
+
+        config_name='environment.%s.script' % self.v_name
+        self._traj.f_add_config(config_name, main.__file__,
+                                    comment ='Name of the executed main script').f_lock()
 
 
         if self._traj.v_version != VERSION:
