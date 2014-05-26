@@ -9,6 +9,16 @@ pypet 0.1b.6
 
 *   Faster Loading of data
 
+*   Support for PyTables 3.1.1
+
+*   pypet stores the name of the main script as a config parameter
+
+*   Data of Parameters can be accessed via `.data` or `param['data']`.
+    Same holds for results that only contain a single data item.
+
+*   Parameters provide the function `f_get_default` to return the default value
+    if the parameter is not empty.
+
 pypet 0.1b.5
 
 *   New auto load feature

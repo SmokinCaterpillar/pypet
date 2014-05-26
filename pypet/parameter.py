@@ -469,6 +469,11 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError( "Should have implemented this." )
 
+    def f_get_default(self):
+        """Returns the default value of the parameter and locks it.
+        """
+        raise NotImplementedError( "Should have implemented this." )
+
     @deprecated(msg='Please use `f_get_range()` instead!')
     def f_get_array(self):
         """Returns an iterable to iterate over the values of the exploration range.
@@ -693,6 +698,14 @@ class Parameter(BaseParameter):
         >>> param.f_get()
         42
 
+        Or using
+        >>> param.data
+        42
+
+        [It is not `v_data` because the data is supposed to be part of the trajectory tree
+        or extension of the natural naming scheme and not considered as an
+        attribute/variable of the parameter container.]
+
         To change the data after parameter creation one can call
         :func:`~pypet.parameter.Parameter.f_set`:
 
@@ -787,7 +800,30 @@ class Parameter(BaseParameter):
 
         return result
 
+    def __getattr__(self, item):
+        """Allows to query for `.data` as an attribute"""
+        if item == 'data':
+            return self.f_get()
+        elif item == 'default':
+            return self.f_get_default()
+        else:
+            raise AttributeError('`%s` object has no attribute `%s`.' % (self.f_get_class_name(),
+                                                                         item))
 
+    def __getitem__(self, item):
+        """Equivalent to `f_get_range[item] if item is integer`
+
+        Allows also ['data'] access which is equivalent to `f_get`
+
+        :raises: TypeError if parameter has no range
+
+        """
+        if item == 'data':
+            return self.f_get()
+        elif item == 'default' or item == -1:
+            return self.f_get_default()
+        else:
+            return super(Parameter, self).__getitem__(item)
       
     @copydoc(BaseParameter._set_parameter_access)
     def _set_parameter_access(self, idx=0):
@@ -920,6 +956,13 @@ class Parameter(BaseParameter):
 
         return val
 
+    @copydoc(BaseParameter.f_get_default)
+    def f_get_default(self):
+        if self.f_is_empty():
+            raise TypeError('Parameter `%s` is empty cannot access data' % self.v_full_name)
+
+        self.f_lock() # As soon as someone accesses an entry the parameter gets locked
+        return self._default
 
     def f_get_range(self):
         """Returns a python tuple containing the exploration range.
@@ -1089,6 +1132,8 @@ class Parameter(BaseParameter):
 
         self.f_lock() # As soon as someone accesses an entry the parameter gets locked
         return self._data
+
+
 
     @copydoc(BaseParameter._shrink)
     def _shrink(self):
@@ -2016,7 +2061,7 @@ class Result(BaseResult):
         """Equivalent to iterating over the keys of the data dictionary."""
         return self._data.__iter__()
 
-    def f_get(self,*args):
+    def f_get(self, *args):
         """Returns items handled by the result.
 
          If only a single name is given, a single data item is returned. If several names are
@@ -2065,7 +2110,10 @@ class Result(BaseResult):
                     name = self.v_name+'_%d' % name
 
             if not name in self._data:
-                raise  AttributeError('`%s` is not part of your result `%s`.' %
+                if name == 'data' and len(self._data) == 1:
+                    return self._data[self._data.keys()[0]]
+                else:
+                    raise  AttributeError('`%s` is not part of your result `%s`.' %
                                       (name,self.v_full_name))
 
             result_list.append(self._data[name])
@@ -2213,11 +2261,7 @@ class Result(BaseResult):
         if not '_data' in self.__dict__:
             raise AttributeError('This is to avoid pickling issues!')
 
-        if not name in self._data:
-            raise  AttributeError('`%s` is not part of your result `%s`.' %
-                                  (name,self.v_full_name))
-
-        return self._data[name]
+        return self.f_get(name)
 
 class SparseResult(Result):
     """Handles Scipy sparse matrices.
