@@ -1891,7 +1891,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                            trajectory_name=self.v_trajectory_name)
 
             except Exception:
-                pass # We end up here if the parameter was not stored to disk, yetr
+                pass # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)
 
 

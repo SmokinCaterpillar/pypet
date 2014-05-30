@@ -10,6 +10,7 @@ __author__ = 'Robert Meyer'
 
 import logging
 import tables as pt
+import tables.parameters as ptpa
 import os
 import warnings
 import time
@@ -396,6 +397,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
     In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
+    DICT_SPLIT = 'DICT_SPLIT'
+    ''' Stored as dict but has to be split since the table becomes too long
+    to cause performance issues.
+    '''
+
     TABLE = 'TABLE'
     '''Stored as pytable_
 
@@ -1751,15 +1757,12 @@ class HDF5StorageService(StorageService, HasLogger):
         if traj.v_annotations.f_is_empty():
             self._ann_load_annotations(traj, self._trajectory_group)
 
-        try:
-            nodes_iterator = self._trajectory_group._f_iter_nodes()
-        except AttributeError:
-            nodes_iterator = self._trajectory_group._f_iterNodes()
-
         maximum_display_other = 10
         counter = 0
 
-        for hdf5group in nodes_iterator:
+        children = self._trajectory_group._v_children
+        for hdf5group_name in children:
+            hdf5group = children[hdf5group_name]
 
             what = hdf5group._v_name
 
@@ -2283,7 +2286,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """Stores data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
-        :param msg: How to store leaf nodes, either 'LEAF' or 'UPDATE_LEAF'
+        :param msg: 'LEAF'
 
         :param traj_node: The node where storing starts
 
@@ -2533,17 +2536,18 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if recursive:
                 # We load recursively everything below it
-                try:
-                    for new_hdf5group in hdf5group._f_iter_nodes(classname='Group'):
-                        self._tree_load_nodes(traj,new_traj_node,new_hdf5group,load_data)
-                except AttributeError:
-                    for new_hdf5group in hdf5group._f_iterNodes(classname='Group'):
-                        self._tree_load_nodes(traj,new_traj_node,new_hdf5group,load_data)
+                children = hdf5group._v_children
+                for new_hdf5group_name in children:
+                    new_hdf5group = children[new_hdf5group_name]
+                    if not isinstance(new_hdf5group, pt.Group):
+                        continue
+                    self._tree_load_nodes(traj,new_traj_node, new_hdf5group,load_data)
+
 
     def _tree_store_nodes(self,msg, traj_node, parent_hdf5_group, recursive = True):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
 
-        :param msg: How to store leaf nodes, either 'LEAF' or 'UPDATE_LEAF'
+        :param msg: 'LEAF'
         :param traj_node: Node to be stored
         :param parent_hdf5_group: Parent hdf5 groug
         :param recursive: Whether to store recursively the subtree
@@ -3825,7 +3829,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+            Message passed to the storage service ('LEAF')
 
         :param key:
 
@@ -3851,29 +3855,55 @@ class HDF5StorageService(StorageService, HasLogger):
             raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
 
         # Create a temp_dict in order not to modify the original data
-        temp_dict={}
-        for innerkey, val in data_to_store.iteritems():
-            temp_dict[innerkey] =[val]
+        if len(data_to_store)> ptpa.MAX_COLUMNS:
+            dicts = [{}]
+            count = 0
+            for innerkey in data_to_store:
+                val = data_to_store[innerkey]
+                if count == ptpa.MAX_COLUMNS:
+                    dicts.append({})
+                    count = 0
+                dicts[-1][innerkey] = val
+                count += 1
+            try:
+                subgroup = self._hdf5file.create_group(where=group, name=key)
+            except AttributeError:
+                subgroup = self._hdf5file.createGroup(where=group, name=key)
 
-        # Convert dictionary to object table
-        objtable = ObjectTable(data=temp_dict)
+            setattr(subgroup._v_attrs,HDF5StorageService.STORAGE_TYPE,
+                    HDF5StorageService.DICT)
+            setattr(subgroup._v_attrs,HDF5StorageService.DICT_SPLIT,
+                    1)
 
-        # Then store the object table
-        self._prm_store_into_pytable(msg,key,objtable,group,fullname)
+            for idx, dictionary in enumerate(dicts):
+                self._prm_store_dict_as_table(msg, key+'_%d' % idx, dictionary,
+                                              subgroup, fullname)
+        else:
 
-        try:
-            new_table = group._f_get_child(key)
-        except AttributeError:
-            new_table = group._f_getChild(key)
+            temp_dict={}
+            for innerkey in data_to_store:
+                val = data_to_store[innerkey]
+                temp_dict[innerkey] =[val]
 
-        # Remember that the Object Table represents a dictionary
-        self._all_set_attributes_to_recall_natives(temp_dict,new_table,
-                                                   HDF5StorageService.DATA_PREFIX)
+            # Convert dictionary to object table
+            objtable = ObjectTable(data=temp_dict)
 
-        setattr(new_table._v_attrs,HDF5StorageService.STORAGE_TYPE,
-                HDF5StorageService.DICT)
+            # Then store the object table
+            self._prm_store_into_pytable(msg,key,objtable,group,fullname)
 
-        self._hdf5file.flush()
+            try:
+                new_table = group._f_get_child(key)
+            except AttributeError:
+                new_table = group._f_getChild(key)
+
+            # Remember that the Object Table represents a dictionary
+            self._all_set_attributes_to_recall_natives(temp_dict,new_table,
+                                                       HDF5StorageService.DATA_PREFIX)
+
+            setattr(new_table._v_attrs,HDF5StorageService.STORAGE_TYPE,
+                    HDF5StorageService.DICT)
+
+            self._hdf5file.flush()
 
 
     def _prm_store_series(self, msg, key, data, group, fullname):
@@ -3881,7 +3911,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+            Message passed to the storage service ('LEAF')
 
         :param key:
 
@@ -3928,7 +3958,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+            Message passed to the storage service ('LEAF')
 
         :param key:
 
@@ -3977,7 +4007,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF')
+            Message passed to the storage service ('LEAF')
 
         :param key:
 
@@ -4027,7 +4057,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
+            Message passed to the storage service ('LEAF').
             Not needed here.
 
         :param key:
@@ -4086,7 +4116,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
+            Message passed to the storage service ('LEAF').
             Not needed here.
 
         :param key:
@@ -4246,7 +4276,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param msg:
 
-            Message passed to the storage service (either 'UPDATE_LEAF' or 'LEAF').
+            Message passed to the storage service ('LEAF').
 
         :param tablename:
 
@@ -4327,7 +4357,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         for key, val in data.iteritems():
 
-            # remeber the original data types
+            # remember the original data types
             self._all_set_attributes_to_recall_natives(val[0],original_data_type_dict,
                             HDF5StorageService.FORMATTED_COLUMN_PREFIX % key)
 
@@ -4518,20 +4548,32 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            temp_dict={}
-            # Load as Pbject Table
-            self._prm_read_table(leaf,temp_dict,full_name)
-            key =leaf._v_name
-            temp_table = temp_dict[key]
-            # Turn the ObjectTable into a dictionary of lists (with length 1).
-            temp_dict = temp_table.to_dict('list')
+            if self._all_get_from_attrs(leaf, HDF5StorageService.DICT_SPLIT):
+                temp_dict = {}
+                children = leaf._v_children
+                for tablename in children:
+                    table = children[tablename]
+                    self._prm_read_dictionary(table, temp_dict, full_name)
+                key =leaf._v_name
+                load_dict[key]={}
+                for dictname in temp_dict:
+                    dictionary = temp_dict[dictname]
+                    load_dict[key].update(dictionary)
+            else:
+                temp_dict={}
+                # Load as Pbject Table
+                self._prm_read_table(leaf, temp_dict,full_name)
+                key =leaf._v_name
+                temp_table = temp_dict[key]
+                # Turn the ObjectTable into a dictionary of lists (with length 1).
+                temp_dict = temp_table.to_dict('list')
 
-            innder_dict = {}
-            load_dict[key] = innder_dict
+                innder_dict = {}
+                load_dict[key] = innder_dict
 
-            # Turn the dictionary of lists into a normal dictionary
-            for innerkey, vallist in temp_dict.items():
-                innder_dict[innerkey] = vallist[0]
+                # Turn the dictionary of lists into a normal dictionary
+                for innerkey, vallist in temp_dict.items():
+                    innder_dict[innerkey] = vallist[0]
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name,full_name))
             raise

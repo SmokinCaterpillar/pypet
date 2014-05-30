@@ -141,6 +141,26 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(traj.results.wctest[1].jjj==43)
         self.assertTrue(traj.results.wc2test[-1].hhh==333)
 
+    def test_store_and_load_large_dictionary(self):
+        traj = Trajectory(name='Test', filename=make_temp_file('large_dict.hdf5'))
+
+        large_dict = {}
+
+        for irun in range(513):
+            large_dict['item_%d' % irun] = irun
+
+        traj.f_add_result('large_dict', large_dict, comment='Huge_dict!')
+
+        traj.f_store()
+
+        traj_name = traj.v_name
+
+        traj2 = Trajectory(filename=make_temp_file('large_dict.hdf5'))
+
+        traj2.f_load(name=traj_name, load_all=2)
+
+        self.compare_trajectories(traj, traj2)
+
     def test_auto_load(self):
 
 
