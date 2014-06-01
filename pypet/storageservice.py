@@ -16,6 +16,7 @@ import warnings
 import time
 import datetime
 import Queue
+import sys
 
 import numpy as np
 from pandas import DataFrame, read_hdf, Series, Panel, Panel4D, HDFStore
@@ -26,6 +27,7 @@ from pypet import __version__ as VERSION
 from pypet.parameter import ObjectTable
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger
+
 
 
 
@@ -260,7 +262,13 @@ class NodeProcessingTimer(HasLogger):
             self._last_time=current_time
 
 
+class PTItemMock(object):
+    """Class that mocks a PyTables item and wraps around a dictionary"""
+    def __init__(self, dictionary):
+        self._v_attrs = dictionary
 
+    def _f_setattr(self, name, val):
+        self._v_attrs[name]=val
 
 
 class HDF5StorageService(StorageService, HasLogger):
@@ -397,10 +405,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
     In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
-    DICT_SPLIT = 'DICT_SPLIT'
-    ''' Stored as dict but has to be split since the table becomes too long
-    to cause performance issues.
-    '''
 
     TABLE = 'TABLE'
     '''Stored as pytable_
@@ -420,6 +424,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
     PANEL = 'PANEL'
     ''' Store data as pandas Panel(4D) '''
+
+    SPLIT_TABLE = 'SPLIT_TABLE'
+    ''' If a table was split due to too many columns'''
+
+    DATATYPE_TABLE = 'DATATYPE_TABLE'
+    '''If a table contains the data types instead of the attrs'''
 
 
     TYPE_FLAG_MAPPING = {
@@ -2904,16 +2914,16 @@ class HDF5StorageService(StorageService, HasLogger):
         except KeyError:
             return None
 
-    def _all_set_attributes_to_recall_natives(self, data, ptitem_or_dict, prefix):
+    def _all_set_attributes_to_recall_natives(self, data, ptitem, prefix):
         """Stores original data type to hdf5 node attributes for preserving the data type.
 
         :param data:
 
             Data to be stored
 
-        :param ptitem_or_dict:
+        :param ptitem:
 
-            HDF5 node to store data types as attributes. Can also be just a dictionary.
+            HDF5 node to store data types as attributes. Can also be just a PTItemMock.
 
         :param prefix:
 
@@ -2921,39 +2931,37 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
 
-        def _set_attribute_to_item_or_dict(item_or_dict, name,val):
+        def _set_attribute_to_item_or_dict(item, name,val):
             """Stores `val` with `name` into `item_or_dict`.
 
-            `item_or_dict` is either and HDF5 node or a python dictionary.
+            `item` is either and HDF5 node or a python dictionary as PTItemMock.
 
             """
             try:
-                try:
-                    item_or_dict._f_setattr(name,val)
-                except AttributeError:
-                    item_or_dict._f_setAttr(name,val)
+                item._f_setattr(name,val)
             except AttributeError:
-                item_or_dict[name]=val
+                item._f_setAttr(name,val)
+
 
         # If `data` is a container, remember the container type
         if type(data) is tuple:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_TUPLE)
 
         elif type(data) is list:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_LIST)
 
         elif type(data) is np.ndarray:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_NDARRAY)
 
         elif type(data) is np.matrix:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                                            HDF5StorageService.COLL_MATRIX)
 
         elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_SCALAR)
 
             strtype = repr(type(data))
@@ -2962,10 +2970,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                                (str(data),repr(type(data))))
 
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
 
         elif type(data) is dict:
-            _set_attribute_to_item_or_dict(ptitem_or_dict,prefix+HDF5StorageService.COLL_TYPE,
+            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_DICT)
 
         else:
@@ -2985,11 +2993,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     raise TypeError('I do not know how to handle `%s` its type is '
                                        '`%s`.' % (str(data),strtype))
 
-                _set_attribute_to_item_or_dict(ptitem_or_dict,prefix +
+                _set_attribute_to_item_or_dict(ptitem,prefix +
                                                     HDF5StorageService.SCALAR_TYPE,strtype)
 
 
-    def _all_recall_native_type(self,data, ptitem, prefix):
+    def _all_recall_native_type(self, data, ptitem, prefix):
         """Checks if loaded data has the type it was stored in. If not converts it.
 
         :param data: Data item to be checked and converted
@@ -3854,56 +3862,56 @@ class HDF5StorageService(StorageService, HasLogger):
         if key in group:
             raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
 
-        # Create a temp_dict in order not to modify the original data
-        if len(data_to_store)> ptpa.MAX_COLUMNS:
-            dicts = [{}]
-            count = 0
-            for innerkey in data_to_store:
-                val = data_to_store[innerkey]
-                if count == ptpa.MAX_COLUMNS:
-                    dicts.append({})
-                    count = 0
-                dicts[-1][innerkey] = val
-                count += 1
-            try:
-                subgroup = self._hdf5file.create_group(where=group, name=key)
-            except AttributeError:
-                subgroup = self._hdf5file.createGroup(where=group, name=key)
+        # # Create a temp_dict in order not to modify the original data
+        # if len(data_to_store)> ptpa.MAX_COLUMNS:
+        #     dicts = [{}]
+        #     count = 0
+        #     for innerkey in data_to_store:
+        #         val = data_to_store[innerkey]
+        #         if count == ptpa.MAX_COLUMNS:
+        #             dicts.append({})
+        #             count = 0
+        #         dicts[-1][innerkey] = val
+        #         count += 1
+        #     try:
+        #         subgroup = self._hdf5file.create_group(where=group, name=key)
+        #     except AttributeError:
+        #         subgroup = self._hdf5file.createGroup(where=group, name=key)
+        #
+        #     setattr(subgroup._v_attrs,HDF5StorageService.STORAGE_TYPE,
+        #             HDF5StorageService.DICT)
+        #     setattr(subgroup._v_attrs,HDF5StorageService.DICT_SPLIT,
+        #             1)
+        #
+        #     for idx, dictionary in enumerate(dicts):
+        #         self._prm_store_dict_as_table(msg, key+'_%d' % idx, dictionary,
+        #                                       subgroup, fullname)
+        # else:
 
-            setattr(subgroup._v_attrs,HDF5StorageService.STORAGE_TYPE,
-                    HDF5StorageService.DICT)
-            setattr(subgroup._v_attrs,HDF5StorageService.DICT_SPLIT,
-                    1)
+        temp_dict={}
+        for innerkey in data_to_store:
+            val = data_to_store[innerkey]
+            temp_dict[innerkey] =[val]
 
-            for idx, dictionary in enumerate(dicts):
-                self._prm_store_dict_as_table(msg, key+'_%d' % idx, dictionary,
-                                              subgroup, fullname)
-        else:
+        # Convert dictionary to object table
+        objtable = ObjectTable(data=temp_dict)
 
-            temp_dict={}
-            for innerkey in data_to_store:
-                val = data_to_store[innerkey]
-                temp_dict[innerkey] =[val]
+        # Then store the object table
+        self._prm_store_into_pytable(msg,key,objtable,group,fullname)
 
-            # Convert dictionary to object table
-            objtable = ObjectTable(data=temp_dict)
+        try:
+            new_table = group._f_get_child(key)
+        except AttributeError:
+            new_table = group._f_getChild(key)
 
-            # Then store the object table
-            self._prm_store_into_pytable(msg,key,objtable,group,fullname)
+        # Remember that the Object Table represents a dictionary
+        self._all_set_attributes_to_recall_natives(temp_dict, new_table,
+                                                   HDF5StorageService.DATA_PREFIX)
 
-            try:
-                new_table = group._f_get_child(key)
-            except AttributeError:
-                new_table = group._f_getChild(key)
+        setattr(new_table._v_attrs,HDF5StorageService.STORAGE_TYPE,
+                HDF5StorageService.DICT)
 
-            # Remember that the Object Table represents a dictionary
-            self._all_set_attributes_to_recall_natives(temp_dict,new_table,
-                                                       HDF5StorageService.DATA_PREFIX)
-
-            setattr(new_table._v_attrs,HDF5StorageService.STORAGE_TYPE,
-                    HDF5StorageService.DICT)
-
-            self._hdf5file.flush()
+        self._hdf5file.flush()
 
 
     def _prm_store_series(self, msg, key, data, group, fullname):
@@ -4104,7 +4112,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 carray[:]=data[:]
 
             # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data,carray,HDF5StorageService.DATA_PREFIX)
+            self._all_set_attributes_to_recall_natives(data, carray, HDF5StorageService.DATA_PREFIX)
             setattr(carray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
             self._hdf5file.flush()
         except:
@@ -4155,7 +4163,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 array=self._hdf5file.createArray(where=group, name=key,object=data)
 
             # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data,array,HDF5StorageService.DATA_PREFIX)
+            self._all_set_attributes_to_recall_natives(data ,array, HDF5StorageService.DATA_PREFIX)
             setattr(array._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.ARRAY)
             self._hdf5file.flush()
         except:
@@ -4286,7 +4294,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             Data to store
 
-        :param group:
+        :param hdf5group:
 
             Group node where to store data in hdf5 file
 
@@ -4302,41 +4310,113 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Get a new pytables description from the data and create a new table
             description_dict, data_type_dict = self._prm_make_description(data, fullname)
+            description_dicts = [{}]
+
+            if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
+                # For optimzation we want to store the original data types into another table
+                try:
+                    new_table_group=self._hdf5file.create_group(where=hdf5group, name=tablename)
+                except AttributeError:
+                    new_table_group=self._hdf5file.createGroup(where=hdf5group, name=tablename)
+                if len(description_dict) > ptpa.MAX_COLUMNS:
+                    # For further optimization we need to split the table into several
+                    count = 0
+                    for innerkey in description_dict:
+                        val = description_dict[innerkey]
+                        if count == ptpa.MAX_COLUMNS:
+                            description_dicts.append({})
+                            count = 0
+                        description_dicts[-1][innerkey] = val
+                        count += 1
+                else:
+                    description_dicts=[description_dict]
+
+                setattr(new_table_group._v_attrs, HDF5StorageService.STORAGE_TYPE,
+                    HDF5StorageService.TABLE)
+                setattr(new_table_group._v_attrs, HDF5StorageService.SPLIT_TABLE, 1)
+
+                hdf5group=new_table_group
+            else:
+                description_dicts=[description_dict]
+
+            for idx, descr_dict in enumerate(description_dicts):
+
+                if idx == 0:
+                    tblname = tablename
+                else:
+                    tblname = tablename +'_%d' % idx
+
+                try:
+                    table = self._hdf5file.create_table(where=hdf5group, name=tblname,
+                                                       description=descr_dict,
+                                                       title=tblname,
+                                                       expectedrows=datasize,
+                                                       filters=self._get_filters())
+                except AttributeError:
+                    table = self._hdf5file.createTable(where=hdf5group, name=tblname,
+                                                       description=descr_dict,
+                                                       title=tblname,
+                                                       expectedrows=datasize,
+                                                       filters=self._get_filters())
+
+                row = table.row
+                for n in range(datasize):
+                    # Fill the columns with data, note if the parameter was extended nstart!=0
+
+                    for key in descr_dict:
+
+                        row[key] = data[key][n]
+
+                    row.append()
 
 
-            try:
-                table = self._hdf5file.create_table(where=hdf5group, name=tablename,
-                                                   description=description_dict,
-                                                   title=tablename,
-                                                   expectedrows=datasize,
-                                                   filters=self._get_filters())
-            except AttributeError:
-                table = self._hdf5file.createTable(where=hdf5group, name=tablename,
-                                                   description=description_dict,
-                                                   title=tablename,
-                                                   expectedrows=datasize,
-                                                   filters=self._get_filters())
-            nstart = 0
-            row = table.row
+                # Remember the original types of the data for perfect recall
+                if idx == 0 and len(description_dict) <= pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
+                    # We only have a single table and we can store the original data types as attributes
+                    for field_name, type_description in data_type_dict.iteritems():
+                        table._f_setAttr(field_name,type_description)
 
+                    setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
 
-            cols = data.columns.tolist()
-            for n in range(nstart, datasize):
-                # Fill the columns with data, note if the parameter was extended nstart!=0
+                table.flush()
+                self._hdf5file.flush()
 
-                for key in cols:
+            if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
+                # We have potentially many split tables and the data types are
+                # stored into an additional table for performance reasons
+                tblname = tablename + '__' + HDF5StorageService.STORAGE_TYPE
+                field_names, data_types = zip(*data_type_dict.items())
+                data_type_table_dict = {'field_name' : field_names, 'data_type':data_types}
+                descr_dict, _ = self._prm_make_description(data_type_table_dict, fullname)
+                try:
+                    table = self._hdf5file.create_table(where=hdf5group, name=tblname,
+                                                       description=descr_dict,
+                                                       title=tblname,
+                                                       expectedrows=len(field_names),
+                                                       filters=self._get_filters())
+                except AttributeError:
+                    table = self._hdf5file.createTable(where=hdf5group, name=tblname,
+                                                       description=descr_dict,
+                                                       title=tblname,
+                                                       expectedrows=len(field_names),
+                                                       filters=self._get_filters())
 
-                    row[key] = data[key][n]
+                row = table.row
 
-                row.append()
+                for n in range(len(field_names)):
+                    # Fill the columns with data, note if the parameter was extended nstart!=0
 
-            # Remember the original types of the data for perfect recall
-            for field_name, type_description in data_type_dict.iteritems():
-                table._f_setAttr(field_name,type_description)
+                    for key in data_type_table_dict:
 
-            setattr(table._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
-            table.flush()
-            self._hdf5file.flush()
+                        row[key] = data_type_table_dict[key][n]
+
+                    row.append()
+
+                setattr(table._v_attrs, HDF5StorageService.DATATYPE_TABLE, 1)
+
+                table.flush()
+                self._hdf5file.flush()
+
         except:
             self._logger.error('Failed storing table `%s` of `%s`.' %(tablename,fullname))
             raise
@@ -4358,7 +4438,7 @@ class HDF5StorageService(StorageService, HasLogger):
         for key, val in data.iteritems():
 
             # remember the original data types
-            self._all_set_attributes_to_recall_natives(val[0],original_data_type_dict,
+            self._all_set_attributes_to_recall_natives(val[0], PTItemMock(original_data_type_dict),
                             HDF5StorageService.FORMATTED_COLUMN_PREFIX % key)
 
             _convert_lists_and_tuples(val)
@@ -4548,32 +4628,32 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            if self._all_get_from_attrs(leaf, HDF5StorageService.DICT_SPLIT):
-                temp_dict = {}
-                children = leaf._v_children
-                for tablename in children:
-                    table = children[tablename]
-                    self._prm_read_dictionary(table, temp_dict, full_name)
-                key =leaf._v_name
-                load_dict[key]={}
-                for dictname in temp_dict:
-                    dictionary = temp_dict[dictname]
-                    load_dict[key].update(dictionary)
-            else:
-                temp_dict={}
-                # Load as Pbject Table
-                self._prm_read_table(leaf, temp_dict,full_name)
-                key =leaf._v_name
-                temp_table = temp_dict[key]
-                # Turn the ObjectTable into a dictionary of lists (with length 1).
-                temp_dict = temp_table.to_dict('list')
+            # if self._all_get_from_attrs(leaf, HDF5StorageService.DICT_SPLIT):
+            #     temp_dict = {}
+            #     children = leaf._v_children
+            #     for tablename in children:
+            #         table = children[tablename]
+            #         self._prm_read_dictionary(table, temp_dict, full_name)
+            #     key =leaf._v_name
+            #     load_dict[key]={}
+            #     for dictname in temp_dict:
+            #         dictionary = temp_dict[dictname]
+            #         load_dict[key].update(dictionary)
+            # else:
+            temp_dict={}
+            # Load as Pbject Table
+            self._prm_read_table(leaf, temp_dict,full_name)
+            key =leaf._v_name
+            temp_table = temp_dict[key]
+            # Turn the ObjectTable into a dictionary of lists (with length 1).
+            temp_dict = temp_table.to_dict('list')
 
-                innder_dict = {}
-                load_dict[key] = innder_dict
+            innder_dict = {}
+            load_dict[key] = innder_dict
 
-                # Turn the dictionary of lists into a normal dictionary
-                for innerkey, vallist in temp_dict.items():
-                    innder_dict[innerkey] = vallist[0]
+            # Turn the dictionary of lists into a normal dictionary
+            for innerkey, vallist in temp_dict.items():
+                innder_dict[innerkey] = vallist[0]
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name,full_name))
             raise
@@ -4605,13 +4685,13 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name,full_name))
             raise
 
-    def _prm_read_table(self,table,load_dict, full_name):
+    def _prm_read_table(self, table_or_group, load_dict, full_name):
         """Reads a non-nested PyTables table column by column and created a new ObjectTable for
         the loaded data.
 
-        :param table:
+        :param table_or_group:
 
-            PyTables table to read from
+            PyTables table to read from or a group containing subtables.
 
         :param load_dict:
 
@@ -4623,29 +4703,69 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            table_name = table._v_name
+            if self._all_get_from_attrs(table_or_group, HDF5StorageService.SPLIT_TABLE):
+                table_name = table_or_group._v_name
+                
+                data_type_table_name = table_name + '__' + HDF5StorageService.STORAGE_TYPE
 
-            for colname in table.colnames:
-                # Read Data column by column
-                col = table.col(colname)
-                data_list=list(col)
+                data_type_table = table_or_group._v_children[data_type_table_name]
+                data_type_dict = {}
+                for row in data_type_table:
+                    fieldname = str(row['field_name'])
+                    data_type_dict[fieldname]= str(row['data_type'])
+                
+                for sub_table in table_or_group:
+                    sub_table_name = sub_table._v_name
+                    
+                    if sub_table_name == data_type_table_name:
+                        continue
 
-                prefix = HDF5StorageService.FORMATTED_COLUMN_PREFIX % colname
-                for idx,data in enumerate(data_list):
-                    # Recall original type of data
-                    data,type_changed = self._all_recall_native_type(data,table,prefix)
-                    if type_changed:
-                        data_list[idx] = data
+                    for colname in sub_table.colnames:
+                        # Read Data column by column
+                        col = sub_table.col(colname)
+                        data_list=list(col)
+
+                        prefix = HDF5StorageService.FORMATTED_COLUMN_PREFIX % colname
+                        for idx,data in enumerate(data_list):
+                            # Recall original type of data
+                            data,type_changed = self._all_recall_native_type(data,
+                                                        PTItemMock(data_type_dict), prefix)
+                            if type_changed:
+                                data_list[idx] = data
+                            else:
+                                break
+
+                        # Construct or insert into an ObjectTable
+                        if table_name in load_dict:
+                            load_dict[table_name][colname] = data_list
+                        else:
+                            load_dict[table_name] = ObjectTable(data={colname:data_list})
+
+            else:
+
+                table_name = table_or_group._v_name
+
+                for colname in table_or_group.colnames:
+                    # Read Data column by column
+                    col = table_or_group.col(colname)
+                    data_list=list(col)
+
+                    prefix = HDF5StorageService.FORMATTED_COLUMN_PREFIX % colname
+                    for idx,data in enumerate(data_list):
+                        # Recall original type of data
+                        data,type_changed = self._all_recall_native_type(data, table_or_group, prefix)
+                        if type_changed:
+                            data_list[idx] = data
+                        else:
+                            break
+
+                    # Construct or insert into an ObjectTable
+                    if table_name in load_dict:
+                        load_dict[table_name][colname] = data_list
                     else:
-                        break
-
-                # Construct or insert into an ObjectTable
-                if table_name in load_dict:
-                    load_dict[table_name][colname] = data_list
-                else:
-                    load_dict[table_name] = ObjectTable(data={colname:data_list})
+                        load_dict[table_name] = ObjectTable(data={colname:data_list})
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (table._v_name,full_name))
+            self._logger.error('Failed loading `%s` of `%s`.' % (table_or_group._v_name,full_name))
             raise
 
 

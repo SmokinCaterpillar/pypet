@@ -19,6 +19,12 @@ pypet 0.1b.6
 *   Parameters provide the function `f_get_default` to return the default value
     if the parameter is not empty.
 
+*   Large dictionaries and Object Tables are now split into chunks of size 512 items
+
+*   In case an object table has more than 32 columns, another table is created to
+    store the data item types (which is faster than storing all of the types as
+    hdf5 node attributes)
+
 pypet 0.1b.5
 
 *   New auto load feature

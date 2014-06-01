@@ -81,7 +81,10 @@ HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 excluding the microseconds
 
 """
-
+HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
+"""
+Maximum number of attributes before a distinct table is created
+"""
 
 ######## Multiprocessing Modes #############
 

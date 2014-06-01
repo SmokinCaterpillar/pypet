@@ -146,10 +146,16 @@ class StorageTest(TrajectoryComparator):
 
         large_dict = {}
 
-        for irun in range(513):
+        for irun in range(1025):
             large_dict['item_%d' % irun] = irun
 
+        large_dict2 = {}
+
+        for irun in range(33):
+            large_dict2['item_%d' % irun] = irun
+
         traj.f_add_result('large_dict', large_dict, comment='Huge_dict!')
+        traj.f_add_result('large_dict2', large_dict2, comment='Not so large dict!')
 
         traj.f_store()
 
@@ -160,6 +166,7 @@ class StorageTest(TrajectoryComparator):
         traj2.f_load(name=traj_name, load_all=2)
 
         self.compare_trajectories(traj, traj2)
+
 
     def test_auto_load(self):
 
