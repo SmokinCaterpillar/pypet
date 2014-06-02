@@ -53,5 +53,5 @@ What should I do?
 **Q:** I have large data sets that are not stored if I use multiprocessing and the lock wrapping!?
 
     **A:** Probably, you use an older HDF5 version (< 1.8.7) that does not allow
-    simultaneous openings of a signle HDF5 file. Either install a newer version or switch to
+    simultaneous openings of a single HDF5 file. Either install a newer version or switch to
     queue wrapping.
