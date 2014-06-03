@@ -81,7 +81,10 @@ HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 excluding the microseconds
 
 """
-
+HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
+"""
+Maximum number of attributes before a distinct table is created
+"""
 
 ######## Multiprocessing Modes #############
 
@@ -113,8 +116,6 @@ UPDATE_DATA = 2
 
 LEAF ='LEAF'
 """ For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object"""
-UPDATE_LEAF = 'UPDATE_LEAF'
-""" Updates a *leaf* node, currently only parameters that are extended in length can be updated."""
 TRAJECTORY = 'TRAJECTORY'
 """ Stores the whole trajectory"""
 MERGE = 'MERGE'

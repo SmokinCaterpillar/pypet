@@ -11,7 +11,6 @@ import multiprocessing as mp
 import pickle
 
 import os
-import dill
 
 import tables as pt
 from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \

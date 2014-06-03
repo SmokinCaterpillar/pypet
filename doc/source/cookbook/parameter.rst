@@ -130,6 +130,9 @@ So far, the following parameters exist:
 
 Parameters can be changed and values can be requested with the getter and setter methods:
 :func:`~pypet.parameter.Parameter.f_get` and :func:`~pypet.parameter.Parameter.f_set`.
+For convenience ``param.data`` works as well instead of :func:`~pypet.parameter.Parameter.f_get`.
+Note that ``param.v_data` is not valid syntax. The idea is that `.data` works as an
+extension to the natural naming scheme.
 
 For people using BRIAN_ quantities, there also exists a
 :class:`~pypet.brian.parameter.BrianParameter`.

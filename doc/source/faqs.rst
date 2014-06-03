@@ -49,3 +49,9 @@ What should I do?
     is rendered obsolete. Likewise is depth first search because this automatic checking
     only works with breadth first tree traversal.
     Sorry for any inconvenience caused by this API change.
+
+**Q:** I have large data sets that are not stored if I use multiprocessing and the lock wrapping!?
+
+    **A:** Probably, you use an older HDF5 version (< 1.8.7) that does not allow
+    simultaneous openings of a single HDF5 file. Either install a newer version or switch to
+    queue wrapping.

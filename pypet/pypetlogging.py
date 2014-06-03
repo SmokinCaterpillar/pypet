@@ -48,3 +48,11 @@ class HasLogger(object):
         if name is None:
             name = type(self).__name__
         self._logger = logging.getLogger(name)
+
+
+class DisableLogger():
+    """Context Manager that disables logging"""
+    def __enter__(self):
+       logging.disable(logging.CRITICAL)
+    def __exit__(self, exception_type, exception_value, traceback):
+       logging.disable(logging.NOTSET)

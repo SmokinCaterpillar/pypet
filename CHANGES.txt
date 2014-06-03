@@ -1,4 +1,31 @@
-pypet 0.1b5
+pypet 0.1b.6
+
+*   The storage service prints status updates for loading and storing trees
+
+*   v_as_run is not longer `None` for a trajectory but `run_ALL`
+
+*   The Queue storage writer now stores batches of single runs to avoid
+    re-opening of files as much as possible
+
+*   Faster Loading of data
+
+*   Support for PyTables 3.1.1
+
+*   *pypet* stores the name of the main script as a config parameter
+
+*   Data of Parameters can be accessed via `.data` or `param['data']`.
+    Same holds for results that only contain a single data item.
+
+*   Parameters provide the function `f_get_default` to return the default value
+    if the parameter is not empty.
+
+*   Large dictionaries and Object Tables are now split into chunks of 512 items
+
+*   In case an object table has more than 32 columns, another table is created to
+    store the data item types (which is faster than storing all of the types as
+    hdf5 node attributes)
+
+pypet 0.1b.5
 
 *   New auto load feature
 
@@ -55,10 +82,10 @@ pypet 0.1b5
 
 *   Brian parameters no longer store the `storage_mode` explicitly
 
-*   BUG FIX: Wildcard character now alway defaults to `run_ALL` if trajectory is not set
+*   BUG FIX: Wildcard character now always defaults to `run_ALL` if trajectory is not set
     to particular run
 
-*   BUG FIX: Now names with XXXrun_ are again allowed only `run_` are forbidden.
+*   BUG FIX: Now names with `XXXrun_` are again allowed only `run_` are forbidden.
 
 
 pypet 0.1b.4

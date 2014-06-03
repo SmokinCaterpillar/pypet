@@ -1065,7 +1065,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_as_run'.
         self._idx = -1
-        self._as_run = None
+        self._as_run = pypetconstants.RUN_NAME_DUMMY
 
         self._standard_parameter = Parameter
         self._standard_result = Result
@@ -1268,7 +1268,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves`.
 
         """
-        if name_or_idx is None or name_or_idx==-1:
+        if name_or_idx is None or name_or_idx == pypetconstants.RUN_NAME_DUMMY or name_or_idx==-1:
             self.f_restore_default()
         else:
             if isinstance(name_or_idx,basestring):
@@ -1891,7 +1891,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                            trajectory_name=self.v_trajectory_name)
 
             except Exception:
-                pass # We end up here if the parameter was not stored to disk, yetr
+                pass # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)
 
 
@@ -1997,7 +1997,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         for irun in range(length):
             self._add_run_info(irun)
-
 
     def _add_run_info(self, idx):
         """Adds a new run to the `_run_information` dict.
@@ -3216,7 +3215,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """Restores the default value in all explored parameters and sets the
         v_idx property back to -1 and v_as_run to None."""
         self._idx=-1
-        self._as_run = None
+        self._as_run = pypetconstants.RUN_NAME_DUMMY
         for param in self._explored_parameters.itervalues():
             param._restore_default()
 

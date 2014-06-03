@@ -106,7 +106,11 @@ class ParameterTest(unittest.TestCase):
     def test_parameter_locking(self):
         for param in self.param.itervalues():
 
-            param.f_lock()
+            if not param.v_explored:
+                self.assertFalse(param.v_locked, 'Param %s is locked' % param.v_full_name)
+                param.f_lock()
+            else:
+                self.assertTrue(param.v_locked, 'Param %s is locked' % param.v_full_name)
 
             with self.assertRaises(pex.ParameterLockedException):
                 param.f_set(3)
@@ -216,6 +220,25 @@ class ParameterTest(unittest.TestCase):
             val2=param[1]
             self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
 
+    def test_get_data(self):
+        for paramname in self.param:
+            param = self.param[paramname]
+            val1=param.data
+            val2=param.f_get()
+            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            val3=param['data']
+            self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+
+            val1=param.default
+            val2=param._default
+            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            val3=param['default']
+            self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+            val4=param.f_get_default()
+            self.assertTrue(comp.nested_equal(val4,val2), '%s != %s' % (str(val4),str(val2)))
+            val5 = param[-1]
+            self.assertTrue(comp.nested_equal(val5,val2), '%s != %s' % (str(val5),str(val2)))
+
     def test_type_error_for_get_item(self):
         for name,param in self.param.items():
             if not name in self.explore_dict:
@@ -223,7 +246,7 @@ class ParameterTest(unittest.TestCase):
                     param[1]
 
     def test_type_error_for_shrink(self):
-        for name,param in self.param.items():
+        for name, param in self.param.items():
             if not name in self.explore_dict:
                 with self.assertRaises(TypeError):
                     param._shrink()
@@ -664,6 +687,23 @@ class ResultTest(unittest.TestCase):
         for res in self.results.values():
             with self.assertRaises(AttributeError):
                 del res.idonotexistforsure
+
+
+    def test_get_data(self):
+        for res in self.results.values():
+            if len(res._data)==1:
+                val1=res.data
+                val2=res.f_get()
+                self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+                val3=res['data']
+                self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+            else:
+                with self.assertRaises(AttributeError):
+                    res.data
+                with self.assertRaises(AttributeError):
+                    res['data']
+                with self.assertRaises(ValueError):
+                    res.f_get()
 
     def test_f_get_errors(self):
 

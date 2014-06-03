@@ -1,18 +1,17 @@
 language: python
 python:
-  - 2.7
+  - "2.7_with_system_site_packages"
   - 2.6
-virtualenv:
-  system_site_packages: true
+
 env:
   matrix:
     - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF
-    - PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=OFF
+    - PANDAS_VERSION=0.12.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.4 CYTHON_VERSION=0.20.1 COVERAGE=OFF
 
 matrix:
   include:
-    - python: 2.7
-      env: PANDAS_VERSION=0.12.0 TABLES_VERSION=3.0.0 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 NUMPY_VERSION=1.7.1 SCIPY_VERSION=0.12.0, COVERAGE=ON
+    - python: "2.7_with_system_site_packages"
+      env: PANDAS_VERSION=0.12.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON
 
 # Install dependencies for PyTables
 # command to install dependencies
@@ -44,8 +43,8 @@ install:
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-  - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install --pre dill
+#  - echo "+++++++++++ Installing dill ++++++++++++"
+#  - pip install --pre dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
@@ -55,4 +54,5 @@ after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
 branches:
   only:
     - develop
+    - master
 

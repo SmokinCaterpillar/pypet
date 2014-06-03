@@ -52,7 +52,7 @@ from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 
-from pypet.pypetlogging import HasLogger
+from pypet.pypetlogging import HasLogger, DisableLogger
 
 
 #For fetching:
@@ -222,14 +222,15 @@ class NNTreeNode(WithAnnotations):
         # In case of results and derived parameters the creator can be a single run
         # parameters and configs are always created by the original trajectory
         self._run_branch = 'trajectory'
-        self._run_branch_pos = -1 # Remebrers at which position the branching occured
+        self._run_branch_pos = -1 # Remembers at which position the branching occured
         # -1 if there is no branching
-        for idx, name in enumerate(split_name):
-            if name.startswith(pypetconstants.RUN_NAME):
-                self._run_branch_pos = idx
-                if name != pypetconstants.RUN_NAME_DUMMY:
-                    self._run_branch = name
-                    break
+        if pypetconstants.RUN_NAME in full_name:
+            head, tail = full_name.split(pypetconstants.RUN_NAME)
+            self._run_branch_pos = head.count('.')
+            branch = pypetconstants.RUN_NAME + tail.split('.')[0]
+            if branch != pypetconstants.RUN_NAME_DUMMY:
+                self._run_branch = branch
+
 
 
     def f_get_class_name(self):
@@ -423,6 +424,9 @@ class NaturalNamingInterface(HasLogger):
         # List of names that are taboo. The user cannot create parameters or results that
         # contain these names.
         self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
+
+        # Context Manager to disable logging for auto-loading
+        self._disable_logger = DisableLogger()
 
 
     def _map_type_to_dict(self, type_name):
@@ -840,7 +844,7 @@ class NaturalNamingInterface(HasLogger):
         if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
         elif name == -2:
-            if self._root_instance._as_run is not None:
+            if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
                 return '$'
             else:
                 return pypetconstants.RUN_NAME_DUMMY
@@ -858,7 +862,7 @@ class NaturalNamingInterface(HasLogger):
 
         if name in SHORTCUT_SET:
             if name == 'crun':
-                if self._root_instance._as_run is not None:
+                if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
                     return '$'
                 else:
                     return pypetconstants.RUN_NAME_DUMMY
@@ -1522,7 +1526,7 @@ class NaturalNamingInterface(HasLogger):
         that do not belong to the run are blinded out.
 
         """
-        if run_name is not None and run_name in node._children:
+        if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
             # Only consider one particular run and blind out the rest, but include
             # all other subbranches
             node_list = [node._children[run_name]]
@@ -1578,7 +1582,7 @@ class NaturalNamingInterface(HasLogger):
 
     def _get_candidate_dict(self, key, as_run, use_upper_bound=True):
         # First find all nodes where the key matches the (short) name of the node
-        if as_run is None:
+        if as_run == pypetconstants.RUN_NAME_DUMMY:
             return self._nodes_and_leaves[key]
         else:
             temp_dict = {}
@@ -1929,17 +1933,18 @@ class NaturalNamingInterface(HasLogger):
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
 
-            try:
-                as_run = self._root_instance._as_run
-                if as_run is None:
-                    # If our trajectory is not set to a particular run we can skip this part
-                    raise AttributeError
-                split_name[wildcard_pos] = as_run
-                result = self._perform_get(node, split_name, fast_access, backwards_search,
-                            shortcuts, max_depth, auto_load, try_auto_load_directly1)
-                return result
-            except (pex.DataNotInStorageError, AttributeError):
-                split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+            with self._disable_logger:
+                try:
+                    as_run = self._root_instance._as_run
+                    if as_run == pypetconstants.RUN_NAME_DUMMY:
+                        # If our trajectory is not set to a particular run we can skip this part
+                        raise AttributeError
+                    split_name[wildcard_pos] = as_run
+                    result = self._perform_get(node, split_name, fast_access, backwards_search,
+                                shortcuts, max_depth, auto_load, try_auto_load_directly1)
+                    return result
+                except (pex.DataNotInStorageError, AttributeError):
+                    split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
 
         return self._perform_get(node, split_name, fast_access, backwards_search,
                 shortcuts, max_depth, auto_load, try_auto_load_directly2)

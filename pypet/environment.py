@@ -15,6 +15,7 @@ care of organizational issues like logging.
 
 __author__ = 'Robert Meyer'
 
+import __main__ as main
 import os
 import sys
 import logging
@@ -1037,6 +1038,10 @@ class Environment(HasLogger):
         self._traj.f_add_config(config_name,self.v_hexsha,
                                     comment ='SHA-1 identifier of the environment').f_lock()
 
+        config_name='environment.%s.script' % self.v_name
+        self._traj.f_add_config(config_name, main.__file__,
+                                    comment ='Name of the executed main script').f_lock()
+
 
         if self._traj.v_version != VERSION:
             config_name='environment.%s.version' % self.v_name
@@ -1383,12 +1388,13 @@ class Environment(HasLogger):
 
             return runfunc, args, kwargs
 
-        Or simply:
+        Or
 
         ::
+
             return runfunc, args
 
-        Or only
+        Or
 
         ::
 
@@ -1401,7 +1407,7 @@ class Environment(HasLogger):
 
         ::
 
-            (runfunc, args), (postproc,)
+            return (runfunc, args), (postproc,)
 
         work as well.
 
@@ -1420,7 +1426,7 @@ class Environment(HasLogger):
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
-            potentially after calling`~pypet.trajectory.Trajectory.f_update_skeleton`
+            potentially after calling :func:`~pypet.trajectory.Trajectory.f_update_skeleton`
             and loading all results at once with :func:`~pypet.trajectory.f_load`
             or loading manually with :func:`~pypet.trajectory.f_load_items`.
 
@@ -2002,7 +2008,7 @@ class Environment(HasLogger):
                                         no_cap = False
                                         if signal_cap:
                                             self._logger.warning('Could not start next process immediately.'
-                                                                 'CPU Cap reached, %.2f > %.2f.' %
+                                                                 'CPU Cap reached, %.2f >= %.2f.' %
                                                                  (cpu_usage, self._cpu_cap))
                                             signal_cap = False
                                     elif memory_usage > self._memory_cap:
@@ -2010,7 +2016,7 @@ class Environment(HasLogger):
                                         if signal_cap:
                                             self._logger.warning('Could not start next process '
                                                                  'immediately. Memory Cap reached, '
-                                                                 '%.2f > %.2f.' %
+                                                                 '%.2f >= %.2f.' %
                                                                  (memory_usage, self._memory_cap))
                                             signal_cap = False
                                     elif swap_usage > self._swap_cap:
@@ -2018,7 +2024,7 @@ class Environment(HasLogger):
                                         if signal_cap:
                                             self._logger.warning('Could not start next process '
                                                                  'immediately. Swap Cap reached, '
-                                                                 '%.2f > %.2f.' %
+                                                                 '%.2f >= %.2f.' %
                                                                  (swap_usage, self._swap_cap))
                                             signal_cap = False
 
