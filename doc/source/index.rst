@@ -10,9 +10,9 @@ Welcome to pypet's documentation!
 The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
 and data storage into HDF5_ files for you.
 
-Latest version: `0.1b.5`_
+Latest version: `0.1b.6`_
 
-.. _`0.1b.5`: https://pypi.python.org/pypi/pypet
+.. _`0.1b.6`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
