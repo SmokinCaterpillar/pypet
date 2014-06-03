@@ -68,7 +68,7 @@ This conceptualization is depicted in the figure below:
 *pypet* gives is you a tool to make the stages much easier to handle. *pypet*
 offers a novel tree data container called :class:`~pypet.trajectory.Trajectory`
 that can be used to store all parameters and results of your numerical simulations.
-Moreover, *pypet* has an :class:`~pypet.envrionment.Environment` that
+Moreover, *pypet* has an :class:`~pypet.environment.Environment` that
 allows easy parallel exploration of the parameter space.
 
 We will see how we can use both in our numerical experiment and the different stages.
@@ -119,12 +119,12 @@ Naming Convention
 To avoid confusion with natural naming scheme (see below)
 and the functionality provided by the environment, trajectory,
 parameter containers, and so on, I followed the idea by PyTables_ to use prefixes:
-`f_` for functions and `v_` for python variables/attributes/properties.
+``f_`` for functions and ``v_`` for python variables/attributes/properties.
 
-For instance, given a *pypet* result container `myresult`, `myresult.v_comment` is the object's
+For instance, given a *pypet* result container ``myresult``, ``myresult.v_comment`` is the object's
 comment attribute and
-`myresult.f_set(mydata=42)` is the function for adding data to the result container.
-Whereas `myresult.mydata` might refer to a data item named `mydata` added by the user.
+``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
+Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
 
 -------------------------
 #1 Pre-Processing
@@ -137,45 +137,45 @@ suitable.
 
 Yet, we will shortly discuss the most important ones here.
 
-* `trajectory`
+* ``trajectory``
 
     Here you can either pass an already existing trajectory container or simply a string
     specifying the name of a new trajectory. In the latter case the environment will
     create a trajectory container for you.
 
-* `add_time`
+* ``add_time``
 
-    If `True` and the environment creates a new trajectory container, it will add the current time
+    If ``True`` and the environment creates a new trajectory container, it will add the current time
     to the name in the format *_XXXX_XX_XX_XXhXXmXXs*.
-    So for instance if you set `trajectory='Gigawatts_Experiment'` and `add_time=true`,
+    So for instance if you set ``trajectory='Gigawatts_Experiment'`` and ``add_time=true``,
     your trajectory's name will be `Gigawatts_Experiment_2015_10_21_04h23m00s`.
 
-* `comment`
+* ``comment``
 
     A nice descriptive comment about what you are going to do in your numerical experiment.
 
-* `log_folder`
+* ``log_folder``
 
     The environment makes use of logging_. You can specify a folder where all
     log-files should be stored. Default is `current_working_directory/logs/`.
 
-* `multiproc`
+* ``multiproc``
 
-    If we want to use multiprocessing. We sure do so, so we set this to `True`.
+    If we want to use multiprocessing. We sure do so, so we set this to ``True``.
 
-* `ncores`
+* ``ncores``
 
     The number of cpu cores we want to utilize. More precisely, the number of processes we
     start at the same time to calculate the single runs. There's usually no benefit in
     setting this value higher than the actual number of cores your computer has.
 
-* `filename`
+* ``filename``
 
     We can specify the name of the resulting HDF5 file where all data will be stored.
-    We don't have to give a filename per se, we can also specify a folder `'./results/'` and
+    We don't have to give a filename per se, we can also specify a folder ``'./results/'`` and
     the new file will have the name of the trajectory.
 
-* `git_repository`
+* ``git_repository``
 
     If your code base is under git_ version control (it's not? Stop reading and get git_ NOW! ;-),
     you can specify the path to your root git
@@ -183,7 +183,7 @@ Yet, we will shortly discuss the most important ones here.
     in the working copy of your code and b) write the corresponding commit code into
     your trajectory so you can immediately see with which version you did your experiments.
 
-* `sumatra_project`
+* ``sumatra_project``
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
     root folder here. *pypet* will automatically trigger the recording of your experiments
@@ -350,13 +350,13 @@ or ``traj['parameters.neuron.tau_ref']``, or ``traj['parameters','neuron','tau_r
 or use the :func:`~pypet.naturalnaming.NNGroupNode.f_get` method.
 
 As long as your tree nodes are unique, you can shortcut through the tree. If there's only
-one parameter `tau_ref`, ``traj.tau_ref`` is equivalent to ``traj.parameters.neuron.tau_ref``.
+one parameter ``tau_ref``, ``traj.tau_ref`` is equivalent to ``traj.parameters.neuron.tau_ref``.
 
 Moreover, since a :class:`~pypet.parameter.Parameter` only contains a single value (apart
 from the range),
 *pypet* will assume that you usually don't care about the actual container but just about
 the data. Thus, ``traj.parameters.neuron.tau_ref`` will immediatly return the data value
-for `tau_ref` and not the corresponding :class:`~pypet.parameter.Parameter` container.
+for ``tau_ref`` and not the corresponding :class:`~pypet.parameter.Parameter` container.
 To learn more about this *fast access* of data look at :ref:`more-on-access`.
 
 
@@ -379,8 +379,8 @@ you can use the :func:`~pypet.utils.explore.cartesian_product` builder function.
 This will return a dictionary of lists of the same length and all combinations of
 the parameters.
 
-Here is our exploration, we try dimensionless currents `I` rangin from 0 to 1.5 in steps of 0.02
-for three different refractory periods `tau_ref`:
+Here is our exploration, we try dimensionless currents ``I`` ranging from 0 to 1.5 in steps of 0.02
+for three different refractory periods ``tau_ref``:
 
 .. code-block:: python
 
@@ -484,16 +484,16 @@ So here is our top-level simulation or run function:
 
 
 
-Our function has to accept at least one argument and this is our `traj` container.
-To be precise here the `traj` variable here refers no longer to the full
+Our function has to accept at least one argument and this is our ``traj`` container.
+To be precise here the ``traj`` variable here refers no longer to the full
 :class:`~pypet.trajectory.Trajectory` but is a
 :class:`~pypet.trajectory.SingleRun` container instead. The differences are rather small. This
 type of container has a little less functionality than a full :class:`~pypet.trajectory.Trajectory`
 and all explored parameters are set to the values for a particular run.
-For simplicity, I will stick to the variable name `traj` here.
+For simplicity, I will stick to the variable name ``traj`` here.
 
 For instance, if we currently execute the second run (aka `run_00000001`)
-all parameters will contain their default values, except `tau_ref` and `I`, they will
+all parameters will contain their default values, except ``tau_ref`` and ``I``, they will
 be set to 5.0 and 0.02, respectively.
 
 
@@ -510,10 +510,10 @@ Let's take a look at the first few instructions
     duration = traj.par.simulation.duration
 
 
-So here we simply extract the parameter values from `traj`.
+So here we simply extract the parameter values from ``traj``.
 As said before *pypet* is smart to directly return the data value instead of
 a :class:`~pypet.parameter.Parameter` container. Moreover, remember all parameters
-will have their default values except `tau_ref` and `I`.
+will have their default values except ``tau_ref`` and ``I``.
 
 Next, we create a numpy array and a python list and compute the number of steps. This is
 not specific to *pypet* but simply needed for our neuron simulation:
@@ -562,7 +562,7 @@ and :math:`V \leftarrow 0`` **if** :math:`V \geq 1`  **or** :math:`t-t_{ap} \leq
 (with :math:`t` the current time and :math:`t_{ap}` time of the last action potential).
 
 Ok, for now we have finished one particular run ouf our simulation. We computed the development
-of the membrane potential `V` over time and put it into `V_array`.
+of the membrane potential ``V`` over time and put it into ``V_array``.
 
 Next, we hand over this data to our trajectory, since we want to keep it and write it
 into the final HDF5 file:
@@ -576,19 +576,19 @@ into the final HDF5 file:
 
 This statement looks similar to the addition of parameters we have seen before. Yet, there
 are some subtle differences. As we can see, a result can contain several data items.
-If we pass them via `NAME=value`, we can later on recall them from the result with `result.NAME`.
-Secondly, there is this odd `'$'` character in the result's name.
-Well, recall that we are currently operating in the run phase, accordingly the `run_neuron`
+If we pass them via ``NAME=value``, we can later on recall them from the result with ``result.NAME``.
+Secondly, there is this odd ``'$'`` character in the result's name.
+Well, recall that we are currently operating in the run phase, accordingly the ``run_neuron``
 function will be executed many times. Thus, we also gather the
-data `V_array` data many times. We need to store this every time under a different
-name in our trajectory tree. `'$'` is a wildcard character that is replaced by the name
+data ``V_array`` data many times. We need to store this every time under a different
+name in our trajectory tree. ``'$'`` is a wildcard character that is replaced by the name
 of the current run. If we were in the second run, we would store everything under
-`traj.results.neuron.run_00000001` and in the third run under
-`traj.results.neuron.run_00000002` and so on and so forth.
-Consequently, calling `traj.results.neuron.run_00000001.V` will return our membrane voltage array
+``traj.results.neuron.run_00000001`` and in the third run under
+``traj.results.neuron.run_00000002`` and so on and so forth.
+Consequently, calling ``traj.results.neuron.run_00000001.V`` will return our membrane voltage array
 of the second run.
 
-You are not limited to place the `'$'` at the end, for example
+You are not limited to place the ``'$'`` at the end, for example
 
 .. code-block:: python
 
@@ -597,7 +597,7 @@ You are not limited to place the `'$'` at the end, for example
 would be possible as well.
 
 As a side remark, if you add a result or derived parameter during the run phase but
-**not** use the `'$'` wildcard, *pypet* will add `runs.'$'` to the beginning of your
+**not** use the ``'$'`` wildcard, *pypet* will add ``runs.'$'`` to the beginning of your
 result's or derived parameter's name.
 
 So executing the following statement during the run phase
@@ -606,7 +606,7 @@ So executing the following statement during the run phase
 
     traj.f_add_result('fundamental.wisdom.answer', 42, comment='The answer')
 
-will yield a renaming to `results.runs.run_XXXXXXXXX.fundamental.wisdom.answer`.
+will yield a renaming to ``results.runs.run_XXXXXXXXX.fundamental.wisdom.answer``.
 Where `run_XXXXXXXXX` is the name of the corresponding run, of course.
 
 Moreover, it's worth noticing that you don't have to explicitly write the trajectory to disk.
@@ -614,16 +614,16 @@ Everything you add during pre-processing, post-processing (see below) is
 automatically stored at
 the end of the experiment. Everything you add
 during the run phase under a group node called `run_XXXXXXXX` (where this is the name of the
-current run, which will be automatically chosen if you use the `'$'` wildcard)
+current run, which will be automatically chosen if you use the ``'$'`` wildcard)
 will be stored at the end of the particular run.
 
 -------------------
 #3 Post-Processing
 -------------------
 
-Each single run of our `run_neuron` function returned an estimate of the firing rate.
+Each single run of our ``run_neuron`` function returned an estimate of the firing rate.
 In the post processing phase we want to collect these estimates and sort them into a
-table according to the value of `I` and `tau_ref`. As an appropriate table we choose a
+table according to the value of ``I`` and ``tau_ref``. As an appropriate table we choose a
 pandas_ DataFrame. Again this is not *pypet* specific but pandas_ offers neat
 containers for series, tables and multidimensional panel data.
 The nice thing about pandas_ containers is that they except all forms of indices and not
@@ -635,7 +635,7 @@ The post-processing function has to take at least two arguments.
 First one is the trajectory, second one is the list of results.
 This list actually contains two-dimensional tuples. First entry of the tuple is the index
 of the run as an integer, and second entry is the result returned by our job-function
-`run_neuron` in the corresponding run. Be aware that since we use multiprocessing,
+``run_neuron`` in the corresponding run. Be aware that since we use multiprocessing,
 the list is not ordered according to the run indices, but according to the time the
 single runs did actually finish.
 
@@ -692,7 +692,7 @@ At first we extract the range of parameters we used:
     I_range = traj.par.neuron.f_get('I').f_get_range()
     ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
 
-Note that we use `f_get` here since we are interested in the parameter container not the
+Note that we use ``f_get`` here since we are interested in the parameter container not the
 data value. We can directly extract the parameter range from the container.
 
 Next, we create a two dimensional table aka pandas_ DataFrame with the currents as the
@@ -708,7 +708,7 @@ row indices and the refractory periods as column indices.
 Now we iterate through the result tuples and  write the
 firing rates into the table according to the parameter settings in this run.
 As I said before, the neat thing about pandas_ is that we can use the values of
-`I` and `tau_ref` as indices for our table.
+``I`` and ``tau_ref`` as indices for our table.
 
 .. code-block:: python
 
@@ -728,7 +728,7 @@ Finally, we add the filled DataFrame to the trajectory.
                           comment='Contains a pandas data frame with all firing rates.')
 
 Since we are no longer in the run phase, this result will be found in
-`traj.results.summary.firing_rate` and **no** name of any single run will be added.
+``traj.results.summary.firing_rate`` and **no** name of any single run will be added.
 
 So this was our post-processing where we simply collected all firing rates and sorted
 them into a table. You can do much more in the post processing phase. You can
@@ -744,7 +744,7 @@ Final Steps in the Main Script
 Still we actually need to make the environment execute all the stuff, so this is our main
 script after we generated the environment and added the parameters.
 First, we add the post-processing function. Secondly, we tell the environment to
-run our function `run_neuron`. Our postprocessing function will be automatically called
+run our function ``run_neuron``. Our postprocessing function will be automatically called
 after all runs have finished.
 
 .. code-block:: python
@@ -766,7 +766,7 @@ For instance,
     env.f_run(myjob, 42, 'fortytwo', test=33.3)
 
 will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.3`` as the
-keyword argument `test` to your run function. So the definition of the run function could look
+keyword argument ``test`` to your run function. So the definition of the run function could look
 like this:
 
 .. code-block:: python
@@ -879,8 +879,8 @@ Finally, I just want to make some final remarks on the analysis script.
     traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
                 load_results=0, load_derived_parameters=0)
 
-describes how the different subtrees of the trajectory are loaded (`load_parameters`
-also includes the `config` branch). 0 means no data at all is loaded,
+describes how the different subtrees of the trajectory are loaded (``load_parameters``
+also includes the ``config`` branch). 0 means no data at all is loaded,
 1 means only the containers are loaded but without any data and 2 means the
 containers including the data are loaded. So here we load all parameters
 and all config parameters with data and no results whatsoever.
@@ -897,7 +897,7 @@ Furthermore,
     traj.v_idx = example_run
 
 is an important statement in the code.
-Setting the properties `v_idx` or `v_as_run` or
+Setting the properties ``v_idx`` or ``v_as_run`` or
 using the function :func:`~pypet.trajectory.Trajectory.f_as_run` are equivalent.
 These give you a powerful tool in data analysis because they make your trajectory
 behave like a particular single run. Thus, all explored parameter's values will be

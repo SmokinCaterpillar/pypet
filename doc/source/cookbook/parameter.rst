@@ -104,15 +104,15 @@ So far, the following parameters exist:
     the parameter space in form of a cartesian product.
 
     For instance, assume you explore a numpy array with default value
-    `numpy.array([1,2,3])`.
-    A potential exploration range could be: `[numpy.array([1,2,3]),numpy.array([3,4,3]),
-    numpy.array([1,2,3]),numpy.array([3,4,3])]`
-    So you reuse `numpy.array([1,2,3])` and `numpy.array([3,4,3])` twice. If you would
-    put this data into the standard Parameter, the full list `[numpy.array([1,2,3]),numpy.array([3,4,3]),
-    numpy.array([1,2,3]), numpy.array([3,4,3])` would be stored to disk.
+    ``numpy.array([1,2,3])``.
+    A potential exploration range could be: ``[numpy.array([1,2,3]),numpy.array([3,4,3]),
+    numpy.array([1,2,3]),numpy.array([3,4,3])]``
+    So you reuse ``numpy.array([1,2,3])`` and ``numpy.array([3,4,3])`` twice. If you would
+    put this data into the standard Parameter, the full list ``[numpy.array([1,2,3]),numpy.array([3,4,3]),
+    numpy.array([1,2,3]), numpy.array([3,4,3])`` would be stored to disk.
     The ArrayParameter is smarter. It will ask the storage service only to store
-    `numpy.array([1,2,3])` and `numpy.array([3,4,3])` once and in addition a list of references
-    `[ref_to_array_1, ref_to_array_2, ref_to_array_1, ref_to_array_2]`.
+    ``numpy.array([1,2,3])`` and ``numpy.array([3,4,3])`` once and in addition a list of references
+    ``[ref_to_array_1, ref_to_array_2, ref_to_array_1, ref_to_array_2]``.
 
     Subclasses the standard Parameter and, therefore, supports also native python data.
 
@@ -164,21 +164,21 @@ For example:
     >>> res.test
     42
 
-If you use `f_set(*args)` the first positional argument is added to the result having the name
+If you use ``f_set(*args)`` the first positional argument is added to the result having the name
 of the result, here 'myresult'. Subsequent positional arguments are added with 'name_X' where *X*
-is the position of the argument. Positions are counted starting from zero so `f_set('a','b','c')`
-will add the entries `'myresult, myresult_1, myresult_2'` to your result.
+is the position of the argument. Positions are counted starting from zero so ``f_set('a','b','c')``
+will add the entries ``'myresult, myresult_1, myresult_2'`` to your result.
 
 Using :func:`~pypet.parameter.Result.f_get` you can request several items at once.
-If you ask for `f_get(itemname)` you will get in return the item with that name. If you
-request `f_get(itemname1, itemname2, ....)` you will get a list in return containing the items.
+If you ask for ``f_get(itemname)`` you will get in return the item with that name. If you
+request ``f_get(itemname1, itemname2, ....)`` you will get a list in return containing the items.
 To refer to items stored with 'name_X' providing the index value is sufficient:
 
     >>> res.f_get(0)
     333
 
-If your result contains only a single item you can simply call `f_get()` without any arguments.
-But if you call `f_get()` without any arguments and the result contains more than one item
+If your result contains only a single item you can simply call ``f_get()`` without any arguments.
+But if you call ``f_get()`` without any arguments and the result contains more than one item
 a ValueError is thrown.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,7 +219,7 @@ The following results exist:
 
         * :class:`~pypet.parameter.ObjectTable`
 
-            Object tables are special pandas_ DataFrames with `dtype=object`, i.e. everything
+            Object tables are special pandas_ DataFrames with ``dtype=object``, i.e. everything
             you keep in object tables will keep its type and won't be auto-converted py pandas.
 
 * :class:`~pypet.parameter.SparseResult`

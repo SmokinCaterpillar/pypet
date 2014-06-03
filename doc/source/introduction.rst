@@ -36,7 +36,7 @@ Main Features
 
 * **Group** your parameters and results into meaningful categories
 
-* Access data via **natural naming**, e.g. `traj.parameters.traffic.ncars`
+* Access data via **natural naming**, e.g. ``traj.parameters.traffic.ncars``
 
 * Automatic **storage** of simulation data into HDF5_ files via PyTables_
 
@@ -90,7 +90,7 @@ Simply install via ``pip install --pre pypet`` (``--pre`` since the current vers
 Or
 
 Package release can also be found on `pypi.python.org`_. Download, unpack
-and `python setup.py install` it.
+and ``python setup.py install`` it.
 
 
 *pypet* has been tested for python 2.6 and python 2.7 for **Linux** using
@@ -102,7 +102,7 @@ all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
 pip is not possible. You have to download the tar file from `pypi.python.org`_ and
 unzip it [#tar]_. Next, open a windows terminal [#win]_
 and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above run from the terminal `python setup.py install`.
+As above run from the terminal ``python setup.py install``.
 
 By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
 
@@ -274,13 +274,13 @@ our simulation. This concept of parameter exploration will be introduced soon be
 Yet, a *single run* is a reduced version of a full *trajectory* that usually only
 contains one particular parameter combination and not the full explored parameter ranges.
 But for convenience over the course of this documentation, I also use the variable
-`traj` in the individual runs to refer to a *single run* container. You can treat a *single run* and
+``traj`` in the individual runs to refer to a *single run* container. You can treat a *single run* and
 operate with this container almost in the same way as a *trajectory*, apart from slightly reduced
 functionality.
 
 We can access the parameters simply by natural naming,
-as seen above via `traj.x` and `traj.y`. The value of `z` is simply added as a result to the
-`traj` container.
+as seen above via ``traj.x`` and ``traj.y``. The value of `z` is simply added as a result to the
+``traj`` container.
 
 After the definition of the job that we want to simulate, we create an environment which
 will run the simulation.
@@ -299,7 +299,7 @@ descriptive comment that is attached to the trajectory. You can pass many more (
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
-the property `v_trajectory`. This time we work with a full :class:`~pypet.trajectory.Trajectory`
+the property ``v_trajectory``. This time we work with a full :class:`~pypet.trajectory.Trajectory`
 and not with a :class:`~pypet.trajectory.SingleRun`.
 
 .. code-block::python
@@ -387,19 +387,19 @@ Some final remarks on the command:
     # Now we want to load all stored data.
     traj.f_load(index=-1, load_parameters=2, load_results=2)
 
-Above `index` specifies that we want to load the trajectory with that particular index
-within the HDF5 file. We could instead also specify a `name`.
-Counting works also backwards, so `-1` yields the last or newest trajectory in the file.
+Above ``index`` specifies that we want to load the trajectory with that particular index
+within the HDF5 file. We could instead also specify a ``name``.
+Counting works also backwards, so ``-1`` yields the last or newest trajectory in the file.
 
 Next, we need to specify how the data is loaded.
-Therefore, we have to set the keyword arguments `load_parameters` and `load_results`.
-Here we chose both to be `2`.
+Therefore, we have to set the keyword arguments ``load_parameters`` and ``load_results``.
+Here we chose both to be ``2``.
 
-`0` would mean we do not want to load anything at all.
-`1` would mean we only want to load the empty hulls or skeletons of our parameters
+``0`` would mean we do not want to load anything at all.
+``1`` would mean we only want to load the empty hulls or skeletons of our parameters
 or results. Accordingly, we would add parameters or results to our trajectory
 but they would not contain any data.
-Instead, `2` means we want to load the parameters and results including the data they contain.
+Instead, ``2`` means we want to load the parameters and results including the data they contain.
 
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
 a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants
