@@ -1,3 +1,8 @@
+pypet 0.1b.7
+
+*   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was
+    deleted.
+
 pypet 0.1b.6
 
 *   The storage service prints status updates for loading and storing trees
