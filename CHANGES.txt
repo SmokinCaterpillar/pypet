@@ -219,7 +219,7 @@ pypet 0.1b.2
 
 *   Annotations support __getitem__
 
-*   BrianMonitorResult, the property and columne 'times' for the Spike and StateSpikeMonitor
+*   BrianMonitorResult, the property and columns 'times' for the Spike and StateSpikeMonitor
     has been renamed 'spiketimes'.
 
 *   Results support __iter__
@@ -236,7 +236,7 @@ pypet 0.1b.2
 
 *   New Brian Result
 
-*   Storage Service in case of purging now sets the comment to the result with the lowest index,
+*   Storage Service - in case of purging - now sets the comment to the result with the lowest index,
     in case of multiprocessing.
 
 *   Old API names are kept, but emit a depricated warning.
@@ -270,13 +270,13 @@ pypet 0.1b.0
 
 *   SparseResult
 
-*   If you merge trajectory, all environment settings of both are kept.
+*   If you merge a trajectory, all environment settings of both are kept.
 
 *   More information about the environment is added to the trajectory
 
 *   BUG FIX:
 
-    Recall of trajectory comments from diks yielded numpy strings instead of python strings
+    Recall of trajectory comments from disks yielded numpy strings instead of python strings
     This could cause trouble if the comment is empty!
 
 *   Git Integration, you can now make autocommits for every experiment
@@ -295,7 +295,7 @@ pypet 0.1b.0
 
 *   Test are operating in a temp directory
 
-*   Now you can have fast access with result if they contain only a single entry with the name of
+*   Now you can have fast access with results if they contain only a single entry with the name of
     the result
 
 *   New trajectory function `f_as_run` that makes the trajectory belief it is a particular
@@ -310,6 +310,7 @@ pypet 0.1a.6
 pypet 0.1a.5
 
 *   Removed unnecessary imports
+
 *   Better documentation
 
 
