@@ -44,8 +44,6 @@ try:
 except ImportError:
     psutil = None
 
-
-from pypet.utils.mplogging import StreamToLogger
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -53,7 +51,7 @@ from  pypet import pypetconstants
 from pypet.gitintegration import make_git_commit
 from pypet import __version__ as VERSION
 from pypet.utils.decorators import deprecated
-from pypet.pypetlogging import HasLogger
+from pypet.pypetlogging import HasLogger, StreamToLogger
 
 
 def _single_run(args):
