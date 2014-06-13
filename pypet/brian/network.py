@@ -603,9 +603,14 @@ class NetworkManager(object):
         In case `multiproc=True` for your environment, the setting of `force_single_core`
         is irrelevant and has no effect.
 
+    :param network_constructor:
+
+        If you have a custom network constructor apart from the Brian one,
+        pass it here.
+
     """
     def __init__(self, network_runner, component_list, analyser_list=(),
-                 force_single_core=False):
+                 force_single_core=False, network_constructor=None):
         self.components = component_list
         self.network_runner = network_runner
         self.analysers = analyser_list
@@ -616,6 +621,10 @@ class NetworkManager(object):
         self._pre_run=False
         self._network = None
         self._force_single_core =force_single_core
+        if network_constructor is None:
+            self._network_constructor=Network
+        else:
+            self._network_constructor=network_constructor
 
 
 
@@ -761,7 +770,7 @@ class NetworkManager(object):
                      '------------------------')
 
 
-        self._network = Network(*self._brian_list)
+        self._network = self._network_constructor(*self._brian_list)
         self.network_runner.execute_network_pre_run( traj, self._network,  self._network_dict,
                                              self.components, self.analysers)
 
@@ -856,7 +865,7 @@ class NetworkManager(object):
         # We need to construct a network object in case one was not pre-run
         if not self._pre_run:
 
-            self._network = Network(*self._brian_list)
+            self._network = self._network_constructor(*self._brian_list)
 
         # Start the experimental run
         self.network_runner.execute_network_run( traj, self._network,  self._network_dict,
