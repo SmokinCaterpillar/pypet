@@ -117,11 +117,22 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
         self._environment_hexsha = parent_trajectory.v_environment_hexsha
         self._environment_name = parent_trajectory.v_environment_name
+        self._filename = parent_trajectory.v_filename
 
         # Only needed in parent trajectory.
         # But if we keep it here, we can have a simpler generic addition of elements
         # in the natural naming interface
         self._changed_default_parameters = {}
+
+    @property
+    def v_as_run(self):
+        """In case of a single run, this returns simply the name of the run."""
+        return self._name
+
+    @property
+    def v_filename(self):
+        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
+        return self._filename
 
     def _set_start_time(self):
         """Sets the start timestamp and formatted time to the current time.
@@ -1110,10 +1121,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # self.f_add_result_group('results')
         # self.f_add_derived_parameter_group('derived_parameters')
 
-    @property
-    def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
-        return self._filename
+
 
     @property
     def v_version(self):

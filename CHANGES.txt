@@ -5,6 +5,9 @@ pypet 0.1b.7
 
 *   The Network Manager now accepts custom Network Constructor
 
+*   A SingleRun can now provide a `v_filename` and `v_as_run` property.
+    Both cannot be changed and the latter simply returns the name of the run.
+
 pypet 0.1b.6
 
 *   The storage service prints status updates for loading and storing trees
