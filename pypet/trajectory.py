@@ -1124,8 +1124,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     @property
     def v_filename(self):
         """The name and path of the hdf5 file in case you use the HDF5StorageService"""
-        if self._filename is None and hasattr(self._storage_service, 'filename'):
-            self._filename = self._storage_service.filename
         return self._filename
 
 
@@ -1160,6 +1158,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def v_storage_service(self,service):
         """Sets the storage service"""
         self._storage_service = service
+        if self._filename is None and hasattr(self._storage_service, 'filename'):
+            self._filename = self._storage_service.filename
 
 
     @property
