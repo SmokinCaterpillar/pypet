@@ -1121,6 +1121,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # self.f_add_result_group('results')
         # self.f_add_derived_parameter_group('derived_parameters')
 
+    @property
+    def v_filename(self):
+        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
+        if self._filename is None and hasattr(self._storage_service, 'filename'):
+            self._filename = self._storage_service.filename
+        return self._filename
 
 
     @property
