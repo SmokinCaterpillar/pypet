@@ -11,7 +11,7 @@ if [[ $COVERAGE == ON ]]
         if [[ $GIT_TEST == ON ]]
             then
                 echo "Installing Git and Sumatra Test"
-                sudo apt-get install libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
+                # sudo apt-get install libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
                 sudo apt-get install git
                 pip install --pre GitPython
                 pip install Sumatra
