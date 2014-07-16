@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e # To exit upon any error
+set -u # Treat references to unset variables as an error
+
 if [[ $COVERAGE == ON ]]
     then
         coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_single_core_tests
