@@ -1,11 +1,11 @@
 #!/bin/bash
 
-if [[ $COVERAGE == ON ]]
+if [ $COVERAGE == ON ]
     then
         coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_single_core_tests
         coverage combine
     else
-        if [[ $GIT_TEST == ON]]
+        if [ $GIT_TEST == ON]
             then
                 echo "Installing Git and Sumatra Test"
                 apt-get install libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
