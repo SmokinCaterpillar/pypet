@@ -63,7 +63,7 @@ To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessin
 
 To utilize the continuing of crashed trajectories you need
 
-* dill_ >= 0.2b.1
+* dill_ >= 0.2.1
 
 .. _dill: https://pypi.python.org/pypi/dill
 
@@ -75,7 +75,7 @@ If you use Python 2.6 you also need
 
 Automatic sumatra records are supported for
 
-* sumatra_ >= 0.5.3
+* sumatra_ >= 0.6.0
 
 .. _sumatra: http://neuralensemble.org/sumatra/
 

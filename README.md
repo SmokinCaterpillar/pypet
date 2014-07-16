@@ -46,7 +46,7 @@ To utilize the cap feature for multiprocessing you need
 
 To utilize the continuing of crashed trajectories you need
 
-* dill >= 0.2b.1
+* dill >= 0.2.1
 
 If you use Python 2.6 you also need
 
@@ -54,7 +54,7 @@ If you use Python 2.6 you also need
 
 Automatic sumatra records are supported for
 
-* sumatra >= 0.5.3
+* sumatra >= 0.6.0
 
 =========================
 What is pypet all about?

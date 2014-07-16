@@ -1566,7 +1566,7 @@ class Environment(HasLogger):
                 conf = self._traj.f_add_config(config_name, self._sumatra_reason,
                         comment='Reason of sumatra run.')
 
-        self._logger.info('Saved sumatra project.')
+        self._logger.info('Saved sumatra project with reason: %s' % self._sumatra_reason)
 
     def _prepare_continue(self):
         """Prepares the continuation of a crashed trajectory"""
