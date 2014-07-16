@@ -10,6 +10,8 @@ pypet 0.1b.7
 
 *   Better testing on travis.
 
+*   Better support for pandas 0.14.1
+
 pypet 0.1b.6
 
 *   The storage service prints status updates for loading and storing trees

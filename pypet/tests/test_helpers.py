@@ -241,7 +241,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         myseries = myframe['TC1']
 
-        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),'Item2' : pd.DataFrame(np.random.randn(4, 2))})
+        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.ones((4, 3))),'Item2' : pd.DataFrame(np.ones((4, 2)))})
 
         # p4d = pd.Panel4D(np.random.randn(2, 2, 5, 4),
         #     labels=['Label1','Label2'],

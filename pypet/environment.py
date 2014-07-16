@@ -15,7 +15,11 @@ care of organizational issues like logging.
 
 __author__ = 'Robert Meyer'
 
-import __main__ as main
+try:
+    import __main__ as main
+except ImportError as e:
+    main = None
+    print repr(e)
 import os
 import sys
 import logging

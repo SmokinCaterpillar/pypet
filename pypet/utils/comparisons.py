@@ -129,6 +129,8 @@ def nested_equal(a, b):
         return a==b
     if isinstance(a, np.ndarray):
         return np.all(a==b)
+    if isinstance(a, (pd.Panel, pd.Panel4D)):
+        return nested_equal(a.to_frame(), b.to_frame())
     if isinstance(a, pd.DataFrame):
         try:
             new_frame = a == b
