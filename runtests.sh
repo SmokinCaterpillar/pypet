@@ -10,7 +10,7 @@ if [[ $COVERAGE == ON ]]
                 echo "Installing Git and Sumatra Test"
                 apt-get install libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
                 apt-get install git
-                pip install GitPython
+                pip install GitPython==0.3.1
                 pip install Sumatra
                 mkdir git_sumatra_test
                 cp pypet/tests/test_git.py git_sumatra_test
