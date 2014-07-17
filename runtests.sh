@@ -25,7 +25,7 @@ if [[ $COVERAGE == ON ]]
                 echo "DummyDummyDummy">>dummy.txt
                 git add dummy.txt
                 git commit -m "First Commit"
-                git add git_test.py
+                git add test_git.py
                 echo "Running First Git Test"
                 python test_git.py
                 rm -rvf experiments
