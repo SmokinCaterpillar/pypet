@@ -20,7 +20,12 @@ if [[ $COVERAGE == ON ]]
                 cd git_sumatra_test
                 git init
                 smt init GitTest
-                echo "Running Git Test"
+                git commit -m "First Commit"
+                git add git_test.py
+                echo "Running First Git Test"
+                python test_git.py
+                rm -rvf experiments
+                echo "Running Second Git Test (without actual commit)"
                 python test_git.py
                 echo "Git Test complete, removing folder"
                 cd ..
