@@ -3,12 +3,12 @@ pypet 0.1b.7
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was
     deleted.
 
-*   The Network Manager now accepts custom Network Constructor
+*   The Network Manager now accepts custom network constructors
 
 *   A SingleRun can now provide a `v_filename` and `v_as_run` property.
     Both cannot be changed and the latter simply returns the name of the run.
 
-*   Better testing on travis.
+*   Better testing on travis
 
 *   Better support for pandas 0.14.1
 
