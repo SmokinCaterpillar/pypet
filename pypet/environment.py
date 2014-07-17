@@ -773,6 +773,31 @@ class Environment(HasLogger):
         if wrap_mode == pypetconstants.WRAP_MODE_QUEUE and immediate_postproc:
             raise ValueError('You CANNOT perform immediate post-processing if you DO use a pool.')
 
+        if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
+            memory_cap <= 0.0 or memory_cap > 1.0 or
+            swap_cap <= 0.0 or swap_cap > 1.0):
+            raise ValueError('Please choose cap values larger than 0.0 and smaller or equal to 1.0.')
+
+        self._cpu_cap = cpu_cap
+        self._memory_cap = memory_cap
+        self._swap_cap = swap_cap
+
+        self._check_usage =  (self._cpu_cap < 1.0 or
+                              self._memory_cap < 1.0 or
+                              self._swap_cap < 1.0)
+
+        if self._check_usage:
+            if psutil is not None:
+                self._logger.info('Monitoring usage statistics. '
+                                  'I will not spawn new processes '
+                              'if one of the following cap thresholds is crossed, '
+                              'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
+                              (self._cpu_cap, self._memory_cap, self._swap_cap))
+                psutil.cpu_percent() # Just for initialisation
+            else:
+                raise ValueError('You cannot enable monitoring without having '
+                                   'installed psutil. Please install psutil or set '
+                                   'cpu_cap, memory_cap, and swap_cap to 1.0')
 
         self._sumatra_project=sumatra_project
         self._sumatra_reason = sumatra_reason
@@ -922,32 +947,6 @@ class Environment(HasLogger):
         # Whether to use a pool of processes
         self._use_pool = use_pool
 
-
-        if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
-            memory_cap <= 0.0 or memory_cap > 1.0 or
-            swap_cap <= 0.0 or swap_cap > 1.0):
-            raise ValueError('Please choose cap values larger than 0.0 and smaller or equal to 1.0.')
-
-        self._cpu_cap = cpu_cap
-        self._memory_cap = memory_cap
-        self._swap_cap = swap_cap
-
-        self._check_usage =  (self._cpu_cap < 1.0 or
-                              self._memory_cap < 1.0 or
-                              self._swap_cap < 1.0)
-
-        if self._check_usage:
-            if psutil is not None:
-                self._logger.info('Monitoring usage statistics. '
-                                  'I will not spawn new processes '
-                              'if one of the following cap thresholds is crossed, '
-                              'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
-                              (self._cpu_cap, self._memory_cap, self._swap_cap))
-                psutil.cpu_percent() # Just for initialisation
-            else:
-                raise ValueError('You cannot enable monitoring without having '
-                                   'installed psutil. Please install psutil or set '
-                                   'cpu_cap, memory_cap, and swap_cap to 1.0')
 
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
