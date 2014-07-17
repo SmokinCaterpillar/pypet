@@ -88,7 +88,7 @@ Automatic sumatra records are supported for
     *pypet* works under 0.13.x but not all features are fully supported.
     For instance, these upcasting issues may prevent you from storing
     Trajectories containing ArrayParameters to disk.
-    This unwanted upcastings did not happen in previous pandas versions and will be, or more
+    These unwanted upcastings did not happen in previous pandas versions and will be, or more
     precisely, have already been removed in the next pandas version.
     So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
