@@ -75,9 +75,9 @@ If you use Python 2.6 you also need
 
 Automatic sumatra records are supported for
 
-* sumatra_ >= 0.6.0
+* Sumatra_ >= 0.6.0
 
-.. _sumatra: http://neuralensemble.org/sumatra/
+.. _Sumatra: http://neuralensemble.org/sumatra/
 
 ==========================
 ToC

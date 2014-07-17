@@ -52,9 +52,9 @@ If you use Python 2.6 you also need
 
 * ordereddict >= 1.1
 
-Automatic sumatra records are supported for
+Automatic Sumatra records are supported for
 
-* sumatra >= 0.6.0
+* Sumatra >= 0.6.0
 
 =========================
 What is pypet all about?
