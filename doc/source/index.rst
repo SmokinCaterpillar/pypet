@@ -138,11 +138,12 @@ Publications
         Exploration Toolkit, 2014. http://pypet.readthedocs.org/.
 
 
----------------------
-BBD2013 Poster
----------------------
+---------------------------------
+Brain Days and EuroPython Poster
+---------------------------------
 
-There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_.
+There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_ and
+the `EuroPython 2014`_.
 
 .. image:: bbd_2013_poster/meyer_bbd_2013_small.png
 
@@ -155,6 +156,7 @@ Download:
 
 .. _`Berlin Brain Days 2013`: http://www.neuroscience-berlin.de/bbd/
 
+.. _`EuroPython 2014`: https://ep2014.europython.eu/en/
 
 ===================
 Acknowledgments
