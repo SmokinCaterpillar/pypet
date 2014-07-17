@@ -59,7 +59,7 @@ To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessin
 
 * psutil_ >= 2.0.0
 
-.. _psutil: http://psutil.readthedocs.org/
+.. _psutil: http://pythonhosted.org/psutil/
 
 To utilize the continuing of crashed trajectories you need
 
@@ -78,6 +78,19 @@ Automatic sumatra records are supported for
 * Sumatra_ >= 0.6.0
 
 .. _Sumatra: http://neuralensemble.org/sumatra/
+
+.. rubric:: Footnotes
+
+.. [#pandasversion]
+
+    Preferably use pandas 0.14.1 or 0.12.0 since there are some
+    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
+    *pypet* works under 0.13.x but not all features are fully supported.
+    For instance, these upcasting issues may prevent you from storing
+    Trajectories containing ArrayParameters to disk.
+    This unwanted upcastings did not happen in previous pandas versions and will be, or more
+    precisely, have already been removed in the next pandas version.
+    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
 ==========================
 ToC
@@ -224,17 +237,6 @@ License
 
 
 
-.. rubric:: Footnotes
 
-.. [#pandasversion]
-
-    Preferably use pandas 0.14.1 or 0.12.0 since there are some
-    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
-    *pypet* works under 0.13.x but not all features are fully supported.
-    For instance, these upcasting issues may prevent you from storing
-    Trajectories containing ArrayParameters to disk.
-    This unwanted upcastings did not happen in previous pandas versions and will be, or more
-    precisely, have already been removed in the next pandas version.
-    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
 
