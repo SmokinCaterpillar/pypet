@@ -11,8 +11,7 @@ if [[ $COVERAGE == ON ]]
         if [[ $GIT_TEST == ON ]]
             then
                 echo "Installing Git and Sumatra Test"
-                # sudo apt-get install libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
-                sudo apt-get install git
+                # sudo apt-get install git
                 pip install --pre GitPython
                 pip install Sumatra
                 mkdir git_sumatra_test
@@ -24,8 +23,9 @@ if [[ $COVERAGE == ON ]]
                 git config --global user.name "Your Name"
                 echo "DummyDummyDummy">>dummy.txt
                 git add dummy.txt
-                git commit -m "First Commit"
                 git add test_git.py
+                git commit -m "First Commit"
+                echo "Dummy2">>dummy.txt
                 echo "Running First Git Test"
                 python test_git.py
                 rm -rvf experiments
