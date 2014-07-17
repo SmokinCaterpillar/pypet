@@ -777,7 +777,8 @@ class Environment(HasLogger):
                                'use a pool.')
 
         if wrap_mode == pypetconstants.WRAP_MODE_QUEUE and immediate_postproc:
-            raise ValueError('You CANNOT perform immediate post-processing if you DO use a pool.')
+            raise ValueError('You CANNOT perform immediate post-processing if you DO use wrap mode '
+                             '`QUEUE`.')
 
         if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
             memory_cap <= 0.0 or memory_cap > 1.0 or
