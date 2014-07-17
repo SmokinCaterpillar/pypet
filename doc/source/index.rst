@@ -43,7 +43,7 @@ Python 2.6 or 2.7
 
 * tables >= 2.3.1
 
-* pandas >= 0.12.0 (preferably use 0.14.1 or 0.12.0 since there are some upcasting issues with 0.13.x)
+* pandas >= 0.12.0 [#pandasversion]_
 
 * numpy >= 1.6.1
 
@@ -221,4 +221,20 @@ License
 ===================
 
 .. literalinclude:: ../../LICENSE
+
+
+
+.. rubric:: Footnotes
+
+.. [#pandasversion]
+
+    Preferably use pandas 0.14.1 or 0.12.0 since there are some
+    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
+    *pypet* works under 0.13.x but not all features are fully supported.
+    For instance, these upcasting issues may prevent you from storing
+    Trajectories containing ArrayParameters to disk.
+    This unwanted upcastings did not happen in previous pandas versions and will be, or more
+    precisely, have already been removed in the next pandas version.
+    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
+
 

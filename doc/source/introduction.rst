@@ -209,8 +209,7 @@ Let's take a look at the snippet at once:
 
 .. code-block:: python
 
-    from pypet.environment import Environment
-    from pypet.utils.explore import cartesian_product
+    from pypet import Environment, cartesian_product
 
 
     def multiply(traj):
@@ -365,7 +364,7 @@ empty *trajectory* container and load all data into it by ourselves.
 
 .. code-block:: python
 
-    from pypet.trajectory import Trajectory
+    from pypet import Trajectory
 
     # So, first let's create a new empty trajectory and pass it the path and name of the HDF5 file.
     traj = Trajectory(filename='experiments/example_01/HDF5/example_01.hdf5')

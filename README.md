@@ -206,8 +206,7 @@ Let's take a look at the snippet at once:
 
 ::
 
-    from pypet.environment import Environment
-    from pypet.utils.explore import cartesian_product
+    from pypet import Environment, cartesian_product
 
     def multiply(traj):
         """Example of a sophisticated simulation that involves multiplying two values.

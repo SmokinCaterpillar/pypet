@@ -196,7 +196,7 @@ Ok, so let's start with creating an environment:
 
 .. code-block:: python
 
-    from pypet.environment import Environment
+    from pypet import Environment
     env = Environment(trajectory='FiringRate',
                       comment='Experiment to measure the firing rate '
                             'of a leaky integrate and fire neuron. '
@@ -796,7 +796,7 @@ environment and only use a trajectory container.
 
 .. code-block:: python
 
-    from pypet.trajectory import Trajectory
+    from pypet import Trajectory
     import matplotlib.pyplot as plt
 
     # This time we don't need an environment since we just going to look
