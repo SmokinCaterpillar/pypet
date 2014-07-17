@@ -5,8 +5,7 @@ import numpy as np
 # Let's reuse the stuff from the previous example
 from example_05_custom_parameter import euler_scheme, FunctionParameter, diff_lorenz
 
-from pypet.environment import Environment
-from pypet.parameter import ArrayParameter
+from pypet import Environment, ArrayParameter
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 

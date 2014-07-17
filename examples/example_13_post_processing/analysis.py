@@ -1,6 +1,6 @@
 __author__ = 'robert'
 
-from pypet.trajectory import Trajectory
+from pypet import Trajectory
 import matplotlib.pyplot as plt
 
 def main():

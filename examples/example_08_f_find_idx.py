@@ -1,7 +1,6 @@
 __author__ = 'Robert Meyer'
 
-from pypet.environment import Environment
-from pypet.utils.explore import cartesian_product
+from pypet import Environment, cartesian_product
 from pypet import pypetconstants
 
 

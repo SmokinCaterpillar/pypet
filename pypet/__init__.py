@@ -15,3 +15,4 @@ from pypet.parameter import BaseParameter, Parameter, ArrayParameter, SparsePara
     BaseResult, Result, SparseResult, PickleResult, ObjectTable
 from pypetexceptions import *
 from pypet.pypetlogging import HasLogger
+from pypet.utils.explore import cartesian_product

@@ -8,9 +8,9 @@ __author__ = 'Robert Meyer'
 import os
 import matplotlib.pyplot as plt
 
-from pypet.trajectory import Trajectory
+from pypet import Trajectory, Environment
 from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurationParameter
-from pypet.environment import Environment
+
 
 
 def main():
@@ -31,7 +31,7 @@ def main():
 
 
     # Load the trajectory, but onyl laod the skeleton of the results
-    traj.f_load(index=0, # Change if you do not want to load the very first trajectory
+    traj.f_load(index=-1, # Change if you do not want to load the very last trajectory
                 load_parameters=2,
                 load_derived_parameters=2,
                 load_results=1)

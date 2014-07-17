@@ -12,6 +12,9 @@ pypet 0.1b.7
 
 *   Better support for pandas 0.14.1
 
+*   Now you can import most of the objects directly from the *pypet* package, e.g.
+    ``from pypet import Trajectory`` instead of ``from pypet.trajectory import Trajectory``.
+
 pypet 0.1b.6
 
 *   The storage service prints status updates for loading and storing trees

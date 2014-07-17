@@ -2270,9 +2270,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Load all parameters of the current and the other trajectory
         if self._stored:
-            self.f_load_items(self._parameters.itervalues(), only_empties=True)
+            # To suppress warnings if nothing needs to be loaded
+            with self._nn_interface._disable_logger:
+                self.f_load_items(self._parameters.itervalues(), only_empties=True)
         if other_trajectory._stored:
-            other_trajectory.f_load_items(other_trajectory._parameters.itervalues(),
+            with self._nn_interface._disable_logger:
+                other_trajectory.f_load_items(other_trajectory._parameters.itervalues(),
                                           only_empties=True)
 
         self.f_restore_default()
@@ -2671,7 +2674,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             other_instance = other_trajectory.f_get(other_key)
 
             if other_instance.f_is_empty():
-                other_trajectory.f_load_items(other_instance)
+                # To suppress warnings if nothing needs to be loaded
+                with self._nn_interface._disable_logger:
+                    other_trajectory.f_load_items(other_instance)
 
             # The empty instances for the new data have already been created before
             my_instance = self.f_get(new_key)

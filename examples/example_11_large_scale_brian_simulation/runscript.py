@@ -28,7 +28,7 @@ def main():
                       multiproc=True,
                       ncores=2,
                       use_pool=False, # We cannot use a pool, our network cannot be pickled
-                      wrap_mode='LOCK')
+                      wrap_mode='QUEUE')
 
     #Get the trajectory container
     traj = env.v_trajectory
@@ -64,7 +64,9 @@ def main():
     # Pre-build network components
     clustered_network_manager.pre_build(traj)
 
+
     # Run the network simulation
+    traj.f_store() # Let's store the parameters already before the run
     env.f_run(clustered_network_manager.run_network)
 
 

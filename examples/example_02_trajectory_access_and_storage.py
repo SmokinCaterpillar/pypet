@@ -1,8 +1,7 @@
 __author__ = 'Robert Meyer'
 
 
-from pypet.trajectory import Trajectory
-from pypet.pypetexceptions import NotUniqueNodeError
+from pypet import Trajectory, NotUniqueNodeError
 
 
 # We first generate a new Trajectory

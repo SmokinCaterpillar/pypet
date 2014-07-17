@@ -1,6 +1,6 @@
 __author__ = 'robert'
 from main import add_parameters, add_exploration, run_neuron, neuron_postproc
-from pypet.environment import Environment
+from pypet import Environment
 import logging
 
 def mypipeline(traj):

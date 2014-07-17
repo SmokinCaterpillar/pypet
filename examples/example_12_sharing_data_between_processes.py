@@ -3,8 +3,7 @@ __author__ = 'Robert Meyer'
 import multiprocessing as mp
 import numpy as np
 
-from pypet.environment import Environment
-from pypet.utils.explore import cartesian_product
+from pypet import Environment, cartesian_product
 
 
 def multiply(traj, result_list):

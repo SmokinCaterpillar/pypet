@@ -56,13 +56,21 @@ What should I do?
     queue wrapping.
 
 
-**Q:**  My programm crashes with
+**Q:**  My program crashes with
         ``TypeError: [..]  dtype: float64 its type is <class 'pandas.core.series.Series'>.``!?
 
     **A:**  You are using pandas version ``0.13.x``
             Unfortunately, pandas performs some unwanted upcasting that
             cannot be handled by *pypet* (see https://github.com/pydata/pandas/issues/6526/).
+            This upcasting did not happen in previous pandas versions and will be, or more
+            precisely, has already been removed in the next pandas version.
             So either downgrade pandas to version ``0.12.0`` or upgrade to ``0.14.1``.
+
+**Q:** My program crashes if I try to store a Trajectory containing an ArrayParameter!?
+
+    **A:** Look at the previous answer,
+           you are using pandas ``0.13.x``, please up or downgrade your
+           pandas package.
 
 
 **Q:** Why can I no longer decide on the search strategy and what happened to ``v_check_uniqueness``?

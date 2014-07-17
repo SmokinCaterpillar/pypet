@@ -27,7 +27,7 @@ def add_params(traj):
     traj.f_add_parameter('Net.b',0.08*nA)
     traj.f_add_parameter('Net.I',.8*nA)
     traj.f_add_parameter('Net.Vcut',traj.VT+5*traj.DeltaT) # practical threshold condition
-    traj.f_add_parameter('Net.N',100)
+    traj.f_add_parameter('Net.N',50)
 
     eqs='''
     dvm/dt=(gL*(EL-vm)+gL*DeltaT*exp((vm-VT)/DeltaT)+I-w)/C : volt
@@ -87,7 +87,7 @@ def run_net(traj):
 
 def main():
     # Let's be very verbose!
-    logging.basicConfig(level = logging.DEBUG)
+    logging.basicConfig(level = logging.INFO)
 
 
     # Let's do multiprocessing this time with a lock (which is default)
@@ -98,6 +98,7 @@ def main():
                       comment = 'Go Brian!',
                       dynamically_imported_classes=[BrianMonitorResult, BrianParameter],
                       multiproc=True,
+                      wrap_mode='QUEUE',
                       ncores=2)
 
     traj = env.v_trajectory

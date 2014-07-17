@@ -1458,7 +1458,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._hdf5file.flush()
 
         except pt.NoSuchNodeError:
-            self._logger.warning('Did not find table `%s` in one of the trajectories,'
+            self._logger.info('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
     @staticmethod
@@ -1550,7 +1550,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._hdf5file.flush()
 
         except pt.NoSuchNodeError:
-            self._logger.warning('Did not find table `%s` in one of the trajectories,'
+            self._logger.info('Did not find table `%s` in one of the trajectories,'
                               ' skipped copying.' % tablename)
 
     def _trj_merge_trajectories(self,other_trajectory_name,rename_dict,move_nodes=False,
@@ -1761,7 +1761,13 @@ class HDF5StorageService(StorageService, HasLogger):
         # Loads meta data like the name, timestamps etc.
         self._trj_load_meta_data(traj,as_new,force)
 
-        self._logger.info('Loading trajectory `%s`.' % traj.v_name)
+        if (load_parameters != pypetconstants.LOAD_NOTHING or
+            load_derived_parameters != pypetconstants.LOAD_NOTHING or
+            load_results != pypetconstants.LOAD_NOTHING or
+            load_other_data != pypetconstants.LOAD_NOTHING):
+            self._logger.info('Loading trajectory `%s`.' % traj.v_name)
+        else:
+            self._logger.info('Checked meta data of trajectory `%s`.' % traj.v_name)
 
         # Load the annotations in case they have not been loaded before
         if traj.v_annotations.f_is_empty():

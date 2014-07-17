@@ -43,7 +43,7 @@ Python 2.6 or 2.7
 
 * tables >= 2.3.1
 
-* pandas >= 0.12.0
+* pandas >= 0.12.0 (preferably use 0.14.1 or 0.12.0 since there are some upcasting issues with 0.13.x)
 
 * numpy >= 1.6.1
 

@@ -2,9 +2,7 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import inspect
-from pypet.environment import Environment
-from pypet.parameter import Parameter, ArrayParameter
-from pypet.trajectory import Trajectory
+from pypet import Environment, Parameter, ArrayParameter, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 

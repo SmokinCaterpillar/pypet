@@ -3,8 +3,7 @@ __author__ = 'robert'
 import numpy as np
 import pandas as pd
 import logging
-from pypet.environment import Environment
-from pypet.utils.explore import cartesian_product
+from pypet import Environment, cartesian_product
 
 def run_neuron(traj):
     """Runs a simulation of a model neuron.
@@ -155,6 +154,7 @@ def main():
                       log_stdout=True,
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
+                      wrap_mode='QUEUE',
                       filename='./hdf5/', # We only pass a folder here, so the name is chosen
                       # automatically to be the same as the Trajectory
                       )
