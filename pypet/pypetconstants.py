@@ -7,7 +7,7 @@ that are recognized by storage services to determine how to store and load data.
 
 __author__ = 'Robert Meyer'
 
-import numpy as np
+import numpy
 
 
 ###################### Supported Data ########################
@@ -17,48 +17,48 @@ PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'float'>": float,
  "<type 'int'>": int,
  "<type 'long'>": long,
- "<type 'numpy.bool_'>": np.bool_,
- "<type 'numpy.complex128'>": np.complex128,
- "<type 'numpy.complex64'>": np.complex64,
- "<type 'numpy.float32'>": np.float32,
- "<type 'numpy.float64'>": np.float64,
- "<type 'numpy.int16'>": np.int16,
- "<type 'numpy.int32'>": np.int32,
- "<type 'numpy.int64'>": np.int64,
- "<type 'numpy.int8'>": np.int8,
- "<type 'numpy.string_'>": np.string_,
- "<type 'numpy.uint16'>": np.uint16,
- "<type 'numpy.uint32'>": np.uint32,
- "<type 'numpy.uint64'>": np.uint64,
- "<type 'numpy.uint8'>": np.uint8,
+ "<type 'numpy.bool_'>": numpy.bool_,
+ "<type 'numpy.complex128'>": numpy.complex128,
+ "<type 'numpy.complex64'>": numpy.complex64,
+ "<type 'numpy.float32'>": numpy.float32,
+ "<type 'numpy.float64'>": numpy.float64,
+ "<type 'numpy.int16'>": numpy.int16,
+ "<type 'numpy.int32'>": numpy.int32,
+ "<type 'numpy.int64'>": numpy.int64,
+ "<type 'numpy.int8'>": numpy.int8,
+ "<type 'numpy.string_'>": numpy.string_,
+ "<type 'numpy.uint16'>": numpy.uint16,
+ "<type 'numpy.uint32'>": numpy.uint32,
+ "<type 'numpy.uint64'>": numpy.uint64,
+ "<type 'numpy.uint8'>": numpy.uint8,
  "<type 'str'>": str}
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
 """
 
-PARAMETER_SUPPORTED_DATA = (np.int8,
-                       np.int16,
-                       np.int32,
-                       np.int64,
-                       np.int,
-                       np.int_,
-                       np.long,
-                       np.uint8,
-                       np.uint16,
-                       np.uint32,
-                       np.uint64,
-                       np.bool,
-                       np.bool_,
-                       np.float32,
-                       np.float64,
-                       np.float,
-                       np.float_,
-                       np.complex64,
-                       np.complex,
-                       np.complex_,
-                       np.str,
-                       np.str_)
+PARAMETER_SUPPORTED_DATA = (numpy.int8,
+                       numpy.int16,
+                       numpy.int32,
+                       numpy.int64,
+                       numpy.int,
+                       numpy.int_,
+                       numpy.long,
+                       numpy.uint8,
+                       numpy.uint16,
+                       numpy.uint32,
+                       numpy.uint64,
+                       numpy.bool,
+                       numpy.bool_,
+                       numpy.float32,
+                       numpy.float64,
+                       numpy.float,
+                       numpy.float_,
+                       numpy.complex64,
+                       numpy.complex,
+                       numpy.complex_,
+                       numpy.str,
+                       numpy.str_)
 """Set of supported scalar types by the storage service and the standard parameter"""
 
 
