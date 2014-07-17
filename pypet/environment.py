@@ -932,6 +932,23 @@ class Environment(HasLogger):
         self._memory_cap = memory_cap
         self._swap_cap = swap_cap
 
+        self._check_usage =  (self._cpu_cap < 1.0 or
+                              self._memory_cap < 1.0 or
+                              self._swap_cap < 1.0)
+
+        if self._check_usage:
+            if psutil is not None:
+                self._logger.info('Monitoring usage statistics. '
+                                  'I will not spawn new processes '
+                              'if one of the following cap thresholds is crossed, '
+                              'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
+                              (self._cpu_cap, self._memory_cap, self._swap_cap))
+                psutil.cpu_percent() # Just for initialisation
+            else:
+                raise ValueError('You cannot enable monitoring without having '
+                                   'installed psutil. Please install psutil or set '
+                                   'cpu_cap, memory_cap, and swap_cap to 1.0')
+
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
@@ -1973,17 +1990,6 @@ class Environment(HasLogger):
                         results.extend([result for result in pool_results])
 
                     else:
-
-                        check_usage = psutil is not None and (self._cpu_cap < 1.0 or
-                                                              self._memory_cap < 1.0 or
-                                                              self._swap_cap < 1.0)
-                        if check_usage:
-                            self._logger.info('Monitoring usage statistics. I will not spawn new processes '
-                                              'if one of the following cap thresholds is crossed, '
-                                              'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
-                                              (self._cpu_cap, self._memory_cap, self._swap_cap))
-                            psutil.cpu_percent() # Just for initialisation
-
                         no_cap = True # Evaluates if new processes are allowed to be started or if cap is
                         # reached
                         signal_cap = True # If True cap warning is emitted
@@ -2003,7 +2009,7 @@ class Environment(HasLogger):
 
                             # Check if caps are reached. Cap is only checked if there is at least one
                             # process working to prevent deadlock.
-                            if check_usage and keep_running:
+                            if self._check_usage and keep_running:
                                 no_cap=True
                                 if len(process_dict) > 0:
                                     cpu_usage = psutil.cpu_percent()/100.0
