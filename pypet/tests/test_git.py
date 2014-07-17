@@ -34,10 +34,13 @@ def main():
         # Run the simulation
         env.f_run(multiply)
 
+        print "Python git test successful"
+
         # traj.f_expand({'x':[3,3],'y':[42,43]})
         #
         # env.f_run(multiply)
-    except Exception:
+    except Exception as e:
+        print repr(e)
         sys.exit(1)
 
 

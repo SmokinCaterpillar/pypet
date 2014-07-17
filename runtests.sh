@@ -22,8 +22,10 @@ if [[ $COVERAGE == ON ]]
                 smt init GitTest
                 echo "Running Git Test"
                 python test_git.py
+                echo "Git Test complete, removing folder"
                 cd ..
                 rm -rvf git_sumatra_test
+                echo "Removal complete"
 
             else
                 python ./pypet/tests/all_tests.py
