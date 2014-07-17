@@ -43,6 +43,8 @@ install:
   - pip install pandas==$PANDAS_VERSION
   - echo "+++++++++++ Installing Brian +++++++++++"
   - pip install brian
+  - echo "+++++++++++ Installing psuitl +++++++++++"
+  - pip install psutil
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
