@@ -1,17 +1,17 @@
 language: python
 python:
   - "2.7_with_system_site_packages"
-#  - 2.6
+  - 2.6
 
 env:
   matrix:
-#    - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF
+    - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF
     - PANDAS_VERSION=0.14.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.4 CYTHON_VERSION=0.20.2 COVERAGE=OFF GIT_TEST=OFF
 
 matrix:
   include:
-#    - python: "2.7_with_system_site_packages"
-#      env: PANDAS_VERSION=0.13.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON GIT_TEST=OFF
+    - python: "2.7_with_system_site_packages"
+      env: PANDAS_VERSION=0.13.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON GIT_TEST=OFF
     - python: "2.7_with_system_site_packages"
       env: PANDAS_VERSION=0.13.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=OFF GIT_TEST=ON
 
@@ -44,8 +44,8 @@ install:
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-#  - echo "+++++++++++ Installing dill ++++++++++++"
-#  - pip install dill
+  - echo "+++++++++++ Installing dill ++++++++++++"
+  - pip install dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - pip install .
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
