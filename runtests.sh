@@ -20,6 +20,8 @@ if [[ $COVERAGE == ON ]]
                 cd git_sumatra_test
                 git init
                 smt init GitTest
+                git config --global user.email "you@example.com"
+                git config --global user.name "Your Name"
                 git commit -m "First Commit"
                 git add git_test.py
                 echo "Running First Git Test"
