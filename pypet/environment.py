@@ -785,7 +785,7 @@ class Environment(HasLogger):
             swap_cap <= 0.0 or swap_cap > 1.0):
             raise ValueError('Please choose cap values larger than 0.0 and smaller or equal to 1.0.')
 
-        check_usage = cpu_cap < 1.0 or  memory_cap < 1.0 or swap_cap < 1.0
+        check_usage = cpu_cap < 1.0 or memory_cap < 1.0 or swap_cap < 1.0
 
         if check_usage and psutil is None:
             raise ValueError('You cannot enable monitoring without having '
