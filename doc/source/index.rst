@@ -55,7 +55,7 @@ For git integration you additionally need
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
-To utilize the cap feature for multiprocessing (see :ref:`more-on-multiprocessing`) you need
+To utilize the cap feature for :ref:`more-on-multiprocessing` you need
 
 * psutil_ >= 2.0.0
 
