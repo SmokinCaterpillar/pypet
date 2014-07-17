@@ -11,6 +11,10 @@
 __author__ = 'Robert Meyer'
 
 import time
+try:
+    import git
+except ImportError:
+    git = None
 
 def add_commit_variables(traj, commit):
     """Adds commit information to the trajectory."""
@@ -56,7 +60,7 @@ def make_git_commit(environment, git_repository, user_message):
 
     # Import GitPython, we do it here to allow also users not having GitPython installed
     # to use the normal environment
-    import git
+
 
     # Open the repository
     repo = git.Repo(git_repository)

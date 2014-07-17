@@ -48,6 +48,11 @@ try:
 except ImportError:
     psutil = None
 
+try:
+    import git
+except ImportError:
+    git = None
+
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -751,9 +756,10 @@ class Environment(HasLogger):
             raise ValueError('You cannot purge duplicate comments without having the'
                                ' small overview tables.')
 
-        # if continuable and use_pool:
-        #     raise ValueError('You cannot use `continuable=True` with a pool, please set '
-        #                        '`use_pool=False`.')
+        if git_repository is not None and git is None:
+            raise ValueError('You cannot specify a git repository without having '
+                             'GitPython. Please install the GitPython package to use '
+                             'pypet`s git integration.')
 
         if continuable and dill is None:
             raise ValueError('Please install `dill` if you want to use the feature to '
