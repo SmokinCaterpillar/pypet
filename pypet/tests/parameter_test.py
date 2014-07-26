@@ -288,7 +288,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_rename(self):
-        for name,param in self.param.iteritems():
+        for name,param in self.param.items():
             param._rename('test.test.wirsing')
             self.assertTrue(param.v_name=='wirsing')
             self.assertTrue(param.v_full_name=='test.test.wirsing')
@@ -789,7 +789,7 @@ class ResultTest(unittest.TestCase):
 
 
     def test_rename(self):
-        for name,res in self.results.iteritems():
+        for name,res in self.results.items():
             res._rename('test.test.wirsing')
             self.assertTrue(res.v_name=='wirsing')
             self.assertTrue(res.v_full_name=='test.test.wirsing')

@@ -274,7 +274,7 @@ class BrianMonitorTest(ResultTest):
 
     def make_results(self):
         self.results={}
-        for key,monitor in self.monitors.iteritems():
+        for key,monitor in self.monitors.items():
             if key.endswith('Ar'):
                 self.results[key]=BrianMonitorResult(key,monitor,
                                                      storage_mode=BrianMonitorResult.ARRAY_MODE)
