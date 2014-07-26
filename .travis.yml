@@ -60,4 +60,5 @@ branches:
   only:
     - develop
     - master
+    - python6
 
