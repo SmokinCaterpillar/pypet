@@ -1567,7 +1567,9 @@ class HDF5StorageService(StorageService, HasLogger):
             raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
                              'be found in my file.')
 
-        for old_name, new_name in rename_dict.iteritems():
+        for old_name in rename_dict:
+            new_name = rename_dict[old_name]
+
             # Iterate over all items that need to be merged
             split_name = old_name.split('.')
             old_location = '/'+other_trajectory_name+'/'+'/'.join(split_name)
@@ -3374,7 +3376,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             changed = False
 
-            for field_name, val in anno_dict.iteritems():
+            for field_name in anno_dict:
+                val = anno_dict[field_name]
+
                 field_name_with_prefix = HDF5StorageService.ANNOTATION_PREFIX+field_name
                 if not field_name_with_prefix in current_attrs:
                     # Only store *new* annotations, if they already exist on disk, skip storage
@@ -4379,7 +4383,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Remember the original types of the data for perfect recall
                 if idx == 0 and len(description_dict) <= pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
                     # We only have a single table and we can store the original data types as attributes
-                    for field_name, type_description in data_type_dict.iteritems():
+                    for field_name in data_type_dict:
+                        type_description = data_type_dict[field_name]
+
                         table._f_setAttr(field_name,type_description)
 
                     setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
@@ -4441,7 +4447,9 @@ class HDF5StorageService(StorageService, HasLogger):
         descriptiondict={} # dictionary containing the description to build a pytables table
         original_data_type_dict={} # dictionary containing the original data types
 
-        for key, val in data.iteritems():
+        for key in data:
+            val = data[key]
+
 
             # remember the original data types
             self._all_set_attributes_to_recall_natives(val[0], PTItemMock(original_data_type_dict),

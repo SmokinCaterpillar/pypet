@@ -2084,8 +2084,8 @@ class NNGroupNode(NNTreeNode):
             name = self.v_name
 
         return '<%s>: %s: %s' % (self.f_get_class_name(), name,
-                                 str([(key, str(type(val)))
-                                      for key, val in self._children.iteritems()]))
+                                 str([(key, str(type(self._children[key])))
+                                      for key in self._children]))
 
     def __dir__(self):
         """Adds all children to auto-completion"""

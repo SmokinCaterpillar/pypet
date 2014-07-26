@@ -351,7 +351,8 @@ class BrianResult(Result):
 
     def _store(self):
         store_dict={}
-        for key, val in self._data.iteritems():
+        for key in self._data:
+            val = self._data[key]
             if isinstance(val,Quantity):
 
                 if self._storage_mode == BrianResult.STRING_MODE:

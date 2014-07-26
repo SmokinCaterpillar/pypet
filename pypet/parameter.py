@@ -2309,7 +2309,8 @@ class SparseResult(Result):
 
         """
         store_dict = {}
-        for key, val in self._data.iteritems():
+        for key, val in self._data:
+            val = self._data[key]
             if SparseParameter._is_supported_matrix(val):
 
                 data_list, name_list, hash_tuple= SparseParameter._serialize_matrix(val)

@@ -41,7 +41,8 @@ def results_equal(a,b):
     if akeyset != bkeyset:
         return False
 
-    for key, val in a._data.iteritems():
+    for key in a._data:
+        val = a._data[key]
         bval = b._data[key]
 
         if not nested_equal(val,bval):
@@ -139,7 +140,9 @@ def nested_equal(a, b):
         except ValueError:
             # The Value Error can happen if the data frame is of dtype=object and contains
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
-            for name, cola in a.iteritems():
+            for name in a:
+                cola = a[name]
+
                 if not name in b:
                     return False
 

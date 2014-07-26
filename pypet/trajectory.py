@@ -377,7 +377,9 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
                 return param_dict
         else:
             resdict = {}
-            for key, param in param_dict.iteritems():
+            for key in param_dict:
+                param = param_dict[key]
+
                 val = param.f_get()
                 resdict[key] = val
 
@@ -1461,7 +1463,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # First check if the completed runs are also finished runs (i.e. are part of the snapshot)
         # If not remove these
-        for run_name, info_dict in self._run_information.iteritems():
+        for run_name in self._run_information:
+            info_dict = self._run_information[run_name]
             completed = info_dict['completed']
             timestamp = info_dict['timestamp']
             idx = info_dict['idx']
@@ -1475,7 +1478,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 cleaned_run_indices.append(index)
 
         # Next, delete all the data for not completed runs
-        for run_name, info_dict in self._run_information.iteritems():
+        for run_name in self._run_information:
+            info_dict = self._run_information[run_name]
             completed = info_dict['completed']
 
             if not completed:
@@ -2669,7 +2673,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             to the new names in the current trajectory.
 
         """
-        for other_key, new_key in rename_dict.iteritems():
+        for other_key in rename_dict:
+            new_key = rename_dict[other_key]
 
             other_instance = other_trajectory.f_get(other_key)
 
@@ -3027,7 +3032,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Iterate through all parameters of the other trajectory
         # and check which differ from the parameters of the current trajectory
-        for key, other_param in params_to_merge.iteritems():
+        for key in params_to_merge:
+            other_param = params_to_merge[key]
 
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
