@@ -2309,7 +2309,7 @@ class SparseResult(Result):
 
         """
         store_dict = {}
-        for key, val in self._data:
+        for key in self._data:
             val = self._data[key]
             if SparseParameter._is_supported_matrix(val):
 
