@@ -14,7 +14,7 @@ from pypet.tests.pipeline_test import TestPostProc
 try:
     from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
 except ImportError as e:
-    print repr(e) # We end up here if `dill` is not installed
+    print(repr(e)) # We end up here if `dill` is not installed
     pass
 from pypet.tests.utilstest import CartesianTest
 from pypet.tests.environment_test import EnvironmentTest
@@ -29,7 +29,7 @@ try:
         from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
         from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest, BrianFullNetworkMPTest
 except ImportError as e:
-    print repr(e) # We end up here if `brian` is not installed
+    print(repr(e)) # We end up here if `brian` is not installed
     pass
 
 
@@ -40,11 +40,11 @@ if __name__ == '__main__':
     for opt, arg in opt_list:
         if opt == '-k':
             remove = False
-            print 'I will keep all files.'
+            print('I will keep all files.')
 
         if opt == '--folder':
             folder = arg
-            print 'I will put all data into folder `%s`.' % folder
+            print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
     make_run(remove, folder)

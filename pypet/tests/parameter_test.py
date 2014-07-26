@@ -21,6 +21,7 @@ import pandas as pd
 import pypet.utils.comparisons as comp
 from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
+import pypet.compat as compat
 
 
 
@@ -733,7 +734,7 @@ class ResultTest(unittest.TestCase):
             self.assertTrue(res.f_is_empty())
 
     def f_set_numbering(self):
-        int_list = range(10)
+        int_list = list(range(10))
         for res in self.results.values():
             res.f_set(*int_list)
 
@@ -755,7 +756,7 @@ class ResultTest(unittest.TestCase):
         self.data['integer'] = 42
         self.data['float'] = 42.424242
         self.data['string'] = 'TestString! 66'
-        self.data['long'] = long(44444444444444444444444)
+        self.data['long'] = compat.long_type(44444444444444444444444)
         self.data['numpy_array'] = np.array([[3232.3,232323.0,323232323232.32323232],[4,4]])
         self.data['tuple'] = (444,444,443)
         self.data['list'] = ['3','4','666']

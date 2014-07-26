@@ -63,7 +63,7 @@ __author__ = 'Robert Meyer'
 
 import logging
 try:
-    import cPickle as pickle
+    import cPickle as pickle # will fail under python 3
 except ImportError:
     import pickle
 import pickletools
@@ -76,7 +76,7 @@ from pypet import pypetconstants
 from pypet.naturalnaming import NNLeafNode
 import pypet.utils.comparisons as comparisons
 from pypet.utils.decorators import deprecated, copydoc
-import pypetexceptions as pex
+import pypet.pypetexceptions as pex
 
 
 class ObjectTable(DataFrame):
@@ -1213,7 +1213,7 @@ class ArrayParameter(Parameter):
                 smart_dict = {}
 
                 store_dict['explored_data'+ArrayParameter.IDENTIFIER] = \
-                    ObjectTable(columns=['idx'],index=range(len(self)))
+                    ObjectTable(columns=['idx'],index=list(range(len(self))))
 
                 count = 0
                 for idx, elem in enumerate(self._explored_range):
@@ -1495,7 +1495,7 @@ class SparseParameter(ArrayParameter):
 
                 store_dict['explored_data'+SparseParameter.IDENTIFIER] = \
                     ObjectTable(columns=['idx','is_dia'],
-                                index=range(len(self)))
+                                index=list(range(len(self))))
 
                 count = 0
                 for idx,elem in enumerate(self._explored_range):
@@ -1699,7 +1699,7 @@ class PickleParameter(Parameter):
         if self.f_has_range():
 
             store_dict['explored_data'] = \
-                ObjectTable(columns=['idx'],index=range(len(self)))
+                ObjectTable(columns=['idx'],index=list(range(len(self))))
 
             smart_dict = {}
             count = 0

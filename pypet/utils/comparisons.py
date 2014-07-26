@@ -7,6 +7,7 @@ import pandas as pd
 import pypet
 import itertools as it
 import pypet.pypetconstants as pypetconstants
+import pypet.compat as compat
 
 
 def results_equal(a,b):
@@ -109,7 +110,7 @@ def nested_equal(a, b):
     .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
 
     """
-    if id(a) == id(b):
+    if a is b:
         return True
 
     # for types that support __eq__
@@ -124,8 +125,8 @@ def nested_equal(a, b):
     #Check equality according to type type [sic].
     if a is None:
         return b is None
-    if isinstance(a, basestring):
-         return a == b
+    if isinstance(a, (compat.unicode_type, compat.bytes_type)):
+        return a == b
     if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
         return a==b
     if isinstance(a, np.ndarray):

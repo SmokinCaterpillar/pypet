@@ -17,9 +17,9 @@ from pypet.environment import Environment
 from pypet import pypetconstants
 import logging
 
-from test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
+from pypet.tests.test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
-from hdf5_storage_test import ResultSortTest
+from pypet.tests.hdf5_storage_test import ResultSortTest
 
 
 class MergeTest(TrajectoryComparator):

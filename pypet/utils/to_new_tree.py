@@ -18,7 +18,7 @@ class FileUpdater(object):
                                'If you want to backup your file add `-b` to the arguments.')
 
         if backup:
-            print 'Backing Up...'
+            print('Backing Up...')
             head, tail = os.path.split(filename)
 
             name, ext = os.path.splitext(tail)
@@ -29,7 +29,7 @@ class FileUpdater(object):
 
             shutil.copy(filename, outfilename)
 
-            print '...Done!'
+            print('...Done!')
 
         self.hdf5file = None
 
@@ -50,13 +50,13 @@ class FileUpdater(object):
 
     def _update_traj(self,traj_node):
 
-        print '*** UPDATING TRAJECTORY %s ***' % traj_node._v_name
+        print('*** UPDATING TRAJECTORY %s ***' % traj_node._v_name)
 
         overview_node = traj_node.overview
 
-        print 'Updating Overview Tables'
+        print('Updating Overview Tables')
         for overview_table in overview_node:
-            print 'Updating Table %s ...' % overview_table._v_name
+            print('Updating Table %s ...' % overview_table._v_name)
 
             if 'location' in overview_table.colnames:
                 nrows = overview_table.nrows
@@ -78,19 +78,19 @@ class FileUpdater(object):
                         if new_location:
                             overview_table.cols.location[row] = new_location
                 overview_table.flush()
-            print '... Done!'
+            print('... Done!')
 
-        print 'Updating Derived Parameters ...'
+        print('Updating Derived Parameters ...')
 
         self._change_subtree(traj_node, 'derived_parameters')
 
-        print '... Done!'
+        print('... Done!')
 
-        print 'Updating Results ...'
+        print('Updating Results ...')
 
         self._change_subtree(traj_node, 'results')
 
-        print '... Done!'
+        print('... Done!')
 
 
     def _change_subtree(self, traj_node, where):
@@ -104,7 +104,7 @@ class FileUpdater(object):
                     if not 'runs' in res_node._v_children:
                         self.hdf5file.createGroup(where=res_node, name='runs', title='runs')
 
-                    print '    Moving node %s' % node_name
+                    print('    Moving node %s' % node_name)
                     runs_node = res_node._v_children['runs']
 
                     to_move_node = res_node._v_children[node_name]
@@ -117,7 +117,7 @@ class FileUpdater(object):
 
                         to_move_node = inner_traj_node._v_children[move_node_name]
 
-                        print '    Moving node %s' % move_node_name
+                        print('    Moving node %s' % move_node_name)
 
                         self.hdf5file.moveNode(where=to_move_node, newparent=res_node)
 
@@ -135,10 +135,10 @@ if __name__ == '__main__':
     for opt, arg in opt_list:
         if opt == '-b':
             backup = True
-            print 'I will make a backup.'
+            print('I will make a backup.')
 
         if opt == '--filename':
             filename = arg
-            print 'I will rework `%s`.' % filename
+            print('I will rework `%s`.' % filename)
 
     FileUpdater(filename, backup).update_file()

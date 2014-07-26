@@ -7,20 +7,19 @@ as well wrapper classes to allow thread safe multiprocess storing.
 
 __author__ = 'Robert Meyer'
 
-
-import logging
 import tables as pt
 import tables.parameters as ptpa
 import os
 import warnings
 import time
-import datetime
-import Queue
-import sys
-
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 import numpy as np
 from pandas import DataFrame, read_hdf, Series, Panel, Panel4D, HDFStore
 
+import pypet.compat as compat
 from pypet import pypetconstants
 import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
@@ -138,7 +137,7 @@ class QueueStorageServiceWriter(object):
                         else:
                             raise RuntimeError('You queued something that was not intended to be queued!')
 
-                    except Queue.Empty:
+                    except queue.Empty:
                         break
 
                 if to_store_list:
@@ -3131,8 +3130,8 @@ class HDF5StorageService(StorageService, HasLogger):
             row_iterator = None
 
         try:
-            row = row_iterator.next()
-        except AttributeError:
+            row = next(row_iterator)
+        except TypeError:
             row = None
         except StopIteration:
             row = None
@@ -3169,7 +3168,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 multiple_entries = False
 
                 try:
-                    row_iterator.next()
+                    next(row_iterator)
                     multiple_entries = True
                 except StopIteration:
                     pass
@@ -3194,12 +3193,13 @@ class HDF5StorageService(StorageService, HasLogger):
         ## Check if there are 2 entries which should not happen
         multiple_entries = False
         try:
-            row_iterator.next()
+            next(row_iterator)
             multiple_entries = True
+        except TypeError:
+            pass
         except StopIteration:
             pass
-        except AttributeError:
-            pass
+
 
         if  multiple_entries:
              raise RuntimeError('There is something entirely wrong, `%s` '
@@ -3483,7 +3483,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     row_iterator= self._all_find_param_or_result_entry_and_return_iterator(instance, table)
 
 
-                    row = row_iterator.next()
+                    row = next(row_iterator)
 
                     # Decrease the number of items represented by the summary
                     nitems = row['number_of_items']-1
@@ -3491,7 +3491,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     row.update()
 
                     try:
-                        row_iterator.next()
+                        next(row_iterator)
                         raise RuntimeError('There is something completely wrong, found '
                                            '`%s` twice in a table!' %
                                         instance.v_full_name)
@@ -3572,7 +3572,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 row = None
                 try:
-                    row = row_iterator.next()
+                    row = next(row_iterator)
                 except StopIteration:
                     pass
 
@@ -3637,7 +3637,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     row.update()
 
                     try:
-                        row_iterator.next()
+                        next(row_iterator)
                         raise RuntimeError('There is something completely wrong, '
                                            'found `%s` twice in a table!' %
                                         instance.v_full_name)
@@ -3777,7 +3777,7 @@ class HDF5StorageService(StorageService, HasLogger):
             # it, pick default storage flags
             self._prm_extract_missing_flags(store_dict, store_flags)
 
-            if isinstance(overwrite, basestring):
+            if isinstance(overwrite, compat.base_type):
                 overwrite = [overwrite]
 
             if overwrite is True:
@@ -4248,7 +4248,7 @@ class HDF5StorageService(StorageService, HasLogger):
             the_node._f_remove(recursive=True)
 
             if remove_empty_groups:
-                for irun in reversed(range(len(split_name))):
+                for irun in reversed(list(range(len(split_name)))):
                     where = '/'+self._trajectory_name+'/' + '/'.join(split_name[0:irun])
                     node_name = split_name[irun]
                     try:
@@ -4266,7 +4266,7 @@ class HDF5StorageService(StorageService, HasLogger):
             if not instance.v_is_leaf:
                 raise ValueError('You can only choose `delete_only` mode for leafs.')
 
-            if isinstance(delete_only, basestring):
+            if isinstance(delete_only, compat.base_type):
                 delete_only = [delete_only]
 
             path_to_leaf = where+'/'+node_name
@@ -4397,7 +4397,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 # We have potentially many split tables and the data types are
                 # stored into an additional table for performance reasons
                 tblname = tablename + '__' + HDF5StorageService.STORAGE_TYPE
-                field_names, data_types = zip(*data_type_dict.items())
+                field_names, data_types = list(zip(*data_type_dict.items()))
                 data_type_table_dict = {'field_name' : field_names, 'data_type':data_types}
                 descr_dict, _ = self._prm_make_description(data_type_table_dict, fullname)
                 try:
@@ -4538,9 +4538,9 @@ class HDF5StorageService(StorageService, HasLogger):
                              'both at the same time.')
 
         # If load only is just a name and not a list of names, turn it into a 1 element list
-        if isinstance(load_only, basestring):
+        if isinstance(load_only, compat.base_type):
             load_only= [load_only]
-        if isinstance(load_except, basestring):
+        if isinstance(load_except, compat.base_type):
             load_except = [load_except]
 
 

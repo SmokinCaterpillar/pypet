@@ -28,6 +28,7 @@ else:
     from collections import OrderedDict
 
 import pypet.pypetexceptions as pex
+import pypet.compat as compat
 from pypet import __version__ as VERSION
 from pypet import pypetconstants
 from pypet.naturalnaming import NNGroupNode,NaturalNamingInterface, ResultGroup, ParameterGroup, \
@@ -1249,7 +1250,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             dynamically_imported_classes = [dynamically_imported_classes]
 
         for item in dynamically_imported_classes:
-            if not (isinstance(item, basestring) or inspect.isclass(item)):
+            if not (isinstance(item, compat.base_type) or inspect.isclass(item)):
                 raise TypeError('Your dynamic import `%s` is neither a class nor a string.' %
                                 str(item))
 
@@ -1287,7 +1288,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if name_or_idx is None or name_or_idx == pypetconstants.RUN_NAME_DUMMY or name_or_idx==-1:
             self.f_restore_default()
         else:
-            if isinstance(name_or_idx,basestring):
+            if isinstance(name_or_idx, compat.base_type):
                 self._idx = self.f_idx_to_run(name_or_idx)
                 self._as_run = name_or_idx
             else:
@@ -1366,7 +1367,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
         if sort:
-            return [self.f_idx_to_run(idx) for idx in xrange(len(self))]
+            return [self.f_idx_to_run(idx) for idx in compat.compatrange(len(self))]
         else:
             return self._run_information.keys()
 
@@ -1769,7 +1770,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         [0, 2, 17, 36]
 
         """
-        if isinstance(name_list, basestring):
+        if isinstance(name_list, compat.base_type):
             name_list = [name_list]
 
         # First create a list of iterators, each over the range of the matched parameters
@@ -3064,8 +3065,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             # We need to compare all parameter combinations in the current trajectory
             # to all parameter combinations in the other trajectory to spot duplicate points.
             # Quadratic Complexity!
-            for irun in xrange(len(other_trajectory)):
-                for jrun in xrange(len(self)):
+            for irun in compat.compatrange(len(other_trajectory)):
+                for jrun in compat.compatrange(len(self)):
                     change = True
 
                     # Check all marked parameters
@@ -3118,14 +3119,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     other_range = (x for run, x in itools.izip(use_runs, other_param.f_get_range())
                                    if run)
                 else:
-                    other_range = (other_param.f_get() for _ in xrange(adding_length))
+                    other_range = (other_param.f_get() for _ in compat.compatrange(adding_length))
 
             # If a parameter in the current trajectory was marked for merging but was not
             # explored before, we need to explore it first, simply by creating the range of
             # the current trajectory's length containing only it's default value
             if not my_param.f_has_range():
                 my_param.f_unlock()
-                my_param._explore((my_param.f_get() for _ in xrange(len(self))))
+                my_param._explore((my_param.f_get() for _ in compat.compatrange(len(self))))
 
             # After determining the new range extension `other_range`,
             # expand the parameters

@@ -8,7 +8,7 @@ import numpy as np
 import sys
 
 try:
-    import cPickle as pickle
+    import cPickle as pickle # will fail under python 3
 except ImportError:
     import pickle
 
@@ -194,7 +194,7 @@ class AnnotationsTest(unittest.TestCase):
 
 
     def test_f_set_numbering(self):
-        int_list = range(10)
+        int_list = list(range(10))
         for node in self.traj.f_iter_nodes(recursive=True):
             node.v_annotations.f_set(*int_list)
 

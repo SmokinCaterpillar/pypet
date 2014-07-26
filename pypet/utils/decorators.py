@@ -1,6 +1,8 @@
 import functools
 import warnings
 
+import pypet.compat as compat
+
 __author__ = 'Robert Meyer'
 
 
@@ -22,8 +24,8 @@ def deprecated(msg=''):
             warnings.warn_explicit(
                  warning_string,
                  category=DeprecationWarning,
-                 filename=func.func_code.co_filename,
-                 lineno=func.func_code.co_firstlineno + 1
+                 filename=compat.func_code(func).co_filename,
+                 lineno=compat.func_code(func).co_firstlineno + 1
              )
             return func(*args, **kwargs)
         return new_func

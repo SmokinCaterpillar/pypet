@@ -2,7 +2,7 @@
 Created on 24.05.2013
 '''
 import itertools as itools
-
+import pypet.compat as compat
 
 
 def cartesian_product(parameter_dict, combined_parameters = ()):
@@ -41,7 +41,7 @@ def cartesian_product(parameter_dict, combined_parameters = ()):
         combined_parameters = list(combined_parameters)
 
     for idx,item in enumerate(combined_parameters):
-        if isinstance(item,basestring):
+        if isinstance(item, compat.base_type):
             combined_parameters[idx]= (item,)
 
     iterator_list = []

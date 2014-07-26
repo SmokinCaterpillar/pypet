@@ -17,7 +17,7 @@ import os
 import dill
 
 import tables as pt
-from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
+from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
     TrajectoryComparator, make_temp_file, multiply
 
 class CustomParameter(Parameter):

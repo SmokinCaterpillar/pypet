@@ -57,7 +57,7 @@ def add_params(traj):
 def run_net(traj):
 
     clear(True, True)
-    print traj.defaultclock
+    print(traj.defaultclock)
     defaultclock.dt=traj.defaultclock
 
     C=traj.C

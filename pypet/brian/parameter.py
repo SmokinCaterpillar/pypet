@@ -869,7 +869,7 @@ class BrianMonitorResult(Result):
             spike_dict={}
 
             if len(monitor.spikes)>0:
-                zip_lists = zip(*monitor.spikes)
+                zip_lists = list(zip(*monitor.spikes))
                 time_list = zip_lists[1]
 
                 nounit_list = [np.float64(time) for time in time_list]
@@ -942,7 +942,7 @@ class BrianMonitorResult(Result):
             spike_dict={}
 
             if len(monitor.spikes)>0:
-                zip_lists = zip(*monitor.spikes)
+                zip_lists = list(zip(*monitor.spikes))
                 time_list = zip_lists[1]
 
                 nounit_list = [np.float64(time) for time in time_list]

@@ -8,6 +8,7 @@ that are recognized by storage services to determine how to store and load data.
 __author__ = 'Robert Meyer'
 
 import numpy
+import pypet.compat as compat
 
 
 ###################### Supported Data ########################
@@ -16,7 +17,7 @@ PARAMETERTYPEDICT={"<type 'bool'>": bool,
  "<type 'complex'>": complex,
  "<type 'float'>": float,
  "<type 'int'>": int,
- "<type 'long'>": long,
+ "<type 'long'>": compat.long_type,
  "<type 'numpy.bool_'>": numpy.bool_,
  "<type 'numpy.complex128'>": numpy.complex128,
  "<type 'numpy.complex64'>": numpy.complex64,

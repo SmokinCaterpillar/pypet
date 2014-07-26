@@ -19,7 +19,7 @@ try:
     import __main__ as main
 except ImportError as e:
     main = None
-    print repr(e)
+    print(repr(e))
 import os
 import sys
 import logging
@@ -53,6 +53,7 @@ try:
 except ImportError:
     git = None
 
+import pypet.compat as compat
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender,\
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -61,6 +62,7 @@ from pypet.gitintegration import make_git_commit
 from pypet import __version__ as VERSION
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger, StreamToLogger
+
 
 
 def _single_run(args):
@@ -815,7 +817,7 @@ class Environment(HasLogger):
         self._git_message=git_message
 
         # Check if a novel trajectory needs to be created.
-        if isinstance(trajectory, basestring):
+        if isinstance(trajectory, compat.base_type):
             # Create a new trajectory
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
@@ -1802,7 +1804,7 @@ class Environment(HasLogger):
                  self._clean_up_runs,
                  self._continue_path,
                  self._automatic_storing)
-                    for n in xrange(start_run_idx, len(self._traj))
+                    for n in compat.compatrange(start_run_idx, len(self._traj))
                         if not self._traj.f_is_completed(n))
 
     def _execute_postproc(self, results):
@@ -2047,7 +2049,7 @@ class Environment(HasLogger):
                             # a job to do, add another process
                             if len(process_dict) < self._ncores and keep_running and no_cap:
                                 try:
-                                    task = iterator.next()
+                                    task = next(iterator)
                                     proc = multip.Process(target=_single_run,
                                                                        args=(task,))
                                     proc.start()
@@ -2129,7 +2131,7 @@ class Environment(HasLogger):
                                       self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
-                    for n in xrange(start_run_idx, len(self._traj)):
+                    for n in compat.compatrange(start_run_idx, len(self._traj)):
                         if not self._traj.f_is_completed(n):
 
                             if self._deep_copy_data: # Not supported ATM, here for future reference

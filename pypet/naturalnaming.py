@@ -48,11 +48,13 @@ import logging
 
 from pypet.utils.decorators import deprecated
 import pypet.pypetexceptions as pex
+import pypet.compat as compat
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 
 from pypet.pypetlogging import HasLogger, DisableLogger
+
 
 
 #For fetching:
@@ -502,7 +504,7 @@ class NaturalNamingInterface(HasLogger):
             a tuple: (msg, item_to_store_load_or_remove, args, kwargs)
 
         """
-        if not isinstance(name, basestring):
+        if not isinstance(name, compat.base_type):
             raise TypeError('No string!')
 
         node = self._root_instance.f_get(name)
@@ -559,9 +561,8 @@ class NaturalNamingInterface(HasLogger):
         if len(store_tuple) > 3:
             kwargs = store_tuple[3]
         if len(store_tuple) > 4:
-            print store_tuple
-            raise ValueError('Your argument tuple has to many entries, please call '
-                             'store with [(msg,item,args,kwargs),...]')
+            raise ValueError('Your argument tuple %s has to many entries, please call '
+                             'store with [(msg,item,args,kwargs),...]' % str(store_tuple))
 
         ##dummy test
         _ = self._fetch_from_node(store_load, node, args, kwargs)
@@ -1551,7 +1552,7 @@ class NaturalNamingInterface(HasLogger):
 
         while True:
             try:
-                item = queue.next()
+                item = next(queue)
                 if start:
                     start = False
                 else:
@@ -1787,7 +1788,7 @@ class NaturalNamingInterface(HasLogger):
                     if climbing:
                         count = 0
                         candidate_length = len(candidate_split_name)
-                        for idx in xrange(candidate_length):
+                        for idx in compat.compatrange(candidate_length):
 
                             if idx + split_length - count > candidate_length:
                                 break
@@ -2327,7 +2328,7 @@ class NNGroupNode(NNTreeNode):
         return self.__getattr__(item)
 
     def __getattr__(self, name):
-        if isinstance(name, basestring) and name.startswith('_'):
+        if isinstance(name, compat.base_type) and name.startswith('_'):
             raise AttributeError('Trajectory node does not contain `%s`' % name)
 
         if not '_nn_interface' in self.__dict__:

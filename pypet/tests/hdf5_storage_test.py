@@ -25,7 +25,7 @@ import inspect
 
 import tables as pt
 
-from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
+from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 
 
@@ -612,7 +612,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
+        print('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -644,7 +644,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
+        print('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -1004,7 +1004,7 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        print self.env.f_run(multiply)
+        print(self.env.f_run(multiply))
         traj = self.traj
         self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
 

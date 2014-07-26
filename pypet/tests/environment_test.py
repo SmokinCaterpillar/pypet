@@ -13,13 +13,13 @@ else:
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging
-from test_helpers import make_run,make_temp_file
+from pypet.tests.test_helpers import make_run,make_temp_file
 
 
 def just_printing_bro(traj):
         key = traj.f_get('Test').v_full_name
         value = traj.f_get('par.Test', fast_access=True)
-        print 'Current value of %s is %d' %(key, value)
+        print('Current value of %s is %d' %(key, value))
 
 class EnvironmentTest(unittest.TestCase):
 

@@ -59,7 +59,7 @@ def progressbar(index, total, percentage_step=20, logger=None):
         try:
             logger.info(statement)
         except AttributeError:
-            print statement
+            print(statement)
 
 
 

@@ -5,6 +5,7 @@ from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
     BaseParameter, SparseParameter, SparseResult, ObjectTable
 import pypet.pypetconstants
+import pypet.compat as compat
 import scipy.sparse as spsp
 import os
 import logging
@@ -101,7 +102,7 @@ def create_param_dict(param_dict):
     normal_dict = param_dict['Normal']
     normal_dict['string'] = 'Im a test string!'
     normal_dict['int'] = 42
-    normal_dict['long'] = long(42)
+    normal_dict['long'] = compat.long_type(42)
     normal_dict['double'] = 42.42
     normal_dict['bool'] =True
     normal_dict['trial'] = 0
@@ -159,7 +160,7 @@ def add_params(traj,param_dict):
     for key, val in flat_dict.items():
         if isinstance(val, (np.ndarray,tuple)):
             traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
-        elif isinstance(val, (int,str,bool,long,float)):
+        elif isinstance(val, (str,bool,float)+compat.int_types):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
             traj.f_add_parameter(SparseParameter,key,val, comment='comment').v_annotations.f_set(
@@ -197,13 +198,13 @@ def add_params(traj,param_dict):
 
 def multiply(traj):
     z=traj.x*traj.y
-    print 'z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y)
+    print('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
     return z
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
-        print '>>>>>Starting Simple Calculations'
+        print('>>>>>Starting Simple Calculations')
         my_dict = {}
 
         my_dict2={}
@@ -221,7 +222,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
-        my_dict['__LONG'] = long(42)
+        my_dict['__LONG'] = compat.long_type(42)
 
         keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):
@@ -282,7 +283,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
-        print '<<<<<<Finished Simple Calculations'
+        print('<<<<<<Finished Simple Calculations')
 
         return 42
 

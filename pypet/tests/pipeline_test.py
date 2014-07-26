@@ -13,7 +13,7 @@ import pickle
 import os
 
 import tables as pt
-from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
+from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
     TrajectoryComparator, make_temp_file, multiply
 
 class Multiply(object):
@@ -32,7 +32,7 @@ class CustomParameter(Parameter):
         super(CustomParameter, self).__init__(*args, **kwargs)
 
 def postproc(traj, results, idx):
-    print idx
+    print(idx)
 
     traj.f_update_skeleton()
 
