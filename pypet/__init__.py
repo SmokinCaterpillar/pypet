@@ -13,6 +13,6 @@ from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGro
     ResultGroup, NNGroupNode, NNLeafNode
 from pypet.parameter import BaseParameter, Parameter, ArrayParameter, SparseParameter, PickleParameter, \
     BaseResult, Result, SparseResult, PickleResult, ObjectTable
-from pypetexceptions import *
+from pypet.pypetexceptions import *
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
