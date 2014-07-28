@@ -534,7 +534,8 @@ class EnvironmentTest(TrajectoryComparator):
                           complib=self.complib,
                           shuffle=self.shuffle,
                           pandas_append=self.pandas_append,
-                          pandas_format=self.pandas_format)
+                          pandas_format=self.pandas_format,
+                          encoding=self.encoding)
 
         traj = env.v_trajectory
 
@@ -647,7 +648,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.env = Environment(trajectory=self.traj,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False, encoding=self.encoding)
+                          log_stdout=False)
 
         self.traj = self.env.v_trajectory
 
