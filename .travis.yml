@@ -29,9 +29,12 @@ before_install:
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "+++++++++++ Installing SciPy and NumPy +++++++++++++"
-  - sudo apt-get install -qq python-numpy python-scipy
+  - echo "+++++++++++ Installing SciPy and NumPy if python 2 +++++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo apt-get install -qq python-numpy python-scipy; fi
 install:
+  - echo "+++++++++++ Installing Numpy ans Scipy if python 3 ++++++++++
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install numpy; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install scipy; fi
   - echo "+++++++++++ Installing Coveralls +++++++++++"
   - pip install coveralls
   - echo "Python $TRAVIS_PYTHON_VERSION"
