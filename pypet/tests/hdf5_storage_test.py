@@ -419,6 +419,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.complevel=9
         self.shuffle=True
         self.fletcher32 = False
+        self.encoding = 'utf8'
 
 
     def explore_complex_params(self, traj):
@@ -646,7 +647,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.env = Environment(trajectory=self.traj,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False)
+                          log_stdout=False, encoding=self.encoding)
 
         self.traj = self.env.v_trajectory
 
@@ -886,6 +887,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = False
+        self.encoding='utf16'
 
 class TestOtherHDF5Settings2(EnvironmentTest):
     def set_mode(self):
@@ -900,6 +902,8 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = True
+        self.encoding='latin1'
+
 
 
 class ResultSortTest(TrajectoryComparator):
