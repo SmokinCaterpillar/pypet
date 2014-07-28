@@ -30,7 +30,7 @@ class MergeTest(TrajectoryComparator):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
 
 

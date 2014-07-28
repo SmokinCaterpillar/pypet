@@ -1,3 +1,11 @@
+pypet 0.1b.8
+
+*   Support for python 3.3 and 3.4!!!
+
+*   Proper handling of unicode strings (well, see above^^)
+
+*   Checking if names of leaf and group nodes only contain alphanumeric characters
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was

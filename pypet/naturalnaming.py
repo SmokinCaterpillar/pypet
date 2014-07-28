@@ -1268,7 +1268,7 @@ class NaturalNamingInterface(HasLogger):
         for split_name in split_names:
 
             if re.match(CHECK_REGEXP, split_name) is None:
-                faulty_names = '%s `%s` contains non-admissable characters ' \
+                faulty_names = '%s `%s` contains non-admissible characters ' \
                                '(use only [A-Za-z0-9_-]),' % \
                                (faulty_names, split_name)
 

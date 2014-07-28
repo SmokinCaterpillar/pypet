@@ -7,8 +7,10 @@
 Welcome to pypet's documentation!
 ==================================
 
-The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
-and data storage into HDF5_ files for you.
+The new python parameter exploration toolkit:
+*pypet* manages exploration of the parameter space
+of any numerical simulation in python
+and stores your data into HDF5_ files for you.
 
 Latest version: `0.1b.7`_
 
@@ -51,7 +53,7 @@ Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
 
 For git integration you additionally need
 
-* GitPython_ >= 0.3.1
+* GitPython_ >= 0.3.1 [#gitpython]_
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
@@ -95,6 +97,10 @@ Automatic sumatra records are supported for
     These unwanted upcastings did not happen in previous pandas versions and will be, or more
     precisely, have already been removed in the next pandas version.
     So please up or downgrade your pandas distribution if your current installation is 0.13.x.
+
+.. [#gitpython]
+
+    Keep in mind that GitPython currently does not support python 3.
 
 ==========================
 ToC

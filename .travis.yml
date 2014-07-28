@@ -45,8 +45,8 @@ install:
   - pip install tables==$TABLES_VERSION
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - pip install pandas==$PANDAS_VERSION
-  - echo "+++++++++++ Installing Brian +++++++++++"
-  - pip install brian
+  - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then pip install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - pip install psutil
   #Temporal solution to travis issue #155
