@@ -322,7 +322,7 @@ class StorageTest(TrajectoryComparator):
                          continuable=False,
                          use_hdf5=True,
                          complevel=4,
-                         complib='lzo',
+                         complib='zlib',
                          shuffle=True,
                          fletcher32=True,
                          pandas_format='t',
@@ -346,12 +346,12 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(row['complevel'] == 4)
 
-        self.assertTrue(row['complib'] == 'lzo')
+        self.assertTrue(row['complib'] == compat.tobytetype('zlib'))
 
         self.assertTrue(row['shuffle'])
         self.assertTrue(row['fletcher32'])
         self.assertTrue(row['pandas_append'])
-        self.assertTrue(row['pandas_format'] == 't')
+        self.assertTrue(row['pandas_format'] == compat.tobytetype('t'))
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             self.assertTrue(row[table_name])
