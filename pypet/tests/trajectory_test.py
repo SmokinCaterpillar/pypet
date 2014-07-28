@@ -337,12 +337,12 @@ class TrajectoryTest(unittest.TestCase):
             if not item.v_is_leaf:
                 if as_run in item._children:
                     bfs_queue.append(item._children[as_run])
-                    for child in item._children.itervalues():
+                    for child in item._children.values():
                         if not (child.v_name.startswith(pypetconstants.RUN_NAME) and
                                         child.v_name != pypetconstants.RUN_NAME_DUMMY):
                             bfs_queue.append(child)
                 else:
-                    for child in item._children.itervalues():
+                    for child in item._children.values():
                         bfs_queue.append(child)
 
         return depth_dict

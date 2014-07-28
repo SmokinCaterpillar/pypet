@@ -27,10 +27,12 @@ if (sys.version_info < (2, 7, 0)):
 else:
     from collections import OrderedDict
 try:
-    from future_builtins import zip
+    from future_builtins import zip, map, filter
 except ImportError: # not 2.6+ or is 3.x
     try:
         from itertools import izip as zip # < 2.5 or 3.x
+        from itertools import imap as map
+        from itertools import ifilter as filter
     except ImportError:
         pass
 import pypet.pypetexceptions as pex
@@ -1799,7 +1801,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # Create a logical iterator returning `True` or `False`
         # whether the user's predicate matches the parameter data
-        logic_iter = itools.imap(predicate, *iter_list)
+        logic_iter = map(predicate, *iter_list)
 
         # Now the run indices are the the indices where `logic_iter` evaluates to `True`
         for idx, item in enumerate(logic_iter):
@@ -2461,11 +2463,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._logger.info('Adding merge information')
         timestamp = time.time()
         formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        hexsha=hashlib.sha1(self.v_name +
+        hexsha=hashlib.sha1(compat.tobytetype(self.v_name +
                             str(self.v_timestamp) +
                             other_trajectory.v_name +
                             str(other_trajectory.v_timestamp) +
-                            VERSION).hexdigest()
+                            VERSION)).hexdigest()
 
         short_hexsha= hexsha[0:7]
 
@@ -2934,7 +2936,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if traj.f_contains(where):
             group = traj[where]
             predicate = lambda x: x.v_run_branch == 'trajectory'
-            return itools.ifilter(predicate, group.f_iter_nodes(recursive=True))
+            return filter(predicate, group.f_iter_nodes(recursive=True))
         else:
             return iter([])
 

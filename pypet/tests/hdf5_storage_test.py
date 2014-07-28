@@ -473,7 +473,8 @@ class EnvironmentTest(TrajectoryComparator):
             param = par_dict[param_name]
             if param.v_name in self.explore_dict:
                 param.f_unlock()
-                param._shrink()
+                if param.v_explored:
+                    param._shrink()
 
         self.explore_dict={'Numpy.string':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),

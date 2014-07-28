@@ -45,6 +45,7 @@ __author__ = 'Robert Meyer'
 import inspect
 import itertools as itools
 import logging
+import re
 
 from pypet.utils.decorators import deprecated
 import pypet.pypetexceptions as pex
@@ -94,7 +95,7 @@ FAST_UPPER_BOUND = 2
 
 SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
 
-
+CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
@@ -1265,6 +1266,12 @@ class NaturalNamingInterface(HasLogger):
         faulty_names = ''
 
         for split_name in split_names:
+
+            if re.match(CHECK_REGEXP, split_name) is None:
+                faulty_names = '%s `%s` contains non-admissable characters ' \
+                               '(use only [A-Za-z0-9_-]),' % \
+                               (faulty_names, split_name)
+
             if split_name in self._not_admissible_names:
                 faulty_names = '%s `%s` is a method/attribute of the trajectory/treenode/naminginterface,' % \
                                (faulty_names, split_name)
@@ -1273,8 +1280,8 @@ class NaturalNamingInterface(HasLogger):
                 faulty_names = '%s `%s` starts with a leading underscore,' % (
                     faulty_names, split_name)
 
-            if ' ' in split_name:
-                faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
+            # if ' ' in split_name:
+            #     faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
 
             if not self._translate_into_shortcut(split_name) is None:
                 faulty_names = '%s `%s` is already an important shortcut,' % (

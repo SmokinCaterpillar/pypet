@@ -165,7 +165,7 @@ class AnnotationsTest(unittest.TestCase):
         self.assertTrue(self.traj.f_get('test2').v_annotations.f_get(), 4)
 
     def test_get_annotations(self):
-        key_list = sorted(self.annotations.keys())
+        key_list = list(self.annotations.keys())
         for node in self.traj.f_iter_nodes(recursive=True):
             for name in self.annotations:
                 self.assertTrue(comp.nested_equal(self.annotations[name],

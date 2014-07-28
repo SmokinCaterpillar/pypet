@@ -105,7 +105,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_parameter_locking(self):
-        for param in self.param.itervalues():
+        for param in self.param.values():
 
             if not param.v_explored:
                 self.assertFalse(param.v_locked, 'Param %s is locked' % param.v_full_name)
@@ -130,7 +130,7 @@ class ParameterTest(unittest.TestCase):
 
     def test_param_accepts_not_unsupported_data(self):
 
-        for param in self.param.itervalues():
+        for param in self.param.values():
             if not isinstance(param, PickleParameter):
                 with self.assertRaises(TypeError):
                     param.f_set(ChainMap())
