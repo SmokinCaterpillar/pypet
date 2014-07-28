@@ -419,7 +419,7 @@ class MergeTest(TrajectoryComparator):
         self.explored ={'Normal.trial': [0,1],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
-        traj.f_explore(cartesian_product(self.explored))
+        traj.f_explore(cartesian_product(self.explored,  ('Numpy.double','Normal.trial')))
 
 
     def explore2(self, traj):

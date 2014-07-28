@@ -856,7 +856,14 @@ class ResultTest(unittest.TestCase):
         for key, val1 in self.data.items():
             res = self.results['test.res.kwargs']
             val2 = res[key]
-            self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
+            if isinstance(val1, dict):
+                for innerkey in val1:
+                    innerval1 = val1[innerkey]
+                    innerval2 = val2[innerkey]
+                    self.assertEqual(repr(innerval1), repr(innerval2),
+                                     '%s != %s' % (str(val1),str(val2)))
+            else:
+                self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
 
 
     def test_pickling(self):

@@ -77,7 +77,7 @@ def make_run(remove=None, folder=None):
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name best on the current `testcase`"""
-    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
+    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**8))
     maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
 
     if len(name) > maxlen:
@@ -208,7 +208,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict = {}
 
         my_dict2={}
-        for key, val in traj.parameters.f_to_dict(fast_access=True,short_names=False).items():
+        param_dict=traj.parameters.f_to_dict(fast_access=True,short_names=False)
+        for key in sorted(param_dict.keys())[0:10]:
+            val = param_dict[key]
             if 'trial' in key:
                 continue
             newkey = key.replace('.','_')
@@ -229,7 +231,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__NUMPY_BYTES'] = np.array([b'zweiundvierzig'])
 
         keys = sorted(to_dict_wo_config(traj).keys())
-        for idx,key in enumerate(keys):
+        for idx,key in enumerate(keys[0:10]):
             keys[idx] = key.replace('.', '_')
 
         traj.f_add_result_group('List', comment='Im a result group')
