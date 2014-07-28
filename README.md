@@ -28,7 +28,7 @@ Thanks!
 Requirements
 ---------------------
 
-Python 2.6, 2.7, 3.3, 3.4 (<3.3 might work but has not been tested)
+Python 2.6, 2.7, 3.3, 3.4
 
 * tables >= 2.3.1
 
