@@ -888,7 +888,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = False
-        self.encoding='utf16'
+        self.encoding='latin1'
 
 class TestOtherHDF5Settings2(EnvironmentTest):
     def set_mode(self):
