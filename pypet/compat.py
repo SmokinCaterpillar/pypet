@@ -28,7 +28,7 @@ if python == 2:
     tobytetype = lambda string: string
     # decode = lambda string, encodig: string
 
-    range = xrange
+    xrange = xrange
 
 
 elif python == 3:
@@ -41,7 +41,7 @@ elif python == 3:
     base_type = str
 
     func_code = lambda func: func.__code__
-    tostrtype = lambda string: str(string.encode('utf-8'))
+    tostrtype = lambda string: str(string.decode('utf-8'))
     # encode = lambda string, encoding: string.encode(encoding)
 
     itervalues = lambda dictionary: dictionary.values()
@@ -49,10 +49,10 @@ elif python == 3:
     listkeys = lambda dictionary: list(dictionary.keys())
     listvalues = lambda dictionary: list(dictionary.values())
 
-    tobytetype = lambda string: string.decode('utf-8')
+    tobytetype = lambda string: string.encode('utf-8')
     # decode = lambda string, encoding: string.decode(encoding)
 
-    range = range
+    xrange = range
 
 else:
 

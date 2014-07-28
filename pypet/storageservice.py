@@ -3380,7 +3380,7 @@ class HDF5StorageService(StorageService, HasLogger):
             logger.debug('The string `%s` was too long I truncated it to'
                                  ' %d characters' %
                                  (string,max_length))
-            string = string[0:max_length-3] + '...'
+            string = string[0:max_length-3] + compat.tobytetype('...')
 
         return string
 

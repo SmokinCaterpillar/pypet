@@ -1378,7 +1378,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
         if sort:
-            return [self.f_idx_to_run(idx) for idx in compat.range(len(self))]
+            return [self.f_idx_to_run(idx) for idx in compat.xrange(len(self))]
         else:
             return compat.listkeys(self._run_information)
 
@@ -3076,8 +3076,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             # We need to compare all parameter combinations in the current trajectory
             # to all parameter combinations in the other trajectory to spot duplicate points.
             # Quadratic Complexity!
-            for irun in compat.range(len(other_trajectory)):
-                for jrun in compat.range(len(self)):
+            for irun in compat.xrange(len(other_trajectory)):
+                for jrun in compat.xrange(len(self)):
                     change = True
 
                     # Check all marked parameters
@@ -3130,14 +3130,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     other_range = (x for run, x in zip(use_runs, other_param.f_get_range())
                                    if run)
                 else:
-                    other_range = (other_param.f_get() for _ in compat.range(adding_length))
+                    other_range = (other_param.f_get() for _ in compat.xrange(adding_length))
 
             # If a parameter in the current trajectory was marked for merging but was not
             # explored before, we need to explore it first, simply by creating the range of
             # the current trajectory's length containing only it's default value
             if not my_param.f_has_range():
                 my_param.f_unlock()
-                my_param._explore((my_param.f_get() for _ in compat.range(len(self))))
+                my_param._explore((my_param.f_get() for _ in compat.xrange(len(self))))
 
             # After determining the new range extension `other_range`,
             # expand the parameters

@@ -468,6 +468,13 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(pex.NotUniqueNodeError):
             traj.f_explore(self.explore_dict)
 
+        par_dict = traj.parameters.f_to_dict()
+        for param_name in par_dict:
+            param = par_dict[param_name]
+            if param.v_name in self.explore_dict:
+                param.f_unlock()
+                param._shrink()
+
         self.explore_dict={'Numpy.string':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
@@ -591,7 +598,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
     def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False):
         ### Load The Trajectory and check if the values are still the same

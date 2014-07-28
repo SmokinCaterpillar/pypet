@@ -1759,7 +1759,7 @@ class NaturalNamingInterface(HasLogger):
                                  'shortcuts for faster performance.' %
                                  (LENGTH_WARNING_THRESHOLD, len(candidate_dict), key))
 
-        for candidate_name in candidate_dict.iterkeys():
+        for candidate_name in candidate_dict:
 
 
             # Check if candidate startswith the parent's name
@@ -1788,7 +1788,7 @@ class NaturalNamingInterface(HasLogger):
                     if climbing:
                         count = 0
                         candidate_length = len(candidate_split_name)
-                        for idx in compat.range(candidate_length):
+                        for idx in compat.xrange(candidate_length):
 
                             if idx + split_length - count > candidate_length:
                                 break

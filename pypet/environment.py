@@ -890,7 +890,7 @@ class Environment(HasLogger):
 
         if not new_commit:
             # Otherwise we need to create a novel hexsha
-            self._hexsha=hashlib.sha1(compat.tostrtype(self.v_trajectory.v_name +
+            self._hexsha=hashlib.sha1(compat.tobytetype(self.v_trajectory.v_name +
                                       str(self.v_trajectory.v_timestamp) +
                                       str(self.v_timestamp) +
                                       VERSION)).hexdigest()
@@ -1816,7 +1816,7 @@ class Environment(HasLogger):
                  self._clean_up_runs,
                  self._continue_path,
                  self._automatic_storing)
-                    for n in compat.range(start_run_idx, len(self._traj))
+                    for n in compat.xrange(start_run_idx, len(self._traj))
                         if not self._traj.f_is_completed(n))
 
     def _execute_postproc(self, results):
@@ -2143,7 +2143,7 @@ class Environment(HasLogger):
                                       self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
-                    for n in compat.range(start_run_idx, len(self._traj)):
+                    for n in compat.xrange(start_run_idx, len(self._traj)):
                         if not self._traj.f_is_completed(n):
 
                             if self._deep_copy_data: # Not supported ATM, here for future reference
