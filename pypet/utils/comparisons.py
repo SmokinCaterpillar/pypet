@@ -1,11 +1,17 @@
 __author__ = 'Robert Meyer'
 
 from collections import Sequence, Mapping, Set
+try:
+    from future_builtins import zip
+except ImportError: # not 2.6+ or is 3.x
+    try:
+        from itertools import izip as zip # < 2.5 or 3.x
+    except ImportError:
+        pass
 import numpy as np
 import pandas as pd
 
 import pypet
-import itertools as it
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 
@@ -91,7 +97,7 @@ def parameters_equal(a,b):
         return False
 
     if a.f_has_range():
-        for myitem, bitem in it.izip(a.f_get_range(),b.f_get_range()):
+        for myitem, bitem in zip(a.f_get_range(),b.f_get_range()):
             if not a._values_of_same_type(myitem,bitem):
                 return False
 
@@ -117,7 +123,7 @@ def nested_equal(a, b):
     if hasattr(a,'__eq__'):
         try:
             custom_eq= a == b
-            if isinstance(custom_eq,bool):
+            if isinstance(custom_eq, bool):
                 return custom_eq
         except ValueError:
             pass
@@ -133,7 +139,7 @@ def nested_equal(a, b):
         return np.all(a==b)
     if isinstance(a, (pd.Panel, pd.Panel4D)):
         return nested_equal(a.to_frame(), b.to_frame())
-    if isinstance(a, pd.DataFrame):
+    if isinstance(a, (pd.DataFrame, pd.Series)):
         try:
             new_frame = a == b
             new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
@@ -141,21 +147,31 @@ def nested_equal(a, b):
         except ValueError:
             # The Value Error can happen if the data frame is of dtype=object and contains
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
-            for name in a:
-                cola = a[name]
+            if isinstance(a, pd.DataFrame):
+                for name in a:
+                    cola = a[name]
 
-                if not name in b:
+                    if not name in b:
+                        return False
+
+                    colb = b[name]
+
+                    if not len(cola)==len(colb):
+                        return False
+
+                    for idx,itema in enumerate(cola):
+                        itemb = colb[idx]
+                        if not nested_equal(itema,itemb):
+                            return False
+            else:
+                if not len(a)==len(b):
                     return False
 
-                colb = b[name]
-
-                if not len(cola)==len(colb):
-                    return False
-
-                for idx,itema in enumerate(cola):
-                    itemb = colb[idx]
+                for idx,itema in enumerate(a):
+                    itemb = b[idx]
                     if not nested_equal(itema,itemb):
                         return False
+
 
             return True
 

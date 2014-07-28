@@ -13,26 +13,28 @@ import pypet.compat as compat
 
 ###################### Supported Data ########################
 
-PARAMETERTYPEDICT={"<type 'bool'>": bool,
- "<type 'complex'>": complex,
- "<type 'float'>": float,
- "<type 'int'>": int,
- "<type 'long'>": compat.long_type,
- "<type 'numpy.bool_'>": numpy.bool_,
- "<type 'numpy.complex128'>": numpy.complex128,
- "<type 'numpy.complex64'>": numpy.complex64,
- "<type 'numpy.float32'>": numpy.float32,
- "<type 'numpy.float64'>": numpy.float64,
- "<type 'numpy.int16'>": numpy.int16,
- "<type 'numpy.int32'>": numpy.int32,
- "<type 'numpy.int64'>": numpy.int64,
- "<type 'numpy.int8'>": numpy.int8,
- "<type 'numpy.string_'>": numpy.string_,
- "<type 'numpy.uint16'>": numpy.uint16,
- "<type 'numpy.uint32'>": numpy.uint32,
- "<type 'numpy.uint64'>": numpy.uint64,
- "<type 'numpy.uint8'>": numpy.uint8,
- "<type 'str'>": str}
+PARAMETERTYPEDICT={bool.__name__: bool,
+ complex.__name__: complex,
+ float.__name__: float,
+ int.__name__: int,
+ compat.long_type.__name__: compat.long_type,
+ numpy.bool_.__name__: numpy.bool_,
+ numpy.complex128.__name__: numpy.complex128,
+ numpy.complex64.__name__: numpy.complex64,
+ numpy.float32.__name__: numpy.float32,
+ numpy.float64.__name__: numpy.float64,
+ numpy.int16.__name__: numpy.int16,
+ numpy.int32.__name__: numpy.int32,
+ numpy.int64.__name__: numpy.int64,
+ numpy.int8.__name__: numpy.int8,
+ numpy.string_.__name__: numpy.string_,
+ numpy.uint16.__name__: numpy.uint16,
+ numpy.uint32.__name__: numpy.uint32,
+ numpy.uint64.__name__: numpy.uint64,
+ numpy.uint8.__name__: numpy.uint8,
+ compat.unicode_type.__name__: compat.unicode_type,
+ compat.bytes_type.__name__: compat.bytes_type}
+
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
@@ -58,8 +60,9 @@ PARAMETER_SUPPORTED_DATA = (numpy.int8,
                        numpy.complex64,
                        numpy.complex,
                        numpy.complex_,
-                       numpy.str,
-                       numpy.str_)
+                       numpy.str_,
+                       compat.unicode_type,
+                       compat.bytes_type)
 """Set of supported scalar types by the storage service and the standard parameter"""
 
 

@@ -223,6 +223,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
         my_dict['__LONG'] = compat.long_type(42)
+        my_dict['__UNICODE'] = u'sdfdsf'
+        my_dict['__BYTES'] = b'zweiundvierzig'
+        my_dict['__NUMPY_UNICODE'] = np.array([u'$%&ddss'])
+        my_dict['__NUMPY_BYTES'] = np.array([b'zweiundvierzig'])
 
         keys = sorted(to_dict_wo_config(traj).keys())
         for idx,key in enumerate(keys):
@@ -336,7 +340,8 @@ class TrajectoryComparator(unittest.TestCase):
             else:
                 raise RuntimeError('You shall not pass')
 
-            self.assertTrue(nested_equal(item.v_annotations,old_item.v_annotations),'%s != %s' %
+
+            self.assertTrue(str(item.v_annotations)==str(old_item.v_annotations),'%s != %s' %
                         (item.v_annotations.f_ann_to_str(),old_item.v_annotations.f_ann_to_str()))
 
         # Check the annotations
@@ -350,5 +355,5 @@ class TrajectoryComparator(unittest.TestCase):
 
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations
-                self.assertTrue(nested_equal(node.v_annotations, second_anns))
+                self.assertTrue(str(node.v_annotations) == str(second_anns))
 

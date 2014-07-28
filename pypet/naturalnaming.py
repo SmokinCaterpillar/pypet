@@ -678,7 +678,7 @@ class NaturalNamingInterface(HasLogger):
         def _remove_subtree_inner(node):
 
             if not node.v_is_leaf:
-                for name in node._children.keys():
+                for name in compat.listkeys(node._children):
                     child = node._children[name]
                     _remove_subtree_inner(child)
                     del node._children[name]
@@ -1451,7 +1451,7 @@ class NaturalNamingInterface(HasLogger):
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node, as_run, total_depth)
         else:
-            return node._children.itervalues()
+            return compat.itervalues(node._children)
 
 
     @staticmethod
@@ -1498,7 +1498,7 @@ class NaturalNamingInterface(HasLogger):
                     return temp_dict
 
             else:
-                iterator = temp_dict.itervalues()
+                iterator = compat.itervalues(temp_dict)
         else:
             iterator = self._iter_leaves(node)
 
@@ -1537,7 +1537,7 @@ class NaturalNamingInterface(HasLogger):
                     node_list.append(node._children[child_name])
             return node_list
         else:
-            return node._children.itervalues()
+            return compat.itervalues(node._children)
 
     @staticmethod
     def _recursive_traversal_bfs(node, run_name=None, total_depth=float('inf')):
@@ -1647,7 +1647,7 @@ class NaturalNamingInterface(HasLogger):
 
         # Next check if the found candidates could be reached from the parent node
         result_node = None
-        for goal_name in candidate_dict.iterkeys():
+        for goal_name in candidate_dict:
 
             if goal_name.startswith(parent_full_name):
 
@@ -1788,7 +1788,7 @@ class NaturalNamingInterface(HasLogger):
                     if climbing:
                         count = 0
                         candidate_length = len(candidate_split_name)
-                        for idx in compat.compatrange(candidate_length):
+                        for idx in compat.range(candidate_length):
 
                             if idx + split_length - count > candidate_length:
                                 break
@@ -2090,7 +2090,7 @@ class NNGroupNode(NNTreeNode):
 
     def __dir__(self):
         """Adds all children to auto-completion"""
-        result = dir(type(self)) + self.__dict__.keys()
+        result = dir(type(self)) + compat.listkeys(self.__dict__)
         result.extend(self._children.keys())
         return result
 

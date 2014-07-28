@@ -39,7 +39,7 @@ Thanks!
 Requirements
 ============================
 
-Python 2.6 or 2.7
+Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
 
 * tables >= 2.3.1
 
@@ -80,6 +80,10 @@ Automatic sumatra records are supported for
 .. _Sumatra: http://neuralensemble.org/sumatra/
 
 .. rubric:: Footnotes
+
+.. [#pythonversion]
+
+    *pypet* might also work under python ``3.0-3.2`` but has not been tested.
 
 .. [#pandasversion]
 

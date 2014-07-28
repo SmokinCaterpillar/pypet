@@ -26,7 +26,13 @@ if (sys.version_info < (2, 7, 0)):
     from ordereddict import OrderedDict
 else:
     from collections import OrderedDict
-
+try:
+    from future_builtins import zip
+except ImportError: # not 2.6+ or is 3.x
+    try:
+        from itertools import izip as zip # < 2.5 or 3.x
+    except ImportError:
+        pass
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
 from pypet import __version__ as VERSION
@@ -1015,7 +1021,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # class' constructor without problems.
         super(SingleRun,self).__init__()
         self._version = VERSION
-
+        self._python = '.'.join([str(x) for x in sys.version_info[0:3]])
 
         init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
@@ -1136,6 +1142,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._version
 
     @property
+    def v_python(self):
+        """The version of python as a string that was used to create the trajectory"""
+        return self._python
+
+    @property
     def v_comment(self):
         """Should be a nice descriptive comment"""
         return self._comment
@@ -1227,7 +1238,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """ Sets full copy mode of trajectory and (!) ALL explored parameters!"""
         if val != self._full_copy:
             self._full_copy = val
-            for param in self._explored_parameters.itervalues():
+            for param in compat.itervalues(self._explored_parameters):
                 param.v_full_copy = val
 
 
@@ -1367,9 +1378,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         """
         if sort:
-            return [self.f_idx_to_run(idx) for idx in compat.compatrange(len(self))]
+            return [self.f_idx_to_run(idx) for idx in compat.range(len(self))]
         else:
-            return self._run_information.keys()
+            return compat.listkeys(self._run_information)
 
 
     def f_get_run_information(self, name_or_idx=None, copy=True):
@@ -1627,14 +1638,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             results = self._children['results']
             if 'runs' in results._children:
                 runs = results._children['runs']
-                for node_name in runs._children.keys():
+                for node_name in compat.listkeys(runs._children):
                     if node_name.startswith(pypetconstants.RUN_NAME):
                         runs.f_remove_child(node_name,recursive=True)
         if 'derived_parameters' in self._children:
             dpars = self._children['derived_parameters']
             if 'runs' in dpars._children:
                 runs = dpars._children['runs']
-                for node_name in runs._children.keys():
+                for node_name in compat.listkeys(runs._children):
                     if node_name.startswith(pypetconstants.RUN_NAME):
                         runs.f_remove_child(node_name,recursive=True)
 
@@ -1835,7 +1846,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """
 
         if name_or_id is None:
-            return all((runinfo['completed'] for runinfo in self._run_information.itervalues()) )
+            return all((runinfo['completed'] for runinfo in compat.itervalues(self._run_information)) )
         else:
             return self.f_get_run_information(name_or_id)['completed']
 
@@ -2055,7 +2066,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def _remove_run_data(self):
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
-            for child_name in group.f_get_children(copy=False).keys():
+            for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
                     child_name != pypetconstants.RUN_NAME_DUMMY):
                         group.f_remove_child(child_name, recursive=True)
@@ -2253,7 +2264,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # If a trajectory is newly loaded, all parameters are unlocked.
         if as_new:
-            for param in self._parameters.itervalues():
+            for param in compat.itervalues(self._parameters):
                 param.f_unlock()
         else:
             self.f_lock_parameters()
@@ -2277,10 +2288,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if self._stored:
             # To suppress warnings if nothing needs to be loaded
             with self._nn_interface._disable_logger:
-                self.f_load_items(self._parameters.itervalues(), only_empties=True)
+                self.f_load_items(compat.itervalues(self._parameters), only_empties=True)
         if other_trajectory._stored:
             with self._nn_interface._disable_logger:
-                other_trajectory.f_load_items(other_trajectory._parameters.itervalues(),
+                other_trajectory.f_load_items(compat.itervalues(other_trajectory._parameters),
                                           only_empties=True)
 
         self.f_restore_default()
@@ -2293,7 +2304,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if not ignore_trajectory_derived_parameters and 'derived_parameters' in self:
             my_traj_dpars = self._get_traj_dpars_or_results(self, 'derived_parameters')
             if self._stored:
-                self.f_load_items(my_traj_dpars.itervalues(), only_empties=True)
+                self.f_load_items(compat.itervalues(my_traj_dpars), only_empties=True)
             allmyparams.update(my_traj_dpars)
             other_traj_dpars = self._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
             if other_trajectory._stored:
@@ -2803,7 +2814,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             idx = other_trajectory.f_get_run_information(run_name)['idx']
             if used_runs[idx]:
                 iter_list=[]
-                for parent_group in other_trajectory._run_parent_groups.itervalues():
+                for parent_group in compat.itervalues(other_trajectory._run_parent_groups):
                     if parent_group.f_contains(run_name):
                         node = parent_group.f_get(run_name)
                         if node.v_is_leaf:
@@ -3065,12 +3076,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             # We need to compare all parameter combinations in the current trajectory
             # to all parameter combinations in the other trajectory to spot duplicate points.
             # Quadratic Complexity!
-            for irun in compat.compatrange(len(other_trajectory)):
-                for jrun in compat.compatrange(len(self)):
+            for irun in compat.range(len(other_trajectory)):
+                for jrun in compat.range(len(self)):
                     change = True
 
                     # Check all marked parameters
-                    for my_param, other_param in params_to_change.itervalues():
+                    for my_param, other_param in compat.itervalues(params_to_change):
                         if other_param.f_has_range():
                             other_param._set_parameter_access(irun)
 
@@ -3095,7 +3106,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         break
 
             # Restore changed default values
-            for my_param, other_param in params_to_change.itervalues():
+            for my_param, other_param in compat.itervalues(params_to_change):
                 other_param._restore_default()
                 my_param._restore_default()
 
@@ -3105,7 +3116,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if adding_length == 0:
             return use_runs, []
 
-        for my_param, other_param in params_to_change.itervalues():
+        for my_param, other_param in compat.itervalues(params_to_change):
             fullname = my_param.v_full_name
 
             # We need new ranges to enlarge all parameters marked for merging
@@ -3116,17 +3127,17 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 # In case we do not use all runs we need to filter the ranges of the
                 # parameters of the other trajectory
                 if other_param.f_has_range():
-                    other_range = (x for run, x in itools.izip(use_runs, other_param.f_get_range())
+                    other_range = (x for run, x in zip(use_runs, other_param.f_get_range())
                                    if run)
                 else:
-                    other_range = (other_param.f_get() for _ in compat.compatrange(adding_length))
+                    other_range = (other_param.f_get() for _ in compat.range(adding_length))
 
             # If a parameter in the current trajectory was marked for merging but was not
             # explored before, we need to explore it first, simply by creating the range of
             # the current trajectory's length containing only it's default value
             if not my_param.f_has_range():
                 my_param.f_unlock()
-                my_param._explore((my_param.f_get() for _ in compat.compatrange(len(self))))
+                my_param._explore((my_param.f_get() for _ in compat.range(len(self))))
 
             # After determining the new range extension `other_range`,
             # expand the parameters
@@ -3136,7 +3147,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             if not fullname in self._explored_parameters:
                 self._explored_parameters[fullname] = my_param
 
-        return use_runs, params_to_change.keys()
+        return use_runs, compat.listkeys(params_to_change)
 
     def f_migrate(self, new_name=None, new_filename=None, new_filetile = None, in_store=False):
         """Can be called to rename and relocate the trajectory.
@@ -3242,7 +3253,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         v_idx property back to -1 and v_as_run to None."""
         self._idx=-1
         self._as_run = pypetconstants.RUN_NAME_DUMMY
-        for param in self._explored_parameters.itervalues():
+        for param in compat.itervalues(self._explored_parameters):
             param._restore_default()
 
     def _set_explored_parameters_to_idx(self, idx):
@@ -3250,7 +3261,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         they should represent.
 
         """
-        for param in self._explored_parameters.itervalues():
+        for param in compat.itervalues(self._explored_parameters):
             param._set_parameter_access(idx)
 
     def _make_single_run(self, idx, copy_trajectory=False):

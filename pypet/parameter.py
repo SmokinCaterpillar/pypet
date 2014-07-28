@@ -67,6 +67,7 @@ try:
 except ImportError:
     import pickle
 import pickletools
+import hashlib
 
 import numpy as np
 import scipy.sparse as spsp
@@ -76,7 +77,9 @@ from pypet import pypetconstants
 from pypet.naturalnaming import NNLeafNode
 import pypet.utils.comparisons as comparisons
 from pypet.utils.decorators import deprecated, copydoc
+from pypet.utils.helpful_classes import HashArray
 import pypet.pypetexceptions as pex
+import pypet.compat as compat
 
 
 class ObjectTable(DataFrame):
@@ -1225,7 +1228,7 @@ class ArrayParameter(Parameter):
                     else:
                         # You cannot hash numpy arrays themselves, but if they are read only
                         # you can hash array.data
-                        hash_elem = elem.data
+                        hash_elem = HashArray(elem)
 
                     # Check if we have used the array before,
                     # i.e. element can be found in the dictionary
@@ -1441,8 +1444,8 @@ class SparseParameter(ArrayParameter):
         # hashable.
         for item in return_list:
             if type(item) is np.ndarray:
-                item.flags.writeable = False
-                hash_list.append(item.data)
+                # item.flags.writeable = False
+                hash_list.append(HashArray(item))
             else:
                 hash_list.append(item)
 
@@ -1896,7 +1899,7 @@ class Result(BaseResult):
 
     def __dir__(self):
         """Adds all data to auto-completion"""
-        result = dir(type(self)) + self.__dict__.keys()
+        result = dir(type(self)) + compat.listkeys(self.__dict__)
         result.extend(self._data.keys())
         return result
 
@@ -2092,11 +2095,11 @@ class Result(BaseResult):
 
         if len(args) == 0:
             if len(self._data) == 1:
-                return self._data[self._data.keys()[0]]
+                return self._data[compat.listkeys(self._data)[0]]
             elif len(self._data) >1:
                 raise ValueError('Your result `%s` contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
-                                 (self.v_full_name, str(self._data.keys())))
+                                 (self.v_full_name, str(compat.listkeys(self._data))))
             else:
                 raise AttributeError('Your result `%s` is empty, cannot access data.' %
                                      self.v_full_name)
@@ -2111,7 +2114,7 @@ class Result(BaseResult):
 
             if not name in self._data:
                 if name == 'data' and len(self._data) == 1:
-                    return self._data[self._data.keys()[0]]
+                    return self._data[compat.listkeys(self._data)[0]]
                 else:
                     raise  AttributeError('`%s` is not part of your result `%s`.' %
                                       (name,self.v_full_name))
@@ -2334,7 +2337,7 @@ class SparseResult(Result):
         Reconstruction of sparse matrices similar to the :class:`~pypet.parameter.SparseParameter`.
 
         """
-        for key in load_dict.keys():
+        for key in compat.listkeys(load_dict):
             # We delete keys over time:
             if key in load_dict:
                 if SparseResult.IDENTIFIER in key:

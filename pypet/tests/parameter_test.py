@@ -656,7 +656,7 @@ class ResultTest(unittest.TestCase):
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
         for key, value in self.data.items():
@@ -918,7 +918,7 @@ class PickleResultTest(ResultTest):
                         'test.res.args':1,
                         'test.res.kwargs':2}
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
@@ -962,7 +962,7 @@ class SparseResultTest(ResultTest):
 
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs', protocol=2)
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 if __name__ == '__main__':

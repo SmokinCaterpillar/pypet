@@ -22,6 +22,7 @@ import scipy.sparse as spsp
 import random
 import tables
 import inspect
+import pypet.compat as compat
 
 import tables as pt
 
@@ -561,6 +562,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore
@@ -954,7 +956,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -974,7 +976,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1006,7 +1008,7 @@ class ResultSortTest(TrajectoryComparator):
 
         print(self.env.f_run(multiply))
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1026,7 +1028,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
 
 
         self.traj.f_update_skeleton()
@@ -1045,7 +1047,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1055,7 +1057,8 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+\
+                        len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)

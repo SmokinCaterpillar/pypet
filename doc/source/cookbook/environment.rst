@@ -51,6 +51,7 @@ You start your simulations by creating an environment object:
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 encoding='utf8',
                  complevel=9,
                  complib='zlib',
                  shuffle=True,

@@ -2,6 +2,13 @@
 Created on 24.05.2013
 '''
 import itertools as itools
+try:
+    from future_builtins import zip
+except ImportError: # not 2.6+ or is 3.x
+    try:
+        from itertools import izip as zip # < 2.5 or 3.x
+    except ImportError:
+        pass
 import pypet.compat as compat
 
 
@@ -47,7 +54,7 @@ def cartesian_product(parameter_dict, combined_parameters = ()):
     iterator_list = []
     for item_tuple in combined_parameters:
         inner_iterator_list = [parameter_dict[key] for key in item_tuple]
-        zipped_iterator = itools.izip(*inner_iterator_list)
+        zipped_iterator = zip(*inner_iterator_list)
         iterator_list.append(zipped_iterator)
 
     result_dict ={}

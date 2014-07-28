@@ -1,8 +1,9 @@
 __author__ = 'Robert Meyer'
 
-
-import UserDict
+import numpy as np
 import itertools as itools
+import hashlib
+import pypet.compat as compat
 
 
 class ChainMap(object):
@@ -28,7 +29,28 @@ class ChainMap(object):
 
         return  length
 
-    def iterkeys(self):
+    def __iter__(self):
 
-        iter_list = [mapping.iterkeys() for mapping in self._maps]
+        iter_list = [compat.iterkeys(mapping) for mapping in self._maps]
         return itools.chain(*iter_list)
+
+
+class HashArray(object):
+    """Hashable wrapper for numpy arrays"""
+    def __init__(self, ndarray):
+        """Creates a new hashable object encapsulating an ndarray.
+
+            :param wrapped: The wrapped ndarray.
+
+        """
+        self._ndarray = ndarray
+
+    def __eq__(self, other):
+
+        try:
+            return np.all(self._ndarray == other._ndarray)
+        except AttributeError:
+            return False
+
+    def __hash__(self):
+        return int(hashlib.sha1(self._ndarray.view(np.uint8)).hexdigest(), 16)

@@ -488,6 +488,10 @@ class Environment(HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
+    :param encoding:
+
+        Format to encode and decode unicode strings stored to disk.
+
     :param complevel:
 
         If you use HDF5, you can specify your compression level. 0 means no compression
@@ -732,6 +736,7 @@ class Environment(HasLogger):
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 encoding='utf8',
                  complevel=9,
                  complib='zlib',
                  shuffle=True,
@@ -885,10 +890,10 @@ class Environment(HasLogger):
 
         if not new_commit:
             # Otherwise we need to create a novel hexsha
-            self._hexsha=hashlib.sha1(self.v_trajectory.v_name +
+            self._hexsha=hashlib.sha1(compat.tostrtype(self.v_trajectory.v_name +
                                       str(self.v_trajectory.v_timestamp) +
                                       str(self.v_timestamp) +
-                                      VERSION).hexdigest()
+                                      VERSION)).hexdigest()
 
         # Create the name of the environment
         short_hexsha= self._hexsha[0:7]
@@ -1069,7 +1074,11 @@ class Environment(HasLogger):
                                     comment ='Pypet version if it differs from the version'
                                              ' of the trajectory').f_lock()
 
-
+        if self._traj.v_python != compat.python_version_string:
+            config_name='environment.%s.python' % self.v_name
+            self._traj.f_add_config(config_name,self.v_trajectory.v_python,
+                                    comment ='Python version if it differs from the version'
+                                             ' of the trajectory').f_lock()
 
         self._traj.config.environment.v_comment='Settings for the different environments '\
                                               'used to run the experiments'
@@ -1118,6 +1127,9 @@ class Environment(HasLogger):
 
                 self._traj.f_add_config('hdf5.complib',complib,
                                             comment='Compression Algorithm')
+
+                self._traj.f_add_config('hdf5.encoding', encoding,
+                                            comment='Encoding for unicode characters')
 
                 self._traj.f_add_config('hdf5.fletcher32',fletcher32,
                                             comment='Whether to use fletcher 32 checksum')
@@ -1534,7 +1546,7 @@ class Environment(HasLogger):
         reason += 'Trajectory: `%s`, %s -- Explored Parameters: %s' % \
                   (self._traj.v_name,
                    self._traj.v_comment,
-                   str(self._traj._explored_parameters.keys()))
+                   str(compat.listkeys(self._traj._explored_parameters)))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
         self._sumatra_reason = reason
@@ -1543,7 +1555,7 @@ class Environment(HasLogger):
         if self._traj.f_contains('parameters'):
             param_dict = self._traj.parameters.f_to_dict(fast_access=False)
 
-            for param_name in param_dict.keys():
+            for param_name in compat.listkeys(param_dict):
                 param = param_dict[param_name]
                 if param.f_has_range():
                     param_dict[param_name] = param.f_get_range()
@@ -1804,7 +1816,7 @@ class Environment(HasLogger):
                  self._clean_up_runs,
                  self._continue_path,
                  self._automatic_storing)
-                    for n in compat.compatrange(start_run_idx, len(self._traj))
+                    for n in compat.range(start_run_idx, len(self._traj))
                         if not self._traj.f_is_completed(n))
 
     def _execute_postproc(self, results):
@@ -2006,7 +2018,7 @@ class Environment(HasLogger):
 
                             terminated_procs_pids = []
                             # First check if some processes did finish their job
-                            for pid in process_dict.keys():
+                            for pid in compat.listkeys(process_dict):
                                 proc = process_dict[pid]
 
                                 # Delete the terminated processes
@@ -2131,7 +2143,7 @@ class Environment(HasLogger):
                                       self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
-                    for n in compat.compatrange(start_run_idx, len(self._traj)):
+                    for n in compat.range(start_run_idx, len(self._traj)):
                         if not self._traj.f_is_completed(n):
 
                             if self._deep_copy_data: # Not supported ATM, here for future reference

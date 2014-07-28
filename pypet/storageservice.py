@@ -12,6 +12,7 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
+import sys
 try:
     import queue
 except ImportError:
@@ -361,7 +362,8 @@ class HDF5StorageService(StorageService, HasLogger):
             'shuffle',
             'fletcher32',
             'pandas_format',
-            'pandas_append'
+            'pandas_append',
+            'encoding'
     ]
     '''List of HDF5StorageService Attributes that have to be stored into the hdf5_settings table'''
 
@@ -495,6 +497,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._complib = 'zlib'
         self._fletcher32 = False
         self._shuffle = True
+        self._encoding = 'utf8'
 
         self._node_processing_timer = None
 
@@ -523,6 +526,16 @@ class HDF5StorageService(StorageService, HasLogger):
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
+
+    @property
+    def encoding(self):
+        """ How unicode strings are encoded"""
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, encoding):
+        self._encoding = encoding
+
 
     @property
     def display_time(self):
@@ -758,7 +771,7 @@ class HDF5StorageService(StorageService, HasLogger):
         except pt.NoSuchNodeError as e:
             self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
-            raise pex.DataNotInStorageError(e.message)
+            raise pex.DataNotInStorageError(str(e))
         except:
             self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
@@ -1031,6 +1044,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._srvc_closing_routine(opened)
 
         except:
+
             self._srvc_closing_routine(opened)
             self._logger.error('Failed storing `%s`' % str(stuff_to_store))
             raise
@@ -1399,8 +1413,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in other_table:
                 # Iterate through the rows of the overview table
-                location = row['location']
-                name = row['name']
+                location = compat.tostrtype(row['location'])
+                name = compat.tostrtype(row['name'])
                 full_name = location+'.'+name
 
                 # If we need the overview entry mark it for merging
@@ -1415,8 +1429,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in table:
                 # Iterate through the current rows
-                location = row['location']
-                name = row['name']
+                location = compat.tostrtype(row['location'])
+                name = compat.tostrtype(row['name'])
                 full_name = location+'.'+name
 
                 # Update the number of items according to the number or merged items
@@ -1501,8 +1515,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in other_table.iterrows():
                 # Iterate through the summary table
-                location = row['location']
-                name = row['name']
+                location = compat.tostrtype(row['location'])
+                name = compat.tostrtype(row['name'])
                 full_name = location+'.'+name
 
 
@@ -1521,8 +1535,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Insert data into the current overview table
             for row in table.iterrows():
-                location = row['location']
-                name = row['name']
+                location = compat.tostrtype(row['location'])
+                name = compat.tostrtype(row['name'])
                 full_name = location+'.'+name
 
                 if full_name in new_row_dict:
@@ -1671,7 +1685,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             create_run_group = ('results.runs.%s' % run_name) in traj
 
-            run_summary=self._srn_add_explored_params(run_name,traj._explored_parameters.values(),
+            run_summary=self._srn_add_explored_params(run_name,
+                                                      compat.listvalues(traj._explored_parameters),
                                                       add_table, create_run_group=create_run_group)
 
 
@@ -1833,43 +1848,53 @@ class HDF5StorageService(StorageService, HasLogger):
         as new. Updates the run information as well.
 
         """
+
         metatable = self._overview_group.info
         metarow = metatable[0]
 
-        version = metarow['version']
+        try:
+            version = compat.tostrtype(metarow['version'])
+            python = compat.tostrtype(metarow['python'])
 
-        self._trj_check_version(version, force)
+        except Exception as e:
+            self._logger.error('Could not check version due to: %s' % str(e))
+            version = '`COULD NOT BE LOADED`'
+            python = '`COULD NOT BE LOADED`'
+
+
+        self._trj_check_version(version, python, force)
 
         if as_new:
             length = int(metarow['length'])
             for irun in range(length):
                 traj._add_run_info(irun)
         else:
-            traj._comment = str(metarow['comment'])
+            traj._comment = compat.tostrtype(metarow['comment'])
             traj._timestamp = float(metarow['timestamp'])
             traj._trajectory_timestamp = traj._timestamp
-            traj._time = str(metarow['time'])
+            traj._time = compat.tostrtype(metarow['time'])
             traj._trajectory_time = traj._time
-            traj._name = str(metarow['name'])
+            traj._name = compat.tostrtype(metarow['name'])
             traj._trajectory_name = traj._name
-            traj._version = str(metarow['version'])
+            traj._version = compat.tostrtype(metarow['version'])
+            traj._python = compat.tostrtype(metarow['python'])
 
             single_run_table = self._overview_group.runs
 
             # Load the run information about the single runs
             for row in single_run_table.iterrows():
-                name = str(row['name'])
+                name = compat.tostrtype(row['name'])
                 idx = int(row['idx'])
                 timestamp = float(row['timestamp'])
-                time = str(row['time'])
+                time = compat.tostrtype(row['time'])
                 completed = int(row['completed'])
-                summary=str(row['parameter_summary'])
-                hexsha = str(row['short_environment_hexsha'])
+                summary=compat.tostrtype(row['parameter_summary'])
+                hexsha = compat.tostrtype(row['short_environment_hexsha'])
 
 
                 # To allow backwards compatibility we need this try catch block
                 try:
-                    runtime = str(row['runtime'])
+                    runtime = compat.tostrtype(row['runtime'])
                     finish_timestamp = float(row['finish_timestamp'])
                 except KeyError as ke:
                     runtime=''
@@ -1892,31 +1917,35 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 traj._run_information[name] = info_dict
 
-            # Load the hdf5 config data:
-            if 'hdf5_settings' in self._overview_group:
-                hdf5_table = self._overview_group.hdf5_settings
-                hdf5_row = hdf5_table[0]
+                # Load the hdf5 config data:
+                try:
+                    if 'hdf5_settings' in self._overview_group:
+                        hdf5_table = self._overview_group.hdf5_settings
+                        hdf5_row = hdf5_table[0]
 
-                self.complib = str(hdf5_row['complib'])
-                self.complevel = int(hdf5_row['complevel'])
-                self.shuffle = bool(hdf5_row['shuffle'])
-                self.fletcher32 = bool(hdf5_row['fletcher32'])
-                self.pandas_format = str(hdf5_row['pandas_format'])
-                self.pandas_append = bool(hdf5_row['pandas_append'])
+                        self.complib = compat.tostrtype(hdf5_row['complib'])
+                        self.complevel = int(hdf5_row['complevel'])
+                        self.shuffle = bool(hdf5_row['shuffle'])
+                        self.fletcher32 = bool(hdf5_row['fletcher32'])
+                        self.pandas_format = compat.tostrtype(hdf5_row['pandas_format'])
+                        self.pandas_append = bool(hdf5_row['pandas_append'])
+                        self.encoding = compat.tostrtype(hdf5_row['encoding'])
 
-                self._results_per_run = int(hdf5_row['results_per_run'])
-                self._derived_parameters_per_run = int(hdf5_row['derived_parameters_per_run'])
-                self._purge_duplicate_comments = bool(hdf5_row['purge_duplicate_comments'])
-                self._overview_explored_parameters_runs = bool(hdf5_row['explored_parameters_runs'])
+                        self._results_per_run = int(hdf5_row['results_per_run'])
+                        self._derived_parameters_per_run = int(hdf5_row['derived_parameters_per_run'])
+                        self._purge_duplicate_comments = bool(hdf5_row['purge_duplicate_comments'])
+                        self._overview_explored_parameters_runs = bool(hdf5_row['explored_parameters_runs'])
 
-                for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
-                    attr_value = bool(hdf5_row[table_name])
-                    setattr(self, attr_name, attr_value)
+                        for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
+                            attr_value = bool(hdf5_row[table_name])
+                            setattr(self, attr_name, attr_value)
+                    else:
+                        self._logger.warning('Could not find `hdf5_settings` overview table. I will use the '
+                            'standard settings (for `complib`, `complevel` etc.) instead.')
 
-
-            else:
-                self._logger.warning('Could not find `hdf5_settings` overview table. I will use the '
-                                     'standard settings (for `complib`, `complevel` etc.) instead.')
+                except Exception as e:
+                    self._logger.error('Using default hdf5 settings, '
+                                       'could not extract hdf5 settings because of: %s' % str(e))
 
     def _tree_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data,
                               recursive=True, as_new=False):
@@ -1968,26 +1997,29 @@ class HDF5StorageService(StorageService, HasLogger):
         hdf5_group = getattr(hdf5_group,final_group_name)
         self._tree_load_nodes(traj,traj_node, hdf5_group, load_data, recursive=recursive)
 
-    def _trj_check_version( self, version, force):
+    def _trj_check_version( self, version, python, force):
         """Checks for version mismatch
 
         Raises a VersionMismatchError if version of loaded trajectory and current pypet version
         do not match. In case of `force=True` error is not raised only a warning is emitted.
 
         """
-        if version != VERSION and not force:
-            raise pex.VersionMismatchError('Current pypet version is %s but your trajectory'
-                                            ' was created with version %s.'
+        curr_python = compat.python_version_string
+
+        if (version != VERSION or curr_python != python) and not force:
+            raise pex.VersionMismatchError('Current pypet version is %s used under python %s '
+                                           '  but your trajectory'
+                                            ' was created with version %s and python %s.'
                                             ' Use >>force=True<< to perform your load regardless'
                                             ' of version mismatch.' %
-                                           (VERSION, version))
-        elif version != VERSION :
-            self._logger.warning('Current pypet version is %s but your trajectory'
-                                            ' was created with version %s.'
+                                           (VERSION, curr_python, version, python))
+        elif (version != VERSION or curr_python != python):
+            self._logger.warning('Current pypet version is %s with python %s but your trajectory'
+                                            ' was created with version %s under python %s.'
                                             ' Yet, you enforced the load, so I will'
                                             ' handle the trajectory despite the'
                                             ' version mismatch.' %
-                                           (VERSION , version))
+                                           (VERSION, curr_python, version, python))
 
 
     #################################### Storing a Trajectory ####################################
@@ -2051,7 +2083,8 @@ class HDF5StorageService(StorageService, HasLogger):
                          'comment':  pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
                                                   pos=4),
                          'length':pt.IntCol(pos=2),
-                         'version' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5)}
+                         'version' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5),
+                         'python': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,pos=5)}
                          # 'loaded_from' : pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)}
 
         infotable = self._all_get_or_create_table(where=self._overview_group, tablename='info',
@@ -2086,9 +2119,10 @@ class HDF5StorageService(StorageService, HasLogger):
                                  'shuffle' :  pt.BoolCol(pos=2),
                                  'fletcher32' : pt.BoolCol(pos=3),
                                   'pandas_append' : pt.BoolCol(pos=4),
-                                  'pandas_format' : pt.StringCol(7, pos=5)}
+                                  'pandas_format' : pt.StringCol(7, pos=5),
+                                  'encoding' : pt.StringCol(11, pos=6)}
 
-        pos = 6
+        pos = 7
         for name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             hdf5_description_dict[table_name] = pt.BoolCol(pos=pos)
             pos+=1
@@ -2619,7 +2653,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if recursive:
                 # And if desired store recursively the subtree
-                for child in traj_node._children.itervalues():
+                for child in compat.itervalues(traj_node._children):
                     self._tree_store_nodes(store_msg,child,new_hdf5_group)
 
 
@@ -2644,7 +2678,7 @@ class HDF5StorageService(StorageService, HasLogger):
             # Also collect some summary information about the explored parameters
             # So we can add this to the `run` table
             run_summary = self._srn_add_explored_params(single_run.v_name,
-                                                        single_run._explored_parameters.values(),
+                                                        compat.listvalues(single_run._explored_parameters),
                                                         add_table)
 
             # Finally, add the real run information to the `run` table
@@ -2971,7 +3005,7 @@ class HDF5StorageService(StorageService, HasLogger):
             _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_SCALAR)
 
-            strtype = repr(type(data))
+            strtype = type(data).__name__
 
             if not strtype in pypetconstants.PARAMETERTYPEDICT:
                 raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
@@ -2994,15 +3028,18 @@ class HDF5StorageService(StorageService, HasLogger):
             # `dict` is stored
             # as an `ObjectTable` and thus types are already conserved.
             if len(data) > 0:
-                strtype = repr(type(data[0]))
+                strtype = type(data[0]).__name__
 
                 if not strtype in pypetconstants.PARAMETERTYPEDICT:
                     raise TypeError('I do not know how to handle `%s` its type is '
                                        '`%s`.' % (str(data),strtype))
 
                 _set_attribute_to_item_or_dict(ptitem,prefix +
-                                                    HDF5StorageService.SCALAR_TYPE,strtype)
-
+                                        HDF5StorageService.SCALAR_TYPE,strtype)
+        elif (type(data) in (np.ndarray, np.matrix) and
+                np.issubdtype(data.dtype, compat.unicode_type)):
+                _set_attribute_to_item_or_dict(ptitem,prefix +
+                            HDF5StorageService.SCALAR_TYPE, compat.unicode_type.__name__)
 
     def _all_recall_native_type(self, data, ptitem, prefix):
         """Checks if loaded data has the type it was stored in. If not converts it.
@@ -3035,8 +3072,13 @@ class HDF5StorageService(StorageService, HasLogger):
             if not typestr is None:
                 # Check if current type and stored type match
                 # if not convert the data
-                if not typestr == repr(type(data)):
-                    data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
+                if typestr != type(data).__name__:
+
+                    if typestr == compat.unicode_type.__name__:
+                        data = data.decode(self._encoding)
+                    else:
+                        data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
+
                     type_changed = True
 
 
@@ -3046,7 +3088,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                        HDF5StorageService.COLL_LIST)):
             # Here data item was originally a tuple or a list
 
-            if not isinstance(data,(list,tuple)):
+            if not isinstance(data, (list,tuple)):
                 # If the original type cannot be recalled, first convert it to a list
                 type_changed=True
                 data = list(data)
@@ -3058,7 +3100,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if not first_item is None:
                 # Check if the type of the first item was conserved
-                if not typestr == repr(type(first_item)):
+                if not typestr == type(first_item).__name__:
 
                     if not isinstance(data, list):
                         data = list(data)
@@ -3066,7 +3108,10 @@ class HDF5StorageService(StorageService, HasLogger):
                     # If type was not conserved we need to convert all items
                     # in the list or tuple
                     for idx,item in enumerate(data):
-                        data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
+                        if typestr == compat.unicode_type.__name__:
+                            data[idx] = data[idx].decode(self._encoding)
+                        else:
+                            data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
                         type_changed = True
 
             if self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
@@ -3076,11 +3121,18 @@ class HDF5StorageService(StorageService, HasLogger):
                     data = tuple(data)
                     type_changed = True
 
-        elif self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
-                                      HDF5StorageService.COLL_MATRIX):
+        elif isinstance(data, np.ndarray):
+
+            if typestr == compat.unicode_type.__name__:
+                data = np.core.defchararray.decode(data, self._encoding)
+                type_changed = True
+
+            if (self._all_attr_equals(ptitem, prefix+HDF5StorageService.COLL_TYPE,
+                                      HDF5StorageService.COLL_MATRIX)):
                 # Here data item was originally a matrix
                 data = np.matrix(data)
                 type_changed = True
+
 
         return data, type_changed
 
@@ -3249,23 +3301,23 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['length'] = len(item)
 
         if 'comment' in colnames:
-            comment = self._all_cut_string(item.v_comment,
+            comment = self._all_cut_string(compat.tobytetype(item.v_comment),
                                            pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
                                            self._logger)
 
             insert_dict['comment'] = comment
 
         if 'location' in colnames:
-            insert_dict['location'] = item.v_location
+            insert_dict['location'] = compat.tobytetype(item.v_location)
 
         if 'name' in colnames:
-            insert_dict['name'] = item.v_name
+            insert_dict['name'] = compat.tobytetype(item.v_name)
 
         if 'class_name' in colnames:
-            insert_dict['class_name'] = item.f_get_class_name()
+            insert_dict['class_name'] = compat.tobytetype(item.f_get_class_name())
 
         if 'value' in colnames:
-            insert_dict['value'] = self._all_cut_string(item.f_val_to_str(),
+            insert_dict['value'] = self._all_cut_string(compat.tobytetype(item.f_val_to_str()),
                                     pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH, self._logger)
 
         if 'example_item_run_name' in colnames:
@@ -3275,22 +3327,25 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['idx'] = item.v_idx
 
         if 'time' in colnames:
-            insert_dict['time'] = item.v_time
+            insert_dict['time'] = compat.tobytetype(item.v_time)
 
         if 'timestamp' in colnames:
             insert_dict['timestamp'] = item.v_timestamp
 
         if 'range' in colnames:
-            insert_dict['range'] = self._all_cut_string(str(item.f_get_range()),
+            insert_dict['range'] = self._all_cut_string(compat.tobytetype(str(item.f_get_range())),
                                     pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH, self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
-            insert_dict['array'] = self._all_cut_string(str(item.f_get_range()),
+            insert_dict['array'] = self._all_cut_string(compat.tobytetype(str(item.f_get_range())),
                                     pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH, self._logger)
 
         if 'version' in colnames:
-            insert_dict['version'] = item.v_version
+            insert_dict['version'] = compat.tobytetype(item.v_version)
+
+        if 'python' in colnames:
+            insert_dict['python'] = compat.tobytetype(item.v_python)
 
         if 'finish_timestamp' in colnames:
             insert_dict['finish_timestamp'] = item._finish_timestamp
@@ -3301,10 +3356,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 #If string is too long we cut the microseconds
                 runtime = runtime.split('.')[0]
 
-            insert_dict['runtime'] = runtime
+            insert_dict['runtime'] = compat.tobytetype(runtime)
 
         if 'short_environment_hexsha' in colnames:
-            insert_dict['short_environment_hexsha'] = item.v_environment_hexsha[0:7]
+            insert_dict['short_environment_hexsha'] = compat.tobytetype(item.v_environment_hexsha[0:7])
 
 
         return insert_dict
@@ -3581,10 +3636,10 @@ class HDF5StorageService(StorageService, HasLogger):
                     nitems = row['number_of_items']+1
 
                     # Get the run name of the example
-                    example_item_run_name = row['example_item_run_name']
+                    example_item_run_name = compat.tostrtype(row['example_item_run_name'])
 
                     # Get the old comment:
-                    location_string = row['location']
+                    location_string = compat.tostrtype(row['location'])
                     other_parent_node_name = location_string.replace(run_mask, example_item_run_name)
                     other_parent_node_name = '/' + self._trajectory_name + '/' + \
                                              other_parent_node_name.replace('.','/')
@@ -4096,6 +4151,20 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
+
+            def _make_array(group, key, data):
+                try:
+                    #try using pytables 3.0.0 API
+                    carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._get_filters())
+                except AttributeError:
+                    #if it does not work, create carray with old api
+                    atom = pt.Atom.from_dtype(data.dtype)
+                    carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
+                                                   shape=data.shape, filters=self._get_filters())
+                    carray[:]=data[:]
+
+                return carray
+
             if key in group:
                 raise ValueError('CArray `%s` already exists in `%s`. Appending is not supported (yet).')
 
@@ -4111,15 +4180,12 @@ class HDF5StorageService(StorageService, HasLogger):
             #     self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
             #     return
 
-            #try using pytables 3.0.0 API
             try:
-                carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._get_filters())
-            except AttributeError:
-                #if it does not work, create carray with old api
-                atom = pt.Atom.from_dtype(data.dtype)
-                carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
-                                                   shape=data.shape, filters=self._get_filters())
-                carray[:]=data[:]
+                carray = _make_array(group, key, data)
+            except ValueError:
+                conv_data = data[:]
+                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
+                carray = _make_array(group, key, conv_data)
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data, carray, HDF5StorageService.DATA_PREFIX)
@@ -4154,6 +4220,14 @@ class HDF5StorageService(StorageService, HasLogger):
             Full name of the `data_to_store`s original container, only needed for throwing errors.
 
         """
+        def _make_array(group, key, data):
+            try:
+                array=self._hdf5file.create_array(where=group, name=key, obj=data)
+            except AttributeError:
+                array=self._hdf5file.createArray(where=group, name=key, object=data)
+
+            return array
+
         try:
             if key in group:
                 raise ValueError('Array `%s` already exists in `%s`. Appending is not supported (yet).')
@@ -4166,11 +4240,17 @@ class HDF5StorageService(StorageService, HasLogger):
             # if size == 0:
             #     self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
             #     return
-
             try:
-                array=self._hdf5file.create_array(where=group, name=key,obj=data)
-            except AttributeError:
-                array=self._hdf5file.createArray(where=group, name=key,object=data)
+                array = _make_array(group, key, data)
+            except TypeError:
+
+                if isinstance(data, compat.unicode_type):
+                    conv_data = data.encode(self._encoding)
+                else:
+                    conv_data = []
+                    for string in data:
+                        conv_data.append(string.encode(self._encoding))
+                array = _make_array(group, key, conv_data)
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data ,array, HDF5StorageService.DATA_PREFIX)
@@ -4444,6 +4524,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 for idx,item in enumerate(series_of_data):
                     series_of_data[idx] = np.array(item)
 
+
         descriptiondict={} # dictionary containing the description to build a pytables table
         original_data_type_dict={} # dictionary containing the original data types
 
@@ -4479,12 +4560,13 @@ class HDF5StorageService(StorageService, HasLogger):
             if type(val) is int:
                 return pt.IntCol()
 
-            if isinstance(val,str):
+            if isinstance(val, (compat.unicode_type, compat.bytes_type)):
                 itemsize = int(self._prm_get_longest_stringsize(column))
                 return pt.StringCol(itemsize)
 
             if isinstance(val, np.ndarray):
-                if np.issubdtype(val.dtype,np.str):
+                if (np.issubdtype(val.dtype, compat.unicode_type) or
+                    np.issubdtype(val.dtype, compat.bytes_type) ):
                     itemsize = int(self._prm_get_longest_stringsize(column))
                     return pt.StringCol(itemsize,shape=val.shape)
                 else:
@@ -4502,14 +4584,17 @@ class HDF5StorageService(StorageService, HasLogger):
         maxlength = 1
 
         for stringar in string_list:
-            if not isinstance(stringar,np.ndarray) or stringar.ndim==0:
-                stringar = np.array([stringar])
-
-            for string in stringar:
-                maxlength = max(len(string),maxlength)
+            if isinstance(stringar,np.ndarray):
+                if stringar.ndim > 0:
+                    for string in stringar.ravel():
+                        maxlength = max(len(string),maxlength)
+                else:
+                    maxlength = max(len(stringar.tolist()), maxlength)
+            else:
+                maxlength = max(len(stringar), maxlength)
 
         # Make the string Col longer than needed in order to allow later on slightly larger strings
-        return maxlength*1.5
+        return int(maxlength*1.5)
 
     def _prm_load_parameter_or_result(self, param, load_only=None, load_except=None,
                                       _hdf5_group=None):
