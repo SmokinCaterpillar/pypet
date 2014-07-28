@@ -491,6 +491,7 @@ class Environment(HasLogger):
     :param encoding:
 
         Format to encode and decode unicode strings stored to disk.
+        The default ``'utf8'`` is highly recommended.
 
     :param complevel:
 

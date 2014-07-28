@@ -319,6 +319,10 @@ because most of the time the default settings are sufficient.
 
     Title of the hdf5 file (only important if file is created new)
 
+* ``encoding``
+
+    Encoding for unicode characters. The default ``'utf8'`` is highly recommended.
+
 * ``complevel``
 
     If you use HDF5, you can specify your compression level. 0 means no compression
