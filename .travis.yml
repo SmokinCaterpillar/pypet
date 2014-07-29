@@ -29,14 +29,16 @@ before_install:
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "+++++++++++ Installing NumPy  +++++++++++++"
-  - sudo apt-get install python-numpy
-  - echo "+++++++++++ Installing SciPy if python 2 +++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo apt-get install python-scipy; fi
+  - echo "++++++++++++ Install conda ++++++++++++++++++
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
-  - echo "+++++++++++ Installing Scipy if python 3 ++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install scipy; fi
+  - echo "+++++++++++Installing numpy and scipy with conda+++++++++++"
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
   - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"

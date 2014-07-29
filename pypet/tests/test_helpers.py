@@ -77,7 +77,7 @@ def make_run(remove=None, folder=None):
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name best on the current `testcase`"""
-    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**8))
+    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
     maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
 
     if len(name) > maxlen:
