@@ -6,6 +6,9 @@ pypet 0.1b.8
 
 *   Checking if names of leaf and group nodes only contain alphanumeric characters
 
+*   PickleParameter and PickleResult now explicitly store the pickle protocol
+    because retrieval from the pickle dump is not always possible in python 3.
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was

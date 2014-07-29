@@ -337,7 +337,7 @@ class ParameterTest(unittest.TestCase):
             if param.f_has_range():
                 if isinstance(param,(ArrayParameter, PickleParameter)) and \
                         not isinstance(param, SparseParameter):
-                    self.assertTrue(len(store_dict)<6)
+                    self.assertTrue(len(store_dict)<7)
                 # For sparse parameter it is more:
                 if isinstance(param, SparseParameter):
                     self.assertTrue(len(store_dict)<23)

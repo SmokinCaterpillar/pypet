@@ -1641,7 +1641,9 @@ class PickleParameter(Parameter):
     If the parameter is loaded, `v_protocol` is set to the protocol used to store the data.
 
     """
-    def __init__(self, full_name, data=None, comment='',protocol=2):
+    PROTOCOL = '__pckl_prtcl__'
+
+    def __init__(self, full_name, data=None, comment='', protocol=2):
         super(PickleParameter,self).__init__(full_name,data,comment)
         self._protocol=None
         self.v_protocol=protocol
@@ -1698,6 +1700,7 @@ class PickleParameter(Parameter):
         store_dict={}
         dump = pickle.dumps(self._data, protocol=self.v_protocol)
         store_dict['data'] = dump
+        store_dict[PickleParameter.PROTOCOL] = self.v_protocol
 
         if self.f_has_range():
 
@@ -1733,9 +1736,9 @@ class PickleParameter(Parameter):
 
     @staticmethod
     def _get_protocol(dump):
-        protolist = [tup[0].proto for tup in pickletools.genops(dump)]
-        #op, fs, snd = next(pickletools.genops(dump))
-        return int(max(protolist))
+        pops = pickletools.genops(dump)
+        proto = 2 if next(pops)[0].proto == 2 else int(any(op.proto for op, fst, snd in pops))
+        return proto
 
     def _load(self,load_dict):
         """Reconstructs objects from the pickle dumps in `load_dict`.
@@ -1750,7 +1753,11 @@ class PickleParameter(Parameter):
 
         self._data = pickle.loads(dump)
 
-        self.v_protocol = self._get_protocol(dump)
+        try:
+            self.v_protocol= load_dict[PickleParameter.PROTOCOL]
+        except KeyError:
+            # For backwards compatibility
+            self.v_protocol = PickleParameter._get_protocol(dump)
 
 
         if 'explored_data'in load_dict:
@@ -2374,6 +2381,8 @@ class PickleResult(Result):
     which is the general case.
 
     """
+    PROTOCOL = PickleParameter.PROTOCOL
+
     def __init__(self, full_name, *args, **kwargs):
         self._protocol=None
         protocol = kwargs.pop('protocol', 0)
@@ -2410,6 +2419,9 @@ class PickleResult(Result):
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
+        if name == PickleResult.PROTOCOL:
+            raise AttributeError('You cannot name an entry `%s`' % PickleResult.PROTOCOL)
+
         self._data[name] = item
 
 
@@ -2418,6 +2430,7 @@ class PickleResult(Result):
         store_dict ={}
         for key, val in self._data.items():
             store_dict[key] = pickle.dumps(val, protocol=self.v_protocol)
+        store_dict[PickleResult.PROTOCOL] = self.v_protocol
         return store_dict
 
     def _load(self, load_dict):
@@ -2426,8 +2439,12 @@ class PickleResult(Result):
         Sets the `v_protocol` property to the protocol of the first reconstructed item.
 
         """
+        try:
+            self.v_protocol= load_dict.pop(PickleParameter.PROTOCOL)
+        except KeyError:
+            # For backwards compatibility
+            dump = next(compat.itervalues(load_dict))
+            self.v_protocol = PickleParameter._get_protocol(dump)
         for idx, key in enumerate(load_dict):
             val = load_dict[key]
             self._data[key] = pickle.loads(val)
-            if idx == 0:
-                self.v_protocol = PickleParameter._get_protocol(val)
