@@ -29,15 +29,16 @@ before_install:
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "+++++++++++ Installing SciPy and NumPy if python 2 +++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo apt-get install -qq python-numpy python-scipy; fi
+  - echo "+++++++++++ Installing NumPy  +++++++++++++"
+  - sudo apt-get install python-numpy
+  - echo "+++++++++++ Installing SciPy if python 2 +++++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo apt-get install python-scipy; fi
 install:
-  - echo "+++++++++++ Installing Numpy ans Scipy if python 3 ++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install numpy; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install scipy; fi
-  - echo "+++++++++++ Installing Coveralls +++++++++++"
-  - pip install coveralls
   - echo "Python $TRAVIS_PYTHON_VERSION"
+  - echo "+++++++++++ Installing Scipy if python 3 ++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install scipy; fi
+  - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
+  - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
