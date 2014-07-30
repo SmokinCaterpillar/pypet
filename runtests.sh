@@ -12,8 +12,8 @@ if [[ $COVERAGE == ON ]]
             then
                 echo "Installing Git and Sumatra Test"
                 # sudo apt-get install git
-                conda install GitPython
-                conda install Sumatra
+                pip install --pre GitPython
+                pip install Sumatra
                 mkdir git_sumatra_test
                 cp pypet/tests/test_git.py git_sumatra_test
                 cd git_sumatra_test
