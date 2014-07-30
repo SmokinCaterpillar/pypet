@@ -23,11 +23,14 @@ from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
 try:
-    from pypet.tests.briantests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
-        BrianResult, BrianResultStringModeTest
-    # if not os.getenv('TRAVIS',False):
-    from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
-    from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest
+    if os.getenv('COVERAGE','OFF')=='OFF':
+        from pypet.tests.briantests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
+            BrianResult, BrianResultStringModeTest
+
+        from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
+        from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest
+    else:
+        print('Using coverage will ignore brian tests')
 except ImportError as e:
     print(repr(e)) # We end up here if `brian` is not installed
     pass
