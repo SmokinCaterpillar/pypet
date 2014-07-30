@@ -62,13 +62,17 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         """The queue to put data on"""
         return self._queue
 
+    @queue.setter
+    def queue(self, queue):
+        self._queue = queue
+
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._set_logger()
 
     def __getstate__(self):
         result = self.__dict__.copy()
-        result['queue'] = None
+        result['_queue'] = None
         del result['_logger']
         return result
 
