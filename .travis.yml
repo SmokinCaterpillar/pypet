@@ -54,26 +54,26 @@ before_install:
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
-  - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
+  - if [[ $COVERAGE == ON ]]; then  conda install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then conda install ordereddict; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
-  - pip install numexpr==$NUMEXPR_VERSION
+  - conda install numexpr=$NUMEXPR_VERSION
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - pip install cython==$CYTHON_VERSION
+  - conda install cython=$CYTHON_VERSION
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - pip install tables==$TABLES_VERSION
+  - conda install tables=$TABLES_VERSION
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - pip install pandas==$PANDAS_VERSION
+  - conda install pandas=$PANDAS_VERSION
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then pip install brian; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then conda install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
-  - pip install psutil
+  - conda install psutil
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install dill
+  - conda install dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - python setup.py install
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
