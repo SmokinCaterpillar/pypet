@@ -1,6 +1,6 @@
 language: python
 python:
-  - "2.7_with_system_site_packages"
+  - 2.7
   - 2.6
 
 
@@ -12,9 +12,9 @@ env:
 
 matrix:
   include:
-    - python: "2.7_with_system_site_packages"
+    - python: 2.7
       env: PANDAS_VERSION=0.14.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON GIT_TEST=OFF
-    - python: "2.7_with_system_site_packages"
+    - python: 2.7
       env: PANDAS_VERSION=0.13.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=OFF GIT_TEST=ON
     - python: 3.3
       env: PANDAS_VERSION=0.14.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.4 CYTHON_VERSION=0.20.2 COVERAGE=OFF GIT_TEST=OFF
@@ -29,39 +29,38 @@ before_install:
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "++++++++++++ Install conda ++++++++++++++++++"
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - conda update --yes conda
+  - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
+  - sudo pip install conda
+  - sudo conda init
+  - sudo conda update conda --yes
+  - deps='pip numpy scipy'
+  - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
+  - export PATH=$HOME/py/bin:$PATH
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
-  - echo "+++++++++++Installing numpy and scipy with conda+++++++++++"
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
-  - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
+  - if [[ $COVERAGE == ON ]]; then  conda install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then conda install ordereddict; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
-  - pip install numexpr==$NUMEXPR_VERSION
+  - conda install numexpr==$NUMEXPR_VERSION
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - pip install cython==$CYTHON_VERSION
+  - conda install cython==$CYTHON_VERSION
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - pip install tables==$TABLES_VERSION
+  - conda install tables==$TABLES_VERSION
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - pip install pandas==$PANDAS_VERSION
+  - conda install pandas==$PANDAS_VERSION
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then pip install brian; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then conda install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
-  - pip install psutil
+  - conda install psutil
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install dill
+  - conda install dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
-  - pip install .
+  - python setup.py install
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
 script: chmod +x runtests.sh; ./runtests.sh
