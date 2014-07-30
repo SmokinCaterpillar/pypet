@@ -54,8 +54,13 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     """
     def __init__(self):
-        self.queue = None
+        self._queue = None
         self._set_logger()
+
+    @property
+    def queue(self):
+        """The queue to put data on"""
+        return self._queue
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
@@ -75,32 +80,40 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     def store(self,*args,**kwargs):
         """Puts data to store on queue."""
         try:
-            self.queue.put(('STORE',args,kwargs))
+            self._queue.put(('STORE',args,kwargs))
         except IOError:
             ## This is due to a bug in Python, repeating the operation works :-/
             ## See http://bugs.python.org/issue5155
              try:
                 self._logger.error('Failed sending task %s to queue, I will try again.' %
                                                 str(('STORE',args,kwargs)) )
-                self.queue.put(('STORE',args, kwargs))
+                self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Second queue sending try was successful!')
              except IOError:
                 self._logger.error('Failed sending task %s to queue, I will try one last time.' %
                                                 str(('STORE',args,kwargs)) )
-                self.queue.put(('STORE',args, kwargs))
+                self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
-
+        # except TypeError as e:
+        #     self._logger.error('Could not put %s because of: %s, '
+        #                          'I will ignore the error and continue.' %
+        #                          (str(('STORE',args,kwargs)), str(e)))
+        except Exception as e:
+            self._logger.error('Could not put %s because of: %s' %
+                                 (str(('STORE',args,kwargs)), str(e)))
+            raise
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
-        self.queue.put(('DONE',[],{}))
+        self._queue.put(('DONE',[],{}))
 
-class QueueStorageServiceWriter(object):
+class QueueStorageServiceWriter(HasLogger):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
     def __init__(self, storage_service, queue):
         self._storage_service = storage_service
         self._queue = queue
         self._trajectory_name = None
+        self._set_logger()
 
     def run(self):
         """Starts listening to the queue."""
@@ -140,6 +153,14 @@ class QueueStorageServiceWriter(object):
 
                     except queue.Empty:
                         break
+                    # except TypeError as e:
+                    #     self._logger.error('Could not get %s because of: %s, '
+                    #                          'I will ignore the error and continue.' %
+                    #                          (str(('STORE',args,kwargs)), str(e)))
+                    except Exception as e:
+                        self._logger.error('Could not get %s because of: %s' %
+                                             (str(('STORE',args,kwargs)), str(e)))
+                        raise
 
                 if to_store_list:
                     self._storage_service.store(pypetconstants.LIST, to_store_list,
