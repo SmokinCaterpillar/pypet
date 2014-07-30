@@ -25,9 +25,9 @@ from pypet.tests.test_helpers import make_run
 try:
     from pypet.tests.briantests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
         BrianResult, BrianResultStringModeTest
-    if not os.getenv('TRAVIS',False):
-        from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
-        from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest, BrianFullNetworkMPTest
+    # if not os.getenv('TRAVIS',False):
+    from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
+    from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest, BrianFullNetworkMPTest
 except ImportError as e:
     print(repr(e)) # We end up here if `brian` is not installed
     pass
