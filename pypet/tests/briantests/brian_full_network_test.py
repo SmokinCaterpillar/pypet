@@ -173,7 +173,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
 class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
     def setUp(self):
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
