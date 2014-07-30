@@ -36,6 +36,7 @@ before_install:
   - deps='pip numpy scipy'
   - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
   - export PATH=$HOME/py/bin:$PATH
+  - source activate $HOME/py
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
