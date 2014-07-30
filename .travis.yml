@@ -29,7 +29,7 @@ before_install:
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "++++++++++++ Install conda ++++++++++++++++++
+  - echo "++++++++++++ Install conda ++++++++++++++++++"
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
