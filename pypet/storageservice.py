@@ -2894,7 +2894,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _all_get_or_create_table(self,where,tablename,description,expectedrows=None):
         """Creates a new table, or if the table already exists, returns it."""
-        where_node = self._hdf5file.getNode(where)
+        try:
+            where_node = self._hdf5file.get_node(where)
+        except AttributeError:
+            where_node = self._hdf5file.getNode(where)
 
         if not tablename in where_node:
             if not expectedrows is None:
@@ -4465,8 +4468,10 @@ class HDF5StorageService(StorageService, HasLogger):
                     # We only have a single table and we can store the original data types as attributes
                     for field_name in data_type_dict:
                         type_description = data_type_dict[field_name]
-
-                        table._f_setAttr(field_name,type_description)
+                        try:
+                            table._f_setattr(field_name,type_description)
+                        except AttributeError:
+                            table._f_setAttr(field_name,type_description)
 
                     setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
 
