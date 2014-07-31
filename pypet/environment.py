@@ -31,6 +31,7 @@ import time
 import datetime
 import pickle
 
+
 try:
     from sumatra.projects import load_project
     from sumatra.programs import PythonExecutable
@@ -62,6 +63,7 @@ from pypet.gitintegration import make_git_commit
 from pypet import __version__ as VERSION
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger, StreamToLogger
+from pypet.utils.helpful_functions import is_debug
 
 
 
@@ -1158,7 +1160,7 @@ class Environment(HasLogger):
 
 
         # Notify that in case of lazy debuggin we won't record anythin
-        if lazy_debug and 'pydevd' in sys.modules:
+        if lazy_debug and is_debug():
             self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
         self._logger.info('Environment initialized.')
@@ -1340,7 +1342,7 @@ class Environment(HasLogger):
 
         """
 
-        if lazy_debug and 'pydevd' in sys.modules:
+        if lazy_debug and is_debug():
             self._storage_service = LazyStorageService()
         else:
             self._storage_service = HDF5StorageService(self._filename,

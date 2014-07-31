@@ -53,7 +53,7 @@ import pypet.compat as compat
 from pypet import pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
-
+from pypet.utils.helpful_functions import is_debug
 from pypet.pypetlogging import HasLogger, DisableLogger
 
 
@@ -2098,7 +2098,8 @@ class NNGroupNode(NNTreeNode):
     def __dir__(self):
         """Adds all children to auto-completion"""
         result = dir(type(self)) + compat.listkeys(self.__dict__)
-        result.extend(self._children.keys())
+        if not is_debug():
+            result.extend(self._children.keys())
         return result
 
     def __iter__(self):
