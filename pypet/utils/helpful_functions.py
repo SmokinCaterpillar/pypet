@@ -5,6 +5,13 @@ from pypet.utils.comparisons import nested_equal as nested_equal_new
 import sys
 
 def is_debug():
+    """Checks if user is currently debugging.
+
+    Debugging is checked via ``'pydevd' in sys.modules``.
+
+    :return: True of False
+
+    """
     return 'pydevd' in sys.modules
 
 def flatten_dictionary(nested_dict, separator):
