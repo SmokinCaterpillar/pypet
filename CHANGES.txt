@@ -9,6 +9,9 @@ pypet 0.1b.8
 *   PickleParameter and PickleResult now explicitly store the pickle protocol
     because retrieval from the pickle dump is not always possible in python 3.
 
+*   Children of groups are no longer listed via __dir__ in case of debugging to
+    prevent unwanted locking.
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was
