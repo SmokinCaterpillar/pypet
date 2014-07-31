@@ -98,10 +98,10 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                                                 str(('STORE',args,kwargs)) )
                 self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
-        # except TypeError as e:
-        #     self._logger.error('Could not put %s because of: %s, '
-        #                          'I will ignore the error and continue.' %
-        #                          (str(('STORE',args,kwargs)), str(e)))
+        except TypeError as e:
+            self._logger.error('Could not put %s because of: %s, '
+                                 'I will ignore the error and continue.' %
+                                 (str(('STORE',args,kwargs)), str(e)))
         except Exception as e:
             self._logger.error('Could not put %s because of: %s' %
                                  (str(('STORE',args,kwargs)), str(e)))
@@ -157,10 +157,10 @@ class QueueStorageServiceWriter(HasLogger):
 
                     except queue.Empty:
                         break
-                    # except TypeError as e:
-                    #     self._logger.error('Could not get %s because of: %s, '
-                    #                          'I will ignore the error and continue.' %
-                    #                          (str(('STORE',args,kwargs)), str(e)))
+                    except TypeError as e:
+                        self._logger.error('Could not get %s because of: %s, '
+                                             'I will ignore the error and continue.' %
+                                             (str(('STORE',args,kwargs)), str(e)))
                     except Exception as e:
                         self._logger.error('Could not get %s because of: %s' %
                                              (str(('STORE',args,kwargs)), str(e)))
