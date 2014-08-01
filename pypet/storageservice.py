@@ -99,6 +99,8 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                 self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
         except TypeError as e:
+            # This handels a weird bug under python 3.4 (not 3.3) that sometimes
+            # a NoneType is put on the queue instead of real data which needs to be ignored
             self._logger.error('Could not put %s because of: %s, '
                                  'I will try again.' %
                                  (str(('STORE',args,kwargs)), str(e)))
