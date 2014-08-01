@@ -100,8 +100,19 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                 self._logger.error('Third queue sending try was successful!')
         except TypeError as e:
             self._logger.error('Could not put %s because of: %s, '
-                                 'I will ignore the error and continue.' %
+                                 'I will try again.' %
                                  (str(('STORE',args,kwargs)), str(e)))
+            try:
+                self._logger.error('Failed sending task %s to queue due to: %s. I will try again.' %
+                                   (str(('STORE',args,kwargs))), str(e) )
+                self._queue.put(('STORE',args, kwargs))
+                self._logger.error('Second queue sending try was successful!')
+            except TypeError as e:
+                self._logger.error('Failed sending task %s to queue due to: %s. I will try one last '
+                                   'time again.' %
+                                   (str(('STORE',args,kwargs))), str(e) )
+                self._queue.put(('STORE',args, kwargs))
+                self._logger.error('Third queue sending try was successful!')
         except Exception as e:
             self._logger.error('Could not put %s because of: %s' %
                                  (str(('STORE',args,kwargs)), str(e)))
@@ -159,8 +170,12 @@ class QueueStorageServiceWriter(HasLogger):
                         break
                     except TypeError as e:
                         self._logger.error('Could not get %s because of: %s, '
-                                             'I will ignore the error and continue.' %
+                                             'I will ignore the error and cwhite for another '
+                                             'try.' %
                                              (str(('STORE',args,kwargs)), str(e)))
+                        # Under python 3.4 sometimes NoneTypes are put on the queue
+                        # causing a TypeError. Apart form this sketchy handling, I have
+                        # so far no solution
                     except Exception as e:
                         self._logger.error('Could not get %s because of: %s' %
                                              (str(('STORE',args,kwargs)), str(e)))
@@ -883,7 +898,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 :param stuff_to_store: The single run to be stored
 
-                :param store_data: If all data belwo `run_XXXXXXXX` should be stored
+                :param store_data: If all data below `run_XXXXXXXX` should be stored
 
                 :param store_final: If final meta info should be stored
 
