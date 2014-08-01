@@ -106,13 +106,13 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                                  (str(('STORE',args,kwargs)), str(e)))
             try:
                 self._logger.error('Failed sending task %s to queue due to: %s. I will try again.' %
-                                   (str(('STORE',args,kwargs))), str(e) )
+                                   (str(('STORE',args,kwargs)), str(e)))
                 self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Second queue sending try was successful!')
             except TypeError as e:
                 self._logger.error('Failed sending task %s to queue due to: %s. I will try one last '
                                    'time again.' %
-                                   (str(('STORE',args,kwargs))), str(e) )
+                                   (str(('STORE',args,kwargs)), str(e)))
                 self._queue.put(('STORE',args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
         except Exception as e:
