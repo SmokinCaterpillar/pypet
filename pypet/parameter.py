@@ -1077,9 +1077,9 @@ class Parameter(BaseParameter):
                 raise TypeError('%s is of not supported type %s.' % (repr(val),str(type(newval))))
 
             if not self._values_of_same_type(newval, self._default):
-                raise TypeError('Data is not of the same type as the original entry value, '
+                raise TypeError('Data of `%s` is not of the same type as the original entry value, '
                                 'new type is %s vs old type %s.' %
-                                ( str(type(newval)),str(type(self._default))))
+                                ( self.v_full_name, str(type(newval)),str(type(self._default))))
 
 
             data_tuple.append(newval)
