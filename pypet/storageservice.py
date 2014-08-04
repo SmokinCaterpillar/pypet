@@ -326,6 +326,9 @@ class PTItemMock(object):
     def _f_setattr(self, name, val):
         self._v_attrs[name] = val
 
+    def _f_setAttr(self, name, val):
+        self._f_setattr(name, val)
+
 
 class HDF5StorageService(StorageService, HasLogger):
     """Storage Service to handle the storage of a trajectory/parameters/results into hdf5 files.
