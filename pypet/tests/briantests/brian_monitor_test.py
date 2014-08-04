@@ -21,12 +21,12 @@ from brian import clear
 class BrianMonitorTest(ResultTest):
 
     @classmethod
-    def setUpClass(BrianMonitorTest):
+    def setUpClass(cls):
         BrianMonitorResult.monitors=run_network()
         pass
 
     @classmethod
-    def tearDownClass(BrianMonitorTest):
+    def tearDownClass(cls):
         clear(True, True)
         reload(brian)
 

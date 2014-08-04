@@ -1255,7 +1255,8 @@ class ArrayParameter(Parameter):
 
             return store_dict
 
-    def _build_name(self,name_idx):
+    @staticmethod
+    def _build_name(name_idx):
         """Formats a name for storage
 
         :return:
@@ -1678,7 +1679,8 @@ class PickleParameter(Parameter):
         """No conversion necessary, therefore we simply return the value."""
         return val
 
-    def _build_name(self,name_id):
+    @staticmethod
+    def _build_name(name_id):
         """Formats names for storage
 
         Explored data is stored as 'xp_XXXXXXXX' where 'XXXXXXXX' is the index of the object.

@@ -42,7 +42,7 @@ elif tables == 3:
     get_node = lambda hdf5_file, *args, **kwargs: hdf5_file.get_node(*args, **kwargs)
     list_nodes = lambda hdf5_file, *args, **kwargs: hdf5_file.list_nodes(*args, **kwargs)
     move_node = lambda hdf5_file, *args, **kwargs: hdf5_file.move_node(*args, **kwargs)
-    remove_node = lambda hdf5_file, *args, **kwargs: hdf5_file.move_node(*args, **kwargs)
+    remove_node = lambda hdf5_file, *args, **kwargs: hdf5_file.remove_node(*args, **kwargs)
     copy_node = lambda hdf5_file, *args, **kwargs: hdf5_file.copy_node(*args, **kwargs)
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.create_table(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.create_array(*args, **kwargs)

@@ -19,9 +19,9 @@ def flatten_dictionary(nested_dict, separator):
     for key, val in nested_dict.items():
         if isinstance(val,dict):
             new_flat_dict = flatten_dictionary(val, separator)
-            for flat_key, val in new_flat_dict.items():
+            for flat_key, inval in new_flat_dict.items():
                 new_key = key + separator + flat_key
-                flat_dict[new_key] = val
+                flat_dict[new_key] = inval
         else:
             flat_dict[key] = val
 

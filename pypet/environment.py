@@ -1163,10 +1163,12 @@ class Environment(HasLogger):
         if lazy_debug and is_debug():
             self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
+        self._trajectory_name = self._traj.v_name
         self._logger.info('Environment initialized.')
 
 
-    def _make_logging_handlers(self, log_path, log_level, log_stdout):
+    @staticmethod
+    def _make_logging_handlers(log_path, log_level, log_stdout):
 
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
@@ -1296,9 +1298,9 @@ class Environment(HasLogger):
 
         """
         if trajectory_name is None:
-            self.trajectory_name = self.v_trajectory.v_name
+            self._trajectory_name = self.v_trajectory.v_name
         else:
-            self.trajectory_name = trajectory_name
+            self._trajectory_name = trajectory_name
 
         if continue_folder is not None:
             self._continue_folder = continue_folder
@@ -1613,7 +1615,7 @@ class Environment(HasLogger):
                                'with `do_single_runs=False`.')
 
 
-        self._continue_path = os.path.join(self._continue_folder, self.trajectory_name)
+        self._continue_path = os.path.join(self._continue_folder, self._trajectory_name)
         cnt_filename = os.path.join(self._continue_path, 'environment.ecnt')
         cnt_file = open(cnt_filename, 'rb')
         continue_dict = dill.load(cnt_file)
