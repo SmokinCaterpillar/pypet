@@ -77,7 +77,7 @@ GROUP = 'GROUP'
 LEAF = 'LEAF'
 
 # Types are not allowed to be added during single runs
-SENSITIVE_TYPES = {PARAMETER, PARAMETER_GROUP, CONFIG, CONFIG_GROUP}
+SENSITIVE_TYPES = set([PARAMETER, PARAMETER_GROUP, CONFIG, CONFIG_GROUP])
 
 LENGTH_WARNING_THRESHOLD = 100
 
@@ -93,7 +93,7 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 # a slow search with a full tree traversal is initiated.
 FAST_UPPER_BOUND = 2
 
-SHORTCUT_SET = {'crun', 'dpar', 'par', 'conf', 'res'}
+SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
 
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
