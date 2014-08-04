@@ -12,6 +12,8 @@ pypet 0.1b.8
 *   Children of groups are no longer listed via __dir__ in case of debugging to
     prevent unwanted locking.
 
+*   Better support for pytables 2 and 3 with same code base.
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was

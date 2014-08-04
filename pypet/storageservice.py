@@ -12,15 +12,15 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
-import sys
 try:
     import queue
 except ImportError:
     import Queue as queue
 import numpy as np
-from pandas import DataFrame, read_hdf, Series, Panel, Panel4D, HDFStore
+from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
 
 import pypet.compat as compat
+import pypet.utils.ptcompat as ptcompat
 from pypet import pypetconstants
 import pypet.pypetexceptions as pex
 from pypet import __version__ as VERSION
@@ -1221,19 +1221,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     # If we want to store a trajectory it has not been stored before
                     # create a new trajectory group
-                    try:
-                        self._hdf5file.create_group(where='/', name= self._trajectory_name,
-                                               title=self._trajectory_name)
-                    except AttributeError:
-                        self._hdf5file.createGroup(where='/', name= self._trajectory_name,
+
+                    ptcompat.create_group(self._hdf5file, where='/', name= self._trajectory_name,
                                                title=self._trajectory_name)
 
                 # Store a reference to the top trajectory node
-                try:
-                    self._trajectory_group = self._hdf5file.get_node('/'+self._trajectory_name)
-                except AttributeError:
-                    self._trajectory_group = self._hdf5file.getNode('/'+self._trajectory_name)
-
+                self._trajectory_group = ptcompat.get_node(self._hdf5file,
+                                                           '/'+self._trajectory_name)
             elif mode == 'r':
 
                 if not self._trajectory_name is None and not self._trajectory_index is None:
@@ -1252,10 +1246,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 if not self._trajectory_index is None:
                     # If an index is provided pick the trajectory at the corresponding
                     # position in the trajectory node list
-                    try:
-                        nodelist = self._hdf5file.list_nodes(where='/')
-                    except AttributeError:
-                        nodelist = self._hdf5file.listNodes(where='/')
+                    nodelist = ptcompat.list_nodes(self._hdf5file, where='/')
 
                     if (self._trajectory_index >= len(nodelist) or
                                 self._trajectory_index  < -len(nodelist)):
@@ -1273,12 +1264,8 @@ class HDF5StorageService(StorageService, HasLogger):
                         raise ValueError('File %s does not contain trajectory %s.'
                                          % (self._filename, self._trajectory_name))
 
-                    try:
-                        self._trajectory_group = self._hdf5file.get_node('/'+
-                                                                        self._trajectory_name)
-                    except AttributeError:
-                        self._trajectory_group = self._hdf5file.getNode('/'+
-                                                                        self._trajectory_name)
+                    self._trajectory_group = ptcompat.get_node(self._hdf5file,
+                                                               '/' + self._trajectory_name)
                 else:
                     raise ValueError('Please specify a name of a trajectory to load or its '
                                      'index, otherwise I cannot open one.')
@@ -1363,10 +1350,8 @@ class HDF5StorageService(StorageService, HasLogger):
         if backup_filename is None:
             backup_filename ='%s/backup_%s.hdf5' % (mypath,traj.v_name)
 
-        try:
-            backup_hdf5file = pt.open_file(filename=backup_filename, mode='a', title=backup_filename)
-        except AttributeError:
-            backup_hdf5file = pt.openFile(filename=backup_filename, mode='a', title=backup_filename)
+        backup_hdf5file = ptcompat.open_file(filename=backup_filename,
+                                             mode='a', title=backup_filename)
 
         if ('/'+self._trajectory_name) in backup_hdf5file:
 
@@ -1445,10 +1430,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             # get the other table
-            try:
-                other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
-            except AttributeError:
-                other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/overview/'+tablename)
+            other_table = ptcompat.get_node(self._hdf5file,
+                                            '/'+other_trajectory_name+'/overview/'+tablename)
 
             new_row_dict={} # Dictionary with full names as keys and summary row dicts as values
 
@@ -1464,10 +1447,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     new_row_dict[full_name] = self._trj_read_out_row(other_table.colnames, row)
 
             # Get the summary table in the current trajectory
-            try:
-                table= self._hdf5file.get_node('/'+self._trajectory_name+'/overview/'+tablename)
-            except AttributeError:
-                table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
+            table = ptcompat.get_node(self._hdf5file,
+                                      '/'+self._trajectory_name+'/overview/'+tablename)
 
             for row in table:
                 # Iterate through the current rows
@@ -1548,11 +1529,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            try:
-                other_table = self._hdf5file.get_node('/'+other_trajectory_name+'/overview/'+tablename)
-            except AttributeError:
-                other_table = self._hdf5file.getNode('/'+other_trajectory_name+'/overview/'+tablename)
-
+            other_table = ptcompat.get_node(self._hdf5file,
+                              '/'+other_trajectory_name+'/overview/'+tablename)
             new_row_dict={}
 
             for row in other_table.iterrows():
@@ -1570,10 +1548,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     read_out_row['location'] = new_location
                     new_row_dict[rename_dict[full_name]] = read_out_row
 
-            try:
-                table= self._hdf5file.get_node('/'+self._trajectory_name+'/overview/'+tablename)
-            except AttributeError:
-                table= self._hdf5file.getNode('/'+self._trajectory_name+'/overview/'+tablename)
+            table = ptcompat.get_node(self._hdf5file,
+                              '/'+self._trajectory_name+'/overview/'+tablename)
 
             # Insert data into the current overview table
             for row in table.iterrows():
@@ -1634,46 +1610,31 @@ class HDF5StorageService(StorageService, HasLogger):
             new_location = '/'+self._trajectory_name+'/'+'/'.join(split_name)
 
             # Get the data from the other trajectory
-            try:
-                old_group = self._hdf5file.get_node(old_location)
-            except AttributeError:
-                old_group = self._hdf5file.getNode(old_location)
+            old_group = ptcompat.get_node(self._hdf5file, old_location)
 
             for node in old_group:
                 # Now move or copy the data
                 if move_nodes:
-                    try:
-                        self._hdf5file.move_node(where=old_location, newparent=new_location,
-                                             name=node._v_name, createparents=True )
-                    except AttributeError:
-                        self._hdf5file.moveNode(where=old_location, newparent=new_location,
-                                             name=node._v_name, createparents=True )
+                    ptcompat.move_node(self._hdf5file,
+                                       where=old_location, newparent=new_location,
+                                       name=node._v_name, createparents=True)
                 else:
-                    try:
-                        self._hdf5file.copy_node(where=old_location, newparent=new_location,
-                                              name=node._v_name, createparents=True,
-                                              recursive=True)
-                    except AttributeError:
-                        self._hdf5file.copyNode(where=old_location, newparent=new_location,
-                                              name=node._v_name, createparents=True,
-                                              recursive=True)
+                    ptcompat.copy_node(self._hdf5file,
+                                       where=old_location, newparent=new_location,
+                                       name=node._v_name, createparents=True,
+                                       recursive=True)
 
             # And finally copy the attributes of leaf nodes
             # Attributes of group nodes are NOT copied, this has to be done
             # by the trajectory
-            try:
-                old_group._v_attrs._f_copy(where = self._hdf5file.get_node(new_location))
-            except AttributeError:
-                old_group._v_attrs._f_copy(where = self._hdf5file.getNode(new_location))
+            old_group._v_attrs._f_copy(where = ptcompat.get_node(self._hdf5file, new_location))
 
         self._trj_copy_table_entries(rename_dict, other_trajectory_name)
 
         if delete_trajectory:
-            try:
-                 self._hdf5file.remove_node(where='/', name=other_trajectory_name, recursive = True)
-            except AttributeError:
-                self._hdf5file.removeNode(where='/', name=other_trajectory_name, recursive = True)
 
+            ptcompat.remove_node(self._hdf5file,
+                                 where='/', name=other_trajectory_name, recursive = True)
 
     def _trj_prepare_merge(self, traj, changed_parameters):
         """Prepares a trajectory for merging.
@@ -2066,26 +2027,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
     #################################### Storing a Trajectory ####################################
 
-    # def _trj_fill_run_table_with_dummys(self, traj, start=0):
-    #     """Fills the `run` overview table with dummy information.
-    #
-    #     The table is later on filled by the single runs with the real information.
-    #     `start` specifies how large the table is when calling this function.
-    #
-    #     The table might not be emtpy because a trajectory is enlarged due to expanding.
-    #
-    #     """
-    #     runtable = getattr(self._overview_group,'runs')
-    #
-    #     for idx in range(start, len(traj)):
-    #         name = traj.f_idx_to_run(idx)
-    #         insert_dict = traj.f_get_run_information(name)
-    #
-    #         self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,
-    #                                     flags=(HDF5StorageService.ADD_ROW,))
-    #
-    #     runtable.flush()
-
     def _all_fill_run_table_with_dummys(self, start, stop):
         """Fills the `run` overview table with dummy information.
 
@@ -2312,7 +2253,6 @@ class HDF5StorageService(StorageService, HasLogger):
             #             paramtable.cols.location.createIndex(optlevel=8, kind='full')
             #             paramtable.cols.name.createIndex(optlevel=8, kind='full')
 
-
             paramtable.flush()
 
     def _trj_store_trajectory(self, traj, only_init = False):
@@ -2433,12 +2373,9 @@ class HDF5StorageService(StorageService, HasLogger):
             if location=='':
                 parent_hdf5_node = self._trajectory_group
             else:
-                try:
-                    parent_hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,
-                                                              name=hdf5_location)
-                except AttributeError:
-                    parent_hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,
-                                                              name=hdf5_location)
+                parent_hdf5_node = ptcompat.get_node(self._hdf5file,
+                                                     where=self._trajectory_group,
+                                                     name=hdf5_location)
 
             # Store node and potentially everything below it
             self._tree_store_sub_branch(pypetconstants.LEAF, traj_node, child_name, parent_hdf5_node,
@@ -2488,10 +2425,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 hdf5_node = self._trajectory_group
         else:
             try:
-                try:
-                    hdf5_node = self._hdf5file.get_node(where=self._trajectory_group,name = hdf5_node_name)
-                except AttributeError:
-                    hdf5_node = self._hdf5file.getNode(where=self._trajectory_group,name = hdf5_node_name)
+                hdf5_node = ptcompat.get_node(self._hdf5file,
+                                              where=self._trajectory_group,
+                                              name = hdf5_node_name)
             except pt.NoSuchNodeError:
                 self._logger.error('Cannot load `%s` the hdf5 node `%s` does not exist!'
                                     % (child_name, hdf5_node_name))
@@ -2655,10 +2591,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # If the node does not exist in the hdf5 file create it
         if not hasattr(parent_hdf5_group,name):
             store_new = True
-            try:
-                new_hdf5_group = self._hdf5file.create_group(where=parent_hdf5_group,name=name)
-            except AttributeError:
-                new_hdf5_group = self._hdf5file.createGroup(where=parent_hdf5_group,name=name)
+            new_hdf5_group = ptcompat.create_group(self._hdf5file, where=parent_hdf5_group, name=name)
         else:
             new_hdf5_group = getattr(parent_hdf5_group,name)
 
@@ -2686,7 +2619,7 @@ class HDF5StorageService(StorageService, HasLogger):
                          not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs) )
 
             if store_new:
-                self._grp_store_group(traj_node,_hdf5_group=new_hdf5_group)
+                self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group)
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
                                traj_node.v_full_name)
@@ -2786,26 +2719,17 @@ class HDF5StorageService(StorageService, HasLogger):
                 # If more parameters became explored we need to create the table new
                 if paramtable.nrows != len(paramlist):
                     del paramtable
-                    try:
-                        self._hdf5file.remove_node(where=rungroup, name='explored_parameters')
-                    except AttributeError:
-                        self._hdf5file.removeNode(where=rungroup, name='explored_parameters')
+                    ptcompat.remove_node(self._hdf5file,where=rungroup, name='explored_parameters')
                 else:
                     add_table=False
 
             if not 'explored_parameters' in rungroup:
-                try:
-                    paramtable = self._hdf5file.create_table(where=rungroup,
-                                                            name='explored_parameters',
-                                                            description=paramdescriptiondict,
-                                                            title='explored_parameters',
-                                                            filters=self._get_filters())
-                except AttributeError:
-                    paramtable = self._hdf5file.createTable(where=rungroup,
-                                                            name='explored_parameters',
-                                                            description=paramdescriptiondict,
-                                                            title='explored_parameters',
-                                                            filters=self._get_filters())
+                paramtable = ptcompat.create_table(self._hdf5file,
+                                                    where=rungroup,
+                                                    name='explored_parameters',
+                                                    description=paramdescriptiondict,
+                                                    title='explored_parameters',
+                                                    filters=self._get_filters())
 
         runsummary = ''
         paramlist = sorted(paramlist, key= lambda name: name.v_name + name.v_location)
@@ -2936,37 +2860,22 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _all_get_or_create_table(self,where,tablename,description,expectedrows=None):
         """Creates a new table, or if the table already exists, returns it."""
-        try:
-            where_node = self._hdf5file.get_node(where)
-        except AttributeError:
-            where_node = self._hdf5file.getNode(where)
+        where_node = ptcompat.get_node(self._hdf5file, where)
 
         if not tablename in where_node:
             if not expectedrows is None:
-                try:
-                    table = self._hdf5file.create_table(where=where_node, name=tablename,
-                                                   description=description, title=tablename,
-                                                   expectedrows=expectedrows,
-                                                   filters=self._get_filters())
-                except AttributeError:
-                    table = self._hdf5file.createTable(where=where_node, name=tablename,
-                                                   description=description, title=tablename,
-                                                   expectedrows=expectedrows,
-                                                   filters=self._get_filters())
+                table = ptcompat.create_table(self._hdf5file,
+                                               where=where_node, name=tablename,
+                                               description=description, title=tablename,
+                                               expectedrows=expectedrows,
+                                               filters=self._get_filters())
             else:
-                try:
-                    table = self._hdf5file.create_table(where=where_node, name=tablename,
-                                                   description=description, title=tablename,
-                                                   filters=self._get_filters())
-                except AttributeError:
-                    table = self._hdf5file.createTable(where=where_node, name=tablename,
-                                                   description=description, title=tablename,
-                                                   filters=self._get_filters())
+                table = ptcompat.create_table(self._hdf5file,
+                                              where=where_node, name=tablename,
+                                              description=description, title=tablename,
+                                              filters=self._get_filters())
         else:
-            try:
-                table = where_node._f_get_child(tablename)
-            except AttributeError:
-                table = where_node._f_getChild(tablename)
+            table = ptcompat.get_child(where_node, tablename)
 
         return table
 
@@ -2974,11 +2883,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """Returns an HDF5 node by the path specified in `name`"""
         path_name = name.replace('.','/')
         where = '/%s/%s' %(self._trajectory_name,path_name)
-
-        try:
-            return self._hdf5file.get_node(where=where)
-        except AttributeError:
-            return self._hdf5file.getNode(where=where)
+        return ptcompat.get_node(self._hdf5file, where=where)
 
     @staticmethod
     def _all_attr_equals(ptitem, name,value):
@@ -3017,37 +2922,27 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
 
-        def _set_attribute_to_item_or_dict(item, name,val):
-            """Stores `val` with `name` into `item_or_dict`.
-
-            `item` is either and HDF5 node or a python dictionary as PTItemMock.
-
-            """
-            try:
-                item._f_setattr(name,val)
-            except AttributeError:
-                item._f_setAttr(name,val)
 
 
         # If `data` is a container, remember the container type
         if type(data) is tuple:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_TUPLE)
 
         elif type(data) is list:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_LIST)
 
         elif type(data) is np.ndarray:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_NDARRAY)
 
         elif type(data) is np.matrix:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                                            HDF5StorageService.COLL_MATRIX)
 
         elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_SCALAR)
 
             strtype = type(data).__name__
@@ -3056,10 +2951,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                                (str(data),repr(type(data))))
 
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.SCALAR_TYPE,strtype)
 
         elif type(data) is dict:
-            _set_attribute_to_item_or_dict(ptitem,prefix+HDF5StorageService.COLL_TYPE,
+            ptcompat.set_attribute(ptitem,prefix+HDF5StorageService.COLL_TYPE,
                             HDF5StorageService.COLL_DICT)
 
         else:
@@ -3079,11 +2974,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     raise TypeError('I do not know how to handle `%s` its type is '
                                        '`%s`.' % (str(data),strtype))
 
-                _set_attribute_to_item_or_dict(ptitem,prefix +
+                ptcompat.set_attribute(ptitem,prefix +
                                         HDF5StorageService.SCALAR_TYPE,strtype)
         elif (type(data) in (np.ndarray, np.matrix) and
                 np.issubdtype(data.dtype, compat.unicode_type)):
-                _set_attribute_to_item_or_dict(ptitem,prefix +
+                ptcompat.set_attribute(ptitem,prefix +
                             HDF5StorageService.SCALAR_TYPE, compat.unicode_type.__name__)
 
     def _all_recall_native_type(self, data, ptitem, prefix):
@@ -3275,11 +3170,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                         'appears more than once in table %s.'
                                         %(item_name,table._v_name))
 
+
                 try:
-                    try:
-                        table.remove_rows(rownumber)
-                    except AttributeError:
-                        table.removeRows(rownumber)
+                    ptcompat.remove_rows(table, rownumber)
                 except NotImplementedError:
                     pass # We get here if we try to remove the last row of a table
                     # there is nothing we can do except for keeping it :(
@@ -3446,18 +3339,11 @@ class HDF5StorageService(StorageService, HasLogger):
         created = False
         for name in split_key:
             if not name in newhdf5group:
-                try:
-                    newhdf5group=self._hdf5file.create_group(where=newhdf5group, name=name,
-                                                             title=name, filters=self._get_filters())
-                except AttributeError:
-                    newhdf5group=self._hdf5file.createGroup(where=newhdf5group, name=name,
-                                                            title=name, filters=self._get_filters())
+                newhdf5group=ptcompat.create_group(self._hdf5file, where=newhdf5group, name=name,
+                                            title=name, filters=self._get_filters())
                 created = True
             else:
-                try:
-                    newhdf5group=newhdf5group._f_get_child(name)
-                except AttributeError:
-                    newhdf5group=newhdf5group._f_getChild(name)
+                newhdf5group = ptcompat.get_child(newhdf5group, name)
 
         return newhdf5group, created
 
@@ -3692,12 +3578,9 @@ class HDF5StorageService(StorageService, HasLogger):
                     # If the instance actually has the name of the run as it's own name
                     # We need this replacement as well:
                     instance_name = instance.v_name.replace(run_mask, example_item_run_name)
-                    try:
-                        example_item_node = self._hdf5file.get_node(where=other_parent_node_name,
-                                                                               name=instance_name)
-                    except AttributeError:
-                        example_item_node = self._hdf5file.getNode(where=other_parent_node_name,
-                                                                        name = instance_name)
+                    example_item_node = ptcompat.get_node(self._hdf5file,
+                                                          where=other_parent_node_name,
+                                                          name=instance_name)
 
                     # Check if comment is obsolete
                     example_comment = ''
@@ -3972,32 +3855,6 @@ class HDF5StorageService(StorageService, HasLogger):
         if key in group:
             raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
 
-        # # Create a temp_dict in order not to modify the original data
-        # if len(data_to_store)> ptpa.MAX_COLUMNS:
-        #     dicts = [{}]
-        #     count = 0
-        #     for innerkey in data_to_store:
-        #         val = data_to_store[innerkey]
-        #         if count == ptpa.MAX_COLUMNS:
-        #             dicts.append({})
-        #             count = 0
-        #         dicts[-1][innerkey] = val
-        #         count += 1
-        #     try:
-        #         subgroup = self._hdf5file.create_group(where=group, name=key)
-        #     except AttributeError:
-        #         subgroup = self._hdf5file.createGroup(where=group, name=key)
-        #
-        #     setattr(subgroup._v_attrs,HDF5StorageService.STORAGE_TYPE,
-        #             HDF5StorageService.DICT)
-        #     setattr(subgroup._v_attrs,HDF5StorageService.DICT_SPLIT,
-        #             1)
-        #
-        #     for idx, dictionary in enumerate(dicts):
-        #         self._prm_store_dict_as_table(msg, key+'_%d' % idx, dictionary,
-        #                                       subgroup, fullname)
-        # else:
-
         temp_dict={}
         for innerkey in data_to_store:
             val = data_to_store[innerkey]
@@ -4009,10 +3866,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Then store the object table
         self._prm_store_into_pytable(msg,key,objtable,group,fullname)
 
-        try:
-            new_table = group._f_get_child(key)
-        except AttributeError:
-            new_table = group._f_getChild(key)
+        new_table = ptcompat.get_child(group, key)
 
         # Remember that the Object Table represents a dictionary
         self._all_set_attributes_to_recall_natives(temp_dict, new_table,
@@ -4060,10 +3914,7 @@ class HDF5StorageService(StorageService, HasLogger):
             pandas_store.flush()
             self._hdf5file.flush()
 
-            try:
-                frame_group = group._f_get_child(key)
-            except AttributeError:
-                frame_group = group._f_getChild(key)
+            frame_group = ptcompat.get_child(group, key)
 
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
@@ -4109,10 +3960,7 @@ class HDF5StorageService(StorageService, HasLogger):
             pandas_store.flush()
             self._hdf5file.flush()
 
-            try:
-                frame_group = group._f_get_child(key)
-            except AttributeError:
-                frame_group = group._f_getChild(key)
+            frame_group = ptcompat.get_child(group, key)
 
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
@@ -4158,10 +4006,7 @@ class HDF5StorageService(StorageService, HasLogger):
             pandas_store.flush()
             self._hdf5file.flush()
 
-            try:
-                frame_group = group._f_get_child(key)
-            except AttributeError:
-                frame_group = group._f_getChild(key)
+            frame_group = ptcompat.get_child(group, key)
 
             setattr(frame_group._v_attrs,HDF5StorageService.STORAGE_TYPE, HDF5StorageService.FRAME)
             self._hdf5file.flush()
@@ -4197,19 +4042,6 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         try:
 
-            def _make_array(group, key, data):
-                try:
-                    #try using pytables 3.0.0 API
-                    carray=self._hdf5file.create_carray(where=group, name=key, obj=data, filters=self._get_filters())
-                except AttributeError:
-                    #if it does not work, create carray with old api
-                    atom = pt.Atom.from_dtype(data.dtype)
-                    carray=self._hdf5file.createCArray(where=group, name=key, atom=atom,
-                                                   shape=data.shape, filters=self._get_filters())
-                    carray[:]=data[:]
-
-                return carray
-
             if key in group:
                 raise ValueError('CArray `%s` already exists in `%s`. Appending is not supported (yet).')
 
@@ -4226,11 +4058,13 @@ class HDF5StorageService(StorageService, HasLogger):
             #     return
 
             try:
-                carray = _make_array(group, key, data)
+                carray = ptcompat.create_carray(self._hdf5file, where=group, name=key, obj=data,
+                                                filters=self._get_filters())
             except ValueError:
                 conv_data = data[:]
                 conv_data = np.core.defchararray.encode(conv_data, self.encoding)
-                carray = _make_array(group, key, conv_data)
+                carray = ptcompat.create_carray(self._hdf5file, where=group, name=key, obj=conv_data,
+                                                filters=self._get_filters())
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data, carray, HDF5StorageService.DATA_PREFIX)
@@ -4265,13 +4099,6 @@ class HDF5StorageService(StorageService, HasLogger):
             Full name of the `data_to_store`s original container, only needed for throwing errors.
 
         """
-        def _make_array(group, key, data):
-            try:
-                array=self._hdf5file.create_array(where=group, name=key, obj=data)
-            except AttributeError:
-                array=self._hdf5file.createArray(where=group, name=key, object=data)
-
-            return array
 
         try:
             if key in group:
@@ -4286,7 +4113,8 @@ class HDF5StorageService(StorageService, HasLogger):
             #     self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
             #     return
             try:
-                array = _make_array(group, key, data)
+                array = ptcompat.create_array(self._hdf5file, where=group,
+                                                      name=key, obj=data)
             except TypeError:
 
                 if isinstance(data, compat.unicode_type):
@@ -4295,7 +4123,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     conv_data = []
                     for string in data:
                         conv_data.append(string.encode(self._encoding))
-                array = _make_array(group, key, conv_data)
+                array = ptcompat.create_array(self._hdf5file, where=group,
+                                                      name=key, obj=conv_data)
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data ,array, HDF5StorageService.DATA_PREFIX)
@@ -4337,10 +4166,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if delete_only is None:
 
-            try:
-                the_node = self._hdf5file.get_node(where=where, name=node_name)
-            except AttributeError:
-                the_node = self._hdf5file.getNode(where=where, name=node_name)
+            the_node = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
 
             if not instance.v_is_leaf:
                 if len(the_node._v_groups) != 0:
@@ -4376,15 +4202,11 @@ class HDF5StorageService(StorageService, HasLogger):
                 for irun in reversed(list(range(len(split_name)))):
                     where = '/'+self._trajectory_name+'/' + '/'.join(split_name[0:irun])
                     node_name = split_name[irun]
-                    try:
-                        act_group = self._hdf5file.get_node(where=where, name=node_name)
-                    except AttributeError:
-                        act_group = self._hdf5file.getNode(where=where, name=node_name)
+                    act_group = ptcompat.get_node(self._hdf5file,
+                                                  where=where, name=node_name)
                     if len(act_group._v_groups) == 0:
-                        try:
-                            self._hdf5file.remove_node(where=where,name=node_name, recursive=True)
-                        except AttributeError:
-                            self._hdf5file.removeNode(where=where,name=node_name, recursive=True)
+                        ptcompat.remove_node(self._hdf5file,
+                                             where=where,name=node_name, recursive=True)
                     else:
                         break
         else:
@@ -4403,10 +4225,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     delattr(instance, delete_item)
                 try:
-                    try:
-                        the_node = self._hdf5file.get_node(where= path_to_leaf, name=delete_item)
-                    except AttributeError:
-                        the_node = self._hdf5file.getNode(where= path_to_leaf, name=delete_item)
+                    the_node = ptcompat.get_node(self._hdf5file,
+                                                 where=path_to_leaf, name=delete_item)
 
                     the_node._f_remove(recursive=True)
                 except pt.NoSuchNodeError:
@@ -4449,10 +4269,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
                 # For optimzation we want to store the original data types into another table
-                try:
-                    new_table_group=self._hdf5file.create_group(where=hdf5group, name=tablename)
-                except AttributeError:
-                    new_table_group=self._hdf5file.createGroup(where=hdf5group, name=tablename)
+                new_table_group = ptcompat.create_group(self._hdf5file, where=hdf5group, name=tablename)
+
                 if len(description_dict) > ptpa.MAX_COLUMNS:
                     # For further optimization we need to split the table into several
                     count = 0
@@ -4481,18 +4299,12 @@ class HDF5StorageService(StorageService, HasLogger):
                 else:
                     tblname = tablename +'_%d' % idx
 
-                try:
-                    table = self._hdf5file.create_table(where=hdf5group, name=tblname,
-                                                       description=descr_dict,
-                                                       title=tblname,
-                                                       expectedrows=datasize,
-                                                       filters=self._get_filters())
-                except AttributeError:
-                    table = self._hdf5file.createTable(where=hdf5group, name=tblname,
-                                                       description=descr_dict,
-                                                       title=tblname,
-                                                       expectedrows=datasize,
-                                                       filters=self._get_filters())
+                table = ptcompat.create_table(self._hdf5file,
+                                               where=hdf5group, name=tblname,
+                                               description=descr_dict,
+                                               title=tblname,
+                                               expectedrows=datasize,
+                                               filters=self._get_filters())
 
                 row = table.row
                 for n in range(datasize):
@@ -4510,10 +4322,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     # We only have a single table and we can store the original data types as attributes
                     for field_name in data_type_dict:
                         type_description = data_type_dict[field_name]
-                        try:
-                            table._f_setattr(field_name,type_description)
-                        except AttributeError:
-                            table._f_setAttr(field_name,type_description)
+                        ptcompat.set_attribute(table, field_name, type_description)
 
                     setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.TABLE)
 
@@ -4527,18 +4336,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 field_names, data_types = list(zip(*data_type_dict.items()))
                 data_type_table_dict = {'field_name' : field_names, 'data_type':data_types}
                 descr_dict, _ = self._prm_make_description(data_type_table_dict, fullname)
-                try:
-                    table = self._hdf5file.create_table(where=hdf5group, name=tblname,
-                                                       description=descr_dict,
-                                                       title=tblname,
-                                                       expectedrows=len(field_names),
-                                                       filters=self._get_filters())
-                except AttributeError:
-                    table = self._hdf5file.createTable(where=hdf5group, name=tblname,
-                                                       description=descr_dict,
-                                                       title=tblname,
-                                                       expectedrows=len(field_names),
-                                                       filters=self._get_filters())
+
+                table = ptcompat.create_table(self._hdf5file,
+                                               where=hdf5group, name=tblname,
+                                               description=descr_dict,
+                                               title=tblname,
+                                               expectedrows=len(field_names),
+                                               filters=self._get_filters())
 
                 row = table.row
 
