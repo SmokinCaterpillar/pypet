@@ -327,7 +327,7 @@ class PTItemMock(object):
         self._v_attrs[name] = val
 
     def _f_setAttr(self, name, val):
-        self._f_setattr(name, val)
+        self._v_attrs[name] = val
 
 
 class HDF5StorageService(StorageService, HasLogger):
