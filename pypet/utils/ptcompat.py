@@ -16,6 +16,10 @@ def _make_pt2_carray(hdf5_file, *args, **kwargs):
     carray[:] = data[:]
     return carray
 
+def _make_pt2_array(hdf5_file, *args, **kwargs):
+    data = kwargs.pop('obj')
+    return hdf5_file.createArray(*args, object=data, **kwargs)
+
 
 if tables == 2:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
@@ -27,7 +31,7 @@ if tables == 2:
     remove_node = lambda hdf5_file, *args, **kwargs: hdf5_file.removeNode(*args, **kwargs)
     copy_node = lambda hdf5_file, *args, **kwargs: hdf5_file.copyNode(*args, **kwargs)
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.createTable(*args, **kwars)
-    create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.createArray(*args, **kwargs)
+    create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
     create_carray = lambda hdf5_file, data, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
                                                                               **kwargs)
 
