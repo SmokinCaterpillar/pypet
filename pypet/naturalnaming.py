@@ -57,7 +57,6 @@ from pypet.utils.helpful_functions import is_debug
 from pypet.pypetlogging import HasLogger, DisableLogger
 
 
-
 # For fetching:
 STORE = 'STORE'  # We want to store stuff with the storage service
 LOAD = 'LOAD'  # We want to load stuff with the storage service
