@@ -27,7 +27,7 @@ class ChainMap(object):
         for mapping in self._maps:
             length += len(mapping)
 
-        return  length
+        return length
 
     def __iter__(self):
 
@@ -37,6 +37,7 @@ class ChainMap(object):
 
 class HashArray(object):
     """Hashable wrapper for numpy arrays"""
+
     def __init__(self, ndarray):
         """Creates a new hashable object encapsulating an ndarray.
 

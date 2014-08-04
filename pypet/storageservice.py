@@ -1333,7 +1333,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._trajectory_index = kwargs.pop('trajectory_index')
 
 
-    # ########################## MERGING ###########################################################
+    ########################### Merging ###########################################################
 
     def _trj_backup_trajectory(self, traj, backup_filename=None):
         """Backs up a trajectory.
@@ -1705,7 +1705,7 @@ class HDF5StorageService(StorageService, HasLogger):
         traj.f_restore_default()
 
 
-    # ####################### LOADING A TRAJECTORY #################################################
+    ######################## Loading a Trajectory #################################################
 
     def _trj_load_trajectory(self, msg, traj, as_new, load_parameters, load_derived_parameters,
                              load_results, load_other_data, force):
@@ -2030,7 +2030,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                  (VERSION, curr_python, version, python))
 
 
-    # ################################### Storing a Trajectory ####################################
+    #################################### Storing a Trajectory ####################################
 
     def _all_fill_run_table_with_dummys(self, start, stop):
         """Fills the `run` overview table with dummy information.
@@ -2362,7 +2362,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._tree_store_nodes(msg, traj_node, hdf5_group, recursive)
 
 
-    # #######################  Storing and Loading Sub Trees #######################################
+    ########################  Storing and Loading Sub Trees #######################################
 
     def _tree_store_tree(self, traj_node, child_name, recursive):
         """Stores a node and potentially recursively all nodes below
@@ -2643,7 +2643,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._tree_store_nodes(store_msg, child, new_hdf5_group)
 
 
-    # ####################### Storing a Single Run ##########################################
+    ######################## Storing a Single Run ##########################################
+
     def _srn_store_single_run(self, single_run, store_data, store_final):
         """ Stores a single run instance to disk (only meta data)"""
 
@@ -3354,7 +3355,7 @@ class HDF5StorageService(StorageService, HasLogger):
         return newhdf5group, created
 
 
-    # ################ Storing and loading Annotations ###########################################
+    ################# Storing and loading Annotations ###########################################
 
     def _ann_store_annotations(self, item_with_annotations, node):
         """Stores annotations into an hdf5 file."""
@@ -3407,7 +3408,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     setattr(annotations, key, data)
 
 
-    # ############################################# Storing Groups ################################
+    ############################################## Storing Groups ################################
 
     def _grp_store_group(self, node_in_traj, _hdf5_group=None):
         """Stores a group node.
@@ -3426,7 +3427,7 @@ class HDF5StorageService(StorageService, HasLogger):
         node_in_traj._stored = True
 
 
-    # ################ Storing and Loading Parameters ############################################
+    ################# Storing and Loading Parameters ############################################
 
     @staticmethod
     def _prm_extract_missing_flags(data_dict, flags_dict):

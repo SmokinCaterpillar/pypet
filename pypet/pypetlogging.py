@@ -2,6 +2,7 @@ __author__ = 'Robert Meyer'
 
 import logging
 
+
 class HasLogger(object):
     """Abstract super class that automatically adds a logger to a class.
 
@@ -52,16 +53,19 @@ class HasLogger(object):
 
 class DisableLogger():
     """Context Manager that disables logging"""
+
     def __enter__(self):
-       logging.disable(logging.CRITICAL)
+        logging.disable(logging.CRITICAL)
+
     def __exit__(self, exception_type, exception_value, traceback):
-       logging.disable(logging.NOTSET)
+        logging.disable(logging.NOTSET)
 
 
 class StreamToLogger(object):
     """
     Fake file-like stream object that redirects writes to a logger instance.
     """
+
     def __init__(self, logger, log_level=logging.INFO):
         self._logger = logger
         self._log_level = log_level

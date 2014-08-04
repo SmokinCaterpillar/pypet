@@ -1,6 +1,5 @@
 __author__ = 'Robert Meyer'
 
-
 import sys
 import getopt
 import tables as pt
@@ -9,7 +8,6 @@ import os
 
 
 class FileUpdater(object):
-
     def __init__(self, filename, backup):
         self.filename = filename
 
@@ -47,8 +45,7 @@ class FileUpdater(object):
         self.hdf5file.close()
 
 
-
-    def _update_traj(self,traj_node):
+    def _update_traj(self, traj_node):
 
         print('*** UPDATING TRAJECTORY %s ***' % traj_node._v_name)
 
@@ -65,14 +62,14 @@ class FileUpdater(object):
                     location = overview_table.cols.location[row]
 
                     split_name = location.split('.')
-                    if len(split_name)>1:
-                        new_location=''
-                        if split_name[1]=='trajectory':
+                    if len(split_name) > 1:
+                        new_location = ''
+                        if split_name[1] == 'trajectory':
                             del split_name[1]
                             new_location = '.'.join(split_name)
 
                         elif split_name[1].startswith('run_'):
-                            split_name.insert(1,'runs')
+                            split_name.insert(1, 'runs')
                             new_location = '.'.join(split_name)
 
                         if new_location:
@@ -114,7 +111,6 @@ class FileUpdater(object):
                     inner_traj_node = res_node._v_children['trajectory']
 
                     for move_node_name in inner_traj_node._v_children.keys():
-
                         to_move_node = inner_traj_node._v_children[move_node_name]
 
                         print('    Moving node %s' % move_node_name)
@@ -124,12 +120,9 @@ class FileUpdater(object):
                     self.hdf5file.removeNode(where=inner_traj_node)
 
 
-
-
-
 if __name__ == '__main__':
 
-    opt_list, _ = getopt.getopt(sys.argv[1:],'b',['filename='])
+    opt_list, _ = getopt.getopt(sys.argv[1:], 'b', ['filename='])
     filename = None
     backup = False
     for opt, arg in opt_list:

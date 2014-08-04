@@ -16,19 +16,22 @@ def deprecated(msg=''):
         Additional message added to the warning.
 
     '''
+
     def wrapper(func):
         @functools.wraps(func)
         def new_func(*args, **kwargs):
             warning_string = "Call to deprecated function or property `%s`." % func.__name__
-            warning_string= warning_string + ' ' + msg
+            warning_string = warning_string + ' ' + msg
             warnings.warn_explicit(
-                 warning_string,
-                 category=DeprecationWarning,
-                 filename=compat.func_code(func).co_filename,
-                 lineno=compat.func_code(func).co_firstlineno + 1
-             )
+                warning_string,
+                category=DeprecationWarning,
+                filename=compat.func_code(func).co_filename,
+                lineno=compat.func_code(func).co_firstlineno + 1
+            )
             return func(*args, **kwargs)
+
         return new_func
+
     return wrapper
 
 
@@ -39,6 +42,7 @@ def copydoc(fromfunc, sep="\n"):
     like `ABSTRACT: Needs to be defined in subclass`, this line and the line after are removed.
 
     """
+
     def _decorator(func):
         sourcedoc = fromfunc.__doc__
 
@@ -57,4 +61,5 @@ def copydoc(fromfunc, sep="\n"):
         else:
             func.__doc__ = sep.join([sourcedoc, func.__doc__])
         return func
+
     return _decorator

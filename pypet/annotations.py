@@ -154,7 +154,7 @@ class Annotations(object):
 
 class WithAnnotations(HasLogger):
     def __init__(self):
-        self._annotations = Annotations() # The annotation object to handle annotations
+        self._annotations = Annotations()  # The annotation object to handle annotations
 
     @property
     def v_annotations(self):

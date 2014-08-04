@@ -8,15 +8,16 @@ import tables as pt
 
 tables = int(pt.__version__[0])
 
-def _make_pt2_carray(hdf5_file,  *args, **kwargs):
+
+def _make_pt2_carray(hdf5_file, *args, **kwargs):
     data = kwargs.pop('obj')
     atom = pt.Atom.from_dtype(data.dtype)
     carray = hdf5_file.createCArray(*args, atom=atom, shape=data.shape, **kwargs)
-    carray[:]=data[:]
+    carray[:] = data[:]
     return carray
 
 
-if  tables == 2:
+if tables == 2:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
 
     create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.createGroup(*args, **kwargs)
@@ -27,7 +28,8 @@ if  tables == 2:
     copy_node = lambda hdf5_file, *args, **kwargs: hdf5_file.copyNode(*args, **kwargs)
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.createTable(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.createArray(*args, **kwargs)
-    create_carray = lambda hdf5_file, data, *args, **kwargs: _make_pt2_carray(hdf5_file, *args, **kwargs)
+    create_carray = lambda hdf5_file, data, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
+                                                                              **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
 
