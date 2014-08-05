@@ -1,3 +1,4 @@
+__author__ = 'Robert Meyer'
 
 try:
     from pypet._version import __version__
