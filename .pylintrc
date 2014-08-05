@@ -1,3 +1,6 @@
+# For gui usage_
+# $ export PYLINTRC=/media/data/PYTHON_WORKSPACE/pypet-project/.pylintrc
+
 [MASTER]
 
 # Specify a configuration file.

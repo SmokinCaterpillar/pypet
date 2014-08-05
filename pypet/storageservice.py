@@ -22,9 +22,9 @@ from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
 
 import pypet.compat as compat
 import pypet.utils.ptcompat as ptcompat
-from pypet import pypetconstants
+import pypet.pypetconstants as pypetconstants
 import pypet.pypetexceptions as pex
-from pypet import __version__ as VERSION
+from pypet._version import __version__ as VERSION
 from pypet.parameter import ObjectTable
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger
