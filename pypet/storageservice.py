@@ -577,7 +577,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_results_runs = False
         self._overview_results_runs_summary = False
 
-
+        self._mode = None
 
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
@@ -3654,7 +3654,6 @@ class HDF5StorageService(StorageService, HasLogger):
                         del example_item_node._v_attrs[HDF5StorageService.COMMENT]
 
                     self._hdf5file.flush()
-                    pass
                 else:
                     self._all_store_param_or_result_table_entry(instance, table,
                                                                 flags=(

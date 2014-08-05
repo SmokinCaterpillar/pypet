@@ -900,32 +900,32 @@ class BrianMonitorResult(Result):
 
         elif self._storage_mode == BrianMonitorResult.ARRAY_MODE:
 
-                format_string = self._get_format_string(monitor)
-                self.f_set(format_string=format_string)
+            format_string = self._get_format_string(monitor)
+            self.f_set(format_string=format_string)
 
-                spiked_neurons = set()
+            spiked_neurons = set()
 
+            for neuron in range(len(monitor.source)):
+                spikes = monitor.times(neuron)
+                if len(spikes) > 0:
+
+                    spiked_neurons.add(neuron)
+
+                    key = 'spiketimes_' + format_string % neuron
+                    self.f_set(**{key: spikes})
+
+            spiked_neurons = sorted(list(spiked_neurons))
+            if spiked_neurons:
+                self.f_set(neurons_with_spikes=spiked_neurons)
+
+            for varname in varnames:
                 for neuron in range(len(monitor.source)):
-                    spikes = monitor.times(neuron)
-                    if len(spikes) > 0:
-
-                        spiked_neurons.add(neuron)
-
-                        key = 'spiketimes_' + format_string % neuron
-                        self.f_set(**{key: spikes})
-
-                spiked_neurons = sorted(list(spiked_neurons))
-                if spiked_neurons:
-                    self.f_set(neurons_with_spikes=spiked_neurons)
-
-                for varname in varnames:
-                    for neuron in range(len(monitor.source)):
-                        values = monitor.values(varname, neuron)
-                        if len(values) > 0:
-                            key = varname + '_' + format_string % neuron
-                            self.f_set(**{key: values})
+                    values = monitor.values(varname, neuron)
+                    if len(values) > 0:
+                        key = varname + '_' + format_string % neuron
+                        self.f_set(**{key: values})
         else:
-                raise RuntimeError('You shall not pass!')
+            raise RuntimeError('You shall not pass!')
 
     def _extract_spike_monitor(self, monitor):
         
@@ -964,25 +964,25 @@ class BrianMonitorResult(Result):
                     self.f_set(spikes=spikeframe)
 
         elif self._storage_mode == BrianMonitorResult.ARRAY_MODE:
-                format_string = self._get_format_string(monitor)
-                self.f_set(format_string=format_string)
+            format_string = self._get_format_string(monitor)
+            self.f_set(format_string=format_string)
 
-                spiked_neurons = set()
+            spiked_neurons = set()
 
-                for neuron, spikes in monitor.spiketimes.items():
-                    if len(spikes) > 0:
+            for neuron, spikes in monitor.spiketimes.items():
+                if len(spikes) > 0:
 
-                        spiked_neurons.add(neuron)
+                    spiked_neurons.add(neuron)
 
-                        key = 'spiketimes_' + format_string % neuron
-                        self.f_set(**{key: spikes})
+                    key = 'spiketimes_' + format_string % neuron
+                    self.f_set(**{key: spikes})
 
-                spiked_neurons = sorted(list(spiked_neurons))
-                if spiked_neurons:
-                    self.f_set(neurons_with_spikes=spiked_neurons)
+            spiked_neurons = sorted(list(spiked_neurons))
+            if spiked_neurons:
+                self.f_set(neurons_with_spikes=spiked_neurons)
 
         else:
-                raise RuntimeError('You shall not pass!')
+            raise RuntimeError('You shall not pass!')
 
     def _extract_population_rate_monitor(self, monitor):
         assert isinstance(monitor, PopulationRateMonitor)

@@ -12,7 +12,6 @@ A SingleRun provides less functionality than the Trajectory.
 
 __author__ = 'Robert Meyer'
 
-import logging
 import datetime
 import time
 import hashlib
@@ -1917,13 +1916,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
 
     def _store_expansion(self):
-        for param_name, param in self._explored_parameters.items():
-
+        for param in compat.itervalues(self._explored_parameters):
             try:
-
                 self._storage_service.store(pypetconstants.DELETE, param,
                                             trajectory_name=self.v_trajectory_name)
-
             except Exception:
                 pass  # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)

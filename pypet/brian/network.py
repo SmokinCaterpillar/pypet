@@ -548,7 +548,7 @@ class NetworkRunner(NetworkComponent):
             subrun_number += 1
 
 
-class NetworkManager(object):
+class NetworkManager(HasLogger):
     """Manages a BRIAN network experiment and creates the network.
 
     An experiment consists of
@@ -629,33 +629,6 @@ class NetworkManager(object):
             self._network_constructor = Network
         else:
             self._network_constructor = network_constructor
-
-
-
-
-    def __getstate__(self):
-        """Called for pickling.
-
-        Removes the logger to allow pickling and returns a copy of `__dict__`.
-
-        """
-        result = self.__dict__.copy()
-        del result['_logger']  # pickling does not work with loggers
-        return result
-
-    def __setstate__(self, statedict):
-        """Called after loading a pickle dump.
-
-        Restores `__dict__` from `statedict` and adds a new logger.
-
-        """
-        self.__dict__.update(statedict)
-        self._set_logger()
-
-
-    def _set_logger(self):
-        """Creates a logger"""
-        self._logger = logging.getLogger('NetworkManager')
 
     def add_parameters(self, traj):
         """Adds parameters for a network simulation.

@@ -44,7 +44,6 @@ __author__ = 'Robert Meyer'
 
 import inspect
 import itertools as itools
-import logging
 import re
 
 from pypet.utils.decorators import deprecated
@@ -424,6 +423,7 @@ class NaturalNamingInterface(HasLogger):
         # Context Manager to disable logging for auto-loading
         self._disable_logger = DisableLogger()
 
+
     def _map_type_to_dict(self, type_name):
         """ Maps a an instance type representation string (e.g. 'RESULT')
         to the corresponding dictionary in root.
@@ -454,9 +454,6 @@ class NaturalNamingInterface(HasLogger):
         new_root._children = self._root_instance._children
         self._root_instance = new_root
         self._run_or_traj_name = self._root_instance.v_name
-
-        self._logger = logging.getLogger('NNTree=' +
-                                         self._root_instance.v_name)
 
     def _get_backwards_search(self):
         return self._root_instance.v_backwards_search

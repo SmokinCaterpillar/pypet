@@ -14,6 +14,8 @@ pypet 0.1b.8
 
 *   Better support for pytables 2 and 3 with same code base.
 
+*   pypet and pypet.brian now provide the __all__ list.
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was

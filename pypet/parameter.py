@@ -2444,6 +2444,6 @@ class PickleResult(Result):
             # For backwards compatibility
             dump = next(compat.itervalues(load_dict))
             self.v_protocol = PickleParameter._get_protocol(dump)
-        for idx, key in enumerate(load_dict):
+        for key in load_dict:
             val = load_dict[key]
             self._data[key] = pickle.loads(val)
