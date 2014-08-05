@@ -68,7 +68,7 @@ def parameters_equal(a, b):
     :raises: ValueError if both inputs are no parameter instances
 
     """
-    if not (isinstance(b, pypet.parameter.BaseParameter) and
+    if (not isinstance(b, pypet.parameter.BaseParameter) and
             not isinstance(a, pypet.parameter.BaseParameter)):
         raise ValueError('Both inputs are not parameters')
 
