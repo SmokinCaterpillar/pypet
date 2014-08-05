@@ -2081,7 +2081,7 @@ class Environment(HasLogger):
                                             self._logger.info(
                                                 '\n********************************'
                                                 '****************************\n'
-                                                ' IMMEDIATE POSTPROCESSING expanded the '
+                                                'IMMEDIATE POSTPROCESSING expanded the '
                                                 'trajectory and added %d new runs'
                                                 '\n********************************'
                                                 '****************************\n' %
