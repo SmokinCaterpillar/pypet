@@ -22,7 +22,7 @@ def _make_pt2_array(hdf5_file, *args, **kwargs):
 
 
 if tables == 2:
-    open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
+    open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
 
     create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.createGroup(*args, **kwargs)
     get_node = lambda hdf5_file, *args, **kwargs: hdf5_file.getNode(*args, **kwargs)
@@ -33,7 +33,7 @@ if tables == 2:
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.createTable(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
-                                                                              **kwargs)
+                                                                        **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
 
@@ -42,7 +42,7 @@ if tables == 2:
     set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setAttr(*args, **kwargs)
 
 elif tables == 3:
-    open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
+    open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
 
     create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.create_group(*args, **kwargs)
     get_node = lambda hdf5_file, *args, **kwargs: hdf5_file.get_node(*args, **kwargs)
