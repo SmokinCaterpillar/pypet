@@ -77,7 +77,9 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._set_start_time()  # Sets current time as start time, if using environment is reset
         # to time precise time point of start
         self._finish_timestamp = None  # End of run, set by the environemnt
-        self._runtime = None  # Runtime in human readabel format
+        self._runtime = None  # Runtime in human readable format
+        self._timestamp = None
+        self._time = None
 
         self._trajectory_name = parent_trajectory.v_name
         self._trajectory_time = parent_trajectory.v_time
@@ -457,7 +459,9 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         :raises: ValueError
 
         """
-        return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names)
+        return self._nn_interface._to_dict(self, fast_access=fast_access,
+                                           short_names=short_names,
+                                           copy=copy)
 
     def f_get_config(self, fast_access=False, copy=True):
         """Returns a dictionary containing the full config names as keys and the config parameters
@@ -1543,7 +1547,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             raise TypeError('Your trajectory is already stored to disk or database, shrinking is '
                             'not allowed.')
 
-        for key, param in self._explored_parameters.items():
+        for param in compat.itervalues(self._explored_parameters):
             param.f_unlock()
             param._shrink()
 
@@ -2054,12 +2058,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     def f_lock_parameters(self):
         """Locks all parameters"""
-        for key, par in self._parameters.items():
+        for par in compat.itervalues(self._parameters):
             par.f_lock()
 
     def f_lock_derived_parameters(self):
         """Locks all derived parameters"""
-        for key, par in self._derived_parameters.items():
+        for par in compat.itervalues(self._derived_parameters):
             par.f_lock()
 
     def _remove_run_data(self):
