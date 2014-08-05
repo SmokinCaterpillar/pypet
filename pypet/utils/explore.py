@@ -1,6 +1,6 @@
-'''
+"""
 Created on 24.05.2013
-'''
+"""
 import itertools as itools
 
 try:
@@ -14,18 +14,18 @@ import pypet.compat as compat
 
 
 def cartesian_product(parameter_dict, combined_parameters=()):
-    ''' Generates a Cartesian product of the input parameter dictionary.
+    """ Generates a Cartesian product of the input parameter dictionary.
 
     For example:
 
     >>> print cartesian_product({'param1':[1,2,3], 'param2':[42.0, 52.5]})
     {'param1':[1,1,2,2,3,3],'param2': [42.0,52.5,42.0,52.5,42.0,52.5]}
 
-    :param param_dict:
+    :param parameter_dict:
 
         Dictionary containing parameter names as keys and iterables of data to explore.
 
-    :param combined_parameter_list:
+    :param combined_parameters:
 
         Tuple of tuples. Defines the order of the parameters and parameters that are
         linked together.
@@ -42,7 +42,7 @@ def cartesian_product(parameter_dict, combined_parameters=()):
 
     :returns: Dictionary with cartesian product lists.
 
-    '''
+    """
     if not combined_parameters:
         combined_parameters = list(parameter_dict)
     else:

@@ -166,10 +166,10 @@ class QueueStorageServiceWriter(HasLogger):
                                 self._trajectory_name = trajectory_name
                             elif self._trajectory_name != trajectory_name:
                                 raise RuntimeError('Cannot store into two different trajectories. '
-                                                   'I am supposed to store into %s, but I should also '
-
-                                                   'store into %s.' % (
-                                                       self._trajectory_name, trajectory_name))
+                                                   'I am supposed to store into %s, '
+                                                   'but I should also '
+                                                   'store into %s.' %
+                                                   (self._trajectory_name, trajectory_name))
 
                             to_store_list.append((store_msg, stuff_to_store, args, kwargs))
                         else:
@@ -385,7 +385,7 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Type of scalars stored into a container'''
 
 
-    # ## Overview Table constants
+    ### Overview Table constants
     CONFIG = 'config'
     PARAMETERS = 'parameters'
     RESULTS = 'results'
@@ -426,7 +426,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
 
-    # ## Storing Data Constants
+    ### Storing Data Constants
     STORAGE_TYPE = 'SRVC_STORE'
     '''Flag, how data was stored'''
 
@@ -604,7 +604,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     @property
     def complib(self):
-        "Compression library used"
+        """Compression library used"""
         return self._complib
 
     @complib.setter
@@ -760,8 +760,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 :param load_only:
 
-                    If you load a result, you can partially load it and ignore the rest of the data.
-                    Just specify the name of the data you want to load. You can also provide a list,
+                    If you load a result, you can partially load it and ignore the
+                    rest of the data. Just specify the name of the data you want to load.
+                    You can also provide a list,
                     for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
 
                     Issues a warning if items cannot be found.
@@ -1077,7 +1078,7 @@ class HDF5StorageService(StorageService, HasLogger):
             elif msg == pypetconstants.SINGLE_RUN:
                 self._srn_store_single_run(stuff_to_store, *args, **kwargs)
 
-            elif msg in (pypetconstants.LEAF):
+            elif msg in pypetconstants.LEAF:
                 self._prm_store_parameter_or_result(msg, stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.DELETE:
@@ -1227,7 +1228,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     # trajectory has been stored before
                     if not msg == pypetconstants.TRAJECTORY:
                         raise ValueError('Your trajectory cannot be found in the hdf5file, '
-                                         'please use >>traj.f_store()<< before storing anyhting else.')
+                                         'please use >>traj.f_store()<< '
+                                         'before storing anyhting else.')
 
                     # If we want to store a trajectory it has not been stored before
                     # create a new trajectory group
@@ -1424,8 +1426,8 @@ class HDF5StorageService(StorageService, HasLogger):
             old_split_name = old_name.split('.')
             for idx, name in enumerate(old_split_name):
                 add_to_count = False
-                if (name.startswith(pypetconstants.RUN_NAME)
-                    and name != pypetconstants.RUN_NAME_DUMMY):
+                if (name.startswith(pypetconstants.RUN_NAME) and
+                            name != pypetconstants.RUN_NAME_DUMMY):
                     old_split_name[idx] = run_mask
                     add_to_count = True
                     break
@@ -1484,7 +1486,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 for col_name in table.colnames:
 
                     # This is to allow backwards compatibility
-                    if col_name == 'example_item_run_name' and not col_name in other_table.colnames:
+                    if (col_name == 'example_item_run_name' and
+                            not col_name in other_table.colnames):
                         continue
 
                     if col_name == 'example_item_run_name':
@@ -2024,7 +2027,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                            ' Use >>force=True<< to perform your load regardless'
                                            ' of version mismatch.' %
                                            (VERSION, curr_python, version, python))
-        elif (version != VERSION or curr_python != python):
+        elif version != VERSION or curr_python != python:
             self._logger.warning('Current pypet version is %s with python %s but your trajectory'
                                  ' was created with version %s under python %s.'
                                  ' Yet, you enforced the load, so I will'
@@ -2554,13 +2557,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 if comment is None:
                     comment = ''
 
-                new_traj_node = parent_traj_node._nn_interface._add_generic(parent_traj_node,
-                                                                            type_name=nn.GROUP,
-                                                                            group_type_name=nn.GROUP,
-                                                                            args=(name,
-                                                                                  comment),
-                                                                            kwargs={},
-                                                                            add_prefix=False)
+                new_traj_node = parent_traj_node._nn_interface._add_generic(
+                    parent_traj_node,
+                    type_name=nn.GROUP,
+                    group_type_name=nn.GROUP,
+                    args=(name, comment),
+                    kwargs={},
+                    add_prefix=False)
 
                 new_traj_node._stored = not as_new
 
@@ -2630,7 +2633,7 @@ class HDF5StorageService(StorageService, HasLogger):
                          (not traj_node.v_annotations.f_is_empty()
                           and not HDF5StorageService.ANNOTATED in new_hdf5_group._v_attrs) or
                          (traj_node.v_comment != '' and
-                          not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs) )
+                          not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs))
 
             if store_new:
                 self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group)
@@ -2777,7 +2780,7 @@ class HDF5StorageService(StorageService, HasLogger):
         return runsummary
 
 
-    # ################ Methods used across Storing and Loading different Items #####################
+    ################# Methods used across Storing and Loading different Items #####################
 
     @staticmethod
     def _all_find_param_or_result_entry_and_return_iterator(param_or_result, table):
@@ -3262,9 +3265,10 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['class_name'] = compat.tobytetype(item.f_get_class_name())
 
         if 'value' in colnames:
-            insert_dict['value'] = self._all_cut_string(compat.tobytetype(item.f_val_to_str()),
-                                                        pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                                        self._logger)
+            insert_dict['value'] = self._all_cut_string(
+                compat.tobytetype(item.f_val_to_str()),
+                pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                self._logger)
 
         if 'example_item_run_name' in colnames:
             insert_dict['example_item_run_name'] = additional_info['example_item_run_name']
@@ -3279,15 +3283,17 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['timestamp'] = item.v_timestamp
 
         if 'range' in colnames:
-            insert_dict['range'] = self._all_cut_string(compat.tobytetype(str(item.f_get_range())),
-                                                        pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
-                                                        self._logger)
+            insert_dict['range'] = self._all_cut_string(
+                compat.tobytetype(str(item.f_get_range())),
+                pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
+                self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
-            insert_dict['array'] = self._all_cut_string(compat.tobytetype(str(item.f_get_range())),
-                                                        pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
-                                                        self._logger)
+            insert_dict['array'] = self._all_cut_string(
+                compat.tobytetype(str(item.f_get_range())),
+                pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
+                self._logger)
 
         if 'version' in colnames:
             insert_dict['version'] = compat.tobytetype(item.v_version)
@@ -3499,12 +3505,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     if nitems == 0:
                         # Here the summary became obsolete
-                        self._all_store_param_or_result_table_entry(instance, table,
-                                                                    flags=(
-                                                                        HDF5StorageService.REMOVE_ROW,))
+                        self._all_store_param_or_result_table_entry(
+                            instance,
+                            table,
+                            flags=(HDF5StorageService.REMOVE_ROW,))
 
 
-                except  pt.NoSuchNodeError:
+                except pt.NoSuchNodeError:
                     pass
                 except StopIteration:
                     pass
@@ -3544,7 +3551,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     table = getattr(self._overview_group, table_name)
                 else:
                     return where, definitely_store_comment
-            except  pt.NoSuchNodeError:
+            except pt.NoSuchNodeError:
                 return where, definitely_store_comment
 
             # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
@@ -3613,9 +3620,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
                             row['example_item_run_name'] = creator_name
 
-                            row['value'] = self._all_cut_string(instance.f_val_to_str(),
-                                                                pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                                                self._logger)
+                            row['value'] = self._all_cut_string(
+                                instance.f_val_to_str(),
+                                pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
+                                self._logger)
                         else:
                             self._logger.warning('Your example value and comment in the overview'
                                                  ' table cannot be set to the lowest index'
@@ -3652,13 +3660,14 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                 flags=(
                                                                     HDF5StorageService.ADD_ROW,),
                                                                 additional_info={
-                                                                    'example_item_run_name': creator_name})
+                                                                    'example_item_run_name':
+                                                                    creator_name})
 
                     definitely_store_comment = True
 
             # There are 2 cases of exceptions, either the table is switched off, or
             # the entry already exists, in both cases we  have to store the comments
-            except  pt.NoSuchNodeError:
+            except pt.NoSuchNodeError:
                 definitely_store_comment = True
             finally:
                 # Get the old name back
@@ -3667,7 +3676,8 @@ class HDF5StorageService(StorageService, HasLogger):
         return where, definitely_store_comment
 
     def _prm_add_meta_info(self, instance, group, msg):
-        """Adds information to overview tables and meta information to the `instance`s hdf5 `group`.
+        """Adds information to overview tables and meta information to
+        the `instance`s hdf5 `group`.
 
         :param instance: Instance to store meta info about
         :param group: HDF5 group of instance
@@ -3692,8 +3702,8 @@ class HDF5StorageService(StorageService, HasLogger):
         except pt.NoSuchNodeError:
             pass
 
-        if ((
-                        not self._purge_duplicate_comments or definitely_store_comment) and instance.v_comment != ''):
+        if ((not self._purge_duplicate_comments or definitely_store_comment) and
+                    instance.v_comment != ''):
             # Only add the comment if necessary
             setattr(group._v_attrs, HDF5StorageService.COMMENT, instance.v_comment)
 
@@ -3785,8 +3795,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 if len(stuff_not_to_be_overwritten) > 0:
                     self._logger.warning('Cannot overwrite `%s`, these items are not supposed to '
-                                         'be stored by the leaf node.' % str(
-                        stuff_not_to_be_overwritten))
+                                         'be stored by the leaf node.' %
+                                         str(stuff_not_to_be_overwritten))
 
                 stuff_to_overwrite = overwrite_set & key_set
                 if len(stuff_to_overwrite) > 0:
@@ -4165,7 +4175,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param instance: Instance to be removed
 
-        :param remove_empty_groups: Whether to delete groups that might become empty due to deletion
+        :param remove_empty_groups:
+
+            Whether to delete groups that might become empty due to deletion
 
         :param delete_only:
 
@@ -4205,18 +4217,20 @@ class HDF5StorageService(StorageService, HasLogger):
                 if table_name in self._overview_group:
                     table = getattr(self._overview_group, table_name)
 
-                    self._all_store_param_or_result_table_entry(instance, table,
-                                                                flags=(
-                                                                    HDF5StorageService.REMOVE_ROW,))
+                    self._all_store_param_or_result_table_entry(
+                        instance,
+                        table,
+                        flags=(HDF5StorageService.REMOVE_ROW,))
 
                 if instance.v_is_parameter:
                     table_name = 'explored_parameters'
                     if table_name in self._overview_group:
                         table = getattr(self._overview_group, table_name)
 
-                        self._all_store_param_or_result_table_entry(instance, table,
-                                                                    flags=(
-                                                                        HDF5StorageService.REMOVE_ROW,))
+                        self._all_store_param_or_result_table_entry(
+                            instance,
+                            table,
+                            flags=(HDF5StorageService.REMOVE_ROW,))
 
                 self._prm_meta_remove_summary(instance)
 
@@ -4343,7 +4357,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Remember the original types of the data for perfect recall
                 if idx == 0 and len(
                         description_dict) <= pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
-                    # We only have a single table and we can store the original data types as attributes
+                    # We only have a single table and
+                    # we can store the original data types as attributes
                     for field_name in data_type_dict:
                         type_description = data_type_dict[field_name]
                         ptcompat.set_attribute(table, field_name, type_description)
@@ -4410,7 +4425,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # remember the original data types
             self._all_set_attributes_to_recall_natives(val[0], PTItemMock(original_data_type_dict),
-                                                       HDF5StorageService.FORMATTED_COLUMN_PREFIX % key)
+                                                       HDF5StorageService.FORMATTED_COLUMN_PREFIX %
+                                                       key)
 
             _convert_lists_and_tuples(val)
 
@@ -4442,7 +4458,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if isinstance(val, np.ndarray):
                 if (np.issubdtype(val.dtype, compat.unicode_type) or
-                        np.issubdtype(val.dtype, compat.bytes_type) ):
+                        np.issubdtype(val.dtype, compat.bytes_type)):
                     itemsize = int(self._prm_get_longest_stringsize(column))
                     return pt.StringCol(itemsize, shape=val.shape)
                 else:

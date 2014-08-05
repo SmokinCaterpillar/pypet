@@ -68,12 +68,12 @@ def parameters_equal(a, b):
     :raises: ValueError if both inputs are no parameter instances
 
     """
-    if not isinstance(b, pypet.parameter.BaseParameter) and not isinstance(a,
-                                                                           pypet.parameter.BaseParameter):
+    if not (isinstance(b, pypet.parameter.BaseParameter) and
+            not isinstance(a, pypet.parameter.BaseParameter)):
         raise ValueError('Both inputs are not parameters')
 
-    if not isinstance(b, pypet.parameter.BaseParameter) or not isinstance(a,
-                                                                          pypet.parameter.BaseParameter):
+    if (not isinstance(b, pypet.parameter.BaseParameter) or
+            not isinstance(a, pypet.parameter.BaseParameter)):
         return False
 
     if not a.v_name == b.v_name:
@@ -144,7 +144,7 @@ def nested_equal(a, b):
     if isinstance(a, (pd.DataFrame, pd.Series)):
         try:
             new_frame = a == b
-            new_frame = new_frame | ( pd.isnull(a) & pd.isnull(b))
+            new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
             return np.all(new_frame.as_matrix())
         except ValueError:
             # The Value Error can happen if the data frame is of dtype=object and contains

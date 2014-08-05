@@ -7,7 +7,7 @@ __author__ = 'Robert Meyer'
 
 
 def deprecated(msg=''):
-    '''This is a decorator which can be used to mark functions
+    """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used.
 
@@ -15,7 +15,7 @@ def deprecated(msg=''):
 
         Additional message added to the warning.
 
-    '''
+    """
 
     def wrapper(func):
         @functools.wraps(func)
@@ -56,7 +56,7 @@ def copydoc(fromfunc, sep="\n"):
         if len(split_doc) != len(split_doc_no_abstract):
             sourcedoc = '\n'.join(split_doc_no_abstract[:-1])
 
-        if func.__doc__ == None:
+        if func.__doc__ is None:
             func.__doc__ = sourcedoc
         else:
             func.__doc__ = sep.join([sourcedoc, func.__doc__])

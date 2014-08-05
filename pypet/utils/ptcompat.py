@@ -16,6 +16,7 @@ def _make_pt2_carray(hdf5_file, *args, **kwargs):
     carray[:] = data[:]
     return carray
 
+
 def _make_pt2_array(hdf5_file, *args, **kwargs):
     data = kwargs.pop('obj')
     return hdf5_file.createArray(*args, object=data, **kwargs)

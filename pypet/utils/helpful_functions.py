@@ -62,13 +62,13 @@ def progressbar(index, total, percentage_step=20, logger=None):
     """
     steps = int(100 / percentage_step)
     total_float = total / 100.
-    cur = int(int((index) / total_float) / percentage_step)
+    cur = int(int(index / total_float) / percentage_step)
     nex = int(int((index + 1) / total_float) / percentage_step)
 
-    if (nex > cur):
+    if nex > cur:
         statement = ('[' + '=' * min(nex, steps) +
                      ' ' * max(steps - nex, 0) + ']' + '%.1f' % (
-            (index + 1) / (0.01 * total)) + '%')
+                    (index + 1) / (0.01 * total)) + '%')
         try:
             logger.info(statement)
         except AttributeError:

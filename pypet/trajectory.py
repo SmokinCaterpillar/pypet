@@ -23,7 +23,7 @@ import copy as cp
 import numpy as np
 import sys
 
-if (sys.version_info < (2, 7, 0)):
+if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
 else:
     from collections import OrderedDict
@@ -160,7 +160,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
     def _set_finish_time(self):
         """Sets the finish time and computes the runtime in human readable format"""
         init_time = time.time()
-        formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        #formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         self._finish_timestamp = init_time
 
         findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
@@ -188,7 +188,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
                 raise TypeError('Not a class!')
 
             return new_class
-        except (NameError, TypeError) as exc:
+        except (NameError, TypeError):
             for dynamic_class in self._dynamic_imports:
                 # Dynamic classes can be provided directly as a Class instance,
                 # for example as `MyCustomParameter`,
@@ -227,7 +227,8 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
     @property
     def v_shortcuts(self):
-        """Whether shortcuts are allowed if accessing data via natural naming or squared bracket indexing."""
+        """Whether shortcuts are allowed if accessing data via natural naming or
+        squared bracket indexing."""
         return self._shortcuts
 
     @v_shortcuts.setter
@@ -260,8 +261,8 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
     @property
     def v_iter_recursive(self):
-        """Whether using `__iter__` should iterate only immediate children or recursively all nodes.
-        """
+        """Whether using `__iter__` should iterate only immediate children or
+        recursively all nodes."""
         return self._iter_recursive
 
     @v_iter_recursive.setter
@@ -1296,7 +1297,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves`.
 
         """
-        if name_or_idx is None or name_or_idx == pypetconstants.RUN_NAME_DUMMY or name_or_idx == -1:
+        if (name_or_idx is None or name_or_idx == pypetconstants.RUN_NAME_DUMMY or
+                    name_or_idx == -1):
             self.f_restore_default()
         else:
             if isinstance(name_or_idx, compat.base_type):
@@ -1522,8 +1524,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                 self.f_delete_items(still_empty, remove_from_trajectory=True,
                                                     remove_empty_groups=True)
 
-                        if (self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False)
-                            and self.f_get('%s.runs.%s').f_has_children()):
+                        if (self.f_contains('%s.runs.%s' % (where, run_name),
+                                            shortcuts=False) and
+                                self.f_get('%s.runs.%s').f_has_children()):
                             raise RuntimeError('Something is wrong!')
 
         return cleaned_run_indices
@@ -1774,7 +1777,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         Example:
 
         >>> predicate = lambda param1, param2: param1==4 and param2 in [1.0, 2.0]
-        >>> iterator = traj.f_find_idx(['groupA.param1','groupA.param2'], predicate)
+        >>> iterator = traj.f_find_idx(['groupA.param1', 'groupA.param2'], predicate)
         >>> [x for x in iterator]
         [0, 2, 17, 36]
 
@@ -2202,9 +2205,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :param dynamically_imported_classes:
 
-            If you've written a custom parameter that needs to be loaded dynamically during runtime,
-            this needs to be specified here as a list of classes or strings naming classes
-            and there module paths. For example:
+            If you've written a custom parameter that needs to be loaded dynamically
+            during runtime, this needs to be specified here as a list of classes or
+            strings naming classes and there module paths. For example:
             `dynamically_imported_classes = ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
             If you only have a single class to import, you do not need the list brackets:
@@ -2447,7 +2450,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         # BACKUP if merge is possible
         if not backup_filename is None:
-            if backup_filename == 1 or backup_filename == True:
+            if backup_filename == 1 or backup_filename is True:
                 backup_filename = None  # We set it to None here to signal the backup function
                 # that we want the names to be chosen for us
 
@@ -2522,9 +2525,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 config_name = 'merge.%s.other_trajectory.timestamp' % merge_name
                 self.f_add_config(config_name, other_trajectory.v_timestamp,
-                                  comment='Timestamp of creation of other trajectory merged into the'
-
-                                          ' current one')
+                                  comment='Timestamp of creation of other trajectory '
+                                          'merged into the current one')
 
                 config_name = 'merge.%s.other_trajectory.length' % merge_name
                 self.f_add_config(config_name, len(other_trajectory),
@@ -2538,9 +2540,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # Merge parameters and keep track which runs where used and which parameters need
         # to be updated
         self._logger.info('Merging the parameters')
-        used_runs, changed_parameters = self._merge_parameters(other_trajectory, remove_duplicates,
-                                                               trial_parameter,
-                                                               ignore_trajectory_derived_parameters)
+        used_runs, changed_parameters = self._merge_parameters(
+            other_trajectory,
+            remove_duplicates,
+            trial_parameter,
+            ignore_trajectory_derived_parameters)
         if keep_info:
             config_name = 'merge.%s.merged_runs' % merge_name
             self.f_add_config(config_name, int(np.sum(used_runs)),
@@ -2587,8 +2591,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         except pex.NoSuchServiceError:
             # If the storage service does not support merge we end up here
             self._logger.warning('My storage service does not support merging of trajectories, '
-                                 'I will use the f_load mechanism of the other trajectory and store '
-                                 'the results slowly item by item. Note that thereby the other '
+                                 'I will use the f_load mechanism of the other trajectory and '
+                                 'store the results slowly item by item. '
+                                 'Note that thereby the other '
                                  'trajectory will be altered (in RAM).')
 
             self._merge_slowly(other_trajectory, rename_dict)
@@ -2598,8 +2603,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.warning(str(e))
 
             self._logger.warning('Could not perfom fast merging. '
-                                 'I will use the `f_load` method of the other trajectory and store '
-                                 'the results slowly item by item. Note that thereby the other '
+                                 'I will use the `f_load` method of the other trajectory and '
+                                 'store the results slowly item by item. '
+                                 'Note that thereby the other '
                                  'trajectory will be altered (in RAM).')
 
             self._merge_slowly(other_trajectory, rename_dict)
@@ -2830,12 +2836,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
                 new_runname = pypetconstants.FORMATTED_RUN_NAME % count
 
-                self._run_information[new_runname] = dict(idx=count,
-                                                          time=time, timestamp=timestamp,
-                                                          completed=completed,
-                                                          short_environment_hexsha=short_environment_hexsha,
-                                                          finish_timestamp=finish_timestamp,
-                                                          runtime=runtime)
+                self._run_information[new_runname] = dict(
+                    idx=count,
+                    time=time,
+                    timestamp=timestamp,
+                    completed=completed,
+                    short_environment_hexsha=short_environment_hexsha,
+                    finish_timestamp=finish_timestamp,
+                    runtime=runtime)
 
                 self._single_run_ids[count] = new_runname
                 self._single_run_ids[new_runname] = count
@@ -3010,7 +3018,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
                                 'contain integers from 0 to %d, but it infact it contains `%s` '
                                 'in the other trajectory.' % (
-                    othermaxtrial_T2, str(othertrialset)))
+                                othermaxtrial_T2, str(othertrialset)))
 
             # If the trial parameter's name was just given in parts we update it here
             # to the full name
@@ -3052,9 +3060,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             # If a parameter was explored in one of the trajectories or two unexplored
             # parameters differ, we need to mark them for merge
-            if (my_param.f_has_range()
-                or other_param.f_has_range()
-                or not my_param._equal_values(my_param.f_get(), other_param.f_get())):
+            if (my_param.f_has_range() or
+                    other_param.f_has_range() or
+                    not my_param._equal_values(my_param.f_get(), other_param.f_get())):
 
                 # If two unexplored parameters differ, that means they differ in every run,
                 # accordingly we do not need to check for duplicate runs anymore
@@ -3142,7 +3150,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return use_runs, compat.listkeys(params_to_change)
 
-    def f_migrate(self, new_name=None, new_filename=None, new_filetile=None, in_store=False):
+    def f_migrate(self, new_name=None, new_filename=None, new_file_tile=None, in_store=False):
         """Can be called to rename and relocate the trajectory.
 
         Choosing a new filename only works with the original HDF5StorageService.
@@ -3156,34 +3164,27 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         :param in_store:
 
-            Set this to True if the trajectory has been stored with the new name at the new file before
-            and you just want to "switch back" to the location. If you migrate to a store used
-            before and you do not set `in_store=True`, the storage service will throw a RuntimeError
-            in case you store the Trajectory
+            Set this to True if the trajectory has been stored with the new name at the new
+            file before  and you just want to "switch back" to the location.
+            If you migrate to a store used before and you do not set `in_store=True`,
+            the storage service will throw a RuntimeError in case you store the Trajectory
             because it will assume that you try to store a new trajectory that accidentally has
             the very same name as another trajectory. If set to `True` and trajectory is not found
             in the file, the trajectory is simply stored to the file.
 
         """
 
-        # if new_name is None and new_filename is None:
-        # raise ValueError('Calling `f_migrate` without changing at least one thing makes no
-        # sense.')
-        #
-        # if new_name is not None and new_name == self._name:
-        # raise ValueError('New name must differ from old one.')
-        #
-        # if new_filename is not None and new_filename == self._filename:
-        # raise ValueError('New filename must differ from old one.')
-
         if new_name is not None:
             self._name = new_name
             self._trajectory_name = self._name
 
+        if new_file_tile is None:
+            new_file_tile = self.v_name
+
         if new_filename is not None:
             if self._storage_service is None:
                 self._storage_service = HDF5StorageService(filename=new_filename,
-                                                           file_title=self.v_name)
+                                                           file_title=new_file_tile)
             else:
                 self._storage_service.filename = new_filename
             self._filename = new_filename
@@ -3237,7 +3238,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._stored = True
 
     def f_is_empty(self):
-        """Whether no results nor parameters have been added yet to the trajectory (ignores config)."""
+        """Whether no results nor parameters have been added yet to the trajectory
+        (ignores config)."""
         return (len(self._parameters) == 0 and
                 len(self._derived_parameters) == 0 and
                 len(self._results) == 0)

@@ -61,14 +61,12 @@ numpy 64 bit integers, for instance.
 
 __author__ = 'Robert Meyer'
 
-import logging
 
 try:
     import cPickle as pickle  # will fail under python 3
 except ImportError:
     import pickle
 import pickletools
-import hashlib
 
 import numpy as np
 import scipy.sparse as spsp
@@ -1085,7 +1083,7 @@ class Parameter(BaseParameter):
                 raise TypeError(
                     'Data of `%s` is not of the same type as the original entry value, '
                     'new type is %s vs old type %s.' %
-                    ( self.v_full_name, str(type(newval)), str(type(self._default))))
+                    (self.v_full_name, str(type(newval)), str(type(self._default))))
 
             data_tuple.append(newval)
 
@@ -1370,7 +1368,7 @@ class SparseParameter(ArrayParameter):
         return (spsp.isspmatrix_csc(data) or
                 spsp.isspmatrix_csr(data) or
                 spsp.isspmatrix_bsr(data) or
-                spsp.isspmatrix_dia(data) )
+                spsp.isspmatrix_dia(data))
 
 
     def f_supports(self, data):
@@ -1883,8 +1881,8 @@ class Result(BaseResult):
         'y'
 
 
-        Alternative method to put and retrieve data from the result container is via `__getattr__` and
-        `__setattr__`
+        Alternative method to put and retrieve data from the result container is via
+        ``__getattr__`` and ``__setattr__``:
 
         >>> res.ford = 'prefect'
         >>> res.ford
@@ -2063,9 +2061,9 @@ class Result(BaseResult):
         """
         if isinstance(key, int):
             if key == 0:
-                name = self.v_name
+                key = self.v_name
             else:
-                name = self.v_name + '_%d' % key
+                key = self.v_name + '_%d' % key
 
         setattr(self, key, value)
 
@@ -2240,7 +2238,7 @@ class Result(BaseResult):
 
         Example usage:
 
-        >>> res = Result('Iam.an.example', comment = 'And a neat one, indeed!', fortytwo=42)
+        >>> res = Result('Iam.an.example', comment='And a neat one, indeed!', fortytwo=42)
         >>> 'fortytwo' in res
         True
         >>> del res.fortytwo

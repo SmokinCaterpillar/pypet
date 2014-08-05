@@ -41,7 +41,7 @@ class HashArray(object):
     def __init__(self, ndarray):
         """Creates a new hashable object encapsulating an ndarray.
 
-            :param wrapped: The wrapped ndarray.
+            :param ndarray: The wrapped ndarray.
 
         """
         self._ndarray = ndarray
