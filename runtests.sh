@@ -12,6 +12,7 @@ if [[ $COVERAGE == ON ]]
 
 if [[ $EXAMPLES == ON ]]
     then
+        conda install matplotlib
         cd pypet/tests
         python run_all_examples.py
         cd ..

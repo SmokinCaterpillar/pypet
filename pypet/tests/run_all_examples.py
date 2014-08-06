@@ -1,3 +1,7 @@
+"""Module running all examples in the examples directory
+
+Suppresses all openings of plots
+"""
 __author__ = 'Robert Meyer'
 
 import matplotlib

@@ -59,7 +59,7 @@ install:
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then conda install cython; else pip install cython==$CYTHON_VERSION; fi
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then conda install tables; else pip install tables==$TABLES_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then conda install pytables; else pip install tables==$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then conda install pandas; else pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
