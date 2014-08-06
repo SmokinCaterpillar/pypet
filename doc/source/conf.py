@@ -18,6 +18,7 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.append(os.path.abspath('../../'))
+sys.path.append(os.path.abspath('../'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -259,6 +260,8 @@ class Mock(object):
     def __getattr__(cls, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
+        elif name == '__version__':
+            return '2'
         elif name[0] == name[0].upper():
             mockType = type(name, (), {})
             mockType.__module__ = __name__

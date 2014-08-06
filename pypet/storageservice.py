@@ -12,6 +12,7 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
+import sys
 
 try:
     import queue
@@ -1866,11 +1867,14 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             version = compat.tostrtype(metarow['version'])
-            python = compat.tostrtype(metarow['python'])
-
-        except Exception as e:
-            self._logger.error('Could not check version due to: %s' % str(e))
+        except KeyError as ke:
+            self._logger.error('Could not check version due to: %s' % str(ke))
             version = '`COULD NOT BE LOADED`'
+
+        try:
+            python = compat.tostrtype(metarow['python'])
+        except KeyError as ke:
+            self._logger.error('Could not check version due to: %s' % str(ke))
             python = '`COULD NOT BE LOADED`'
 
         self._trj_check_version(version, python, force)
@@ -1887,8 +1891,8 @@ class HDF5StorageService(StorageService, HasLogger):
             traj._trajectory_time = traj._time
             traj._name = compat.tostrtype(metarow['name'])
             traj._trajectory_name = traj._name
-            traj._version = compat.tostrtype(metarow['version'])
-            traj._python = compat.tostrtype(metarow['python'])
+            traj._version = version
+            traj._python = python
 
             single_run_table = self._overview_group.runs
 

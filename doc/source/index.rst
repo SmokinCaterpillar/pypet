@@ -55,9 +55,15 @@ Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
 
 * scipy >= 0.9.0
 
+If you use Python 2.6 you also need
+
+* ordereddict_ >= 1.1
+
+.. _ordereddict: https://pypi.python.org/pypi/ordereddict
+
 For git integration you additionally need
 
-* GitPython_ >= 0.3.1 [#gitpython]_
+* GitPython_ >= 0.3.1 [#gitpythonversion]_
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
@@ -73,12 +79,6 @@ To utilize the continuing of crashed trajectories you need
 
 .. _dill: https://pypi.python.org/pypi/dill
 
-If you use Python 2.6 you also need
-
-* ordereddict_ >= 1.1
-
-.. _ordereddict: https://pypi.python.org/pypi/ordereddict
-
 Automatic sumatra records are supported for
 
 * Sumatra_ >= 0.6.0
@@ -89,7 +89,7 @@ Automatic sumatra records are supported for
 
 .. [#pythonversion]
 
-    *pypet* might also work under python ``3.0-3.2`` but has not been tested.
+    *pypet* might also work under python 3.0-3.2 but has not been tested.
 
 .. [#pandasversion]
 
@@ -102,7 +102,7 @@ Automatic sumatra records are supported for
     precisely, have already been removed in the next pandas version.
     So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
-.. [#gitpython]
+.. [#gitpythonversion]
 
     Keep in mind that GitPython currently does not support python 3.
 

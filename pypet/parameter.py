@@ -622,7 +622,7 @@ class BaseParameter(NNLeafNode):
 
     def _shrink(self):
         """If a parameter is explored, i.e. it has a range, the whole exploration range is deleted.
-.
+
         Note that this function does not erase data from disk. So if the parameter has
         been stored with a service to disk and is shrunk, it can be restored by loading from disk.
 

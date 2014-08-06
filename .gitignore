@@ -40,3 +40,10 @@ nosetests.xml
 experiments
 Test
 Brian
+notebooks
+logs
+LOGS
+log
+LOG
+hdf5
+HDF5

@@ -42,6 +42,10 @@ Python 2.6, 2.7, 3.3, 3.4
 
 * scipy >= 0.9.0
 
+If you use Python 2.6 you also need
+
+* ordereddict >= 1.1
+
 For git integration you additionally need
 
 * GitPython >= 0.3.1
@@ -53,10 +57,6 @@ To utilize the cap feature for multiprocessing you need
 To utilize the continuing of crashed trajectories you need
 
 * dill >= 0.2.1
-
-If you use Python 2.6 you also need
-
-* ordereddict >= 1.1
 
 Automatic Sumatra records are supported for
 

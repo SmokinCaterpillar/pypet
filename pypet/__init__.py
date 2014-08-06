@@ -3,13 +3,12 @@
 __author__ = 'Robert Meyer'
 
 try:
-    from pypet._version import __version__
+    from ._version import __version__
 except ImportError:
     # We're running in a tree that doesn't
     # have a _version.py, so we don't know what our version is.
     __version__ = "unknown"
 
-import sys
 
 from pypet.environment import Environment
 from pypet.trajectory import Trajectory, SingleRun
