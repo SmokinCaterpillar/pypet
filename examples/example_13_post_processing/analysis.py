@@ -23,7 +23,7 @@ def main():
     plt.figure()
     plt.subplot(2,1,1)
     #Let's iterate through the columns and plot the different firing rates :
-    for tau_ref, I_col in rates_frame.items():
+    for tau_ref, I_col in rates_frame.iteritems():
         plt.plot(I_col.index, I_col, label='Avg. Rate for tau_ref=%s' % str(tau_ref))
 
     # Label the plot

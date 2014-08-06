@@ -6,6 +6,8 @@ Examples
 =====================
 
 Here you can find some example code how to use the *pypet*.
+All examples were written and tested with python 2.7.
+If you use python 3.x you might need to change some of them.
 
 .. toctree::
     examplesdoc/example_01
