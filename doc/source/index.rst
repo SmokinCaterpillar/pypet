@@ -9,12 +9,16 @@ Welcome to pypet's documentation!
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
-of any numerical simulation in python
-and stores your data into HDF5_ files for you.
+of any numerical simulation in python,
+thereby storing your data into HDF5_ files for you.
+Moreover, *pypet* offers a new data container which
+lets you access all your parameters and results
+from a single source. Data I/O of your simulations and
+analyses becomes a piece of cake!
 
-Latest version: `0.1b.7`_
+Latest version: `0.1b.8`_
 
-.. _`0.1b.7`: https://pypi.python.org/pypi/pypet
+.. _`0.1b.8`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 

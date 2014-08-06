@@ -4,8 +4,12 @@ pypet
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
-of any numerical simulation in python
-and stores your data into HDF5 files for you.
+of any numerical simulation in python,
+thereby storing your data into HDF5 files for you.
+Moreover, *pypet* offers a new data container which
+lets you access all your parameters and results
+from a single source. Data I/O of your simulations and
+analyses becomes a piece of cake!
 
 ===========================
 IMPORTANT!
