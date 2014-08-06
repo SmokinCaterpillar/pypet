@@ -35,15 +35,16 @@ except ImportError:  # not 2.6+ or is 3.x
         from itertools import ifilter as filter
     except ImportError:
         pass
+
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
-from pypet import __version__ as VERSION
-from pypet import pypetconstants
+from pypet._version import __version__ as VERSION
+import pypet.pypetconstants as pypetconstants
 from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, STORE, LOAD, REMOVE
-from pypet.parameter import Parameter, BaseParameter, Result, BaseResult, ArrayParameter, \
+from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
-from pypet.storageservice import HDF5StorageService
+import pypet.storageservice as storage
 
 
 class SingleRun(DerivedParameterGroup, ResultGroup):
@@ -142,7 +143,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
     @property
     def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
+        """The name and path of the hdf5 file in case you use the rageService"""
         return self._filename
 
     def _set_start_time(self):
@@ -1000,7 +1001,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     :param filename:
 
-        If you want to use the default :class:`HDF5StorageService`, you can specify the
+        If you want to use the default :class:`rageService`, you can specify the
         filename of the HDF5 file. If you specify the filename, the trajectory
         will automatically create the corresponding service object.
 
@@ -1085,7 +1086,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._filename = None
         else:
             self._filename = filename
-            self._storage_service = HDF5StorageService(filename=filename,
+            self._storage_service = storage.rageService(filename=filename,
                                                        file_title=self.v_name)
 
 
@@ -1136,7 +1137,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     @property
     def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
+        """The name and path of the hdf5 file in case you use the rageService"""
         return self._filename
 
 
@@ -1167,7 +1168,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         """The service that can store the trajectory to disk or wherever.
 
         Default is None or if a filename was provided on construction
-        the :class:`~pypet.storageservice.HDF5StorageService`.
+        the :class:`~pypet.storageservice.rageService`.
 
         """
         return self._storage_service
@@ -2200,7 +2201,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :param filename:
 
             If you haven't specified a filename on creation of the trajectory, you can
-            specify one here. The trajectory will generate an HDF5StorageService
+            specify one here. The trajectory will generate an rageService
             automatically.
 
         :param dynamically_imported_classes:
@@ -2240,7 +2241,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         if filename:
             self._filename = filename
             if self._storage_service is None:
-                self._storage_service = HDF5StorageService(filename=filename)
+                self._storage_service = storage.rageService(filename=filename)
             else:
                 self._storage_service.filename = filename
 
@@ -3153,8 +3154,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def f_migrate(self, new_name=None, new_filename=None, new_file_tile=None, in_store=False):
         """Can be called to rename and relocate the trajectory.
 
-        Choosing a new filename only works with the original HDF5StorageService.
-        In case the trajectory has no storage service, a new HDF5StorageService is created
+        Choosing a new filename only works with the original rageService.
+        In case the trajectory has no storage service, a new rageService is created
 
         :param new_name: New name of the trajectory, None if you do not want to change the name.
 
@@ -3183,7 +3184,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if new_filename is not None:
             if self._storage_service is None:
-                self._storage_service = HDF5StorageService(filename=new_filename,
+                self._storage_service = storage.rageService(filename=new_filename,
                                                            file_title=new_file_tile)
             else:
                 self._storage_service.filename = new_filename

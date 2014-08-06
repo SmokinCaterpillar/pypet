@@ -1,3 +1,4 @@
+from pypet import BaseParameter
 
 __author__ = 'Robert Meyer'
 
@@ -11,7 +12,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter,\
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult
 import pickle
 import scipy.sparse as spsp

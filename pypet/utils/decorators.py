@@ -1,9 +1,12 @@
+"""Module containing decorators"""
+
+__author__ = 'Robert Meyer'
+
 import functools
 import warnings
 
 import pypet.compat as compat
 
-__author__ = 'Robert Meyer'
 
 
 def deprecated(msg=''):

@@ -1,9 +1,11 @@
+from pypet import BaseParameter, BaseResult
+
 __author__ = 'Robert Meyer'
 
 from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
 from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
-from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, \
-    BaseParameter, SparseParameter, SparseResult, ObjectTable
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult, \
+    SparseParameter, SparseResult, ObjectTable
 import pypet.pypetconstants
 import pypet.compat as compat
 import scipy.sparse as spsp

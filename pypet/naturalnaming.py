@@ -49,7 +49,7 @@ import re
 from pypet.utils.decorators import deprecated
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
-from pypet import pypetconstants
+import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.helpful_functions import is_debug

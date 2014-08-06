@@ -19,6 +19,7 @@ except ImportError as e:
 from pypet.tests.utilstest import CartesianTest
 from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
+from pypet.tests.module_test import TestAllImport
 from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
@@ -29,6 +30,7 @@ try:
 
         from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
         from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest
+        from pypet.tests.briantests.module_test import TestAllBrianImport
     else:
         print('Using coverage will ignore brian tests')
 except ImportError as e:

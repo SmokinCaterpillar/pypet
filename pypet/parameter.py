@@ -72,7 +72,7 @@ import numpy as np
 import scipy.sparse as spsp
 from pandas import DataFrame, Series, Panel, Panel4D
 
-from pypet import pypetconstants
+import pypet.pypetconstants as pypetconstants
 from pypet.naturalnaming import NNLeafNode
 import pypet.utils.comparisons as comparisons
 from pypet.utils.decorators import deprecated, copydoc

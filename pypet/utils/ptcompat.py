@@ -1,6 +1,4 @@
-"""
-Module to allow support for PyTables 2 and 3
-"""
+"""Module to allow support for PyTables 2 and 3"""
 
 __author__ = 'Robert Meyer'
 

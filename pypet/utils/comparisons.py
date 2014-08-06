@@ -1,3 +1,5 @@
+"""Module containing utility functions to compare parameters and results"""
+
 __author__ = 'Robert Meyer'
 
 from collections import Sequence, Mapping, Set
@@ -12,7 +14,6 @@ except ImportError:  # not 2.6+ or is 3.x
 import numpy as np
 import pandas as pd
 
-import pypet
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 
@@ -27,10 +28,11 @@ def results_equal(a, b):
     :raises: ValueError if both inputs are no result instances
 
     """
-    if not isinstance(a, pypet.parameter.Result) and not isinstance(b, pypet.parameter.Result):
+
+    if a.v_is_parameter or b.v_is_parameter:
         raise ValueError('Both inputs are not results.')
 
-    if not isinstance(a, pypet.parameter.Result) or not isinstance(b, pypet.parameter.Result):
+    if a.v_is_parameter or b.v_is_parameter:
         return False
 
     if not a.v_name == b.v_name:
@@ -68,12 +70,12 @@ def parameters_equal(a, b):
     :raises: ValueError if both inputs are no parameter instances
 
     """
-    if (not isinstance(b, pypet.parameter.BaseParameter) and
-            not isinstance(a, pypet.parameter.BaseParameter)):
+    if (not b.v_is_parameter and
+            not a.v_is_parameter):
         raise ValueError('Both inputs are not parameters')
 
-    if (not isinstance(b, pypet.parameter.BaseParameter) or
-            not isinstance(a, pypet.parameter.BaseParameter)):
+    if (not b.v_is_parameter or
+            not a.v_is_parameter):
         return False
 
     if not a.v_name == b.v_name:

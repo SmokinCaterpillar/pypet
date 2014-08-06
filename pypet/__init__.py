@@ -1,3 +1,5 @@
+
+
 __author__ = 'Robert Meyer'
 
 try:
@@ -7,13 +9,15 @@ except ImportError:
     # have a _version.py, so we don't know what our version is.
     __version__ = "unknown"
 
-from pypet.trajectory import Trajectory, SingleRun
+import sys
+
 from pypet.environment import Environment
+from pypet.trajectory import Trajectory, SingleRun
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
     ResultGroup, NNGroupNode, NNLeafNode
-from pypet.parameter import BaseParameter, Parameter, ArrayParameter, SparseParameter,\
-    PickleParameter, BaseResult, Result, SparseResult, PickleResult, ObjectTable
+from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
+    PickleParameter, Result, SparseResult, PickleResult, ObjectTable, BaseParameter, BaseResult
 from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     NotUniqueNodeError, ParameterLockedException, PresettingError, TooManyGroupsError,\
     VersionMismatchError

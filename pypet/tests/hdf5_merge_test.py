@@ -11,10 +11,10 @@ else:
 
 
 import numpy as np
-from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 
 from pypet.tests.test_helpers import add_params, create_param_dict, make_run, simple_calculations, \

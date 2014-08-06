@@ -3,12 +3,12 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
-from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 import pypet.pypetexceptions as pex
 

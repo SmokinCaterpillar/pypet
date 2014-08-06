@@ -1,6 +1,5 @@
-"""
-Created on 24.05.2013
-"""
+"""Module containing factory functions for parameter exploration"""
+
 import itertools as itools
 
 try:

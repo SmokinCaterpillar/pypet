@@ -12,7 +12,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, Result, BaseResult
+from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.naturalnaming import NaturalNamingInterface
 from pypet.storageservice import LazyStorageService
@@ -22,7 +22,7 @@ import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseResult
 
 import copy
 
