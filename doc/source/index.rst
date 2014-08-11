@@ -16,9 +16,9 @@ lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
-Latest version: `0.1b.8`_
+Latest version: `0.1b.9`_
 
-.. _`0.1b.8`: https://pypi.python.org/pypi/pypet
+.. _`0.1b.9`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
