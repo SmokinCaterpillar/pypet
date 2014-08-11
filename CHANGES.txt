@@ -1,6 +1,6 @@
 pypet 0.1b.8
 
-*   Support for python 3.3 and 3.4!!!
+*   Support for python 3.3 and 3.4!
 
 *   Proper handling of unicode strings (well, see above^^)
 
@@ -12,7 +12,7 @@ pypet 0.1b.8
 *   Children of groups are no longer listed via __dir__ in case of debugging to
     prevent unwanted locking.
 
-*   Better support for pytables 2 and 3 with same code base.
+*   Better support for PyTables 2 and 3 with same code base.
 
 *   pypet and pypet.brian now provide the __all__ list.
 
