@@ -1867,13 +1867,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             version = compat.tostrtype(metarow['version'])
-        except KeyError as ke:
+        except IndexError as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             version = '`COULD NOT BE LOADED`'
 
         try:
             python = compat.tostrtype(metarow['python'])
-        except KeyError as ke:
+        except IndexError as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             python = '`COULD NOT BE LOADED`'
 
@@ -1911,7 +1911,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 try:
                     runtime = compat.tostrtype(row['runtime'])
                     finish_timestamp = float(row['finish_timestamp'])
-                except KeyError as ke:
+                except IndexError as ke:
                     runtime = ''
                     finish_timestamp = 0.0
                     self._logger.warning('Could not load runtime, ' + repr(ke))
