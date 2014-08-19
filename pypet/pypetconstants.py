@@ -44,8 +44,6 @@ for key in list(PARAMETERTYPEDICT.keys()):
         typestr=typestr.replace('class', 'type')
 
     PARAMETERTYPEDICT[typestr] = dtype
-
-
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
