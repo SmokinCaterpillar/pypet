@@ -35,6 +35,17 @@ PARAMETERTYPEDICT = {bool.__name__: bool,
                      compat.unicode_type.__name__: compat.unicode_type,
                      compat.bytes_type.__name__: compat.bytes_type}
 
+# For compatibility with older pypet versions:
+for key in list(PARAMETERTYPEDICT.keys()):
+    dtype = PARAMETERTYPEDICT[key]
+    typestr = repr(dtype)
+    if 'class' in typestr:
+        # Python 3 replaced "<type 'x'>" with "<class 'x'>"
+        typestr=typestr.replace('class', 'type')
+
+    PARAMETERTYPEDICT[typestr] = dtype
+
+
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
