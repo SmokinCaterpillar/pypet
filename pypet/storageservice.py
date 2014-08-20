@@ -1862,6 +1862,15 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
 
+        def _extract_meta_data(attr_name, row, name_in_row, conversion_function):
+            try:
+                setattr(self, attr_name, conversion_function(row[name_in_row]))
+            except IndexError as e:
+                self._logger.error('Using default hdf5 setting, '
+                                       'could not extract `%s` hdf5 setting because of: %s' %
+                                        (name_in_row, str(e)))
+
+
         metatable = self._overview_group.info
         metarow = metatable[0]
 
@@ -1932,38 +1941,35 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 traj._run_information[name] = info_dict
 
-                # Load the hdf5 config data:
-                try:
-                    if 'hdf5_settings' in self._overview_group:
-                        hdf5_table = self._overview_group.hdf5_settings
-                        hdf5_row = hdf5_table[0]
+            # Load the hdf5 config data:
+            if 'hdf5_settings' in self._overview_group:
+                hdf5_table = self._overview_group.hdf5_settings
+                hdf5_row = hdf5_table[0]
 
-                        self.complib = compat.tostrtype(hdf5_row['complib'])
-                        self.complevel = int(hdf5_row['complevel'])
-                        self.shuffle = bool(hdf5_row['shuffle'])
-                        self.fletcher32 = bool(hdf5_row['fletcher32'])
-                        self.pandas_format = compat.tostrtype(hdf5_row['pandas_format'])
-                        self.pandas_append = bool(hdf5_row['pandas_append'])
-                        self.encoding = compat.tostrtype(hdf5_row['encoding'])
+                _extract_meta_data('complib', hdf5_row, 'complib', compat.tostrtype)
+                _extract_meta_data('complevel', hdf5_row, 'complevel', int)
+                _extract_meta_data('shuffle', hdf5_row, 'shuffle', bool)
+                _extract_meta_data('fletcher32', hdf5_row, 'fletcher32', bool)
+                _extract_meta_data('pandas_format', hdf5_row, 'pandas_format', compat.tostrtype)
+                _extract_meta_data('pandas_append', hdf5_row, 'pandas_append', bool)
+                _extract_meta_data('encoding', hdf5_row, 'encoding', compat.tostrtype)
 
-                        self._results_per_run = int(hdf5_row['results_per_run'])
-                        self._derived_parameters_per_run = int(
-                            hdf5_row['derived_parameters_per_run'])
-                        self._purge_duplicate_comments = bool(hdf5_row['purge_duplicate_comments'])
-                        self._overview_explored_parameters_runs = bool(
-                            hdf5_row['explored_parameters_runs'])
+                _extract_meta_data('_results_per_run', hdf5_row,
+                                   'results_per_run', int)
+                _extract_meta_data('_derived_parameters_per_run', hdf5_row,
+                                   'derived_parameters_per_run', int)
+                _extract_meta_data('_purge_duplicate_comments', hdf5_row,
+                                   'purge_duplicate_comments', bool)
+                _extract_meta_data('_overview_explored_parameters_runs', hdf5_row,
+                                   'explored_parameters_runs', bool)
 
-                        for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
-                            attr_value = bool(hdf5_row[table_name])
-                            setattr(self, attr_name, attr_value)
-                    else:
-                        self._logger.warning(
-                            'Could not find `hdf5_settings` overview table. I will use the '
-                            'standard settings (for `complib`, `complevel` etc.) instead.')
-
-                except Exception as e:
-                    self._logger.error('Using default hdf5 settings, '
-                                       'could not extract hdf5 settings because of: %s' % str(e))
+                for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
+                    attr_value = bool(hdf5_row[table_name])
+                    setattr(self, attr_name, attr_value)
+            else:
+                self._logger.warning(
+                    'Could not find `hdf5_settings` overview table. I will use the '
+                    'standard settings (for `complib`, `complevel` etc.) instead.')
 
     def _tree_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data,
                               recursive=True, as_new=False):
@@ -3038,7 +3044,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     if typestr == compat.unicode_type.__name__:
                         data = data.decode(self._encoding)
                     else:
-                        data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
+                        try:
+                            data = pypetconstants.PARAMETERTYPEDICT[typestr](data)
+                        except KeyError:
+                            # For compatibility with files from older pypet versions
+                            data = pypetconstants.COMPATPARAMETERTYPEDICT[typestr](data)
 
                     type_changed = True
 
@@ -3072,7 +3082,11 @@ class HDF5StorageService(StorageService, HasLogger):
                         if typestr == compat.unicode_type.__name__:
                             data[idx] = data[idx].decode(self._encoding)
                         else:
-                            data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
+                            try:
+                                data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
+                            except KeyError:
+                                # For compatibility with files from older pypet versions:
+                                data[idx] = pypetconstants.COMPATPARAMETERTYPEDICT[typestr](item)
                         type_changed = True
 
             if self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,

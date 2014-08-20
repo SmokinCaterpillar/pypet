@@ -11,6 +11,7 @@ from pypet.tests.trajectory_test import SingleRunQueueTest, SingleRunTest, Traje
 from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest, StorageTest, TestOtherHDF5Settings, TestOtherHDF5Settings2
 from pypet.tests.hdf5_merge_test import TestMergeResultsSort, MergeTest
 from pypet.tests.pipeline_test import TestPostProc
+from pypet.tests.backwards_compat_test import LoadOldTrajectoryTest
 try:
     from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
 except ImportError as e:

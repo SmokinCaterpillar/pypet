@@ -34,20 +34,21 @@ PARAMETERTYPEDICT = {bool.__name__: bool,
                      numpy.uint8.__name__: numpy.uint8,
                      compat.unicode_type.__name__: compat.unicode_type,
                      compat.bytes_type.__name__: compat.bytes_type}
+""" A Mapping (dict) from the the string representation of a type and the type.
+
+These are the so far supported types of the storage service and the standard parameter!
+"""
 
 # For compatibility with older pypet versions:
-for key in list(PARAMETERTYPEDICT.keys()):
+COMPATPARAMETERTYPEDICT = {}
+for key in PARAMETERTYPEDICT.keys():
     dtype = PARAMETERTYPEDICT[key]
     typestr = repr(dtype)
     if 'class' in typestr:
         # Python 3 replaced "<type 'x'>" with "<class 'x'>"
         typestr=typestr.replace('class', 'type')
 
-    PARAMETERTYPEDICT[typestr] = dtype
-""" A Mapping (dict) from the the string representation of a type and the type.
-
-These are the so far supported types of the storage service and the standard parameter!
-"""
+    COMPATPARAMETERTYPEDICT[typestr] = dtype
 
 PARAMETER_SUPPORTED_DATA = (numpy.int8,
                             numpy.int16,
