@@ -43,6 +43,7 @@ setup(
               'pypet.tests',
               'pypet.tests.briantests',
               'pypet.utils'],
+    package_data={'pypet.tests':['testdata/*.hdf5']},
     license='BSD',
     author='Robert Meyer',
     author_email='robert.meyer@ni.tu-berlin.de',
