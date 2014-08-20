@@ -1,3 +1,10 @@
+pypet 0.1b.9
+
+*   BUG FIX: Fixed backwards compatibility
+
+*   BUG FIX: Metadata is loaded only once
+
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
