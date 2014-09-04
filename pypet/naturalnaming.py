@@ -2068,6 +2068,9 @@ class NNGroupNode(NNTreeNode):
         self._children = {}
         self._nn_interface = nn_interface
 
+    def __repr__(self):
+        return '<%s>' % self.__str__()
+
     def __str__(self):
         if not self.v_is_root:
             name = self.v_full_name
@@ -2086,7 +2089,12 @@ class NNGroupNode(NNTreeNode):
 
         children_string = ', '.join(children_string_list)
 
-        return '<%s>: %s: %s' % (self.f_get_class_name(), name, children_string)
+        if self.v_comment:
+            commentstring = ' (`%s`)' % self.v_comment
+        else:
+            commentstring = ''
+
+        return '%s: %s%s: %s' % (self.f_get_class_name(), name, commentstring, children_string)
 
 
     def __dir__(self):

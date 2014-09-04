@@ -371,6 +371,9 @@ class BaseParameter(NNLeafNode):
 
         return type(val1) is type(val2)
 
+    def __repr__(self):
+        return '<%s>' % self.__str__()
+
     def __str__(self):
         """String representation of the Parameter
 
@@ -404,7 +407,7 @@ class BaseParameter(NNLeafNode):
         else:
             infostr = ''
 
-        return_string = '<%s> %s%s' % (self.f_get_class_name(), self.v_full_name, infostr)
+        return_string = '%s %s%s' % (self.f_get_class_name(), self.v_full_name, infostr)
 
         if not self.f_is_empty():
             return_string += ': ' + self.f_val_to_str()
@@ -1976,6 +1979,9 @@ class Result(BaseResult):
 
         return return_string
 
+    def __repr__(self):
+        return '<%s>' % self.__str__()
+
     def __str__(self):
         """String representation of the result.
 
@@ -1987,9 +1993,9 @@ class Result(BaseResult):
 
         """
         datastr = self.f_val_to_str()
-        return_string = '<%s> %s' % (self.f_get_class_name(), self.v_full_name)
+        return_string = '%s %s' % (self.f_get_class_name(), self.v_full_name)
         if self.v_comment:
-            return_string += '(`%s`)' % self.v_comment
+            return_string += ' (`%s`)' % self.v_comment
         if datastr:
             return_string += ': ' + datastr
 
