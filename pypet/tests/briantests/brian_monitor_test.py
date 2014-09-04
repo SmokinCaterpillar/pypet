@@ -33,9 +33,8 @@ class BrianMonitorTest(ResultTest):
     def setUp(self):
         self.monitors = BrianMonitorResult.monitors
         self.make_results()
+        self.make_constructor()
 
-    def make_constructor(self):
-        pass
 
     def check_spike_counter(self, res, monitor):
         self.assertTrue(comp.nested_equal(monitor.count, res.count))
