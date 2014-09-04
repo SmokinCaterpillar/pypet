@@ -136,6 +136,20 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         # in the natural naming interface
         self._changed_default_parameters = {}
 
+    def __str__(self):
+
+        if self.v_comment:
+            commentstring = '`%s`, ' % self.v_comment
+        else:
+            commentstring = ''
+
+        info_string = '(%sidx:%d)'  % (commentstring, self.v_idx)
+
+        children_string = self._get_children_representation()
+
+        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string,
+                                children_string)
+
     @property
     def v_as_run(self):
         """In case of a single run, this returns simply the name of the run."""
@@ -1129,11 +1143,20 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._comment = ''
         self.v_comment = comment
 
-        # We add the four major subtrees
-        # self.f_add_parameter_group('parameters')
-        # self.f_add_config_group('config')
-        # self.f_add_result_group('results')
-        # self.f_add_derived_parameter_group('derived_parameters')
+
+    def __str__(self):
+
+        if self.v_comment:
+            commentstring = '`%s`, ' % self.v_comment
+        else:
+            commentstring = ''
+
+        info_string = '(%slen:%d)'  % (commentstring, len(self))
+
+        children_string = self._get_children_representation()
+
+        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string, children_string)
+
 
     @property
     def v_filename(self):

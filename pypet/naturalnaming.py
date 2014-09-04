@@ -2071,13 +2071,7 @@ class NNGroupNode(NNTreeNode):
     def __repr__(self):
         return '<%s>' % self.__str__()
 
-    def __str__(self):
-        if not self.v_is_root:
-            name = self.v_full_name
-        else:
-            name = self.v_name
-
-
+    def _get_children_representation(self):
         children_string_list = []
 
         for idx, key in enumerate(self._children):
@@ -2089,13 +2083,18 @@ class NNGroupNode(NNTreeNode):
 
         children_string = ', '.join(children_string_list)
 
+        return children_string
+
+    def __str__(self):
         if self.v_comment:
             commentstring = ' (`%s`)' % self.v_comment
         else:
             commentstring = ''
 
-        return '%s: %s%s: %s' % (self.f_get_class_name(), name, commentstring, children_string)
+        children_string = self._get_children_representation()
 
+        return '%s %s%s: %s' % (self.f_get_class_name(), self.v_full_name, commentstring,
+                                children_string)
 
     def __dir__(self):
         """Adds all children to auto-completion"""

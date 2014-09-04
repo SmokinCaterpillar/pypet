@@ -584,6 +584,9 @@ class HDF5StorageService(StorageService, HasLogger):
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
 
+    def __repr__(self):
+        return '<%s (filename:`%s`)>' % (self.__class__.__name__, str(self._filename))
+
     @property
     def encoding(self):
         """ How unicode strings are encoded"""

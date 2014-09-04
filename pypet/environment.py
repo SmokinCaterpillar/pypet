@@ -1156,6 +1156,11 @@ class Environment(HasLogger):
         self._trajectory_name = self._traj.v_name
         self._logger.info('Environment initialized.')
 
+    def __repr__(self):
+        repr_string = '<%s %s for Trajectory %s>' % (self.__class__.__name__, self.v_name,
+                                          self.v_trajectory.v_name)
+        return repr_string
+
     @staticmethod
     def _make_logging_handlers(log_path, log_level, log_stdout):
 
@@ -1532,9 +1537,15 @@ class Environment(HasLogger):
         reason = self._sumatra_reason
         if reason:
             reason += ' -- '
-        reason += 'Trajectory: `%s`, %s -- Explored Parameters: %s' % \
+
+        if self._traj.v_comment:
+            commentstr = ' (`%s`)' % self._traj.v_comment
+        else:
+            commentstr = ''
+
+        reason += 'Trajectory %s%s -- Explored Parameters: %s' % \
                   (self._traj.v_name,
-                   self._traj.v_comment,
+                   commentstr,
                    str(compat.listkeys(self._traj._explored_parameters)))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
@@ -1566,6 +1577,7 @@ class Environment(HasLogger):
 
     def _finish_sumatra(self):
         """ Saves a sumatra record"""
+
         finish_time = self._start_timestamp - self._finish_timestamp
         self._record.duration = finish_time
         self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
@@ -1584,7 +1596,7 @@ class Environment(HasLogger):
                 self._traj.f_add_config(config_name, self._sumatra_reason,
                                         comment='Reason of sumatra run.')
 
-        self._logger.info('Saved sumatra project with reason: %s' % self._sumatra_reason)
+        self._logger.info('Saved sumatra project record with reason: %s' % self._sumatra_reason)
 
     def _prepare_continue(self):
         """Prepares the continuation of a crashed trajectory"""
