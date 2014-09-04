@@ -276,10 +276,12 @@ class BaseParameter(NNLeafNode):
         Note that representing the parameter as a string accesses its value,
         but for simpler debugging, this does not lock the parameter or counts as usage!
 
+        Calls `__repr__` of the contained value.
+
         """
         old_locked = self._locked
         try:
-            return str(self.f_get())
+            return repr(self.f_get())
         except Exception:
             return 'No Evaluation possible (yet)!'
         finally:
@@ -402,8 +404,12 @@ class BaseParameter(NNLeafNode):
         else:
             infostr = ''
 
-        return '<%s> %s%s: %s' % (self.f_get_class_name(), self.v_full_name,
-                                  infostr, self.f_val_to_str())
+        return_string = '<%s> %s%s' % (self.f_get_class_name(), self.v_full_name, infostr)
+
+        if not self.f_is_empty():
+            return_string += ': ' + self.f_val_to_str()
+
+        return return_string
 
 
     def f_unlock(self):
@@ -1902,7 +1908,6 @@ class Result(BaseResult):
         self._data = {}
         self._set_logger()
         self.f_set(*args, **kwargs)
-        self._no_data_string = False
 
     def __dir__(self):
         """Adds all data to auto-completion"""
@@ -1913,18 +1918,26 @@ class Result(BaseResult):
     @property
     def v_no_data_string(self):
         """Whether or not to give a short summarizing string when calling
-         :func:`~pypet.parameter.Result.f_val_to_str`.
+         :func:`~pypet.parameter.Result.f_val_to_str` or `__str__`.
 
         Can be set to `False` if the evaluation of stored data into string is too costly.
 
+        DEPRECATED! Does not change anything. Data will always be printed.
+
         """
-        return self._no_data_string
+        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
+                             'longer have an effect. Data will always be printed.')
+        return False
 
     @v_no_data_string.setter
     def v_no_data_string(self, boolean):
-        """Sets the no_data_string property"""
-        self._no_data_string = boolean
+        """Sets the no_data_string property
 
+        DEPRECATED! Does not change anything. Data will always be printed.
+
+        """
+        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
+                             'longer have an effect. Data will always be printed.')
 
     def __contains__(self, item):
         return item in self._data
@@ -1933,8 +1946,7 @@ class Result(BaseResult):
     def f_val_to_str(self):
         """Summarizes data handled by the result as a string.
 
-        Calls `__str__` on all handled data if `v_no_data_string=False`, else only
-        the name/key of the handled data is printed.
+        Calls `__repr__` on all handled data. Data is NOT ordered.
 
         Truncates the string if it is longer than
         :const:`pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH`
@@ -1942,25 +1954,27 @@ class Result(BaseResult):
         :return: string
 
         """
-        if not self._no_data_string:
-            resstr = ''
-            for key in sorted(self._data.keys()):
-                val = self._data[key]
-                resstr += '%s=%s, ' % (key, str(val))
 
-                if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
-                    resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH - 3] + '...'
-                    return resstr
+        resstrlist = []
+        strlen = 0
 
-            return resstr[0:-2]
+        for key in self._data:
+            val = self._data[key]
+            resstr = '%s=%s, ' % (key, repr(val))
+            resstrlist.append(resstr)
+
+            strlen += len(resstr)
+            if strlen > pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                break
+
+        return_string = "".join(resstrlist)
+        if len(return_string) > pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+            return_string =\
+                return_string[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH - 3] + '...'
         else:
-            resstr = ', '.join(sorted(self._data.keys()))
+            return_string = return_string[0:-2] # Delete the last `, `
 
-            if len(resstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
-                resstr = resstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH - 3] + '...'
-                return resstr
-
-            return resstr
+        return return_string
 
     def __str__(self):
         """String representation of the result.
@@ -1973,13 +1987,13 @@ class Result(BaseResult):
 
         """
         datastr = self.f_val_to_str()
-
+        return_string = '<%s> %s' % (self.f_get_class_name(), self.v_full_name)
         if self.v_comment:
-            return '<%s> %s (`%s`): %s' % (self.f_get_class_name(),
-                                           self.v_full_name, self.v_comment, datastr)
-        else:
-            return '<%s> %s: %s' % (self.f_get_class_name(), self.v_full_name, datastr)
+            return_string += '(`%s`)' % self.v_comment
+        if datastr:
+            return_string += ': ' + datastr
 
+        return return_string
 
     def f_to_dict(self, copy=True):
         """Returns all handled data as a dictionary.

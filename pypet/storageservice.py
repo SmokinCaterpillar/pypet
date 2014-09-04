@@ -3302,14 +3302,14 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if 'range' in colnames:
             insert_dict['range'] = self._all_cut_string(
-                compat.tobytetype(str(item.f_get_range())),
+                compat.tobytetype(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
             insert_dict['array'] = self._all_cut_string(
-                compat.tobytetype(str(item.f_get_range())),
+                compat.tobytetype(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 

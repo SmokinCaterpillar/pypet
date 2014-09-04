@@ -14,6 +14,7 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult
+from pypet.naturalnaming import NNGroupNode
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
@@ -23,8 +24,7 @@ import pypet.utils.comparisons as comp
 from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
 import pypet.compat as compat
-
-
+import pypet.pypetconstants as pypetconstants
 
 class ParameterTest(unittest.TestCase):
 
@@ -806,16 +806,32 @@ class ResultTest(unittest.TestCase):
             self.assertTrue(res.f_is_empty())
 
 
-    def test_no_data_string(self):
-        for  res in self.results.values():
-            resstr = ''
-            for key in sorted(res._data.keys()):
-                resstr += '%s, ' % key
+    def test_string_representation(self):
+        self.results['kkk']=self.Constructor('test.res.kkk', answer=42)
+        self.results['rrr']=self.Constructor('test.res.rrr')
+        for res in self.results.values():
+            resstrlist = []
+            strlen = 0
+            for key in res._data:
+                val = res._data[key]
+                resstr = '%s=%s, ' % (key, repr(val))
+                resstrlist.append(resstr)
 
-            resstr=resstr[0:-2]
-            res.v_no_data_string = True
+                strlen += len(resstr)
+                if strlen > pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                    break
 
-            self.assertTrue(resstr.startswith(res.f_val_to_str()[0:-3]))
+            return_string = "".join(resstrlist)
+            if len(return_string) > pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
+                return_string =\
+                    return_string[0:pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH - 3] + '...'
+            else:
+                return_string = return_string[0:-2] # Delete the last `, `
+
+
+            valstr = res.f_val_to_str()
+            self.assertTrue(return_string==valstr)
+            self.assertTrue(len(valstr)<=pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
 
     def test_meta_settings(self):

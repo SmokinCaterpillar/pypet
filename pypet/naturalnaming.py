@@ -2074,9 +2074,20 @@ class NNGroupNode(NNTreeNode):
         else:
             name = self.v_name
 
-        return '<%s>: %s: %s' % (self.f_get_class_name(), name,
-                                 str([(key, str(type(self._children[key])))
-                                      for key in self._children]))
+
+        children_string_list = []
+
+        for idx, key in enumerate(self._children):
+            children_string_list.append('(%s: %s)' % (key, str(type(self._children[key]))))
+
+            if idx == 5:
+                children_string_list.append('...')
+                break
+
+        children_string = ', '.join(children_string_list)
+
+        return '<%s>: %s: %s' % (self.f_get_class_name(), name, children_string)
+
 
     def __dir__(self):
         """Adds all children to auto-completion"""
