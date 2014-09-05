@@ -138,6 +138,10 @@ class QueueStorageServiceWriter(HasLogger):
         self._trajectory_name = None
         self._set_logger()
 
+    def __repr__(self):
+        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
+                                                     repr(self._storage_service))
+
     def run(self):
         """Starts listening to the queue."""
         while True:
@@ -219,6 +223,10 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         self._storage_service = storage_service
         self._lock = lock
         self._set_logger()
+
+    def __repr__(self):
+        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
+                                                     repr(self._storage_service))
 
     def store(self, *args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
