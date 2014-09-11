@@ -25,11 +25,11 @@ def deprecated(msg=''):
         def new_func(*args, **kwargs):
             warning_string = "Call to deprecated function or property `%s`." % func.__name__
             warning_string = warning_string + ' ' + msg
-            warnings.warn_explicit(
+            warnings.warn(
                 warning_string,
                 category=DeprecationWarning,
-                filename=compat.func_code(func).co_filename,
-                lineno=compat.func_code(func).co_firstlineno + 1
+                # filename=compat.func_code(func).co_filename,
+                # lineno=compat.func_code(func).co_firstlineno + 1
             )
             return func(*args, **kwargs)
 
@@ -66,3 +66,43 @@ def copydoc(fromfunc, sep="\n"):
         return func
 
     return _decorator
+
+
+def kwargs_api_change(old_name, new_name):
+    """This is a decorator which can be used if a kwarg has changed
+    its name over versions to also support the old argument name.
+
+    Issues a warning if the old keyword argument is detected and
+    converts call to new API.
+
+    :param old_name:
+
+        Old name of the keyword argument
+
+    :param new_name:
+
+        New name of keyword argument
+
+    """
+
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+
+            if old_name in kwargs:
+                warning_string = 'Using deprecated keyword argument `%s` ' \
+                                 'please use `%s` instead.' % (old_name, new_name)
+                warnings.warn(
+                    warning_string,
+                    category=DeprecationWarning,
+                    # filename=compat.func_code(func).co_filename,
+                    # lineno=compat.func_code(func).co_firstlineno + 1
+                )
+                value = kwargs.pop(old_name)
+                kwargs[new_name] = value
+
+            return func(*args, **kwargs)
+
+        return new_func
+
+    return wrapper

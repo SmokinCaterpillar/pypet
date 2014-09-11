@@ -13,6 +13,10 @@ pypet 0.1b.9
 
 *   Added informative repr for the most commonly used classes
 
+*   The (annoyingly long) keyword `dynamically_imported_classes` is changed to
+    `dynamic_imports`. For backwards compatibility, the old keyword can still
+    be used.
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

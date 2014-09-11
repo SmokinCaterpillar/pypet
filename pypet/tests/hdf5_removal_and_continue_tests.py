@@ -456,7 +456,7 @@ class ContinueMPPoolTest(ContinueMPTest):
         trajname = 'Test%d' % idx
 
         env = Environment(trajectory=trajname,
-                          dynamically_imported_classes=[CustomParameter],
+                          dynamic_imports=[CustomParameter],
                           filename=filename,
                           file_title=trajname,
                           log_folder=self.logfolder,

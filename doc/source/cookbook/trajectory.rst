@@ -817,7 +817,7 @@ your trajectory. For example:
 
     # Create the trajectory independent of the environment
     traj = Trajectory(filename='./myfile.hdf5',
-                      dynamically_imported_classes=[BrianParameter,
+                      dynamic_imports=[BrianParameter,
                                                     BrianMonitorResult,
                                                     BrianResult])
 
