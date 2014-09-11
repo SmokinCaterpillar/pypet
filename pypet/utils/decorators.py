@@ -90,8 +90,9 @@ def kwargs_api_change(old_name, new_name):
         def new_func(*args, **kwargs):
 
             if old_name in kwargs:
-                warning_string = 'Using deprecated keyword argument `%s` ' \
-                                 'please use `%s` instead.' % (old_name, new_name)
+                warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
+                                 'please use keyword `%s` instead.' % \
+                                 (old_name, func.__name__, new_name)
                 warnings.warn(
                     warning_string,
                     category=DeprecationWarning,
