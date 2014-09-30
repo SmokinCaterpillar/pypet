@@ -90,16 +90,18 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         except IOError:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            try:
-                self._logger.error('Failed sending task %s to queue, I will try again.' %
-                                   str(('STORE', args, kwargs)))
-                self._queue.put(('STORE', args, kwargs))
-                self._logger.error('Second queue sending try was successful!')
-            except IOError:
-                self._logger.error('Failed sending task %s to queue, I will try one last time.' %
-                                   str(('STORE', args, kwargs)))
-                self._queue.put(('STORE', args, kwargs))
-                self._logger.error('Third queue sending try was successful!')
+            resend = True
+            max_tries = 8000
+            sleep_time = 0.25
+            for trying in range(max_tries):
+                try:
+                    self._logger.error('Failed sending task %s to queue, I will try again.' %
+                                       str(('STORE', args, kwargs)))
+                    self._queue.put(('STORE', args, kwargs))
+                    self._logger.error('Queue sending try #%d  was successful!' % trying)
+                    break
+                except IOError:
+                    time.sleep(sleep_time)
         except TypeError as e:
             # This handles a weird bug under python 3.4 (not 3.3) that sometimes
             # a NoneType is put on the queue instead of real data which needs to be ignored
