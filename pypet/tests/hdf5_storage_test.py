@@ -184,6 +184,36 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(val==42)
 
+        with self.assertRaises(pex.DataNotInStorageError):
+            traj.kdsfdsf
+
+    def test_get_default(self):
+
+
+        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+
+        traj.v_auto_load = True
+
+        traj.f_add_result('I.am.$.a.mean.resu', 42, comment='Test')
+
+        val = traj.f_get_default('jjjjjjjjjj', 555)
+        self.assertTrue(val==555)
+
+        traj.f_store()
+
+        traj.f_remove_child('results', recursive=True)
+
+
+
+
+        val = traj.f_get_default('res.I.am.crun.a.mean.answ', 444, auto_load=True)
+
+        self.assertTrue(val==444)
+
+        val = traj.f_get_default('res.I.am.crun.a.mean.resu', auto_load=True, fast_access=True)
+
+        self.assertTrue(val==42)
+
         with self.assertRaises(Exception):
             traj.kdsfdsf
 

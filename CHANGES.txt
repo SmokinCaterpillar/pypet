@@ -17,6 +17,9 @@ pypet 0.1b.9
     `dynamic_imports`. For backwards compatibility, the old keyword can still
     be used.
 
+*   New `f_get_default` method, now one can specify a default value that should be
+    returned if the requested data is not found in the trajectory
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
