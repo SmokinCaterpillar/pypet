@@ -24,6 +24,7 @@ if [[ $GIT_TEST == ON ]]
         echo "Installing Git and Sumatra Test"
         # sudo apt-get install git
         pip install --pre GitPython
+        pip install django==1.5
         pip install Sumatra
         mkdir git_sumatra_test
         cp pypet/tests/test_git.py git_sumatra_test

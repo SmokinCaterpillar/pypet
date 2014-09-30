@@ -68,7 +68,7 @@ class TestPostProc(TrajectoryComparator):
         cntfolder = make_temp_file('experiments/tests/cnt/')
 
         env = Environment(trajectory=trajname,
-                          dynamically_imported_classes=[CustomParameter],
+                          dynamic_imports=[CustomParameter],
                           filename=filename, log_folder=logfolder, log_stdout=False,
                           **self.env_kwargs)
 

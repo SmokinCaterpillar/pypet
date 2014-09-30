@@ -3,6 +3,7 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
+import warnings
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
@@ -241,6 +242,24 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('results' not in traj)
         self.assertTrue(res not in traj)
 
+    def test_throw_warning_if_old_kw_is_used(self):
+
+        filename = make_temp_file('hdfwarning.hdf5')
+
+        with warnings.catch_warnings(record=True) as w:
+
+            env = Environment(trajectory='test', filename=filename,
+                              dynamically_imported_classes=[])
+
+        with warnings.catch_warnings(record=True) as w:
+            traj = Trajectory(dynamically_imported_classes=[])
+
+        traj = env.v_trajectory
+        traj.f_store()
+
+        with warnings.catch_warnings(record=True) as w:
+            traj.f_load(dynamically_imported_classes=[])
+
     def test_overwrite_stuff(self):
         traj = Trajectory(name='Test', filename=make_temp_file('testowrite.hdf5'))
 
@@ -312,7 +331,7 @@ class StorageTest(TrajectoryComparator):
         env = Environment('testraj', filename=filename,
                           add_time=True,
                          comment='',
-                         dynamically_imported_classes=None,
+                         dynamic_imports=None,
                          log_folder=None,
                          log_level=None,
                          log_stdout=False,

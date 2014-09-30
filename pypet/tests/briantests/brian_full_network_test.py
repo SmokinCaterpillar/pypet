@@ -131,7 +131,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
                           filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
                           file_title='test',
                           log_folder=make_temp_file('experiments/tests/briantests/log'),
-                          dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                          dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=False)
 
@@ -162,7 +162,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
 
         traj2 = Trajectory(name = self.traj.v_name, add_time=False,
                            filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
-                           dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult])
 
         traj2.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
@@ -180,7 +180,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                           filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
                           file_title='test',
                           log_folder=make_temp_file('experiments/tests/briantests/log'),
-                          dynamically_imported_classes=['pypet.brian.parameter.BrianParameter',
+                          dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=True,
                           use_pool=True,

@@ -140,6 +140,10 @@ class QueueStorageServiceWriter(HasLogger):
         self._trajectory_name = None
         self._set_logger()
 
+    def __repr__(self):
+        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
+                                                     repr(self._storage_service))
+
     def run(self):
         """Starts listening to the queue."""
         while True:
@@ -221,6 +225,10 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         self._storage_service = storage_service
         self._lock = lock
         self._set_logger()
+
+    def __repr__(self):
+        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
+                                                     repr(self._storage_service))
 
     def store(self, *args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
@@ -585,6 +593,9 @@ class HDF5StorageService(StorageService, HasLogger):
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
+
+    def __repr__(self):
+        return '<%s (filename:`%s`)>' % (self.__class__.__name__, str(self._filename))
 
     @property
     def encoding(self):
@@ -3304,14 +3315,14 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if 'range' in colnames:
             insert_dict['range'] = self._all_cut_string(
-                compat.tobytetype(str(item.f_get_range())),
+                compat.tobytetype(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
             insert_dict['array'] = self._all_cut_string(
-                compat.tobytetype(str(item.f_get_range())),
+                compat.tobytetype(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 

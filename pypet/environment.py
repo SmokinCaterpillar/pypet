@@ -61,7 +61,7 @@ from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, 
 import pypet.pypetconstants as pypetconstants
 from pypet.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
-from pypet.utils.decorators import deprecated
+from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug
 
@@ -267,7 +267,7 @@ class Environment(HasLogger):
 
     :param comment: Comment added to the trajectory if a novel trajectory is created.
 
-    :param dynamically_imported_classes:
+    :param dynamic_imports:
 
           Only considered if a new trajectory is created.
           If you've written custom parameters or results that need to be loaded
@@ -276,12 +276,12 @@ class Environment(HasLogger):
           naming classes and there module paths.
 
           For example:
-          `dynamically_imported_classes =
+          `dynamic_imports =
           ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
           If you only have a single class to import, you do not need
           the list brackets:
-          `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+          `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
     :param automatic_storing:
 
@@ -716,10 +716,11 @@ class Environment(HasLogger):
 
     """
 
+    @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
-                 dynamically_imported_classes=None,
+                 dynamic_imports=None,
                  automatic_storing=True,
                  log_folder=None,
                  log_level=logging.INFO,
@@ -830,7 +831,7 @@ class Environment(HasLogger):
             # Create a new trajectory
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
-                                    dynamically_imported_classes=dynamically_imported_classes,
+                                    dynamic_imports=dynamic_imports,
                                     comment=comment)
 
             self._timestamp = self.v_trajectory.v_timestamp  # Timestamp of creation
@@ -1155,6 +1156,11 @@ class Environment(HasLogger):
 
         self._trajectory_name = self._traj.v_name
         self._logger.info('Environment initialized.')
+
+    def __repr__(self):
+        repr_string = '<%s %s for Trajectory %s>' % (self.__class__.__name__, self.v_name,
+                                          self.v_trajectory.v_name)
+        return repr_string
 
     @staticmethod
     def _make_logging_handlers(log_path, log_level, log_stdout):
@@ -1532,9 +1538,15 @@ class Environment(HasLogger):
         reason = self._sumatra_reason
         if reason:
             reason += ' -- '
-        reason += 'Trajectory: `%s`, %s -- Explored Parameters: %s' % \
+
+        if self._traj.v_comment:
+            commentstr = ' (`%s`)' % self._traj.v_comment
+        else:
+            commentstr = ''
+
+        reason += 'Trajectory %s%s -- Explored Parameters: %s' % \
                   (self._traj.v_name,
-                   self._traj.v_comment,
+                   commentstr,
                    str(compat.listkeys(self._traj._explored_parameters)))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
@@ -1566,6 +1578,7 @@ class Environment(HasLogger):
 
     def _finish_sumatra(self):
         """ Saves a sumatra record"""
+
         finish_time = self._start_timestamp - self._finish_timestamp
         self._record.duration = finish_time
         self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
@@ -1584,7 +1597,7 @@ class Environment(HasLogger):
                 self._traj.f_add_config(config_name, self._sumatra_reason,
                                         comment='Reason of sumatra run.')
 
-        self._logger.info('Saved sumatra project with reason: %s' % self._sumatra_reason)
+        self._logger.info('Saved sumatra project record with reason: %s' % self._sumatra_reason)
 
     def _prepare_continue(self):
         """Prepares the continuation of a crashed trajectory"""

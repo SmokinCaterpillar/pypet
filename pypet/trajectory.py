@@ -45,6 +45,7 @@ from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
 import pypet.storageservice as storage
+from pypet.utils.decorators import kwargs_api_change
 
 
 class SingleRun(DerivedParameterGroup, ResultGroup):
@@ -135,6 +136,20 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         # But if we keep it here, we can have a simpler generic addition of elements
         # in the natural naming interface
         self._changed_default_parameters = {}
+
+    def __str__(self):
+
+        if self.v_comment:
+            commentstring = '`%s`, ' % self.v_comment
+        else:
+            commentstring = ''
+
+        info_string = '(%sidx:%d)'  % (commentstring, self.v_idx)
+
+        children_string = self._get_children_representation()
+
+        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string,
+                                children_string)
 
     @property
     def v_as_run(self):
@@ -989,15 +1004,15 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         A useful comment describing the trajectory.
 
-    :param dynamically_imported_classes:
+    :param dynamic_imports:
 
         If you've written a custom parameter that needs to be loaded dynamically during runtime,
         this needs to be specified here as a list of classes or strings naming classes
         and there module paths. For example:
-        `dynamically_imported_classes = ['pypet.parameter.PickleParameter',MyCustomParameter]`
+        `dynamic_imports = ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
         If you only have a single class to import, you do not need the list brackets:
-        `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+        `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
     :param filename:
 
@@ -1014,13 +1029,14 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
     Example usage:
 
-    >>> traj = Trajectory('ExampleTrajectory',dynamically_imported_classes=['Some.custom.class'],\
+    >>> traj = Trajectory('ExampleTrajectory',dynamic_imports=['Some.custom.class'],\
     comment = 'I am a neat example!', filename='experiment.hdf5', file_title='Experiments')
 
     """
 
+    @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, name='my_trajectory', add_time=True, comment='',
-                 dynamically_imported_classes=None,
+                 dynamic_imports=None,
                  filename=None):
 
         # We call the init of the grandparent class because a Single Run init requires
@@ -1111,8 +1127,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         # helper variable to return the correct length during single runs.
         self._length_during_run = None
 
-        if not dynamically_imported_classes is None:
-            self.f_add_to_dynamic_imports(dynamically_imported_classes)
+        if not dynamic_imports is None:
+            self.f_add_to_dynamic_imports(dynamic_imports)
 
         faulty_names = self._nn_interface._check_names([name])
 
@@ -1129,11 +1145,20 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._comment = ''
         self.v_comment = comment
 
-        # We add the four major subtrees
-        # self.f_add_parameter_group('parameters')
-        # self.f_add_config_group('config')
-        # self.f_add_result_group('results')
-        # self.f_add_derived_parameter_group('derived_parameters')
+
+    def __str__(self):
+
+        if self.v_comment:
+            commentstring = '`%s`, ' % self.v_comment
+        else:
+            commentstring = ''
+
+        info_string = '(%slen:%d)'  % (commentstring, len(self))
+
+        children_string = self._get_children_representation()
+
+        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string, children_string)
+
 
     @property
     def v_filename(self):
@@ -1247,30 +1272,30 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 param.v_full_copy = val
 
 
-    def f_add_to_dynamic_imports(self, dynamically_imported_classes):
+    def f_add_to_dynamic_imports(self, dynamic_imports):
         """Adds classes or paths to classes to the trajectory to create custom parameters.
 
-        :param dynamically_imported_classes:
+        :param dynamic_imports:
 
             If you've written custom parameter that needs to be loaded dynamically during runtime,
             this needs to be specified here as a list of classes or strings naming classes
             and there module paths. For example:
-            `dynamically_imported_classes = ['pypet.parameter.PickleParameter',MyCustomParameter]`
+            `dynamic_imports = ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
             If you only have a single class to import, you do not need the list brackets:
-            `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+            `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
         """
 
-        if not isinstance(dynamically_imported_classes, (list, tuple)):
-            dynamically_imported_classes = [dynamically_imported_classes]
+        if not isinstance(dynamic_imports, (list, tuple)):
+            dynamic_imports = [dynamic_imports]
 
-        for item in dynamically_imported_classes:
+        for item in dynamic_imports:
             if not (isinstance(item, compat.base_type) or inspect.isclass(item)):
                 raise TypeError('Your dynamic import `%s` is neither a class nor a string.' %
                                 str(item))
 
-        self._dynamic_imports.extend(dynamically_imported_classes)
+        self._dynamic_imports.extend(dynamic_imports)
 
 
     def f_as_run(self, name_or_idx):
@@ -2101,7 +2126,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
-
+    @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def f_load(self,
                name=None,
                index=None,
@@ -2113,7 +2138,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                load_all=None,
                force=False,
                filename=None,
-               dynamically_imported_classes=None):
+               dynamic_imports=None):
         """Loads a trajectory via the storage service.
 
 
@@ -2204,15 +2229,15 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             specify one here. The trajectory will generate an HDF5StorageService
             automatically.
 
-        :param dynamically_imported_classes:
+        :param dynamic_imports:
 
             If you've written a custom parameter that needs to be loaded dynamically
             during runtime, this needs to be specified here as a list of classes or
             strings naming classes and there module paths. For example:
-            `dynamically_imported_classes = ['pypet.parameter.PickleParameter',MyCustomParameter]`
+            `dynamic_imports = ['pypet.parameter.PickleParameter',MyCustomParameter]`
 
             If you only have a single class to import, you do not need the list brackets:
-            `dynamically_imported_classes = 'pypet.parameter.PickleParameter'`
+            `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
             The classes passed here are added for good and will be kept by the trajectory.
             Please add your dynamically imported classes only once.
@@ -2245,8 +2270,8 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             else:
                 self._storage_service.filename = filename
 
-        if not dynamically_imported_classes is None:
-            self.f_add_to_dynamic_imports(dynamically_imported_classes)
+        if not dynamic_imports is None:
+            self.f_add_to_dynamic_imports(dynamic_imports)
 
         if load_all is not None:
             load_parameters = load_all

@@ -30,7 +30,7 @@ You start your simulations by creating an environment object:
 >>> env = Environment(trajectory='trajectory',
                  add_time=True,
                  comment='',
-                 dynamically_imported_classes=None,
+                 dynamic_imports=None,
                  automatic_storing=True,
                  log_folder=None,
                  log_level=logging.INFO,
@@ -91,15 +91,15 @@ because most of the time the default settings are sufficient.
 
     The comment that will be added to a newly created trajectory.
 
-* ``dynamically_imported_classes``
+* ``dynamic_imports``
 
     Only considered if a new trajectory is created.
 
-    The argument ``dynamically_imported_classes`` is important
+    The argument ``dynamic_imports`` is important
     if you have written your own *parameter* or *result* classes, you can pass these either
     as class variables ``MyCustomParameterClass`` or as strings leading to the classes in your package:
     ``'mysim.myparameters.MyCustomParameterClass'``. If you have several classes, just put them in
-    a list ``dynamically_imported_classes=[MyCustomParameterClass,MyCustomResultClass]``.
+    a list ``dynamic_imports=[MyCustomParameterClass,MyCustomResultClass]``.
     The trajectory needs to know your custom classes in case you want to load a custom class
     from disk and the trajectory needs to know how they are built.
 
@@ -585,7 +585,7 @@ The following code snippet shows how to enable multiprocessing with 4 cpus, a po
 
     env = Environment(self, trajectory='trajectory',
                  comment='',
-                 dynamically_imported_classes=None,
+                 dynamic_imports=None,
                  log_folder='../log/',
                  use_hdf5=True,
                  filename='../experiments.h5',

@@ -4,6 +4,18 @@ pypet 0.1b.9
 
 *   BUG FIX: Metadata is loaded only once
 
+*   Results no longer support the `v_no_data_string' property
+
+*   Data of Results is no longer sorted in case of calling `f_val_to_string`
+
+*   In accordance with the python default to call `__repr__` for displaying contained
+    objects, `f_val_to_str` calls `repr` on the contained data in parameters and results.
+
+*   Added informative repr for the most commonly used classes
+
+*   The (annoyingly long) keyword `dynamically_imported_classes` is changed to
+    `dynamic_imports`. For backwards compatibility, the old keyword can still
+    be used.
 
 pypet 0.1b.8
 

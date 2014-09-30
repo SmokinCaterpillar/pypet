@@ -20,6 +20,7 @@ import pickle
 import logging
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
+import warnings
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult
@@ -86,6 +87,23 @@ class TrajectoryTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
+
+
+
+    def test_truncation_of_string_statements_of_group_nodes(self):
+
+        self.traj.f_add_group('suiting_subgroups')
+
+        for irun in range(5):
+            self.traj.suiting_subgroups.f_add_group('test%d' % irun)
+
+        self.assertFalse(str(self.traj.suiting_subgroups).endswith('...'))
+
+        self.traj.f_add_group('non_suiting_subgroups')
+        for irun in range(6):
+            self.traj.non_suiting_subgroups.f_add_group('test%d' % irun)
+
+        self.assertTrue(str(self.traj.non_suiting_subgroups).endswith('...'))
 
     def test_shrink(self):
 
