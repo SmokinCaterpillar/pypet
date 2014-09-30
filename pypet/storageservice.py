@@ -90,7 +90,6 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         except IOError:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            resend = True
             max_tries = 8000
             sleep_time = 0.25
             for trying in range(max_tries):
