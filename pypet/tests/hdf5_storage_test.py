@@ -157,7 +157,7 @@ class StorageTest(TrajectoryComparator):
     def test_auto_load(self):
 
 
-        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+        traj = Trajectory(name='Testautoload', filename=make_temp_file('autoload.hdf5'))
 
         traj.v_auto_load = True
 
@@ -190,7 +190,7 @@ class StorageTest(TrajectoryComparator):
     def test_get_default(self):
 
 
-        traj = Trajectory(name='Test', filename=make_temp_file('autoload.hdf5'))
+        traj = Trajectory(name='Testgetdefault', filename=make_temp_file('autoload.hdf5'))
 
         traj.v_auto_load = True
 
