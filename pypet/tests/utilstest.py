@@ -4,7 +4,7 @@ __author__ = 'Robert Meyer'
 
 
 
-from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
+from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 
 from pypet.trajectory import Trajectory

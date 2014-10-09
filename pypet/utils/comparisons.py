@@ -1,15 +1,24 @@
+"""Module containing utility functions to compare parameters and results"""
+
 __author__ = 'Robert Meyer'
 
 from collections import Sequence, Mapping, Set
+
+try:
+    from future_builtins import zip
+except ImportError:  # not 2.6+ or is 3.x
+    try:
+        from itertools import izip as zip  # < 2.5 or 3.x
+    except ImportError:
+        pass
 import numpy as np
 import pandas as pd
 
-import pypet
-import itertools as it
 import pypet.pypetconstants as pypetconstants
+import pypet.compat as compat
 
 
-def results_equal(a,b):
+def results_equal(a, b):
     """Compares two result instances
 
     Checks full name and all data. Does not consider the comment.
@@ -19,21 +28,21 @@ def results_equal(a,b):
     :raises: ValueError if both inputs are no result instances
 
     """
-    if not isinstance(a, pypet.parameter.Result) and not isinstance(b, pypet.parameter.Result):
+
+    if a.v_is_parameter or b.v_is_parameter:
         raise ValueError('Both inputs are not results.')
 
-    if not isinstance(a, pypet.parameter.Result) or not isinstance(b, pypet.parameter.Result):
+    if a.v_is_parameter or b.v_is_parameter:
         return False
 
-    if not a.v_name==b.v_name:
+    if not a.v_name == b.v_name:
         return False
 
-    if not a.v_location==b.v_location:
+    if not a.v_location == b.v_location:
         return False
 
     if not a.v_full_name == b.v_full_name:
         return False
-
 
     akeyset = set(a._data.keys())
     bkeyset = set(b._data.keys())
@@ -41,16 +50,17 @@ def results_equal(a,b):
     if akeyset != bkeyset:
         return False
 
-    for key, val in a._data.iteritems():
+    for key in a._data:
+        val = a._data[key]
         bval = b._data[key]
 
-        if not nested_equal(val,bval):
+        if not nested_equal(val, bval):
             return False
-
 
     return True
 
-def parameters_equal(a,b):
+
+def parameters_equal(a, b):
     """Compares two parameter instances
 
     Checks full name, data, and ranges. Does not consider the comment.
@@ -60,16 +70,18 @@ def parameters_equal(a,b):
     :raises: ValueError if both inputs are no parameter instances
 
     """
-    if not isinstance(b, pypet.parameter.BaseParameter) and not isinstance(a, pypet.parameter.BaseParameter):
+    if (not b.v_is_parameter and
+            not a.v_is_parameter):
         raise ValueError('Both inputs are not parameters')
 
-    if not isinstance(b, pypet.parameter.BaseParameter) or not isinstance(a, pypet.parameter.BaseParameter):
+    if (not b.v_is_parameter or
+            not a.v_is_parameter):
         return False
 
-    if not a.v_name==b.v_name:
+    if not a.v_name == b.v_name:
         return False
 
-    if not a.v_location==b.v_location:
+    if not a.v_location == b.v_location:
         return False
 
     if not a.v_full_name == b.v_full_name:
@@ -77,23 +89,23 @@ def parameters_equal(a,b):
 
     # I allow different comments for now
     # if not a.get_comment() == b.get_comment():
-    #     return False
+    # return False
 
-    if not a._values_of_same_type(a.f_get(),b.f_get()):
+    if not a._values_of_same_type(a.f_get(), b.f_get()):
         return False
 
-    if not a._equal_values(a.f_get(),b.f_get()):
+    if not a._equal_values(a.f_get(), b.f_get()):
         return False
 
     if not len(a) == len(b):
         return False
 
     if a.f_has_range():
-        for myitem, bitem in it.izip(a.f_get_range(),b.f_get_range()):
-            if not a._values_of_same_type(myitem,bitem):
+        for myitem, bitem in zip(a.f_get_range(), b.f_get_range()):
+            if not a._values_of_same_type(myitem, bitem):
                 return False
 
-            if not a._equal_values(myitem,bitem):
+            if not a._equal_values(myitem, bitem):
                 return False
 
     return True
@@ -108,49 +120,60 @@ def nested_equal(a, b):
     .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
 
     """
-    if id(a) == id(b):
+    if a is b:
         return True
 
     # for types that support __eq__
-    if hasattr(a,'__eq__'):
+    if hasattr(a, '__eq__'):
         try:
-            custom_eq= a == b
-            if isinstance(custom_eq,bool):
+            custom_eq = a == b
+            if isinstance(custom_eq, bool):
                 return custom_eq
         except ValueError:
             pass
 
-    #Check equality according to type type [sic].
+    # Check equality according to type type [sic].
     if a is None:
         return b is None
-    if isinstance(a, basestring):
-         return a == b
+    if isinstance(a, (compat.unicode_type, compat.bytes_type)):
+        return a == b
     if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
-        return a==b
+        return a == b
     if isinstance(a, np.ndarray):
-        return np.all(a==b)
+        return np.all(a == b)
     if isinstance(a, (pd.Panel, pd.Panel4D)):
         return nested_equal(a.to_frame(), b.to_frame())
-    if isinstance(a, pd.DataFrame):
+    if isinstance(a, (pd.DataFrame, pd.Series)):
         try:
             new_frame = a == b
-            new_frame = new_frame |( pd.isnull(a) & pd.isnull(b))
+            new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
             return np.all(new_frame.as_matrix())
         except ValueError:
             # The Value Error can happen if the data frame is of dtype=object and contains
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
-            for name, cola in a.iteritems():
-                if not name in b:
+            if isinstance(a, pd.DataFrame):
+                for name in a:
+                    cola = a[name]
+
+                    if not name in b:
+                        return False
+
+                    colb = b[name]
+
+                    if not len(cola) == len(colb):
+                        return False
+
+                    for idx, itema in enumerate(cola):
+                        itemb = colb[idx]
+                        if not nested_equal(itema, itemb):
+                            return False
+            else:
+                if not len(a) == len(b):
                     return False
 
-                colb = b[name]
-
-                if not len(cola)==len(colb):
-                    return False
-
-                for idx,itema in enumerate(cola):
-                    itemb = colb[idx]
-                    if not nested_equal(itema,itemb):
+                for idx, itema in enumerate(a):
+                    itemb = b[idx]
+                    if not nested_equal(itema, itemb):
                         return False
 
             return True
@@ -162,10 +185,10 @@ def nested_equal(a, b):
             return False
         return all(nested_equal(a[k], b[k]) for k in a.keys())
     if isinstance(a, Set):
-         return a == b
+        return a == b
 
-    if hasattr(a,'__dict__'):
-        if not hasattr(b,'__dict__'):
+    if hasattr(a, '__dict__'):
+        if not hasattr(b, '__dict__'):
             return False
 
         if set(a.__dict__.keys()) != set(b.__dict__.keys()):

@@ -17,7 +17,7 @@ import os
 import dill
 
 import tables as pt
-from test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
+from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
     TrajectoryComparator, make_temp_file, multiply
 
 class CustomParameter(Parameter):
@@ -300,7 +300,7 @@ class ContinueTest(TrajectoryComparator):
         #self.trajs[0].f_load(trajectory_name=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
 
         self.trajs[1].f_update_skeleton()
-        self.trajs[1].f_load_items(self.trajs[1].f_to_dict().itervalues(),only_empties=True)
+        self.trajs[1].f_load_items(self.trajs[1].f_to_dict().values(),only_empties=True)
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
 

@@ -24,6 +24,7 @@ __author__ = 'Robert Meyer'
 
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
+import pypet.compat as compat
 
 
 class Annotations(object):
@@ -96,11 +97,11 @@ class Annotations(object):
 
         if len(args) == 0:
             if len(self.__dict__) == 1:
-                return self.__dict__[self.__dict__.keys()[0]]
+                return self.__dict__[compat.listkeys(self.__dict__)[0]]
             elif len(self.__dict__) > 1:
                 raise ValueError('Your annotation contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
-                                 (str(self.__dict__.keys())))
+                                 (str(compat.listkeys(self.__dict__))))
             else:
                 raise AttributeError('Your annotation is empty, cannot access data.')
 
@@ -141,7 +142,7 @@ class Annotations(object):
         setattr(self, name, data)
 
     def f_ann_to_str(self):
-        """Returns all annotations as a concatenated string."""
+        """Returns all annotations lexicographically sorted as a concatenated string."""
         resstr = ''
         for key in sorted(self.__dict__.keys()):
             resstr += '%s=%s; ' % (key, str(self.__dict__[key]))
@@ -153,7 +154,7 @@ class Annotations(object):
 
 class WithAnnotations(HasLogger):
     def __init__(self):
-        self._annotations = Annotations() # The annotation object to handle annotations
+        self._annotations = Annotations()  # The annotation object to handle annotations
 
     @property
     def v_annotations(self):

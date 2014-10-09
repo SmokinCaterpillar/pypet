@@ -3,12 +3,12 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
-from pypet.parameter import Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult, BaseParameter
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 import pypet.pypetexceptions as pex
 
@@ -22,10 +22,11 @@ import scipy.sparse as spsp
 import random
 import tables
 import inspect
+import pypet.compat as compat
 
 import tables as pt
 
-from test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
+from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 
 
@@ -321,7 +322,7 @@ class StorageTest(TrajectoryComparator):
                          continuable=False,
                          use_hdf5=True,
                          complevel=4,
-                         complib='lzo',
+                         complib='zlib',
                          shuffle=True,
                          fletcher32=True,
                          pandas_format='t',
@@ -345,12 +346,12 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(row['complevel'] == 4)
 
-        self.assertTrue(row['complib'] == 'lzo')
+        self.assertTrue(row['complib'] == compat.tobytetype('zlib'))
 
         self.assertTrue(row['shuffle'])
         self.assertTrue(row['fletcher32'])
         self.assertTrue(row['pandas_append'])
-        self.assertTrue(row['pandas_format'] == 't')
+        self.assertTrue(row['pandas_format'] == compat.tobytetype('t'))
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             self.assertTrue(row[table_name])
@@ -418,6 +419,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.complevel=9
         self.shuffle=True
         self.fletcher32 = False
+        self.encoding = 'utf8'
 
 
     def explore_complex_params(self, traj):
@@ -466,6 +468,14 @@ class EnvironmentTest(TrajectoryComparator):
 
         with self.assertRaises(pex.NotUniqueNodeError):
             traj.f_explore(self.explore_dict)
+
+        par_dict = traj.parameters.f_to_dict()
+        for param_name in par_dict:
+            param = par_dict[param_name]
+            if param.v_name in self.explore_dict:
+                param.f_unlock()
+                if param.v_explored:
+                    param._shrink()
 
         self.explore_dict={'Numpy.string':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
@@ -524,7 +534,8 @@ class EnvironmentTest(TrajectoryComparator):
                           complib=self.complib,
                           shuffle=self.shuffle,
                           pandas_append=self.pandas_append,
-                          pandas_format=self.pandas_format)
+                          pandas_format=self.pandas_format,
+                          encoding=self.encoding)
 
         traj = env.v_trajectory
 
@@ -561,6 +572,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore
@@ -589,7 +601,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
     def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False):
         ### Load The Trajectory and check if the values are still the same
@@ -612,7 +624,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        print '\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$'
+        print('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -644,7 +656,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        print '\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n'
+        print('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -876,6 +888,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = False
+        self.encoding='latin1'
 
 class TestOtherHDF5Settings2(EnvironmentTest):
     def set_mode(self):
@@ -890,6 +903,8 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = True
+        self.encoding='latin1'
+
 
 
 class ResultSortTest(TrajectoryComparator):
@@ -954,7 +969,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -974,7 +989,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1004,9 +1019,9 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        print self.env.f_run(multiply)
+        print(self.env.f_run(multiply))
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1026,7 +1041,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
 
 
         self.traj.f_update_skeleton()
@@ -1045,7 +1060,7 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1055,7 +1070,8 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(self.expand_dict.values()[0])+ len(self.explore_dict.values()[0]))
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+\
+                        len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)

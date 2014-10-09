@@ -36,6 +36,7 @@ from pypet.brian.parameter import BrianDurationParameter
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
 
+
 @deprecated('Please use `environment.f_run(manager.run_network)` instead of '
             '`environment.f_run(run_network, manager)`.')
 def run_network(traj, network_manager):
@@ -222,6 +223,7 @@ class NetworkComponent(HasLogger):
         """
         pass
 
+
 class NetworkAnalyser(NetworkComponent):
     """Specific NetworkComponent that analysis a network experiment.
 
@@ -308,11 +310,11 @@ class NetworkRunner(NetworkComponent):
 
     """
     def __init__(self, report='text', report_period=None,
-                 durations_group_name = 'simulation.durations',
-                 pre_durations_group_name = 'simulation.pre_durations'):
+                 durations_group_name='simulation.durations',
+                 pre_durations_group_name='simulation.pre_durations'):
 
         if report_period is None:
-            report_period=10 * second
+            report_period = 10 * second
 
         self._report = report
         self._report_period = report_period
@@ -324,7 +326,7 @@ class NetworkRunner(NetworkComponent):
         self._set_logger()
 
 
-    def execute_network_pre_run(self, traj, network,  network_dict, component_list, analyser_list):
+    def execute_network_pre_run(self, traj, network, network_dict, component_list, analyser_list):
         """Runs a network before the actual experiment.
 
         Called by a :class:`~pypet.brian.network.NetworkManager`.
@@ -353,9 +355,9 @@ class NetworkRunner(NetworkComponent):
 
         """
         self._execute_network_run(traj, network, network_dict, component_list, analyser_list,
-                          pre_run=True)
+                                  pre_run=True)
 
-    def execute_network_run(self, traj, network,  network_dict, component_list, analyser_list):
+    def execute_network_run(self, traj, network, network_dict, component_list, analyser_list):
         """Runs a network in an experimental run.
 
         Called by a :class:`~pypet.brian.network.NetworkManager`.
@@ -435,7 +437,7 @@ class NetworkRunner(NetworkComponent):
 
         """
         self._execute_network_run(traj, network, network_dict, component_list, analyser_list,
-                          pre_run=False)
+                                  pre_run=False)
 
     def _extract_subruns(self, traj, pre_run=False):
         """Extracts subruns from the trajectory.
@@ -461,26 +463,28 @@ class NetworkRunner(NetworkComponent):
             for duration_param in durations.f_iter_leaves():
 
                 if isinstance(duration_param, BrianDurationParameter):
-                    self._logger.warning('BrianDurationParameters are deprecated. Please use a normal '
-                                        'BrianParameter and specify the order in `v_annotations.order`!')
+                    self._logger.warning('BrianDurationParameters are deprecated. '
+                                         'Please use a normal BrianParameter and '
+                                         'specify the order in `v_annotations.order`!')
 
                 if 'order' in duration_param.v_annotations:
-                    order= duration_param.v_annotations.order
+                    order = duration_param.v_annotations.order
                 else:
                     raise RuntimeError('Your duration parameter %s has no order. Please add '
-                                       'an order in `v_annotations.order`.' % duration_param.v_full_name)
+                                       'an order in `v_annotations.order`.' %
+                                       duration_param.v_full_name)
 
                 if order in subruns:
                     raise RuntimeError('Your durations must differ in their order, there are two '
                                        'with order %d.' % order)
                 else:
-                    subruns[order]=duration_param
+                    subruns[order] = duration_param
                     orders.append(order)
 
         return [subruns[order] for order in sorted(orders)]
 
     def _execute_network_run(self, traj, network, network_dict, component_list,
-                     analyser_list, pre_run=False):
+                             analyser_list, pre_run=False):
         """Generic `execute_network_run` function, handles experimental runs as well as pre-runs.
 
         See also :func:`~pypet.brian.network.NetworkRunner.execute_network_run` and
@@ -496,24 +500,24 @@ class NetworkRunner(NetworkComponent):
         subrun_number = 0
 
         # Execute all subruns in order
-        while len(subrun_list)>0:
+        while len(subrun_list) > 0:
 
             # Get the next subrun
-            current_subrun= subrun_list.pop(0)
+            current_subrun = subrun_list.pop(0)
 
             # 1. Call `add` of all normal components
             for component in component_list:
-                component.add_to_network(traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+                component.add_to_network(traj, network, current_subrun, subrun_list,
+                                         network_dict)
 
             # 2. Call `add` of all analyser components
             for analyser in analyser_list:
-                analyser.add_to_network(traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+                analyser.add_to_network(traj, network, current_subrun, subrun_list,
+                                        network_dict)
 
             # 3. Call `add` of the network runner itself
-            self.add_to_network(traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+            self.add_to_network(traj, network, current_subrun, subrun_list,
+                                network_dict)
 
             # 4. Run the network
             self._logger.info('STARTING subrun `%s` (#%d) lasting %s.' %
@@ -523,33 +527,33 @@ class NetworkRunner(NetworkComponent):
 
             # 5. Call `analyse` of all analyser components
             for analyser in analyser_list:
-                analyser.analyse( traj, network, current_subrun,  subrun_list,
+                analyser.analyse(traj, network, current_subrun, subrun_list,
                                  network_dict)
 
             # 6. Call `remove` of the network runner itself
-            self.remove_from_network(traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+            self.remove_from_network(traj, network, current_subrun, subrun_list,
+                                     network_dict)
 
             # 7. Call `remove` for all analyser components
             for analyser in analyser_list:
-                analyser.remove_from_network( traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+                analyser.remove_from_network(traj, network, current_subrun, subrun_list,
+                                             network_dict)
 
             # 8. Call `remove` for all normal components
             for component in component_list:
-                component.remove_from_network(traj, network, current_subrun,  subrun_list,
-                                 network_dict)
+                component.remove_from_network(traj, network, current_subrun, subrun_list,
+                                              network_dict)
 
 
-            subrun_number+=1
+            subrun_number += 1
 
 
-class NetworkManager(object):
+class NetworkManager(HasLogger):
     """Manages a BRIAN network experiment and creates the network.
 
     An experiment consists of
 
-    :param network_runnner:  A :class:`~pypet.brian.network.NetworkRunner`
+    :param network_runner:  A :class:`~pypet.brian.network.NetworkRunner`
 
         Special component that handles the execution of several subruns.
         A NetworkRunner can be subclassed to implement the
@@ -617,41 +621,14 @@ class NetworkManager(object):
         self._network_dict = {}
         self._brian_list = []
         self._set_logger()
-        self._pre_built=False
-        self._pre_run=False
+        self._pre_built = False
+        self._pre_run = False
         self._network = None
-        self._force_single_core =force_single_core
+        self._force_single_core = force_single_core
         if network_constructor is None:
-            self._network_constructor=Network
+            self._network_constructor = Network
         else:
-            self._network_constructor=network_constructor
-
-
-
-
-    def __getstate__(self):
-        """Called for pickling.
-
-        Removes the logger to allow pickling and returns a copy of `__dict__`.
-
-        """
-        result = self.__dict__.copy()
-        del result['_logger'] #pickling does not work with loggers
-        return result
-
-    def __setstate__(self, statedict):
-        """Called after loading a pickle dump.
-
-        Restores `__dict__` from `statedict` and adds a new logger.
-
-        """
-        self.__dict__.update( statedict)
-        self._set_logger()
-
-
-    def _set_logger(self):
-        """Creates a logger"""
-        self._logger = logging.getLogger('NetworkManager')
+            self._network_constructor = network_constructor
 
     def add_parameters(self, traj):
         """Adds parameters for a network simulation.
@@ -766,17 +743,17 @@ class NetworkManager(object):
         self.pre_build(traj)
 
         self._logger.info('\n------------------------\n'
-                     'Pre-Running the Network\n'
-                     '------------------------')
+                          'Pre-Running the Network\n'
+                          '------------------------')
 
 
         self._network = self._network_constructor(*self._brian_list)
-        self.network_runner.execute_network_pre_run( traj, self._network,  self._network_dict,
-                                             self.components, self.analysers)
+        self.network_runner.execute_network_pre_run(traj, self._network, self._network_dict,
+                                                    self.components, self.analysers)
 
         self._logger.info('\n-----------------------------\n'
-                     'Network Simulation successful\n'
-                     '-----------------------------')
+                          'Network Simulation successful\n'
+                          '-----------------------------')
 
         self._pre_run = True
 
@@ -807,7 +784,8 @@ class NetworkManager(object):
         # Check if the network was pre-built
         if self._pre_built:
             # If yes check for multiprocessing or if a single core processing is forced
-            multiproc = traj.f_get('config.environment.%s.multiproc' % traj.v_environment_name).f_get()
+            multiproc = traj.f_get('config.environment.%s.multiproc' %
+                                   traj.v_environment_name).f_get()
             if multiproc:
                 self._run_network(traj)
             else:
@@ -819,26 +797,28 @@ class NetworkManager(object):
                                          'your trajectory contains more than a single run. ')
                     self._run_network(traj)
                 else:
-                    raise RuntimeError('You cannot run a pre-built network without multiprocessing.\n'
+                    raise RuntimeError('You cannot run a pre-built network without '
+                                       'multiprocessing.\n'
                                        'The network configuration must be copied either by '
                                        'pickling (using a `multiproc=True` and `use_pool=True` in '
-                                       'your environemnt) or by forking ( multiprocessing with '
-                                       '`use_pool=False`).\n If your network cannot be pickled use '
-                                       'the latter. In order to come close to iterative processing '
+                                       'your environment) or by forking ( multiprocessing with '
+                                       '`use_pool=False`).\n If your network '
+                                       'cannot be pickled use the latter. '
+                                       'In order to come close to iterative processing '
                                        'you could use multiprocessing with `ncores=1`. \n'
                                        'If you do not care about messing up initial conditions '
                                        '(i.e. you are debugging) use `force_single_core=True` '
                                        'in your network manager.')
         else:
-            clear(True,True)
+            clear(True, True)
             reinit()
             self._run_network(traj)
 
     def _pretty_print_explored_parameters(self, traj):
         print_statement = '\n-------------------\n' +\
-                     'Running the Network\n' +\
-                     '-------------------\n' +\
-                     '      with\n'
+                          'Running the Network\n' +\
+                          '-------------------\n' +\
+                          '      with\n'
 
         explore_dict = traj.f_get_explored_parameters(copy=False)
         for full_name in explore_dict:
@@ -846,7 +826,7 @@ class NetworkManager(object):
 
             print_statement += '%s = %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
 
-        print_statement+='-------------------'
+        print_statement += '-------------------'
 
         self._logger.info(print_statement)
 
@@ -868,9 +848,9 @@ class NetworkManager(object):
             self._network = self._network_constructor(*self._brian_list)
 
         # Start the experimental run
-        self.network_runner.execute_network_run( traj, self._network,  self._network_dict,
-                                             self.components, self.analysers)
+        self.network_runner.execute_network_run(traj, self._network, self._network_dict,
+                                                self.components, self.analysers)
 
         self._logger.info('\n-----------------------------\n'
-                     'Network Simulation successful\n'
-                     '-----------------------------')
+                          'Network Simulation successful\n'
+                          '-----------------------------')

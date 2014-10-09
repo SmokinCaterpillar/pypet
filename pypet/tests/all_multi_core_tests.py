@@ -12,20 +12,16 @@ from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 try:
     from pypet.tests.hdf5_removal_and_continue_tests import ContinueMPTest, ContinueMPPoolTest
 except ImportError as e:
-    print repr(e) # We end up here if `dill` is not installed
+    print(repr(e)) # We end up here if `dill` is not installed
     pass
 
 from pypet.tests.test_helpers import make_run
 
 # Works only if someone has installed Brian
 try:
-    from pypet.tests.briantests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
-        BrianResult, BrianResultStringModeTest
-    if not os.getenv('TRAVIS',False):
-        from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
-        from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest, BrianFullNetworkMPTest
+    from pypet.tests.briantests.brian_full_network_test import  BrianFullNetworkMPTest
 except ImportError as e:
-    print repr(e)
+    print(repr(e))
     pass
 
 
@@ -36,11 +32,11 @@ if __name__ == '__main__':
     for opt, arg in opt_list:
         if opt == '-k':
             remove = False
-            print 'I will keep all files.'
+            print('I will keep all files.')
 
         if opt == '--folder':
             folder = arg
-            print 'I will put all data into folder `%s`.' % folder
+            print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
     make_run(remove, folder)

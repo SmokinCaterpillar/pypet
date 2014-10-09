@@ -47,7 +47,7 @@ def run_experiments():
         traj.f_add_parameter('res_per_run', res_per_run)
         traj.f_add_parameter('trial', 0)
 
-        traj.f_explore({'trial': range(int(nruns))})
+        traj.f_explore({'trial': list(range(int(nruns)))})
 
 
         env.f_run(add_data)
@@ -84,7 +84,7 @@ def test_loading(filenames, traj_names):
     for idx, loading_time in enumerate(loading_times):
         loading_time_wd = loading_times_wd[idx]
         groups = n_groups[idx]
-        print 'Groups: %d, Loading: %.3fs, with Data: %.3fs' % (groups, loading_time, loading_time_wd)
+        print('Groups: %d, Loading: %.3fs, with Data: %.3fs' % (groups, loading_time, loading_time_wd))
 
 
 
@@ -107,7 +107,7 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
     traj.f_add_parameter('res_per_run', res_per_run)
     traj.f_add_parameter('trial', 0)
 
-    traj.f_explore({'trial':range(10)})
+    traj.f_explore({'trial':list(range(10))})
 
     runexp = lambda : env.f_run(add_data)
 
@@ -118,7 +118,7 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
     else:
         runexp()
 
-    print '########################################################################'
+    print('########################################################################')
 
     traj = Trajectory(name=traj.v_name, add_time=False, filename= traj.v_storage_service.filename)
 

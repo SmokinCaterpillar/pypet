@@ -11,15 +11,15 @@ else:
 
 
 import numpy as np
-from pypet.parameter import BaseParameter,Parameter, PickleParameter, BaseResult, ArrayParameter, PickleResult
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 
-from test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
+from pypet.tests.test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
-from hdf5_storage_test import ResultSortTest
+from pypet.tests.hdf5_storage_test import ResultSortTest
 
 
 class MergeTest(TrajectoryComparator):
@@ -30,7 +30,7 @@ class MergeTest(TrajectoryComparator):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
 
 
@@ -419,7 +419,7 @@ class MergeTest(TrajectoryComparator):
         self.explored ={'Normal.trial': [0,1],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])]}
 
-        traj.f_explore(cartesian_product(self.explored))
+        traj.f_explore(cartesian_product(self.explored,  ('Numpy.double','Normal.trial')))
 
 
     def explore2(self, traj):

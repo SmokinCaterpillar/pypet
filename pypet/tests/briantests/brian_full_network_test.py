@@ -57,7 +57,7 @@ def add_params(traj):
 def run_net(traj):
 
     clear(True, True)
-    print traj.defaultclock
+    print(traj.defaultclock)
     defaultclock.dt=traj.defaultclock
 
     C=traj.C
@@ -173,7 +173,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
 class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
     def setUp(self):
-        logging.basicConfig(level = logging.DEBUG)
+        logging.basicConfig(level = logging.INFO)
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),

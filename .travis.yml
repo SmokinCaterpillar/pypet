@@ -1,57 +1,78 @@
 language: python
 python:
-  - "2.7_with_system_site_packages"
+  - 2.7
   - 2.6
 
 
 env:
   matrix:
-    - PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF
-    - PANDAS_VERSION=0.14.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.4 CYTHON_VERSION=0.20.2 COVERAGE=OFF GIT_TEST=OFF
+    - NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
 
 
 matrix:
   include:
-    - python: "2.7_with_system_site_packages"
-      env: PANDAS_VERSION=0.14.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=ON GIT_TEST=OFF
-    - python: "2.7_with_system_site_packages"
-      env: PANDAS_VERSION=0.13.1 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.2 CYTHON_VERSION=0.19.1 COVERAGE=OFF GIT_TEST=ON
+    - python: 3.3
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+    - python: 3.4
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+    - python: 2.7
+      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=OFF EXAMPLES=OFF
+    - python: 2.7
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON
+
 
 
 # Install dependencies for PyTables
 # command to install dependencies
 before_install:
+  - sudo apt-get update
   - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
   - sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - sudo apt-get install libhdf5-serial-dev
-  - echo "+++++++++++ Installing SciPy and NumPy +++++++++++++"
-  - sudo apt-get install -qq python-numpy python-scipy
+  - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget http://repo.continuum.io/miniconda/Miniconda-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget http://repo.continuum.io/miniconda/Miniconda3-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  # Replace dep1 dep2 ... with your dependencies
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+  - source activate test-environment
+  - pip freeze
 install:
-  - echo "+++++++++++ Installing Coveralls +++++++++++"
-  - pip install coveralls
   - echo "Python $TRAVIS_PYTHON_VERSION"
+  - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
+  - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
-  - pip install numexpr==$NUMEXPR_VERSION
+  - if [[ $NEWEST == TRUE ]]; then conda install numexpr; else pip install numexpr==$NUMEXPR_VERSION; fi
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - pip install cython==$CYTHON_VERSION
+  - if [[ $NEWEST == TRUE ]]; then conda install cython; else pip install cython==$CYTHON_VERSION; fi
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - pip install tables==$TABLES_VERSION
+  - if [[ $NEWEST == TRUE ]]; then conda install pytables; else pip install tables==$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - pip install pandas==$PANDAS_VERSION
-  - echo "+++++++++++ Installing Brian +++++++++++"
-  - pip install brian
+  - if [[ $NEWEST == TRUE ]]; then conda install pandas; else pip install pandas==$PANDAS_VERSION; fi
+  - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then pip install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - pip install psutil
+  - echo "+++++++++++ Installing dill ++++++++++++"
+  - pip install dill
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-  - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install dill
   - echo "+++++++++++ Installing PYPET +++++++++++"
-  - pip install .
+  - python setup.py install
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
 script: chmod +x runtests.sh; ./runtests.sh
@@ -60,4 +81,5 @@ branches:
   only:
     - develop
     - master
+    - python6
 

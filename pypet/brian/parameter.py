@@ -14,10 +14,10 @@ fast setup of large scale BRIAN experiments.
 
 """
 
-___author__='Robert Meyer'
+___author__ = 'Robert Meyer'
 
 
-from pypet.parameter import Parameter,Result,ObjectTable
+from pypet.parameter import Parameter, Result, ObjectTable
 # Unfortunately I have to do this for read the docs to be able to mock brian
 from pypet.utils.decorators import copydoc
 
@@ -28,12 +28,11 @@ except TypeError:
     pass
 
 from brian.fundamentalunits import Quantity, get_unit_fast
-from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
+from brian.monitor import SpikeMonitor, SpikeCounter, StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
     MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
 
 import numpy as np
-import logging
 import pandas as pd
 
 
@@ -72,10 +71,10 @@ class BrianParameter(Parameter):
     '''String storage mode'''
 
 
-    def __init__(self, full_name, data=None, comment='',storage_mode=FLOAT_MODE):
-        super(BrianParameter,self).__init__(full_name,data,comment)
+    def __init__(self, full_name, data=None, comment='', storage_mode=FLOAT_MODE):
+        super(BrianParameter, self).__init__(full_name, data, comment)
 
-        self._storage_mode=None
+        self._storage_mode = None
         self.v_storage_mode = storage_mode
 
     @property
@@ -101,7 +100,8 @@ class BrianParameter(Parameter):
 
     @v_storage_mode.setter
     def v_storage_mode(self, storage_mode):
-        assert (storage_mode == BrianParameter.STRING_MODE or storage_mode == BrianParameter.FLOAT_MODE)
+        assert (storage_mode == BrianParameter.STRING_MODE or
+                storage_mode == BrianParameter.FLOAT_MODE)
         self._storage_mode = storage_mode
 
 
@@ -109,26 +109,26 @@ class BrianParameter(Parameter):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        if super(BrianParameter,self).f_supports(data):
+        if super(BrianParameter, self).f_supports(data):
             return True
         return False
 
-    def _values_of_same_type(self,val1, val2):
+    def _values_of_same_type(self, val1, val2):
 
-        if isinstance(val1,Quantity):
+        if isinstance(val1, Quantity):
             try:
                 if not val1.has_same_dimensions(val2):
                     return False
             except AttributeError:
                 return False
-        elif isinstance(val2,Quantity):
+        elif isinstance(val2, Quantity):
             try:
                 if not val2.has_same_dimensions(val1):
                     return False
             except AttributeError:
                 return False
 
-        elif not super(BrianParameter,self)._values_of_same_type(val1, val2):
+        elif not super(BrianParameter, self)._values_of_same_type(val1, val2):
             return False
 
 
@@ -136,13 +136,14 @@ class BrianParameter(Parameter):
 
     def _store(self):
 
-        if isinstance(self._data,Quantity):
-            store_dict={}
+        if isinstance(self._data, Quantity):
+            store_dict = {}
 
             if self._storage_mode == BrianParameter.STRING_MODE:
 
                 valstr = self._data.in_best_unit(python_code=True)
-                store_dict['data'+BrianParameter.IDENTIFIER] = ObjectTable(data={'data':[valstr]})
+                store_dict['data' + BrianParameter.IDENTIFIER] = ObjectTable(
+                    data={'data': [valstr]})
 
 
                 if self.f_has_range():
@@ -152,14 +153,14 @@ class BrianParameter(Parameter):
                         valstr_list.append(valstr)
 
 
-                    store_dict['explored_data'+BrianParameter.IDENTIFIER] = \
-                        ObjectTable(data={'data':valstr_list})
+                    store_dict['explored_data' + BrianParameter.IDENTIFIER] = \
+                        ObjectTable(data={'data': valstr_list})
 
             elif self._storage_mode == BrianParameter.FLOAT_MODE:
                 unitstr = repr(get_unit_fast(self._data))
                 value = float(self._data)
-                store_dict['data'+BrianParameter.IDENTIFIER] = ObjectTable(data={'value':[value],
-                                                       'unit':[unitstr]})
+                store_dict['data' + BrianParameter.IDENTIFIER] = ObjectTable(
+                    data={'value': [value], 'unit': [unitstr]})
 
                 if self.f_has_range():
                     value_list = []
@@ -168,8 +169,8 @@ class BrianParameter(Parameter):
                         value_list.append(value)
 
 
-                    store_dict['explored_data'+BrianParameter.IDENTIFIER] = \
-                        ObjectTable(data={'value':value_list})
+                    store_dict['explored_data' + BrianParameter.IDENTIFIER] = \
+                        ObjectTable(data={'value': value_list})
 
             else:
                 raise RuntimeError('You shall not pass!')
@@ -178,13 +179,13 @@ class BrianParameter(Parameter):
 
             return store_dict
         else:
-            return super(BrianParameter,self)._store()
+            return super(BrianParameter, self)._store()
 
 
     def _load(self, load_dict):
 
         try:
-            data_table = load_dict['data'+BrianParameter.IDENTIFIER]
+            data_table = load_dict['data' + BrianParameter.IDENTIFIER]
 
             if 'unit' in data_table:
                 self._storage_mode = BrianParameter.FLOAT_MODE
@@ -197,8 +198,8 @@ class BrianParameter(Parameter):
                 self._data = eval(valstr)
 
 
-                if 'explored_data'+BrianParameter.IDENTIFIER in load_dict:
-                    explore_table = load_dict['explored_data'+BrianParameter.IDENTIFIER]
+                if 'explored_data' + BrianParameter.IDENTIFIER in load_dict:
+                    explore_table = load_dict['explored_data' + BrianParameter.IDENTIFIER]
 
                     valstr_col = explore_table['data']
                     explore_list = []
@@ -206,7 +207,7 @@ class BrianParameter(Parameter):
                         brian_quantity = eval(valstr)
                         explore_list.append(brian_quantity)
 
-                    self._explored_range=tuple(explore_list)
+                    self._explored_range = tuple(explore_list)
                     self._explored = True
 
             elif self._storage_mode == BrianParameter.FLOAT_MODE:
@@ -214,15 +215,15 @@ class BrianParameter(Parameter):
                 # Recreate the brain units from the vale as float and unit as string:
                 unit = eval(data_table['unit'][0])
                 value = data_table['value'][0]
-                self._data = value*unit
+                self._data = value * unit
 
-                if 'explored_data'+BrianParameter.IDENTIFIER in load_dict:
-                    explore_table = load_dict['explored_data'+BrianParameter.IDENTIFIER]
+                if 'explored_data' + BrianParameter.IDENTIFIER in load_dict:
+                    explore_table = load_dict['explored_data' + BrianParameter.IDENTIFIER]
 
                     value_col = explore_table['value']
                     explore_list = []
                     for value in value_col:
-                        brian_quantity = value*unit
+                        brian_quantity = value * unit
                         explore_list.append(brian_quantity)
 
                     self._explored_range = tuple(explore_list)
@@ -230,10 +231,11 @@ class BrianParameter(Parameter):
 
 
         except KeyError:
-            super(BrianParameter,self)._load(load_dict)
+            super(BrianParameter, self)._load(load_dict)
 
         self._default = self._data
         self._locked = True
+
 
 class BrianDurationParameter(BrianParameter):
     """Special BRIAN parameter to specify orders and durations of subruns.
@@ -249,17 +251,18 @@ class BrianDurationParameter(BrianParameter):
     add the property `order` to it's :class:`~pypet.annotations.Annotations`.
     No longer use:
 
-        >>> subrun = BrianDurationParameter('mysubrun', 10*s, order=42)
+        >>> subrun = BrianDurationParameter('mysubrun', 10 * s, order=42)
 
     But use:
 
-        >>> subrun = BrianParameter('mysubrun', 10*s)
+        >>> subrun = BrianParameter('mysubrun', 10 * s)
         >>> subrun.v_annotations.order=42
 
     """
-    def __init__(self, full_name, data=None, order=0, comment='',storage_mode=BrianParameter.FLOAT_MODE):
+    def __init__(self, full_name, data=None, order=0, comment='',
+                 storage_mode=BrianParameter.FLOAT_MODE):
         super(BrianDurationParameter, self).__init__(full_name, data, comment, storage_mode)
-        self.v_annotations.order=order
+        self.v_annotations.order = order
 
     @property
     def v_order(self):
@@ -269,11 +272,11 @@ class BrianDurationParameter(BrianParameter):
 
     @v_order.setter
     def v_order(self, order):
-        self.v_annotations.order=order
+        self.v_annotations.order = order
 
-    def _load(self,load_dict):
+    def _load(self, load_dict):
         if 'order' in load_dict:
-            self.v_annotations.order=load_dict['order']
+            self.v_annotations.order = load_dict['order']
         super(BrianDurationParameter, self)._load(load_dict)
 
 
@@ -289,7 +292,7 @@ class BrianResult(Result):
 
     """
 
-    IDENTIFIER=BrianParameter.IDENTIFIER
+    IDENTIFIER = BrianParameter.IDENTIFIER
     ''' Identifier String to label brian data '''
 
     FLOAT_MODE = 'FLOAT'
@@ -299,11 +302,11 @@ class BrianResult(Result):
     '''String storage mode'''
 
     def __init__(self, full_name, *args, **kwargs):
-        self._storage_mode=None
-        storage_mode = kwargs.pop('storage_mode',BrianResult.FLOAT_MODE)
-        self.v_storage_mode=storage_mode
+        self._storage_mode = None
+        storage_mode = kwargs.pop('storage_mode', BrianResult.FLOAT_MODE)
+        self.v_storage_mode = storage_mode
 
-        super(BrianResult,self).__init__(full_name, *args, **kwargs)
+        super(BrianResult, self).__init__(full_name, *args, **kwargs)
 
     @property
     def v_storage_mode(self):
@@ -338,43 +341,45 @@ class BrianResult(Result):
                                  ' please do not use %s in your result names.' %
                                  BrianResult.IDENTIFIER)
         elif name == 'storage_mode':
-            self.v_storage_mode=item
+            self.v_storage_mode = item
         else:
-            super(BrianResult,self).f_set_single(name,item)
+            super(BrianResult, self).f_set_single(name, item)
 
     def _supports(self, data):
         if isinstance(data, Quantity):
             return True
         else:
-            return super(BrianResult,self)._supports(data)
+            return super(BrianResult, self)._supports(data)
 
 
     def _store(self):
-        store_dict={}
-        for key, val in self._data.iteritems():
-            if isinstance(val,Quantity):
+        store_dict = {}
+        for key in self._data:
+            val = self._data[key]
+            if isinstance(val, Quantity):
 
                 if self._storage_mode == BrianResult.STRING_MODE:
 
                     valstr = val.in_best_unit(python_code=True)
-                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'data':[valstr] })
+                    store_dict[key + BrianResult.IDENTIFIER] = ObjectTable(
+                        data={'data': [valstr]})
 
                 elif self._storage_mode == BrianResult.FLOAT_MODE:
                     unitstr = repr(get_unit_fast(val))
                     value = float(val)
-                    store_dict[key+BrianResult.IDENTIFIER] = ObjectTable(data={'value':[value],
-                                                           'unit':[unitstr]})
+                    store_dict[key + BrianResult.IDENTIFIER] = ObjectTable(
+                        data={'value': [value], 'unit': [unitstr]})
 
                 else:
                     raise RuntimeError('You shall not pass!')
 
             else:
-                store_dict[key]=val
+                store_dict[key] = val
 
         return store_dict
 
 
-    def _load(self,load_dict):
+    def _load(self, load_dict):
 
         for key in load_dict:
             if BrianResult.IDENTIFIER in key:
@@ -397,9 +402,10 @@ class BrianResult(Result):
                     # Recreate the brain units from the vale as float and unit as string:
                     unit = eval(data_table['unit'][0])
                     value = data_table['value'][0]
-                    self._data[new_key] = value*unit
+                    self._data[new_key] = value * unit
             else:
-                self._data[key]=load_dict[key]
+                self._data[key] = load_dict[key]
+
 
 class BrianMonitorResult(Result):
     """ A Result class that supports brian monitors.
@@ -687,14 +693,14 @@ class BrianMonitorResult(Result):
 
         self._storage_mode = None
         self._monitor_type = None
-        storage_mode = kwargs.pop('storage_mode',BrianMonitorResult.TABLE_MODE)
-        self.v_storage_mode=storage_mode
+        storage_mode = kwargs.pop('storage_mode', BrianMonitorResult.TABLE_MODE)
+        self.v_storage_mode = storage_mode
 
-        super(BrianMonitorResult,self).__init__(full_name, *args, **kwargs)
+        super(BrianMonitorResult, self).__init__(full_name, *args, **kwargs)
 
 
     def _store(self):
-        store_dict = super(BrianMonitorResult,self)._store()
+        store_dict = super(BrianMonitorResult, self)._store()
 
         if self._monitor_type is not None:
             store_dict['monitor_type'] = self._monitor_type
@@ -748,7 +754,8 @@ class BrianMonitorResult(Result):
         if self._monitor_type is not None:
             raise TypeError('Cannot change the storage mode if you already extracted a monitor.')
 
-        assert (storage_mode == BrianMonitorResult.ARRAY_MODE or storage_mode == BrianMonitorResult.TABLE_MODE)
+        assert (storage_mode == BrianMonitorResult.ARRAY_MODE or
+                storage_mode == BrianMonitorResult.TABLE_MODE)
         self._storage_mode = storage_mode
 
     def f_set_single(self, name, item):
@@ -761,16 +768,16 @@ class BrianMonitorResult(Result):
 
             if self.v_stored:
                 self._logger.warning('You are changing an already stored result. If '
-                                 'you not explicitly overwrite the data on disk, this change '
-                                 'might be lost and not propagated to disk.')
+                                     'you not explicitly overwrite the data on disk, '
+                                     'this change might be lost and not propagated to disk.')
 
             self._extract_monitor_data(item)
         else:
-            super(BrianMonitorResult,self).f_set_single(name,item)
+            super(BrianMonitorResult, self).f_set_single(name, item)
 
 
     
-    def _extract_monitor_data(self,monitor):
+    def _extract_monitor_data(self, monitor):
 
         if self._monitor_type is not None:
             raise TypeError('Your result `%s` already extracted data from a `%s` monitor.'
@@ -791,84 +798,84 @@ class BrianMonitorResult(Result):
         elif isinstance(monitor, StateSpikeMonitor):
             self._extract_state_spike_monitor(monitor)
         
-        elif  isinstance(monitor, PopulationRateMonitor):
+        elif isinstance(monitor, PopulationRateMonitor):
             self._extract_population_rate_monitor(monitor)
 
         elif isinstance(monitor, ISIHistogramMonitor):
             self._extract_isi_hist_monitor(monitor)
 
-        elif isinstance(monitor,SpikeMonitor):
+        elif isinstance(monitor, SpikeMonitor):
             self._extract_spike_monitor(monitor)
 
         elif isinstance(monitor, MultiStateMonitor):
             self._extract_multi_state_monitor(monitor)
         
-        elif isinstance(monitor,StateMonitor):
+        elif isinstance(monitor, StateMonitor):
             self._extract_state_monitor(monitor)
 
             
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
 
-    def _extract_spike_counter(self,monitor):
+    def _extract_spike_counter(self, monitor):
         self.f_set(count=monitor.count)
-        self.f_set(source = str(monitor.source))
-        self.f_set(delay = monitor.delay)
-        self.f_set(nspikes = monitor.nspikes)
+        self.f_set(source=str(monitor.source))
+        self.f_set(delay=monitor.delay)
+        self.f_set(nspikes=monitor.nspikes)
 
 
-    def _extract_van_rossum_metric(self,monitor):
+    def _extract_van_rossum_metric(self, monitor):
 
-        self.f_set(source = str(monitor.source))
+        self.f_set(source=str(monitor.source))
         self.f_set(N=monitor.N)
         self.f_set(tau=float(monitor.tau))
-        self.f_set(tau_unit = 'second')
+        self.f_set(tau_unit='second')
         #self.f_set(timestep = monitor.timestep)
 
-        self.f_set(distance = monitor.distance)
+        self.f_set(distance=monitor.distance)
 
 
 
-    def _extract_isi_hist_monitor(self,monitor):
+    def _extract_isi_hist_monitor(self, monitor):
 
-        self.f_set(source = str(monitor.source))
-        self.f_set(count = monitor.count)
-        self.f_set(bins = monitor.bins)
-        self.f_set(delay = monitor.delay)
-        self.f_set(nspikes = monitor.nspikes)
+        self.f_set(source=str(monitor.source))
+        self.f_set(count=monitor.count)
+        self.f_set(bins=monitor.bins)
+        self.f_set(delay=monitor.delay)
+        self.f_set(nspikes=monitor.nspikes)
 
     @staticmethod
     def _get_format_string(monitor):
-        digits= len(str(len(monitor.source)))
-        format_string = '%0'+str(digits)+'d'
+        digits = len(str(len(monitor.source)))
+        format_string = '%0' + str(digits) + 'd'
         return format_string
 
-    def _extract_state_spike_monitor(self,monitor):
+    def _extract_state_spike_monitor(self, monitor):
 
-        self.f_set(source = str(monitor.source))
+        self.f_set(source=str(monitor.source))
 
         varnames = monitor._varnames
-        if not isinstance(varnames, tuple) :
+        if not isinstance(varnames, tuple):
             varnames = (varnames,)
 
-        for idx,varname in enumerate(varnames):
-            unit = repr(get_unit_fast(monitor.spikes[0][idx+2]))
-            self.f_set(**{varname+'_unit':unit})
+        for idx, varname in enumerate(varnames):
+            unit = repr(get_unit_fast(monitor.spikes[0][idx + 2]))
+            self.f_set(**{varname + '_unit': unit})
 
 
-        self.f_set(varnames = varnames)
+        self.f_set(varnames=varnames)
 
         #self.f_set(record = monitor.record)
         self.f_set(delay=monitor.delay)
-        self.f_set(nspikes = monitor.nspikes)
-        self.f_set(spiketimes_unit = 'second')
+        self.f_set(nspikes=monitor.nspikes)
+        self.f_set(spiketimes_unit='second')
 
 
-        if self._storage_mode==BrianMonitorResult.TABLE_MODE:
-            spike_dict={}
+        if self._storage_mode == BrianMonitorResult.TABLE_MODE:
+            spike_dict = {}
 
-            if len(monitor.spikes)>0:
-                zip_lists = zip(*monitor.spikes)
+            if len(monitor.spikes) > 0:
+                zip_lists = list(zip(*monitor.spikes))
                 time_list = zip_lists[1]
 
                 nounit_list = [np.float64(time) for time in time_list]
@@ -891,57 +898,57 @@ class BrianMonitorResult(Result):
 
                     self.f_set(spikes=pd.DataFrame(data=spike_dict))
 
-        elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
+        elif self._storage_mode == BrianMonitorResult.ARRAY_MODE:
 
-                format_string = self._get_format_string(monitor)
-                self.f_set(format_string=format_string)
+            format_string = self._get_format_string(monitor)
+            self.f_set(format_string=format_string)
 
-                spiked_neurons = set()
+            spiked_neurons = set()
 
+            for neuron in range(len(monitor.source)):
+                spikes = monitor.times(neuron)
+                if len(spikes) > 0:
+
+                    spiked_neurons.add(neuron)
+
+                    key = 'spiketimes_' + format_string % neuron
+                    self.f_set(**{key: spikes})
+
+            spiked_neurons = sorted(list(spiked_neurons))
+            if spiked_neurons:
+                self.f_set(neurons_with_spikes=spiked_neurons)
+
+            for varname in varnames:
                 for neuron in range(len(monitor.source)):
-                    spikes = monitor.times(neuron)
-                    if len(spikes)>0:
-
-                        spiked_neurons.add(neuron)
-
-                        key = 'spiketimes_' + format_string % neuron
-                        self.f_set(**{key:spikes})
-
-                spiked_neurons = sorted(list(spiked_neurons))
-                if spiked_neurons:
-                    self.f_set(neurons_with_spikes=spiked_neurons)
-
-                for varname in varnames:
-                     for neuron in range(len(monitor.source)):
-                         values = monitor.values(varname,neuron)
-                         if len(values)>0:
-                             key = varname+'_' + format_string % neuron
-                             self.f_set(**{key:values})
+                    values = monitor.values(varname, neuron)
+                    if len(values) > 0:
+                        key = varname + '_' + format_string % neuron
+                        self.f_set(**{key: values})
         else:
-                raise RuntimeError('You shall not pass!')
+            raise RuntimeError('You shall not pass!')
 
     def _extract_spike_monitor(self, monitor):
         
         #assert isinstance(monitor, SpikeMonitor)
 
 
-        self.f_set(source = str(monitor.source))
+        self.f_set(source=str(monitor.source))
 
-        self.f_set(record = monitor.record)
+        self.f_set(record=monitor.record)
 
-        self.f_set(nspikes = monitor.nspikes)
+        self.f_set(nspikes=monitor.nspikes)
 
-        self.f_set(spiketimes_unit = 'second')
+        self.f_set(spiketimes_unit='second')
 
 
         self.f_set(delay=monitor.delay)
 
 
-        if self._storage_mode==BrianMonitorResult.TABLE_MODE:
-            spike_dict={}
+        if self._storage_mode == BrianMonitorResult.TABLE_MODE:
+            spike_dict = {}
 
-            if len(monitor.spikes)>0:
-                zip_lists = zip(*monitor.spikes)
+            if len(monitor.spikes) > 0:
+                zip_lists = list(zip(*monitor.spikes))
                 time_list = zip_lists[1]
 
                 nounit_list = [np.float64(time) for time in time_list]
@@ -956,112 +963,99 @@ class BrianMonitorResult(Result):
                     spikeframe = pd.DataFrame(data=spike_dict)
                     self.f_set(spikes=spikeframe)
 
-        elif self._storage_mode==BrianMonitorResult.ARRAY_MODE:
-                format_string = self._get_format_string(monitor)
-                self.f_set(format_string=format_string)
+        elif self._storage_mode == BrianMonitorResult.ARRAY_MODE:
+            format_string = self._get_format_string(monitor)
+            self.f_set(format_string=format_string)
 
-                spiked_neurons = set()
+            spiked_neurons = set()
 
-                for neuron, spikes in monitor.spiketimes.items():
-                    if len(spikes)>0:
+            for neuron, spikes in monitor.spiketimes.items():
+                if len(spikes) > 0:
 
-                        spiked_neurons.add(neuron)
+                    spiked_neurons.add(neuron)
 
-                        key = 'spiketimes_' +format_string % neuron
-                        self.f_set(**{key: spikes})
+                    key = 'spiketimes_' + format_string % neuron
+                    self.f_set(**{key: spikes})
 
-                spiked_neurons = sorted(list(spiked_neurons))
-                if spiked_neurons:
-                    self.f_set(neurons_with_spikes=spiked_neurons)
+            spiked_neurons = sorted(list(spiked_neurons))
+            if spiked_neurons:
+                self.f_set(neurons_with_spikes=spiked_neurons)
 
         else:
-                raise RuntimeError('You shall not pass!')
+            raise RuntimeError('You shall not pass!')
 
-
-
-    def _extract_population_rate_monitor(self,monitor):
+    def _extract_population_rate_monitor(self, monitor):
         assert isinstance(monitor, PopulationRateMonitor)
         
 
-        self.f_set(source = str(monitor.source))
-        self.f_set(times_unit = 'second', rate_unit='Hz')
-        self.f_set(times = monitor.times)
-        self.f_set(rate = monitor.rate)
-        self.f_set(delay = monitor.delay)
-        self.f_set(bin=monitor._bin)
-        
-
-    def _extract_spike_counter(self,monitor):
-
-        self.f_set(nspikes =monitor.nspikes)
-        self.f_set(source = str(monitor.source))
-        self.f_set(count=monitor.count)
+        self.f_set(source=str(monitor.source))
+        self.f_set(times_unit='second', rate_unit='Hz')
+        self.f_set(times=monitor.times)
+        self.f_set(rate=monitor.rate)
         self.f_set(delay=monitor.delay)
+        self.f_set(bin=monitor._bin)
 
-
-
-    def _extract_population_spike_counter(self,monitor):
+    def _extract_population_spike_counter(self, monitor):
         
         assert isinstance(monitor, PopulationSpikeCounter)
 
-        self.f_set(nspikes = monitor.nspikes)
-        self.f_set(source = str(monitor.source))
+        self.f_set(nspikes=monitor.nspikes)
+        self.f_set(source=str(monitor.source))
         self.f_set(delay=monitor.delay)
 
 
 
 
-    def _extract_multi_state_monitor(self,monitors):
+    def _extract_multi_state_monitor(self, monitors):
 
-        self.f_set(vars = monitors.vars)
+        self.f_set(vars=monitors.vars)
 
 
-        if len(monitors.times)>0:
-            self.f_set(times = monitors.times)
-            self.f_set(times_unit = 'second')
+        if len(monitors.times) > 0:
+            self.f_set(times=monitors.times)
+            self.f_set(times_unit='second')
 
         ### Store recorded values ###
-        for idx,varname in enumerate(monitors.vars):
+        for idx, varname in enumerate(monitors.vars):
             monitor = monitors.monitors[varname]
             if idx == 0:
 
 
-                self.f_set(record = monitor.record)
+                self.f_set(record=monitor.record)
 
-                self.f_set(when = monitor.when)
+                self.f_set(when=monitor.when)
 
-                self.f_set(timestep = monitor.timestep)
+                self.f_set(timestep=monitor.timestep)
 
-                self.f_set(source = str(monitor.P))
+                self.f_set(source=str(monitor.P))
 
             if np.mean(monitor.mean) != 0.0:
-                self.f_set(**{varname+'_mean':monitor.mean})
-                self.f_set(**{varname+'_var' : monitor.var})
-            if len(monitors.times)>0:
-                self.f_set(**{varname+'_values' : monitor.values})
-            self.f_set (**{varname+'_unit' : repr(monitor.unit)})
+                self.f_set(**{varname + '_mean': monitor.mean})
+                self.f_set(**{varname + '_var': monitor.var})
+            if len(monitors.times) > 0:
+                self.f_set(**{varname + '_values': monitor.values})
+            self.f_set(**{varname + '_unit': repr(monitor.unit)})
 
 
-    def _extract_state_monitor(self,monitor):
+    def _extract_state_monitor(self, monitor):
 
-        self.f_set(varname = monitor.varname)
-        self.f_set(unit = repr(monitor.unit))
+        self.f_set(varname=monitor.varname)
+        self.f_set(unit=repr(monitor.unit))
 
             
-        self.f_set(record = monitor.record)
+        self.f_set(record=monitor.record)
         
-        self.f_set(when = monitor.when)
+        self.f_set(when=monitor.when)
         
-        self.f_set(timestep = monitor.timestep)
+        self.f_set(timestep=monitor.timestep)
 
-        self.f_set(source = str(monitor.P))
-        self.f_set(times_unit = 'second')
+        self.f_set(source=str(monitor.P))
+        self.f_set(times_unit='second')
 
         if np.mean(monitor.mean) != 0.0:
-            self.f_set(mean = monitor.mean)
-            self.f_set(var = monitor.var)
-        if len(monitor.times)>0:
-            self.f_set(times = monitor.times)
-            self.f_set(values = monitor.values)
+            self.f_set(mean=monitor.mean)
+            self.f_set(var=monitor.var)
+        if len(monitor.times) > 0:
+            self.f_set(times=monitor.times)
+            self.f_set(values=monitor.values)
 
-            

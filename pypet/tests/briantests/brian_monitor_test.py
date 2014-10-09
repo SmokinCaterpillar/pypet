@@ -21,12 +21,12 @@ from brian import clear
 class BrianMonitorTest(ResultTest):
 
     @classmethod
-    def setUpClass(BrianMonitorTest):
+    def setUpClass(cls):
         BrianMonitorResult.monitors=run_network()
         pass
 
     @classmethod
-    def tearDownClass(BrianMonitorTest):
+    def tearDownClass(cls):
         clear(True, True)
         reload(brian)
 
@@ -274,7 +274,7 @@ class BrianMonitorTest(ResultTest):
 
     def make_results(self):
         self.results={}
-        for key,monitor in self.monitors.iteritems():
+        for key,monitor in self.monitors.items():
             if key.endswith('Ar'):
                 self.results[key]=BrianMonitorResult(key,monitor,
                                                      storage_mode=BrianMonitorResult.ARRAY_MODE)

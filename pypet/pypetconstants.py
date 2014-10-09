@@ -8,57 +8,71 @@ that are recognized by storage services to determine how to store and load data.
 __author__ = 'Robert Meyer'
 
 import numpy
+import pypet.compat as compat
 
 
 ###################### Supported Data ########################
 
-PARAMETERTYPEDICT={"<type 'bool'>": bool,
- "<type 'complex'>": complex,
- "<type 'float'>": float,
- "<type 'int'>": int,
- "<type 'long'>": long,
- "<type 'numpy.bool_'>": numpy.bool_,
- "<type 'numpy.complex128'>": numpy.complex128,
- "<type 'numpy.complex64'>": numpy.complex64,
- "<type 'numpy.float32'>": numpy.float32,
- "<type 'numpy.float64'>": numpy.float64,
- "<type 'numpy.int16'>": numpy.int16,
- "<type 'numpy.int32'>": numpy.int32,
- "<type 'numpy.int64'>": numpy.int64,
- "<type 'numpy.int8'>": numpy.int8,
- "<type 'numpy.string_'>": numpy.string_,
- "<type 'numpy.uint16'>": numpy.uint16,
- "<type 'numpy.uint32'>": numpy.uint32,
- "<type 'numpy.uint64'>": numpy.uint64,
- "<type 'numpy.uint8'>": numpy.uint8,
- "<type 'str'>": str}
+PARAMETERTYPEDICT = {bool.__name__: bool,
+                     complex.__name__: complex,
+                     float.__name__: float,
+                     int.__name__: int,
+                     compat.long_type.__name__: compat.long_type,
+                     numpy.bool_.__name__: numpy.bool_,
+                     numpy.complex128.__name__: numpy.complex128,
+                     numpy.complex64.__name__: numpy.complex64,
+                     numpy.float32.__name__: numpy.float32,
+                     numpy.float64.__name__: numpy.float64,
+                     numpy.int16.__name__: numpy.int16,
+                     numpy.int32.__name__: numpy.int32,
+                     numpy.int64.__name__: numpy.int64,
+                     numpy.int8.__name__: numpy.int8,
+                     numpy.string_.__name__: numpy.string_,
+                     numpy.uint16.__name__: numpy.uint16,
+                     numpy.uint32.__name__: numpy.uint32,
+                     numpy.uint64.__name__: numpy.uint64,
+                     numpy.uint8.__name__: numpy.uint8,
+                     compat.unicode_type.__name__: compat.unicode_type,
+                     compat.bytes_type.__name__: compat.bytes_type}
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
 """
 
+# For compatibility with older pypet versions:
+COMPATPARAMETERTYPEDICT = {}
+for key in PARAMETERTYPEDICT.keys():
+    dtype = PARAMETERTYPEDICT[key]
+    typestr = repr(dtype)
+    if 'class' in typestr:
+        # Python 3 replaced "<type 'x'>" with "<class 'x'>"
+        typestr=typestr.replace('class', 'type')
+
+    COMPATPARAMETERTYPEDICT[typestr] = dtype
+
 PARAMETER_SUPPORTED_DATA = (numpy.int8,
-                       numpy.int16,
-                       numpy.int32,
-                       numpy.int64,
-                       numpy.int,
-                       numpy.int_,
-                       numpy.long,
-                       numpy.uint8,
-                       numpy.uint16,
-                       numpy.uint32,
-                       numpy.uint64,
-                       numpy.bool,
-                       numpy.bool_,
-                       numpy.float32,
-                       numpy.float64,
-                       numpy.float,
-                       numpy.float_,
-                       numpy.complex64,
-                       numpy.complex,
-                       numpy.complex_,
-                       numpy.str,
-                       numpy.str_)
+                            numpy.int16,
+                            numpy.int32,
+                            numpy.int64,
+                            numpy.int,
+                            numpy.int_,
+                            numpy.long,
+                            numpy.uint8,
+                            numpy.uint16,
+                            numpy.uint32,
+                            numpy.uint64,
+                            numpy.bool,
+                            numpy.bool_,
+                            numpy.float32,
+                            numpy.float64,
+                            numpy.float,
+                            numpy.float_,
+                            numpy.complex64,
+                            numpy.complex,
+                            numpy.complex_,
+                            numpy.str_,
+                            compat.unicode_type,
+                            compat.bytes_type)
 """Set of supported scalar types by the storage service and the standard parameter"""
 
 
@@ -107,14 +121,16 @@ LOAD_NOTHING = 0
 OVERWRITE_DATA = 3
 """Overwrites all data in RAM with data from disk"""
 UPDATE_SKELETON = 1
-""" DEPRECATED: Updates skeleton, i.e. adds only items that are not part of your current trajectory."""
+""" DEPRECATED: Updates skeleton, i.e. adds only items that are not
+part of your current trajectory."""
 UPDATE_DATA = 2
-""" DEPRECATED: Updates skeleton and data, adds only items that are not part of your current trajectory."""
+""" DEPRECATED: Updates skeleton and data,
+adds only items that are not part of your current trajectory."""
 
 
 ##################### STORING Message Constants ################################
 
-LEAF ='LEAF'
+LEAF = 'LEAF'
 """ For trajectory or item storage, stores a *leaf* node, i.e. parameter or result object"""
 TRAJECTORY = 'TRAJECTORY'
 """ Stores the whole trajectory"""
@@ -130,7 +146,7 @@ PREPARE_MERGE = 'PREPARE_MERGE'
 """ Updates a trajectory before it is going to be merged"""
 BACKUP = 'BACKUP'
 """ Backs up a trajectory"""
-DELETE='DELETE'
+DELETE = 'DELETE'
 """ Removes an item from hdf5 file"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
@@ -138,11 +154,11 @@ TREE = 'TREE'
 
 
 ########## Names of Runs ####################
-FORMAT_ZEROS=8
+FORMAT_ZEROS = 8
 """ Number of leading zeros"""
 RUN_NAME = 'run_'
 """Name of a single run"""
 RUN_NAME_DUMMY = 'run_ALL'
 """Dummy name if not created during run"""
-FORMATTED_RUN_NAME=RUN_NAME+'%0'+str(FORMAT_ZEROS)+'d'
+FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""

@@ -2,19 +2,33 @@ __author__ = 'Robert Meyer'
 
 from pypet.utils.decorators import deprecated
 from pypet.utils.comparisons import nested_equal as nested_equal_new
+import sys
+
+
+def is_debug():
+    """Checks if user is currently debugging.
+
+    Debugging is checked via ``'pydevd' in sys.modules``.
+
+    :return: True of False
+
+    """
+    return 'pydevd' in sys.modules
+
 
 def flatten_dictionary(nested_dict, separator):
     flat_dict = {}
     for key, val in nested_dict.items():
-        if isinstance(val,dict):
+        if isinstance(val, dict):
             new_flat_dict = flatten_dictionary(val, separator)
-            for flat_key, val in new_flat_dict.items():
+            for flat_key, inval in new_flat_dict.items():
                 new_key = key + separator + flat_key
-                flat_dict[new_key] = val
+                flat_dict[new_key] = inval
         else:
             flat_dict[key] = val
 
     return flat_dict
+
 
 def nest_dictionary(flat_dict, separator):
     nested_dict = {}
@@ -24,13 +38,12 @@ def nest_dictionary(flat_dict, separator):
         final_key = split_key.pop()
         for new_key in split_key:
             if not new_key in act_dict:
-                act_dict[new_key] ={}
+                act_dict[new_key] = {}
 
             act_dict = act_dict[new_key]
 
         act_dict[final_key] = val
     return nested_dict
-
 
 
 def progressbar(index, total, percentage_step=20, logger=None):
@@ -47,21 +60,19 @@ def progressbar(index, total, percentage_step=20, logger=None):
     :return: Progress bar string
 
     """
-    steps = int(100/percentage_step)
-    total_float=total/100.
-    cur = int(int((index) / total_float) / percentage_step)
-    nex = int(int((index+1) / total_float) / percentage_step)
+    steps = int(100 / percentage_step)
+    total_float = total / 100.
+    cur = int(int(index / total_float) / percentage_step)
+    nex = int(int((index + 1) / total_float) / percentage_step)
 
-
-    if (nex > cur):
-        statement = ('[' + '=' * min(nex,steps) +
-                     ' ' * max(steps-nex,0) + ']' +  '%.1f' % ((index+1)/(0.01*total)) + '%')
+    if nex > cur:
+        statement = ('[' + '=' * min(nex, steps) +
+                     ' ' * max(steps - nex, 0) + ']' + '%.1f' % (
+                    (index + 1) / (0.01 * total)) + '%')
         try:
             logger.info(statement)
         except AttributeError:
-            print statement
-
-
+            print(statement)
 
 
 @deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
@@ -73,7 +84,7 @@ def nested_equal(a, b):
 
     DEPRECATED: Use `pypet.utils.comparisons.nested_equal` instead.
     """
-    return nested_equal_new(a,b)
+    return nested_equal_new(a, b)
 
 
 

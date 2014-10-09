@@ -1,3 +1,29 @@
+pypet 0.1b.9
+
+*   BUG FIX: Fixed backwards compatibility
+
+*   BUG FIX: Metadata is loaded only once
+
+
+pypet 0.1b.8
+
+*   Support for python 3.3 and 3.4!
+
+*   Proper handling of unicode strings (well, see above^^)
+
+*   Checking if names of leaf and group nodes only contain alphanumeric characters
+
+*   PickleParameter and PickleResult now explicitly store the pickle protocol
+    because retrieval from the pickle dump is not always possible in python 3.
+
+*   Children of groups are no longer listed via __dir__ in case of debugging to
+    prevent unwanted locking.
+
+*   Better support for PyTables 2 and 3 with same code base.
+
+*   pypet and pypet.brian now provide the __all__ list.
+
+
 pypet 0.1b.7
 
 *   StreamToLogger has moved to the pypetlogging.py module. The mplogging module was
@@ -14,6 +40,7 @@ pypet 0.1b.7
 
 *   Now you can import most of the objects directly from the *pypet* package, e.g.
     ``from pypet import Trajectory`` instead of ``from pypet.trajectory import Trajectory``.
+
 
 pypet 0.1b.6
 
@@ -41,6 +68,7 @@ pypet 0.1b.6
 *   In case an object table has more than 32 columns, another table is created to
     store the data item types (which is faster than storing all of the types as
     hdf5 node attributes)
+
 
 pypet 0.1b.5
 

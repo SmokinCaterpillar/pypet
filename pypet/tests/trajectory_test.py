@@ -12,7 +12,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, Result, BaseResult
+from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory, SingleRun
 from pypet.naturalnaming import NaturalNamingInterface
 from pypet.storageservice import LazyStorageService
@@ -22,7 +22,7 @@ import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
-from pypet import pypetconstants
+from pypet import pypetconstants, BaseResult
 
 import copy
 
@@ -337,12 +337,12 @@ class TrajectoryTest(unittest.TestCase):
             if not item.v_is_leaf:
                 if as_run in item._children:
                     bfs_queue.append(item._children[as_run])
-                    for child in item._children.itervalues():
+                    for child in item._children.values():
                         if not (child.v_name.startswith(pypetconstants.RUN_NAME) and
                                         child.v_name != pypetconstants.RUN_NAME_DUMMY):
                             bfs_queue.append(child)
                 else:
-                    for child in item._children.itervalues():
+                    for child in item._children.values():
                         bfs_queue.append(child)
 
         return depth_dict

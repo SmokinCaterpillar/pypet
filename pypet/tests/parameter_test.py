@@ -1,3 +1,4 @@
+from pypet import BaseParameter
 
 __author__ = 'Robert Meyer'
 
@@ -11,7 +12,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.parameter import Parameter, PickleParameter, BaseParameter, ArrayParameter,\
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult
 import pickle
 import scipy.sparse as spsp
@@ -21,6 +22,7 @@ import pandas as pd
 import pypet.utils.comparisons as comp
 from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
+import pypet.compat as compat
 
 
 
@@ -104,7 +106,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_parameter_locking(self):
-        for param in self.param.itervalues():
+        for param in self.param.values():
 
             if not param.v_explored:
                 self.assertFalse(param.v_locked, 'Param %s is locked' % param.v_full_name)
@@ -129,7 +131,7 @@ class ParameterTest(unittest.TestCase):
 
     def test_param_accepts_not_unsupported_data(self):
 
-        for param in self.param.itervalues():
+        for param in self.param.values():
             if not isinstance(param, PickleParameter):
                 with self.assertRaises(TypeError):
                     param.f_set(ChainMap())
@@ -288,7 +290,7 @@ class ParameterTest(unittest.TestCase):
 
 
     def test_rename(self):
-        for name,param in self.param.iteritems():
+        for name,param in self.param.items():
             param._rename('test.test.wirsing')
             self.assertTrue(param.v_name=='wirsing')
             self.assertTrue(param.v_full_name=='test.test.wirsing')
@@ -336,7 +338,7 @@ class ParameterTest(unittest.TestCase):
             if param.f_has_range():
                 if isinstance(param,(ArrayParameter, PickleParameter)) and \
                         not isinstance(param, SparseParameter):
-                    self.assertTrue(len(store_dict)<6)
+                    self.assertTrue(len(store_dict)<7)
                 # For sparse parameter it is more:
                 if isinstance(param, SparseParameter):
                     self.assertTrue(len(store_dict)<23)
@@ -655,7 +657,7 @@ class ResultTest(unittest.TestCase):
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
         for key, value in self.data.items():
@@ -733,7 +735,7 @@ class ResultTest(unittest.TestCase):
             self.assertTrue(res.f_is_empty())
 
     def f_set_numbering(self):
-        int_list = range(10)
+        int_list = list(range(10))
         for res in self.results.values():
             res.f_set(*int_list)
 
@@ -755,7 +757,7 @@ class ResultTest(unittest.TestCase):
         self.data['integer'] = 42
         self.data['float'] = 42.424242
         self.data['string'] = 'TestString! 66'
-        self.data['long'] = long(44444444444444444444444)
+        self.data['long'] = compat.long_type(44444444444444444444444)
         self.data['numpy_array'] = np.array([[3232.3,232323.0,323232323232.32323232],[4,4]])
         self.data['tuple'] = (444,444,443)
         self.data['list'] = ['3','4','666']
@@ -789,7 +791,7 @@ class ResultTest(unittest.TestCase):
 
 
     def test_rename(self):
-        for name,res in self.results.iteritems():
+        for name,res in self.results.items():
             res._rename('test.test.wirsing')
             self.assertTrue(res.v_name=='wirsing')
             self.assertTrue(res.v_full_name=='test.test.wirsing')
@@ -855,7 +857,14 @@ class ResultTest(unittest.TestCase):
         for key, val1 in self.data.items():
             res = self.results['test.res.kwargs']
             val2 = res[key]
-            self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
+            if isinstance(val1, dict):
+                for innerkey in val1:
+                    innerval1 = val1[innerkey]
+                    innerval2 = val2[innerkey]
+                    self.assertEqual(repr(innerval1), repr(innerval2),
+                                     '%s != %s' % (str(val1),str(val2)))
+            else:
+                self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
 
 
     def test_pickling(self):
@@ -917,7 +926,7 @@ class PickleResultTest(ResultTest):
                         'test.res.args':1,
                         'test.res.kwargs':2}
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
@@ -961,7 +970,7 @@ class SparseResultTest(ResultTest):
 
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs', protocol=2)
 
-        self.results['test.res.args'].f_set(self.data.values())
+        self.results['test.res.args'].f_set(compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 if __name__ == '__main__':

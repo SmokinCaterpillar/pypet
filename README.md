@@ -2,8 +2,14 @@
 pypet
 =========
 
-The new python parameter exploration toolkit: *pypet* manages exploration of the parameter space
-and data storage into HDF5 files for you.
+The new python parameter exploration toolkit:
+*pypet* manages exploration of the parameter space
+of any numerical simulation in python,
+thereby storing your data into HDF5 files for you.
+Moreover, *pypet* offers a new data container which
+lets you access all your parameters and results
+from a single source. Data I/O of your simulations and
+analyses becomes a piece of cake!
 
 ===========================
 IMPORTANT!
@@ -26,7 +32,7 @@ Thanks!
 Requirements
 ---------------------
 
-Python 2.6 or 2.7
+Python 2.6, 2.7, 3.3, 3.4
 
 * tables >= 2.3.1
 
@@ -35,6 +41,10 @@ Python 2.6 or 2.7
 * numpy >= 1.6.1
 
 * scipy >= 0.9.0
+
+If you use Python 2.6 you also need
+
+* ordereddict >= 1.1
 
 For git integration you additionally need
 
@@ -47,10 +57,6 @@ To utilize the cap feature for multiprocessing you need
 To utilize the continuing of crashed trajectories you need
 
 * dill >= 0.2.1
-
-If you use Python 2.6 you also need
-
-* ordereddict >= 1.1
 
 Automatic Sumatra records are supported for
 

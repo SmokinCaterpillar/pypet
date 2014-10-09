@@ -51,6 +51,7 @@ You start your simulations by creating an environment object:
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 encoding='utf8',
                  complevel=9,
                  complib='zlib',
                  shuffle=True,
@@ -317,6 +318,10 @@ because most of the time the default settings are sufficient.
 * ``file_title``
 
     Title of the hdf5 file (only important if file is created new)
+
+* ``encoding``
+
+    Encoding for unicode characters. The default ``'utf8'`` is highly recommended.
 
 * ``complevel``
 
