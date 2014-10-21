@@ -475,6 +475,26 @@ class MergeTest(TrajectoryComparator):
 
         traj.f_explore(self.explored)
 
+    # def test_merging_wildcard(self):
+    #     self.filenames = [make_temp_file('experiments/tests/HDF5/merge_wild.hdf5'), 0, 0]
+    #
+    #     self.envs=[]
+    #     self.trajs = []
+    #
+    #     for irun,filename in enumerate(self.filenames):
+    #         if isinstance(filename,int):
+    #             filename = self.filenames[filename]
+    #
+    #         self.make_environment( irun, filename)
+    #
+    #     self.trajs[0].f_add_derived_parameter('$', 45)
+    #     self.trajs[1].f_add_derived_parameter('$', 47)
+    #
+    #     for traj in self.trajs:
+    #         traj.f_store()
+    #     self.trajs[0].f_merge(self.trajs[1])
+    #     pass
+
 
 class TestMergeResultsSort(ResultSortTest):
 
