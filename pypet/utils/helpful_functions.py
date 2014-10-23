@@ -113,8 +113,8 @@ class _Progressbar(object):
 
             if time:
                 time_delta = current_time - self._start_time
-                remaining_seconds = int(np.round((self._total_float - indexp1)/indexp1) *
-                                        time_delta.total_seconds())
+                remaining_seconds = int(np.round((self._total_float - indexp1)/indexp1 *
+                                        time_delta.total_seconds()))
                 remaining_delta = datetime.timedelta(seconds=remaining_seconds)
                 time_delta = datetime.timedelta(seconds =
                                                 int(np.round(time_delta.total_seconds())))
