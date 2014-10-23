@@ -20,6 +20,8 @@ pypet 0.1b.9
 *   New `f_get_default` method, now one can specify a default value that should be
     returned if the requested data is not found in the trajectory
 
+*   `progressbar` displays the run and remaining time.
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
