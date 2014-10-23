@@ -100,13 +100,14 @@ class _Progressbar(object):
             The progressbar string or None if the string has not been updated.
 
         """
-        if reset or index <= self._current_index:
+        reset = reset or index <= self._current_index
+        if reset:
             self._reset(index, total, percentage_step)
 
         next = int(int((index + 1) / self._total_norm) / self._percentage_step)
         statement = None
 
-        if next > self._current or index == self._total_minus_one:
+        if next > self._current or index == self._total_minus_one or reset:
             current_time = datetime.datetime.now()
 
             indexp1 = index + 1
@@ -127,9 +128,11 @@ class _Progressbar(object):
 
             if index == self._total_minus_one:
                 statement = '[' + '=' * self._steps +']100.0%' + runtime_str
+            elif reset:
+                statement = '[' + ' ' * self._steps +']  0.0%'
             else:
-                statement = ('[' + '=' * min(self._current, self._steps) +
-                             ' ' * max(self._steps - self._current, 0) + ']' + ' %.1f' % (
+                statement = ('[' + '=' * min(next, self._steps) +
+                             ' ' * max(self._steps - next, 0) + ']' + ' %.1f' % (
                              (index + 1) / (0.01 * total)) + '%' + runtime_str + remaining_str)
 
             if not newline:
