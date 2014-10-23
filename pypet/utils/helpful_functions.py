@@ -132,7 +132,7 @@ class _Progressbar(object):
                 statement = '[' + ' ' * self._steps +']  0.0%'
             else:
                 statement = ('[' + '=' * min(next, self._steps) +
-                             ' ' * max(self._steps - next, 0) + ']' + ' %.1f' % (
+                             ' ' * max(self._steps - next, 0) + ']' + ' %5.1f' % (
                              (index + 1) / (0.01 * total)) + '%' + runtime_str + remaining_str)
 
             if not newline:
