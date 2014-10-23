@@ -1,11 +1,12 @@
+from __future__ import print_function
 __author__ = 'Robert Meyer'
 
 import sys
 import datetime
 import numpy as np
+
 from pypet.utils.decorators import deprecated
 from pypet.utils.comparisons import nested_equal as nested_equal_new
-
 
 
 def is_debug():
@@ -74,8 +75,8 @@ class _Progressbar(object):
         self._percentage_step = percentage_step
         self._current = int(int(index / self._total_norm) / percentage_step)
 
-    def __call__(self, index, total, percentage_step=20, logger='print',
-                 newline=True, time=True, reset=False):
+    def __call__(self, index, total, percentage_step=10, logger='print',
+                 reprint=False, time=True, reset=False):
         """Plots a progress bar to the given `logger` for large for loops.
 
         To be used inside a for-loop.
@@ -88,7 +89,10 @@ class _Progressbar(object):
             Logger to write to, if string 'print' is given, the print statement is
             used. Use None if you don't want to print or log the progressbar statement.
 
-        :param newline: If a new line should be plotted or carriage return
+        :param reprint:
+
+            If no new line should be plotted but carriage return (works only for printing)
+
         :param time: If the lasting and remaining time should be calculated and displayed
         :param reset:
 
@@ -126,20 +130,22 @@ class _Progressbar(object):
                 runtime_str = ''
                 remaining_str = ''
 
+            ending = False
             if index == self._total_minus_one:
                 statement = '[' + '=' * self._steps +']100.0%' + runtime_str
+                ending=True
             elif reset:
                 statement = '[' + ' ' * self._steps +']  0.0%'
             else:
                 statement = ('[' + '=' * min(next, self._steps) +
-                             ' ' * max(self._steps - next, 0) + ']' + ' %5.1f' % (
+                             ' ' * max(self._steps - next, 0) + ']' + ' %4.1f' % (
                              (index + 1) / (0.01 * total)) + '%' + runtime_str + remaining_str)
 
-            if not newline:
-                statement = '\r' + statement
-
             if logger == 'print':
-                print(statement)
+                if reprint and not ending:
+                    print(statement, end='\r')
+                else:
+                    print(statement)
             elif logger is not None:
                 logger.info(statement)
 
@@ -148,30 +154,41 @@ class _Progressbar(object):
         return statement
 
 
-progressbar = _Progressbar()
-"""Plots a progress bar to the given `logger` for large for loops.
+_progressbar = _Progressbar()
 
-To be used inside a for-loop.
 
-:param index: Current index of for-loop
-:param total: Total size of for-loop
-:param percentage_step: Steps with which the bar should be plotted
-:param logger:
+def progressbar(index, total, percentage_step=10, logger='print',
+                 reprint=False, time=True, reset=False):
+    """Plots a progress bar to the given `logger` for large for loops.
 
-    Logger to write to, if string 'print' is given, the print statement is
-    used. Use None if you don't want to print or log the progressbar statement.
+    To be used inside a for-loop.
 
-:param newline: If a new line should be plotted or carriage return
-:param reset:
+    :param index: Current index of for-loop
+    :param total: Total size of for-loop
+    :param percentage_step: Steps with which the bar should be plotted
+    :param logger:
 
-    If the progressbar should be restarted. If progressbar is called with a lower
-    index than the one before, the progressbar is automatically restarted.
+        Logger to write to, if string 'print' is given, the print statement is
+        used. Use None if you don't want to print or log the progressbar statement.
 
-:return:
+    :param reprint:
 
-    The progressbar string or None if the string has not been updated.
+        If no new line should be plotted but carriage return (works only for printing)
 
-"""
+    :param time: If the lasting and remaining time should be calculated and displayed
+    :param reset:
+
+        If the progressbar should be restarted. If progressbar is called with a lower
+        index than the one before, the progressbar is automatically restarted.
+
+    :return:
+
+        The progressbar string or None if the string has not been updated.
+
+    """
+    return _progressbar(index=index, total=total, percentage_step=percentage_step,
+                        logger=logger, reprint=reprint, time=time, reset=reset)
+
 # def progressbar(index, total, percentage_step=20, logger=None):
 #     """Plots a progress bar to the given `logger` for large for loops.
 #
