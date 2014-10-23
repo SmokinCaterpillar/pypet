@@ -2,7 +2,8 @@
 
 __author__ = 'Robert Meyer'
 
-
+import time
+import logging
 
 from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
@@ -55,9 +56,42 @@ class ProgressBarTest(unittest.TestCase):
         percentage_step = 17
 
         for irun in range(total):
-            progressbar(irun, total)
+            time.sleep(0.005)
+            progressbar(irun, total, percentage_step)
+
+    def test_progressbar_resume(self):
+
+        total = 55
+
+        for irun in range(total):
+            time.sleep(0.005)
+            progressbar(irun, total, 5)
+
+        for irun in range(2*total):
+            time.sleep(0.005)
+            progressbar(irun, 2*total, 10)
 
 
+    def test_progressbar_float(self):
+
+        total = 55
+
+        for irun in range(total):
+            time.sleep(0.005)
+            progressbar(irun, total, 5.1)
+
+        for irun in range(2*total):
+            time.sleep(0.005)
+            progressbar(irun, 2*total, 0.5)
+
+    def test_progressbar_logging(self):
+        logger = logging.getLogger()
+
+        total = 22
+
+        for irun in range(total):
+            time.sleep(0.005)
+            progressbar(irun, total, logger=logger)
 
 class TestNewTreeTranslation(unittest.TestCase):
 

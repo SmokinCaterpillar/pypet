@@ -55,3 +55,5 @@ class HashArray(object):
 
     def __hash__(self):
         return int(hashlib.sha1(self._ndarray.view(np.uint8)).hexdigest(), 16)
+
+
