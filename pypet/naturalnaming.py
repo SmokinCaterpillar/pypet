@@ -146,6 +146,11 @@ class NNTreeNode(WithAnnotations):
         """Whether node is a leaf or not (i.e. it is a group node)"""
         return self._leaf
 
+    @property
+    def v_is_group(self):
+        """Whether node is a group or not (i.e. it is a leaf node)"""
+        return not self._leaf
+
     @deprecated(msg='Please use property `v_is_root` instead.')
     def f_is_root(self):
         """Whether the group is root (True for the trajectory and a single run object)

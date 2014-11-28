@@ -3486,7 +3486,6 @@ class HDF5StorageService(StorageService, HasLogger):
                     raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
                                                  'type `%s`.' % (key, str(dtype)))
 
-
     def _prm_meta_remove_summary(self, instance):
         """Changes a summary table entry if the current `instance` is removed from the trajectory
         and from disk.
