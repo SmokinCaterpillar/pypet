@@ -94,6 +94,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._groups = parent_trajectory._groups
         self._run_parent_groups = parent_trajectory._run_parent_groups
         self._other_leaves = parent_trajectory._other_leaves
+        self._linked_by = parent_trajectory._linked_by
 
         # The single run takes over the nn_interface of the parent trajectory and
         # changes the root. This alters the nn_interface of the parent trajectory.
@@ -1069,6 +1070,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
         self._other_leaves = {}  # Contains ALL other user added leaves
+        self._linked_by = {} #Contains all nodes that are linked to
 
         self._changed_default_parameters = {}  # Needed for paremeter presetting
 
