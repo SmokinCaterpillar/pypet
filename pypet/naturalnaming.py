@@ -773,16 +773,9 @@ class NaturalNamingInterface(HasLogger):
             del root._groups[full_name]
 
         # Delete all links to the node
-        if full_name in root._linked_by:
-            linking_dict = root._linked_by[full_name]
-            for linking_node_full_name in compat.listkeys(linking_dict):
-                link_node, link_name = linking_dict[linking_node_full_name]
-                link_node._children[link_name]
-                link_node._links[link_name]
-                del linking_dict[linking_node_full_name]
-            del root._linked_by[full_name]
-            del linking_dict
-
+        if full_name in compat.listkeys(root._linked_by):
+            linink_group, name = root._linked_by[full_name]
+            linink_group.f_remove_link(name)
 
         # Finally remove all references in the dictionaries for fast search
         del self._nodes_and_leaves[name][full_name]
@@ -1287,6 +1280,10 @@ class NaturalNamingInterface(HasLogger):
         del act_node._children[name]
         del act_node._links[name]
 
+        del self._nodes_and_leaves[name][full_name]
+        if len(self._nodes_and_leaves[name]) == 0:
+            del self._nodes_and_leaves[name]
+
     def _create_link(self, act_node, name, instance):
 
         if instance.v_is_root:
@@ -1303,6 +1300,11 @@ class NaturalNamingInterface(HasLogger):
         if full_name not in self._root_instance._linked_by:
             self._root_instance._linked_by[full_name] = {}
         self._root_instance._linked_by[full_name][act_node.v_full_name] = (act_node, name)
+
+        if not name in self._nodes_and_leaves:
+            self._nodes_and_leaves[name] = {instance.v_full_name: instance}
+        else:
+            self._nodes_and_leaves[name][instance.v_full_name] = instance
 
         return instance
 
@@ -2287,7 +2289,7 @@ class NNGroupNode(NNTreeNode):
         if name not in self._links:
             raise ValueError('No link with name `%s` found under `%s`.' % (name, self._full_name))
 
-        self._nn_interface.f_remove_link(self, name)
+        self._nn_interface._remove_link(self, name)
 
     def f_add_leaf(self, *args, **kwargs):
         """Adds an empty generic leaf under the current node.
