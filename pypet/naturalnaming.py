@@ -773,9 +773,10 @@ class NaturalNamingInterface(HasLogger):
             del root._groups[full_name]
 
         # Delete all links to the node
-        if full_name in compat.listkeys(root._linked_by):
-            linink_group, name = root._linked_by[full_name]
-            linink_group.f_remove_link(name)
+        if full_name in root._linked_by:
+            for linking_name in compat.listkeys(root._linked_by[full_name]):
+                linink_group, link = root._linked_by[linking_name]
+                linink_group.f_remove_link(link)
 
         # Finally remove all references in the dictionaries for fast search
         del self._nodes_and_leaves[name][full_name]
