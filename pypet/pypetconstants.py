@@ -148,6 +148,8 @@ BACKUP = 'BACKUP'
 """ Backs up a trajectory"""
 DELETE = 'DELETE'
 """ Removes an item from hdf5 file"""
+DELETE_LINK = 'DELETE_LINK'
+""" Removes a soft link from hdf5 file"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
 

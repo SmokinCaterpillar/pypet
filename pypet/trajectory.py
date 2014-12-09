@@ -808,6 +808,8 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         data stored to disk. If you want to delete data from disk, take a look at
         :func:`~pypet.trajectory.SingleRun.f_delete_items`.
 
+        This will also remove all links if items are linked.
+
         :param iterator:
 
             A sequence of items you want to remove. Either the instances themselves
@@ -833,15 +835,62 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
             self._logger.warning('Your removal was not successful, could not find a single '
                                  'item to remove.')
 
+    def f_delete_link(self, link, remove_from_trajectory=False):
+        """Deletes a single link see :func:`~pypet.trajectory.SingleRun.f_delete_links`"""
+        self._f_delete_links((link,), remove_from_trajectory)
+
+    def f_delete_links(self, iterator_of_links, remove_from_trajectory=False):
+        """Deletes several links from the hard disk.
+
+        Links can be passed as a string ``'groupA.groupB.linkA'``
+        or as a tuple  containing the node from which the link should be removed and the
+        name of the link ``(groupWithLink, 'linkA')``.
+
+        """
+
+        to_delete_links = []
+
+        group_link_pairs = []
+
+        for elem in iterator_of_links:
+            if isinstance(elem, compat.base_type):
+                split_names = elem.split('.')
+                parent_name = '.'.join(split_names[:-1])
+                link = elem[-1]
+                parent_node = self.f_get(parent_name) if parent_name != '' else self
+                link_name = parent_node.v_full_name + '.' + link if parent_name != '' else link
+                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
+                group_link_pairs.append((parent_node, link))
+            else:
+                link_name = elem[0].v_full_name + '.' + elem[1]
+                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
+                group_link_pairs.append(elem)
+        try:
+            self._storage_service.store(pypetconstants.LIST, to_delete_links,
+                                        trajectory_name=self.v_trajectory_name)
+        except:
+            self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
+                               ' item(s) was/were never stored to disk.' % str(to_delete_links))
+            raise
+
+        if remove_from_trajectory:
+            for group, link in group_link_pairs:
+                group.f_remove_link(link)
+
+
+
 
     def f_delete_item(self, item, *args, **kwargs):
-        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.delete_items`"""
+        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.f_delete_items`"""
         self.f_delete_items([item], *args, **kwargs)
 
     def f_delete_items(self, iterator, *args, **kwargs):
         """Deletes items from storage on disk.
 
         Per default the item is NOT removed from the trajectory.
+
+        Links are NOT deleted on the hard disk, please delete links manually before deleting
+        data!
 
         :param iterator:
 

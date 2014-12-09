@@ -33,6 +33,7 @@ if tables == 2:
     create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
                                                                         **kwargs)
+    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.createSoftLink(*args, **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
 
@@ -52,6 +53,8 @@ elif tables == 3:
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.create_table(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.create_array(*args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_carray(*args, **kwargs)
+    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.create_soft_link(*args,
+                                                                                     **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_get_child(*args, **kwargs)
 

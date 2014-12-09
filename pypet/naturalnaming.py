@@ -61,7 +61,6 @@ STORE = 'STORE'  # We want to store stuff with the storage service
 LOAD = 'LOAD'  # We want to load stuff with the storage service
 REMOVE = 'REMOVE'  # We want to remove stuff, potentially from disk
 
-
 # Group Constants
 RESULT = 'RESULT'
 RESULT_GROUP = 'RESULTGROUP'
@@ -683,8 +682,9 @@ class NaturalNamingInterface(HasLogger):
             else:
                 linking = self._root_instance._linked_by[node_full_name]
                 for key in compat.iterkeys(linking):
-                    if key in keep:
-                        return False
+                    for keep_key in keep:
+                        if key.startswith(keep_key):
+                            return False
 
             if node.v_is_group:
                 for name_ in compat.listkeys(node._children):
@@ -1276,11 +1276,27 @@ class NaturalNamingInterface(HasLogger):
                                (name, start_node.v_full_name))
             raise
 
+    def _remove_link(self, act_node, name):
+        linked_node = act_node._children[name]
+        full_name = linked_node.v_full_name
+        linking = self._root_instance._linked_by[full_name]
+        del linking[act_node.v_full_name]
+        if len(linking) == 0:
+            del self._root_instance.linked_by[full_name]
+            del linking
+        del act_node._children[name]
+        del act_node._links[name]
+
     def _create_link(self, act_node, name, instance):
 
         if instance.v_is_root:
             raise ValueError('You cannot create a link to the root node')
 
+        if name in act_node._children:
+            raise ValueError('`%s` has already a child called `%s`, '
+                             'cannot add a link with this name.' % (act_node.v_full_name, name))
+
+        act_node._children[name] = instance
         act_node._links[name] = instance
 
         full_name = instance.v_full_name
@@ -2236,18 +2252,15 @@ class NNGroupNode(NNTreeNode):
                                                args=(name, comment), kwargs={}, add_prefix=False)
 
     def f_add_link(self, name_or_item, full_name_or_item=None):
-        """Adds an empty generic group under the current node.
+        """Adds a link to an existing node.
 
-        You can add to a generic group anywhere you want. So you are free to build
-        your parameter tree with any structure. You do not necessarily have to follow the
-        four subtrees `config`, `parameters`, `derived_parameters`, `results`.
+        Can be called as ``node.f_add_link(other_node)`` this will add a link the `other_node`
+        with the link name as the name of the node.
 
-        If you are operating within these subtrees this simply calls the corresponding adding
-        function.
+        Or can be called as ``node.f_add_link(name, other_node)`` to add a link to the
+        `other_node` and the given `name` of the link.
 
-        Be aware that if you are within a single run and you add items not below a group
-        `run_XXXXXXXX` that you have to manually
-        save the items. Otherwise they will be lost after the single run is completed.
+
 
         """
         if isinstance(name_or_item, compat.base_type):
@@ -2255,7 +2268,7 @@ class NNGroupNode(NNTreeNode):
             if '.' in name_or_item:
                 raise ValueError('You can add links only directly under a node!')
             if isinstance( full_name_or_item, compat.base_type):
-                instance = self.f_get_root().f_get( full_name_or_item)
+                instance = self.f_get_root().f_get(full_name_or_item)
             else:
                 instance =  full_name_or_item
         else:
@@ -2263,6 +2276,18 @@ class NNGroupNode(NNTreeNode):
             name = instance.v_name
 
         return self._nn_interface._create_link(self, name, instance)
+
+    def f_remove_link(self, name):
+        """ Removes a link from from the current group node with a given name.
+
+        Does not delete the link from the hard drive. If you want to do this,
+        checkout :func:`~pypet.trajectory.SingleRun.f_delete_links`
+
+        """
+        if name not in self._links:
+            raise ValueError('No link with name `%s` found under `%s`.' % (name, self._full_name))
+
+        self._nn_interface.f_remove_link(self, name)
 
     def f_add_leaf(self, *args, **kwargs):
         """Adds an empty generic leaf under the current node.
@@ -2326,7 +2351,7 @@ class NNGroupNode(NNTreeNode):
 
         :param remove_linked:
 
-            If linked nodes are supposed to be removed. If yes, all links refereing to the
+            If linked nodes are supposed to be removed. If yes, all links referring to the
             node will be removed as well.
 
         :param keep:
@@ -2634,7 +2659,7 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names)
 
-    def f_store_child(self, name, recursive=False):
+    def f_store_child(self, name, recursive=False, ignore_links=False):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -2645,6 +2670,10 @@ class NNGroupNode(NNTreeNode):
         :param recursive:
 
             Whether recursively all children's children should be stored too.
+
+        :param ignore_links:
+
+            If links should be ignored and all nodes below the link are skipped
 
         :raises: ValueError if the child does not exist.
 
@@ -2659,9 +2688,10 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_trajectory_name,
-                              recursive=recursive)
+                              recursive=recursive, ignore_links=ignore_links)
 
-    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
+    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA,
+                     ignore_links=False):
         """Loads a child or recursively a subtree from disk.
 
         :param name:
@@ -2678,6 +2708,10 @@ class NNGroupNode(NNTreeNode):
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
 
+        :param ignore_links:
+
+            If links should be skipped and all nodes below links
+
         :returns:
 
             The loaded child, in case of grouping ('groupA.groupB.childC') the last
@@ -2690,7 +2724,8 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.load(pypetconstants.TREE, self, child_name=name,
                              trajectory_name=traj.v_trajectory_name,
-                             recursive=recursive, load_data=load_data, trajectory=traj)
+                             recursive=recursive, load_data=load_data, trajectory=traj,
+                             ignore_links=ignore_links)
 
         return self.f_get(name, shortcuts=False)
 
