@@ -1502,7 +1502,7 @@ class NaturalNamingInterface(HasLogger):
 
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
-                    return_depth=False):
+                    return_depth=False, ignore_links=False):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1521,6 +1521,10 @@ class NaturalNamingInterface(HasLogger):
 
             If relative depth should be returned
 
+        :param ignore_links:
+
+            If short links should be ignored
+
         :return: Iterator
 
         """
@@ -1529,19 +1533,28 @@ class NaturalNamingInterface(HasLogger):
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
-                                            as_run, max_depth, return_depth)
+                                            as_run, max_depth, return_depth,
+                                            ignore_links)
         else:
-            if return_depth:
-                child_iterator = compat.itervalues(node._children)
-                return itools.izip(itools.repeat(1), child_iterator)
+            if ignore_links:
+                pred = lambda x: x not in node._links
+                if return_depth:
+                    child_iterator = itools.ifilter(pred, compat.itervalues(node._children))
+                    return itools.izip(itools.repeat(1), child_iterator)
+                else:
+                    return itools.ifilter(pred, compat.itervalues(node._children))
             else:
-                return compat.itervalues(node._children)
+                if return_depth:
+                    child_iterator = compat.itervalues(node._children)
+                    return itools.izip(itools.repeat(1), child_iterator)
+                else:
+                    return compat.itervalues(node._children)
 
 
     @staticmethod
-    def _iter_leaves(node):
+    def _iter_leaves(node, ignore_links=False):
         """ Iterates over all leaves hanging below `node`."""
-        for node in node.f_iter_nodes(recursive=True):
+        for node in node.f_iter_nodes(recursive=True, ignore_links=ignore_links):
             if node.v_is_leaf:
                 yield node
             else:
@@ -1603,28 +1616,43 @@ class NaturalNamingInterface(HasLogger):
         return result_dict
 
     @staticmethod
-    def _make_child_iterator(node, run_name):
+    def _make_child_iterator(node, run_name, ignore_links):
         """Returns an iterator over a node's children.
 
         In case of using a trajectory as a run (setting 'v_as_run') some sub branches
         that do not belong to the run are blinded out.
 
         """
-        if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
-            # Only consider one particular run and blind out the rest, but include
-            # all other subbranches
-            node_list = [node._children[run_name]]
-            for child_name in node._children:
-                if not (child_name.startswith(pypetconstants.RUN_NAME)
-                        and child_name != pypetconstants.RUN_NAME_DUMMY):
-                    node_list.append(node._children[child_name])
-            return node_list
+        if ignore_links:
+            if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
+                # Only consider one particular run and blind out the rest, but include
+                # all other subbranches
+                node_list = [node._children[run_name]]
+                for child_name in node._children:
+                    if (child_name not in node._links and
+                        not (child_name.startswith(pypetconstants.RUN_NAME)
+                            and child_name != pypetconstants.RUN_NAME_DUMMY)):
+                        node_list.append(node._children[child_name])
+                return node_list
+            else:
+                pred = lambda x: x not in node._links
+                return itools.ifilter(pred, compat.itervalues(node._children))
         else:
-            return compat.itervalues(node._children)
+            if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
+                # Only consider one particular run and blind out the rest, but include
+                # all other subbranches
+                node_list = [node._children[run_name]]
+                for child_name in node._children:
+                    if not (child_name.startswith(pypetconstants.RUN_NAME)
+                            and child_name != pypetconstants.RUN_NAME_DUMMY):
+                        node_list.append(node._children[child_name])
+                return node_list
+            else:
+                return compat.itervalues(node._children)
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
-                                 return_depth=False):
+                                 return_depth=False, ignore_links=False):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
@@ -1654,7 +1682,8 @@ class NaturalNamingInterface(HasLogger):
 
                     if not item._leaf and depth < max_depth:
                         child_iterator = NaturalNamingInterface._make_child_iterator(item,
-                                                                                     run_name)
+                                                                                     run_name,
+                                                                                     ignore_links)
                         child_iterator = itools.izip(itools.repeat(depth+1), child_iterator)
                         queue = itools.chain(queue, child_iterator)
             except StopIteration:
@@ -2505,19 +2534,24 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._root_instance
 
-    def f_iter_nodes(self, recursive=True):
+    def f_iter_nodes(self, recursive=True, ignore_links=False):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
+        :param ignore_links: If links should be ignored and skipped
+
         :return: Iterator over nodes
 
         """
-        return self._nn_interface._iter_nodes(self, recursive=recursive)
+        return self._nn_interface._iter_nodes(self, recursive=recursive, ignore_links=ignore_links)
 
-    def f_iter_leaves(self):
-        """Iterates (recursively) over all leaves hanging below the current group."""
-        return self._nn_interface._iter_leaves(self)
+    def f_iter_leaves(self, ignore_links=False):
+        """Iterates (recursively) over all leaves hanging below the current group.
+
+        If links should be ignored, leaves hanging below linked nodes are not listed.
+        """
+        return self._nn_interface._iter_leaves(self, ignore_links=ignore_links)
 
     def f_get_all(self, name, max_depth=None):
         """ Searches for all occurrences of `name` under `node`.
