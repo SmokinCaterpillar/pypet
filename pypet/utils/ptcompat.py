@@ -41,6 +41,8 @@ if tables == 2:
 
     set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setAttr(*args, **kwargs)
 
+    get_objectid = lambda ptitem: ptitem._v_objectID
+
 elif tables == 3:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
 
@@ -61,6 +63,8 @@ elif tables == 3:
     remove_rows = lambda table, *args, **kwargs: table.remove_rows(*args, **kwargs)
 
     set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setattr(*args, **kwargs)
+
+    get_objectid = lambda ptitem: ptitem._v_objectid
 
 else:
     raise RuntimeError('You shall not pass! Your PyTables version is weird!')

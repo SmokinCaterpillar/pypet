@@ -460,7 +460,7 @@ class NetworkRunner(NetworkComponent):
 
 
         for durations in durations_list:
-            for duration_param in durations.f_iter_leaves():
+            for duration_param in durations.f_iter_leaves(ignore_links=True):
 
                 if isinstance(duration_param, BrianDurationParameter):
                     self._logger.warning('BrianDurationParameters are deprecated. '

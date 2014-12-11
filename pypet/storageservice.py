@@ -587,8 +587,6 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_results_runs = False
         self._overview_results_runs_summary = False
 
-        self._visited_nodes=None
-
         self._mode = None
 
         # We don't want the NN warnings of pytables to display because they can be
@@ -678,7 +676,6 @@ class HDF5StorageService(StorageService, HasLogger):
             raise ValueError('''Pandas format can only be 'table' (or 't') and 'fixed' (or 'f')
                             not `%s`.''' % pandas_format)
         self._pandas_format = pandas_format
-
 
     @property
     def filename(self):
@@ -1309,7 +1306,6 @@ class HDF5StorageService(StorageService, HasLogger):
             self._node_processing_timer = NodeProcessingTimer(display_time=self._display_time,
                                                               logger_name=self._logger.name)
 
-            self._visited_nodes= set()
             return True
         else:
             return False
@@ -1339,7 +1335,6 @@ class HDF5StorageService(StorageService, HasLogger):
             self._trajectory_group = None
             self._trajectory_name = None
             self._trajectory_index = None
-            self._visited_nodes= None
             return True
         else:
             return False
@@ -1997,8 +1992,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     'standard settings (for `complib`, `complevel` etc.) instead.')
 
     def _tree_load_sub_branch(self, traj, traj_node, branch_name, hdf5_group, load_data,
-                              recursive=True, as_new=False,
-                              ignore_links=False):
+                              recursive=True, as_new=False):
         """Loads data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -2028,10 +2022,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
             If trajectory is loaded as new
 
-        :param ignore_links
-
-            If links should be skipped
-
         """
         split_names = branch_name.split('.')
 
@@ -2042,15 +2032,14 @@ class HDF5StorageService(StorageService, HasLogger):
             hdf5_group = getattr(hdf5_group, name)
 
             self._tree_load_nodes(traj, traj_node, hdf5_group, load_data, recursive=False,
-                                  as_new=as_new, ignore_links=ignore_links)
+                                  as_new=as_new)
 
             traj_node = traj_node._children[name]
 
         # Then load recursively all data in the last group and below
         hdf5_group = getattr(hdf5_group, final_group_name)
         self._tree_load_nodes(traj, traj_node, hdf5_group, load_data, recursive=recursive,
-                              as_new=as_new,
-                              ignore_links=ignore_links)
+                              as_new=as_new)
 
     def _trj_check_version(self, version, python, force):
         """Checks for version mismatch
@@ -2362,8 +2351,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 # Store recursively the derived parameters subtree
                 self._tree_store_nodes(pypetconstants.LEAF, traj, child_name,
-                                       self._trajectory_group, recursive=True,
-                                       ignore_links=False)
+                                       self._trajectory_group, recursive=True)
 
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
@@ -2372,8 +2360,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         traj._stored = True
 
-    def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True,
-                               ignore_links=False):
+    def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True):
         """Stores data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -2391,10 +2378,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
             HDF5 node in the file corresponding to `traj_node`
 
-        :param ignore_links:
-
-            If links should be skipped
-
         """
         split_names = branch_name.split('.')
 
@@ -2402,21 +2385,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
         for name in split_names:
             # Store along a branch
-            self._tree_store_nodes(msg, traj_node, name, hdf5_group, recursive=False,
-                                   ignore_links=ignore_links)
+            self._tree_store_nodes(msg, traj_node, name, hdf5_group, recursive=False)
 
             traj_node = traj_node._children[name]
 
             hdf5_group = getattr(hdf5_group, name)
 
         # Store final group and recursively everything below it
-        self._tree_store_nodes(msg, traj_node, leaf_name, hdf5_group, recursive=recursive,
-                               ignore_links=ignore_links)
+        self._tree_store_nodes(msg, traj_node, leaf_name, hdf5_group, recursive=recursive)
 
 
     ########################  Storing and Loading Sub Trees #######################################
 
-    def _tree_store_tree(self, traj_node, child_name, recursive, ignore_links):
+    def _tree_store_tree(self, traj_node, child_name, recursive):
         """Stores a node and potentially recursively all nodes below
 
         :param traj_node: Parent node where storing starts
@@ -2424,8 +2405,6 @@ class HDF5StorageService(StorageService, HasLogger):
         :param child_name: Name of child node
 
         :param recursive: Whether to store everything below `traj_node`.
-
-        :param ignore_links: If links should be skipped
 
         """
         location = traj_node.v_full_name
@@ -2443,8 +2422,7 @@ class HDF5StorageService(StorageService, HasLogger):
             # Store node and potentially everything below it
             self._tree_store_sub_branch(pypetconstants.LEAF, traj_node, child_name,
                                         parent_hdf5_node,
-                                        recursive=recursive,
-                                        ignore_links=ignore_links)
+                                        recursive=recursive)
 
         except pt.NoSuchNodeError:
             self._logger.warning('Cannot store `%s` the parental hdf5 node with path `%s` does '
@@ -2465,12 +2443,10 @@ class HDF5StorageService(StorageService, HasLogger):
                                             traj_node._nn_interface._root_instance,
                                             traj_node.v_full_name + '.' + child_name,
                                             self._trajectory_group,
-                                            recursive=recursive,
-                                            ignore_links=ignore_links)
+                                            recursive=recursive)
 
 
-    def _tree_load_tree(self, parent_traj_node, child_name, recursive, load_data, trajectory,
-                        ignore_links):
+    def _tree_load_tree(self, parent_traj_node, child_name, recursive, load_data, trajectory):
         """Loads a specific tree node and potentially all nodes below
 
         :param parent_traj_node: parent node of node to load in trajectory
@@ -2482,8 +2458,6 @@ class HDF5StorageService(StorageService, HasLogger):
         :param load_data: How to load the data
 
         :param trajectory: The trajectory object
-
-        :param ignore_links: If links should be ignored
 
         """
         hdf5_node_name = parent_traj_node.v_full_name.replace('.', '/')
@@ -2503,12 +2477,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._tree_load_sub_branch(trajectory, parent_traj_node, child_name, hdf5_node,
                                    load_data=load_data,
-                                   recursive=recursive, ignore_links=ignore_links)
+                                   recursive=recursive)
 
 
     def _tree_load_nodes(self, traj, parent_traj_node, hdf5group,
                          load_data=pypetconstants.UPDATE_SKELETON, recursive=True,
-                         as_new=False, ignore_links=False):
+                         as_new=False):
         """Loads a node from hdf5 file and if desired recursively everything below
 
         :param traj: The trajectory object
@@ -2523,36 +2497,26 @@ class HDF5StorageService(StorageService, HasLogger):
             return
 
         location_name = parent_traj_node.v_full_name
-        is_link = isinstance(hdf5group, pt.links.SoftLink)
-        if is_link:
-            if ignore_links:
-                return
+        if isinstance(hdf5group, pt.link.SoftLink):
             try:
                 linked_group = hdf5group()
             except pt.NoSuchNodeError:
                 self._logger.error('Link `%s` is broken I will delete it it!' % str(hdf5group))
                 hdf5group._f_remove()
                 return
+
             name = linked_group._v_name
             link_name = hdf5group._v_name
-        else:
-            name = hdf5group._v_name
+            full_name = location_name+'.'+name if location_name != '' else name
 
-        full_name = location_name+'.'+name if location_name != '' else name
-
-        if full_name in self._visited_nodes:
-            return
-        else:
-            self._visited_nodes.add(full_name)
-
-        if is_link:
-            self._tree_load_sub_branch(traj, traj, full_name,
+            if not full_name in traj:
+                self._tree_load_sub_branch(traj, traj, full_name,
                                         self._trajectory_group, load_data=load_data,
-                                        recursive=recursive,
-                                        ignore_links=ignore_links,
+                                        recursive=False,
                                         as_new=as_new)
             parent_traj_node.f_add_link(link_name, traj.f_get(full_name))
         else:
+            name = hdf5group._v_name
             is_leaf = self._all_get_from_attrs(hdf5group, HDF5StorageService.LEAF)
 
             if is_leaf:
@@ -2594,6 +2558,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     range_length = self._all_get_from_attrs(hdf5group, HDF5StorageService.LENGTH)
 
                     if not range_length is None and range_length != len(traj):
+                        full_name = location_name+'.'+name if location_name != '' else name
                         raise RuntimeError('Something is completely odd. You load parameter'
                                            ' `%s` of length %d into a trajectory of length'
                                            ' %d. They should be equally long!' %
@@ -2667,11 +2632,10 @@ class HDF5StorageService(StorageService, HasLogger):
                         if not isinstance(new_hdf5group, pt.Group):
                             continue
                         self._tree_load_nodes(traj, new_traj_node, new_hdf5group, load_data,
-                                              recursive=recursive, ignore_links=ignore_links)
+                                              recursive=recursive)
 
 
-    def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True,
-                          ignore_links=False):
+    def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
 
         :param msg: 'LEAF'
@@ -2679,82 +2643,60 @@ class HDF5StorageService(StorageService, HasLogger):
         :param name: Name of node to be stored
         :param parent_hdf5_group: Parent hdf5 groug
         :param recursive: Whether to store recursively the subtree
-        :param ignore_links: If links should be ignored completely
 
         """
         traj_node = parent_traj_node._children[name]
-        full_name = traj_node.v_full_name
 
-        if full_name in self._visited_nodes:
-            return
+        store_new = False
+        store_msg = msg
+
+        # If the node does not exist in the hdf5 file create it
+        if not hasattr(parent_hdf5_group, name):
+            store_new = True
+            new_hdf5_group = ptcompat.create_group(self._hdf5file, where=parent_hdf5_group,
+                                                   name=name)
         else:
-            self._visited_nodes.add(full_name)
+            new_hdf5_group = getattr(parent_hdf5_group, name)
 
-        if name in parent_traj_node._links:
-            if ignore_links:
-                return
+        if traj_node.v_is_leaf:
+            if store_new:
+                # If we have a leaf node, store it as a parameter or result
+                self._prm_store_parameter_or_result(store_msg, traj_node,
+                                                    _hdf5_group=new_hdf5_group,
+                                                    _newly_created=True)
+            else:
+                self._logger.debug('Already found `%s` on disk I will not store it!' %
+                                   traj_node.v_full_name)
 
-            root = parent_traj_node._nn_interface._root_instance
-            self._tree_store_sub_branch(msg, root, traj_node.v_full_name,
-                                        self._trajectory_group,
-                                        ignore_links=ignore_links)
+            self._node_processing_timer.signal_update()
 
-            if not hasattr(parent_hdf5_group, name):
-                to_link_hdf5_group = self._all_create_or_get_groups(traj_node.v_full_name)
-                ptcompat.create_soft_link(parent_hdf5_group, to_link_hdf5_group)
+            do_recursive=False
 
         else:
+            # Else store it as a group node
 
-            store_new = False
-            store_msg = msg
+            # We have to do the following check to be sure that the group node was not
+            # build on the fly via `f_store_item`.
+            store_new = (store_new or len(traj_node._links)>0 or
+                         (not traj_node.v_annotations.f_is_empty()
+                          and not HDF5StorageService.ANNOTATED in new_hdf5_group._v_attrs) or
+                         (traj_node.v_comment != '' and
+                          not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs))
 
-            # If the node does not exist in the hdf5 file create it
-            if not hasattr(parent_hdf5_group, name):
-                store_new = True
-                new_hdf5_group = ptcompat.create_group(self._hdf5file, where=parent_hdf5_group,
-                                                       name=name)
+            if store_new:
+                self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group,
+                                      _msg=store_msg)
             else:
-                new_hdf5_group = getattr(parent_hdf5_group, name)
+                self._logger.debug('Already found `%s` on disk I will not store it!' %
+                                   traj_node.v_full_name)
 
-            if traj_node.v_is_leaf:
-                if store_new:
-                    # If we have a leaf node, store it as a parameter or result
-                    self._prm_store_parameter_or_result(store_msg, traj_node,
-                                                        _hdf5_group=new_hdf5_group,
-                                                        _newly_created=True)
-                else:
-                    self._logger.debug('Already found `%s` on disk I will not store it!' %
-                                       traj_node.v_full_name)
+            self._node_processing_timer.signal_update()
 
-                self._node_processing_timer.signal_update()
-
-                do_recursive=False
-
-            else:
-                # Else store it as a group node
-
-                # We have to do the following check to be sure that the group node was not
-                # build on the fly via `f_store_item`.
-                store_new = (store_new or
-                             (not traj_node.v_annotations.f_is_empty()
-                              and not HDF5StorageService.ANNOTATED in new_hdf5_group._v_attrs) or
-                             (traj_node.v_comment != '' and
-                              not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs))
-
-                if store_new:
-                    self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group)
-                else:
-                    self._logger.debug('Already found `%s` on disk I will not store it!' %
-                                       traj_node.v_full_name)
-
-                self._node_processing_timer.signal_update()
-
-                if recursive:
-                    # And if desired store recursively the subtree
-                    for child in compat.itervalues(traj_node._children):
-                        self._tree_store_nodes(store_msg, traj_node, child, new_hdf5_group,
-                                               recursive=recursive,
-                                               ignore_links=ignore_links)
+            if recursive:
+                # And if desired store recursively the subtree
+                for child in compat.iterkeys(traj_node._children):
+                    self._tree_store_nodes(store_msg, traj_node, child, new_hdf5_group,
+                                           recursive=recursive)
 
 
     ######################## Storing a Single Run ##########################################
@@ -3535,7 +3477,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ############################################## Storing Groups ################################
 
-    def _grp_store_group(self, node_in_traj, _hdf5_group=None):
+    def _grp_store_group(self, node_in_traj, _hdf5_group=None, _msg=None):
         """Stores a group node.
 
         For group nodes only annotations and comments need to be stored.
@@ -3546,6 +3488,30 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
             setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
+
+        for link in node_in_traj._links:
+            if hasattr(_hdf5_group, link):
+                continue
+
+            linked_traj_node = node_in_traj._links[link]
+            linking_name = linked_traj_node.v_full_name.replace('.','/')
+            linking_name = '/' + self._trajectory_name + '/' + linking_name
+            try:
+                to_link_hdf5_group = ptcompat.get_node(self._hdf5file,
+                                                       where=linking_name)
+            except pt.NoSuchNodeError:
+                self._logger.warning('Could not store link `%s` under `%s` immediately, '
+                                     'need to store `%s` first.' % (link,
+                                                                node_in_traj.v_full_name,
+                                                                linked_traj_node.v_full_name))
+                root = node_in_traj._nn_interface._root_instance
+                self._tree_store_sub_branch(_msg, root, linked_traj_node.v_full_name,
+                                    self._trajectory_group, recursive=False)
+                to_link_hdf5_group = ptcompat.get_node(self._hdf5file,
+                                                       where=linking_name)
+            ptcompat.create_soft_link(self._hdf5file, where=_hdf5_group,
+                                      name=link,
+                                      target=to_link_hdf5_group)
 
         self._ann_store_annotations(node_in_traj, _hdf5_group)
 

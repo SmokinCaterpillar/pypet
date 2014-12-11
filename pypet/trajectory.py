@@ -818,7 +818,8 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         :param remove_empty_groups:
 
             If your deletion of the instance leads to empty groups,
-            these will be deleted, too.
+            these will be deleted, too. If nodes were linked too, the links are deleted.
+            If the linking node becomes empty thereby, the node is removed, too.
 
         """
 
@@ -2697,7 +2698,12 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self.config.f_store_child('merge')
         merge_group.f_store_child(merge_name, recursive=True)
 
+        # Merging links
+        self._merge_links(other_trajectory, rename_dict)
         self._logger.info('Finished Merging!')
+
+    def _merge_links(self):
+        pass
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
@@ -2713,7 +2719,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging git commits!')
             git_node = other_trajectory.f_get('config.git')
             param_list = []
-            for param in git_node.f_iter_leaves():
+            for param in git_node.f_iter_leaves(ignore_links=True):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -2728,7 +2734,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging environment config!')
             env_node = other_trajectory.f_get('config.environment')
             param_list = []
-            for param in env_node.f_iter_leaves():
+            for param in env_node.f_iter_leaves(ignore_links=True):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -2743,7 +2749,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging merge config!')
             merge_node = other_trajectory.f_get('config.merge')
             param_list = []
-            for param in merge_node.f_iter_leaves():
+            for param in merge_node.f_iter_leaves(ignore_links=True):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -2996,7 +3002,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if traj.f_contains(where):
             group = traj[where]
-            for leaf in group.f_iter_leaves():
+            for leaf in group.f_iter_leaves(ignore_links=True):
                 if leaf.v_run_branch == 'trajectory':
                     result_dict[leaf.v_full_name] = leaf
 

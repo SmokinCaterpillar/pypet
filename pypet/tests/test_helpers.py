@@ -236,9 +236,18 @@ def simple_calculations(traj, arg1, simple_kwarg):
         for idx,key in enumerate(keys[0:10]):
             keys[idx] = key.replace('.', '_')
 
-        traj.f_add_result_group('List', comment='Im a result group')
+        listy=traj.f_add_result_group('List', comment='Im a result group')
         traj.f_add_result_group('Iwiiremainempty.yo', comment='Empty group!')
         traj.Iwiiremainempty.f_store_child('yo')
+
+        traj.Iwiiremainempty.f_add_link('kkk',listy )
+        listy.f_add_link('hhh', traj.Iwiiremainempty)
+
+        if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.v_full_name:
+            raise RuntimeError()
+
+        if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.hhh.kkk.v_full_name:
+            raise RuntimeError()
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.List.f_store_child('Of', recursive=True)

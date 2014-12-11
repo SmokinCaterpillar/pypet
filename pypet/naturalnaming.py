@@ -668,6 +668,7 @@ class NaturalNamingInterface(HasLogger):
 
         :param start_node: The parent node from where to start
         :param name: Name of child which will be deleted and recursively all nodes below the child
+        :param keep: List of nodes to keep
 
         """
 
@@ -676,25 +677,25 @@ class NaturalNamingInterface(HasLogger):
             if node_full_name in keep:
                 return False
 
-            if not remove_links:
-                if node_full_name in self._root_instance._linked_by:
+            if node_full_name in self._root_instance._linked_by:
+                if not remove_links:
                     return False
-            else:
-                linking = self._root_instance._linked_by[node_full_name]
-                for key in compat.iterkeys(linking):
-                    for keep_key in keep:
-                        if key.startswith(keep_key):
-                            return False
+                else:
+                    linking = self._root_instance._linked_by[node_full_name]
+                    for key in compat.iterkeys(linking):
+                        for keep_key in keep:
+                            if key.startswith(keep_key):
+                                return False
 
             if node.v_is_group:
                 for name_ in compat.listkeys(node._children):
                     child_ = node._children[name_]
-                    child_deleted = _remove_subtree_inner(child_)
+                    child_deleted = _remove_subtree_inner(child_, remove_links, keep)
                     if child_deleted:
                         del node._children[name_]
                         del child_
 
-                if len(node._children)==0:
+                if len(node._children) == 0 and len(node._links) == 0:
                     self._delete_node(node)
                     return True
                 else:
@@ -705,7 +706,7 @@ class NaturalNamingInterface(HasLogger):
 
         child = start_node._children[name]
 
-        keep = set(keep())
+        keep = set(keep)
 
         if _remove_subtree_inner(child, remove_links, keep):
             del start_node._children[name]
@@ -726,7 +727,6 @@ class NaturalNamingInterface(HasLogger):
         """
         full_name = node.v_full_name
         name = node.v_name
-        run_name = node.v_run_branch
 
         root = self._root_instance
 
@@ -779,6 +779,11 @@ class NaturalNamingInterface(HasLogger):
                 linink_group.f_remove_link(link)
 
         # Finally remove all references in the dictionaries for fast search
+        self._remove_from_nodes_and_leaves(name, node)
+
+    def _remove_from_nodes_and_leaves(self, name, node):
+        full_name = node.v_full_name
+        run_name = node.v_run_branch
         del self._nodes_and_leaves[name][full_name]
         if len(self._nodes_and_leaves[name]) == 0:
             del self._nodes_and_leaves[name]
@@ -821,14 +826,33 @@ class NaturalNamingInterface(HasLogger):
         :param remove_empty_groups:
 
              Whether groups that become empty due to deletion of the node should be erased as well.
+             Note that groups that were linking to the node that became empty than themselves
+             are also removed.
 
         :return: True if node was deleted, otherwise False
 
         """
 
         # If the names list is empty, we have reached the node we want to delete.
+
+        def _delete_node_and_linked(node, remove_empty_groups):
+            if remove_empty_groups:
+                full_name = node.v_full_name
+                linking_nodes = []
+                if full_name in self._root_instance._linked_by:
+                    linking_node = self._root_instance._linked_by[full_name]
+                    linking_nodes.append(linking_node)
+                self._delete_node(actual_node)
+                for linking_node in linking_nodes:
+                    if len(linking_node._children) == 0 and len(linking_node._links) == 0:
+                        self._remove_recursive(self._root_instance,
+                                               linking_node.v_full_name.split('.'),
+                                               remove_empty_groups=remove_empty_groups)
+            else:
+                self._delete_node(node)
+
         if len(split_name) == 0:
-            self._delete_node(actual_node)
+            _delete_node_and_linked(actual_node, remove_empty_groups)
             return True
 
         # Otherwise get the next node by using the first name in the list
@@ -841,8 +865,11 @@ class NaturalNamingInterface(HasLogger):
             del child
 
             # Remove empty groups on the way back if desired
-            if remove_empty_groups and len(actual_node._children) == 0:
-                self._delete_node(actual_node)
+            if (remove_empty_groups and
+                len(actual_node._children) == 0 and
+                len(actual_node._links) == 0):
+
+                _delete_node_and_linked(actual_node, remove_empty_groups)
                 return True
 
         return False
@@ -1133,6 +1160,25 @@ class NaturalNamingInterface(HasLogger):
 
         return name
 
+    def _add_to_nodes_and_leaves(self, new_node, name):
+        if not name in self._nodes_and_leaves:
+            self._nodes_and_leaves[name] = {new_node.v_full_name: new_node}
+        else:
+            self._nodes_and_leaves[name][new_node.v_full_name] = new_node
+
+        run_name = new_node._run_branch
+        if not name in self._nodes_and_leaves_runs_sorted:
+            self._nodes_and_leaves_runs_sorted[name] = {run_name:
+                                                            {new_node.v_full_name:
+                                                                 new_node}}
+        else:
+            if not run_name in self._nodes_and_leaves_runs_sorted[name]:
+                self._nodes_and_leaves_runs_sorted[name][run_name] = \
+                    {new_node.v_full_name: new_node}
+            else:
+                self._nodes_and_leaves_runs_sorted[name][run_name]\
+                    [new_node.v_full_name] = new_node
+
     def _add_to_tree(self, start_node, name, type_name, group_type_name,
                      instance, constructor, args, kwargs):
         """Adds a new item to the tree.
@@ -1200,7 +1246,12 @@ class NaturalNamingInterface(HasLogger):
             # last_name = start_node.v_name
             for idx, name in enumerate(split_name):
 
-                if not name in act_node._children:
+                if name not in act_node._children:
+
+                    if name in act_node._links:
+                        raise AttributeError('You cannot add `%s` under `%s`, there exists '
+                                             'already a link with this name. ' %
+                                             (name, act_node.v_full_name))
 
                     if idx == last_idx and group_type_name != type_name:
                         # We are at the end of the chain and we add a leaf node
@@ -1227,23 +1278,7 @@ class NaturalNamingInterface(HasLogger):
 
                     # Add the new instance also to the nested reference dictionaries
                     # to allow fast search
-                    if not name in self._nodes_and_leaves:
-                        self._nodes_and_leaves[name] = {new_node.v_full_name: new_node}
-                    else:
-                        self._nodes_and_leaves[name][new_node.v_full_name] = new_node
-
-                    run_name = new_node._run_branch
-                    if not name in self._nodes_and_leaves_runs_sorted:
-                        self._nodes_and_leaves_runs_sorted[name] = {run_name:
-                                                                        {new_node.v_full_name:
-                                                                             new_node}}
-                    else:
-                        if not run_name in self._nodes_and_leaves_runs_sorted[name]:
-                            self._nodes_and_leaves_runs_sorted[name][run_name] = \
-                                {new_node.v_full_name: new_node}
-                        else:
-                            self._nodes_and_leaves_runs_sorted[name][run_name]\
-                                [new_node.v_full_name] = new_node
+                    self._add_to_nodes_and_leaves(new_node, name)
 
                     if (name.startswith(pypetconstants.RUN_NAME) and
                                 name != pypetconstants.RUN_NAME_DUMMY):
@@ -1254,13 +1289,6 @@ class NaturalNamingInterface(HasLogger):
                         raise AttributeError('You already have a group/instance `%s` under '
                                              '`%s`' % (name, act_node.v_full_name))
 
-                if name in act_node._links:
-                    raise AttributeError('You cannot add items via hopping over a link, '
-                                         'here from `%s` to `%s`.'
-                                         'Please, get the original node `%s` '
-                                         'first and add the item '
-                                         'below it.' % (act_node.v_full_name, name,
-                                                        act_node._children[name].v_full_name))
                 act_node = act_node._children[name]
                 # last_name = name
 
@@ -1271,30 +1299,40 @@ class NaturalNamingInterface(HasLogger):
             raise
 
     def _remove_link(self, act_node, name):
-        linked_node = act_node._children[name]
+        linked_node = act_node._links[name]
         full_name = linked_node.v_full_name
         linking = self._root_instance._linked_by[full_name]
         del linking[act_node.v_full_name]
         if len(linking) == 0:
             del self._root_instance.linked_by[full_name]
             del linking
-        del act_node._children[name]
         del act_node._links[name]
 
-        del self._nodes_and_leaves[name][full_name]
-        if len(self._nodes_and_leaves[name]) == 0:
-            del self._nodes_and_leaves[name]
+        self._remove_from_nodes_and_leaves(name, act_node)
 
     def _create_link(self, act_node, name, instance):
+
+        if '.' in name:
+            raise ValueError('`.` is not allowed in the name of a link!')
+
+        if name.startswith(pypetconstants.RUN_NAME):
+            raise ValueError('Your link cannot have the name of run `%s`.' % name)
+
+        faulty_names = self._check_names([name], act_node)
+
+        if faulty_names:
+            raise ValueError(
+                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
+                '%s please choose other names.'
+                % (name, faulty_names))
 
         if instance.v_is_root:
             raise ValueError('You cannot create a link to the root node')
 
-        if name in act_node._children:
-            raise ValueError('`%s` has already a child called `%s`, '
+        if name in act_node._children or name in act_node._links:
+            raise ValueError('`%s` has already a child or link called `%s`, '
                              'cannot add a link with this name.' % (act_node.v_full_name, name))
 
-        act_node._children[name] = instance
         act_node._links[name] = instance
 
         full_name = instance.v_full_name
@@ -1302,10 +1340,7 @@ class NaturalNamingInterface(HasLogger):
             self._root_instance._linked_by[full_name] = {}
         self._root_instance._linked_by[full_name][act_node.v_full_name] = (act_node, name)
 
-        if not name in self._nodes_and_leaves:
-            self._nodes_and_leaves[name] = {instance.v_full_name: instance}
-        else:
-            self._nodes_and_leaves[name][instance.v_full_name] = instance
+        self._add_to_nodes_and_leaves(instance, name)
 
         return instance
 
@@ -1536,19 +1571,12 @@ class NaturalNamingInterface(HasLogger):
                                             as_run, max_depth, return_depth,
                                             ignore_links)
         else:
-            if ignore_links:
-                pred = lambda x: x not in node._links
-                if return_depth:
-                    child_iterator = itools.ifilter(pred, compat.itervalues(node._children))
-                    return itools.izip(itools.repeat(1), child_iterator)
-                else:
-                    return itools.ifilter(pred, compat.itervalues(node._children))
+            if return_depth:
+                child_iterator = self._make_child_iterator(node, as_run, ignore_links)
+                return itools.izip(itools.repeat(1), child_iterator)
             else:
-                if return_depth:
-                    child_iterator = compat.itervalues(node._children)
-                    return itools.izip(itools.repeat(1), child_iterator)
-                else:
-                    return compat.itervalues(node._children)
+                return self._make_child_iterator(node, as_run, ignore_links)
+
 
 
     @staticmethod
@@ -1560,7 +1588,8 @@ class NaturalNamingInterface(HasLogger):
             else:
                 continue
 
-    def _to_dict(self, node, fast_access=True, short_names=False, copy=True):
+    def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
+                 ignore_links=False):
         """ Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -1572,6 +1601,10 @@ class NaturalNamingInterface(HasLogger):
 
             If true keys are not full names but only the names.
             Raises a ValueError if the names are not unique.
+
+        :param ignore_links:
+
+            If links should be ignored
 
         :return: dictionary
 
@@ -1597,7 +1630,7 @@ class NaturalNamingInterface(HasLogger):
             else:
                 iterator = compat.itervalues(temp_dict)
         else:
-            iterator = self._iter_leaves(node)
+            iterator = self._iter_leaves(node, ignore_links=ignore_links)
 
         # If not we need to build the dict by iterating recursively over all leaves:
         result_dict = {}
@@ -1623,32 +1656,26 @@ class NaturalNamingInterface(HasLogger):
         that do not belong to the run are blinded out.
 
         """
-        if ignore_links:
-            if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
-                # Only consider one particular run and blind out the rest, but include
-                # all other subbranches
-                node_list = [node._children[run_name]]
-                for child_name in node._children:
-                    if (child_name not in node._links and
-                        not (child_name.startswith(pypetconstants.RUN_NAME)
-                            and child_name != pypetconstants.RUN_NAME_DUMMY)):
-                        node_list.append(node._children[child_name])
-                return node_list
-            else:
-                pred = lambda x: x not in node._links
-                return itools.ifilter(pred, compat.itervalues(node._children))
+
+        if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
+            # Only consider one particular run and blind out the rest, but include
+            # all other subbranches
+            node_list = [node._children[run_name]]
+            for child_name in node._children:
+                if not (child_name.startswith(pypetconstants.RUN_NAME)
+                        and child_name != pypetconstants.RUN_NAME_DUMMY):
+                    node_list.append(node._children[child_name])
+            if not ignore_links and run_name in node._links:
+                for link_name in node._links:
+                    if not (link_name.startswith(pypetconstants.RUN_NAME)
+                            and link_name != pypetconstants.RUN_NAME_DUMMY):
+                        node_list.append(node._links[link_name])
+            return node_list
         else:
-            if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
-                # Only consider one particular run and blind out the rest, but include
-                # all other subbranches
-                node_list = [node._children[run_name]]
-                for child_name in node._children:
-                    if not (child_name.startswith(pypetconstants.RUN_NAME)
-                            and child_name != pypetconstants.RUN_NAME_DUMMY):
-                        node_list.append(node._children[child_name])
-                return node_list
-            else:
-                return compat.itervalues(node._children)
+            iterator = compat.itervalues(node._children)
+            if not ignore_links:
+                iterator = itools.chain(iterator, compat.itervalues(node._links))
+            return iterator
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
@@ -2107,6 +2134,8 @@ class NaturalNamingInterface(HasLogger):
 
             if len(split_name) == 1 and first in node._children:
                 result = node._children[first]
+            elif len(split_name) ==  1 and first in node._links:
+                result = node._links[first]
             else:
 
                 result = self._check_flat_dicts(node, split_name)
@@ -2114,7 +2143,7 @@ class NaturalNamingInterface(HasLogger):
                 if result is None:
 
                     if backwards_search and len(split_name) > 1:
-                        # # Do backwards search if we have a colon separated name
+                        # Do backwards search if we have a colon separated name
                         result_list = self._backwards_search(node, split_name, max_depth)
 
                         if len(result_list) == 0:
@@ -2131,7 +2160,6 @@ class NaturalNamingInterface(HasLogger):
                                 % (name, result_list[0].v_full_name,
                                    result_list[1].v_full_name, len(result_list)))
                     else:
-
                         # Check in O(N) with `N` number of groups and nodes
                         # [Worst Case O(N), average case is better
                         # since looking into a single dict costs O(1)].
@@ -2143,11 +2171,14 @@ class NaturalNamingInterface(HasLogger):
         elif not try_auto_load_directly:
             result = node
             for name in split_name:
-                if not name in result._children:
+                if name in result._children:
+                    result = result._children[name]
+                elif name in result._links:
+                    result = result._links[name]
+                else:
                     raise AttributeError(
                         'You did not allow for shortcuts and `%s` was not directly '
                         'found  under node `%s`.' % (name, result.v_full_name))
-                result = result._children[name]
 
         if result is None and auto_load:
             try:
@@ -2297,8 +2328,6 @@ class NNGroupNode(NNTreeNode):
         """
         if isinstance(name_or_item, compat.base_type):
             name = name_or_item
-            if '.' in name_or_item:
-                raise ValueError('You can add links only directly under a node!')
             if isinstance( full_name_or_item, compat.base_type):
                 instance = self.f_get_root().f_get(full_name_or_item)
             else:
@@ -2677,7 +2706,23 @@ class NNGroupNode(NNTreeNode):
         else:
             return self._children
 
-    def f_to_dict(self, fast_access=False, short_names=False):
+    def f_get_links(self, copy=True):
+        """Returns a link dictionary.
+
+        :param copy:
+
+            Whether the group's original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+
+        :returns: Dictionary of nodes
+
+        """
+        if copy:
+            return self._links.copy()
+        else:
+            return self._links
+
+    def f_to_dict(self, fast_access=False, short_names=False, ignore_links=False):
         """Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -2689,14 +2734,19 @@ class NNGroupNode(NNTreeNode):
             If true keys are not full names but only the names. Raises a ValueError
             if the names are not unique.
 
+        :param ignore_links:
+
+            If links should be ignored
+
         :return: dictionary
 
         :raises: ValueError
 
         """
-        return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names)
+        return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
+                                           ignore_links=ignore_links)
 
-    def f_store_child(self, name, recursive=False, ignore_links=False):
+    def f_store_child(self, name, recursive=False):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -2707,10 +2757,6 @@ class NNGroupNode(NNTreeNode):
         :param recursive:
 
             Whether recursively all children's children should be stored too.
-
-        :param ignore_links:
-
-            If links should be ignored and all nodes below the link are skipped
 
         :raises: ValueError if the child does not exist.
 
@@ -2725,10 +2771,9 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_trajectory_name,
-                              recursive=recursive, ignore_links=ignore_links)
+                              recursive=recursive)
 
-    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA,
-                     ignore_links=False):
+    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
         """Loads a child or recursively a subtree from disk.
 
         :param name:
@@ -2745,10 +2790,6 @@ class NNGroupNode(NNTreeNode):
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
 
-        :param ignore_links:
-
-            If links should be skipped and all nodes below links
-
         :returns:
 
             The loaded child, in case of grouping ('groupA.groupB.childC') the last
@@ -2761,8 +2802,7 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.load(pypetconstants.TREE, self, child_name=name,
                              trajectory_name=traj.v_trajectory_name,
-                             recursive=recursive, load_data=load_data, trajectory=traj,
-                             ignore_links=ignore_links)
+                             recursive=recursive, load_data=load_data, trajectory=traj)
 
         return self.f_get(name, shortcuts=False)
 

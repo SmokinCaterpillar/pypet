@@ -22,6 +22,8 @@ pypet 0.1b.9
 
 *   `progressbar` displays the run and remaining time.
 
+*   New LINK features allowing group nodes to refer to other parts of the tree
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
