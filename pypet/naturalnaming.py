@@ -750,9 +750,6 @@ class NaturalNamingInterface(HasLogger):
             elif full_name in root._other_leaves:
                 del root._other_leaves[full_name]
 
-            if full_name in root._run_parent_groups:
-                del root._run_parent_groups[full_name]
-
             if full_name in root._explored_parameters:
                 del root._explored_parameters[full_name]
 
@@ -771,6 +768,9 @@ class NaturalNamingInterface(HasLogger):
 
         else:
             del root._groups[full_name]
+
+            if full_name in root._run_parent_groups:
+                del root._run_parent_groups[full_name]
 
         # Delete all links to the node
         if full_name in root._linked_by:
@@ -840,8 +840,9 @@ class NaturalNamingInterface(HasLogger):
                 full_name = node.v_full_name
                 linking_nodes = []
                 if full_name in self._root_instance._linked_by:
-                    linking_node = self._root_instance._linked_by[full_name]
-                    linking_nodes.append(linking_node)
+                    linking = self._root_instance.linked_by[full_name]
+                    for linking_node, link in compat.itervalues(linking):
+                        linking_nodes.append(linking_node)
                 self._delete_node(actual_node)
                 for linking_node in linking_nodes:
                     if len(linking_node._children) == 0 and len(linking_node._links) == 0:
@@ -1301,7 +1302,7 @@ class NaturalNamingInterface(HasLogger):
     def _remove_link(self, act_node, name):
         linked_node = act_node._links[name]
         full_name = linked_node.v_full_name
-        linking = self._root_instance._linked_by[full_name]
+        linking, _link = self._root_instance._linked_by[full_name]
         del linking[act_node.v_full_name]
         if len(linking) == 0:
             del self._root_instance.linked_by[full_name]
@@ -1314,9 +1315,6 @@ class NaturalNamingInterface(HasLogger):
 
         if '.' in name:
             raise ValueError('`.` is not allowed in the name of a link!')
-
-        if name.startswith(pypetconstants.RUN_NAME):
-            raise ValueError('Your link cannot have the name of run `%s`.' % name)
 
         faulty_names = self._check_names([name], act_node)
 
@@ -1332,6 +1330,10 @@ class NaturalNamingInterface(HasLogger):
         if name in act_node._children or name in act_node._links:
             raise ValueError('`%s` has already a child or link called `%s`, '
                              'cannot add a link with this name.' % (act_node.v_full_name, name))
+
+        if (name.startswith(pypetconstants.RUN_NAME) and
+                                name != pypetconstants.RUN_NAME_DUMMY):
+            self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
 
         act_node._links[name] = instance
 
