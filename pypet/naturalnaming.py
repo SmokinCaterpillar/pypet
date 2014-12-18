@@ -45,6 +45,15 @@ __author__ = 'Robert Meyer'
 import inspect
 import itertools as itools
 import re
+try:
+    from future_builtins import zip, map, filter
+except ImportError:  # not 2.6+ or is 3.x
+    try:
+        from itertools import izip as zip  # < 2.5 or 3.x
+        from itertools import imap as map
+        from itertools import ifilter as filter
+    except ImportError:
+        pass
 
 from pypet.utils.decorators import deprecated
 import pypet.pypetexceptions as pex
@@ -1575,7 +1584,7 @@ class NaturalNamingInterface(HasLogger):
         else:
             if return_depth:
                 child_iterator = self._make_child_iterator(node, as_run, ignore_links)
-                return itools.izip(itools.repeat(1), child_iterator)
+                return zip(itools.repeat(1), child_iterator)
             else:
                 return self._make_child_iterator(node, as_run, ignore_links)
 
@@ -1713,7 +1722,7 @@ class NaturalNamingInterface(HasLogger):
                         child_iterator = NaturalNamingInterface._make_child_iterator(item,
                                                                                      run_name,
                                                                                      ignore_links)
-                        child_iterator = itools.izip(itools.repeat(depth+1), child_iterator)
+                        child_iterator = zip(itools.repeat(depth+1), child_iterator)
                         queue = itools.chain(queue, child_iterator)
             except StopIteration:
                 break
