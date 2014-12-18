@@ -1314,13 +1314,18 @@ class HDF5StorageService(StorageService, HasLogger):
         if closing and self._hdf5file is not None and self._hdf5file.isopen:
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
-            os.fsync(f_fd)
             try:
-                self._hdf5store.flush(fsync=True)
-            except TypeError:
-                f_fd = self._hdf5store._handle.fileno()
-                self._hdf5store.flush()
                 os.fsync(f_fd)
+                try:
+                    self._hdf5store.flush(fsync=True)
+                except TypeError:
+                    f_fd = self._hdf5store._handle.fileno()
+                    self._hdf5store.flush()
+                    os.fsync(f_fd)
+            except OSError as e:
+                self._logger.error('Encountered OSError while flushing file. '
+                                   'I will ignore the error and try to close the file. '
+                                   'Original error: %s' % str(e))
             self._hdf5store.close()
             self._hdf5store = None
             self._hdf5file = None
