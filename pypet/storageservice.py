@@ -2627,7 +2627,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     try:
                         linked_group = new_hdf5group()
                         name = linked_group._v_name
-                        link_name = hdf5group._v_name
+                        link_name = new_hdf5group._v_name
                         if (not link_name in new_traj_node._links or
                                     load_data==pypetconstants.OVERWRITE_DATA):
                             full_name = location_name+'.'+name if location_name != '' else name

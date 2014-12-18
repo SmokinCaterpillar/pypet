@@ -1302,14 +1302,14 @@ class NaturalNamingInterface(HasLogger):
     def _remove_link(self, act_node, name):
         linked_node = act_node._links[name]
         full_name = linked_node.v_full_name
-        linking, _link = self._root_instance._linked_by[full_name]
+        linking = self._root_instance._linked_by[full_name]
         del linking[act_node.v_full_name]
         if len(linking) == 0:
-            del self._root_instance.linked_by[full_name]
+            del self._root_instance._linked_by[full_name]
             del linking
         del act_node._links[name]
 
-        self._remove_from_nodes_and_leaves(name, act_node)
+        self._remove_from_nodes_and_leaves(name, linked_node)
 
     def _create_link(self, act_node, name, instance):
 
@@ -2371,6 +2371,14 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._add_generic(self, type_name=LEAF,
                                                group_type_name=GROUP,
                                                args=args, kwargs=kwargs)
+
+    def f_links(self):
+        """Returns the number of links of the group"""
+        return len(self._links)
+
+    def f_has_links(self):
+        """Checks if node has children or not"""
+        return len(self._links) != 0
 
     def f_children(self):
         """Returns the number of children of the group"""
