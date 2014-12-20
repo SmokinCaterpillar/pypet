@@ -86,7 +86,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.compare_trajectories(traj, traj2)
 
     def test_link_deletion(self):
-        filename = make_temp_file('linktest.hdf5')
+        filename = make_temp_file('linktest2.hdf5')
         traj = Trajectory(filename=filename)
 
         traj.f_add_parameter_group('test')
