@@ -1329,8 +1329,8 @@ class NaturalNamingInterface(HasLogger):
                 '%s please choose other names.'
                 % (name, faulty_names))
 
-        if instance.v_is_root:
-            raise ValueError('You cannot create a link to the root node')
+        if instance.v_is_root or act_node.v_is_root:
+            raise ValueError('You cannot create a link to or directly from the root node')
 
         if name in act_node._children or name in act_node._links:
             raise ValueError('`%s` has already a child or link called `%s`, '

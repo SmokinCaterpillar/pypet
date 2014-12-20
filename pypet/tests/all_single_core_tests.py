@@ -22,6 +22,7 @@ from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
 from pypet.tests.module_test import TestAllImport
 from pypet.tests.test_helpers import make_run
+from pypet.tests.link_test import LinkTrajectoryTests
 
 # Works only if someone has installed Brian
 try:

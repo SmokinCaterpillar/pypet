@@ -545,8 +545,6 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Length of a parameter if it is explored'''
     LEAF = 'SRVC_LEAF'
     ''' Whether an hdf5 node is a leaf node'''
-    HAS_LINK = 'SRVC_LINKING'
-    ''' Whether an hdf5 node is a group node that has links '''
 
 
     def __init__(self, filename=None, file_title='Experiment', display_time=30):
@@ -2606,48 +2604,40 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if recursive:
                 # We load recursively everything below it
-                children = hdf5group._v_children
+                children = hdf5group._v_groups
                 for new_hdf5group_name in children:
                     new_hdf5group = children[new_hdf5group_name]
-                    if not isinstance(new_hdf5group, pt.Group):
-                        continue
                     self._tree_load_nodes(traj, new_traj_node, new_hdf5group, load_data,
                                           recursive=recursive)
 
-            if self._all_get_from_attrs(hdf5group, HDF5StorageService.HAS_LINK):
-                there_are_links = False
-                children = hdf5group._v_children
-                for new_hdf5group_name in children:
-                    new_hdf5group = children[new_hdf5group_name]
-                    if not isinstance(new_hdf5group, pt.link.SoftLink):
-                        continue
-                    try:
-                        linked_group = new_hdf5group()
-                        name = linked_group._v_name
-                        link_name = new_hdf5group._v_name
-                        if (not link_name in new_traj_node._links or
-                                    load_data==pypetconstants.OVERWRITE_DATA):
-                            full_name = location_name+'.'+name if location_name != '' else name
+            links = hdf5group._v_links
+            for new_hdf5group_name in links:
+                new_hdf5group = links[new_hdf5group_name]
+                try:
+                    linked_group = new_hdf5group()
+                    name = linked_group._v_name
+                    link_name = new_hdf5group._v_name
+                    if (not link_name in new_traj_node._links or
+                                load_data==pypetconstants.OVERWRITE_DATA):
+                        full_name = location_name+'.'+name if location_name != '' else name
 
-                            if not full_name in traj:
-                                self._tree_load_sub_branch(traj, traj, full_name,
-                                                        self._trajectory_group, load_data=load_data,
-                                                        recursive=False,
-                                                        as_new=as_new)
-                            if not link_name in new_traj_node._links:
-                                new_traj_node.f_add_link(link_name, traj.f_get(full_name))
-                            elif load_data == pypetconstants.OVERWRITE_DATA:
-                                new_traj_node.f_remove_link(link_name)
-                                new_traj_node.f_add_link(link_name, traj.f_get(full_name))
-                            else:
-                                raise RuntimeError('You shall not pass!')
-                        there_are_links = True
-                    except pt.NoSuchNodeError:
-                        self._logger.error('Link `%s` is broken I will delete it it!' %
-                                           str(hdf5group))
-                        new_hdf5group._f_remove()
-                if not there_are_links:
-                    ptcompat.deleteattr(hdf5group, HDF5StorageService.HAS_LINK)
+                        if not full_name in traj:
+                            self._tree_load_sub_branch(traj, traj, full_name,
+                                                    self._trajectory_group, load_data=load_data,
+                                                    recursive=False,
+                                                    as_new=as_new)
+                        if not link_name in new_traj_node._links:
+                            new_traj_node.f_add_link(link_name, traj.f_get(full_name))
+                        elif load_data == pypetconstants.OVERWRITE_DATA:
+                            new_traj_node.f_remove_link(link_name)
+                            new_traj_node.f_add_link(link_name, traj.f_get(full_name))
+                        else:
+                            raise RuntimeError('You shall not pass!')
+                except pt.NoSuchNodeError:
+                    self._logger.error('Link `%s` is broken I will ignore it, you have to '
+                                       'manually delete it!' %
+                                       str(hdf5group))
+
 
     def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
@@ -3523,7 +3513,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                     self._trajectory_group, recursive=False)
                 to_link_hdf5_group = ptcompat.get_node(self._hdf5file,
                                                        where=linking_name)
-            setattr(_hdf5_group._v_attrs, HDF5StorageService.HAS_LINK, True)
             ptcompat.create_soft_link(self._hdf5file, where=_hdf5_group,
                                       name=link,
                                       target=to_link_hdf5_group)
@@ -4268,6 +4257,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """Removes a link from disk"""
         translated_name = '/' + self._trajectory_name + '/' + link_name.replace('.','/')
         link = ptcompat.get_node(self._hdf5file, where=translated_name)
+        parent_node = link._v_parent
         link._f_remove()
 
     def _all_delete_parameter_or_result_or_group(self, instance,

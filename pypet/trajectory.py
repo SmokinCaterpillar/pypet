@@ -843,7 +843,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
     def f_delete_link(self, link, remove_from_trajectory=False):
         """Deletes a single link see :func:`~pypet.trajectory.SingleRun.f_delete_links`"""
-        self._f_delete_links((link,), remove_from_trajectory)
+        self.f_delete_links((link,), remove_from_trajectory)
 
     def f_delete_links(self, iterator_of_links, remove_from_trajectory=False):
         """Deletes several links from the hard disk.
@@ -862,7 +862,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
             if isinstance(elem, compat.base_type):
                 split_names = elem.split('.')
                 parent_name = '.'.join(split_names[:-1])
-                link = elem[-1]
+                link = split_names[-1]
                 parent_node = self.f_get(parent_name) if parent_name != '' else self
                 link_name = parent_node.v_full_name + '.' + link if parent_name != '' else link
                 to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
@@ -2151,12 +2151,21 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             par.f_lock()
 
     def _remove_run_data(self):
+        def _keep_linked(node):
+            full_name = node.v_full_name
+            if full_name in self._linked_by:
+                linking = self._linked_by[full_name]
+                for linking_name in compat.iterkeys(linking):
+                    linking_node, link = linking[linking_name]
+                    if linking_node.v_run_branch == 'trajectory':
+                        return True
+            return False
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
             for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
                             child_name != pypetconstants.RUN_NAME_DUMMY):
-                    group.f_remove_child(child_name, recursive=True)
+                    group.f_remove_child(child_name, recursive=True, keep_predicate=_keep_linked)
 
     def _finalize(self):
         """Final rollback initiated by the environment
