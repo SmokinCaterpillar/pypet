@@ -1127,7 +1127,6 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed storing `%s`' % str(stuff_to_store))
             raise
 
-
     def _srvc_load_several_items(self, iterable, *args, **kwargs):
         """Loads several items from an iterable
 
@@ -1182,7 +1181,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                      'using default value.' % name)
 
         self._filters = None
-
 
     def _srvc_store_several_items(self, iterable, *args, **kwargs):
         """Stores several items from an iterable
@@ -1311,7 +1309,6 @@ class HDF5StorageService(StorageService, HasLogger):
             return True
         else:
             return False
-
 
     def _srvc_closing_routine(self, closing):
         """Routine to close an hdf5 file

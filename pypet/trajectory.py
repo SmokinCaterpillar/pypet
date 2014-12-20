@@ -450,7 +450,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
 
 
     def f_to_dict(self, fast_access=False, short_names=False, copy=True,
-                  ignore_links=False):
+                  with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances/values.
 
 
@@ -471,7 +471,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
             modify anything! Raises ValueError if `copy=False` and `fast_access=True`
             or `short_names=True`.
 
-        :param ignore_links:
+        :param with_links:
 
             If links should be ignored
 
@@ -482,7 +482,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access,
                                            short_names=short_names,
-                                           copy=copy, ignore_links=ignore_links)
+                                           copy=copy, with_links=with_links)
 
     def f_get_config(self, fast_access=False, copy=True):
         """Returns a dictionary containing the full config names as keys and the config parameters
@@ -1595,19 +1595,19 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                         delete_items = False  # We end here if we could not load data
 
                     if delete_items:
-                        for grp in run_node.f_iter_nodes(ignore_links=True):
+                        for grp in run_node.f_iter_nodes(with_links=False):
                             if not grp.v_is_leaf and grp.f_has_links():
                                 link_tuples = zip(itools.repeat(grp), compat.listkeys(grp._links))
                                 self.f_delete_links(link_tuples, remove_from_trajectory=True)
 
-                        self.f_delete_items(run_node.f_to_dict(ignore_links=True).values(),
+                        self.f_delete_items(run_node.f_to_dict(with_links=False).values(),
                                             remove_empty_groups=True,
                                             remove_from_trajectory=True)
 
                         if self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False):
                             # We end here if there are still some empty groups left
                             still_empty = []
-                            for node in run_node.f_iter_nodes(ignore_links=True):
+                            for node in run_node.f_iter_nodes(with_links=False):
                                 if not node.f_has_children():
                                     still_empty.append(node)
 
@@ -2852,7 +2852,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging git commits!')
             git_node = other_trajectory.f_get('config.git')
             param_list = []
-            for param in git_node.f_iter_leaves(ignore_links=True):
+            for param in git_node.f_iter_leaves(with_links=False):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -2867,7 +2867,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging environment config!')
             env_node = other_trajectory.f_get('config.environment')
             param_list = []
-            for param in env_node.f_iter_leaves(ignore_links=True):
+            for param in env_node.f_iter_leaves(with_links=False):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -2882,7 +2882,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._logger.info('Merging merge config!')
             merge_node = other_trajectory.f_get('config.merge')
             param_list = []
-            for param in merge_node.f_iter_leaves(ignore_links=True):
+            for param in merge_node.f_iter_leaves(with_links=False):
                 if not param.v_full_name in self:
                     param_list.append(self.f_add_config(param))
 
@@ -3145,7 +3145,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         if traj.f_contains(where):
             group = traj[where]
-            for leaf in group.f_iter_leaves(ignore_links=True):
+            for leaf in group.f_iter_leaves(with_links=False):
                 if leaf.v_run_branch == 'trajectory':
                     result_dict[leaf.v_full_name] = leaf
 

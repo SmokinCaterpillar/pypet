@@ -670,39 +670,34 @@ class NaturalNamingInterface(HasLogger):
         return item_list
 
 
-    def _remove_subtree(self, start_node, name, remove_links=True, keep=()):
+    def _remove_subtree(self, start_node, name, keep_predicate=None):
         """Removes a subtree from the trajectory tree.
 
         Does not delete stuff from disk only from RAM.
 
         :param start_node: The parent node from where to start
         :param name: Name of child which will be deleted and recursively all nodes below the child
-        :param keep: List of nodes to keep
+        :param keep_predicate:
+
+            Predicate that can be used to compute for individual nodes if they should be kept
 
         """
 
-        def _remove_subtree_inner(node, remove_links, keep):
-            node_full_name = node.v_full_name
-            if node_full_name in keep:
-                return False
+        def _remove_subtree_inner(node, keep_predicate):
 
-            if node_full_name in self._root_instance._linked_by:
-                if not remove_links:
-                    return False
-                else:
-                    linking = self._root_instance._linked_by[node_full_name]
-                    for key in compat.iterkeys(linking):
-                        for keep_key in keep:
-                            if key.startswith(keep_key):
-                                return False
+            if keep_predicate(node):
+                return False
 
             if node.v_is_group:
                 for name_ in compat.listkeys(node._children):
                     child_ = node._children[name_]
-                    child_deleted = _remove_subtree_inner(child_, remove_links, keep)
+                    child_deleted = _remove_subtree_inner(child_, keep_predicate)
                     if child_deleted:
                         del node._children[name_]
                         del child_
+
+                for link_ in compat.listkeys(node._links):
+                    node.f_remove_link(link_)
 
                 if len(node._children) == 0 and len(node._links) == 0:
                     self._delete_node(node)
@@ -714,10 +709,10 @@ class NaturalNamingInterface(HasLogger):
                 return True
 
         child = start_node._children[name]
+        if keep_predicate is None:
+            keep_predicate = lambda x: False
 
-        keep = set(keep)
-
-        if _remove_subtree_inner(child, remove_links, keep):
+        if _remove_subtree_inner(child, keep_predicate):
             del start_node._children[name]
             return True
         else:
@@ -783,8 +778,9 @@ class NaturalNamingInterface(HasLogger):
 
         # Delete all links to the node
         if full_name in root._linked_by:
-            for linking_name in compat.listkeys(root._linked_by[full_name]):
-                linink_group, link = root._linked_by[linking_name]
+            linking = root._linked_by[full_name]
+            for linking_name in compat.listkeys(linking):
+                linink_group, link = linking[linking_name]
                 linink_group.f_remove_link(link)
 
         # Finally remove all references in the dictionaries for fast search
@@ -1548,7 +1544,7 @@ class NaturalNamingInterface(HasLogger):
 
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
-                    return_depth=False, ignore_links=False):
+                    return_depth=False, with_links=True):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1567,9 +1563,9 @@ class NaturalNamingInterface(HasLogger):
 
             If relative depth should be returned
 
-        :param ignore_links:
+        :param with_links:
 
-            If short links should be ignored
+            If links should be considered
 
         :return: Iterator
 
@@ -1580,27 +1576,27 @@ class NaturalNamingInterface(HasLogger):
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
                                             as_run, max_depth, return_depth,
-                                            ignore_links)
+                                            with_links)
         else:
             if return_depth:
-                child_iterator = self._make_child_iterator(node, as_run, ignore_links)
+                child_iterator = self._make_child_iterator(node, as_run, with_links)
                 return zip(itools.repeat(1), child_iterator)
             else:
-                return self._make_child_iterator(node, as_run, ignore_links)
+                return self._make_child_iterator(node, as_run, with_links)
 
 
 
     @staticmethod
-    def _iter_leaves(node, ignore_links=False):
+    def _iter_leaves(node, with_links=True):
         """ Iterates over all leaves hanging below `node`."""
-        for node in node.f_iter_nodes(recursive=True, ignore_links=ignore_links):
+        for node in node.f_iter_nodes(recursive=True, with_links=with_links):
             if node.v_is_leaf:
                 yield node
             else:
                 continue
 
     def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
-                 ignore_links=False):
+                 with_links=True):
         """ Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -1613,9 +1609,9 @@ class NaturalNamingInterface(HasLogger):
             If true keys are not full names but only the names.
             Raises a ValueError if the names are not unique.
 
-        :param ignore_links:
+        :param with_links:
 
-            If links should be ignored
+            If links should be considered
 
         :return: dictionary
 
@@ -1641,7 +1637,7 @@ class NaturalNamingInterface(HasLogger):
             else:
                 iterator = compat.itervalues(temp_dict)
         else:
-            iterator = self._iter_leaves(node, ignore_links=ignore_links)
+            iterator = self._iter_leaves(node, with_links=with_links)
 
         # If not we need to build the dict by iterating recursively over all leaves:
         result_dict = {}
@@ -1660,7 +1656,7 @@ class NaturalNamingInterface(HasLogger):
         return result_dict
 
     @staticmethod
-    def _make_child_iterator(node, run_name, ignore_links):
+    def _make_child_iterator(node, run_name, with_links):
         """Returns an iterator over a node's children.
 
         In case of using a trajectory as a run (setting 'v_as_run') some sub branches
@@ -1676,7 +1672,7 @@ class NaturalNamingInterface(HasLogger):
                 if not (child_name.startswith(pypetconstants.RUN_NAME)
                         and child_name != pypetconstants.RUN_NAME_DUMMY):
                     node_list.append(node._children[child_name])
-            if not ignore_links and run_name in node._links:
+            if with_links and run_name in node._links:
                 for link_name in node._links:
                     if not (link_name.startswith(pypetconstants.RUN_NAME)
                             and link_name != pypetconstants.RUN_NAME_DUMMY):
@@ -1684,13 +1680,13 @@ class NaturalNamingInterface(HasLogger):
             return node_list
         else:
             iterator = compat.itervalues(node._children)
-            if not ignore_links:
+            if with_links:
                 iterator = itools.chain(iterator, compat.itervalues(node._links))
             return iterator
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
-                                 return_depth=False, ignore_links=False):
+                                 return_depth=False, with_links=True):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
@@ -1721,7 +1717,7 @@ class NaturalNamingInterface(HasLogger):
                     if not item._leaf and depth < max_depth:
                         child_iterator = NaturalNamingInterface._make_child_iterator(item,
                                                                                      run_name,
-                                                                                     ignore_links)
+                                                                                     with_links)
                         child_iterator = zip(itools.repeat(depth+1), child_iterator)
                         queue = itools.chain(queue, child_iterator)
             except StopIteration:
@@ -2409,7 +2405,7 @@ class NNGroupNode(NNTreeNode):
                                shortcuts=self._nn_interface._get_shortcuts(),
                                max_depth=self._nn_interface._get_max_depth())
 
-    def f_remove_child(self, name, recursive=False, remove_linked=True, keep=()):
+    def f_remove_child(self, name, recursive=False, keep_predicate=None):
         """Removes a child of the group.
 
         Note that groups and leaves are only removed from the current trajectory in RAM.
@@ -2429,14 +2425,9 @@ class NNGroupNode(NNTreeNode):
             Must be true if child is a group that has children. Will remove
             the whole subtree in this case. Otherwise a Type Error is thrown.
 
-        :param remove_linked:
+        :param keep_predicate:
 
-            If linked nodes are supposed to be removed. If yes, all links referring to the
-            node will be removed as well.
-
-        :param keep:
-
-            List of items or full names to keep. These are not erased, as well as their children
+            Predicate which can evaluate for each node to true in order to not erase the node
 
         :raises:
 
@@ -2456,16 +2447,7 @@ class NNGroupNode(NNTreeNode):
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with >>recursive = True')
             else:
-                keep = list(keep)
-                for idx, elem in enumerate(keep):
-                    try:
-                        full_name = elem.v_full_name
-                        keep[idx] = full_name
-                    except AttributeError:
-                        pass
-
-                self._nn_interface._remove_subtree(self, name, remove_links=remove_linked,
-                                                   keep=keep)
+                self._nn_interface._remove_subtree(self, name, keep_predicate)
 
     def f_contains(self, item, backwards_search=False,
                    shortcuts=False, max_depth=None):
@@ -2582,24 +2564,24 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._root_instance
 
-    def f_iter_nodes(self, recursive=True, ignore_links=False):
+    def f_iter_nodes(self, recursive=True, with_links=True):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
-        :param ignore_links: If links should be ignored and skipped
+        :param with_links: If links should be considered
 
         :return: Iterator over nodes
 
         """
-        return self._nn_interface._iter_nodes(self, recursive=recursive, ignore_links=ignore_links)
+        return self._nn_interface._iter_nodes(self, recursive=recursive, with_links=with_links)
 
-    def f_iter_leaves(self, ignore_links=False):
+    def f_iter_leaves(self, with_links=True):
         """Iterates (recursively) over all leaves hanging below the current group.
 
         If links should be ignored, leaves hanging below linked nodes are not listed.
         """
-        return self._nn_interface._iter_leaves(self, ignore_links=ignore_links)
+        return self._nn_interface._iter_leaves(self, with_links=with_links)
 
     def f_get_all(self, name, max_depth=None):
         """ Searches for all occurrences of `name` under `node`.
@@ -2741,7 +2723,7 @@ class NNGroupNode(NNTreeNode):
         else:
             return self._links
 
-    def f_to_dict(self, fast_access=False, short_names=False, ignore_links=False):
+    def f_to_dict(self, fast_access=False, short_names=False, with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -2753,9 +2735,9 @@ class NNGroupNode(NNTreeNode):
             If true keys are not full names but only the names. Raises a ValueError
             if the names are not unique.
 
-        :param ignore_links:
+        :param with_links:
 
-            If links should be ignored
+            If links should be considered
 
         :return: dictionary
 
@@ -2763,7 +2745,7 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
-                                           ignore_links=ignore_links)
+                                           with_links=with_links)
 
     def f_store_child(self, name, recursive=False):
         """Stores a child or recursively a subtree to disk.
