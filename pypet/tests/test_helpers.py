@@ -364,7 +364,7 @@ class TrajectoryComparator(unittest.TestCase):
                 if node.v_comment != '' and node.v_full_name in traj2:
                     second_comment = traj2.f_get(node.v_full_name).v_comment
                     self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %
-                                                                     (node.v_comment, second_comment, node.v_full_name))
+                                                (node.v_comment, second_comment, node.v_full_name))
 
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations

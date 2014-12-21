@@ -95,6 +95,18 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(len(traj._linked_by), len(traj2._linked_by))
         self.compare_trajectories(traj, traj2)
 
+        traj2.f_remove_child('parameters', recursive=True)
+
+        traj2.v_auto_load = True
+
+        group = traj2.par.test2.circle2
+
+        self.assertTrue(group is traj2.test)
+
+        retest = traj2.test.circle1
+
+        self.assertTrue(retest is traj2.test2)
+
     def test_link_deletion(self):
         filename = make_temp_file('linktest2.hdf5')
         traj = Trajectory(filename=filename)

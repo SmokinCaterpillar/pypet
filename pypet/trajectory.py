@@ -1470,7 +1470,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         else:
             return compat.listkeys(self._run_information)
 
-
     def f_get_run_information(self, name_or_idx=None, copy=True):
         """Returns a dictionary containing information about a single run.
 
@@ -1535,7 +1534,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 return self._run_information[name_or_idx].copy()
             else:
                 return self._run_information[name_or_idx]
-
 
     def _remove_incomplete_runs(self, start_timestamp, run_indices):
         """Requests the storage service to delete incomplete runs.
@@ -1621,7 +1619,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                             raise RuntimeError('Something is wrong!')
 
         return cleaned_run_indices
-
 
     def f_shrink(self):
         """ Shrinks the trajectory and removes all exploration ranges from the parameters.

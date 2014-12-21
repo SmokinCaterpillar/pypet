@@ -44,7 +44,6 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             traj.v_storage_service.store('FAKESERVICE', self, trajectory_name = traj.v_name)
 
-
         traj.f_store()
 
         with self.assertRaises(ValueError):

@@ -786,8 +786,9 @@ class NaturalNamingInterface(HasLogger):
         # Finally remove all references in the dictionaries for fast search
         self._remove_from_nodes_and_leaves(name, node)
 
-    def _remove_from_nodes_and_leaves(self, name, node):
-        full_name = node.v_full_name
+    def _remove_from_nodes_and_leaves(self, name, node, full_name=None):
+        if full_name is None:
+            full_name = node.v_full_name
         run_name = node.v_run_branch
         del self._nodes_and_leaves[name][full_name]
         if len(self._nodes_and_leaves[name]) == 0:
@@ -1166,24 +1167,26 @@ class NaturalNamingInterface(HasLogger):
 
         return name
 
-    def _add_to_nodes_and_leaves(self, new_node, name):
+    def _add_to_nodes_and_leaves(self, new_node, name, full_name=None):
+        if full_name is None:
+            full_name = new_node.v_full_name
         if not name in self._nodes_and_leaves:
-            self._nodes_and_leaves[name] = {new_node.v_full_name: new_node}
+            self._nodes_and_leaves[name] = {full_name: new_node}
         else:
-            self._nodes_and_leaves[name][new_node.v_full_name] = new_node
+            self._nodes_and_leaves[name][full_name] = new_node
 
         run_name = new_node._run_branch
         if not name in self._nodes_and_leaves_runs_sorted:
             self._nodes_and_leaves_runs_sorted[name] = {run_name:
-                                                            {new_node.v_full_name:
+                                                            {full_name:
                                                                  new_node}}
         else:
             if not run_name in self._nodes_and_leaves_runs_sorted[name]:
                 self._nodes_and_leaves_runs_sorted[name][run_name] = \
-                    {new_node.v_full_name: new_node}
+                    {full_name: new_node}
             else:
                 self._nodes_and_leaves_runs_sorted[name][run_name]\
-                    [new_node.v_full_name] = new_node
+                    [full_name] = new_node
 
     def _add_to_tree(self, start_node, name, type_name, group_type_name,
                      instance, constructor, args, kwargs):
@@ -1314,7 +1317,8 @@ class NaturalNamingInterface(HasLogger):
             del linking
         del act_node._links[name]
 
-        self._remove_from_nodes_and_leaves(name, linked_node)
+        self._remove_from_nodes_and_leaves(name, linked_node,
+                                           full_name=act_node.v_full_name + '.' + name)
 
     def _create_link(self, act_node, name, instance):
 
@@ -1352,7 +1356,7 @@ class NaturalNamingInterface(HasLogger):
             self._root_instance._linked_by[full_name] = {}
         self._root_instance._linked_by[full_name][act_node.v_full_name] = (act_node, name)
 
-        self._add_to_nodes_and_leaves(instance, name)
+        self._add_to_nodes_and_leaves(instance, name, full_name=act_node.v_full_name + '.' + name)
 
         return instance
 
@@ -2457,7 +2461,10 @@ class NNGroupNode(NNTreeNode):
 
             if not child.v_is_leaf and child.f_has_children and not recursive:
                 raise TypeError('Cannot remove child. It is a group with children. Use'
-                                ' f_remove with >>recursive = True')
+                                ' f_remove with ``recursive = True``')
+            elif not child.v_is_leaf and child.f_has_links and not recursive:
+                raise TypeError('Cannot remove child. It is a group with links. Use '
+                                'r_remove with ``recursive = True`` or remove links manually.')
             else:
                 self._nn_interface._remove_subtree(self, name, keep_predicate)
 

@@ -2509,6 +2509,12 @@ class HDF5StorageService(StorageService, HasLogger):
         if load_data == pypetconstants.LOAD_NOTHING:
             return
 
+        if isinstance(hdf5group, pt.link.SoftLink):
+            # We end up here when auto-loading a soft link
+            self._tree_load_link(traj, parent_traj_node, hdf5group,
+                                         load_data=load_data, as_new=as_new)
+            return
+
         location_name = parent_traj_node.v_full_name
         name = hdf5group._v_name
         is_leaf = self._all_get_from_attrs(hdf5group, HDF5StorageService.LEAF)
@@ -2588,7 +2594,6 @@ class HDF5StorageService(StorageService, HasLogger):
             self._node_processing_timer.signal_update()
 
         else:
-            # Else we are dealing with a group node
             if not name in parent_traj_node._children:
                 # If the group does not exist create it
 
@@ -2630,35 +2635,38 @@ class HDF5StorageService(StorageService, HasLogger):
                 links = hdf5group._v_links
                 for new_hdf5group_name in links:
                     new_hdf5group = links[new_hdf5group_name]
-                    try:
-                        linked_group = new_hdf5group()
-                        name = linked_group._v_name
-                        link_name = new_hdf5group._v_name
+                    self._tree_load_link(traj, new_traj_node, new_hdf5group,
+                                         load_data=load_data, as_new=as_new)
 
-                        if (not link_name in new_traj_node._links or
-                                    load_data==pypetconstants.OVERWRITE_DATA):
+    def _tree_load_link(self, traj, new_traj_node, new_hdf5group,
+                         load_data=pypetconstants.UPDATE_SKELETON,
+                         as_new=False):
+        try:
+            linked_group = new_hdf5group()
+            link_name = new_hdf5group._v_name
 
-                            link_location = linked_group._v_pathname
-                            link_location_name = '.'.join(link_location.split('/')[2:])
-                            full_name = link_location_name+'.'+name if \
-                                link_location_name != '' else name
+            if (not link_name in new_traj_node._links or
+                        load_data==pypetconstants.OVERWRITE_DATA):
 
-                            if not full_name in traj:
-                                self._tree_load_sub_branch(traj, traj, full_name,
-                                                        self._trajectory_group, load_data=load_data,
-                                                        recursive=False,
-                                                        as_new=as_new, load_links=False)
-                            if not link_name in new_traj_node._links:
-                                new_traj_node.f_add_link(link_name, traj.f_get(full_name))
-                            elif load_data == pypetconstants.OVERWRITE_DATA:
-                                new_traj_node.f_remove_link(link_name)
-                                new_traj_node.f_add_link(link_name, traj.f_get(full_name))
-                            else:
-                                raise RuntimeError('You shall not pass!')
-                    except pt.NoSuchNodeError:
-                        self._logger.error('Link `%s` is broken I will ignore it, you have to '
-                                           'manually delete it!' %
-                                           str(hdf5group))
+                link_location = linked_group._v_pathname
+                full_name = '.'.join(link_location.split('/')[2:])
+                if not full_name in traj:
+                    self._tree_load_sub_branch(traj, traj, full_name,
+                                            self._trajectory_group, load_data=load_data,
+                                            recursive=False,
+                                            as_new=as_new, load_links=False)
+                if not link_name in new_traj_node._links:
+                    new_traj_node.f_add_link(link_name, traj.f_get(full_name))
+                elif load_data == pypetconstants.OVERWRITE_DATA:
+                    new_traj_node.f_remove_link(link_name)
+                    new_traj_node.f_add_link(link_name, traj.f_get(full_name))
+                else:
+                    raise RuntimeError('You shall not pass!')
+        except pt.NoSuchNodeError:
+            self._logger.error('Link `%s` under `%s` is broken, cannot load it, '
+                               'I will ignore it, you have to '
+                               'manually delete it!' %
+                               (new_hdf5group._v_name, new_traj_node.v_full_name))
 
     def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True,
                           store_links=True):
