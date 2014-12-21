@@ -1321,6 +1321,8 @@ class NaturalNamingInterface(HasLogger):
         if '.' in name:
             raise ValueError('`.` is not allowed in the name of a link!')
 
+        name = self._replace_wildcards(name)
+
         faulty_names = self._check_names([name], act_node)
 
         if faulty_names:
@@ -1335,6 +1337,9 @@ class NaturalNamingInterface(HasLogger):
         if name in act_node._children or name in act_node._links:
             raise ValueError('`%s` has already a child or link called `%s`, '
                              'cannot add a link with this name.' % (act_node.v_full_name, name))
+
+        if not self._root_instance.f_contains(instance):
+            raise ValueError('You can only link to items within the trajectory tree!')
 
         if (name.startswith(pypetconstants.RUN_NAME) and
                                 name != pypetconstants.RUN_NAME_DUMMY):
@@ -2261,6 +2266,7 @@ class NNGroupNode(NNTreeNode):
         result = dir(type(self)) + compat.listkeys(self.__dict__)
         if not is_debug():
             result.extend(self._children.keys())
+            result.extend(self._links.keys())
         return result
 
     def __iter__(self):
@@ -2298,6 +2304,12 @@ class NNGroupNode(NNTreeNode):
                 setattr(debug_tree, child_name, child)
             else:
                 setattr(debug_tree, child_name, child._debug())
+        for link_name in self._links:
+            link = self._links[link_name]
+            if link.v_is_leaf:
+                setattr(debug_tree, link_name, link)
+            else:
+                setattr(debug_tree, link_name, link._debug())
 
         return debug_tree
 
