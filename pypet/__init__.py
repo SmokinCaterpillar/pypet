@@ -11,7 +11,7 @@ except ImportError:
 
 
 from pypet.environment import Environment
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
     ResultGroup, NNGroupNode, NNLeafNode
@@ -26,7 +26,6 @@ from pypet.utils.explore import cartesian_product
 
 __all__ = [
     Trajectory.__name__,
-    SingleRun.__name__,
     Environment.__name__,
     HDF5StorageService.__name__,
     LazyStorageService.__name__,

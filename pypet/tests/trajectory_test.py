@@ -13,7 +13,7 @@ else:
     import unittest
 
 from pypet.parameter import Parameter, PickleParameter, Result
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.naturalnaming import NaturalNamingInterface
 from pypet.storageservice import LazyStorageService
 import pickle

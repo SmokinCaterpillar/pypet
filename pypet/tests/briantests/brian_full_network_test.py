@@ -9,7 +9,7 @@ else:
     import unittest
 
 from pypet.parameter import Parameter
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.storageservice import LazyStorageService
 
 from pypet.environment import Environment

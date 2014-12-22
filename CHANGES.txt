@@ -24,6 +24,8 @@ pypet 0.1b.9
 
 *   New LINK features allowing group nodes to refer to other parts of the tree
 
+*   The SingleRun has been removed and all Interaction happens how with real Trajectory objects
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

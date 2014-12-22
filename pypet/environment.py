@@ -167,7 +167,7 @@ def _single_run(args):
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
-            traj._finalize()
+            traj._finalize_run()
 
         root.info('\n===================================\n '
                   'Finished single run #%d of %d '
@@ -1812,7 +1812,7 @@ class Environment(HasLogger):
                  self._continue_path,
                  self._automatic_storing)
                 for n in compat.xrange(start_run_idx, len(self._traj))
-                if not self._traj.f_is_completed(n))
+                if not self._traj._is_completed(n))
 
     def _execute_postproc(self, results):
         """Executes a postprocessing function
@@ -2120,8 +2120,9 @@ class Environment(HasLogger):
 
                     # Replace the wrapped storage service with the original one
                     # and do some finalization
-                    self._traj.v_storage_service = self._storage_service
+                    self._traj._storage_service = self._storage_service
                     self._traj._finalize()
+
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2150,7 +2151,7 @@ class Environment(HasLogger):
 
                     # Sequentially run all single runs and append the results to a queue
                     for n in compat.xrange(start_run_idx, len(self._traj)):
-                        if not self._traj.f_is_completed(n):
+                        if not self._traj._is_completed(n):
 
                             if self._deep_copy_data:  # Not supported ATM,
                             # here for future reference
@@ -2271,7 +2272,7 @@ class Environment(HasLogger):
         self._traj.f_load(load_all=pypetconstants.LOAD_NOTHING)
         all_completed = True
         for run_name in self._traj.f_get_run_names():
-            if not self._traj.f_is_completed(run_name):
+            if not self._traj._is_completed(run_name):
                 all_completed = False
                 self._logger.error('Run `%s` did NOT completed!' % run_name)
         if all_completed:

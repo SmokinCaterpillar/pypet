@@ -459,16 +459,16 @@ class NaturalNamingInterface(HasLogger):
         else:
             raise RuntimeError('You shall not pass!')
 
-    def _change_root(self, new_root):
-        """ Changes the root of the whole tree.
-
-        This is called on creation of single runs to take over the tree from its parent
-        trajectory and vice versa.
-
-        """
-        new_root._children = self._root_instance._children
-        self._root_instance = new_root
-        self._run_or_traj_name = self._root_instance.v_name
+    # def _change_root(self, new_root):
+    #     """ Changes the root of the whole tree.
+    #
+    #     This is called on creation of single runs to take over the tree from its parent
+    #     trajectory and vice versa.
+    #
+    #     """
+    #     new_root._children = self._root_instance._children
+    #     self._root_instance = new_root
+    #     self._run_or_traj_name = self._root_instance.v_name
 
     def _get_backwards_search(self):
         return self._root_instance.v_backwards_search
@@ -2312,7 +2312,6 @@ class NNGroupNode(NNTreeNode):
         result = dir(type(self)) + compat.listkeys(self.__dict__)
         if not is_debug():
             result.extend(self._children.keys())
-            result.extend(self._links.keys())
         return result
 
     def __iter__(self):
@@ -2345,6 +2344,8 @@ class NNGroupNode(NNTreeNode):
         if not self.v_comment == '':
             debug_tree.v_comment = self.v_comment
         for child_name in self._children:
+            if child_name in self._links:
+                continue
             child = self._children[child_name]
             if child.v_is_leaf:
                 setattr(debug_tree, child_name, child)
@@ -2352,10 +2353,7 @@ class NNGroupNode(NNTreeNode):
                 setattr(debug_tree, child_name, child._debug())
         for link_name in self._links:
             link = self._links[link_name]
-            if link.v_is_leaf:
-                setattr(debug_tree, link_name, link)
-            else:
-                setattr(debug_tree, link_name, link._debug())
+            setattr(debug_tree, link_name, 'Link to `%s`' % link.v_full_name)
 
         return debug_tree
 

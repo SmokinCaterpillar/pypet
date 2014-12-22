@@ -711,9 +711,9 @@ class BrianMonitorResult(Result):
 
     def _load(self, load_dict):
         if 'monitor_type' in load_dict:
-            self._monitor_type = load_dict['monitor_type']
+            self._monitor_type = load_dict.pop('monitor_type')
         if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
-            self._storage_mode = load_dict['storage_mode']
+            self._storage_mode = load_dict.pop('storage_mode')
 
         super(BrianMonitorResult, self)._load(load_dict)
 

@@ -107,3 +107,26 @@ def kwargs_api_change(old_name, new_name):
         return new_func
 
     return wrapper
+
+def not_in_run(func):
+    """This is a decorator that signaling that a function is not available during a single run.
+
+    """
+    doc = func.__doc__
+    na_string = '''\nATTENTION: This function is not available during a single run!\n'''
+
+    if doc is not None:
+        func.__doc__ = '\n'.join([doc, na_string])
+    func._not_in_run = True
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+
+        if len(args)>0 and hasattr(args[0], '_is_run') and args[0]._is_run:
+            raise TypeError('Function `%s` is not available during a single run.' %
+                            func.__name__)
+
+        return func( *args, **kwargs)
+
+    return new_func
+

@@ -3,11 +3,6 @@
 :class:`~pypet.trajectory.Trajectory` is the basic container class to manage results and
 parameters (see also :mod:`pypet.parameters`).
 
-:class:`~pypet.trajectory.SingleRun` is a reduced Trajectory only containing the information
-of a particular parameter combination in case of parameter exploration.
-Note for simplicity it is the parent class of the Trajectory.
-A SingleRun provides less functionality than the Trajectory.
-
 """
 
 __author__ = 'Robert Meyer'
@@ -45,937 +40,12 @@ from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
 import pypet.storageservice as storage
-from pypet.utils.decorators import kwargs_api_change
+from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc
+from pypet.utils.helpful_functions import is_debug
 
 
-class SingleRun(DerivedParameterGroup, ResultGroup):
-    """ Constitutes one specific parameter combination in a whole trajectory
-    with parameter exploration.
 
-    A SingleRun instance is accessed during the actual run phase of a trajectory
-    (see also :class:`~pypet.trajectory.Trajectory`).
-    There exists a SingleRun object for each point in the parameter space.
-
-    Parameters can no longer be added, the parameter set is supposed to be complete before
-    the actual running of the experiment. However, derived parameters can still be added.
-
-    The instance of a SingleRun is never instantiated by the user but by the parent trajectory.
-
-    """
-
-    def __init__(self, name, idx, parent_trajectory):
-        super(SingleRun, self).__init__()
-
-        # We keep a reference to the parent trajectory.
-        # In case of multiprocessing the parent trajectory usually does not contain the full
-        # parameter exploration but only the current point in the parameter space.
-        # This behavior can be altered by modifying `v_full_copy`.
-        self._parent_trajectory = parent_trajectory
-
-        self._name = name
-        self._idx = idx
-
-        self._set_start_time()  # Sets current time as start time, if using environment is reset
-        # to time precise time point of start
-        self._finish_timestamp = None  # End of run, set by the environemnt
-        self._runtime = None  # Runtime in human readable format
-        self._timestamp = None
-        self._time = None
-
-        self._trajectory_name = parent_trajectory.v_name
-        self._trajectory_time = parent_trajectory.v_time
-        self._trajectory_timestamp = parent_trajectory.v_timestamp
-
-        self._parameters = parent_trajectory._parameters
-        self._derived_parameters = parent_trajectory._derived_parameters
-        self._results = parent_trajectory._results
-        self._explored_parameters = parent_trajectory._explored_parameters
-        self._config = parent_trajectory._config
-        self._all_groups = parent_trajectory._all_groups
-        self._run_parent_groups = parent_trajectory._run_parent_groups
-        self._other_leaves = parent_trajectory._other_leaves
-        self._linked_by = parent_trajectory._linked_by
-
-        # The single run takes over the nn_interface of the parent trajectory and
-        # changes the root. This alters the nn_interface of the parent trajectory.
-        # As long as the root note is changed, you should not tamper with the parent
-        # trajectory at all.
-        self._nn_interface = parent_trajectory._nn_interface
-        self._nn_interface._change_root(self)
-
-        self._storage_service = parent_trajectory._storage_service
-
-        self._standard_parameter = parent_trajectory.v_standard_parameter
-        self._standard_result = parent_trajectory.v_standard_result
-        self._standard_leaf = parent_trajectory.v_standard_leaf
-        self._fast_access = parent_trajectory.v_fast_access
-        self._backwards_search = parent_trajectory.v_backwards_search
-        self._shortcuts = parent_trajectory.v_shortcuts
-        self._iter_recursive = parent_trajectory._iter_recursive
-        self._max_depth = parent_trajectory._max_depth
-        self._auto_load = parent_trajectory._auto_load
-
-        self._stored = True
-
-        self._dynamic_imports = parent_trajectory._dynamic_imports
-
-        self._set_logger()
-
-        self._is_run = True
-        self._as_run = self.v_name
-
-        # Single Run objects can have no annotations at the root node of the tree.
-        # The hdf5 file later on only has a single root node. This would require a
-        # complex merging of information which we want to avoid.
-        self._annotations = None
-
-        self._environment_hexsha = parent_trajectory.v_environment_hexsha
-        self._environment_name = parent_trajectory.v_environment_name
-        self._filename = parent_trajectory.v_filename
-
-        # Only needed in parent trajectory.
-        # But if we keep it here, we can have a simpler generic addition of elements
-        # in the natural naming interface
-        self._changed_default_parameters = {}
-
-    def __str__(self):
-
-        if self.v_comment:
-            commentstring = '`%s`, ' % self.v_comment
-        else:
-            commentstring = ''
-
-        info_string = '(%sidx:%d)'  % (commentstring, self.v_idx)
-
-        children_string = self._get_children_representation()
-
-        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string,
-                                children_string)
-
-    @property
-    def v_as_run(self):
-        """In case of a single run, this returns simply the name of the run."""
-        return self._name
-
-    @property
-    def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF5StorageService"""
-        return self._filename
-
-    def _set_start_time(self):
-        """Sets the start timestamp and formatted time to the current time.
-
-        First called from constructor.
-        Can be called from the environment to reset the time, to time not the creation but
-        the start of the run.
-
-        """
-        init_time = time.time()
-        formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp = init_time
-        self._time = formatted_time
-
-    def _set_finish_time(self):
-        """Sets the finish time and computes the runtime in human readable format"""
-        init_time = time.time()
-        #formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._finish_timestamp = init_time
-
-        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
-        startdatetime = datetime.datetime.fromtimestamp(self._timestamp)
-
-        self._runtime = str(findatetime - startdatetime)
-
-
-    def __len__(self):
-        """ Length of a single run can only be 1 and nothing else!"""
-        return 1
-
-
-    def _create_class(self, class_name):
-        """Dynamically creates a class.
-
-        It is tried if the class can be created by the already given imports.
-        If not the list of the dynamically loaded classes is used.
-
-        """
-        try:
-            new_class = eval(class_name)
-
-            if not inspect.isclass(new_class):
-                raise TypeError('Not a class!')
-
-            return new_class
-        except (NameError, TypeError):
-            for dynamic_class in self._dynamic_imports:
-                # Dynamic classes can be provided directly as a Class instance,
-                # for example as `MyCustomParameter`,
-                # or as a string describing where to import the class from,
-                # for instance as `'mypackage.mymodule.MyCustomParameter'`.
-                if inspect.isclass(dynamic_class):
-                    if class_name == dynamic_class.__name__:
-                        return dynamic_class
-                else:
-                    # The class name is always the last in an import string,
-                    # e.g. `'mypackage.mymodule.MyCustomParameter'`
-                    class_name_to_test = dynamic_class.split('.')[-1]
-                    if class_name == class_name_to_test:
-                        new_class = self._load_class(dynamic_class)
-                        return new_class
-            raise ImportError('Could not create the class named `%s`.' % class_name)
-
-    @staticmethod
-    def _load_class(full_class_string):
-        """Loads a class from a string naming the module and class name.
-
-        For example:
-        >>> Trajectory._load_class(full_class_string = 'pypet.brian.parameter.BrianParameter')
-        <BrianParameter>
-
-        """
-
-        class_data = full_class_string.split(".")
-        module_path = ".".join(class_data[:-1])
-        class_str = class_data[-1]
-        module = importlib.import_module(module_path)
-
-        # We retrieve the Class from the module
-        return getattr(module, class_str)
-
-
-    @property
-    def v_shortcuts(self):
-        """Whether shortcuts are allowed if accessing data via natural naming or
-        squared bracket indexing."""
-        return self._shortcuts
-
-    @v_shortcuts.setter
-    def v_shortcuts(self, shortcuts):
-        self._shortcuts = bool(shortcuts)
-
-
-    @property
-    def v_backwards_search(self):
-        """Whether to apply backwards search in the tree if one searches a branch
-        with the square brackets notation `[]`.
-        """
-        return self._backwards_search
-
-    @v_backwards_search.setter
-    def v_backwards_search(self, backwards_search):
-        self._backwards_search = bool(backwards_search)
-
-    @property
-    def v_max_depth(self):
-        """The maximum depth the tree should be searched if shortcuts are allowed.
-
-        Set to `None` if there should be no depth limit.
-        """
-        return self._max_depth
-
-    @v_max_depth.setter
-    def v_max_depth(self, max_depth):
-        self._max_depth = max_depth
-
-    @property
-    def v_iter_recursive(self):
-        """Whether using `__iter__` should iterate only immediate children or
-        recursively all nodes."""
-        return self._iter_recursive
-
-    @v_iter_recursive.setter
-    def v_iter_recursive(self, iter_recursive):
-        self._iter_recursive = bool(iter_recursive)
-
-
-    @property
-    def v_auto_load(self):
-        """Whether the trajectory should attempt to load data on the fly.
-        """
-        return self._auto_load
-
-    @v_auto_load.setter
-    def v_auto_load(self, auto_load):
-        self._auto_load = bool(auto_load)
-
-    @property
-    def v_timestamp(self):
-        """Float timestamp of creation time"""
-        return self._timestamp
-
-    @property
-    def v_time(self):
-        """Formatted time string of the time the trajectory or run was created."""
-        return self._time
-
-    @property
-    def v_standard_parameter(self):
-        """ The standard parameter used for parameter creation"""
-        return self._standard_parameter
-
-    @v_standard_parameter.setter
-    def v_standard_parameter(self, parameter):
-        """Sets the standard parameter"""
-        self._standard_parameter = parameter
-
-    @property
-    def v_standard_result(self):
-        """The standard result class used for result creation """
-        return self._standard_result
-
-    @v_standard_result.setter
-    def v_standard_result(self, result):
-        """Sets standard result"""
-        self._standard_result = result
-
-    @property
-    def v_standard_leaf(self):
-        """The standard constructor used if you add a generic leaf.
-
-        The constructor is only used if you do not add items under the usual four subtrees
-        (`parameters`, `derived_parameters`, `config`, `results`).
-
-        """
-        return self._standard_leaf
-
-    @v_standard_leaf.setter
-    def v_standard_leaf(self, leaf):
-        """Sets standard result"""
-        self._standard_leaf = leaf
-
-    @property
-    def v_fast_access(self):
-        """Whether parameter instances (False) or their values (True) are returned via natural
-        naming.
-
-        Works also for results if they contain a single item with the name of the result.
-
-        Default is True.
-
-        """
-        return self._fast_access
-
-    @v_fast_access.setter
-    def v_fast_access(self, value):
-        """Sets fast access"""
-        self._fast_access = bool(value)
-
-    @property
-    def v_environment_hexsha(self):
-        """If the trajectory is used with an environment this returns
-        the SHA-1 code of the environment.
-
-        """
-        return self._environment_hexsha
-
-    @property
-    def v_environment_name(self):
-        """If the trajectory is used with an environment this returns
-        the name of the environment.
-
-        """
-        return self._environment_name
-
-    @property
-    def v_storage_service(self):
-        """The service which is used to store a trajectory to disk"""
-        return self._storage_service
-
-    @staticmethod
-    def _return_item_dictionary(param_dict, fast_access, copy):
-        """Returns a dictionary containing either all parameters, all explored parameters,
-        all config, all derived parameters, or all results.
-
-        :param param_dict: The dictionary which is about to be returned
-        :param fast_access: Whether to use fast access
-        :param copy: If the original dict should be returned or a shallow copy
-
-        :return: The dictionary
-
-        :raises: ValueError if `copy=False` and fast_access=True`
-
-        """
-
-        if not copy and fast_access:
-            raise ValueError('You cannot access the original dictionary and use fast access at the'
-                             ' same time!')
-        if not fast_access:
-            if copy:
-                return param_dict.copy()
-            else:
-                return param_dict
-        else:
-            resdict = {}
-            for key in param_dict:
-                param = param_dict[key]
-
-                val = param.f_get()
-                resdict[key] = val
-
-            return resdict
-
-    @property
-    def v_trajectory_name(self):
-        """Name of the (parent) trajectory"""
-        return self._trajectory_name
-
-    @property
-    def v_trajectory_time(self):
-        """Time (parent) trajectory was created"""
-        return self._trajectory_time
-
-    @property
-    def v_trajectory_timestamp(self):
-        """Float timestamp when (parent) trajectory was created"""
-        return self._trajectory_timestamp
-
-    @property
-    def v_idx(self):
-        """Index of the single run"""
-        return self._idx
-
-    def _finalize(self):
-        """Called by the environment after storing to perform some rollback operations.
-
-        All results and derived parameters created in the current run are removed.
-
-        Important for single processing to not blow up the parent trajectory with the results
-        of all runs.
-
-        """
-        for group_name in self._run_parent_groups:
-            group = self._run_parent_groups[group_name]
-            if group.f_contains(self.v_name):
-                group.f_remove_child(self.v_name, recursive=True)
-
-
-    def f_to_dict(self, fast_access=False, short_names=False, copy=True,
-                  with_links=True):
-        """Returns a dictionary with pairings of (full) names as keys and instances/values.
-
-
-        :param fast_access:
-
-            If True, parameter values are returned instead of the instances.
-            Works also for results if they contain a single item with the name of the result.
-
-        :param short_names:
-
-            If true, keys are not full names but only the names. Raises a ValueError
-            if the names are not unique.
-
-        :param copy:
-
-            If `fast_access=False` and `short_names=False` you can access the original
-            data dictionary if you set `copy=False`. If you do that, please do not
-            modify anything! Raises ValueError if `copy=False` and `fast_access=True`
-            or `short_names=True`.
-
-        :param with_links:
-
-            If links should be ignored
-
-        :return: dictionary
-
-        :raises: ValueError
-
-        """
-        return self._nn_interface._to_dict(self, fast_access=fast_access,
-                                           short_names=short_names,
-                                           copy=copy, with_links=with_links)
-
-    def f_get_config(self, fast_access=False, copy=True):
-        """Returns a dictionary containing the full config names as keys and the config parameters
-        or the config parameter data items as values.
-
-
-        :param fast_access:
-
-            Determines whether the parameter objects or their values are returned
-            in the dictionary.
-
-        :param copy:
-
-            Whether the original dictionary or a shallow copy is returned.
-            If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises ValueError
-            if fast access is true and copy false.
-
-        :return: Dictionary containing the config data
-
-        :raises: ValueError
-
-        """
-        return self._return_item_dictionary(self._config, fast_access, copy)
-
-    def f_get_parameters(self, fast_access=False, copy=True):
-        """ Returns a dictionary containing the full parameter names as keys and the parameters
-         or the parameter data items as values.
-
-
-        :param fast_access:
-
-            Determines whether the parameter objects or their values are returned
-            in the dictionary.
-
-        :param copy:
-
-            Whether the original dictionary or a shallow copy is returned.
-            If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises ValueError
-            if fast access is true and copy false.
-
-        :return: Dictionary containing the parameters.
-
-        :raises: ValueError
-
-        """
-        return self._return_item_dictionary(self._parameters, fast_access, copy)
-
-
-    def f_get_explored_parameters(self, fast_access=False, copy=True):
-        """ Returns a dictionary containing the full parameter names as keys and the parameters
-         or the parameter data items as values.
-
-
-        :param fast_access:
-
-            Determines whether the parameter objects or their values are returned
-            in the dictionary.
-
-        :param copy:
-
-            Whether the original dictionary or a shallow copy is returned.
-            If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises ValueError
-            if fast access is true and copy false.
-
-        :return: Dictionary containing the parameters.
-
-        :raises: ValueError
-
-        """
-        return self._return_item_dictionary(self._explored_parameters, fast_access, copy)
-
-    def f_get_derived_parameters(self, fast_access=False, copy=True):
-        """ Returns a dictionary containing the full parameter names as keys and the parameters
-         or the parameter data items as values.
-
-
-        :param fast_access:
-
-            Determines whether the parameter objects or their values are returned
-            in the dictionary.
-
-        :param copy:
-
-            Whether the original dictionary or a shallow copy is returned.
-            If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises ValueError
-            if fast access is true and copy false.
-
-        :return: Dictionary containing the parameters.
-
-        :raises: ValueError
-
-        """
-        return self._return_item_dictionary(self._derived_parameters, fast_access, copy)
-
-    def f_get_results(self, fast_access=False, copy=True):
-        """ Returns a dictionary containing the full result names as keys and the corresponding
-        result objects or result data items as values.
-
-
-        :param fast_access:
-
-            Determines whether the result objects or their values are returned
-            in the dictionary. Works only for results if they contain a single item with
-            the name of the result.
-
-        :param copy:
-
-            Whether the original dictionary or a shallow copy is returned.
-            If you want the real dictionary please do not modify it at all!
-            Not Copying and fast access do not work at the same time! Raises ValueError
-            if fast access is true and copy false.
-
-        :return: Dictionary containing the results.
-
-        :raises: ValueError
-
-        """
-        return self._return_item_dictionary(self._results, fast_access, copy)
-
-    def f_store(self):
-        """Stores all data from the single run to disk.
-
-        Looks for new data that is added below a group called `run_XXXXXXXXXX` and
-        stores it where `XXXXXXXXX` is the index of this run.
-
-        """
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name,
-                                    store_final=False, store_data=True)
-
-
-    def _store_final(self, store_data=False):
-        """Signals the storage service that single run is completed
-
-        :param store_data: If all data should be stored as in `f_store`.
-
-        """
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name,
-                                    store_final=True, store_data=store_data)
-
-    def f_store_item(self, item, *args, **kwargs):
-        """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""
-        self.f_store_items([item], *args, **kwargs)
-
-    def f_store_items(self, iterator, *args, **kwargs):
-        """Stores individual items to disk.
-
-        This function is useful if you calculated very large results (or large derived parameters)
-        during runtime and you want to write these to disk immediately and empty them afterwards
-        to free some memory.
-
-        Instead of storing individual parameters or results you can also store whole subtrees with
-        :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
-
-
-        You can pass the following arguments to `f_store_items`:
-
-        :param iterator:
-
-            An iterable containing the parameters or results to store, either their
-            names or the instances. You can also pass group instances or names here
-            to store the annotations of the groups.
-
-        :param non_empties:
-
-            Optional keyword argument (boolean),
-            if `True` will only store the subset of provided items that are not empty.
-            Empty parameters or results found in `iterator` are simply ignored.
-
-        :param args: Additional arguments passed to the storage service
-
-        :param kwargs:
-
-            If you use the standard hdf5 storage service, you can pass the following additional
-            keyword argument:
-
-            :param overwrite:
-
-                List names of parts of your item that should
-                be erased and overwritten by the new data in your leaf.
-                You can also set `overwrite=True`
-                to overwrite all parts.
-
-                For instance:
-
-                    >>> traj.f_add_result('mygroup.myresult', partA=42, partB=44, partC=46)
-                    >>> traj.f_store()
-                    >>> traj.mygroup.myresult.partA = 333
-                    >>> traj.mygroup.myresult.partB = 'I am going to change to a string'
-                    >>> traj.f_store_item('mygroup.myresult', overwrite=['partA', 'partB'])
-
-                Will store `'mygroup.myresult'` to disk again and overwrite the parts
-                `'partA'` and `'partB'` with the new values `333` and
-                `'I am going to change to a string'`.
-                The data stored as `partC` is not changed.
-
-                Be aware that you need to specify the names of parts as they were stored
-                to HDF5. Depending on how your leaf construction works, this may differ
-                from the names the data might have in your leaf in the trajectory container.
-
-                Note that massive overwriting will fragment and blow up your HDF5 file.
-                Try to avoid changing data on disk whenever you can.
-
-        :raises:
-
-            TypeError:
-
-                If the (parent) trajectory has never been stored to disk. In this case
-                use :func:`pypet.trajectory.f_store` first.
-
-            ValueError: If no item could be found to be stored.
-
-        Note if you use the standard hdf5 storage service, there are no additional arguments
-        or keyword arguments to pass!
-
-        """
-
-        if not self._stored:
-            raise TypeError('Cannot store stuff for a trajectory that has never been '
-                            'stored to disk. Please call traj.f_store(only_init=True) first.')
-
-        fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)
-
-        if fetched_items:
-            self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                        trajectory_name=self.v_trajectory_name)
-        else:
-            raise ValueError('Your storage was not successful, could not find a single item '
-                             'to store.')
-
-    def f_load_item(self, item, *args, **kwargs):
-        """Loads a single item, see also :func:`~pypet.trajectory.SingleRun.f_load_items`"""
-        self.f_load_items([item], *args, **kwargs)
-
-    def f_load_items(self, iterator, *args, **kwargs):
-        """Loads parameters and results specified in `iterator`.
-
-        You can directly list the Parameter objects or just their names.
-
-        If names are given the `~pypet.trajectory.SingleRun.f_get` method is applied to find the
-        parameters or results in the trajectory. Accordingly, the parameters and results
-        you want to load must already exist in your trajectory (in RAM), probably they
-        are just empty skeletons waiting desperately to handle data.
-        If they do not exist in RAM yet, but have been stored to disk before,
-        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
-        bring your trajectory tree skeleton up to date. In case of a single run you can
-        use the :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` method to recursively
-        load a subtree without any data.
-        Then you can load the data of individual results or parameters one by one.
-
-        If want to load the whole trajectory at once or ALL results and parameters that are
-        still empty take a look at :func:`~pypet.trajectory.Trajectory.f_load`.
-        As mentioned before, to load subtrees of your trajectory you might want to check out
-        :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
-
-        To load a list of parameters or results with `f_load_items` you can pass
-        the following arguments:
-
-        :param iterator: A list with parameters or results to be loaded.
-
-        :param only_empties:
-
-            Optional keyword argument (boolean),
-            if `True` only empty parameters or results are passed
-            to the storage service to get loaded. Non-empty parameters or results found in
-            `iterator` are simply ignored.
-
-        :param args: Additional arguments directly passed to the storage service
-
-        :param kwargs:
-
-            Additional keyword arguments directly passed to the storage service
-            (except the kwarg `only_empties`)
-
-            If you use the standard hdf5 storage service, you can pass the following additional
-            keyword arguments:
-
-            :param load_only:
-
-                If you load a result, you can partially load it and ignore the rest of data items.
-                Just specify the name of the data you want to load. You can also provide a list,
-                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
-
-                Be aware that you need to specify the names of parts as they were stored
-                to HDF5. Depending on how your leaf construction works, this may differ
-                from the names the data might have in your leaf in the trajectory container.
-
-                A warning is issued if data specified in `load_only` cannot be found in the
-                instances specified in `iterator`.
-
-            :param load_except:
-
-                Analogous to the above, but everything is loaded except names or parts
-                specified in `load_except`.
-                You cannot use `load_only` and `load_except` at the same time. If you do
-                a ValueError is thrown.
-
-                A warning is issued if names listed in `load_except` are not part of the
-                items to load.
-
-        """
-
-        if not self._stored:
-            raise TypeError(
-                'Cannot load stuff from disk for a trajectory that has never been stored.')
-
-        fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
-        if fetched_items:
-            self._storage_service.load(pypetconstants.LIST, fetched_items,
-                                       trajectory_name=self.v_trajectory_name)
-        else:
-            self._logger.warning('Your loading was not successful, could not find a single item '
-                                 'to load.')
-
-    def f_remove_item(self, item, remove_empty_groups=False):
-        """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
-        self.f_remove_items([item], remove_empty_groups)
-
-    def f_remove_items(self, iterator, remove_empty_groups=False):
-        """Removes parameters, results or groups from the trajectory.
-
-        This function ONLY removes items from your current trajectory and does not delete
-        data stored to disk. If you want to delete data from disk, take a look at
-        :func:`~pypet.trajectory.SingleRun.f_delete_items`.
-
-        This will also remove all links if items are linked.
-
-        :param iterator:
-
-            A sequence of items you want to remove. Either the instances themselves
-            or strings with the names of the items.
-
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too. If nodes were linked too, the links are deleted.
-            If the linking node becomes empty thereby, the node is removed, too.
-
-        """
-
-        # Will format the request in a form that is understood by the storage service
-        # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, (), {})
-
-        if fetched_items:
-
-            for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
-
-        else:
-            self._logger.warning('Your removal was not successful, could not find a single '
-                                 'item to remove.')
-
-    def f_delete_link(self, link, remove_from_trajectory=False):
-        """Deletes a single link see :func:`~pypet.trajectory.SingleRun.f_delete_links`"""
-        self.f_delete_links((link,), remove_from_trajectory)
-
-    def f_delete_links(self, iterator_of_links, remove_from_trajectory=False):
-        """Deletes several links from the hard disk.
-
-        Links can be passed as a string ``'groupA.groupB.linkA'``
-        or as a tuple  containing the node from which the link should be removed and the
-        name of the link ``(groupWithLink, 'linkA')``.
-
-        """
-
-        to_delete_links = []
-
-        group_link_pairs = []
-
-        for elem in iterator_of_links:
-            if isinstance(elem, compat.base_type):
-                split_names = elem.split('.')
-                parent_name = '.'.join(split_names[:-1])
-                link = split_names[-1]
-                parent_node = self.f_get(parent_name) if parent_name != '' else self
-                link_name = parent_node.v_full_name + '.' + link if parent_name != '' else link
-                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
-                group_link_pairs.append((parent_node, link))
-            else:
-                link_name = elem[0].v_full_name + '.' + elem[1]
-                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
-                group_link_pairs.append(elem)
-        try:
-            self._storage_service.store(pypetconstants.LIST, to_delete_links,
-                                        trajectory_name=self.v_trajectory_name)
-        except:
-            self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
-                               ' item(s) was/were never stored to disk.' % str(to_delete_links))
-            raise
-
-        if remove_from_trajectory:
-            for group, link in group_link_pairs:
-                group.f_remove_link(link)
-
-
-
-
-    def f_delete_item(self, item, *args, **kwargs):
-        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.f_delete_items`"""
-        self.f_delete_items([item], *args, **kwargs)
-
-    def f_delete_items(self, iterator, *args, **kwargs):
-        """Deletes items from storage on disk.
-
-        Per default the item is NOT removed from the trajectory.
-
-        Links are NOT deleted on the hard disk, please delete links manually before deleting
-        data!
-
-        :param iterator:
-
-            A sequence of items you want to remove. Either the instances themselves
-            or strings with the names of the items.
-
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too. Default is `False`.
-
-        :param remove_from_trajectory:
-
-            If items should also be removed from trajectory. Default is `False`.
-
-
-        :param args: Additional arguments passed to the storage service
-
-        :param kwargs: Additional keyword arguments passed to the storage service
-
-            If you use the standard hdf5 storage service, you can pass the following additional
-            keyword argument:
-
-            :param delete_only:
-
-                You can partially delete leaf nodes. Specify a list of parts of the result node
-                that should be deleted like `delete_only=['mystuff','otherstuff']`.
-                This wil only delete the hdf5 sub parts `mystuff` and `otherstuff` from disk.
-                BE CAREFUL,
-                erasing data partly happens at your own risk. Depending on how complex the
-                loading process of your result node is, you might not be able to reconstruct
-                any data due to partially deleting some of it.
-
-                Be aware that you need to specify the names of parts as they were stored
-                to HDF5. Depending on how your leaf construction works, this may differ
-                from the names the data might have in your leaf in the trajectory container.
-
-                If the hdf5 nodes you specified in `delete_only` cannot be found a warning
-                is issued.
-
-                Note that massive deletion will fragment your HDF5 file.
-                Try to avoid changing data on disk whenever you can.
-
-                If you want to erase a full node, simply ignore this argument or set to `None`.
-
-            :param remove_from_item:
-
-                If data that you want to delete from storage should also be removed from
-                the items in `iterator` if they contain these. Default is `False`.
-
-        """
-
-        remove_empty_groups = kwargs.get('remove_empty_groups', False)
-        remove_from_trajectory = kwargs.pop('remove_from_trajectory', False)
-
-        # Will format the request in a form that is understood by the storage service
-        # aka (msg, item, args, kwargs)
-        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, args, kwargs)
-
-        if fetched_items:
-
-            try:
-                self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                            trajectory_name=self.v_trajectory_name)
-            except:
-                self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
-                                   ' item(s) was/were never stored to disk.' % str(fetched_items))
-                raise
-
-            if remove_from_trajectory:
-                for msg, item, dummy1, dummy2 in fetched_items:
-                    self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
-
-        else:
-            self._logger.warning('Your removal was not successful, could not find a single '
-                                 'item to remove.')
-
-
-class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
+class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup):
     """The trajectory manages results and parameters.
 
     The trajectory is the container to interact with before a simulation.
@@ -1094,12 +164,10 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
     def __init__(self, name='my_trajectory', add_time=True, comment='',
                  dynamic_imports=None,
                  filename=None):
+        self._is_run = False
 
-        # We call the init of the grandparent class because a Single Run init requires
-        # a parent trajectory which would yield circular dependencies. Besides, everything
-        # we need is defined in the current constructor and we can skip the parent
-        # class' constructor without problems.
-        super(SingleRun, self).__init__()
+        super(Trajectory, self).__init__()
+
         self._version = VERSION
         self._python = '.'.join([str(x) for x in sys.version_info[0:3]])
 
@@ -1107,6 +175,9 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         self._timestamp = init_time
         self._time = formatted_time
+
+        self._finish_timestamp = None  # End of run, set by the environemnt
+        self._runtime = None  # Runtime in human readable format as single run
 
         if add_time:
             self._name = name + '_' + str(formatted_time)
@@ -1162,7 +233,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             self._storage_service = storage.HDF5StorageService(filename=filename,
                                                        file_title=self.v_name)
 
-
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_as_run'.
         self._idx = -1
@@ -1176,13 +246,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
-        self._is_run = False
-
         # Helper variable: During a multiprocessing single run, the trajectory is usually
         # pickled without all the parameter exploration ranges and all run information
         # As a consequence, __len__ would return 1, so we need to store the length in this
         # helper variable to return the correct length during single runs.
-        self._length_during_run = None
+        self._length_during_nfc = None
 
         if not dynamic_imports is None:
             self.f_add_to_dynamic_imports(dynamic_imports)
@@ -1202,6 +270,26 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._comment = ''
         self.v_comment = comment
 
+    def __getstate__(self):
+        result = self.__dict__.copy()
+
+        # Do not copy run information in case `v_full_copy` is `False`.
+        # Accordingly, we need to store the length in the helper variable
+        # `_length_during_nfc`.
+        if not self.v_full_copy:
+            if self.v_idx != -1:
+                runname = self._single_run_ids[self.v_idx]
+                result['_run_information'] = {runname: self._run_information[runname]}
+                result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
+            if self._length_during_nfc is None:
+                result['_length_during_nfc'] = len(self)
+
+        del result['_logger']
+        return result
+
+    def __setstate__(self, statedict):
+        self.__dict__.update(statedict)
+        self._set_logger()
 
     def __str__(self):
 
@@ -1214,14 +302,18 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         children_string = self._get_children_representation()
 
-        return '%s %s %s: %s' % (self.f_get_class_name(), self.v_name, info_string, children_string)
+        if self._is_run:
+            runstr = ' (during single run)'
+        else:
+            runstr = ''
 
+        return '%s%s %s %s: %s' % (self.f_get_class_name(), runstr, self.v_name, info_string,
+                                 children_string)
 
     @property
     def v_filename(self):
         """The name and path of the hdf5 file in case you use the HDF4StorageService"""
         return self._filename
-
 
     @property
     def v_version(self):
@@ -1239,6 +331,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._comment
 
     @v_comment.setter
+    @not_in_run
     def v_comment(self, comment):
         """Sets the comment"""
         comment = str(comment)
@@ -1256,6 +349,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._storage_service
 
     @v_storage_service.setter
+    @not_in_run
     def v_storage_service(self, service):
         """Sets the storage service"""
         self._storage_service = service
@@ -1281,6 +375,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._idx
 
     @v_idx.setter
+    @not_in_run
     def v_idx(self, idx):
         """Changes the index to make the trajectory behave as a single run"""
         self.f_as_run(idx)
@@ -1303,6 +398,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._as_run
 
     @v_as_run.setter
+    @not_in_run
     def v_as_run(self, run_name):
         """Changes the run name to make the trajectory behave as a single run"""
         self.f_as_run(run_name)
@@ -1321,6 +417,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         return self._full_copy
 
     @v_full_copy.setter
+    @not_in_run
     def v_full_copy(self, val):
         """ Sets full copy mode of trajectory and (!) ALL explored parameters!"""
         if val != self._full_copy:
@@ -1328,7 +425,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             for param in compat.itervalues(self._explored_parameters):
                 param.v_full_copy = val
 
-
+    @not_in_run
     def f_add_to_dynamic_imports(self, dynamic_imports):
         """Adds classes or paths to classes to the trajectory to create custom parameters.
 
@@ -1354,7 +451,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._dynamic_imports.extend(dynamic_imports)
 
-
+    @not_in_run
     def f_as_run(self, name_or_idx):
         """Can make the trajectory behave like a single run, for easier data analysis.
 
@@ -1396,7 +493,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
             self._set_explored_parameters_to_idx(self.v_idx)
 
-
+    @not_in_run
     def f_iter_runs(self):
         """Makes the trajectory iterate over all runs.
 
@@ -1437,103 +534,6 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
             yield run_name
 
         self.f_as_run(None)
-
-    def f_idx_to_run(self, name_or_idx):
-        """Converts an integer idx to the corresponding single run name and vice versa.
-
-        :param name_or_idx: Name of a single run or an integer index
-
-        :return: The corresponding idx or name of the single run
-
-        Example usage:
-
-        >>> traj.f_idx_to_run(4)
-        'run_00000004'
-        >>> traj.f_idx_to_run('run_00000000')
-        0
-
-        """
-        return self._single_run_ids[name_or_idx]
-
-
-    def f_get_run_names(self, sort=True):
-        """Returns a list of run names.
-
-        :param sort:
-
-            Whether to get them sorted, will only require O(N) [and not O(N*log N)] since we
-            use (sort of) bucket sort.
-
-        """
-        if sort:
-            return [self.f_idx_to_run(idx) for idx in compat.xrange(len(self))]
-        else:
-            return compat.listkeys(self._run_information)
-
-    def f_get_run_information(self, name_or_idx=None, copy=True):
-        """Returns a dictionary containing information about a single run.
-
-        The information dictionaries have the following key, value pairings:
-
-            * completed: Boolean, whether a run was completed
-
-            * idx: Index of a run
-
-            * timestamp: Timestamp of the run as a float
-
-            * time: Formatted time string
-
-            * finish_timestamp: Timestamp of the finishing of the run
-
-            * runtime: Total runtime of the run in human readable format
-
-            * name: Name of the run
-
-            * parameter_summary:
-
-                A string summary of the explored parameter settings for the particular run
-
-            * short_environment_hexsha: The short version of the environment SHA-1 code
-
-
-        If no name or idx is given than a nested dictionary with keys as run names and
-        info dictionaries as values is returned.
-
-        :param name_or_idx: str or int
-
-        :param copy:
-
-            Whether you want the dictionary used by the trajectory or a copy. Note if
-            you want the real thing, please do not modify it, i.e. popping or adding stuff. This
-            could mess up your whole trajectory.
-
-        :return:
-
-            A run information dictionary or a nested dictionary of information dictionaries
-            with the run names as keys.
-
-        """
-        if name_or_idx is None:
-            if copy:
-                return cp.deepcopy(self._run_information)
-            else:
-                return self._run_information
-        try:
-            if copy:
-                # Since the information dictionaries only contain immutable items
-                # (float, int, str)
-                # the normal copy operation is sufficient
-                return self._run_information[name_or_idx].copy()
-            else:
-                return self._run_information[name_or_idx]
-        except KeyError:
-            # Maybe the user provided an idx, this would yield a key error and we
-            # have to convert it to a run name
-            name_or_idx = self.f_idx_to_run(name_or_idx)
-            if copy:
-                return self._run_information[name_or_idx].copy()
-            else:
-                return self._run_information[name_or_idx]
 
     def _remove_incomplete_runs(self, start_timestamp, run_indices):
         """Requests the storage service to delete incomplete runs.
@@ -1620,6 +620,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return cleaned_run_indices
 
+    @not_in_run
     def f_shrink(self):
         """ Shrinks the trajectory and removes all exploration ranges from the parameters.
         Only possible if the trajectory has not been stored to disk before or was loaded as new.
@@ -1650,6 +651,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         else:
             self._changed_default_parameters[name] = (args, kwargs)
 
+    @not_in_run
     def f_preset_config(self, config_name, *args, **kwargs):
         """Similar to func:`~pypet.trajectory.Trajectory.f_preset_parameter`"""
 
@@ -1658,6 +660,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._preset(config_name, args, kwargs)
 
+    @not_in_run
     def f_preset_parameter(self, param_name, *args, **kwargs):
         """Presets parameter value before a parameter is added.
 
@@ -1738,6 +741,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                     if node_name.startswith(pypetconstants.RUN_NAME):
                         runs.f_remove_child(node_name, recursive=True)
 
+    @not_in_run
     def f_get_from_runs(self, name, where='results', use_indices=False,
                         fast_access=False, backwards_search=False,
                         shortcuts=True, max_depth=None, auto_load=False):
@@ -1849,80 +853,18 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return result_dict
 
-
-    def f_find_idx(self, name_list, predicate):
-        """Finds a single run index given a particular condition on parameters.
-
-        :param name_list:
-
-            A list of parameter names the predicate applies to, if you have only a single
-            parameter name you can omit the list brackets.
-
-        :param predicate: A lambda predicate for filtering that evaluates to either true or false
-
-        :return: A generator yielding the matching single run indices
-
-        Example:
-
-        >>> predicate = lambda param1, param2: param1==4 and param2 in [1.0, 2.0]
-        >>> iterator = traj.f_find_idx(['groupA.param1', 'groupA.param2'], predicate)
-        >>> [x for x in iterator]
-        [0, 2, 17, 36]
-
-        """
-        if isinstance(name_list, compat.base_type):
-            name_list = [name_list]
-
-        # First create a list of iterators, each over the range of the matched parameters
-        iter_list = []
-        for name in name_list:
-            param = self.f_get(name)
-            if not param.v_is_parameter:
-                raise TypeError('`%s` is not a parameter it is a %s, find idx is not applicable' %
-                                (name, str(type(param))))
-
-            if param.f_has_range():
-                iter_list.append(iter(param.f_get_range()))
-            else:
-                iter_list.append(itools.repeat(param.f_get(), len(self)))
-
-        # Create a logical iterator returning `True` or `False`
-        # whether the user's predicate matches the parameter data
-        logic_iter = map(predicate, *iter_list)
-
-        # Now the run indices are the the indices where `logic_iter` evaluates to `True`
-        for idx, item in enumerate(logic_iter):
-            if item:
-                yield idx
-
     def __len__(self):
         """Length of trajectory, minimum length is 1"""
         # If `v_full_copy` is False then `run_information` is not pickled, so we
         # need to rely on the helper variable `_length_during_run`.
-        if hasattr(self, '_run_information') and len(self._run_information) > 0:
-            return len(self._run_information)
+        if self._is_run:
+            return 1
+        elif self._length_during_nfc is not None:
+            return self._length_during_nfc
         else:
-            return self._length_during_run
+            return len(self._run_information)
 
-    def __getstate__(self):
-        result = self.__dict__.copy()
-
-        # Do not copy run information in case `v_full_copy` is `False`.
-        # Accordingly, we need to store the length in the helper variable
-        # `_length_during_run`.
-        if not self.v_full_copy:
-            result['_run_information'] = {}
-            result['_single_run_ids'] = {}
-            result['_length_during_run'] = len(self)
-
-        del result['_logger']
-        return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._set_logger()
-
-
+    @not_in_run
     def f_is_completed(self, name_or_id=None):
         """Whether or not a given run is completed.
 
@@ -1933,6 +875,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         :return: True or False
 
         """
+        return self._is_completed(name_or_id)
+
+    def _is_completed(self, name_or_id=None):
+        """Private function such that it can still be called by the environment during
+        a single run"""
 
         if name_or_id is None:
             return all(
@@ -1940,6 +887,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         else:
             return self.f_get_run_information(name_or_id)['completed']
 
+    @not_in_run
     def f_expand(self, build_dict):
         """Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
@@ -2009,7 +957,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 pass  # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)
 
-
+    @not_in_run
     def f_explore(self, build_dict):
         """Prepares the trajectory to explore the parameter space.
 
@@ -2136,12 +1084,13 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         self._run_information[runname] = info_dict
 
-
+    @not_in_run
     def f_lock_parameters(self):
         """Locks all parameters"""
         for par in compat.itervalues(self._parameters):
             par.f_lock()
 
+    @not_in_run
     def f_lock_derived_parameters(self):
         """Locks all derived parameters"""
         for par in compat.itervalues(self._derived_parameters):
@@ -2172,8 +1121,11 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         completed, when they were started, etc.
 
         """
+        self._name = self._trajectory_name
+        self._timestamp = self._trajectory_timestamp
+        self._time = self._trajectory_time
+        self._is_run = False
         self.f_restore_default()
-        self._nn_interface._change_root(self)
         self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
                     load_derived_parameters=pypetconstants.LOAD_NOTHING,
                     load_results=pypetconstants.LOAD_NOTHING,
@@ -2447,6 +1399,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                                     (key, str(type(my_param.f_get())),
                                      str(type(other_param.f_get()))))
 
+    @not_in_run
     def f_backup(self, backup_filename=None):
         """Backs up the trajectory with the given storage service.
 
@@ -2463,6 +1416,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     backup_filename=backup_filename)
 
+    @not_in_run
     def f_merge(self, other_trajectory, trial_parameter=None, remove_duplicates=False,
                 ignore_trajectory_derived_parameters=False,
                 ignore_trajectory_results=False,
@@ -3383,6 +2337,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
 
         return use_runs, compat.listkeys(params_to_change)
 
+    @not_in_run
     def f_migrate(self, new_name=None, new_filename=None, new_file_tile=None, in_store=False):
         """Can be called to rename and relocate the trajectory.
 
@@ -3457,19 +2412,30 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         Note both functions require that your trajectory was stored to disk with `f_store`
         at least once before.
 
+        ATTENTION calling f_store during a single run the behavior is different:
+
+        Then the functio looks for new data that is added below a group called `run_XXXXXXXXXX`
+        and stores it where `XXXXXXXXX` is the index of this run. All arguments to
+        the function are ignored than.
+
         """
+        if self._is_run:
+            self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+                                    trajectory_name=self.v_trajectory_name,
+                                    store_final=False, store_data=True)
+        else:
+            if new_filename is not None or new_name is not None:
+                self.f_migrate(new_name, new_filename)
 
-        if new_filename is not None or new_name is not None:
-            self.f_migrate(new_name, new_filename)
+            if self._stored and self._expansion_not_stored:
+                self._store_expansion()
+                self._expansion_not_stored = False
 
-        if self._stored and self._expansion_not_stored:
-            self._store_expansion()
-            self._expansion_not_stored = False
+            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
+                                        only_init=only_init)
+            self._stored = True
 
-        self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
-                                    only_init=only_init)
-        self._stored = True
-
+    @not_in_run
     def f_is_empty(self):
         """Whether no results nor parameters have been added yet to the trajectory
         (ignores config)."""
@@ -3477,6 +2443,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
                 len(self._derived_parameters) == 0 and
                 len(self._results) == 0)
 
+    @not_in_run
     def f_restore_default(self):
         """Restores the default value in all explored parameters and sets the
         v_idx property back to -1 and v_as_run to None."""
@@ -3493,34 +2460,983 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         for param in compat.itervalues(self._explored_parameters):
             param._set_parameter_access(idx)
 
-    def _make_single_run(self, idx, copy_trajectory=False):
-        """Creates a SingleRun object for parameter exploration with run index `idx`.
 
-        If `copy_trajectory=False` the root node of the trajectory tree changes
-        to the novel SingleRun instance.
-        Accordingly, until switching the root node back to the current trajectory,
-        you cannot interact with the tree via the trajectory but only through the SingleRun
-        instance.
+    def _make_single_run(self, idx):
+        """Turns the trajectory into a SingleRun object for exploration with run index `idx`."""
+        self._set_explored_parameters_to_idx(idx)
+        name = self.f_idx_to_run(idx)
+        self._name = name
+        self._idx = idx
+        self._is_run = True
+        self._as_run = self.v_name
+        self._set_start_time()
+        return self
 
-        If you choose `copy_trajectory=True` the entire current trajectory is copied before
-        a new SingleRun object is created. Accordingly the original trajectory is left
-        untouched and the root node is not changed.
+    def f_get_run_names(self, sort=True):
+        """Returns a list of run names.
+
+        ONLY useful for a single run during multiprocessing if ``v_full_copy` was set to ``True``.
+        Otherwise only the current run is available.
+
+        :param sort:
+
+            Whether to get them sorted, will only require O(N) [and not O(N*log N)] since we
+            use (sort of) bucket sort.
 
         """
-        if copy_trajectory:
-            old_copy_mode = self.v_full_copy
-            self.v_full_copy = True
-            storage_service = self._storage_service
-            self._storage_service = None
-            traj = cp.deepcopy(self)
-            self._storage_service = storage_service
-            traj._storage_service = storage_service
-            self.v_full_copy = old_copy_mode
-            traj.v_full_copy = old_copy_mode
+        if sort:
+            return [self.f_idx_to_run(idx) for idx in compat.xrange(len(self))]
         else:
-            traj = self
+            return compat.listkeys(self._run_information)
 
-        traj._set_explored_parameters_to_idx(idx)
-        name = traj.f_idx_to_run(idx)
-        return SingleRun(name, idx, traj)
+    def f_get_run_information(self, name_or_idx=None, copy=True):
+        """Returns a dictionary containing information about a single run.
 
+        ONLY useful for a single run if ``v_full_copy` was set to ``True``.
+        Otherwise only the current run is available.
+
+        The information dictionaries have the following key, value pairings:
+
+            * completed: Boolean, whether a run was completed
+
+            * idx: Index of a run
+
+            * timestamp: Timestamp of the run as a float
+
+            * time: Formatted time string
+
+            * finish_timestamp: Timestamp of the finishing of the run
+
+            * runtime: Total runtime of the run in human readable format
+
+            * name: Name of the run
+
+            * parameter_summary:
+
+                A string summary of the explored parameter settings for the particular run
+
+            * short_environment_hexsha: The short version of the environment SHA-1 code
+
+
+        If no name or idx is given than a nested dictionary with keys as run names and
+        info dictionaries as values is returned.
+
+        :param name_or_idx: str or int
+
+        :param copy:
+
+            Whether you want the dictionary used by the trajectory or a copy. Note if
+            you want the real thing, please do not modify it, i.e. popping or adding stuff. This
+            could mess up your whole trajectory.
+
+        :return:
+
+            A run information dictionary or a nested dictionary of information dictionaries
+            with the run names as keys.
+
+        """
+        if name_or_idx is None:
+            if copy:
+                return cp.deepcopy(self._run_information)
+            else:
+                return self._run_information
+        try:
+            if copy:
+                # Since the information dictionaries only contain immutable items
+                # (float, int, str)
+                # the normal copy operation is sufficient
+                return self._run_information[name_or_idx].copy()
+            else:
+                return self._run_information[name_or_idx]
+        except KeyError:
+            # Maybe the user provided an idx, this would yield a key error and we
+            # have to convert it to a run name
+            name_or_idx = self.f_idx_to_run(name_or_idx)
+            if copy:
+                return self._run_information[name_or_idx].copy()
+            else:
+                return self._run_information[name_or_idx]
+
+    def f_find_idx(self, name_list, predicate):
+        """Finds a single run index given a particular condition on parameters.
+
+        ONLY useful for a single run if ``v_full_copy` was set to ``True``.
+        Otherwise a TypeError is thrown.
+
+        :param name_list:
+
+            A list of parameter names the predicate applies to, if you have only a single
+            parameter name you can omit the list brackets.
+
+        :param predicate: A lambda predicate for filtering that evaluates to either true or false
+
+        :return: A generator yielding the matching single run indices
+
+        Example:
+
+        >>> predicate = lambda param1, param2: param1==4 and param2 in [1.0, 2.0]
+        >>> iterator = traj.f_find_idx(['groupA.param1', 'groupA.param2'], predicate)
+        >>> [x for x in iterator]
+        [0, 2, 17, 36]
+
+        """
+        if self._is_run and not self.v_full_copy:
+            raise TypeError('You cannot use this function during a multiprocessing signle run and '
+                            'not having ``v_full_copy=True``.')
+        if isinstance(name_list, compat.base_type):
+            name_list = [name_list]
+
+        # First create a list of iterators, each over the range of the matched parameters
+        iter_list = []
+        for name in name_list:
+            param = self.f_get(name)
+            if not param.v_is_parameter:
+                raise TypeError('`%s` is not a parameter it is a %s, find idx is not applicable' %
+                                (name, str(type(param))))
+
+            if param.f_has_range():
+                iter_list.append(iter(param.f_get_range()))
+            else:
+                iter_list.append(itools.repeat(param.f_get(), len(self)))
+
+        # Create a logical iterator returning `True` or `False`
+        # whether the user's predicate matches the parameter data
+        logic_iter = map(predicate, *iter_list)
+
+        # Now the run indices are the the indices where `logic_iter` evaluates to `True`
+        for idx, item in enumerate(logic_iter):
+            if item:
+                yield idx
+
+    def f_idx_to_run(self, name_or_idx):
+        """Converts an integer idx to the corresponding single run name and vice versa.
+
+        Note during a single run ONLY useful if ``v_full_copy`` was set to True.
+
+        :param name_or_idx: Name of a single run or an integer index
+
+        :return: The corresponding idx or name of the single run
+
+        Example usage:
+
+        >>> traj.f_idx_to_run(4)
+        'run_00000004'
+        >>> traj.f_idx_to_run('run_00000000')
+        0
+
+        """
+        return self._single_run_ids[name_or_idx]
+
+    def _set_start_time(self):
+        """Sets the start timestamp and formatted time to the current time.
+
+        First called from constructor.
+        Can be called from the environment to reset the time, to time not the creation but
+        the start of the run.
+
+        """
+        init_time = time.time()
+        formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        self._timestamp = init_time
+        self._time = formatted_time
+
+    def _set_finish_time(self):
+        """Sets the finish time and computes the runtime in human readable format"""
+        init_time = time.time()
+        #formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        self._finish_timestamp = init_time
+
+        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
+        startdatetime = datetime.datetime.fromtimestamp(self._timestamp)
+
+        self._runtime = str(findatetime - startdatetime)
+
+    def _create_class(self, class_name):
+        """Dynamically creates a class.
+
+        It is tried if the class can be created by the already given imports.
+        If not the list of the dynamically loaded classes is used.
+
+        """
+        try:
+            new_class = eval(class_name)
+
+            if not inspect.isclass(new_class):
+                raise TypeError('Not a class!')
+
+            return new_class
+        except (NameError, TypeError):
+            for dynamic_class in self._dynamic_imports:
+                # Dynamic classes can be provided directly as a Class instance,
+                # for example as `MyCustomParameter`,
+                # or as a string describing where to import the class from,
+                # for instance as `'mypackage.mymodule.MyCustomParameter'`.
+                if inspect.isclass(dynamic_class):
+                    if class_name == dynamic_class.__name__:
+                        return dynamic_class
+                else:
+                    # The class name is always the last in an import string,
+                    # e.g. `'mypackage.mymodule.MyCustomParameter'`
+                    class_name_to_test = dynamic_class.split('.')[-1]
+                    if class_name == class_name_to_test:
+                        new_class = self._load_class(dynamic_class)
+                        return new_class
+            raise ImportError('Could not create the class named `%s`.' % class_name)
+
+    @staticmethod
+    def _load_class(full_class_string):
+        """Loads a class from a string naming the module and class name.
+
+        For example:
+        >>> Trajectory._load_class(full_class_string = 'pypet.brian.parameter.BrianParameter')
+        <BrianParameter>
+
+        """
+
+        class_data = full_class_string.split(".")
+        module_path = ".".join(class_data[:-1])
+        class_str = class_data[-1]
+        module = importlib.import_module(module_path)
+
+        # We retrieve the Class from the module
+        return getattr(module, class_str)
+
+    @property
+    def v_shortcuts(self):
+        """Whether shortcuts are allowed if accessing data via natural naming or
+        squared bracket indexing."""
+        return self._shortcuts
+
+    @v_shortcuts.setter
+    def v_shortcuts(self, shortcuts):
+        self._shortcuts = bool(shortcuts)
+
+
+    @property
+    def v_backwards_search(self):
+        """Whether to apply backwards search in the tree if one searches a branch
+        with the square brackets notation `[]`.
+        """
+        return self._backwards_search
+
+    @v_backwards_search.setter
+    def v_backwards_search(self, backwards_search):
+        self._backwards_search = bool(backwards_search)
+
+    @property
+    def v_max_depth(self):
+        """The maximum depth the tree should be searched if shortcuts are allowed.
+
+        Set to `None` if there should be no depth limit.
+        """
+        return self._max_depth
+
+    @v_max_depth.setter
+    def v_max_depth(self, max_depth):
+        self._max_depth = max_depth
+
+    @property
+    def v_iter_recursive(self):
+        """Whether using `__iter__` should iterate only immediate children or
+        recursively all nodes."""
+        return self._iter_recursive
+
+    @v_iter_recursive.setter
+    def v_iter_recursive(self, iter_recursive):
+        self._iter_recursive = bool(iter_recursive)
+
+
+    @property
+    def v_auto_load(self):
+        """Whether the trajectory should attempt to load data on the fly.
+        """
+        return self._auto_load
+
+    @v_auto_load.setter
+    def v_auto_load(self, auto_load):
+        self._auto_load = bool(auto_load)
+
+    @property
+    def v_timestamp(self):
+        """Float timestamp of creation time"""
+        return self._timestamp
+
+    @property
+    def v_time(self):
+        """Formatted time string of the time the trajectory or run was created."""
+        return self._time
+
+    @property
+    def v_standard_parameter(self):
+        """ The standard parameter used for parameter creation"""
+        return self._standard_parameter
+
+    @v_standard_parameter.setter
+    def v_standard_parameter(self, parameter):
+        """Sets the standard parameter"""
+        self._standard_parameter = parameter
+
+    @property
+    def v_standard_result(self):
+        """The standard result class used for result creation """
+        return self._standard_result
+
+    @v_standard_result.setter
+    def v_standard_result(self, result):
+        """Sets standard result"""
+        self._standard_result = result
+
+    @property
+    def v_standard_leaf(self):
+        """The standard constructor used if you add a generic leaf.
+
+        The constructor is only used if you do not add items under the usual four subtrees
+        (`parameters`, `derived_parameters`, `config`, `results`).
+
+        """
+        return self._standard_leaf
+
+    @v_standard_leaf.setter
+    def v_standard_leaf(self, leaf):
+        """Sets standard result"""
+        self._standard_leaf = leaf
+
+    @property
+    def v_fast_access(self):
+        """Whether parameter instances (False) or their values (True) are returned via natural
+        naming.
+
+        Works also for results if they contain a single item with the name of the result.
+
+        Default is True.
+
+        """
+        return self._fast_access
+
+    @v_fast_access.setter
+    def v_fast_access(self, value):
+        """Sets fast access"""
+        self._fast_access = bool(value)
+
+    @property
+    def v_environment_hexsha(self):
+        """If the trajectory is used with an environment this returns
+        the SHA-1 code of the environment.
+
+        """
+        return self._environment_hexsha
+
+    @property
+    def v_environment_name(self):
+        """If the trajectory is used with an environment this returns
+        the name of the environment.
+
+        """
+        return self._environment_name
+
+    @staticmethod
+    def _return_item_dictionary(param_dict, fast_access, copy):
+        """Returns a dictionary containing either all parameters, all explored parameters,
+        all config, all derived parameters, or all results.
+
+        :param param_dict: The dictionary which is about to be returned
+        :param fast_access: Whether to use fast access
+        :param copy: If the original dict should be returned or a shallow copy
+
+        :return: The dictionary
+
+        :raises: ValueError if `copy=False` and fast_access=True`
+
+        """
+
+        if not copy and fast_access:
+            raise ValueError('You cannot access the original dictionary and use fast access at the'
+                             ' same time!')
+        if not fast_access:
+            if copy:
+                return param_dict.copy()
+            else:
+                return param_dict
+        else:
+            resdict = {}
+            for key in param_dict:
+                param = param_dict[key]
+
+                val = param.f_get()
+                resdict[key] = val
+
+            return resdict
+
+    @property
+    def v_trajectory_name(self):
+        """Name of the (parent) trajectory"""
+        return self._trajectory_name
+
+    @property
+    def v_trajectory_time(self):
+        """Time (parent) trajectory was created"""
+        return self._trajectory_time
+
+    @property
+    def v_trajectory_timestamp(self):
+        """Float timestamp when (parent) trajectory was created"""
+        return self._trajectory_timestamp
+
+    def _finalize_run(self):
+        """Called by the environment after storing to perform some rollback operations.
+
+        All results and derived parameters created in the current run are removed.
+
+        Important for single processing to not blow up the parent trajectory with the results
+        of all runs.
+
+        """
+        for group_name in self._run_parent_groups:
+            group = self._run_parent_groups[group_name]
+            if group.f_contains(self.v_name):
+                group.f_remove_child(self.v_name, recursive=True)
+
+    def f_to_dict(self, fast_access=False, short_names=False, copy=True,
+                  with_links=True):
+        """Returns a dictionary with pairings of (full) names as keys and instances/values.
+
+
+        :param fast_access:
+
+            If True, parameter values are returned instead of the instances.
+            Works also for results if they contain a single item with the name of the result.
+
+        :param short_names:
+
+            If true, keys are not full names but only the names. Raises a ValueError
+            if the names are not unique.
+
+        :param copy:
+
+            If `fast_access=False` and `short_names=False` you can access the original
+            data dictionary if you set `copy=False`. If you do that, please do not
+            modify anything! Raises ValueError if `copy=False` and `fast_access=True`
+            or `short_names=True`.
+
+        :param with_links:
+
+            If links should be ignored
+
+        :return: dictionary
+
+        :raises: ValueError
+
+        """
+        return self._nn_interface._to_dict(self, fast_access=fast_access,
+                                           short_names=short_names,
+                                           copy=copy, with_links=with_links)
+
+    def f_get_config(self, fast_access=False, copy=True):
+        """Returns a dictionary containing the full config names as keys and the config parameters
+        or the config parameter data items as values.
+
+
+        :param fast_access:
+
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises ValueError
+            if fast access is true and copy false.
+
+        :return: Dictionary containing the config data
+
+        :raises: ValueError
+
+        """
+        return self._return_item_dictionary(self._config, fast_access, copy)
+
+    def f_get_parameters(self, fast_access=False, copy=True):
+        """ Returns a dictionary containing the full parameter names as keys and the parameters
+         or the parameter data items as values.
+
+
+        :param fast_access:
+
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises ValueError
+            if fast access is true and copy false.
+
+        :return: Dictionary containing the parameters.
+
+        :raises: ValueError
+
+        """
+        return self._return_item_dictionary(self._parameters, fast_access, copy)
+
+
+    def f_get_explored_parameters(self, fast_access=False, copy=True):
+        """ Returns a dictionary containing the full parameter names as keys and the parameters
+         or the parameter data items as values.
+
+
+        :param fast_access:
+
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises ValueError
+            if fast access is true and copy false.
+
+        :return: Dictionary containing the parameters.
+
+        :raises: ValueError
+
+        """
+        return self._return_item_dictionary(self._explored_parameters, fast_access, copy)
+
+    def f_get_derived_parameters(self, fast_access=False, copy=True):
+        """ Returns a dictionary containing the full parameter names as keys and the parameters
+         or the parameter data items as values.
+
+
+        :param fast_access:
+
+            Determines whether the parameter objects or their values are returned
+            in the dictionary.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises ValueError
+            if fast access is true and copy false.
+
+        :return: Dictionary containing the parameters.
+
+        :raises: ValueError
+
+        """
+        return self._return_item_dictionary(self._derived_parameters, fast_access, copy)
+
+    def f_get_results(self, fast_access=False, copy=True):
+        """ Returns a dictionary containing the full result names as keys and the corresponding
+        result objects or result data items as values.
+
+
+        :param fast_access:
+
+            Determines whether the result objects or their values are returned
+            in the dictionary. Works only for results if they contain a single item with
+            the name of the result.
+
+        :param copy:
+
+            Whether the original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+            Not Copying and fast access do not work at the same time! Raises ValueError
+            if fast access is true and copy false.
+
+        :return: Dictionary containing the results.
+
+        :raises: ValueError
+
+        """
+        return self._return_item_dictionary(self._results, fast_access, copy)
+
+    def _store_final(self, store_data=False):
+        """Signals the storage service that single run is completed
+
+        :param store_data: If all data should be stored as in `f_store`.
+
+        """
+        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+                                    trajectory_name=self.v_trajectory_name,
+                                    store_final=True, store_data=store_data)
+
+    def f_store_item(self, item, *args, **kwargs):
+        """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""
+        self.f_store_items([item], *args, **kwargs)
+
+    def f_store_items(self, iterator, *args, **kwargs):
+        """Stores individual items to disk.
+
+        This function is useful if you calculated very large results (or large derived parameters)
+        during runtime and you want to write these to disk immediately and empty them afterwards
+        to free some memory.
+
+        Instead of storing individual parameters or results you can also store whole subtrees with
+        :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
+
+
+        You can pass the following arguments to `f_store_items`:
+
+        :param iterator:
+
+            An iterable containing the parameters or results to store, either their
+            names or the instances. You can also pass group instances or names here
+            to store the annotations of the groups.
+
+        :param non_empties:
+
+            Optional keyword argument (boolean),
+            if `True` will only store the subset of provided items that are not empty.
+            Empty parameters or results found in `iterator` are simply ignored.
+
+        :param args: Additional arguments passed to the storage service
+
+        :param kwargs:
+
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param overwrite:
+
+                List names of parts of your item that should
+                be erased and overwritten by the new data in your leaf.
+                You can also set `overwrite=True`
+                to overwrite all parts.
+
+                For instance:
+
+                    >>> traj.f_add_result('mygroup.myresult', partA=42, partB=44, partC=46)
+                    >>> traj.f_store()
+                    >>> traj.mygroup.myresult.partA = 333
+                    >>> traj.mygroup.myresult.partB = 'I am going to change to a string'
+                    >>> traj.f_store_item('mygroup.myresult', overwrite=['partA', 'partB'])
+
+                Will store `'mygroup.myresult'` to disk again and overwrite the parts
+                `'partA'` and `'partB'` with the new values `333` and
+                `'I am going to change to a string'`.
+                The data stored as `partC` is not changed.
+
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                Note that massive overwriting will fragment and blow up your HDF5 file.
+                Try to avoid changing data on disk whenever you can.
+
+        :raises:
+
+            TypeError:
+
+                If the (parent) trajectory has never been stored to disk. In this case
+                use :func:`pypet.trajectory.f_store` first.
+
+            ValueError: If no item could be found to be stored.
+
+        Note if you use the standard hdf5 storage service, there are no additional arguments
+        or keyword arguments to pass!
+
+        """
+
+        if not self._stored:
+            raise TypeError('Cannot store stuff for a trajectory that has never been '
+                            'stored to disk. Please call traj.f_store(only_init=True) first.')
+
+        fetched_items = self._nn_interface._fetch_items(STORE, iterator, args, kwargs)
+
+        if fetched_items:
+            self._storage_service.store(pypetconstants.LIST, fetched_items,
+                                        trajectory_name=self.v_trajectory_name)
+        else:
+            raise ValueError('Your storage was not successful, could not find a single item '
+                             'to store.')
+
+    def f_load_item(self, item, *args, **kwargs):
+        """Loads a single item, see also :func:`~pypet.trajectory.SingleRun.f_load_items`"""
+        self.f_load_items([item], *args, **kwargs)
+
+    def f_load_items(self, iterator, *args, **kwargs):
+        """Loads parameters and results specified in `iterator`.
+
+        You can directly list the Parameter objects or just their names.
+
+        If names are given the `~pypet.trajectory.SingleRun.f_get` method is applied to find the
+        parameters or results in the trajectory. Accordingly, the parameters and results
+        you want to load must already exist in your trajectory (in RAM), probably they
+        are just empty skeletons waiting desperately to handle data.
+        If they do not exist in RAM yet, but have been stored to disk before,
+        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
+        bring your trajectory tree skeleton up to date. In case of a single run you can
+        use the :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` method to recursively
+        load a subtree without any data.
+        Then you can load the data of individual results or parameters one by one.
+
+        If want to load the whole trajectory at once or ALL results and parameters that are
+        still empty take a look at :func:`~pypet.trajectory.Trajectory.f_load`.
+        As mentioned before, to load subtrees of your trajectory you might want to check out
+        :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`.
+
+        To load a list of parameters or results with `f_load_items` you can pass
+        the following arguments:
+
+        :param iterator: A list with parameters or results to be loaded.
+
+        :param only_empties:
+
+            Optional keyword argument (boolean),
+            if `True` only empty parameters or results are passed
+            to the storage service to get loaded. Non-empty parameters or results found in
+            `iterator` are simply ignored.
+
+        :param args: Additional arguments directly passed to the storage service
+
+        :param kwargs:
+
+            Additional keyword arguments directly passed to the storage service
+            (except the kwarg `only_empties`)
+
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword arguments:
+
+            :param load_only:
+
+                If you load a result, you can partially load it and ignore the rest of data items.
+                Just specify the name of the data you want to load. You can also provide a list,
+                for example `load_only='spikes'`, `load_only=['spikes','membrane_potential']`.
+
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                A warning is issued if data specified in `load_only` cannot be found in the
+                instances specified in `iterator`.
+
+            :param load_except:
+
+                Analogous to the above, but everything is loaded except names or parts
+                specified in `load_except`.
+                You cannot use `load_only` and `load_except` at the same time. If you do
+                a ValueError is thrown.
+
+                A warning is issued if names listed in `load_except` are not part of the
+                items to load.
+
+        """
+
+        if not self._stored:
+            raise TypeError(
+                'Cannot load stuff from disk for a trajectory that has never been stored.')
+
+        fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
+        if fetched_items:
+            self._storage_service.load(pypetconstants.LIST, fetched_items,
+                                       trajectory_name=self.v_trajectory_name)
+        else:
+            self._logger.warning('Your loading was not successful, could not find a single item '
+                                 'to load.')
+
+    def f_remove_item(self, item, remove_empty_groups=False):
+        """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
+        self.f_remove_items([item], remove_empty_groups)
+
+    def f_remove_items(self, iterator, remove_empty_groups=False):
+        """Removes parameters, results or groups from the trajectory.
+
+        This function ONLY removes items from your current trajectory and does not delete
+        data stored to disk. If you want to delete data from disk, take a look at
+        :func:`~pypet.trajectory.SingleRun.f_delete_items`.
+
+        This will also remove all links if items are linked.
+
+        :param iterator:
+
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the items.
+
+        :param remove_empty_groups:
+
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too. If nodes were linked too, the links are deleted.
+            If the linking node becomes empty thereby, the node is removed, too.
+
+        """
+
+        # Will format the request in a form that is understood by the storage service
+        # aka (msg, item, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, (), {})
+
+        if fetched_items:
+
+            for msg, item, dummy1, dummy2 in fetched_items:
+                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+
+        else:
+            self._logger.warning('Your removal was not successful, could not find a single '
+                                 'item to remove.')
+
+    def f_delete_link(self, link, remove_from_trajectory=False):
+        """Deletes a single link see :func:`~pypet.trajectory.SingleRun.f_delete_links`"""
+        self.f_delete_links((link,), remove_from_trajectory)
+
+    def f_delete_links(self, iterator_of_links, remove_from_trajectory=False):
+        """Deletes several links from the hard disk.
+
+        Links can be passed as a string ``'groupA.groupB.linkA'``
+        or as a tuple  containing the node from which the link should be removed and the
+        name of the link ``(groupWithLink, 'linkA')``.
+
+        """
+
+        to_delete_links = []
+
+        group_link_pairs = []
+
+        for elem in iterator_of_links:
+            if isinstance(elem, compat.base_type):
+                split_names = elem.split('.')
+                parent_name = '.'.join(split_names[:-1])
+                link = split_names[-1]
+                parent_node = self.f_get(parent_name) if parent_name != '' else self
+                link_name = parent_node.v_full_name + '.' + link if parent_name != '' else link
+                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
+                group_link_pairs.append((parent_node, link))
+            else:
+                link_name = elem[0].v_full_name + '.' + elem[1]
+                to_delete_links.append((pypetconstants.DELETE_LINK, link_name))
+                group_link_pairs.append(elem)
+        try:
+            self._storage_service.store(pypetconstants.LIST, to_delete_links,
+                                        trajectory_name=self.v_trajectory_name)
+        except:
+            self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
+                               ' item(s) was/were never stored to disk.' % str(to_delete_links))
+            raise
+
+        if remove_from_trajectory:
+            for group, link in group_link_pairs:
+                group.f_remove_link(link)
+
+    def f_delete_item(self, item, *args, **kwargs):
+        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.f_delete_items`"""
+        self.f_delete_items([item], *args, **kwargs)
+
+    def f_delete_items(self, iterator, *args, **kwargs):
+        """Deletes items from storage on disk.
+
+        Per default the item is NOT removed from the trajectory.
+
+        Links are NOT deleted on the hard disk, please delete links manually before deleting
+        data!
+
+        :param iterator:
+
+            A sequence of items you want to remove. Either the instances themselves
+            or strings with the names of the items.
+
+        :param remove_empty_groups:
+
+            If your deletion of the instance leads to empty groups,
+            these will be deleted, too. Default is `False`.
+
+        :param remove_from_trajectory:
+
+            If items should also be removed from trajectory. Default is `False`.
+
+
+        :param args: Additional arguments passed to the storage service
+
+        :param kwargs: Additional keyword arguments passed to the storage service
+
+            If you use the standard hdf5 storage service, you can pass the following additional
+            keyword argument:
+
+            :param delete_only:
+
+                You can partially delete leaf nodes. Specify a list of parts of the result node
+                that should be deleted like `delete_only=['mystuff','otherstuff']`.
+                This wil only delete the hdf5 sub parts `mystuff` and `otherstuff` from disk.
+                BE CAREFUL,
+                erasing data partly happens at your own risk. Depending on how complex the
+                loading process of your result node is, you might not be able to reconstruct
+                any data due to partially deleting some of it.
+
+                Be aware that you need to specify the names of parts as they were stored
+                to HDF5. Depending on how your leaf construction works, this may differ
+                from the names the data might have in your leaf in the trajectory container.
+
+                If the hdf5 nodes you specified in `delete_only` cannot be found a warning
+                is issued.
+
+                Note that massive deletion will fragment your HDF5 file.
+                Try to avoid changing data on disk whenever you can.
+
+                If you want to erase a full node, simply ignore this argument or set to `None`.
+
+            :param remove_from_item:
+
+                If data that you want to delete from storage should also be removed from
+                the items in `iterator` if they contain these. Default is `False`.
+
+        """
+
+        remove_empty_groups = kwargs.get('remove_empty_groups', False)
+        remove_from_trajectory = kwargs.pop('remove_from_trajectory', False)
+
+        # Will format the request in a form that is understood by the storage service
+        # aka (msg, item, args, kwargs)
+        fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, args, kwargs)
+
+        if fetched_items:
+
+            try:
+                self._storage_service.store(pypetconstants.LIST, fetched_items,
+                                            trajectory_name=self.v_trajectory_name)
+            except:
+                self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
+                                   ' item(s) was/were never stored to disk.' % str(fetched_items))
+                raise
+
+            if remove_from_trajectory:
+                for msg, item, dummy1, dummy2 in fetched_items:
+                    self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+
+        else:
+            self._logger.warning('Your removal was not successful, could not find a single '
+                                 'item to remove.')
+
+    @copydoc(ConfigGroup.f_add_config)
+    @not_in_run
+    def f_add_config(self, *args, **kwargs):
+        return super(Trajectory, self).f_add_config(*args, **kwargs)
+
+    @copydoc(ConfigGroup.f_add_config_group)
+    @not_in_run
+    def f_add_config_group(self, *args, **kwargs):
+        return super(Trajectory, self).f_add_config_group(*args, **kwargs)
+
+    @copydoc(ParameterGroup.f_add_parameter)
+    @not_in_run
+    def f_add_parameter(self, *args, **kwargs):
+        return super(Trajectory, self).f_add_parameter(*args, **kwargs)
+
+    @copydoc(ParameterGroup.f_add_parameter_group)
+    @not_in_run
+    def f_add_parameter_group(self, *args, **kwargs):
+        return super(Trajectory, self).f_add_parameter_group(*args, **kwargs)
+
+    def __dir__(self):
+        """Adds all children to auto-completion
+
+        In case of a single run it spares all non-available functions
+
+        """
+        result = dir(type(self))
+        if self._is_run:
+            result = [x for x in result if not x.startswith('f_')  or
+                      not hasattr(getattr(self, x), '_not_in_run')]
+        result.extend(compat.listkeys(self.__dict__))
+        if not is_debug():
+            result.extend(self._children.keys())
+        return result

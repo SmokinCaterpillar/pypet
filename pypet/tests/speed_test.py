@@ -1,7 +1,7 @@
 __author__ = 'Robert Meyer'
 
 
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 from pypet.tests.test_helpers import TEMPDIR
@@ -13,11 +13,6 @@ import os
 import numpy as np
 import time
 import shutil
-
-from pycallgraph import PyCallGraph
-from pycallgraph.output import GraphvizOutput
-
-
 
 def add_data(traj):
     for irun in range(traj.par.res_per_run):

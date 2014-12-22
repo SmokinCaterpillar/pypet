@@ -13,6 +13,7 @@ except ImportError:  # not 2.6+ or is 3.x
         pass
 import numpy as np
 import pandas as pd
+import scipy.sparse as spsp
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
@@ -143,6 +144,11 @@ def nested_equal(a, b):
         return np.all(a == b)
     if isinstance(a, (pd.Panel, pd.Panel4D)):
         return nested_equal(a.to_frame(), b.to_frame())
+    if spsp.isspmatrix(a):
+        if a.nnz == 0:
+            return b.nnz == 0
+        else:
+            return np.all((a == b).data)
     if isinstance(a, (pd.DataFrame, pd.Series)):
         try:
             new_frame = a == b
