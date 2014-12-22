@@ -45,6 +45,7 @@ __author__ = 'Robert Meyer'
 import inspect
 import itertools as itools
 import re
+from collections import deque
 try:
     from future_builtins import zip, map, filter
 except ImportError:  # not 2.6+ or is 3.x
@@ -689,17 +690,24 @@ class NaturalNamingInterface(HasLogger):
                 return False
 
             if node.v_is_group:
-                for name_ in compat.listkeys(node._children):
+                for name_ in itools.chain(compat.listkeys(node._leaves),
+                                          compat.listkeys(node._groups)):
                     child_ = node._children[name_]
                     child_deleted = _remove_subtree_inner(child_, keep_predicate)
                     if child_deleted:
                         del node._children[name_]
+                        if name_ in node._groups:
+                            del node._groups[name_]
+                        elif name_ in node._leaves:
+                            del node._leaves[name_]
+                        else:
+                            raise RuntimeError('You shall not pass!')
                         del child_
 
                 for link_ in compat.listkeys(node._links):
                     node.f_remove_link(link_)
 
-                if len(node._children) == 0 and len(node._links) == 0:
+                if len(node._children) == 0:
                     self._delete_node(node)
                     return True
                 else:
@@ -771,7 +779,7 @@ class NaturalNamingInterface(HasLogger):
             del self._flat_leaf_storage_dict[full_name]
 
         else:
-            del root._groups[full_name]
+            del root._all_groups[full_name]
 
             if full_name in root._run_parent_groups:
                 del root._run_parent_groups[full_name]
@@ -813,7 +821,7 @@ class NaturalNamingInterface(HasLogger):
 
         """
         full_name = instance.v_full_name
-        split_name = full_name.split('.')
+        split_name = deque(full_name.split('.'))
         self._remove_recursive(self._root_instance, split_name, remove_empty_groups)
 
     def _remove_recursive(self, actual_node, split_name, remove_empty_groups):
@@ -827,7 +835,7 @@ class NaturalNamingInterface(HasLogger):
 
         :param actual_node: Current node
 
-        :param split_name: List of names to get the next nodes.
+        :param split_name: DEQUE of names to get the next nodes.
 
         :param remove_empty_groups:
 
@@ -851,9 +859,9 @@ class NaturalNamingInterface(HasLogger):
                         linking_nodes.append(linking_node)
                 self._delete_node(actual_node)
                 for linking_node in linking_nodes:
-                    if len(linking_node._children) == 0 and len(linking_node._links) == 0:
+                    if len(linking_node._children) == 0:
                         self._remove_recursive(self._root_instance,
-                                               linking_node.v_full_name.split('.'),
+                                               deque(linking_node.v_full_name.split('.')),
                                                remove_empty_groups=remove_empty_groups)
             else:
                 self._delete_node(node)
@@ -863,23 +871,35 @@ class NaturalNamingInterface(HasLogger):
             return True
 
         # Otherwise get the next node by using the first name in the list
-        name = split_name.pop(0)
-        child = actual_node._children[name]
+        name = split_name.popleft()
 
-        # Recursively walk down the tree
-        if self._remove_recursive(child, split_name, remove_empty_groups):
-            del actual_node._children[name]
-            del child
+        if name in actual_node._links:
+            if len(split_name)>0:
+                raise RuntimeError('You cannot remove nodes while hopping over links!')
+            actual_node.f_remove_link(name)
+            return True
+        else:
+            child = actual_node._children[name]
 
-            # Remove empty groups on the way back if desired
-            if (remove_empty_groups and
-                len(actual_node._children) == 0 and
-                len(actual_node._links) == 0):
+            # Recursively walk down the tree
+            if self._remove_recursive(child, split_name, remove_empty_groups):
+                del actual_node._children[name]
+                if name in actual_node._groups:
+                    del actual_node._groups[name]
+                elif name in actual_node._leaves:
+                    del actual_node._leaves[name]
+                else:
+                    raise RuntimeError('You shall not pass!')
+                del child
 
-                _delete_node_and_linked(actual_node, remove_empty_groups)
-                return True
+                # Remove empty groups on the way back if desired
+                if (remove_empty_groups and
+                    len(actual_node._children) == 0):
 
-        return False
+                    _delete_node_and_linked(actual_node, remove_empty_groups)
+                    return True
+
+            return False
 
     def _translate_into_shortcut(self, name):
         """Maps a given shortcut to corresponding name
@@ -1257,11 +1277,6 @@ class NaturalNamingInterface(HasLogger):
 
                 if name not in act_node._children:
 
-                    if name in act_node._links:
-                        raise AttributeError('You cannot add `%s` under `%s`, there exists '
-                                             'already a link with this name. ' %
-                                             (name, act_node.v_full_name))
-
                     if idx == last_idx and group_type_name != type_name:
                         # We are at the end of the chain and we add a leaf node
 
@@ -1270,6 +1285,7 @@ class NaturalNamingInterface(HasLogger):
                                                                     constructor,
                                                                     args, kwargs)
 
+                        act_node._leaves[name] = new_node
                         self._flat_leaf_storage_dict[new_node.v_full_name] = new_node
 
                     else:
@@ -1282,7 +1298,7 @@ class NaturalNamingInterface(HasLogger):
                             # We add a group on the fly
                             new_node = self._create_any_group(act_node.v_full_name, name,
                                                               group_type_name)
-
+                        act_node._groups[name] = new_node
                     act_node._children[name] = new_node
 
                     # Add the new instance also to the nested reference dictionaries
@@ -1294,6 +1310,11 @@ class NaturalNamingInterface(HasLogger):
                         self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
 
                 else:
+                    if name in act_node._links:
+                        raise AttributeError('You cannot hop over links when adding '
+                                             'data to the tree. '
+                                             'There is a link called `%s` under `%s`.' %
+                                             (name, act_node.v_full_name))
                     if idx == last_idx:
                         raise AttributeError('You already have a group/instance `%s` under '
                                              '`%s`' % (name, act_node.v_full_name))
@@ -1316,12 +1337,33 @@ class NaturalNamingInterface(HasLogger):
             del self._root_instance._linked_by[full_name]
             del linking
         del act_node._links[name]
+        del act_node._children[name]
 
         self._remove_from_nodes_and_leaves(name, linked_node,
                                            full_name=act_node.v_full_name + '.' + name)
 
-    def _create_link(self, act_node, name, instance):
+    def _create_link_inner(self, act_node, name, instance):
+        """ Creates a link without costly name checking
+        """
+        if (name.startswith(pypetconstants.RUN_NAME) and
+                                name != pypetconstants.RUN_NAME_DUMMY):
+            self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
 
+        act_node._links[name] = instance
+        act_node._children[name] = instance
+
+        full_name = instance.v_full_name
+        if full_name not in self._root_instance._linked_by:
+            self._root_instance._linked_by[full_name] = {}
+        self._root_instance._linked_by[full_name][act_node.v_full_name] = (act_node, name)
+
+        self._add_to_nodes_and_leaves(instance, name, full_name=act_node.v_full_name + '.' + name)
+
+        return instance
+
+    def _create_link(self, act_node, name, instance):
+        """Creates a link and checks if names are appropriate
+        """
         if '.' in name:
             raise ValueError('`.` is not allowed in the name of a link!')
 
@@ -1338,27 +1380,14 @@ class NaturalNamingInterface(HasLogger):
         if instance.v_is_root or act_node.v_is_root:
             raise ValueError('You cannot create a link to or directly from the root node')
 
-        if name in act_node._children or name in act_node._links:
+        if name in act_node._children:
             raise ValueError('`%s` has already a child or link called `%s`, '
                              'cannot add a link with this name.' % (act_node.v_full_name, name))
 
         if not self._root_instance.f_contains(instance):
             raise ValueError('You can only link to items within the trajectory tree!')
 
-        if (name.startswith(pypetconstants.RUN_NAME) and
-                                name != pypetconstants.RUN_NAME_DUMMY):
-            self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
-
-        act_node._links[name] = instance
-
-        full_name = instance.v_full_name
-        if full_name not in self._root_instance._linked_by:
-            self._root_instance._linked_by[full_name] = {}
-        self._root_instance._linked_by[full_name][act_node.v_full_name] = (act_node, name)
-
-        self._add_to_nodes_and_leaves(instance, name, full_name=act_node.v_full_name + '.' + name)
-
-        return instance
+        return self._create_link_inner(act_node, name, instance)
 
     def _check_names(self, split_names, parent_node=None):
         """Checks if a list contains strings with invalid names.
@@ -1459,7 +1488,7 @@ class NaturalNamingInterface(HasLogger):
         else:
             raise RuntimeError('You shall not pass!')
 
-        self._root_instance._groups[instance.v_full_name] = instance
+        self._root_instance._all_groups[instance.v_full_name] = instance
 
         return instance
 
@@ -1676,21 +1705,32 @@ class NaturalNamingInterface(HasLogger):
         if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
             # Only consider one particular run and blind out the rest, but include
             # all other subbranches
-            node_list = [node._children[run_name]]
-            for child_name in node._children:
-                if not (child_name.startswith(pypetconstants.RUN_NAME)
-                        and child_name != pypetconstants.RUN_NAME_DUMMY):
-                    node_list.append(node._children[child_name])
-            if with_links and run_name in node._links:
-                for link_name in node._links:
-                    if not (link_name.startswith(pypetconstants.RUN_NAME)
-                            and link_name != pypetconstants.RUN_NAME_DUMMY):
-                        node_list.append(node._links[link_name])
+            if with_links or not run_name in node._links:
+                node_list = [node._children[run_name]]
+            else:
+                node_list = []
+            if with_links:
+                for child_name in node._children:
+                    if not (child_name.startswith(pypetconstants.RUN_NAME)
+                            and child_name != pypetconstants.RUN_NAME_DUMMY):
+                        node_list.append(node._children[child_name])
+            else:
+                for leaf_name in node._leaves:
+                    if not (leaf_name.startswith(pypetconstants.RUN_NAME)
+                            and leaf_name != pypetconstants.RUN_NAME_DUMMY):
+                        node_list.append(node._leaves[leaf_name])
+                for group_name in node._groups:
+                    if not (group_name.startswith(pypetconstants.RUN_NAME)
+                            and group_name != pypetconstants.RUN_NAME_DUMMY):
+                        node_list.append(node._groups[group_name])
+
             return node_list
         else:
-            iterator = compat.itervalues(node._children)
             if with_links:
-                iterator = itools.chain(iterator, compat.itervalues(node._links))
+                iterator = compat.itervalues(node._children)
+            else:
+                iterator = itools.chain(compat.itervalues(node._leaves),
+                                        compat.itervalues(node._groups))
             return iterator
 
     @staticmethod
@@ -1992,8 +2032,8 @@ class NaturalNamingInterface(HasLogger):
         if new_name in self._flat_leaf_storage_dict:
             return self._flat_leaf_storage_dict[new_name]
 
-        if new_name in self._root_instance._groups:
-            return self._root_instance._groups[new_name]
+        if new_name in self._root_instance._all_groups:
+            return self._root_instance._all_groups[new_name]
 
         return None
 
@@ -2236,6 +2276,8 @@ class NNGroupNode(NNTreeNode):
         self._children = {}
         self._nn_interface = nn_interface
         self._links = {}
+        self._groups = {}
+        self._leaves = {}
 
     def __repr__(self):
         return '<%s>' % self.__str__()
@@ -2409,6 +2451,22 @@ class NNGroupNode(NNTreeNode):
         """Checks if node has children or not"""
         return len(self._children) != 0
 
+    def f_leaves(self):
+        """Returns the number of immediate leaves of the group"""
+        return len(self._leaves)
+
+    def f_has_leaves(self):
+        """Checks if node has leaves or not"""
+        return len(self._leaves) != 0
+
+    def f_groups(self):
+        """Returns the number of immediate groups of the group"""
+        return len(self._groups)
+
+    def f_has_groups(self):
+        """Checks if node has groups or not"""
+        return len(self._groups) != 0
+
     def __contains__(self, item):
         """Equivalent to calling :func:`~pypet.naturalnaming.NNGroupNode.f_contains`.
 
@@ -2458,8 +2516,9 @@ class NNGroupNode(NNTreeNode):
 
         else:
             child = self._children[name]
-
-            if not child.v_is_leaf and child.f_has_children and not recursive:
+            if name in self._links:
+                self.f_remove_link(name)
+            elif not child.v_is_leaf and child.f_has_children and not recursive:
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with ``recursive = True``')
             elif not child.v_is_leaf and child.f_has_links and not recursive:
@@ -2726,6 +2785,38 @@ class NNGroupNode(NNTreeNode):
         else:
             return self._children
 
+    def f_get_groups(self, copy=True):
+        """Returns a dictionary of groups hanging immediately below this group.
+
+        :param copy:
+
+            Whether the group's original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+
+        :returns: Dictionary of nodes
+
+        """
+        if copy:
+            return self._groups.copy()
+        else:
+            return self._groups
+
+    def f_get_leaves(self, copy=True):
+        """Returns a dictionary of all leaves hanging immediately below this group.
+
+        :param copy:
+
+            Whether the group's original dictionary or a shallow copy is returned.
+            If you want the real dictionary please do not modify it at all!
+
+        :returns: Dictionary of nodes
+
+        """
+        if copy:
+            return self._leaves.copy()
+        else:
+            return self._leaves
+
     def f_get_links(self, copy=True):
         """Returns a link dictionary.
 
@@ -2744,6 +2835,9 @@ class NNGroupNode(NNTreeNode):
 
     def f_to_dict(self, fast_access=False, short_names=False, with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances as values.
+
+        This will iteratively traverse the tree and add all nodes below this group to
+        the dictionary.
 
         :param fast_access:
 

@@ -91,7 +91,7 @@ class SingleRun(DerivedParameterGroup, ResultGroup):
         self._results = parent_trajectory._results
         self._explored_parameters = parent_trajectory._explored_parameters
         self._config = parent_trajectory._config
-        self._groups = parent_trajectory._groups
+        self._all_groups = parent_trajectory._all_groups
         self._run_parent_groups = parent_trajectory._run_parent_groups
         self._other_leaves = parent_trajectory._other_leaves
         self._linked_by = parent_trajectory._linked_by
@@ -1122,7 +1122,7 @@ class Trajectory(SingleRun, ParameterGroup, ConfigGroup):
         self._results = {}  # Contains all results
         self._explored_parameters = {}  # Contains all explored parameters
         self._config = {}  # Contains all config parameters
-        self._groups = {}  # Contains ALL groups regardless in which subtree they are
+        self._all_groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
         self._other_leaves = {}  # Contains ALL other user added leaves
         self._linked_by = {} #Contains all nodes that are linked to
