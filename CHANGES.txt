@@ -26,6 +26,8 @@ pypet 0.1b.9
 
 *   The SingleRun has been removed and all Interaction happens how with real Trajectory objects
 
+*   All pypet relevant imported packages will be stored by the trajectory.
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

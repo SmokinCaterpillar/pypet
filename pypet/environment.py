@@ -65,7 +65,6 @@ from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug
 
-
 def _single_run(args):
     """ Performs a single run of the experiment.
 
@@ -1068,17 +1067,12 @@ class Environment(HasLogger):
         except AttributeError:
             pass  # We end up here if we use pypet within an ipython console
 
-        if self._traj.v_version != VERSION:
-            config_name = 'environment.%s.version' % self.v_name
-            self._traj.f_add_config(config_name, self.v_trajectory.v_version,
-                                    comment='Pypet version if it differs from the version'
-                                            ' of the trajectory').f_lock()
-
-        if self._traj.v_python != compat.python_version_string:
-            config_name = 'environment.%s.python' % self.v_name
-            self._traj.f_add_config(config_name, self.v_trajectory.v_python,
-                                    comment='Python version if it differs from the version'
-                                            ' of the trajectory').f_lock()
+        for package_name, version in pypetconstants.VERSIONS_TO_STORE.items():
+            config_name = 'environment.%s.versions.%s' % (self.v_name, package_name)
+            self._traj.f_add_config(config_name, version,
+                                    comment='Particular version of a package or distribution '
+                                            'used during experiment. N/A if package could not '
+                                            'be imported.').f_lock()
 
         self._traj.config.environment.v_comment = 'Settings for the different environments ' \
                                                   'used to run the experiments'

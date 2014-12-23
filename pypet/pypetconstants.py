@@ -7,8 +7,49 @@ that are recognized by storage services to determine how to store and load data.
 
 __author__ = 'Robert Meyer'
 
-import numpy
 import pypet.compat as compat
+
+
+####################### VERSIONS_TO_STORE ####################
+from pypet._version import __version__ as VERSION
+import tables
+tablesversion = tables.__version__
+import pandas
+pandasversion = pandas.__version__
+import numpy
+numpyversion = numpy.__version__
+import scipy
+scipyversion = scipy.__version__
+
+try:
+    import sumatra
+    sumatraversion = sumatra.__version__
+except ImportError:
+    sumatraversion = 'N/A'
+
+try:
+    import dill
+    dillversion = dill.__version__
+except ImportError:
+    dillversion = 'N/A'
+
+try:
+    import psutil
+    psutilversion = psutil.__version__
+except ImportError:
+    psutilversion = 'N/A'
+
+try:
+    import git
+    gitversion = git.__version__
+except ImportError:
+    gitversion = 'N/A'
+
+VERSIONS_TO_STORE = {'pypet': VERSION, 'python': compat.python_version_string,
+                     'scipy': scipyversion, 'numpy': numpyversion, 'PyTables': tablesversion,
+                     'pandas': pandasversion, 'Sumatra': sumatraversion,
+                     'dill': dillversion, 'GitPython': gitversion,
+                     'psutil': psutilversion}
 
 
 ###################### Supported Data ########################
@@ -164,3 +205,4 @@ RUN_NAME_DUMMY = 'run_ALL'
 """Dummy name if not created during run"""
 FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
+

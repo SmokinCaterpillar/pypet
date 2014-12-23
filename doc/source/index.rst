@@ -47,13 +47,21 @@ Requirements
 
 Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
 
-* tables >= 2.3.1
+* tables_ >= 2.3.1
 
-* pandas >= 0.12.0 [#pandasversion]_
+* pandas_ >= 0.12.0 [#pandasversion]_
 
-* numpy >= 1.6.1
+* numpy_ >= 1.6.1
 
-* scipy >= 0.9.0
+* scipy_ >= 0.9.0
+
+.. _tables: http://pytables.github.io/
+
+.. _pandas: http://pandas.pydata.org/
+
+.. _numpy: http://www.numpy.org/
+
+.. _scipy: http://www.scipy.org/
 
 If you use Python 2.6 you also need
 
@@ -65,7 +73,7 @@ For git integration you additionally need
 
 * GitPython_ >= 0.3.1 [#gitpythonversion]_
 
-.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+.. _GitPython: http://gitpython.readthedocs.org/en/stable/
 
 To utilize the cap feature for :ref:`more-on-multiprocessing` you need
 

@@ -1131,6 +1131,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_results=pypetconstants.LOAD_NOTHING,
                     load_other_data=pypetconstants.LOAD_NOTHING)
 
+    @not_in_run
     def f_update_skeleton(self):
         """Loads the full skeleton from the storage service.
 
@@ -1147,6 +1148,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
+    @not_in_run
     def f_load(self,
                name=None,
                index=None,
@@ -1239,9 +1241,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         :param force:
 
-            pypet will refuse to load trajectories that have been created using pypet with a
-            different version number. To force the load of a trajectory from a previous version
-            simply set `force = True`.
+            *pypet* will refuse to load trajectories that have been created using pypet with a
+            different version number or different python version.
+            To force the load of a trajectory from a previous version
+            simply set ``force = True``. Note that it is not checked if other versions of packages
+            differ from previous experiments, i.e. numpy, scipy, etc. But you can check
+            for this manually. The versions of other packages can be found under
+            ``'config.environment.name_of_environment.versions.package_name'``.
 
         :param filename:
 
