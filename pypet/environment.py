@@ -1832,6 +1832,8 @@ class Environment(HasLogger):
         start_run_idx = 0
         new_runs = 0
 
+        self._traj._finalize() # Reset trajectory to no longer be a single run
+
         old_traj_length = len(self._traj)
         postproc_res = self._postproc(self._traj, results,
                                       *self._postproc_args, **self._postproc_kwargs)
