@@ -1097,6 +1097,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             par.f_lock()
 
     def _remove_run_data(self):
+        """ Removes all data of completed runs.
+
+        Keeps data that is externally linked.
+
+        """
         def _keep_linked(node):
             full_name = node.v_full_name
             if full_name in self._linked_by:
@@ -1110,7 +1115,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             group = self._run_parent_groups[group_name]
             for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
-                            child_name != pypetconstants.RUN_NAME_DUMMY):
+                            child_name != pypetconstants.RUN_NAME_DUMMY and
+                            self.f_is_completed(child_name)):
                     group.f_remove_child(child_name, recursive=True, keep_predicate=_keep_linked)
 
     def _finalize(self):
