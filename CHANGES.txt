@@ -30,6 +30,8 @@ pypet 0.1b.9
 
 *   The queue no longer needs to be re-passed to the QueueSender
 
+*   New MultiprocessWrapper (aka a light-weight environment for multiprocessing)
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

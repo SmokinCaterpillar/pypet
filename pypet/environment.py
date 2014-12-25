@@ -1922,13 +1922,14 @@ class Environment(HasLogger):
                         if self._multip_wrapper is None:
                             self._multip_wrapper = MultiprocessWrapper(self._traj,
                                                                self._wrap_mode,
-                                                               log_path=self._log_path,
-                                                               log_stdout=self._log_stdout,
                                                                full_copy=None,
                                                                manager=manager,
-                                                               queue=None,
                                                                lock=None,
-                                                               lock_with_manager=self._use_pool)
+                                                               lock_with_manager=self._use_pool,
+                                                               queue=None,
+                                                               start_queue_process=True,
+                                                               log_path=self._log_path,
+                                                               log_stdout=self._log_stdout,)
                         else:
                             self._multip_wrapper.f_rewrap_storage_service()
 
@@ -2044,6 +2045,8 @@ class Environment(HasLogger):
                                             '*************************\n' %
                                             self._traj.v_name)
 
+                                        # Do some finalization to allow normal post-processing
+                                        self._traj._finalize()
                                         keep_running, start_run_idx, new_runs = \
                                             self._execute_postproc(results)
 
@@ -2234,15 +2237,79 @@ class Environment(HasLogger):
         return results
 
 class MultiprocessWrapper(HasLogger):
+    """ A lightweight environment that allows the usage of multiprocessing.
+
+    Can be used if you don't want a full-blown :class:`~pypet.environment.Environment` to
+    enable multiprocessing or you want to implement your own custom multiprocessing.
+
+    This Wrapper tool will take a trajectory container and take care that the storage
+    service is multiprocessing safe. Support the ``'LOCK'`` as well as the ``'QUEUE'`` mode.
+    In case of the latter an extra queue process is created if desired.
+    This process will handle all storage requests and write data to the hdf5 file.
+
+    Not that in case of ``'QUEUE'`` wrapping data can only be stored not loaded, because
+    the queue will only be read in one direction.
+
+    :param trajectory:
+
+        The trajectory which storage service should be wrapped
+
+    :param wrap_mode:
+
+        There are two options:
+
+         :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
+
+             If desirued another process for storing the trajectory is spawned.
+             The sub processes running the individual trajectories will add their results to a
+             multiprocessing queue that is handled by an additional process.
+             Note that this requires additional memory since data
+             will be pickled and send over the queue for storage!
+
+         :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('LOCK')
+
+             Each individual process takes care about storage by itself. Before
+             carrying out the storage, a lock is placed to prevent the other processes
+             to store data. Accordingly, sometimes this leads to a lot of processes
+             waiting until the lock is released.
+             Yet, data does not need to be pickled before storage!
+
+    :param full_copy:
+
+        In case the trajectory gets pickled (sending over a queue or a pool of processors)
+        if the full trajectory should be copied each time (i.e. all parameter points) or
+        only a particular point. A particular point can be chosen beforehand with
+        :func:`~pypet.trajectory.Trajectory.f_as_run`.
+
+        Leave ``full_copy=None`` if the setting from the passed trajectory should be used.
+        Otherwise ``v_full_copy`` of the trajectory is changed to your chosen value.
+
+    :param manger:
+
+        You can pass an optional multiprocessing manager here,
+        if you already have instantiated one.
+        Leave ``None`` if you want the wrapper to create one.
+
+    :param lock:
+
+        You can pass a multiprocessing lock here, if you already have instantiated one.
+        Leave ``None`` if you want the wrapper to create one in case of ``'LOCK'`` wrapping.
+
+
+
+
+
+    """
     def __init__(self, trajectory,
-                 wrap_mode,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  full_copy=None,
-                 log_path=None,
-                 log_stdout=False,
                  manager=None,
-                 queue=None,
                  lock=None,
-                 lock_with_manager=True):
+                 lock_with_manager=True,
+                 queue=None,
+                 start_queue_process=True,
+                 log_path=None,
+                 log_stdout=False):
 
         self._set_logger()
 
@@ -2254,6 +2321,7 @@ class MultiprocessWrapper(HasLogger):
         self._storage_service = self._traj.v_storage_service
         self._queue_process = None
         self._lock_wrapper = None
+        self._queue_sender = None
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._lock = lock
@@ -2261,6 +2329,7 @@ class MultiprocessWrapper(HasLogger):
         self._log_path = log_path
         self._log_stdout = log_stdout
         self._lock_with_manager = lock_with_manager
+        self._start_queue_process = start_queue_process
 
         self._do_wrap()
 
@@ -2268,7 +2337,7 @@ class MultiprocessWrapper(HasLogger):
         if self._manager is None:
             self._manager = multip.Manager()
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-            self._start_queue_process()
+            self._prepare_queue()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
             self._prepare_lock()
         else:
@@ -2291,11 +2360,12 @@ class MultiprocessWrapper(HasLogger):
         self._traj.v_storage_service = lock_wrapper
         self._lock_wrapper = lock_wrapper
 
-    def _start_queue_process(self):
+    def _prepare_queue(self):
         # For queue mode we need to have a queue in a block of shared memory.
-        if self._queue_process is None:
-            if self._queue is None:
-                self._queue = self._manager.Queue()
+        if self._queue is None:
+            self._queue = self._manager.Queue()
+
+        if self._queue_process is None and self._start_queue_process:
 
             self._logger.info('(Re-) Starting the Storage Queue!')
             # Wrap a queue writer around the storage service
@@ -2308,13 +2378,15 @@ class MultiprocessWrapper(HasLogger):
             queue_process.start()
 
             self._queue_process = queue_process
+
+        if self._queue_sender is None:
             # Replace the storage service of the trajectory by a sender.
             # The sender will put all data onto the queue.
             # The writer from above will receive the data from
             # the queue and hand it over to
             # the storage service
-            queue_sender = QueueStorageServiceSender(self._queue)
-            self._traj.v_storage_service = queue_sender
+            self._queue_sender = QueueStorageServiceSender(self._queue)
+            self._traj.v_storage_service = self._queue_sender
 
     def f_reset_storage_service(self):
         self._traj._storage_service = self._storage_service
@@ -2323,7 +2395,7 @@ class MultiprocessWrapper(HasLogger):
         if self._wrap_mode is pypetconstants.WRAP_MODE_LOCK:
             self._traj._storage_service = self._lock_wrapper
         elif self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
-            self._start_queue_process()
+            self._prepare_queue()
         else:
             raise RuntimeError('You shall not pass!')
 
