@@ -1942,20 +1942,17 @@ class Environment(HasLogger):
                         pass
                     else:
                         # Prepare Multiprocessing
-                        if self._multip_wrapper is None:
-                            lock_with_manager = self._use_pool or self._immediate_postproc
-                            self._multip_wrapper = MultiprocessWrapper(self._traj,
-                                                               self._wrap_mode,
-                                                               full_copy=None,
-                                                               manager=manager,
-                                                               lock=None,
-                                                               lock_with_manager=lock_with_manager,
-                                                               queue=None,
-                                                               start_queue_process=True,
-                                                               log_path=self._log_path,
-                                                               log_stdout=self._log_stdout,)
-                        else:
-                            self._multip_wrapper.f_rewrap_storage_service()
+                        lock_with_manager = self._use_pool or self._immediate_postproc
+                        self._multip_wrapper = MultiprocessWrapper(self._traj,
+                                                           self._wrap_mode,
+                                                           full_copy=None,
+                                                           manager=manager,
+                                                           lock=None,
+                                                           lock_with_manager=lock_with_manager,
+                                                           queue=None,
+                                                           start_queue_process=True,
+                                                           log_path=self._log_path,
+                                                           log_stdout=self._log_stdout,)
 
                     self._logger.info(
                         '\n************************************************************\n'
