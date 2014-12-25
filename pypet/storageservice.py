@@ -40,6 +40,11 @@ class MultiprocWrapper(object):
 
     """
 
+    @property
+    def multiproc_safe(self):
+        """This wrapper guarantees multiprocessing safety"""
+        return True
+
     def store(self, *args, **kwargs):
         raise NotImplementedError('Implement this!')
 
@@ -233,6 +238,11 @@ class LockWrapper(MultiprocWrapper, HasLogger):
                                                      repr(self._storage_service))
 
     @property
+    def mp_safe(self):
+        """Usually storage services are not supposed to be multiprocessing safe"""
+        return True
+
+    @property
     def lock(self):
         """One can access the lock"""
         return self._lock
@@ -264,6 +274,11 @@ class LockWrapper(MultiprocWrapper, HasLogger):
 
 class StorageService(object):
     """Abstract base class defining the storage service interface."""
+
+    @property
+    def multiproc_safe(self):
+        """Usually storage services are not supposed to be multiprocessing safe"""
+        return False
 
     def store(self, msg, stuff_to_store, *args, **kwargs):
         """See :class:`pypet.storageservice.HDF5StorageService` for an example of an

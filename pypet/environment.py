@@ -425,8 +425,16 @@ class Environment(HasLogger):
         differs a lot between individual runs. Accordingly, you don't have to wait for a very
         long run to finish to start post-processing.
 
+        In case you use immediate postprocessing, the storage service of your trajectory is still
+        multiprocessing safe. Moreover, internally the lock securing the
+        storage service will be supervised by a multiprocessing manager.
+        Accordingly, you could even use multiprocessing in your immediate post-processing phase
+        if you dare, like use a multiprocessing pool_, for instance.
+
         Note that after the execution of the final run, your post-processing routine will
         be called again as usual.
+
+        .. _pool: https://docs.python.org/2/library/multiprocessing.html
 
     :param continuable:
 
@@ -1346,11 +1354,26 @@ class Environment(HasLogger):
         This can be useful if the user has an `optimization` task.
 
         Either the function calls `f_expand` directly on the trajectory or returns
-        an dictionary. If latter `f_expand` is called by the environemnt.
+        an dictionary. If latter `f_expand` is called by the environment.
 
-        Note that after expansion of the trajectory, the postprocessing function is called
-        again (and aigan for further expansions). Thus, this allows an iterative approach
+        Note that after expansion of the trajectory, the post-processing function is called
+        again (and again for further expansions). Thus, this allows an iterative approach
         to parameter exploration.
+
+        Note that in case post-processing is called after all runs have been executed,
+        the storage service of the trajectory is no longer multiprocessing safe.
+        If you want to use multiprocessing in your post-processing you can still
+        manually wrap the storage service with the :class:`~pypet.environment.MultiprocessWrapper`.
+
+        Nonetheless, in case you use **immediate** post-processing, the storage service is still
+        multiprocessing safe. In fact, it has to be because some single runs are still being
+        executed and write data to your HDF5 file. Accordingly, you can
+        also use multiprocessing during the immediate post-processing without having
+        to use the :class:`~pypet.environment.MultiprocessWrapper`.
+
+        You can easily check in your post-processing function if the storage service is
+        multiprocessing safe via the ``multiproc_safe`` attribute, i.e.
+        ``traj.v_storage_service.multiproc_safe``.
 
         :param postproc:
 
@@ -1920,12 +1943,13 @@ class Environment(HasLogger):
                     else:
                         # Prepare Multiprocessing
                         if self._multip_wrapper is None:
+                            lock_with_manager = self._use_pool or self._immediate_postproc
                             self._multip_wrapper = MultiprocessWrapper(self._traj,
                                                                self._wrap_mode,
                                                                full_copy=None,
                                                                manager=manager,
                                                                lock=None,
-                                                               lock_with_manager=self._use_pool,
+                                                               lock_with_manager=lock_with_manager,
                                                                queue=None,
                                                                start_queue_process=True,
                                                                log_path=self._log_path,
@@ -2295,10 +2319,6 @@ class MultiprocessWrapper(HasLogger):
         You can pass a multiprocessing lock here, if you already have instantiated one.
         Leave ``None`` if you want the wrapper to create one in case of ``'LOCK'`` wrapping.
 
-
-
-
-
     """
     def __init__(self, trajectory,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
@@ -2334,8 +2354,6 @@ class MultiprocessWrapper(HasLogger):
         self._do_wrap()
 
     def _do_wrap(self):
-        if self._manager is None:
-            self._manager = multip.Manager()
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._prepare_queue()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
@@ -2349,6 +2367,8 @@ class MultiprocessWrapper(HasLogger):
     def _prepare_lock(self):
         if self._lock is None:
             if self._lock_with_manager:
+                if self._manager is None:
+                    self._manager = multip.Manager()
                 # We need a lock that is shared by all processes.
                 self._lock = self._manager.Lock()
             else:
@@ -2363,6 +2383,8 @@ class MultiprocessWrapper(HasLogger):
     def _prepare_queue(self):
         # For queue mode we need to have a queue in a block of shared memory.
         if self._queue is None:
+            if self._manager is None:
+                self._manager = multip.Manager()
             self._queue = self._manager.Queue()
 
         if self._queue_process is None and self._start_queue_process:
