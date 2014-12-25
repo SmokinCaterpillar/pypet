@@ -54,7 +54,6 @@ class MultiprocSortLockTest(ResultSortTest):
         self.use_pool=True
 
 
-
 class MultiprocNoPoolQueueTest(EnvironmentTest):
 
     def set_mode(self):

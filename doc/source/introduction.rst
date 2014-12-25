@@ -81,25 +81,87 @@ Main Features
 Getting Started!
 =============================
 
+-----------------------------
+Requirements
+-----------------------------
+
+Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
+
+* numpy_ >= 1.6.1
+
+* scipy_ >= 0.9.0
+
+* tables_ >= 2.3.1
+
+* pandas_ >= 0.12.0 [#pandasversion]_
+
+If you use Python 2.6 you also need
+
+* ordereddict_ >= 1.1
+
+For git integration you additionally need
+
+* GitPython_ >= 0.3.1 [#gitpythonversion]_
+
+To utilize the cap feature for :ref:`more-on-multiprocessing` you need
+
+* psutil_ >= 2.0.0
+
+To utilize the continuing of crashed trajectories you need
+
+* dill_ >= 0.2.1
+
+Automatic sumatra records are supported for
+
+* Sumatra_ >= 0.6.0
+
+.. rubric:: Footnotes
+
+.. [#pythonversion]
+
+    *pypet* might also work under python 3.0-3.2 but has not been tested.
+
+.. [#pandasversion]
+
+    Preferably use pandas 0.14.1 or 0.12.0 since there are some
+    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
+    *pypet* works under 0.13.x but not all features are fully supported.
+    For instance, these upcasting issues may prevent you from storing
+    Trajectories containing ArrayParameters to disk.
+    These unwanted upcastings did not happen in previous pandas versions and will be, or more
+    precisely, have already been removed in the next pandas version.
+    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
+
+.. [#gitpythonversion]
+
+    Keep in mind that GitPython currently does not work under python 3. However,
+    there's active development to support python 3 in the near future
+    (see https://github.com/gitpython-developers/GitPython/issues/114).
+
 ---------------------------
 Install
 ---------------------------
 
-Simply install via ``pip install --pre pypet`` (``--pre`` since the current version is still *beta*)
+If you don't have all prerequisites (numpy_, scipy_, tables_, pandas_) install them first.
+These are standard python packages, so chances are high that they are already installed.
+By the way, in case you use the python package manager ``pip``
+you can list all installed packages with ``pip freeze``.
 
-Or
+Next, simply install *pypet* via ``pip install --pre pypet``
+(``--pre`` since the current version is still *beta*)
 
-Package release can also be found on `pypi.python.org`_. Download, unpack
+**Or**
+
+The package release can also be found on `pypi.python.org`_. Download, unpack
 and ``python setup.py install`` it.
 
 
-*pypet* has been tested for python 2.6 and python 2.7 for **Linux** using
+*pypet* has been tested for python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
 Travis-CI_. However, so far there was only limited testing under
 Windows.
 
 In principle, *pypet* should work for **Windows** out of the box if you have installed
-all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
-pip is not possible. You have to download the tar file from `pypi.python.org`_ and
+all prerequisites. You have to download the tar file from `pypi.python.org`_ and
 unzip it [#tar]_. Next, open a windows terminal [#win]_
 and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
 As above run from the terminal ``python setup.py install``.
@@ -407,6 +469,17 @@ hands-on experience, check out the :ref:`theexamples`.
 Cheers,
     Robert
 
+.. _tables: http://pytables.github.io/
+
+.. _numpy: http://www.numpy.org/
+
+.. _scipy: http://www.scipy.org/
+
+.. _ordereddict: https://pypi.python.org/pypi/ordereddict
+
+.. _GitPython: http://gitpython.readthedocs.org/en/stable/
+
+.. _psutil: http://pythonhosted.org/psutil/
 
 .. _pandas: http://pandas.pydata.org/
 
@@ -419,6 +492,8 @@ Cheers,
 .. _PyTables: http://www.pytables.org/moin/PyTables
 
 .. _Sumatra: http://neuralensemble.org/sumatra/
+
+.. _dill: https://pypi.python.org/pypi/dill
 
 
 

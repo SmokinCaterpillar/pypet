@@ -76,25 +76,23 @@ def _single_run(args):
 
         2. Boolean whether to log stdout
 
-        3. A queue object, only necessary in case of multiprocessing in queue mode.
+        3. The user's job function
 
-        4. The user's job function
+        4. Number of total runs (int)
 
-        5. Number of total runs (int)
+        5. Whether to use multiprocessing
 
-        6. Whether to use multiprocessing
+        6. A queue object to store results into in case a pool is used, otherwise None
 
-        7. A queue object to store results into in case a pool is used, otherwise None
+        7. The arguments handed to the user's job function (as *args)
 
-        8. The arguments handed to the user's job function (as *args)
+        8. The keyword arguments handed to the user's job function (as **kwargs)
 
-        9. The keyword arguments handed to the user's job function (as **kwargs)
+        9. Whether to clean up after the run
 
-        10. Whether to clean up after the run
+        10. Path for continue files, `None` if continue is not supported
 
-        11. Path for continue files, `None` if continue is not supported
-
-        12. Whether or not the data should be automatically stored
+        11. Whether or not the data should be automatically stored
 
     :return:
 
@@ -107,16 +105,15 @@ def _single_run(args):
         traj = args[0]
         log_path = args[1]
         log_stdout = args[2]
-        queue = args[3]
-        runfunc = args[4]
-        total_runs = args[5]
-        multiproc = args[6]
-        result_queue = args[7]
-        runparams = args[8]
-        kwrunparams = args[9]
-        clean_up_after_run = args[10]
-        continue_path = args[11]
-        automatic_storing = args[12]
+        runfunc = args[3]
+        total_runs = args[4]
+        multiproc = args[5]
+        result_queue = args[6]
+        runparams = args[7]
+        kwrunparams = args[8]
+        clean_up_after_run = args[9]
+        continue_path = args[10]
+        automatic_storing = args[11]
 
         use_pool = result_queue is None
 
@@ -145,9 +142,6 @@ def _single_run(args):
                 errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
                 sys.stderr = errstl
 
-        # Add the queue for storage in case of multiprocessing in queue mode.
-        if queue is not None:
-            traj.v_storage_service.queue = queue
 
         root.info('\n===================================\n '
                   'Starting single run #%d of %d '
@@ -1791,12 +1785,11 @@ class Environment(HasLogger):
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)
 
-    def _make_iterator(self, queue, result_queue, start_run_idx):
+    def _make_iterator(self, result_queue, start_run_idx):
         """Returns an iterator over all runs for multiprocessing"""
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._log_stdout,
-                 queue,
                  self._runfunc, len(self._traj),
                  self._multiproc,
                  result_queue,
@@ -1942,8 +1935,7 @@ class Environment(HasLogger):
                         # The writer from above will receive the data from
                         # the queue and hand it over to
                         # the storage service
-                        queue_sender = QueueStorageServiceSender()
-                        queue_sender.queue = queue
+                        queue_sender = QueueStorageServiceSender(queue)
                         self._traj.v_storage_service = queue_sender
 
                     elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
@@ -1953,8 +1945,6 @@ class Environment(HasLogger):
                             lock = manager.Lock()
                         else:
                             lock = multip.Lock()
-
-                        queue = None
 
                         # Wrap around the storage service to allow the placement of locks around
                         # the storage procedure.
@@ -1977,7 +1967,7 @@ class Environment(HasLogger):
                         (self._traj.v_name, self._ncores))
 
                     # Create a generator to generate the tasks for multiprocessing
-                    iterator = self._make_iterator(queue, result_queue, start_run_idx)
+                    iterator = self._make_iterator(result_queue, start_run_idx)
 
                     if self._use_pool:
                         mpool = multip.Pool(self._ncores)
@@ -2097,7 +2087,7 @@ class Environment(HasLogger):
                                                 new_runs
                                             )
 
-                                            iterator = self._make_iterator(queue, result_queue,
+                                            iterator = self._make_iterator(result_queue,
                                                                            start_run_idx)
                             time.sleep(0.01)
 
@@ -2159,7 +2149,7 @@ class Environment(HasLogger):
                                 result = _single_run((deep_copied_data[1]._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
-                                                      None, deep_copied_data[0],
+                                                      deep_copied_data[0],
                                                       len(self._traj),
                                                       self._multiproc,
                                                       None,
@@ -2172,7 +2162,7 @@ class Environment(HasLogger):
                                 result = _single_run((self._traj._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
-                                                      None, self._runfunc,
+                                                      self._runfunc,
                                                       len(self._traj),
                                                       self._multiproc,
                                                       None,

@@ -55,18 +55,10 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     """
 
-    def __init__(self):
-        self._queue = None
-        self._set_logger()
-
-    @property
-    def queue(self):
-        """The queue to put data on"""
-        return self._queue
-
-    @queue.setter
-    def queue(self, queue):
+    def __init__(self, queue):
         self._queue = queue
+        self._set_logger()
+        self._pickle_queue = True
 
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
@@ -74,7 +66,8 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def __getstate__(self):
         result = self.__dict__.copy()
-        result['_queue'] = None
+        if not self._pickle_queue:
+            result['_queue'] = None
         del result['_logger']
         return result
 
@@ -85,7 +78,9 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def store(self, *args, **kwargs):
         """Puts data to store on queue."""
+        old_pickle = self._pickle_queue
         try:
+            self._pickle_queue = False
             self._queue.put(('STORE', args, kwargs))
         except IOError:
             # # This is due to a bug in Python, repeating the operation works :-/
@@ -124,6 +119,8 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
             self._logger.error('Could not put %s because of: %s' %
                                (str(('STORE', args, kwargs)), str(e)))
             raise
+        finally:
+            self._pickle_queue = old_pickle
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
@@ -146,6 +143,7 @@ class QueueStorageServiceWriter(HasLogger):
     def run(self):
         """Starts listening to the queue."""
         while True:
+            args, kwargs = None, None
             try:
                 to_store_list = []
                 stop_listening = False

@@ -28,6 +28,8 @@ pypet 0.1b.9
 
 *   All pypet relevant imported packages will be stored by the trajectory.
 
+*   The queue no longer needs to be re-passed to the QueueSender
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
