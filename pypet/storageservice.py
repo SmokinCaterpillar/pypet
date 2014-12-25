@@ -60,6 +60,11 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._set_logger()
         self._pickle_queue = True
 
+    @property
+    def queue(self):
+        """One can access the queue"""
+        return self._queue
+
     def __setstate__(self, statedict):
         self.__dict__.update(statedict)
         self._set_logger()
@@ -226,6 +231,11 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def __repr__(self):
         return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
                                                      repr(self._storage_service))
+
+    @property
+    def lock(self):
+        """One can access the lock"""
+        return self._lock
 
     def store(self, *args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""

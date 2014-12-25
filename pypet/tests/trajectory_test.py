@@ -989,7 +989,7 @@ class SingleRunTest(unittest.TestCase):
 
     def test_if_single_run_can_be_pickled(self):
 
-        self.single_run._storageservice=stsv.QueueStorageServiceSender()
+        self.single_run._storageservice=stsv.QueueStorageServiceSender(None)
         dump = pickle.dumps(self.single_run)
 
         single_run_rec = pickle.loads(dump)

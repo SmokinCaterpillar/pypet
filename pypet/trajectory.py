@@ -1110,6 +1110,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     linking_node, link = linking[linking_name]
                     if linking_node.v_run_branch == 'trajectory':
                         return True
+                    if not self.f_is_completed(linking_node.v_run_branch):
+                        return True
             return False
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]

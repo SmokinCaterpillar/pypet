@@ -949,6 +949,7 @@ class Environment(HasLogger):
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
+        self._multip_wrapper = None # The wrapper Service
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
@@ -1819,8 +1820,6 @@ class Environment(HasLogger):
         start_run_idx = 0
         new_runs = 0
 
-        self._traj._finalize() # Reset trajectory to no longer be a single run
-
         old_traj_length = len(self._traj)
         postproc_res = self._postproc(self._traj, results,
                                       *self._postproc_args, **self._postproc_kwargs)
@@ -1898,6 +1897,7 @@ class Environment(HasLogger):
 
             result_queue = None  # Queue for results of `runfunc` in case of multiproc without pool
             self._storage_service = self._traj.v_storage_service
+            self._multip_wrapper = None
 
             if self._continuable:
                 self._trigger_continue_snapshot()
@@ -1909,56 +1909,28 @@ class Environment(HasLogger):
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue
                         # for the results of `runfunc`
-                        if self._postproc is None:
+                        if result_queue is None and self._postproc is None:
                             result_queue = manager.Queue(maxsize=len(self._traj))
                         else:
                             result_queue = manager.Queue()
 
-                    # Prepare Multiprocessing
-                    if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                        # For queue mode we need to have a queue in a block of shared memory.
-                        queue = manager.Queue()
-
-                        self._logger.info('Starting the Storage Queue!')
-
-                        # Wrap a queue writer around the storage service
-                        queue_writer = QueueStorageServiceWriter(self._storage_service, queue)
-
-                        # Start the queue process
-                        queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
-                                                       args=(queue_writer, self._log_path,
-                                                             self._log_stdout))
-                        queue_process.start()
-
-                        # Replace the storage service of the trajectory by a sender.
-                        # The sender will put all data onto the queue.
-                        # The writer from above will receive the data from
-                        # the queue and hand it over to
-                        # the storage service
-                        queue_sender = QueueStorageServiceSender(queue)
-                        self._traj.v_storage_service = queue_sender
-
-                    elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
-
-                        if self._use_pool:
-                            # We need a lock that is shared by all processes.
-                            lock = manager.Lock()
-                        else:
-                            lock = multip.Lock()
-
-                        # Wrap around the storage service to allow the placement of locks around
-                        # the storage procedure.
-                        lock_wrapper = LockWrapper(self._storage_service, lock)
-                        self._traj.v_storage_service = lock_wrapper
-
-                    elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
+                    if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
                         # We assume that storage and loading is multiprocessing safe
                         pass
                     else:
-                        raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                           'not supported, use `%s` or `%s`.'
-                                           % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
-                                              pypetconstants.WRAP_MODE_LOCK))
+                        # Prepare Multiprocessing
+                        if self._multip_wrapper is None:
+                            self._multip_wrapper = MultiprocessWrapper(self._traj,
+                                                               self._wrap_mode,
+                                                               log_path=self._log_path,
+                                                               log_stdout=self._log_stdout,
+                                                               full_copy=None,
+                                                               manager=manager,
+                                                               queue=None,
+                                                               lock=None,
+                                                               lock_with_manager=self._use_pool)
+                        else:
+                            self._multip_wrapper.f_rewrap_storage_service()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2097,18 +2069,8 @@ class Environment(HasLogger):
 
                             results.append(result)
 
-                    # In case of queue mode, we need to signal to the queue writer
-                    # that no more data
-                    # will be put onto the queue
-                    if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                        self._traj.v_storage_service.send_done()
-                        queue_process.join()
-
-                    # Replace the wrapped storage service with the original one
-                    # and do some finalization
-                    self._traj._storage_service = self._storage_service
-                    self._traj._finalize()
-
+                    # Finalize the wrapper
+                    self._multip_wrapper.f_finalize()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2174,14 +2136,15 @@ class Environment(HasLogger):
 
                             results.append(result)
 
-                    # Do some finalization
-                    self._traj._finalize()
 
                     self._logger.info(
                         '\n************************************************************\n'
                         'FINISHED all runs of trajectory\n`%s`.'
                         '\n************************************************************\n' %
                         self._traj.v_name)
+
+                # Do some finalization
+                self._traj._finalize()
 
                 repeat = False
                 if self._postproc is not None:
@@ -2269,3 +2232,107 @@ class Environment(HasLogger):
             self._finish_sumatra()
 
         return results
+
+class MultiprocessWrapper(HasLogger):
+    def __init__(self, trajectory,
+                 wrap_mode,
+                 full_copy=None,
+                 log_path=None,
+                 log_stdout=False,
+                 manager=None,
+                 queue=None,
+                 lock=None,
+                 lock_with_manager=True):
+
+        self._set_logger()
+
+        if full_copy is not None:
+            self._traj.v_full_copy=full_copy
+
+        self._manager = manager
+        self._traj = trajectory
+        self._storage_service = self._traj.v_storage_service
+        self._queue_process = None
+        self._lock_wrapper = None
+        self._wrap_mode = wrap_mode
+        self._queue = queue
+        self._lock = lock
+        self._finalized = False
+        self._log_path = log_path
+        self._log_stdout = log_stdout
+        self._lock_with_manager = lock_with_manager
+
+        self._do_wrap()
+
+    def _do_wrap(self):
+        if self._manager is None:
+            self._manager = multip.Manager()
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+            self._start_queue_process()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
+            self._prepare_lock()
+        else:
+            raise RuntimeError('The mutliprocessing mode %s, your choice is '
+                                           'not supported, use `%s` or `%s`.'
+                                           % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
+                                              pypetconstants.WRAP_MODE_LOCK))
+
+    def _prepare_lock(self):
+        if self._lock is None:
+            if self._lock_with_manager:
+                # We need a lock that is shared by all processes.
+                self._lock = self._manager.Lock()
+            else:
+                self._lock = multip.Lock()
+
+        # Wrap around the storage service to allow the placement of locks around
+        # the storage procedure.
+        lock_wrapper = LockWrapper(self._storage_service, self._lock)
+        self._traj.v_storage_service = lock_wrapper
+        self._lock_wrapper = lock_wrapper
+
+    def _start_queue_process(self):
+        # For queue mode we need to have a queue in a block of shared memory.
+        if self._queue_process is None:
+            if self._queue is None:
+                self._queue = self._manager.Queue()
+
+            self._logger.info('(Re-) Starting the Storage Queue!')
+            # Wrap a queue writer around the storage service
+            queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
+
+            # Start the queue process
+            queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
+                                           args=(queue_writer, self._log_path,
+                                                 self._log_stdout))
+            queue_process.start()
+
+            self._queue_process = queue_process
+            # Replace the storage service of the trajectory by a sender.
+            # The sender will put all data onto the queue.
+            # The writer from above will receive the data from
+            # the queue and hand it over to
+            # the storage service
+            queue_sender = QueueStorageServiceSender(self._queue)
+            self._traj.v_storage_service = queue_sender
+
+    def f_reset_storage_service(self):
+        self._traj._storage_service = self._storage_service
+
+    def f_rewrap_storage_service(self):
+        if self._wrap_mode is pypetconstants.WRAP_MODE_LOCK:
+            self._traj._storage_service = self._lock_wrapper
+        elif self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
+            self._start_queue_process()
+        else:
+            raise RuntimeError('You shall not pass!')
+
+    def f_finalize(self):
+        if self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
+            self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
+                              'store!')
+            self._traj.v_storage_service.send_done()
+            self._queue_process.join()
+            self._queue_process = None
+
+        self.f_reset_storage_service()
