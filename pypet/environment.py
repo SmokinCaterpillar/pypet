@@ -1941,18 +1941,21 @@ class Environment(HasLogger):
                         # We assume that storage and loading is multiprocessing safe
                         pass
                     else:
-                        # Prepare Multiprocessing
-                        lock_with_manager = self._use_pool or self._immediate_postproc
-                        self._multip_wrapper = MultiprocessWrapper(self._traj,
-                                                           self._wrap_mode,
-                                                           full_copy=None,
-                                                           manager=manager,
-                                                           lock=None,
-                                                           lock_with_manager=lock_with_manager,
-                                                           queue=None,
-                                                           start_queue_process=True,
-                                                           log_path=self._log_path,
-                                                           log_stdout=self._log_stdout,)
+                        if self._multip_wrapper is None:
+                            # Prepare Multiprocessing
+                            lock_with_manager = self._use_pool or self._immediate_postproc
+                            self._multip_wrapper = MultiprocessWrapper(self._traj,
+                                                               self._wrap_mode,
+                                                               full_copy=None,
+                                                               manager=manager,
+                                                               lock=None,
+                                                               lock_with_manager=lock_with_manager,
+                                                               queue=None,
+                                                               start_queue_process=True,
+                                                               log_path=self._log_path,
+                                                               log_stdout=self._log_stdout,)
+                        else:
+                            self._multip_wrapper.f_rewrap_storage_service()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2094,7 +2097,8 @@ class Environment(HasLogger):
                             results.append(result)
 
                     # Finalize the wrapper
-                    self._multip_wrapper.f_finalize()
+                    if self._multip_wrapper is not None:
+                        self._multip_wrapper.f_finalize()
 
                     self._logger.info(
                         '\n************************************************************\n'
