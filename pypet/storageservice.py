@@ -64,6 +64,8 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._queue = queue
         self._set_logger()
         self._pickle_queue = True
+        self._max_tries = 99
+        self._sleep_time = 0.1
 
     @property
     def queue(self):
@@ -96,9 +98,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
             self._logger.error('Failed putting data to queue due to error: `%s`' % str(e))
-            max_tries = 999
-            sleep_time = 0.25
-            for trying in range(max_tries):
+            for trying in range(self._max_tries):
                 try:
                     self._logger.error('Failed sending task %s to queue, I will try again.' %
                                        str(('STORE', args, kwargs)))
@@ -107,7 +107,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                     break
                 except IOError as e2:
                     self._logger.error('Failed putting data to queue due to error: `%s`' % str(e2))
-                    time.sleep(sleep_time)
+                    time.sleep(self._sleep_time)
         except TypeError as e:
             # This handles a weird bug under python 3.4 (not 3.3) that sometimes
             # a NoneType is put on the queue instead of real data which needs to be ignored
@@ -136,7 +136,21 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
-        self._queue.put(('DONE', [], {}))
+        try:
+            self._queue.put(('DONE', [], {}))
+        except IOError as e:
+            # # This is due to a bug in Python, repeating the operation works :-/
+            # # See http://bugs.python.org/issue5155
+            self._logger.error('Failed putting data to queue due to error: `%s`' % str(e))
+            for trying in range(self._max_tries):
+                try:
+                    self._logger.error('Failed sending task `DONE` to queue, I will try again.')
+                    self._queue.put(('DONE', [], {}))
+                    self._logger.error('Queue sending try #%d  was successful!' % trying)
+                    break
+                except IOError as e2:
+                    self._logger.error('Failed putting data to queue due to error: `%s`' % str(e2))
+                    time.sleep(self._sleep_time)
 
 
 class QueueStorageServiceWriter(HasLogger):
