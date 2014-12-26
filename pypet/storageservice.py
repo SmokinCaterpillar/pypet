@@ -205,12 +205,12 @@ class QueueStorageServiceWriter(HasLogger):
                         else:
                             raise RuntimeError(
                                 'You queued something that was not intended to be queued!')
-
+                        self._queue.task_done()
                     except queue.Empty:
                         break
                     except TypeError as e:
                         self._logger.error('Could not get %s because of: %s, '
-                                           'I will ignore the error and cwhite for another '
+                                           'I will ignore the error and wait for another '
                                            'try.' %
                                            (str(('STORE', args, kwargs)), str(e)))
                         # Under python 3.4 sometimes NoneTypes are put on the queue
@@ -227,14 +227,9 @@ class QueueStorageServiceWriter(HasLogger):
                 if stop_listening:
                     break
 
-            except:
+            except Exception as e2:
+                self._logger.error('Encountered error: `%s`' % str(e2))
                 raise
-            finally:
-                try:
-                    self._queue.task_done()
-                except ValueError:
-                    pass
-
 
 class LockWrapper(MultiprocWrapper, HasLogger):
     """For multiprocessing in :const:`~pypet.pypetconstants.WRAP_MODE_LOCK` mode,

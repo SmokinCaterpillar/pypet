@@ -1977,7 +1977,7 @@ class Environment(HasLogger):
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue
                         # for the results of `runfunc`
-                        if result_queue is None and self._postproc is None:
+                        if result_queue is None and not self._immediate_postproc:
                             result_queue = manager.Queue(maxsize=total_runs)
                         else:
                             result_queue = manager.Queue()
@@ -2012,6 +2012,7 @@ class Environment(HasLogger):
                     iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
 
                     if self._use_pool:
+                        self._logger.info('Starting pool')
                         mpool = multip.Pool(self._ncores)
                         # Let the pool workers do their jobs provided by the generator
                         pool_results = mpool.imap(_single_run, iterator)
@@ -2019,6 +2020,8 @@ class Environment(HasLogger):
                         # Everything is done
                         mpool.close()
                         mpool.join()
+
+                        self._logger.info('Pool has joined, will delete it.')
 
                         del mpool
 
@@ -2038,7 +2041,7 @@ class Environment(HasLogger):
                         no_cap = True  # Evaluates if new processes are allowed to be started
                         # or if cap is reached
                         signal_cap = True  # If True cap warning is emitted
-                        keep_running = True  # Evaluates to falls if trajectory produces
+                        keep_running = True  # Evaluates to false if trajectory produces
                         # no more single runs
                         process_dict = {}  # Dict containing all subprocees
 
@@ -2102,8 +2105,8 @@ class Environment(HasLogger):
                                     if self._postproc is not None and self._immediate_postproc:
                                         while not result_queue.empty():
                                             result = result_queue.get()
-
                                             results.append(result)
+                                            result_queue.task_done()
 
                                         self._logger.info(
                                             '\n***********************************'
@@ -2140,12 +2143,16 @@ class Environment(HasLogger):
                         # Get all results from the result queue
                         while not result_queue.empty():
                             result = result_queue.get()
-
                             results.append(result)
+                            result_queue.task_done()
 
                     # Finalize the wrapper
                     if self._multiproc_wrapper is not None:
                         self._multiproc_wrapper.f_finalize()
+                    # Finalize the result queue
+                    if result_queue is not None:
+                        del result_queue
+                        result_queue = None
 
                     self._logger.info(
                         '\n************************************************************\n'
