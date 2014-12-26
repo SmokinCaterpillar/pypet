@@ -3,6 +3,7 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
+import os
 import warnings
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.trajectory import Trajectory
@@ -251,7 +252,34 @@ class StorageTest(TrajectoryComparator):
 
         self.compare_trajectories(traj,traj2)
 
-        print 'Mismatch testing done!'
+        print('Mismatch testing done!')
+
+    def test_logging_stdout(self):
+        filename = 'teststdoutlog.hdf5'
+        env = Environment(filename=make_temp_file(filename),
+                          log_stdout=True)
+
+        path = env.v_log_path
+
+        mainstr = 'sTdOuTLoGGinG'
+        print(mainstr)
+        errstr = 'sTdErRLoGGinG'
+        sys.stderr.write(errstr)
+
+        mainfilename = os.path.join(path, 'main.txt')
+        with open(mainfilename, mode='r') as mainf:
+            full_text = mainf.read()
+
+        self.assertTrue(mainstr in full_text)
+        self.assertTrue('4444444' not in full_text)
+
+        errfilename = os.path.join(path, 'errors_and_warnings.txt')
+        with open(errfilename, mode='r') as errf:
+            full_text = errf.read()
+
+        self.assertTrue(errstr in full_text)
+
+        env.f_disable_logging()
 
 
     def test_partially_delete_stuff(self):

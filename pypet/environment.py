@@ -1339,6 +1339,11 @@ class Environment(HasLogger):
         return self._traj
 
     @property
+    def v_log_path(self):
+        """The full path to the (sub) folder where log files are stored"""
+        return self._log_path
+
+    @property
     def v_hexsha(self):
         """The SHA1 identifier of the environment.
 

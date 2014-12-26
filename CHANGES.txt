@@ -40,6 +40,8 @@ pypet 0.1b.9
 *   Environments can be used as context managers to disable the logging to files after the
     experiment.
 
+*   Environments provide the ``v_log_path`` property to get the current log path
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
