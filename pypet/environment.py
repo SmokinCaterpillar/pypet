@@ -1966,13 +1966,15 @@ class Environment(HasLogger):
             if self._continuable:
                 self._trigger_continue_snapshot()
 
-            if self._multiproc:
-                manager = multip.Manager()
+
 
             while True:
                 total_runs = len(self._traj)
 
                 if self._multiproc:
+
+                    manager = multip.Manager()
+
 
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue
@@ -1986,21 +1988,18 @@ class Environment(HasLogger):
                         # We assume that storage and loading is multiprocessing safe
                         pass
                     else:
-                        if self._multiproc_wrapper is None:
-                            # Prepare Multiprocessing
-                            lock_with_manager = self._use_pool or self._immediate_postproc
-                            self._multiproc_wrapper = MultiprocessWrapper(self._traj,
-                                                               self._wrap_mode,
-                                                               full_copy=None,
-                                                               manager=manager,
-                                                               lock=None,
-                                                               lock_with_manager=lock_with_manager,
-                                                               queue=None,
-                                                               start_queue_process=True,
-                                                               log_path=self._log_path,
-                                                               log_stdout=self._log_stdout,)
-                        else:
-                            self._multiproc_wrapper.f_rewrap_storage_service()
+                        # Prepare Multiprocessing
+                        lock_with_manager = self._use_pool or self._immediate_postproc
+                        self._multiproc_wrapper = MultiprocessWrapper(self._traj,
+                                                           self._wrap_mode,
+                                                           full_copy=None,
+                                                           manager=manager,
+                                                           lock=None,
+                                                           lock_with_manager=lock_with_manager,
+                                                           queue=None,
+                                                           start_queue_process=True,
+                                                           log_path=self._log_path,
+                                                           log_stdout=self._log_stdout,)
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2149,9 +2148,10 @@ class Environment(HasLogger):
                     # Finalize the wrapper
                     if self._multiproc_wrapper is not None:
                         self._multiproc_wrapper.f_finalize()
+                        self._multiproc_wrapper = None
+
                     # Finalize the result queue
                     if result_queue is not None:
-                        del result_queue
                         result_queue = None
 
                     self._logger.info(
@@ -2224,6 +2224,7 @@ class Environment(HasLogger):
                         'FINISHED all runs of trajectory\n`%s`.'
                         '\n************************************************************\n' %
                         self._traj.v_name)
+
 
                 # Do some finalization
                 self._traj._finalize()
@@ -2479,12 +2480,10 @@ class MultiprocessWrapper(HasLogger):
             queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
 
             # Start the queue process
-            queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
+            self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
                                            args=(queue_writer, self._log_path,
                                                  self._log_stdout))
-            queue_process.start()
-
-            self._queue_process = queue_process
+            self._queue_process.start()
 
         if self._queue_sender is None:
             # Replace the storage service of the trajectory by a sender.
@@ -2508,6 +2507,10 @@ class MultiprocessWrapper(HasLogger):
             self._traj.v_storage_service.send_done()
             self._queue_process.join()
 
+        if self._manager is not None:
+            self._manager.shutdown()
+
+        self._manager = None
         self._queue_process = None
         self._queue = None
         self._queue_sender = None
