@@ -2461,10 +2461,9 @@ class MultiprocessWrapper(HasLogger):
 
         # Wrap around the storage service to allow the placement of locks around
         # the storage procedure.
-        if self._lock_wrapper is None:
-            lock_wrapper = LockWrapper(self._storage_service, self._lock)
-            self._traj.v_storage_service = lock_wrapper
-            self._lock_wrapper = lock_wrapper
+        lock_wrapper = LockWrapper(self._storage_service, self._lock)
+        self._traj.v_storage_service = lock_wrapper
+        self._lock_wrapper = lock_wrapper
 
     def _prepare_queue(self):
         # For queue mode we need to have a queue in a block of shared memory.
@@ -2473,26 +2472,23 @@ class MultiprocessWrapper(HasLogger):
                 self._manager = multip.Manager()
             self._queue = self._manager.Queue()
 
-        if self._queue_process is None:
+        self._logger.info('Starting the Storage Queue!')
+        # Wrap a queue writer around the storage service
+        queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
 
-            self._logger.info('(Re-) Starting the Storage Queue!')
-            # Wrap a queue writer around the storage service
-            queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
+        # Start the queue process
+        self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
+                                       args=(queue_writer, self._log_path,
+                                             self._log_stdout))
+        self._queue_process.start()
 
-            # Start the queue process
-            self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
-                                           args=(queue_writer, self._log_path,
-                                                 self._log_stdout))
-            self._queue_process.start()
-
-        if self._queue_sender is None:
-            # Replace the storage service of the trajectory by a sender.
-            # The sender will put all data onto the queue.
-            # The writer from above will receive the data from
-            # the queue and hand it over to
-            # the storage service
-            self._queue_sender = QueueStorageServiceSender(self._queue)
-            self._traj.v_storage_service = self._queue_sender
+        # Replace the storage service of the trajectory by a sender.
+        # The sender will put all data onto the queue.
+        # The writer from above will receive the data from
+        # the queue and hand it over to
+        # the storage service
+        self._queue_sender = QueueStorageServiceSender(self._queue)
+        self._traj.v_storage_service = self._queue_sender
 
     def f_finalize(self):
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
