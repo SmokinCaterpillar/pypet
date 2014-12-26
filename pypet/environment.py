@@ -962,7 +962,7 @@ class Environment(HasLogger):
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
-        self._multip_wrapper = None # The wrapper Service
+        self._multiproc_wrapper = None # The wrapper Service
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
@@ -1961,7 +1961,7 @@ class Environment(HasLogger):
 
             result_queue = None  # Queue for results of `runfunc` in case of multiproc without pool
             self._storage_service = self._traj.v_storage_service
-            self._multip_wrapper = None
+            self._multiproc_wrapper = None
 
             if self._continuable:
                 self._trigger_continue_snapshot()
@@ -1984,10 +1984,10 @@ class Environment(HasLogger):
                         # We assume that storage and loading is multiprocessing safe
                         pass
                     else:
-                        if self._multip_wrapper is None:
+                        if self._multiproc_wrapper is None:
                             # Prepare Multiprocessing
                             lock_with_manager = self._use_pool or self._immediate_postproc
-                            self._multip_wrapper = MultiprocessWrapper(self._traj,
+                            self._multiproc_wrapper = MultiprocessWrapper(self._traj,
                                                                self._wrap_mode,
                                                                full_copy=None,
                                                                manager=manager,
@@ -1998,7 +1998,7 @@ class Environment(HasLogger):
                                                                log_path=self._log_path,
                                                                log_stdout=self._log_stdout,)
                         else:
-                            self._multip_wrapper.f_rewrap_storage_service()
+                            self._multiproc_wrapper.f_rewrap_storage_service()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2142,8 +2142,8 @@ class Environment(HasLogger):
                             results.append(result)
 
                     # Finalize the wrapper
-                    if self._multip_wrapper is not None:
-                        self._multip_wrapper.f_finalize()
+                    if self._multiproc_wrapper is not None:
+                        self._multiproc_wrapper.f_finalize()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2354,7 +2354,7 @@ class MultiprocessWrapper(HasLogger):
         Leave ``full_copy=None`` if the setting from the passed trajectory should be used.
         Otherwise ``v_full_copy`` of the trajectory is changed to your chosen value.
 
-    :param manger:
+    :param manager:
 
         You can pass an optional multiprocessing manager here,
         if you already have instantiated one.
@@ -2364,6 +2364,35 @@ class MultiprocessWrapper(HasLogger):
 
         You can pass a multiprocessing lock here, if you already have instantiated one.
         Leave ``None`` if you want the wrapper to create one in case of ``'LOCK'`` wrapping.
+
+    :param lock_with_manager:
+
+        In case you use ``'LOCK'`` wrapping if a lock should be created from the multiprocessing
+        module directly ``multiprocessing.Lock()`` or via a manager
+        ``multiprocessing.Manager().Lock()`` (if you specified a manager, this manager will be
+        used). The former is usually faster whereas the latter is more flexible and can
+        be used with a pool of processes, for instance.
+
+    :param queue:
+
+        You can pass a multiprocessing queue here, if you already instantiated one.
+        Leave ``None`` if you want the wrapper to create one in case of ''`QUEUE'`` wrapping.
+
+    :param log_path:
+
+        You can specify a absolute path to a folder where log files should be stored
+        in case you instantiated logging.
+        Only useful in case of you use the ``'QUEUE'`` wrapping. Messages from the newly
+        started queue process will be logged to a file. Note that
+        messages of your custom sub-processes are not automatically logged,
+        you have to enable this manually in your processes.
+
+        Leave ``None`` if you don't want messages from the queue process to be logged to
+        a file.
+
+    :param log_stdout
+
+        If stdout and stderr should also be logged.
 
     """
     def __init__(self, trajectory,
