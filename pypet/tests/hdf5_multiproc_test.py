@@ -33,7 +33,7 @@ class MultiprocLockTest(EnvironmentTest):
         EnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
-        self.ncores = 3
+        self.ncores = 2
         self.use_pool=True
 
 class MultiprocSortQueueTest(ResultSortTest):
@@ -71,7 +71,7 @@ class MultiprocNoPoolLockTest(EnvironmentTest):
         EnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
-        self.ncores = 3
+        self.ncores = 2
         self.use_pool=False
 
 class MultiprocNoPoolSortQueueTest(ResultSortTest):
