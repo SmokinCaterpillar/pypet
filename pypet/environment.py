@@ -2494,14 +2494,8 @@ class MultiprocessWrapper(HasLogger):
             self._queue_sender = QueueStorageServiceSender(self._queue)
             self._traj.v_storage_service = self._queue_sender
 
-    def f_reset_storage_service(self):
-        self._traj._storage_service = self._storage_service
-
-    def f_rewrap_storage_service(self):
-        self._do_wrap()
-
     def f_finalize(self):
-        if self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
                               'store!')
             self._traj.v_storage_service.send_done()
@@ -2517,4 +2511,4 @@ class MultiprocessWrapper(HasLogger):
         self._lock = None
         self._lock_wrapper = None
 
-        self.f_reset_storage_service()
+        self._traj._storage_service = self._storage_service
