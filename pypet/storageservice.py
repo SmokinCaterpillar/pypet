@@ -2462,7 +2462,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                         recursive=recursive)
 
         except pt.NoSuchNodeError:
-            self._logger.warning('Cannot store `%s` the parental hdf5 node with path `%s` does '
+            self._logger.debug('Cannot store `%s` the parental hdf5 node with path `%s` does '
                                  'not exist on disk.' %
                                  (traj_node.v_name, hdf5_location))
 
@@ -2474,7 +2474,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                    (traj_node.v_name, hdf5_location))
                 raise
             else:
-                self._logger.warning('I will try to store the path from trajectory root to '
+                self._logger.debug('I will try to store the path from trajectory root to '
                                      'the child now.')
                 self._tree_store_sub_branch(pypetconstants.LEAF,
                                             traj_node._nn_interface._root_instance,
@@ -2779,7 +2779,7 @@ class HDF5StorageService(StorageService, HasLogger):
             to_link_hdf5_group = ptcompat.get_node(self._hdf5file,
                                                    where=linking_name)
         except pt.NoSuchNodeError:
-            self._logger.warning('Could not store link `%s` under `%s` immediately, '
+            self._logger.info('Could not store link `%s` under `%s` immediately, '
                                  'need to store `%s` first.' % (link,
                                                             node_in_traj.v_full_name,
                                                             linked_traj_node.v_full_name))

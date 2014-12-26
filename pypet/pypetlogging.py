@@ -72,7 +72,7 @@ class StreamToLogger(object):
         self._linebuf = ''
 
     def write(self, buf):
-        for line in buf.rstrip().splitlines():
+        for line in buf.splitlines():
             self._logger.log(self._log_level, line.rstrip())
 
     def flush(self):

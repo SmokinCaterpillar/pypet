@@ -40,6 +40,10 @@ class Multiply(object):
 
 class ContinueTest(TrajectoryComparator):
 
+    def tearDown(self):
+        if hasattr(self, 'envs'):
+            for env in self.envs:
+                env.f_disable_logging()
 
     def make_run(self,env):
 

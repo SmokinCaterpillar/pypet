@@ -158,6 +158,9 @@ class LinkEnvironmentTest(TrajectoryComparator):
         self.fletcher32 = False
         self.encoding = 'utf8'
 
+    def tearDown(self):
+        self.env.f_disable_logging()
+
     def setUp(self):
         self.set_mode()
 

@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from pypet import BaseParameter, BaseResult
 
 __author__ = 'Robert Meyer'
@@ -10,7 +13,7 @@ import pypet.pypetconstants
 import pypet.compat as compat
 import scipy.sparse as spsp
 import os
-import logging
+
 import random
 
 import sys
@@ -22,6 +25,7 @@ else:
 import shutil
 import numpy as np
 import pandas as pd
+
 
 
 import tempfile
@@ -323,6 +327,11 @@ def to_dict_wo_config(traj):
         return res_dict
 
 class TrajectoryComparator(unittest.TestCase):
+
+    @classmethod
+    def tearDownClass(cls):
+        root = logging.getLogger()
+        root.handlers = [] # delete all handlers
 
     def compare_trajectories(self,traj1,traj2):
 

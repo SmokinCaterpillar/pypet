@@ -50,6 +50,8 @@ def run_experiments():
         traj_names.append(traj.v_name)
         filenames.append(traj.v_storage_service.filename)
 
+        env.f_disable_logging()
+
     return filenames, traj_names, pathfolder
 
 def test_loading(filenames, traj_names):
@@ -121,6 +123,8 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
 
     if profile_loading:
         cProfile.runctx('load()', {'load': load},globals(), filename='load_stats.profile', sort=1)
+
+    env.f_disable_logging()
 
 
 

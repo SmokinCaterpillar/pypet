@@ -11,6 +11,7 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
+logging.basicConfig(level=logging.INFO)
 import pypet.pypetexceptions as pex
 
 import sys
@@ -67,7 +68,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_migrations(self):
 
-        traj = Trajectory(name='Test', filename=make_temp_file('migrate.hdf5'))
+        traj = Trajectory(name='Testmigrate', filename=make_temp_file('migrate.hdf5'))
 
         traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
         traj.f_add_derived_parameter('ffa', 42)
@@ -89,7 +90,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_wildcard_search(self):
 
-        traj = Trajectory(name='Test', filename=make_temp_file('wilcard.hdf5'))
+        traj = Trajectory(name='Testwildcard', filename=make_temp_file('wilcard.hdf5'))
 
         traj.f_add_parameter('expl', 2)
         traj.f_explore({'expl':[1,2,3,4]})
@@ -105,29 +106,39 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
+        print('Removing child1')
+
         traj.f_remove_child('results', recursive=True)
 
+        print('Doing auto-load')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)
 
+        print('Removing child2')
+
         traj.f_remove_child('results', recursive=True)
 
+        print('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[-2].jjj==43)
         self.assertTrue(traj.results.wc2test[-2].hhh==333)
 
+        print('Removing child3')
         traj.f_remove_child('results', recursive=True)
 
+        print('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[1].jjj==43)
         self.assertTrue(traj.results.wc2test[-1].hhh==333)
 
+        print('Done with wildcard test')
+
     def test_store_and_load_large_dictionary(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('large_dict.hdf5'))
+        traj = Trajectory(name='Testlargedict', filename=make_temp_file('large_dict.hdf5'))
 
         large_dict = {}
 
@@ -218,7 +229,7 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_version_mismatch(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('testversionmismatch.hdf5'))
+        traj = Trajectory(name='TestVERSION', filename=make_temp_file('testversionmismatch.hdf5'))
 
         traj.f_add_parameter('group1.test',42)
 
@@ -230,8 +241,6 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-
-
         traj2 = Trajectory(name=traj.v_name, add_time=False,
                            filename=make_temp_file('testversionmismatch.hdf5'))
 
@@ -241,6 +250,8 @@ class StorageTest(TrajectoryComparator):
         traj2.f_load(load_results=2,load_parameters=2, force=True)
 
         self.compare_trajectories(traj,traj2)
+
+        print 'Mismatch testing done!'
 
 
     def test_partially_delete_stuff(self):
@@ -272,6 +283,7 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(res not in traj)
 
     def test_throw_warning_if_old_kw_is_used(self):
+        pass
 
         filename = make_temp_file('hdfwarning.hdf5')
 
@@ -289,8 +301,10 @@ class StorageTest(TrajectoryComparator):
         with warnings.catch_warnings(record=True) as w:
             traj.f_load(dynamically_imported_classes=[])
 
+        env.f_disable_logging()
+
     def test_overwrite_stuff(self):
-        traj = Trajectory(name='Test', filename=make_temp_file('testowrite.hdf5'))
+        traj = Trajectory(name='TestOverwrite', filename=make_temp_file('testowrite.hdf5'))
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -354,10 +368,10 @@ class StorageTest(TrajectoryComparator):
             traj.f_load_item(traj.test, load_except=['x'], load_only=['y'])
 
 
-    def test_hdf5_settings(self):
+    def test_hdf5_settings_and_context(self):
 
         filename = make_temp_file('hdfsettings.hdf5')
-        env = Environment('testraj', filename=filename,
+        with Environment('testraj', filename=filename,
                           add_time=True,
                          comment='',
                          dynamic_imports=None,
@@ -380,36 +394,36 @@ class StorageTest(TrajectoryComparator):
                          small_overview_tables=True,
                          large_overview_tables=True,
                          results_per_run=19,
-                         derived_parameters_per_run=17)
+                         derived_parameters_per_run=17) as env:
 
-        traj = env.v_trajectory
+            traj = env.v_trajectory
 
-        traj.f_store()
+            traj.f_store()
 
-        hdf5file = pt.openFile(filename=filename)
+            hdf5file = pt.openFile(filename=filename)
 
-        table= hdf5file.root._f_getChild(traj.v_name)._f_getChild('overview')._f_getChild('hdf5_settings')
+            table= hdf5file.root._f_getChild(traj.v_name)._f_getChild('overview')._f_getChild('hdf5_settings')
 
-        row = table[0]
+            row = table[0]
 
-        self.assertTrue(row['complevel'] == 4)
+            self.assertTrue(row['complevel'] == 4)
 
-        self.assertTrue(row['complib'] == compat.tobytetype('zlib'))
+            self.assertTrue(row['complib'] == compat.tobytetype('zlib'))
 
-        self.assertTrue(row['shuffle'])
-        self.assertTrue(row['fletcher32'])
-        self.assertTrue(row['pandas_append'])
-        self.assertTrue(row['pandas_format'] == compat.tobytetype('t'))
+            self.assertTrue(row['shuffle'])
+            self.assertTrue(row['fletcher32'])
+            self.assertTrue(row['pandas_append'])
+            self.assertTrue(row['pandas_format'] == compat.tobytetype('t'))
 
-        for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
-            self.assertTrue(row[table_name])
+            for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
+                self.assertTrue(row[table_name])
 
-        self.assertTrue(row['purge_duplicate_comments'])
-        self.assertTrue(row['explored_parameters_runs'])
-        self.assertTrue(row['results_per_run']==19)
-        self.assertTrue(row['derived_parameters_per_run'] == 17)
+            self.assertTrue(row['purge_duplicate_comments'])
+            self.assertTrue(row['explored_parameters_runs'])
+            self.assertTrue(row['results_per_run']==19)
+            self.assertTrue(row['derived_parameters_per_run'] == 17)
 
-        hdf5file.close()
+            hdf5file.close()
 
 
     def test_store_items_and_groups(self):
@@ -554,7 +568,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.explored ={'Normal.trial': [0,1]}
         traj.f_explore(cartesian_product(self.explored))
 
-
+    def tearDown(self):
+        self.env.f_disable_logging()
 
     def setUp(self):
         self.set_mode()
@@ -610,6 +625,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
     def test_a_large_run(self):
+        print('Testing large run')
         self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore
         self.explore_large(self.traj)
@@ -619,7 +635,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
-
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -817,8 +832,6 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(pex.DataNotInStorageError):
             self.traj.parameters.f_load_child('new', recursive=True, load_data=pypetconstants.LOAD_SKELETON)
 
-
-
     def test_switch_on_all_comments(self):
         self.explore(self.traj)
         self.traj.purge_duplicate_comments=0
@@ -960,6 +973,9 @@ class ResultSortTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
         self.use_pool=True
+
+    def tearDown(self):
+        self.env.f_disable_logging()
 
     def setUp(self):
         self.set_mode()
@@ -1139,9 +1155,9 @@ class ResultSortTest(TrajectoryComparator):
         traj.v_idx=-1
 
 
-def test_runfunc(traj, list_that_changes):
-    traj.f_add_result('kkk', list_that_changes[traj.v_idx] + traj.v_idx)
-    list_that_changes[traj.v_idx] = 1000
+# def test_runfunc(traj, list_that_changes):
+#     traj.f_add_result('kkk', list_that_changes[traj.v_idx] + traj.v_idx)
+#     list_that_changes[traj.v_idx] = 1000
 
 # class DeepCopyTest(TrajectoryComparator):
 #

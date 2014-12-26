@@ -913,6 +913,10 @@ class Environment(HasLogger):
         self._traj._environment_hexsha = self._hexsha
         self._traj._environment_name = self._name
 
+        # Helper variables to clean up logging if wanted:
+        self._main_log_handler = None
+        self._error_log_handler = None
+
         # If no log folder is provided, create the default log folder
         log_path = None
         if log_level is not None:
@@ -924,7 +928,8 @@ class Environment(HasLogger):
             log_path = os.path.join(log_folder, self._traj.v_name)
             log_path = os.path.join(log_path, self.v_name)
             # Create the loggers
-            self._make_logging_handlers(log_path, log_level, log_stdout)
+            self._main_log_handler, self._error_log_handler = self._make_logging_handlers(
+                log_path, log_level, log_stdout)
 
         if dill is not None:
             # If you do not set this log-level dill will flood any logging file :-(
@@ -1159,30 +1164,59 @@ class Environment(HasLogger):
                                           self.v_trajectory.v_name)
         return repr_string
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.f_disable_logging()
+
+    def f_disable_logging(self):
+        """Removes all logging handlers and stops logging to files and logging stdout."""
+        if self._log_stdout:
+            self._logger.info('Restoring stdout')
+            sys.stdout = sys.__stdout__
+            self._logger.info('Restoring stderr')
+            sys.stderr = sys.__stderr__
+        if self._error_log_handler is not None:
+            self._logger.info('Disabling logging to the error file')
+            root = logging.getLogger()
+            root.removeHandler(self._error_log_handler)
+            self._error_logger_handler = None
+        if self._main_log_handler is not None:
+            self._logger.info('Disabling logging to main file')
+            root = logging.getLogger()
+            root.removeHandler(self._main_log_handler)
+            self._main_log_handler = None
+        # #logging.shutdown()
+        pass
+
     @staticmethod
     def _make_logging_handlers(log_path, log_level, log_stdout):
+        """Creates logging handlers and redirects stdout.
 
+        Moreover, returns the handlers.
+
+        """
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
 
-        # Check if there already exist logging handlers, if so, we assume the user
-        # has already set a log  level. If not, we set the log level to INFO
-        if len(logging.getLogger().handlers) == 0:
-            logging.basicConfig(level=log_level)
-
+        # Set the log level to the specified one
+        logging.basicConfig(level=log_level)
+        #
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
             '%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h = logging.FileHandler(filename=log_path + '/main.txt')
+        main_log_handler = logging.FileHandler(filename=log_path + '/main.txt')
         root = logging.getLogger()
-        root.addHandler(h)
-
+        root.addHandler(main_log_handler)
+        #
         # Add a handler for storing warnings and errors to a text file
-        h = logging.FileHandler(filename=log_path + '/errors_and_warnings.txt')
-        h.setLevel(logging.WARNING)
+        error_log_handler = logging.FileHandler(filename=log_path +
+                                                               '/errors_and_warnings.txt')
+        error_log_handler.setLevel(logging.WARNING)
         root = logging.getLogger()
-        root.addHandler(h)
+        root.addHandler(error_log_handler)
 
         if log_stdout:
             # Also copy standard out and error to the log files
@@ -1194,6 +1228,8 @@ class Environment(HasLogger):
 
         for handler in root.handlers:
             handler.setFormatter(f)
+
+        return main_log_handler, error_log_handler
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
@@ -1809,12 +1845,12 @@ class Environment(HasLogger):
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)
 
-    def _make_iterator(self, result_queue, start_run_idx):
+    def _make_iterator(self, result_queue, start_run_idx, total_runs):
         """Returns an iterator over all runs for multiprocessing"""
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._log_stdout,
-                 self._runfunc, len(self._traj),
+                 self._runfunc, total_runs,
                  self._multiproc,
                  result_queue,
                  self._args,
@@ -1822,7 +1858,7 @@ class Environment(HasLogger):
                  self._clean_up_runs,
                  self._continue_path,
                  self._automatic_storing)
-                for n in compat.xrange(start_run_idx, len(self._traj))
+                for n in compat.xrange(start_run_idx, total_runs)
                 if not self._traj._is_completed(n))
 
     def _execute_postproc(self, results):
@@ -1926,6 +1962,8 @@ class Environment(HasLogger):
                 self._trigger_continue_snapshot()
 
             while True:
+                total_runs = len(self._traj)
+
                 if self._multiproc:
                     manager = multip.Manager()
 
@@ -1933,7 +1971,7 @@ class Environment(HasLogger):
                         # If we spawn a single process for each run, we need an additional queue
                         # for the results of `runfunc`
                         if result_queue is None and self._postproc is None:
-                            result_queue = manager.Queue(maxsize=len(self._traj))
+                            result_queue = manager.Queue(maxsize=total_runs)
                         else:
                             result_queue = manager.Queue()
 
@@ -1964,7 +2002,7 @@ class Environment(HasLogger):
                         (self._traj.v_name, self._ncores))
 
                     # Create a generator to generate the tasks for multiprocessing
-                    iterator = self._make_iterator(result_queue, start_run_idx)
+                    iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
 
                     if self._use_pool:
                         mpool = multip.Pool(self._ncores)
@@ -2086,8 +2124,10 @@ class Environment(HasLogger):
                                                 new_runs
                                             )
 
+                                            total_runs = len(self._traj)
                                             iterator = self._make_iterator(result_queue,
-                                                                           start_run_idx)
+                                                                           start_run_idx,
+                                                                           total_runs)
                             time.sleep(0.01)
 
                         # Get all results from the result queue
@@ -2126,7 +2166,7 @@ class Environment(HasLogger):
                         self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
-                    for n in compat.xrange(start_run_idx, len(self._traj)):
+                    for n in compat.xrange(start_run_idx, total_runs):
                         if not self._traj._is_completed(n):
 
                             if self._deep_copy_data:  # Not supported ATM,
@@ -2140,7 +2180,7 @@ class Environment(HasLogger):
                                                       self._log_path,
                                                       self._log_stdout,
                                                       deep_copied_data[0],
-                                                      len(self._traj),
+                                                      total_runs,
                                                       self._multiproc,
                                                       None,
                                                       deep_copied_data[2],
@@ -2153,7 +2193,7 @@ class Environment(HasLogger):
                                                       self._log_path,
                                                       self._log_stdout,
                                                       self._runfunc,
-                                                      len(self._traj),
+                                                      total_runs,
                                                       self._multiproc,
                                                       None,
                                                       self._args,
