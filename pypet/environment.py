@@ -1966,11 +1966,13 @@ class Environment(HasLogger):
             if self._continuable:
                 self._trigger_continue_snapshot()
 
+            if self._multiproc:
+                manager = multip.Manager()
+
             while True:
                 total_runs = len(self._traj)
 
                 if self._multiproc:
-                    manager = multip.Manager()
 
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue
@@ -2420,7 +2422,7 @@ class MultiprocessWrapper(HasLogger):
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._lock = lock
-        self._finalized = False
+
         self._log_path = log_path
         self._log_stdout = log_stdout
         self._lock_with_manager = lock_with_manager
@@ -2451,9 +2453,10 @@ class MultiprocessWrapper(HasLogger):
 
         # Wrap around the storage service to allow the placement of locks around
         # the storage procedure.
-        lock_wrapper = LockWrapper(self._storage_service, self._lock)
-        self._traj.v_storage_service = lock_wrapper
-        self._lock_wrapper = lock_wrapper
+        if self._lock_wrapper is None:
+            lock_wrapper = LockWrapper(self._storage_service, self._lock)
+            self._traj.v_storage_service = lock_wrapper
+            self._lock_wrapper = lock_wrapper
 
     def _prepare_queue(self):
         # For queue mode we need to have a queue in a block of shared memory.
@@ -2462,7 +2465,7 @@ class MultiprocessWrapper(HasLogger):
                 self._manager = multip.Manager()
             self._queue = self._manager.Queue()
 
-        if self._queue_process is None and self._start_queue_process:
+        if self._queue_process is None:
 
             self._logger.info('(Re-) Starting the Storage Queue!')
             # Wrap a queue writer around the storage service
@@ -2489,12 +2492,7 @@ class MultiprocessWrapper(HasLogger):
         self._traj._storage_service = self._storage_service
 
     def f_rewrap_storage_service(self):
-        if self._wrap_mode is pypetconstants.WRAP_MODE_LOCK:
-            self._traj._storage_service = self._lock_wrapper
-        elif self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
-            self._prepare_queue()
-        else:
-            raise RuntimeError('You shall not pass!')
+        self._do_wrap()
 
     def f_finalize(self):
         if self._wrap_mode is pypetconstants.WRAP_MODE_QUEUE:
@@ -2502,6 +2500,11 @@ class MultiprocessWrapper(HasLogger):
                               'store!')
             self._traj.v_storage_service.send_done()
             self._queue_process.join()
-            self._queue_process = None
+
+        self._queue_process = None
+        self._queue = None
+        self._queue_sender = None
+        self._lock = None
+        self._lock_wrapper = None
 
         self.f_reset_storage_service()
