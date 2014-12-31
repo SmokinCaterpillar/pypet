@@ -284,3 +284,6 @@ class LinkMergeTest(TrajectoryComparator):
                 self.assertTrue(param == 111)
             else:
                 self.assertTrue(param == 53)
+
+        self.env1.f_disable_logging()
+        self.env2.f_disable_logging()
