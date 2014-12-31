@@ -2882,10 +2882,15 @@ class NNGroupNode(NNTreeNode):
 
         :param store_existing:
 
-            Set this to `False` if you want faster storage. *pypet* will automatically skip
+            Set this to ``False`` if you want faster storage. *pypet* will automatically skip
             all checks if new data can be added to a node that has already been stored.
             For example, this will skip checking of new entries to annotations in group nodes or
             data items within results.
+
+            Be aware that data is not overwritten or deleted even in case ``store_existing=True``.
+            Only new data is added to dist. If you want to overwrite existing data,
+            check :func:`~pypet.trajectory.Trajectory.f_store_item` and
+            :func:`~pypet.trajectory.Trajectory.f_delete_item`.
 
         :raises: ValueError if the child does not exist.
 

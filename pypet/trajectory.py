@@ -2402,7 +2402,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._stored = in_store
 
-    def f_store(self, new_name=None, new_filename=None, only_init=False):
+    def f_store(self, new_name=None, new_filename=None, only_init=False, store_existing=True):
         """Stores the trajectory to disk.
 
         :param filename:
@@ -2421,6 +2421,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             If you just want to initialise the store. If yes, only meta information about
             the trajectory is stored and none of the nodes/leaves within the trajectory.
+
+        :param store_existing:
+
+            Set this to ``False`` if you want faster storage. *pypet* will automatically skip
+            all checks if new data can be added to a node that has already been stored.
+            For example, this will skip checking of new entries to annotations in group nodes or
+            data items within results.
+
+            Be aware that data is not overwritten or deleted even in case ``store_existing=True``.
+            Only new data is added to disk. If you want to overwrite existing data,
+            check :func:`~pypet.trajectory.Trajectory.f_store_item` and
+            :func:`~pypet.trajectory.Trajectory.f_delete_item`.
+
+            Only considered if ``only_init=False``.
 
         If you use the HDF5 Storage Service only novel data is stored to disk.
 
@@ -2445,7 +2459,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_trajectory_name,
-                                    store_final=False, store_data=True)
+                                    store_final=False, store_data=True,
+                                    store_existing=store_existing)
         else:
             if new_filename is not None or new_name is not None:
                 self.f_migrate(new_name, new_filename)
@@ -2455,7 +2470,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self._expansion_not_stored = False
 
             self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
-                                        only_init=only_init)
+                                        only_init=only_init,
+                                        store_existing=store_existing)
             self._stored = True
 
     @not_in_run

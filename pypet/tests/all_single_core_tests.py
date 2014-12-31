@@ -15,6 +15,7 @@ from pypet.tests.backwards_compat_test import LoadOldTrajectoryTest
 try:
     from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
 except ImportError as e:
+    print('NO DILL TESTS!!!')
     print(repr(e)) # We end up here if `dill` is not installed
     pass
 from pypet.tests.utilstest import CartesianTest
@@ -36,6 +37,7 @@ try:
     else:
         print('Using coverage will ignore brian tests')
 except ImportError as e:
+    print('NO BRIAN TESTS!!!')
     print(repr(e)) # We end up here if `brian` is not installed
     pass
 

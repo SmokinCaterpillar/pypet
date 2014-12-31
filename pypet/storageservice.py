@@ -2336,7 +2336,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             paramtable.flush()
 
-    def _trj_store_trajectory(self, traj, only_init=False):
+    def _trj_store_trajectory(self, traj, only_init=False, store_existing=True):
         """ Stores a trajectory to an hdf5 file
 
         Stores all groups, parameters and results
@@ -2386,7 +2386,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 # Store recursively the derived parameters subtree
                 self._tree_store_nodes(pypetconstants.LEAF, traj, child_name,
-                                       self._trajectory_group, recursive=True)
+                                       self._trajectory_group, recursive=True,
+                                       store_existing=store_existing)
 
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
@@ -2812,7 +2813,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, single_run, store_data, store_final):
+    def _srn_store_single_run(self, single_run, store_data, store_final, store_existing=True):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data:
@@ -2820,7 +2821,8 @@ class HDF5StorageService(StorageService, HasLogger):
             for group_name in single_run._run_parent_groups:
                 group = single_run._run_parent_groups[group_name]
                 if group.f_contains(single_run.v_name):
-                    self._tree_store_tree(group, single_run.v_name, recursive=True)
+                    self._tree_store_tree(group, single_run.v_name, recursive=True,
+                                          store_existing=store_existing)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
