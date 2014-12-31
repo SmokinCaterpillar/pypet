@@ -7,6 +7,8 @@ import os
 from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest, \
     MultiprocNoPoolLockTest,MultiprocNoPoolQueueTest,MultiprocNoPoolSortLockTest,MultiprocNoPoolSortQueueTest, CapTest
 
+from pypet.tests.link_multiproc_test import MultiprocLockTest, MultiprocNoPoolLockTest, MultiprocNoPoolQueueTest, MultiprocQueueTest
+
 from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 
 try:

@@ -356,6 +356,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if self._filename is None and hasattr(self._storage_service, 'filename'):
             self._filename = self._storage_service.filename
 
+    @property
+    def v_is_run(self):
+        """`True if trajectory is used during run managed by an environment.
+
+        Accordingly, the functionality fo the trajectory is reduced.
+
+        """
+        return self._is_run
 
     @property
     def v_idx(self):
@@ -1739,21 +1747,22 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     continue
 
                 first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                          first_run_name)
+                                                          first_run_name[1])
 
                 rename_dict[param_name] = first_new_param_name
                 comment = param.v_comment
                 param_type = param.f_get_class_name()
                 param_type = self._create_class(param_type)
-                first_param = self.f_add_result(param_type, first_new_param_name, comment=comment)
-                for run_name in run_name_dict:
+                first_param = self.f_add_leaf(param_type, first_new_param_name,
+                                                           comment=comment)
+                for run_name in run_name_dict.values():
                     next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
                                                           run_name)
-                    split_name = next_name.split['.']
+                    split_name = next_name.split('.')
                     link_name = split_name.pop()
                     location_name = '.'.join(split_name)
                     if not self.f_contains(location_name, shortcuts=False):
-                        the_group = self.f_add_config_group(location_name)
+                        the_group = self.f_add_group(location_name)
                     else:
                         the_group = self.f_get(location_name)
 
@@ -2016,7 +2025,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         if node.v_is_leaf:
                             nodes_iterator = iter([node])
                         else:
-                            nodes_iterator = node.f_iter_nodes(recursive=True)
+                            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=False)
                         iter_list.append(nodes_iterator)
 
                 nodes_iterator = itools.chain(*iter_list)

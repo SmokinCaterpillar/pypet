@@ -1872,6 +1872,11 @@ class NaturalNamingInterface(HasLogger):
         :return: The found node
 
         """
+
+        # If we find it directly there is no need for an exhaustive search
+        if key in node._children:
+            return node._children[key]
+
         as_run = self._get_as_run()
 
         total_depth = node._depth + max_depth
@@ -2116,6 +2121,13 @@ class NaturalNamingInterface(HasLogger):
                 if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
                     try_auto_load_directly2 = True
 
+            # if key.startswith(pypetconstants.RUN_NAME) and key != pypetconstants.RUN_NAME_DUMMY:
+            #     wildcard_pos = idx
+            #     if key not in self._nodes_and_leaves:
+            #         try_auto_load_directly1 = True
+            #     if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
+            #         try_auto_load_directly2 = True
+
         if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
             raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
                                  str(name))
@@ -2229,8 +2241,6 @@ class NaturalNamingInterface(HasLogger):
             for name in split_name:
                 if name in result._children:
                     result = result._children[name]
-                elif name in result._links:
-                    result = result._links[name]
                 else:
                     raise AttributeError(
                         'You did not allow for shortcuts and `%s` was not directly '
@@ -2858,7 +2868,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
                                            with_links=with_links)
 
-    def f_store_child(self, name, recursive=False):
+    def f_store_child(self, name, recursive=False, store_existing=True):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -2869,6 +2879,13 @@ class NNGroupNode(NNTreeNode):
         :param recursive:
 
             Whether recursively all children's children should be stored too.
+
+        :param store_existing:
+
+            Set this to `False` if you want faster storage. *pypet* will automatically skip
+            all checks if new data can be added to a node that has already been stored.
+            For example, this will skip checking of new entries to annotations in group nodes or
+            data items within results.
 
         :raises: ValueError if the child does not exist.
 
@@ -2883,7 +2900,8 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_trajectory_name,
-                              recursive=recursive)
+                              recursive=recursive,
+                              store_existing=store_existing)
 
     def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
         """Loads a child or recursively a subtree from disk.
@@ -2896,6 +2914,9 @@ class NNGroupNode(NNTreeNode):
         :param recursive:
 
             Whether recursively all nodes below the last child should be loaded, too.
+            Note that links are never evaluated recursively. Only the linked node
+            will be loaded if it does not exist in the tree, yet. Any nodes or links
+            of this linked node are not loaded.
 
         :param load_data:
 

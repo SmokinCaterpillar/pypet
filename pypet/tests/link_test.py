@@ -140,6 +140,10 @@ def explore_params(traj):
 
     traj.f_explore({'paraAL':[1,2,3,4,5]})
 
+def explore_params2(traj):
+
+    traj.f_explore({'paraAL':[1,6,7,8,9,10,11]})
+
 def dostuff_and_add_links(traj):
     traj.f_add_result('idx', traj.v_idx)
     traj.res.runs.crun.f_add_link('paraBL', traj.f_get('paramB'))
@@ -219,3 +223,64 @@ class LinkEnvironmentTest(TrajectoryComparator):
             self.assertTrue(self.traj.res.runs[run].paraBL is self.traj.paramB)
 
         self.compare_trajectories(self.traj, traj2)
+
+
+class LinkMergeTest(TrajectoryComparator):
+
+    def test_merge_with_linked_derived_parameter(self):
+        logging.basicConfig(level = logging.INFO)
+
+
+        self.logfolder = make_temp_file('experiments/tests/Log')
+
+        random.seed()
+        self.trajname1 = make_trajectory_name(self)+'1'
+        self.trajname2 = make_trajectory_name(self)+'2'
+        self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname1)
+
+        self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
+                          file_title=self.trajname1, log_folder=self.logfolder,
+                          log_stdout=False)
+
+        self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
+                          file_title=self.trajname2, log_folder=self.logfolder,
+                          log_stdout=False)
+
+        self.traj1 = self.env1.v_trajectory
+        self.traj2 = self.env2.v_trajectory
+
+        create_link_params(self.traj1)
+        create_link_params(self.traj2)
+
+        explore_params(self.traj1)
+        explore_params2(self.traj2)
+
+        self.traj1.f_add_derived_parameter('test.$.gg', 42)
+        self.traj2.f_add_derived_parameter('test.$.gg', 44)
+
+        self.traj1.f_add_derived_parameter('test.hh.$', 111)
+        self.traj2.f_add_derived_parameter('test.hh.$', 53)
+
+        self.env1.f_run(dostuff_and_add_links)
+        self.env2.f_run(dostuff_and_add_links)
+
+        old_length = len(self.traj1)
+
+        self.traj1.f_merge(self.traj2, remove_duplicates=True)
+
+        self.traj1.f_load(load_all=2)
+
+        for run in self.traj1.f_get_run_names():
+            self.traj1.f_as_run(run)
+            idx = self.traj1.v_idx
+            param = self.traj1['test.crun.gg']
+            if idx < old_length:
+                self.assertTrue(param == 42)
+            else:
+                self.assertTrue(param == 44)
+
+            param = self.traj1['test.hh.crun']
+            if idx < old_length:
+                self.assertTrue(param == 111)
+            else:
+                self.assertTrue(param == 53)
