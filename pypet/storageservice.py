@@ -3342,24 +3342,30 @@ class HDF5StorageService(StorageService, HasLogger):
             if row is not None:
                 # Only delete if the row does exist otherwise we do not have to do anything
                 rownumber = row.nrow
-                multiple_entries = False
-
-                try:
-                    next(row_iterator)
-                    multiple_entries = True
-                except StopIteration:
-                    pass
-
-                if multiple_entries:
-                    raise RuntimeError('There is something entirely wrong, `%s` '
-                                       'appears more than once in table %s.'
-                                       % (item_name, table._v_name))
 
                 try:
                     ptcompat.remove_rows(table, rownumber)
                 except NotImplementedError:
                     pass  # We get here if we try to remove the last row of a table
                     # there is nothing we can do except for keeping it :(
+
+                try:
+                    # In older pytables versions for continuing there might be two entries
+                    # for a single row
+                    row = next(row_iterator)
+                    rownumber = row.nrow
+                    try:
+                        ptcompat.remove_rows(table, rownumber)
+                    except NotImplementedError:
+                        pass  # We get here if we try to remove the last row of a table
+                        # there is nothing we can do except for keeping it :(
+                    try:
+                        next(row_iterator)
+                    except StopIteration:
+                        pass
+                except StopIteration:
+                    pass
+
         else:
             raise ValueError('Something is wrong, you might not have found '
                              'a row, or your flags are not set approprialty')

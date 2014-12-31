@@ -703,56 +703,56 @@ class EnvironmentTest(TrajectoryComparator):
         return newtraj
 
 
-    # def test_expand(self):
-    #
-    #     ###Explore
-    #     self.traj.f_add_parameter('TEST', 'test_expand')
-    #     self.explore(self.traj)
-    #
-    #     self.make_run()
-    #
-    #     self.expand()
-    #
-    #     print('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
-    #     self.make_run()
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj,newtraj)
+    def test_expand(self):
 
-    # def test_expand_after_reload(self):
-    #
-    #     self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
-    #     ###Explore
-    #     self.explore(self.traj)
-    #
-    #     self.make_run()
-    #
-    #     traj_name = self.traj.v_name
-    #
-    #     traj_name = self.traj.v_name
-    #
-    #
-    #     self.env = Environment(trajectory=self.traj,filename=self.filename,
-    #                       file_title=self.trajname, log_folder=self.logfolder,
-    #                       log_stdout=False)
-    #
-    #     self.traj = self.env.v_trajectory
-    #
-    #     self.traj.f_load(name=traj_name)
-    #
-    #     self.expand()
-    #
-    #     print('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
-    #     self.make_run()
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj, newtraj)
+        ###Explore
+        self.traj.f_add_parameter('TEST', 'test_expand')
+        self.explore(self.traj)
+
+        self.make_run()
+
+        self.expand()
+
+        print('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_expand_after_reload(self):
+
+        self.traj.f_add_parameter('TEST', 'test_expand_after_reload')
+        ###Explore
+        self.explore(self.traj)
+
+        self.make_run()
+
+        traj_name = self.traj.v_name
+
+        traj_name = self.traj.v_name
+
+
+        self.env = Environment(trajectory=self.traj,filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False)
+
+        self.traj = self.env.v_trajectory
+
+        self.traj.f_load(name=traj_name)
+
+        self.expand()
+
+        print('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
 
 
     def expand(self):
@@ -1105,73 +1105,73 @@ class ResultSortTest(TrajectoryComparator):
         self.assertTrue(newtraj.v_idx == idx)
 
 
-    # def test_expand(self):
-    #     ###Explore
-    #     self.explore(self.traj)
-    #
-    #     print(self.env.f_run(multiply))
-    #     traj = self.traj
-    #     self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
-    #
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #     self.check_if_z_is_correct(traj)
-    #
-    #     traj_name = self.env.v_trajectory.v_name
-    #     del self.env
-    #     self.env = Environment(trajectory=self.traj,filename=self.filename,
-    #                       file_title=self.trajname, log_folder=self.logfolder,
-    #                       log_stdout=False)
-    #
-    #     self.traj = self.env.v_trajectory
-    #
-    #     self.traj.f_load(name=traj_name)
-    #
-    #     self.expand(self.traj)
-    #
-    #     self.env.f_run(multiply)
-    #     traj = self.traj
-    #     self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
-    #
-    #
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #     self.check_if_z_is_correct(traj)
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj,newtraj)
-    #
-    # def test_expand_after_reload(self):
-    #     ###Explore
-    #     self.explore(self.traj)
-    #
-    #     self.env.f_run(multiply)
-    #     traj = self.traj
-    #     self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
-    #
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #     self.check_if_z_is_correct(traj)
-    #
-    #     self.expand(self.traj)
-    #
-    #     self.env.f_run(multiply)
-    #     traj = self.traj
-    #     self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+\
-    #                     len(compat.listvalues(self.explore_dict)[0]))
-    #
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #     self.check_if_z_is_correct(traj)
-    #
-    #     newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-    #     self.traj.f_update_skeleton()
-    #     self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
-    #
-    #     self.compare_trajectories(self.traj,newtraj)
+    def test_expand(self):
+        ###Explore
+        self.explore(self.traj)
+
+        print(self.env.f_run(multiply))
+        traj = self.traj
+        self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        traj_name = self.env.v_trajectory.v_name
+        del self.env
+        self.env = Environment(trajectory=self.traj,filename=self.filename,
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          log_stdout=False)
+
+        self.traj = self.env.v_trajectory
+
+        self.traj.f_load(name=traj_name)
+
+        self.expand(self.traj)
+
+        self.env.f_run(multiply)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
+
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_expand_after_reload(self):
+        ###Explore
+        self.explore(self.traj)
+
+        self.env.f_run(multiply)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        self.expand(self.traj)
+
+        self.env.f_run(multiply)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+\
+                        len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
 
 
     def check_if_z_is_correct(self,traj):
