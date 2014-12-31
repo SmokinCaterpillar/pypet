@@ -3359,10 +3359,6 @@ class HDF5StorageService(StorageService, HasLogger):
                     except NotImplementedError:
                         pass  # We get here if we try to remove the last row of a table
                         # there is nothing we can do except for keeping it :(
-                    try:
-                        next(row_iterator)
-                    except StopIteration:
-                        pass
                 except StopIteration:
                     pass
 
