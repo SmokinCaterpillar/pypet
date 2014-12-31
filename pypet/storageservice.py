@@ -2742,10 +2742,12 @@ class HDF5StorageService(StorageService, HasLogger):
         # If the node does not exist in the hdf5 file create it
         if not hasattr(parent_hdf5_group, name):
             store_new = True
+            newly_created = True
             new_hdf5_group = ptcompat.create_group(self._hdf5file, where=parent_hdf5_group,
                                                    name=name)
         else:
             store_new = traj_node._stored
+            newly_created = False
             new_hdf5_group = getattr(parent_hdf5_group, name)
 
         if traj_node.v_is_leaf:
@@ -2753,7 +2755,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 # If we have a leaf node, store it as a parameter or result
                 self._prm_store_parameter_or_result(store_msg, traj_node,
                                                     _hdf5_group=new_hdf5_group,
-                                                    _newly_created=True)
+                                                    _newly_created=newly_created)
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
                                    traj_node.v_full_name)
@@ -2822,7 +2824,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 group = single_run._run_parent_groups[group_name]
                 if group.f_contains(single_run.v_name):
                     self._tree_store_tree(group, single_run.v_name, recursive=True,
-                                          store_existing=store_existing)
+                                          store_existing)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
@@ -3342,26 +3344,24 @@ class HDF5StorageService(StorageService, HasLogger):
             if row is not None:
                 # Only delete if the row does exist otherwise we do not have to do anything
                 rownumber = row.nrow
+                multiple_entries = False
+
+                try:
+                    next(row_iterator)
+                    multiple_entries = True
+                except StopIteration:
+                    pass
+
+                if multiple_entries:
+                    raise RuntimeError('There is something entirely wrong, `%s` '
+                                       'appears more than once in table %s.'
+                                       % (item_name, table._v_name))
 
                 try:
                     ptcompat.remove_rows(table, rownumber)
                 except NotImplementedError:
                     pass  # We get here if we try to remove the last row of a table
                     # there is nothing we can do except for keeping it :(
-
-                try:
-                    # In older pytables versions for continuing there might be two entries
-                    # for a single row
-                    row = next(row_iterator)
-                    rownumber = row.nrow
-                    try:
-                        ptcompat.remove_rows(table, rownumber)
-                    except NotImplementedError:
-                        pass  # We get here if we try to remove the last row of a table
-                        # there is nothing we can do except for keeping it :(
-                except StopIteration:
-                    pass
-
         else:
             raise ValueError('Something is wrong, you might not have found '
                              'a row, or your flags are not set approprialty')
