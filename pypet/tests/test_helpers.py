@@ -34,7 +34,7 @@ import tempfile
 TEMPDIR = 'temp_folder_for_pypet_tests/'
 ''' Temporary directory for the hdf5 files'''
 
-REMOVE=False
+REMOVE=True
 ''' Whether or not to remove the temporary directory after the tests'''
 
 actual_tempdir=''
