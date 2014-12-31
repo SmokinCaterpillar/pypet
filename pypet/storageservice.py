@@ -2824,7 +2824,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 group = single_run._run_parent_groups[group_name]
                 if group.f_contains(single_run.v_name):
                     self._tree_store_tree(group, single_run.v_name, recursive=True,
-                                          store_existing)
+                                          store_existing=store_existing)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
