@@ -1453,6 +1453,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         Both trajectories must live in the same space. This means both need to have the same
         parameters with similar types of values.
 
+        Note that links are also merged. There are exceptions: Links found under
+        a generic run group called `run_ALL` or links linking to a node under such a
+        group are NOT merged and simply skipped, because there is no straightforward
+        way to resolve the link.
+
         :param other_trajectory: Other trajectory instance to merge into the current one.
 
         :param trial_parameter:
@@ -1713,13 +1718,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if merge_config:
             self._merge_config(other_trajectory)
 
-        # Write the meta data about the merge to disk
-        merge_group = self.f_get('config.merge')
-        self.config.f_store_child('merge')
-        merge_group.f_store_child(merge_name, recursive=True)
-
         # Merging links
         self._merge_links(other_trajectory, run_name_dict)
+
+        # Write out the merged data to disk
+        self._logger.info('Writing merged data to disk')
+        self.f_store(store_existing=False)
+
+
         self._logger.info('Finished Merging!')
 
     def _merge_derived_parameters_run_based(self, other_trajectory,
@@ -1733,7 +1739,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         other_derived_parameters = \
             other_trajectory._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
-        first_run_name = run_name_dict.popitem(last=False)
+        first_run_name, new_first_run_name = compat.listitems(run_name_dict)[0]
 
         for param_name in other_derived_parameters:
             if not pypetconstants.RUN_NAME_DUMMY in param_name:
@@ -1747,7 +1753,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     continue
 
                 first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                          first_run_name[1])
+                                                          new_first_run_name)
 
                 rename_dict[param_name] = first_new_param_name
                 comment = param.v_comment
@@ -1756,6 +1762,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 first_param = self.f_add_leaf(param_type, first_new_param_name,
                                                            comment=comment)
                 for run_name in run_name_dict.values():
+                    if run_name == new_first_run_name:
+                        continue
                     next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
                                                           run_name)
                     split_name = next_name.split('.')
@@ -1775,6 +1783,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 param_type = self._create_class(param_type)
                 self.f_add_result(param_type, param_name, comment=comment)
 
+
     def _merge_links(self, other_trajectory, run_name_dict):
         """ Merges all links"""
         linked_items = other_trajectory._linked_by
@@ -1782,6 +1791,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._logger.info('Merging potential links!')
             for old_linked_name in other_trajectory._linked_by:
                 if pypetconstants.RUN_NAME_DUMMY in old_linked_name:
+                    self._logger.warning('Ignoring all links linking to `%s` because '
+                                         'I don`t know how to resolve links under a `%s` node.' %
+                                        (old_linked_name, pypetconstants.RUN_NAME_DUMMY))
                     continue
                 old_link_dict = other_trajectory._linked_by[old_linked_name]
                 old_linked_item = other_trajectory.f_get(old_linked_name)
@@ -1798,6 +1810,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 for linking_node, link in compat.itervalues(old_link_dict):
                     linking_full_name = linking_node.v_full_name
+                    if pypetconstants.RUN_NAME_DUMMY in linking_full_name:
+                        self._logger.warning('Ignoring link `%s` because '
+                                         'I don`t know how to resolve links under a `%s` node.' %
+                                        (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
+                        continue
+
                     if linking_node.v_run_branch in run_name_dict:
                         pos_list = []
                         for idx, split in enumerate(linking_full_name.split('.')):
@@ -1814,12 +1832,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         new_linking_item = self.f_get(new_linking_full_name)
                         if link in run_name_dict:
                             link = run_name_dict[link]
-                        new_linking_item.f_add_link(link, new_linked_item)
+                        if not link in new_linking_item._links:
+                            new_linking_item.f_add_link(link, new_linked_item)
+                        else:
+                            self._logger.debug('Link `%s` exists already under `%s`.' %
+                                                (link, new_linked_item.v_full_name))
                     except (AttributeError, ValueError) as e:
                         self._logger.error('Could not copy ling `%s` under `%s` linking to `%s` '
-                                           'duet to `%s`' %
+                                           'due to `%s`' %
                                            (link, linking_full_name, old_linked_name, str(e)))
-            self.f_store()
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings

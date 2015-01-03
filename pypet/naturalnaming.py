@@ -1582,7 +1582,7 @@ class NaturalNamingInterface(HasLogger):
 
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
-                    return_depth=False, with_links=True):
+                    return_depth_and_name=False, with_links=True):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1597,7 +1597,7 @@ class NaturalNamingInterface(HasLogger):
 
             Maximum depth to search for
 
-        :param return_depth:
+        :param return_depth_and_name:
 
             If relative depth should be returned
 
@@ -1613,14 +1613,13 @@ class NaturalNamingInterface(HasLogger):
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
-                                            as_run, max_depth, return_depth,
+                                            as_run, max_depth, return_depth_and_name,
                                             with_links)
         else:
-            if return_depth:
-                child_iterator = self._make_child_iterator(node, as_run, with_links)
-                return zip(itools.repeat(1), child_iterator)
-            else:
+            if return_depth_and_name:
                 return self._make_child_iterator(node, as_run, with_links)
+            else:
+                return (x[1][1] for x in self._make_child_iterator(node, as_run, with_links))
 
 
 
@@ -1694,69 +1693,79 @@ class NaturalNamingInterface(HasLogger):
         return result_dict
 
     @staticmethod
-    def _make_child_iterator(node, run_name, with_links):
+    def _make_child_iterator(node, run_name, with_links, current_depth=0):
         """Returns an iterator over a node's children.
 
         In case of using a trajectory as a run (setting 'v_as_run') some sub branches
         that do not belong to the run are blinded out.
 
         """
-
+        cdp1 = current_depth+1
         if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
             # Only consider one particular run and blind out the rest, but include
             # all other subbranches
+
             if with_links or not run_name in node._links:
-                node_list = [node._children[run_name]]
+                node_list = [(cdp1,
+                              run_name,
+                              node._children[run_name])]
             else:
                 node_list = []
             if with_links:
                 for child_name in node._children:
                     if not (child_name.startswith(pypetconstants.RUN_NAME)
                             and child_name != pypetconstants.RUN_NAME_DUMMY):
-                        node_list.append(node._children[child_name])
+                        node_list.append((cdp1,
+                                          child_name,
+                                          node._children[child_name]))
             else:
                 for leaf_name in node._leaves:
                     if not (leaf_name.startswith(pypetconstants.RUN_NAME)
                             and leaf_name != pypetconstants.RUN_NAME_DUMMY):
-                        node_list.append(node._leaves[leaf_name])
+                        node_list.append((cdp1,
+                                          leaf_name,
+                                          node._leaves[leaf_name]))
                 for group_name in node._groups:
                     if not (group_name.startswith(pypetconstants.RUN_NAME)
                             and group_name != pypetconstants.RUN_NAME_DUMMY):
-                        node_list.append(node._groups[group_name])
+                        node_list.append((cdp1,
+                                          group_name,
+                                          node._groups[group_name]))
 
             return node_list
         else:
             if with_links:
-                iterator = compat.itervalues(node._children)
+                iterator = ((cdp1, x[0], x[1]) for x in compat.iteritems(node._children))
             else:
-                iterator = itools.chain(compat.itervalues(node._leaves),
-                                        compat.itervalues(node._groups))
+                leaves = ((cdp1, x[0], x[1]) for x in compat.iteritems(node._leaves))
+                groups = ((cdp1, y[0], y[1]) for y in compat.iteritems(node._groups))
+                iterator = itools.chain(groups, leaves)
             return iterator
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
-                                 return_depth=False, with_links=True):
+                                 return_depth_and_name=False, with_links=True):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
         blinded out.
 
         """
-        queue = iter([(0,node)])
+        queue = iter([(0,node.v_name, node)])
         start = True
         visited_linked_nodes = set([])
 
         while True:
             try:
-                depth, item = next(queue)
+                depth, name, item = next(queue)
                 full_name = item._full_name
                 if not (depth > max_depth  or full_name in visited_linked_nodes):
                     if start:
                         start = False
 
                     else:
-                        if return_depth:
-                            yield depth, item
+                        if return_depth_and_name:
+                            yield depth, name, item
                         else:
                             yield item
 
@@ -1766,8 +1775,8 @@ class NaturalNamingInterface(HasLogger):
                     if not item._leaf and depth < max_depth:
                         child_iterator = NaturalNamingInterface._make_child_iterator(item,
                                                                                      run_name,
-                                                                                     with_links)
-                        child_iterator = zip(itools.repeat(depth+1), child_iterator)
+                                                                                     with_links,
+                                                                             current_depth=depth)
                         queue = itools.chain(queue, child_iterator)
             except StopIteration:
                 break
@@ -1873,9 +1882,9 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        # If we find it directly there is no need for an exhaustive search
-        if key in node._children:
-            return node._children[key]
+        # # If we find it directly there is no need for an exhaustive search
+        # if key in node._children:
+        #     return node._children[key]
 
         as_run = self._get_as_run()
 
@@ -1893,17 +1902,17 @@ class NaturalNamingInterface(HasLogger):
 
         # Slowly traverse the entire tree
         nodes_iterator = self._iter_nodes(node, recursive=True,
-                                          max_depth=max_depth, return_depth=True)
+                                          max_depth=max_depth, return_depth_and_name=True)
         result_node = None
         result_depth = float('inf')
-        for depth, child in nodes_iterator:
+        for depth, name, child in nodes_iterator:
 
             if depth > result_depth:
                 # We can break here because we enter a deeper stage of the tree and we
                 # cannot find matching node of the same depth as the one we found
                 break
 
-            if key == child._name:
+            if key == name:
 
                 # If result_node is not None means that we care about uniqueness and the search
                 # has found more than a single solution.

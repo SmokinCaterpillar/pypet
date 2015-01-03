@@ -12,6 +12,7 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
+import time
 import pypet.pypetexceptions as pex
 
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name
@@ -234,14 +235,13 @@ class LinkMergeTest(TrajectoryComparator):
         self.logfolder = make_temp_file('experiments/tests/Log')
 
         random.seed()
-        self.trajname1 = make_trajectory_name(self)+'1'
-        self.trajname2 = make_trajectory_name(self)+'2'
+        self.trajname1 = 'T1'+ make_trajectory_name(self)
+        self.trajname2 = 'T2'+make_trajectory_name(self)
         self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname1)
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1, log_folder=self.logfolder,
                           log_stdout=False)
-
         self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
                           file_title=self.trajname2, log_folder=self.logfolder,
                           log_stdout=False)
@@ -284,6 +284,8 @@ class LinkMergeTest(TrajectoryComparator):
                 self.assertTrue(param == 111)
             else:
                 self.assertTrue(param == 53)
+
+        self.assertTrue(self.traj1.res.runs['r_%d' % old_length].paraBL == self.traj1.paramB)
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
