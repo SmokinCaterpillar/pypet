@@ -1358,8 +1358,7 @@ class NaturalNamingInterface(HasLogger):
     def _create_link_inner(self, act_node, name, instance):
         """ Creates a link without costly name checking
         """
-        if (name.startswith(pypetconstants.RUN_NAME) and
-                                name != pypetconstants.RUN_NAME_DUMMY):
+        if name.startswith(pypetconstants.RUN_NAME):
             self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
 
         act_node._links[name] = instance
@@ -1600,7 +1599,7 @@ class NaturalNamingInterface(HasLogger):
 
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
-                    return_depth_and_name=False, with_links=True):
+                    with_links=True, in_search=False, ):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1615,9 +1614,9 @@ class NaturalNamingInterface(HasLogger):
 
             Maximum depth to search for
 
-        :param return_depth_and_name:
+        :param in_search:
 
-            If relative depth should be returned
+            if it is used during get search and if detailed info should be returned
 
         :param with_links:
 
@@ -1631,10 +1630,10 @@ class NaturalNamingInterface(HasLogger):
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
-                                            as_run, max_depth, return_depth_and_name,
-                                            with_links)
+                                            as_run, max_depth, with_links,
+                                            in_search)
         else:
-            if return_depth_and_name:
+            if in_search:
                 return self._make_child_iterator(node, as_run, with_links)
             else:
                 return (x[1][1] for x in self._make_child_iterator(node, as_run, with_links))
@@ -1762,7 +1761,7 @@ class NaturalNamingInterface(HasLogger):
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
-                                 return_depth_and_name=False, with_links=True):
+                                 with_links=True, in_search=False):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
@@ -1777,12 +1776,17 @@ class NaturalNamingInterface(HasLogger):
             try:
                 depth, name, item = next(queue)
                 full_name = item._full_name
-                if not (depth > max_depth  or full_name in visited_linked_nodes):
+                if full_name in visited_linked_nodes:
+                    if in_search:
+                        # We need to retunr the node again to check if a link to the node
+                        # has to be found
+                        yield depth, name, item
+                elif depth <= max_depth:
                     if start:
                         start = False
 
                     else:
-                        if return_depth_and_name:
+                        if in_search:
                             yield depth, name, item
                         else:
                             yield item
@@ -1916,7 +1920,7 @@ class NaturalNamingInterface(HasLogger):
         """
 
         # If we find it directly there is no need for an exhaustive search
-        if key in node._children and (with_links or not key in node._links):
+        if key in node._children and (with_links or key not in node._links):
             return node._children[key]
 
         as_run = self._get_as_run()
@@ -1934,7 +1938,7 @@ class NaturalNamingInterface(HasLogger):
 
         # Slowly traverse the entire tree
         nodes_iterator = self._iter_nodes(node, recursive=True,
-                                          max_depth=max_depth, return_depth_and_name=True,
+                                          max_depth=max_depth, in_search=True,
                                           with_links=with_links)
         result_node = None
         result_depth = float('inf')
@@ -2427,11 +2431,11 @@ class NNGroupNode(NNTreeNode):
             setattr(debug_tree, leaf_name, leaf)
 
         for link_name in self._links:
-            linked_ndde = self._links[link_name]
-            setattr(debug_tree, link_name, 'Link to `%s`' % linked_ndde.v_full_name)
+            linked_node = self._links[link_name]
+            setattr(debug_tree, link_name, 'Link to `%s`' % linked_node.v_full_name)
 
         for group_name in self._groups:
-            group = self._children[group_name]
+            group = self._groups[group_name]
             setattr(debug_tree, group_name, group._debug())
 
         return debug_tree

@@ -214,8 +214,13 @@ def explore_params2(traj):
 
 def dostuff_and_add_links(traj):
     traj.f_add_result('idx', traj.v_idx)
+    traj.f_add_result('a.b.c.d', 42)
     traj.res.runs.crun.f_add_link('paraBL', traj.f_get('paramB'))
+    traj.res.runs.crun.f_add_link('paraCL', traj.f_get('paramB'))
+    traj.res.c.f_add_link('AB', traj.f_get('paramB'))
+    traj.f_add_result('x', traj.AB)
     traj.res.f_add_link('$', traj.f_get('paraBL'))
+
 
 class LinkEnvironmentTest(TrajectoryComparator):
     def set_mode(self):
@@ -275,6 +280,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
         #remember the trajectory and the environment
         self.traj = traj
         self.env = env
+
 
 
     def test_run(self):
