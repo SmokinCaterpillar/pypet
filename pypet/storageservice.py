@@ -2336,7 +2336,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             paramtable.flush()
 
-    def _trj_store_trajectory(self, traj, only_init=False, store_existing=True):
+    def _trj_store_trajectory(self, traj, only_init=False, skip_existing=False):
         """ Stores a trajectory to an hdf5 file
 
         Stores all groups, parameters and results
@@ -2387,7 +2387,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Store recursively the derived parameters subtree
                 self._tree_store_nodes(pypetconstants.LEAF, traj, child_name,
                                        self._trajectory_group, recursive=True,
-                                       store_existing=store_existing)
+                                       skip_existing=skip_existing)
 
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
@@ -2397,7 +2397,7 @@ class HDF5StorageService(StorageService, HasLogger):
         traj._stored = True
 
     def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True,
-                               store_links=True, store_existing=True):
+                               store_links=True, skip_existing=False):
         """Stores data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -2423,9 +2423,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             If links should be stored
 
-        :param store_existing:
+        :param skip_existing:
 
-            If data of existing data should be stored
+            If data of existing data should be stored or skipped
 
         """
         split_names = branch_name.split('.')
@@ -2435,7 +2435,7 @@ class HDF5StorageService(StorageService, HasLogger):
         for name in split_names:
             # Store along a branch
             self._tree_store_nodes(msg, traj_node, name, hdf5_group, recursive=False,
-                                   store_links=store_links, store_existing=store_existing)
+                                   store_links=store_links, skip_existing=skip_existing)
 
             traj_node = traj_node._children[name]
 
@@ -2443,12 +2443,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Store final group and recursively everything below it
         self._tree_store_nodes(msg, traj_node, leaf_name, hdf5_group, recursive=recursive,
-                               store_links=store_links, store_existing=store_existing)
+                               store_links=store_links, skip_existing=skip_existing)
 
 
     ########################  Storing and Loading Sub Trees #######################################
 
-    def _tree_store_tree(self, traj_node, child_name, recursive, store_existing=True):
+    def _tree_store_tree(self, traj_node, child_name, recursive, skip_existing=False):
         """Stores a node and potentially recursively all nodes below
 
         :param traj_node: Parent node where storing starts
@@ -2457,7 +2457,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param recursive: Whether to store everything below `traj_node`.
 
-        :param store_existing: If data should be added to existing nodes
+        :param skip_existing: If data should be added to existing nodes or skipped
 
         """
         location = traj_node.v_full_name
@@ -2476,7 +2476,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._tree_store_sub_branch(pypetconstants.LEAF, traj_node, child_name,
                                         parent_hdf5_node,
                                         recursive=recursive,
-                                        store_existing=store_existing)
+                                        skip_existing=skip_existing)
 
         except pt.NoSuchNodeError:
             self._logger.debug('Cannot store `%s` the parental hdf5 node with path `%s` does '
@@ -2498,7 +2498,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                             traj_node.v_full_name + '.' + child_name,
                                             self._trajectory_group,
                                             recursive=recursive,
-                                            store_existing=store_existing)
+                                            skip_existing=skip_existing)
 
 
     def _tree_load_tree(self, parent_traj_node, child_name, recursive, load_data, trajectory):
@@ -2718,7 +2718,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                (new_hdf5group._v_name, new_traj_node.v_full_name))
 
     def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True,
-                          store_links=True, store_existing=True):
+                          store_links=True, skip_existing=False):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
 
         :param msg: 'LEAF'
@@ -2751,7 +2751,7 @@ class HDF5StorageService(StorageService, HasLogger):
             new_hdf5_group = getattr(parent_hdf5_group, name)
 
         if traj_node.v_is_leaf:
-            if store_new or store_existing:
+            if store_new or not skip_existing:
                 # If we have a leaf node, store it as a parameter or result
                 self._prm_store_parameter_or_result(store_msg, traj_node,
                                                     _hdf5_group=new_hdf5_group,
@@ -2773,7 +2773,7 @@ class HDF5StorageService(StorageService, HasLogger):
             #              (traj_node.v_comment != '' and
             #               not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs))
 
-            if store_new or store_existing:
+            if store_new or not skip_existing:
                 self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group)
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
@@ -2786,7 +2786,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 for child in compat.iterkeys(traj_node._children):
                     self._tree_store_nodes(store_msg, traj_node, child, new_hdf5_group,
                                            recursive=recursive, store_links=store_links,
-                                           store_existing= store_existing)
+                                           skip_existing= skip_existing)
 
     def _tree_store_link(self, node_in_traj, link, _hdf5_group, _msg):
 
@@ -2815,7 +2815,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, single_run, store_data, store_final, store_existing=True):
+    def _srn_store_single_run(self, single_run, store_data, store_final, skip_existing=False):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data:
@@ -2824,7 +2824,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 group = single_run._run_parent_groups[group_name]
                 if group.f_contains(single_run.v_name):
                     self._tree_store_tree(group, single_run.v_name, recursive=True,
-                                          store_existing=store_existing)
+                                          skip_existing=skip_existing)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
@@ -3014,6 +3014,15 @@ class HDF5StorageService(StorageService, HasLogger):
         location = instance.v_location
         name = instance.v_name
         fullname = instance.v_full_name
+
+        if (flags == (HDF5StorageService.ADD_ROW,) and table.nrows < 2
+                and 'location' in table.colnames):
+            # We add the modify row option here because you cannot delete the very first
+            # row of the table, so there is the rare condition, that the row might already
+            # exist.
+            # We also need to check if 'location' is in the columns in order to avoid
+            # confusion with the smaller explored parameter overviews
+            flags = (HDF5StorageService.ADD_ROW, HDF5StorageService.MODIFY_ROW)
 
         if flags == (HDF5StorageService.ADD_ROW,):
             # If we are sure we only want to add a row we do not need to search!
@@ -3301,11 +3310,11 @@ class HDF5StorageService(StorageService, HasLogger):
         """
 
         # You can only specify either an index or a condition not both
-        if not index is None and not condition is None:
+        if index is not None and condition is not None:
             raise ValueError('Please give either a condition or an index or none!')
-        elif not condition is None:
+        elif condition is not None:
             row_iterator = table.where(condition, condvars=condvars)
-        elif not index is None:
+        elif index is not None:
             row_iterator = table.iterrows(index, index + 1)
         else:
             row_iterator = None
@@ -3316,6 +3325,8 @@ class HDF5StorageService(StorageService, HasLogger):
             row = None
         except StopIteration:
             row = None
+
+        multiple_entries = []
 
         if ((HDF5StorageService.MODIFY_ROW in flags or HDF5StorageService.ADD_ROW in flags) and
                     HDF5StorageService.REMOVE_ROW in flags):
@@ -3343,43 +3354,50 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if row is not None:
                 # Only delete if the row does exist otherwise we do not have to do anything
-                rownumber = row.nrow
-                multiple_entries = False
+                row_number = row.nrow
 
                 try:
-                    next(row_iterator)
-                    multiple_entries = True
+                    for new_row in row_iterator:
+                        new_row_number = new_row.nrow
+                        if new_row_number > row_number:
+                            new_row_number -= 1 # -1 because we will remove the current row
+                        multiple_entries.append(new_row_number)
+                        # later on
                 except StopIteration:
                     pass
 
-                if multiple_entries:
-                    raise RuntimeError('There is something entirely wrong, `%s` '
-                                       'appears more than once in table %s.'
-                                       % (item_name, table._v_name))
-
                 try:
-                    ptcompat.remove_rows(table, rownumber)
+                    ptcompat.remove_rows(table, start=row_number, stop=row_number+1)
                 except NotImplementedError:
-                    pass  # We get here if we try to remove the last row of a table
-                    # there is nothing we can do except for keeping it :(
+                    pass
+                    # We get here if we try to remove the last row of a table
+                    # there is nothing we can do but keep it :-(
         else:
             raise ValueError('Something is wrong, you might not have found '
-                             'a row, or your flags are not set approprialty')
+                             'a row, or your flags are not set appropriately')
 
-        # # Check if there are 2 entries which should not happen
-        multiple_entries = False
-        try:
-            next(row_iterator)
-            multiple_entries = True
-        except TypeError:
-            pass
-        except StopIteration:
-            pass
+        # Check if there are several entries which should not happen
+        # and correct for that
+        if len(multiple_entries) == 0:
+            try:
+                for new_row in row_iterator:
+                    multiple_entries.append(new_row.nrow)
+            except TypeError:
+                pass
+            except StopIteration:
+                pass
 
-        if multiple_entries:
-            raise RuntimeError('There is something entirely wrong, `%s` '
+        if len(multiple_entries) > 0:
+            self._logger.error('There is something entirely wrong, `%s` '
                                'appears more than once in table %s.'
                                % (item_name, table._v_name))
+            self._logger.error('I will fix this by removing all entries except the last')
+            removed = 0
+            for row_number in sorted(multiple_entries):
+                ptcompat.remove_rows(table, start=row_number - removed,
+                                     stop=row_number - removed + 1)
+                removed += 1 # keep track of how many have been removed, because
+                             # the index of the later rows are decreased thereby
 
         # Check if we added something. Note that row is also not None in case REMOVE_ROW,
         # then it refers to the deleted row
@@ -3859,20 +3877,24 @@ class HDF5StorageService(StorageService, HasLogger):
 
         flags = (HDF5StorageService.ADD_ROW,)
 
-        # Check if we need to store the comment. Maybe update the overview tables
-        # accordingly if the current run index is lower than the one in the table.
-        where, definitely_store_comment = self._all_meta_add_summary(instance)
-
+        definitely_store_comment = True
         try:
-            # Update the summary overview table
-            table_name = self._all_get_table_name(where, instance.v_run_branch)
+            # Check if we need to store the comment. Maybe update the overview tables
+            # accordingly if the current run index is lower than the one in the table.
+            where, definitely_store_comment = self._all_meta_add_summary(instance)
 
-            table = getattr(self._overview_group, table_name)
+            try:
+                # Update the summary overview table
+                table_name = self._all_get_table_name(where, instance.v_run_branch)
 
-            self._all_store_param_or_result_table_entry(instance, table,
-                                                        flags=flags)
-        except pt.NoSuchNodeError:
-            pass
+                table = getattr(self._overview_group, table_name)
+
+                self._all_store_param_or_result_table_entry(instance, table,
+                                                            flags=flags)
+            except pt.NoSuchNodeError:
+                pass
+        except Exception as e:
+            self._logger.error('Could not store information table due to `%s`.' % str(e))
 
         if ((not self._purge_duplicate_comments or definitely_store_comment) and
                     instance.v_comment != ''):
@@ -3894,6 +3916,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                                             flags=flags)
             except pt.NoSuchNodeError:
                 pass
+            except Exception as e:
+                self._logger.error('Could not store information '
+                                   'table due to `%s`.' % str(e))
 
     def _prm_store_parameter_or_result(self, msg, instance, store_flags=None,
                                        overwrite=None, _hdf5_group=None, _newly_created=False):

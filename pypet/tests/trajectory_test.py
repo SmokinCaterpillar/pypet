@@ -983,7 +983,6 @@ class SingleRunTest(unittest.TestCase):
         self.traj = traj
         self.n = 1
         self.single_run = self.traj._make_single_run(self.n)
-        self.assertTrue(len(self.single_run)==1)
 
 
 
@@ -1052,7 +1051,6 @@ class SingleRunQueueTest(unittest.TestCase):
         self.traj = traj
         self.n = 1
         self.single_run = self.traj._make_single_run(self.n)
-        self.assertTrue(len(self.single_run)==1)
 
 
     def test_queue(self):

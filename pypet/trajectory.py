@@ -43,6 +43,38 @@ import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc
 from pypet.utils.helpful_functions import is_debug
 
+def load_trajectory(
+               name=None,
+               index=None,
+               as_new=False,
+               load_parameters=pypetconstants.LOAD_DATA,
+               load_derived_parameters=pypetconstants.LOAD_SKELETON,
+               load_results=pypetconstants.LOAD_SKELETON,
+               load_other_data=pypetconstants.LOAD_SKELETON,
+               load_all=None,
+               force=False,
+               filename=None,
+               dynamic_imports=None):
+    """Helper function that creates a novel trajectory and loads it from disk.
+
+    For the parameters see :func:`~pypet.trajectory.Trajectory.f_load`.
+
+    """
+    if name is None and index is None:
+        raise ValueError('Please specify name or index')
+    traj = Trajectory()
+    traj.f_load(name=name,
+               index=index,
+               as_new=as_new,
+               load_parameters=load_parameters,
+               load_derived_parameters=load_derived_parameters,
+               load_results=load_results,
+               load_other_data=load_other_data,
+               load_all=load_all,
+               force=force,
+               filename=filename,
+               dynamic_imports=dynamic_imports)
+    return traj
 
 
 class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup):
@@ -219,6 +251,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._iter_recursive = False
         self._max_depth = None
         self._auto_load = False
+        self._with_links = True
 
         self._expansion_not_stored = False
 
@@ -423,6 +456,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         return self._full_copy
+
+    @property
+    def v_with_links(self):
+        """Whether links should be considered in case using natural naming
+        or squared bracket indexing"""
+        return self._with_links
+
+    @ v_with_links.setter
+    def v_with_links(self, val):
+        """Sets the usage of links"""
+        self._with_links = bool(val)
 
     @v_full_copy.setter
     @not_in_run
@@ -865,9 +909,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """Length of trajectory, minimum length is 1"""
         # If `v_full_copy` is False then `run_information` is not pickled, so we
         # need to rely on the helper variable `_length_during_run`.
-        if self._is_run:
-            return 1
-        elif self._length_during_nfc is not None:
+        if self._length_during_nfc is not None:
             return self._length_during_nfc
         else:
             return len(self._run_information)
@@ -1115,9 +1157,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if full_name in self._linked_by:
                 linking = self._linked_by[full_name]
                 for linking_name in compat.iterkeys(linking):
-                    linking_node, link = linking[linking_name]
+                    linking_node, link_set = linking[linking_name]
                     if linking_node.v_run_branch == 'trajectory':
-                        return True
+                        for link in link_set:
+                            if (not (link.startswith(pypetconstants.RUN_NAME) and
+                                        link != pypetconstants.RUN_NAME_DUMMY) or
+                                    not self.f_is_completed(link)):
+                                    return True
+                        return False
                     if not self.f_is_completed(linking_node.v_run_branch):
                         return True
             return False
@@ -1723,7 +1770,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         # Write out the merged data to disk
         self._logger.info('Writing merged data to disk')
-        self.f_store(store_existing=False)
+        self.f_store(skip_existing=True)
 
 
         self._logger.info('Finished Merging!')
@@ -1739,7 +1786,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         other_derived_parameters = \
             other_trajectory._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
-        first_run_name, new_first_run_name = compat.listitems(run_name_dict)[0]
+        first_run_name, new_first_run_name = next(compat.iteritems(run_name_dict)) # get first runname
 
         for param_name in other_derived_parameters:
             if not pypetconstants.RUN_NAME_DUMMY in param_name:
@@ -1808,13 +1855,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 else:
                     new_linked_full_name = old_linked_name
 
-                for linking_node, link in compat.itervalues(old_link_dict):
+                for linking_node, link_set in compat.itervalues(old_link_dict):
+
                     linking_full_name = linking_node.v_full_name
-                    if pypetconstants.RUN_NAME_DUMMY in linking_full_name:
-                        self._logger.warning('Ignoring link `%s` because '
-                                         'I don`t know how to resolve links under a `%s` node.' %
+
+                    if (pypetconstants.RUN_NAME_DUMMY in linking_full_name):
+                        self._logger.warning('Ignoring links under `%s` because '
+                                    'I don`t know how to resolve links under a `%s` node.' %
                                         (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
-                        continue
 
                     if linking_node.v_run_branch in run_name_dict:
                         pos_list = []
@@ -1827,20 +1875,33 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     else:
                         new_linking_full_name = linking_full_name
 
-                    try:
-                        new_linked_item = self.f_get(new_linked_full_name)
-                        new_linking_item = self.f_get(new_linking_full_name)
-                        if link in run_name_dict:
-                            link = run_name_dict[link]
-                        if not link in new_linking_item._links:
-                            new_linking_item.f_add_link(link, new_linked_item)
-                        else:
-                            self._logger.debug('Link `%s` exists already under `%s`.' %
-                                                (link, new_linked_item.v_full_name))
-                    except (AttributeError, ValueError) as e:
-                        self._logger.error('Could not copy ling `%s` under `%s` linking to `%s` '
-                                           'due to `%s`' %
-                                           (link, linking_full_name, old_linked_name, str(e)))
+                    for link in link_set:
+                        if (link == pypetconstants.RUN_NAME_DUMMY):
+                            self._logger.warning('Ignoring link `%s` under `%s` because '
+                                        'I don`t know how to resolve links named as `%s`.' %
+                                            (link,
+                                             linking_full_name,
+                                             pypetconstants.RUN_NAME_DUMMY))
+                            continue
+
+                        try:
+                            new_linked_item = self.f_get(new_linked_full_name)
+                            try:
+                                new_linking_item = self.f_get(new_linking_full_name)
+                            except AttributeError:
+                                new_linking_item =  self.f_add_group(new_linking_full_name)
+                            if link in run_name_dict:
+                                link = run_name_dict[link]
+                            if not link in new_linking_item._links:
+                                new_linking_item.f_add_link(link, new_linked_item)
+                            else:
+                                self._logger.debug('Link `%s` exists already under `%s`.' %
+                                                    (link, new_linked_item.v_full_name))
+                        except (AttributeError, ValueError) as e:
+                            self._logger.error('Could not copy ling `%s` under `%s` linking '
+                                               'to `%s` due to `%s`' %
+                                               (link, linking_full_name, old_linked_name,
+                                                str(type(e))))
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
@@ -2041,7 +2102,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if used_runs[idx]:
                 iter_list = []
                 for parent_group in compat.itervalues(other_trajectory._run_parent_groups):
-                    if parent_group.f_contains(run_name):
+                    if parent_group.f_contains(run_name, with_links=False):
                         node = parent_group.f_get(run_name)
                         if node.v_is_leaf:
                             nodes_iterator = iter([node])
@@ -2423,7 +2484,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._stored = in_store
 
-    def f_store(self, new_name=None, new_filename=None, only_init=False, store_existing=True):
+    def f_store(self, new_name=None, new_filename=None, only_init=False, skip_existing=False):
         """Stores the trajectory to disk.
 
         :param filename:
@@ -2443,14 +2504,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             If you just want to initialise the store. If yes, only meta information about
             the trajectory is stored and none of the nodes/leaves within the trajectory.
 
-        :param store_existing:
+        :param skip_existing:
 
-            Set this to ``False`` if you want faster storage. *pypet* will automatically skip
+            Set this to ``True`` if you want faster storage. *pypet* will automatically skip
             all checks if new data can be added to a node that has already been stored.
             For example, this will skip checking of new entries to annotations in group nodes or
             data items within results.
 
-            Be aware that data is not overwritten or deleted even in case ``store_existing=True``.
+            Be aware that data is not overwritten or deleted even in case ``skip_existing=False``.
             Only new data is added to disk. If you want to overwrite existing data,
             check :func:`~pypet.trajectory.Trajectory.f_store_item` and
             :func:`~pypet.trajectory.Trajectory.f_delete_item`.
@@ -2481,7 +2542,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_trajectory_name,
                                     store_final=False, store_data=True,
-                                    store_existing=store_existing)
+                                    skip_existing=skip_existing)
         else:
             if new_filename is not None or new_name is not None:
                 self.f_migrate(new_name, new_filename)
@@ -2492,7 +2553,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
                                         only_init=only_init,
-                                        store_existing=store_existing)
+                                        skip_existing=skip_existing)
             self._stored = True
 
     @not_in_run

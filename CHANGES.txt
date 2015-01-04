@@ -42,6 +42,9 @@ pypet 0.1b.9
 
 *   Environments provide the ``v_log_path`` property to get the current log path
 
+*   BUG FIX: Trajectories with only a single explored parameter can now be merged
+    several times
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

@@ -6,7 +6,7 @@ import numpy as np
 import warnings
 import random
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
-from pypet.trajectory import Trajectory
+from pypet.trajectory import Trajectory, load_trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
@@ -28,7 +28,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
     def test_link_creation(self):
         traj = Trajectory()
 
-        traj.f_add_parameter_group('test')
+        traj.f_add_parameter_group('test.test3')
         traj.f_add_parameter_group('test2')
 
         with self.assertRaises(ValueError):
@@ -50,6 +50,70 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         traj.par.f_add_link('gg', traj.circle1)
         self.assertTrue(traj.gg is traj.test2)
+        self.assertTrue(traj.test2.test3 is traj.par.test.test3)
+
+
+    def test_not_getting_links(self):
+        traj = Trajectory()
+
+        traj.f_add_parameter_group('test.test3')
+        traj.f_add_parameter_group('test2')
+
+        traj.test.f_add_link('circle1' , traj.test2)
+        traj.test2.f_add_link('circle2' , traj.test)
+
+        self.assertTrue(traj.test.circle1 is traj.test2)
+
+        traj.v_with_links = False
+
+        with self.assertRaises(AttributeError):
+            traj.test.circle1
+
+        found = False
+        for item in traj.test.f_iter_nodes(recursive=True, with_links=True):
+            if item is traj.test2:
+                found=True
+
+        self.assertTrue(found)
+
+        for item in traj.test.f_iter_nodes(recursive=True, with_links=False):
+            if item is traj.test2:
+                self.assertTrue(False)
+
+        traj.v_with_links=True
+        self.assertTrue('circle1' in traj)
+        self.assertFalse(traj.f_contains('circle1', with_links=False))
+
+        self.assertTrue('circle1' in traj.test)
+        self.assertFalse(traj.test.f_contains('circle1', with_links=False))
+
+        self.assertTrue(traj.test2.test3 is traj.par.test.test3)
+        traj.v_with_links = False
+        with self.assertRaises(AttributeError):
+            traj.test2.test3
+
+        traj.v_with_links = True
+        self.assertTrue(traj['test2.test3'] is traj.test3)
+
+        with self.assertRaises(AttributeError):
+            traj.f_get('test2.test3', with_links=False)
+
+
+    def test_link_of_link(self):
+
+        traj = Trajectory()
+
+        traj.f_add_parameter_group('test')
+        traj.f_add_parameter_group('test2')
+
+        traj.test.f_add_link('circle1' , traj.test2)
+        traj.test2.f_add_link('circle2' , traj.test)
+        traj.test.f_add_link('circle2' , traj.test.circle1.circle2)
+
+
+        self.assertTrue(traj.test.circle2 is traj.test)
+
+
 
     def test_link_removal(self):
         traj = Trajectory()
@@ -80,6 +144,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)
+        traj.test.f_add_link('circle2' , traj.test.circle1.circle2)
 
         traj.f_add_parameter_group('test.ab.bc.cd')
         traj.cd.f_add_link(traj.test)
@@ -107,6 +172,8 @@ class LinkTrajectoryTests(TrajectoryComparator):
         retest = traj2.test.circle1
 
         self.assertTrue(retest is traj2.test2)
+
+        self.assertTrue(traj2.test.circle2 is traj2.test)
 
     def test_link_deletion(self):
         filename = make_temp_file('linktest2.hdf5')
@@ -148,6 +215,7 @@ def explore_params2(traj):
 def dostuff_and_add_links(traj):
     traj.f_add_result('idx', traj.v_idx)
     traj.res.runs.crun.f_add_link('paraBL', traj.f_get('paramB'))
+    traj.res.f_add_link('$', traj.f_get('paraBL'))
 
 class LinkEnvironmentTest(TrajectoryComparator):
     def set_mode(self):
@@ -228,7 +296,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
 
 class LinkMergeTest(TrajectoryComparator):
 
-    def test_merge_with_linked_derived_parameter(self):
+    def test_merge_with_linked_derived_parameter(self, disable_logging = True):
         logging.basicConfig(level = logging.INFO)
 
 
@@ -285,7 +353,60 @@ class LinkMergeTest(TrajectoryComparator):
             else:
                 self.assertTrue(param == 53)
 
-        self.assertTrue(self.traj1.res.runs['r_%d' % old_length].paraBL == self.traj1.paramB)
+        self.assertTrue(len(self.traj1)>old_length)
+
+        for irun in range(len(self.traj1.f_get_run_names())):
+            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
+            self.assertTrue(self.traj1.res['r_%d' % irun] == self.traj1.paramB)
+
+        if disable_logging:
+            self.env1.f_disable_logging()
+            self.env2.f_disable_logging()
+
+        return old_length
+
+    def test_remerging(self):
+        prev_old_length = self.test_merge_with_linked_derived_parameter(disable_logging=False)
+
+        name = self.traj1
+
+        self.bfilename = make_temp_file('experiments/tests/HDF5/backup_test%s.hdf5' %
+                                        self.trajname1)
+
+        self.traj1.f_load(load_all=2)
+
+        self.traj1.f_backup(self.bfilename)
+
+        self.traj3 = load_trajectory(index=-1, filename=self.bfilename, load_all=2)
+
+        old_length = len(self.traj1)
+
+        self.traj1.f_merge(self.traj3, remove_duplicates=False)
+
+        self.assertTrue(len(self.traj1) > old_length)
+
+        self.traj1.f_load(load_all=2)
+
+        for run in self.traj1.f_get_run_names():
+            self.traj1.f_as_run(run)
+            idx = self.traj1.v_idx
+            param = self.traj1['test.crun.gg']
+            if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
+                self.assertTrue(param == 42)
+            else:
+                self.assertTrue(param == 44)
+
+            param = self.traj1['test.hh.crun']
+            if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
+                self.assertTrue(param == 111)
+            else:
+                self.assertTrue(param == 53)
+
+        self.assertTrue(len(self.traj1)>old_length)
+
+        for irun in range(len(self.traj1.f_get_run_names())):
+            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
+            self.assertTrue(self.traj1.res['r_%d' % irun] == self.traj1.paramB)
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
