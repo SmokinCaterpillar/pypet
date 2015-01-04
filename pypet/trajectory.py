@@ -1786,7 +1786,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         other_derived_parameters = \
             other_trajectory._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
-        first_run_name, new_first_run_name = next(compat.iteritems(run_name_dict)) # get first runname
+        first_run_name, new_first_run_name = next(iter(compat.iteritems(run_name_dict)))
+        # get first runname
 
         for param_name in other_derived_parameters:
             if not pypetconstants.RUN_NAME_DUMMY in param_name:
