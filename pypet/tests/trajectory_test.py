@@ -817,7 +817,7 @@ class TrajectoryTest(unittest.TestCase):
         srun.f_add_result('sdffds',42)
 
 
-        self.assertEqual(id(srun.results.crun), id(srun.results.f_get(srun.v_name)))
+        self.assertEqual(id(srun.results.crun), id(srun.results.f_get(srun.v_crun)))
         # self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
         # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
