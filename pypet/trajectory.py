@@ -427,7 +427,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @v_as_run.setter
     @deprecated(msg='Please use `v_crun` instead')
     @not_in_run
-    def v_crun(self, run_name):
+    def v_as_run(self, run_name):
         """Changes the run name to make the trajectory behave as a single run"""
         self.v_crun = run_name
 
