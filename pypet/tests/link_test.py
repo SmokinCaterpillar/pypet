@@ -39,8 +39,15 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         self.assertTrue(traj.test.circle1.circle2.circle1.circle2 is traj.test)
 
+
+        traj.f_add_link('hh', traj.test)
+
+        traj.par.f_add_link('overview', traj.test)
         with self.assertRaises(ValueError):
-            traj.f_add_link('gg', traj.test)
+            traj.f_add_link('overview', traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('v_crun')
 
         with self.assertRaises(ValueError):
             traj.par.f_add_link('gg', traj)
@@ -51,6 +58,9 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.par.f_add_link('gg', traj.circle1)
         self.assertTrue(traj.gg is traj.test2)
         self.assertTrue(traj.test2.test3 is traj.par.test.test3)
+
+        traj.f_add_link(traj.test3)
+        self.assertTrue('test3' in traj._links)
 
 
     def test_not_getting_links(self):
@@ -142,6 +152,10 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         traj.par.f_add_link('gg', res)
 
+        traj.f_add_link('hh', res)
+        traj.f_add_link('jj', traj.par)
+        traj.f_add_link('ii', res)
+
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)
         traj.test.f_add_link('circle2' , traj.test.circle1.circle2)
@@ -161,6 +175,10 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(len(traj._linked_by), len(traj2._linked_by))
         self.compare_trajectories(traj, traj2)
 
+        traj2.f_remove_child('jj')
+        traj2.f_remove_child('hh')
+        traj2.f_remove_child('ii')
+
         traj2.f_remove_child('parameters', recursive=True)
 
         traj2.v_auto_load = True
@@ -174,6 +192,15 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(retest is traj2.test2)
 
         self.assertTrue(traj2.test.circle2 is traj2.test)
+
+        self.assertTrue(traj2.hh == traj2.res.kk)
+
+        traj2.v_auto_load = False
+        traj2.f_load_child('jj')
+        self.assertTrue(traj2.jj is traj2.par)
+        traj2.f_load(load_all=2)
+        self.assertTrue(traj2.ii == traj2.res.kk)
+
 
     def test_link_deletion(self):
         filename = make_temp_file('linktest2.hdf5')
@@ -398,15 +425,15 @@ class LinkMergeTest(TrajectoryComparator):
             idx = self.traj1.v_idx
             param = self.traj1['test.crun.gg']
             if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
-                self.assertTrue(param == 42)
+                self.assertTrue(param == 42, '%s != 42' % str(param))
             else:
-                self.assertTrue(param == 44)
+                self.assertTrue(param == 44, '%s != 44' % str(param))
 
             param = self.traj1['test.hh.crun']
             if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
-                self.assertTrue(param == 111)
+                self.assertTrue(param == 111, '%s != 111' % str(param))
             else:
-                self.assertTrue(param == 53)
+                self.assertTrue(param == 53, '%s != 53' % str(param))
 
         self.assertTrue(len(self.traj1)>old_length)
 

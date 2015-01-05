@@ -148,17 +148,17 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(all_nodes)==4)
 
-    def test_backwards_search(self):
-
-        x=self.traj.peter.f_get('paul.peter', backwards_search=False)
-
-        y=self.traj.f_get('peter.peter', backwards_search=True)
-
-        self.assertTrue(x is y)
+    # def test_backwards_search(self):
     #
-    # def test_value_error_on_search_strategy_assignment(self):
-    #     with self.assertRaises(ValueError):
-    #         self.traj.v_search_strategy = 'ewnforenfre'
+    #     x=self.traj.peter.f_get('paul.peter', backwards_search=False)
+    #
+    #     y=self.traj.f_get('peter.peter', backwards_search=True)
+    #
+    #     self.assertTrue(x is y)
+    # #
+    # # def test_value_error_on_search_strategy_assignment(self):
+    # #     with self.assertRaises(ValueError):
+    # #         self.traj.v_search_strategy = 'ewnforenfre'
 
     def test_get_data_dictionaries_directly(self):
 
@@ -507,8 +507,8 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.sub.resulttest2', 444)
         self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.resulttest2', 444)
 
-        with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_get_from_runs('sub.sub.resulttest2', backwards_search=True)
+        # with self.assertRaises(pex.NotUniqueNodeError):
+        #     self.traj.f_get_from_runs('sub.sub.resulttest2', backwards_search=True)
 
         with self.assertRaises(ValueError):
             self.traj.f_get_from_runs('test', where='Portland')
@@ -760,8 +760,8 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(self.traj.findme==43)
 
-        with self.assertRaises(pex.NotUniqueNodeError):
-            self.traj.f_get('depth0.findme', backwards_search=True)
+        # with self.assertRaises(pex.NotUniqueNodeError):
+        #     self.traj.f_get('depth0.findme', backwards_search=True)
 
 
     def test_contains_item_identity(self):

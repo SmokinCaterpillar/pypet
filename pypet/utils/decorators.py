@@ -68,7 +68,7 @@ def copydoc(fromfunc, sep="\n"):
     return _decorator
 
 
-def kwargs_api_change(old_name, new_name):
+def kwargs_api_change(old_name, new_name=None):
     """This is a decorator which can be used if a kwarg has changed
     its name over versions to also support the old argument name.
 
@@ -90,7 +90,12 @@ def kwargs_api_change(old_name, new_name):
         def new_func(*args, **kwargs):
 
             if old_name in kwargs:
-                warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
+                if new_name is None:
+                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`. ' \
+                                 'This keyword is no longer supported, please don`t use it ' \
+                                 'anymore.' % (old_name, func.__name__)
+                else:
+                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
                                  'please use keyword `%s` instead.' % \
                                  (old_name, func.__name__, new_name)
                 warnings.warn(
@@ -100,7 +105,8 @@ def kwargs_api_change(old_name, new_name):
                     # lineno=compat.func_code(func).co_firstlineno + 1
                 )
                 value = kwargs.pop(old_name)
-                kwargs[new_name] = value
+                if new_name is not None:
+                    kwargs[new_name] = value
 
             return func(*args, **kwargs)
 

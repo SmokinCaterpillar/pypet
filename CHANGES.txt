@@ -45,6 +45,8 @@ pypet 0.1b.9
 *   BUG FIX: Trajectories with only a single explored parameter can now be merged
     several times
 
+*   Backwards search no longer supported!
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

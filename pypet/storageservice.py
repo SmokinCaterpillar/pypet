@@ -12,12 +12,12 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
-import sys
 
 try:
     import queue
 except ImportError:
     import Queue as queue
+import itertools as itools
 import numpy as np
 from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
 
@@ -1855,53 +1855,57 @@ class HDF5StorageService(StorageService, HasLogger):
         maximum_display_other = 10
         counter = 0
 
-        children = self._trajectory_group._v_groups
-        for hdf5group_name in children:
-            hdf5group = children[hdf5group_name]
+        for children in [self._trajectory_group._v_groups, self._trajectory_group._v_links]:
+            for hdf5group_name in children:
+                hdf5group = children[hdf5group_name]
 
-            what = hdf5group._v_name
+                what = hdf5group._v_name
 
-            load_subbranch = True
-            if what == 'config':
-                loading = load_parameters
-            elif what == 'parameters':
-                loading = load_parameters
-            elif what == 'results':
-                loading = load_results
-            elif what == 'derived_parameters':
-                loading = load_derived_parameters
-            elif what == 'overview':
-                continue
-            else:
-                loading = load_other_data
-                load_subbranch = False
+                load_subbranch = True
+                if what == 'config':
+                    loading = load_parameters
+                elif what == 'parameters':
+                    loading = load_parameters
+                elif what == 'results':
+                    loading = load_results
+                elif what == 'derived_parameters':
+                    loading = load_derived_parameters
+                elif what == 'overview':
+                    continue
+                else:
+                    loading = load_other_data
+                    load_subbranch = False
 
-            if load_subbranch:
-                # If the trajectory is loaded as new, we don't care about old config stuff
-                # and only load the parameters
-                if as_new and what == 'config':
-                    loading = pypetconstants.LOAD_NOTHING
+                if load_subbranch:
+                    # If the trajectory is loaded as new, we don't care about old config stuff
+                    # and only load the parameters
+                    if as_new and what == 'config':
+                        loading = pypetconstants.LOAD_NOTHING
 
-                # Load the subbranches recursively
-                if loading != pypetconstants.LOAD_NOTHING:
-                    self._logger.info('Loading branch `%s` in mode `%s`.' % (what, str(loading)))
-                    self._tree_load_sub_branch(traj, traj, what, self._trajectory_group, loading,
-                                               recursive=True,
-                                               as_new=as_new)
-            else:
+                    # Load the subbranches recursively
+                    if loading != pypetconstants.LOAD_NOTHING:
+                        self._logger.info('Loading branch `%s` in mode `%s`.' %
+                                          (what, str(loading)))
+                        self._tree_load_sub_branch(traj, traj, what, self._trajectory_group,
+                                                   loading,
+                                                   recursive=True,
+                                                   as_new=as_new)
+                else:
 
-                if loading != pypetconstants.LOAD_NOTHING:
-                    counter += 1
-                    if counter <= maximum_display_other:
-                        self._logger.info(
-                            'Loading branch/node `%s` in mode `%s`.' % (what, str(loading)))
-                        if counter == maximum_display_other:
-                            self._logger.info('To many branchs or nodes at root for display. '
-                                              'I will not inform you about loading anymore. '
-                                              'Branches are loaded silently in the background. '
-                                              'Do not worry, I will not freeze! Pinky promise!!!')
+                    if loading != pypetconstants.LOAD_NOTHING:
+                        counter += 1
+                        if counter <= maximum_display_other:
+                            self._logger.info(
+                                'Loading branch/node `%s` in mode `%s`.' % (what, str(loading)))
+                            if counter == maximum_display_other:
+                                self._logger.info('To many branchs or nodes at root for display. '
+                                                  'I will not inform you about loading anymore. '
+                                                  'Branches are loaded silently '
+                                                  'in the background. Do not worry, '
+                                                  'I will not freeze! Pinky promise!!!')
 
-                    self._tree_load_nodes(traj, traj, hdf5group, loading, recursive=True)
+                        self._tree_load_nodes(traj, traj, hdf5group, loading, recursive=True,
+                                              as_new=as_new)
 
 
     def _trj_load_meta_data(self, traj, as_new, force):
@@ -2815,29 +2819,29 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, single_run, store_data, store_final, skip_existing=False):
+    def _srn_store_single_run(self, traj, store_data, store_final, skip_existing=False):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data:
-            self._logger.info('Storing Data of single run `%s`.' % single_run.v_name)
-            for group_name in single_run._run_parent_groups:
-                group = single_run._run_parent_groups[group_name]
-                if group.f_contains(single_run.v_name):
-                    self._tree_store_tree(group, single_run.v_name, recursive=True,
+            self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
+            for group_name in traj._run_parent_groups:
+                group = traj._run_parent_groups[group_name]
+                if group.f_contains(traj.v_crun):
+                    self._tree_store_tree(group, traj.v_crun, recursive=True,
                                           skip_existing=skip_existing)
 
         if store_final:
-            self._logger.info('Finishing Storage of single run `%s`.' % single_run.v_name)
-            idx = single_run.v_idx
+            self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
+            idx = traj.v_idx
 
             add_table = self._overview_explored_parameters_runs
 
             # For better readability and if desired add the explored parameters to the results
             # Also collect some summary information about the explored parameters
             # So we can add this to the `run` table
-            run_summary = self._srn_add_explored_params(single_run.v_name,
+            run_summary = self._srn_add_explored_params(traj.v_crun,
                                                         compat.listvalues(
-                                                            single_run._explored_parameters),
+                                                            traj._explored_parameters),
                                                         add_table)
 
             # Finally, add the real run information to the `run` table
@@ -2849,12 +2853,12 @@ class HDF5StorageService(StorageService, HasLogger):
             if idx + 1 > actual_rows:
                 self._all_fill_run_table_with_dummys(actual_rows, idx + 1)
 
-            insert_dict = self._all_extract_insert_dict(single_run, runtable.colnames)
+            insert_dict = self._all_extract_insert_dict(traj, runtable.colnames)
             insert_dict['parameter_summary'] = run_summary
             insert_dict['completed'] = 1
 
             self._hdf5file.flush()
-            self._all_add_or_modify_row(single_run, insert_dict, runtable,
+            self._all_add_or_modify_row(traj, insert_dict, runtable,
                                         index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
     def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
@@ -3450,7 +3454,8 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['location'] = compat.tobytetype(item.v_location)
 
         if 'name' in colnames:
-            insert_dict['name'] = compat.tobytetype(item.v_name)
+            name = item._name if (not item.v_is_root or not item.v_is_run) else item._crun
+            insert_dict['name'] = compat.tobytetype(name)
 
         if 'class_name' in colnames:
             insert_dict['class_name'] = compat.tobytetype(item.f_get_class_name())
@@ -3468,10 +3473,12 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['idx'] = item.v_idx
 
         if 'time' in colnames:
-            insert_dict['time'] = compat.tobytetype(item.v_time)
+            time = item._time if not item._is_run else item._time_run
+            insert_dict['time'] = time
 
         if 'timestamp' in colnames:
-            insert_dict['timestamp'] = item.v_timestamp
+            timestamp = item._timestamp if not item._is_run else item._timestamp_run
+            insert_dict['timestamp'] = timestamp
 
         if 'range' in colnames:
             insert_dict['range'] = self._all_cut_string(
@@ -3493,10 +3500,10 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['python'] = compat.tobytetype(item.v_python)
 
         if 'finish_timestamp' in colnames:
-            insert_dict['finish_timestamp'] = item._finish_timestamp
+            insert_dict['finish_timestamp'] = item._finish_timestamp_run
 
         if 'runtime' in colnames:
-            runtime = item._runtime
+            runtime = item._runtime_run
             if len(runtime) > pypetconstants.HDF5_STRCOL_MAX_RUNTIME_LENGTH:
                 # If string is too long we cut the microseconds
                 runtime = runtime.split('.')[0]

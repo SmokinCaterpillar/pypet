@@ -56,7 +56,7 @@ except ImportError:  # not 2.6+ or is 3.x
     except ImportError:
         pass
 
-from pypet.utils.decorators import deprecated
+from pypet.utils.decorators import deprecated, kwargs_api_change
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
@@ -411,8 +411,6 @@ class NaturalNamingInterface(HasLogger):
         # a single run or the parent trajectory. This can change during runtime!
         self._root_instance = root_instance
 
-        self._run_or_traj_name = root_instance.v_name
-
         self._set_logger()
 
         # Dictionary containing ALL leaves. Keys are the full names and values the parameter
@@ -428,7 +426,7 @@ class NaturalNamingInterface(HasLogger):
         # Values are dictionaries containing names (not full names) as keys and dictionaries
         # of parameter and result instances as values and their full names as keys (as above).
         # This dictionary is used for fast search in case a trajectory is told to behave like
-        # a particular run (by setting the v_as_run property).
+        # a particular run (by setting the v_crun property).
         self._nodes_and_leaves_runs_sorted = {}
 
         # List of names that are taboo. The user cannot create parameters or results that
@@ -458,20 +456,6 @@ class NaturalNamingInterface(HasLogger):
             return root._other_leaves
         else:
             raise RuntimeError('You shall not pass!')
-
-    # def _change_root(self, new_root):
-    #     """ Changes the root of the whole tree.
-    #
-    #     This is called on creation of single runs to take over the tree from its parent
-    #     trajectory and vice versa.
-    #
-    #     """
-    #     new_root._children = self._root_instance._children
-    #     self._root_instance = new_root
-    #     self._run_or_traj_name = self._root_instance.v_name
-
-    def _get_backwards_search(self):
-        return self._root_instance.v_backwards_search
 
     def _get_fast_access(self):
         return self._root_instance.v_fast_access
@@ -914,7 +898,7 @@ class NaturalNamingInterface(HasLogger):
         * 'run_X' or 'r_X' to 'run_XXXXXXXXX'
 
         * 'crun' to the current run name in case of a
-          single run instance if trajectory is used via `v_as_run`
+          single run instance if trajectory is used via `v_crun`
 
         * 'par' 'parameters'
 
@@ -931,7 +915,7 @@ class NaturalNamingInterface(HasLogger):
         if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
         elif name == -2:
-            if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
+            if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
                 return '$'
             else:
                 return pypetconstants.RUN_NAME_DUMMY
@@ -949,7 +933,7 @@ class NaturalNamingInterface(HasLogger):
 
         if name in SHORTCUT_SET:
             if name == 'crun':
-                if self._root_instance._as_run != pypetconstants.RUN_NAME_DUMMY:
+                if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
                     return '$'
                 else:
                     return pypetconstants.RUN_NAME_DUMMY
@@ -1044,17 +1028,17 @@ class NaturalNamingInterface(HasLogger):
                                                      group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
-                    add = add + 'runs.' + root.v_name + '.'
+                    add = add + 'runs.' + root.v_crun + '.'
 
                 elif start_node.v_depth == 1:
 
                     if name == 'runs':
                         return name
                     else:
-                        add = add + 'runs.' + root.v_name + '.'
+                        add = add + 'runs.' + root.v_crun + '.'
 
-                elif start_node.v_depth == 2 and start_node.v_name == 'runs':
-                    add += root.v_name + '.'
+                elif start_node.v_depth == 2 and start_node.v_crun == 'runs':
+                    add += root.v_crun + '.'
 
         name = add + name
 
@@ -1065,10 +1049,6 @@ class NaturalNamingInterface(HasLogger):
         """Determines types for generic additions"""
         if start_node.v_is_root:
             where = name.split('.')[0]
-            if where == 'overview':
-                raise ValueError(
-                    'Sorry, you are not allowed to have an `overview` subtree directly under '
-                    'the root node.')
         else:
             where = start_node._branch
 
@@ -1188,7 +1168,7 @@ class NaturalNamingInterface(HasLogger):
     def _replace_wildcards(self, name):
         """Replaces the $ wildcards"""
         if self._root_instance._is_run:
-            name = name.replace('$', self._root_instance.v_name)
+            name = name.replace('$', self._root_instance.v_crun)
         else:
             name = name.replace('$', pypetconstants.RUN_NAME_DUMMY)
 
@@ -1281,7 +1261,7 @@ class NaturalNamingInterface(HasLogger):
         try:
             act_node = start_node
             last_idx = len(split_name) - 1
-            # last_name = start_node.v_name
+            # last_name = start_node.v_crun
             for idx, name in enumerate(split_name):
 
                 if name not in act_node._children:
@@ -1394,8 +1374,8 @@ class NaturalNamingInterface(HasLogger):
                 '%s please choose other names.'
                 % (name, faulty_names))
 
-        if instance.v_is_root or act_node.v_is_root:
-            raise ValueError('You cannot create a link to or directly from the root node')
+        if instance.v_is_root:
+            raise ValueError('You cannot create a link to the root node')
 
         if name in act_node._children:
             raise ValueError('`%s` has already a child or link called `%s`, '
@@ -1428,6 +1408,10 @@ class NaturalNamingInterface(HasLogger):
             parent_run_count = int(parent_node._run_branch_pos >= 0)
 
         faulty_names = ''
+
+        if parent_node is not None and parent_node.v_is_root and split_names[0] == 'overview':
+            faulty_names = '%s `overview` cannot be added directly under the root node ' \
+                           'this is a reserved keyword,' % (faulty_names)
 
         for split_name in split_names:
 
@@ -1625,18 +1609,18 @@ class NaturalNamingInterface(HasLogger):
         :return: Iterator
 
         """
-        as_run = self._get_as_run()
+        crun = self._get_crun()
 
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
-                                            as_run, max_depth, with_links,
+                                            crun, max_depth, with_links,
                                             in_search)
         else:
             if in_search:
-                return self._make_child_iterator(node, as_run, with_links)
+                return self._make_child_iterator(node, crun, with_links)
             else:
-                return (x[1][1] for x in self._make_child_iterator(node, as_run, with_links))
+                return (x[1][1] for x in self._make_child_iterator(node, crun, with_links))
 
 
 
@@ -1713,7 +1697,7 @@ class NaturalNamingInterface(HasLogger):
     def _make_child_iterator(node, run_name, with_links, current_depth=0):
         """Returns an iterator over a node's children.
 
-        In case of using a trajectory as a run (setting 'v_as_run') some sub branches
+        In case of using a trajectory as a run (setting 'v_crun') some sub branches
         that do not belong to the run are blinded out.
 
         """
@@ -1768,7 +1752,7 @@ class NaturalNamingInterface(HasLogger):
         blinded out.
 
         """
-        queue = iter([(0,node.v_name, node)])
+        queue = iter([(0, node.v_name, node)])
         start = True
         visited_linked_nodes = set([])
 
@@ -1778,13 +1762,12 @@ class NaturalNamingInterface(HasLogger):
                 full_name = item._full_name
                 if full_name in visited_linked_nodes:
                     if in_search:
-                        # We need to retunr the node again to check if a link to the node
+                        # We need to return the node again to check if a link to the node
                         # has to be found
                         yield depth, name, item
                 elif depth <= max_depth:
                     if start:
                         start = False
-
                     else:
                         if in_search:
                             yield depth, name, item
@@ -1803,15 +1786,15 @@ class NaturalNamingInterface(HasLogger):
             except StopIteration:
                 break
 
-    def _get_candidate_dict(self, key, as_run, use_upper_bound=True):
+    def _get_candidate_dict(self, key, crun, use_upper_bound=True):
         # First find all nodes where the key matches the (short) name of the node
-        if as_run == pypetconstants.RUN_NAME_DUMMY:
+        if crun == pypetconstants.RUN_NAME_DUMMY:
             return self._nodes_and_leaves[key]
         # This can be false in case of links which are not added to the run sorted nodes and leaves
         elif key in self._nodes_and_leaves_runs_sorted:
             temp_dict = {}
-            if as_run in self._nodes_and_leaves_runs_sorted[key]:
-                temp_dict = self._nodes_and_leaves_runs_sorted[key][as_run]
+            if crun in self._nodes_and_leaves_runs_sorted[key]:
+                temp_dict = self._nodes_and_leaves_runs_sorted[key][crun]
                 if use_upper_bound and len(temp_dict) > FAST_UPPER_BOUND:
                     raise pex.TooManyGroupsError('Too many nodes')
 
@@ -1825,11 +1808,11 @@ class NaturalNamingInterface(HasLogger):
         else:
             return {}
 
-    def _get_as_run(self):
-        """ Returns the run name in case of 'v_as_run' is set, otherwise None."""
-        return self._root_instance._as_run
+    def _get_crun(self):
+        """ Returns the run name in case of 'v_crun' is set, otherwise None."""
+        return self._root_instance._crun
 
-    def _very_fast_search(self, node, key, as_run,
+    def _very_fast_search(self, node, key, crun,
                           with_links):
         """Fast search for a node in the tree.
 
@@ -1843,7 +1826,7 @@ class NaturalNamingInterface(HasLogger):
 
             Name of node to find
 
-        :param as_run:
+        :param crun:
 
             If given only nodes belonging to this particular run are searched and the rest
             is blinded out.
@@ -1868,7 +1851,7 @@ class NaturalNamingInterface(HasLogger):
 
         parent_full_name = node.v_full_name
 
-        candidate_dict = self._get_candidate_dict(key, as_run)
+        candidate_dict = self._get_candidate_dict(key, crun)
 
         # If there are to many potential candidates sequential search might be too slow
         if len(candidate_dict) > FAST_UPPER_BOUND:
@@ -1923,12 +1906,12 @@ class NaturalNamingInterface(HasLogger):
         if key in node._children and (with_links or key not in node._links):
             return node._children[key]
 
-        as_run = self._get_as_run()
+        crun = self._get_crun()
 
         # First the very fast search is tried that does not need tree traversal.
         if max_depth == float('inf'):
             try:
-                result_node = self._very_fast_search(node, key, as_run, with_links)
+                result_node = self._very_fast_search(node, key, crun, with_links)
                 if result_node is not None:
                     return result_node
             except pex.TooManyGroupsError:
@@ -1986,9 +1969,9 @@ class NaturalNamingInterface(HasLogger):
         """
 
         result_list = []
-        as_run = self._get_as_run()
+        crun = self._get_crun()
         key = split_name[-1]
-        candidate_dict = self._get_candidate_dict(key, as_run, use_upper_bound=False)
+        candidate_dict = self._get_candidate_dict(key, crun, use_upper_bound=False)
         parent_full_name = start_node.v_full_name
 
         split_length = len(split_name)
@@ -2088,7 +2071,7 @@ class NaturalNamingInterface(HasLogger):
 
         return None
 
-    def _get(self, node, name, fast_access, backwards_search,
+    def _get(self, node, name, fast_access,
              shortcuts, max_depth, auto_load, with_links):
         """Searches for an item (parameter/result/group node) with the given `name`.
 
@@ -2097,14 +2080,6 @@ class NaturalNamingInterface(HasLogger):
         :param name: Name of the item (full name or parts of the full name)
 
         :param fast_access: If the result is a parameter, whether fast access should be applied.
-
-
-        :param backwards_search:
-
-            If the tree should be searched backwards in case more than one name/location is given.
-            For instance, `groupA,groupC,valD` can be used for backwards search.
-            The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`.
 
         :param max_depth:
 
@@ -2169,7 +2144,7 @@ class NaturalNamingInterface(HasLogger):
 
             if key == '$':
                 wildcard_pos = idx
-                if self._root_instance._as_run not in self._nodes_and_leaves:
+                if self._root_instance._crun not in self._nodes_and_leaves:
                     try_auto_load_directly1 = True
                 if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
                     try_auto_load_directly2 = True
@@ -2191,23 +2166,23 @@ class NaturalNamingInterface(HasLogger):
 
             with self._disable_logger:
                 try:
-                    as_run = self._root_instance._as_run
-                    if as_run == pypetconstants.RUN_NAME_DUMMY:
+                    crun = self._root_instance._crun
+                    if crun == pypetconstants.RUN_NAME_DUMMY:
                         # If our trajectory is not set to a particular run we can skip this part
                         raise AttributeError
-                    split_name[wildcard_pos] = as_run
-                    result = self._perform_get(node, split_name, fast_access, backwards_search,
+                    split_name[wildcard_pos] = crun
+                    result = self._perform_get(node, split_name, fast_access,
                                                shortcuts, max_depth, auto_load, with_links,
                                                try_auto_load_directly1)
                     return result
                 except (pex.DataNotInStorageError, AttributeError):
                     split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
 
-        return self._perform_get(node, split_name, fast_access, backwards_search,
+        return self._perform_get(node, split_name, fast_access,
                                  shortcuts, max_depth, auto_load, with_links,
                                  try_auto_load_directly2)
 
-    def _perform_get(self, node, split_name, fast_access, backwards_search,
+    def _perform_get(self, node, split_name, fast_access,
                      shortcuts, max_depth, auto_load, with_links,
                      try_auto_load_directly):
         """Searches for an item (parameter/result/group node) with the given `name`.
@@ -2217,13 +2192,6 @@ class NaturalNamingInterface(HasLogger):
         :param split_name: Name split into list according to '.'
 
         :param fast_access: If the result is a parameter, whether fast access should be applied.
-
-        :param backwards_search:
-
-            If the tree should be searched backwards in case more than one name/location is given.
-            For instance, `groupA,groupC,valD` can be used for backwards search.
-            The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`.
 
         :param max_depth:
 
@@ -2267,33 +2235,14 @@ class NaturalNamingInterface(HasLogger):
                 result = self._check_flat_dicts(node, split_name)
 
                 if result is None:
-
-                    if backwards_search and len(split_name) > 1:
-                        # Do backwards search if we have a colon separated name
-                        result_list = self._backwards_search(node, split_name, max_depth)
-
-                        if len(result_list) == 0:
-                            result = None
-                        elif len(result_list) == 1:
-                            result = result_list.pop()
-                        else:
-                            raise pex.NotUniqueNodeError(
-                                'Node `%s` has been found more than once. '
-                                'Full name of first occurrence is `%s` '
-                                'and of '
-                                'another `%s`. In total there are %d '
-                                'occurrences.'
-                                % (name, result_list[0].v_full_name,
-                                   result_list[1].v_full_name, len(result_list)))
-                    else:
-                        # Check in O(N) with `N` number of groups and nodes
-                        # [Worst Case O(N), average case is better
-                        # since looking into a single dict costs O(1)].
-                        result = node
-                        for key in split_name:
-                            result = self._search(result, key, max_depth, with_links)
-                            if result is None:
-                                break
+                    # Check in O(N) with `N` number of groups and nodes
+                    # [Worst Case O(N), average case is better
+                    # since looking into a single dict costs O(1)].
+                    result = node
+                    for key in split_name:
+                        result = self._search(result, key, max_depth, with_links)
+                        if result is None:
+                            break
         elif not try_auto_load_directly:
             result = node
             for name in split_name:
@@ -2556,7 +2505,6 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self.f_contains(item,
-                               backwards_search=self._nn_interface._get_backwards_search(),
                                shortcuts=self._nn_interface._get_shortcuts(),
                                max_depth=self._nn_interface._get_max_depth(),
                                with_links=self._nn_interface._get_with_links())
@@ -2609,8 +2557,8 @@ class NNGroupNode(NNTreeNode):
             else:
                 self._nn_interface._remove_subtree(self, name, keep_predicate)
 
-    def f_contains(self, item, backwards_search=False,
-                   shortcuts=False, max_depth=None, with_links=True):
+    @kwargs_api_change('backwards_search')
+    def f_contains(self, item, with_links=True, shortcuts=False, max_depth=None):
         """Checks if the node contains a specific parameter or result.
 
         It is checked if the item can be found via the
@@ -2622,9 +2570,9 @@ class NNGroupNode(NNTreeNode):
             the provided item and the found item are exactly the same instance, i.e.
             `id(item)==id(found_item)`.
 
-        :param backwards_search:
+        :param with_links:
 
-            If backwards search should be allowed in case the name contains grouping.
+            If links are considered.
 
         :param shortcuts:
 
@@ -2639,10 +2587,6 @@ class NNGroupNode(NNTreeNode):
 
             If shortcuts is `True` than the maximum search depth
             can be specified. `None` means no limit.
-
-        :param with_links:
-
-            If links are considered.
 
         :return: True or False
 
@@ -2668,7 +2612,7 @@ class NNGroupNode(NNTreeNode):
             item = None
 
         try:
-            result = self.f_get(search_string, backwards_search=backwards_search,
+            result = self.f_get(search_string,
                                 shortcuts=shortcuts, max_depth=max_depth, with_links=with_links)
         except AttributeError:
             return False
@@ -2717,7 +2661,6 @@ class NNGroupNode(NNTreeNode):
 
         return self._nn_interface._get(self, name,
                                        fast_access=self._nn_interface._get_fast_access(),
-                                       backwards_search=self._nn_interface._get_backwards_search(),
                                        shortcuts=self._nn_interface._get_shortcuts(),
                                        max_depth=self._nn_interface._get_max_depth(),
                                        auto_load=self._nn_interface._get_auto_load(),
@@ -2776,8 +2719,9 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._get_all(self, name, max_depth=max_depth)
 
-    def f_get_default(self, name, default=None, fast_access=True, backwards_search=False,
-              shortcuts=True, max_depth=None, auto_load=False, with_links=True):
+    @kwargs_api_change('backwards_search')
+    def f_get_default(self, name, default=None, fast_access=True, with_links=True,
+              shortcuts=True, max_depth=None, auto_load=False):
         """ Similar to `f_get`, but returns the default value if `name` is not found in the
         trajectory.
 
@@ -2791,7 +2735,6 @@ class NNGroupNode(NNTreeNode):
         """
         try:
             return self.f_get(name, fast_access=fast_access,
-                           backwards_search=backwards_search,
                            shortcuts=shortcuts,
                            max_depth=max_depth,
                            auto_load=auto_load,
@@ -2800,20 +2743,18 @@ class NNGroupNode(NNTreeNode):
         except (AttributeError, pex.DataNotInStorageError):
             return default
 
-    def f_get(self, name, fast_access=False, backwards_search=False,
-              shortcuts=True, max_depth=None, auto_load=False, with_links=True):
+    @kwargs_api_change('backwards_search')
+    def f_get(self, name, fast_access=False, with_links=True,
+              shortcuts=True, max_depth=None, auto_load=False):
         """Searches and returns an item (parameter/result/group node) with the given `name`.
 
         :param name: Name of the item (full name or parts of the full name)
 
         :param fast_access: Whether fast access should be applied.
 
-        :param backwards_search:
+        :param with_links:
 
-            If the tree should be searched backwards in case more than one name/location is given.
-            For instance, `groupA,groupC,valD` can be used for backwards search.
-            The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`.
+            If links are considered. Cannot be set to ``False`` if ``auto_load`` is ``True``.
 
 
         :param shortcuts:
@@ -2838,10 +2779,6 @@ class NNGroupNode(NNTreeNode):
             The found instance (result/parameter/group node) or if fast access is True and you
             found a parameter or result that supports fast access, the contained value is returned.
 
-        :param with_links:
-
-            If links are considered. Cannot be set to ``False`` if ``auto_load`` is ``True``.
-
         :raises:
 
             AttributeError: If no node with the given name can be found
@@ -2859,7 +2796,6 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self._nn_interface._get(self, name, fast_access=fast_access,
-                                       backwards_search=backwards_search,
                                        shortcuts=shortcuts,
                                        max_depth=max_depth,
                                        auto_load=auto_load,

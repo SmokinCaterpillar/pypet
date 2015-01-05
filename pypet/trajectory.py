@@ -40,7 +40,7 @@ from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
 import pypet.storageservice as storage
-from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc
+from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug
 
 def load_trajectory(
@@ -208,17 +208,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._timestamp = init_time
         self._time = formatted_time
 
-        self._finish_timestamp = None  # End of run, set by the environemnt
-        self._runtime = None  # Runtime in human readable format as single run
+        # Times related to single runs
+        self._runtime_run = None
+        self._timestamp_run = None
+        self._time_run = None
+        self._finish_timestamp_run = None
 
         if add_time:
             self._name = name + '_' + str(formatted_time)
         else:
             self._name = name
-
-        self._trajectory_name = self.v_name
-        self._trajectory_time = self.v_time
-        self._trajectory_timestamp = self.v_timestamp
 
         self._parameters = {}  # Contains all parameters
         self._derived_parameters = {}  # Contains all derived parameters
@@ -246,7 +245,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access = True
-        self._backwards_search = False
         self._shortcuts = True
         self._iter_recursive = False
         self._max_depth = None
@@ -267,9 +265,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                        file_title=self.v_name)
 
         # Index of a trajectory is -1, if the trajectory should behave like a single run
-        # and blind out other single run results, this can be changed via 'v_as_run'.
+        # and blind out other single run results, this can be changed via 'v_crun'.
         self._idx = -1
-        self._as_run = pypetconstants.RUN_NAME_DUMMY
+        self._crun = pypetconstants.RUN_NAME_DUMMY
 
         self._standard_parameter = Parameter
         self._standard_result = Result
@@ -407,7 +405,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         not names of runs.
 
         Alternatively instead of directly setting `v_idx` you can call
-        :func:`~pypet.trajectory.Trajectory.f_as_run:`. See it's documentation for a description
+        :func:`~pypet.trajectory.Trajectory.f_set_crun:`. See it's documentation for a description
         of making the trajectory behave like a single run.
 
         Set to `-1` to make the trajectory turn everything back to default.
@@ -419,30 +417,42 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @not_in_run
     def v_idx(self, idx):
         """Changes the index to make the trajectory behave as a single run"""
-        self.f_as_run(idx)
+        self.f_set_crun(idx)
 
     @property
+    @deprecated(msg='Please use `v_crun` instead')
     def v_as_run(self):
+        return self.v_crun
+
+    @v_as_run.setter
+    @deprecated(msg='Please use `v_crun` instead')
+    @not_in_run
+    def v_crun(self, run_name):
+        """Changes the run name to make the trajectory behave as a single run"""
+        self.v_crun = run_name
+
+    @property
+    def v_crun(self):
         """Run name if you want to access the trajectory as a single run.
 
         You can turn the trajectory to behave like a single run object if you set
-        `v_as_run` to a particular run name. Note that only string values are appropriate here,
+        `v_crun` to a particular run name. Note that only string values are appropriate here,
         not indices. Check the `v_idx` property if you want to provide an index.
 
-        Alternatively instead of directly setting `v_as_run` you can call
-        :func:`~pypet.trajectory.Trajectory.f_as_run:`. See it's documentation for a description
+        Alternatively instead of directly setting `v_crun` you can call
+        :func:`~pypet.trajectory.Trajectory.f_set_crun:`. See it's documentation for a description
         of making the trajectory behave like a single run.
 
         Set to `None` to make the trajectory to turn everything back to default.
 
         """
-        return self._as_run
+        return self._crun
 
-    @v_as_run.setter
+    @v_crun.setter
     @not_in_run
-    def v_as_run(self, run_name):
+    def v_crun(self, run_name):
         """Changes the run name to make the trajectory behave as a single run"""
-        self.f_as_run(run_name)
+        self.f_set_crun(run_name)
 
     @property
     def v_full_copy(self):
@@ -503,14 +513,19 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._dynamic_imports.extend(dynamic_imports)
 
+    @deprecated(msg='Please use `pypet.trajectory.Trajectory.f_set_crun` instead.')
     @not_in_run
     def f_as_run(self, name_or_idx):
+        return self.f_set_crun(name_or_idx)
+
+    @not_in_run
+    def f_set_crun(self, name_or_idx):
         """Can make the trajectory behave like a single run, for easier data analysis.
 
          Has the following effects:
 
         *
-            `v_idx` and `v_as_run` are set to the appropriate index and run name
+            `v_idx` and `v_crun` are set to the appropriate index and run name
 
         *
             All explored parameters are set to the corresponding value in the exploration
@@ -522,7 +537,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             If you perform a search in the trajectory tree, the trajectory will
             only search the run subtree under *results* and *derived_parameters* with the
             corresponding index.
-            For instance, if you use `f_as_run('run_00000007')` or `f_as_run(7)`
+            For instance, if you use `f_set_crun('run_00000007')` or `f_set_crun(7)`
             and search for `traj.results.z` this will search for `z` only in the subtree
             `traj.results.run_00000007`. Yet, you can still explicitly name other subtrees,
             i.e. `traj.results.run_00000004.z` will still work.
@@ -538,9 +553,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         else:
             if isinstance(name_or_idx, compat.base_type):
                 self._idx = self.f_idx_to_run(name_or_idx)
-                self._as_run = name_or_idx
+                self._crun = name_or_idx
             else:
-                self._as_run = self.f_idx_to_run(name_or_idx)
+                self._crun = self.f_idx_to_run(name_or_idx)
                 self._idx = name_or_idx
 
             self._set_explored_parameters_to_idx(self.v_idx)
@@ -565,11 +580,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         ::
 
             for run_name in traj.f_get_run_names(sort=True):
-                traj.f_as_run(run_name)
+                traj.f_set_crun(run_name)
 
                 # Do some stuff here...
 
-            traj.f_as_run(None)
+            traj.f_set_crun(None)
 
 
         :return:
@@ -581,11 +596,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
 
         for run_name in self.f_get_run_names(sort=True):
-            self.f_as_run(run_name)
+            self.f_set_crun(run_name)
 
             yield run_name
 
-        self.f_as_run(None)
+        self.f_set_crun(None)
 
     def _remove_incomplete_runs(self, start_timestamp, run_indices):
         """Requests the storage service to delete incomplete runs.
@@ -794,8 +809,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         runs.f_remove_child(node_name, recursive=True)
 
     @not_in_run
+    @kwargs_api_change('backwards_search')
     def f_get_from_runs(self, name, where='results', use_indices=False,
-                        fast_access=False, backwards_search=False,
+                        fast_access=False, with_links = True,
                         shortcuts=True, max_depth=None, auto_load=False):
         """Searches for all occurrences of `name` in each run.
 
@@ -826,13 +842,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             Whether to return parameter or result instances or the values handled by these.
 
-        :param backwards_search:
+        :param with_links:
 
-            If the tree should be searched backwards in case more than one name/location is given.
-            For instance, `groupA,groupC,valD` can be used for backwards search.
-            The starting group will look for `valD` first and try to find a way back
-            and check if it passes by `groupA` and `groupC`.
-
+            If links should be considered
 
         :param shortcuts:
 
@@ -885,7 +897,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 try:
                     value = run_group.f_get(name, fast_access=fast_access,
-                                            backwards_search=backwards_search,
+                                            with_links=with_links,
                                             shortcuts=shortcuts,
                                             max_depth=max_depth,
                                             auto_load=auto_load)
@@ -1002,7 +1014,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         for param in compat.itervalues(self._explored_parameters):
             try:
                 self._storage_service.store(pypetconstants.DELETE, param,
-                                            trajectory_name=self.v_trajectory_name)
+                                            trajectory_name=self.v_name)
             except Exception:
                 pass  # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)
@@ -1184,11 +1196,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         completed, when they were started, etc.
 
         """
-        self._name = self._trajectory_name
-        self._timestamp = self._trajectory_timestamp
-        self._time = self._trajectory_time
         self._is_run = False
-        self.f_restore_default()
+        self.f_set_crun(None)
         self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
                     load_derived_parameters=pypetconstants.LOAD_NOTHING,
                     load_results=pypetconstants.LOAD_NOTHING,
@@ -1886,10 +1895,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             continue
 
                         try:
-                            new_linked_item = self.f_get(new_linked_full_name)
-                            try:
-                                new_linking_item = self.f_get(new_linking_full_name)
-                            except AttributeError:
+                            new_linked_item = self.f_get(new_linked_full_name,
+                                                         shortcuts=False)
+                            if self.f_contains(new_linking_full_name):
+                                new_linking_item = self.f_get(new_linking_full_name,
+                                                              shortcuts=False)
+                            else:
                                 new_linking_item =  self.f_add_group(new_linking_full_name)
                             if link in run_name_dict:
                                 link = run_name_dict[link]
@@ -1899,10 +1910,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                 self._logger.debug('Link `%s` exists already under `%s`.' %
                                                     (link, new_linked_item.v_full_name))
                         except (AttributeError, ValueError) as e:
-                            self._logger.error('Could not copy ling `%s` under `%s` linking '
+                            self._logger.error('Could not copy link `%s` under `%s` linking '
                                                'to `%s` due to `%s`' %
                                                (link, linking_full_name, old_linked_name,
-                                                str(type(e))))
+                                                str(e)))
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
@@ -2470,7 +2481,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         if new_name is not None:
             self._name = new_name
-            self._trajectory_name = self._name
 
         if new_file_tile is None:
             new_file_tile = self.v_name
@@ -2541,7 +2551,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name,
+                                    trajectory_name=self.v_name,
                                     store_final=False, store_data=True,
                                     skip_existing=skip_existing)
         else:
@@ -2568,9 +2578,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @not_in_run
     def f_restore_default(self):
         """Restores the default value in all explored parameters and sets the
-        v_idx property back to -1 and v_as_run to None."""
+        v_idx property back to -1 and v_crun to None."""
         self._idx = -1
-        self._as_run = pypetconstants.RUN_NAME_DUMMY
+        self._crun = pypetconstants.RUN_NAME_DUMMY
         for param in compat.itervalues(self._explored_parameters):
             param._restore_default()
 
@@ -2582,15 +2592,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         for param in compat.itervalues(self._explored_parameters):
             param._set_parameter_access(idx)
 
-
     def _make_single_run(self, idx):
         """Turns the trajectory into a SingleRun object for exploration with run index `idx`."""
-        self._set_explored_parameters_to_idx(idx)
-        name = self.f_idx_to_run(idx)
-        self._name = name
-        self._idx = idx
+        self._is_run = False # to be able to use f_set_crun
+        self.f_set_crun(idx)
         self._is_run = True
-        self._as_run = self.v_name
         self._set_start_time()
         return self
 
@@ -2759,19 +2765,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp = init_time
-        self._time = formatted_time
+        self._timestamp_run = init_time
+        self._time_run = formatted_time
 
     def _set_finish_time(self):
         """Sets the finish time and computes the runtime in human readable format"""
-        init_time = time.time()
         #formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._finish_timestamp = init_time
+        self._finish_timestamp_run = time.time()
 
-        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp)
-        startdatetime = datetime.datetime.fromtimestamp(self._timestamp)
+        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp_run)
+        startdatetime = datetime.datetime.fromtimestamp(self._timestamp_run)
 
-        self._runtime = str(findatetime - startdatetime)
+        self._runtime_run = str(findatetime - startdatetime)
 
     def _create_class(self, class_name):
         """Dynamically creates a class.
@@ -2835,15 +2840,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
 
     @property
+    @deprecated('No longer supported, please don`t use it anymore.')
     def v_backwards_search(self):
-        """Whether to apply backwards search in the tree if one searches a branch
-        with the square brackets notation `[]`.
-        """
-        return self._backwards_search
-
-    @v_backwards_search.setter
-    def v_backwards_search(self, backwards_search):
-        self._backwards_search = bool(backwards_search)
+        return False
 
     @property
     def v_max_depth(self):
@@ -2990,19 +2989,22 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return resdict
 
     @property
+    @deprecated(msg='Please use `v_name`.')
     def v_trajectory_name(self):
         """Name of the (parent) trajectory"""
-        return self._trajectory_name
+        return self.v_name
 
     @property
+    @deprecated(msg='Please use `v_time`.')
     def v_trajectory_time(self):
         """Time (parent) trajectory was created"""
-        return self._trajectory_time
+        return self.v_time
 
     @property
+    @deprecated(msg='Please use `v_timestamp`.')
     def v_trajectory_timestamp(self):
         """Float timestamp when (parent) trajectory was created"""
-        return self._trajectory_timestamp
+        return self.v_timestamp
 
     def _finalize_run(self):
         """Called by the environment after storing to perform some rollback operations.
@@ -3015,8 +3017,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
-            if group.f_contains(self.v_name):
-                group.f_remove_child(self.v_name, recursive=True)
+            if group.f_contains(self.v_crun):
+                group.f_remove_child(self.v_crun, recursive=True)
 
     def f_to_dict(self, fast_access=False, short_names=False, copy=True,
                   with_links=True):
@@ -3182,7 +3184,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_trajectory_name,
+                                    trajectory_name=self.v_name,
                                     store_final=True, store_data=store_data)
 
     def f_store_item(self, item, *args, **kwargs):
@@ -3270,7 +3272,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         if fetched_items:
             self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                        trajectory_name=self.v_trajectory_name)
+                                        trajectory_name=self.v_name)
         else:
             raise ValueError('Your storage was not successful, could not find a single item '
                              'to store.')
@@ -3354,7 +3356,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         fetched_items = self._nn_interface._fetch_items(LOAD, iterator, args, kwargs)
         if fetched_items:
             self._storage_service.load(pypetconstants.LIST, fetched_items,
-                                       trajectory_name=self.v_trajectory_name)
+                                       trajectory_name=self.v_name)
         else:
             self._logger.warning('Your loading was not successful, could not find a single item '
                                  'to load.')
@@ -3430,7 +3432,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 group_link_pairs.append(elem)
         try:
             self._storage_service.store(pypetconstants.LIST, to_delete_links,
-                                        trajectory_name=self.v_trajectory_name)
+                                        trajectory_name=self.v_name)
         except:
             self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
                                ' item(s) was/were never stored to disk.' % str(to_delete_links))
@@ -3514,7 +3516,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             try:
                 self._storage_service.store(pypetconstants.LIST, fetched_items,
-                                            trajectory_name=self.v_trajectory_name)
+                                            trajectory_name=self.v_name)
             except:
                 self._logger.error('Could not remove `%s` from the trajectory. Maybe the'
                                    ' item(s) was/were never stored to disk.' % str(fetched_items))

@@ -358,7 +358,7 @@ class TrajectoryComparator(unittest.TestCase):
                                 'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
             elif isinstance(item,BaseResult):
                 self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+                                'For key %s: %s not equal to %s' %(key, str(old_item),str(item)))
             else:
                 raise RuntimeError('You shall not pass')
 
