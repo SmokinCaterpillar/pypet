@@ -3391,6 +3391,8 @@ class HDF5StorageService(StorageService, HasLogger):
             except StopIteration:
                 pass
 
+        table.flush()
+
         if len(multiple_entries) > 0:
             self._logger.error('There is something entirely wrong, `%s` '
                                'appears more than once in table %s.'
@@ -3402,13 +3404,14 @@ class HDF5StorageService(StorageService, HasLogger):
                                      stop=row_number - removed + 1)
                 removed += 1 # keep track of how many have been removed, because
                              # the index of the later rows are decreased thereby
+                table.flush()
 
         # Check if we added something. Note that row is also not None in case REMOVE_ROW,
         # then it refers to the deleted row
         if HDF5StorageService.REMOVE_ROW not in flags and row is None:
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' % (item_name, table._v_name))
-        table.flush()
+
 
 
     def _all_insert_into_row(self, row, insert_dict):
