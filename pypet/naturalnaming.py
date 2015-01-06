@@ -783,7 +783,7 @@ class NaturalNamingInterface(HasLogger):
         self._remove_from_nodes_and_leaves(name, node)
 
     def _remove_from_nodes_and_leaves(self, name, node, full_name=None,
-                                      delete_from_run_dict=True):
+                                      run_name=None):
         if full_name is None:
             full_name = node.v_full_name
 
@@ -791,13 +791,14 @@ class NaturalNamingInterface(HasLogger):
         if len(self._nodes_and_leaves[name]) == 0:
             del self._nodes_and_leaves[name]
 
-        if delete_from_run_dict:
+        if run_name is None:
             run_name = node.v_run_branch
-            del self._nodes_and_leaves_runs_sorted[name][run_name][full_name]
-            if len(self._nodes_and_leaves_runs_sorted[name][run_name]) == 0:
-                del self._nodes_and_leaves_runs_sorted[name][run_name]
-                if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
-                    del self._nodes_and_leaves_runs_sorted[name]
+
+        del self._nodes_and_leaves_runs_sorted[name][run_name][full_name]
+        if len(self._nodes_and_leaves_runs_sorted[name][run_name]) == 0:
+            del self._nodes_and_leaves_runs_sorted[name][run_name]
+            if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
+                del self._nodes_and_leaves_runs_sorted[name]
 
     def _remove_node_or_leaf(self, instance, remove_empty_groups):
         """Removes a single node from the tree.
@@ -892,7 +893,7 @@ class NaturalNamingInterface(HasLogger):
 
             return False
 
-    def _translate_into_shortcut(self, name):
+    def _translate_shortcut(self, name):
         """Maps a given shortcut to corresponding name
 
         * 'run_X' or 'r_X' to 'run_XXXXXXXXX'
@@ -1167,15 +1168,14 @@ class NaturalNamingInterface(HasLogger):
 
     def _replace_wildcards(self, name):
         """Replaces the $ wildcards"""
-        if self._root_instance._is_run:
+        if self._root_instance._idx != -1:
             name = name.replace('$', self._root_instance.v_crun)
         else:
             name = name.replace('$', pypetconstants.RUN_NAME_DUMMY)
 
         return name
 
-    def _add_to_nodes_and_leaves(self, new_node, name, full_name=None,
-                                 add_to_run_dict=True):
+    def _add_to_nodes_and_leaves(self, new_node, name, full_name=None, run_name=None):
         if full_name is None:
             full_name = new_node.v_full_name
         if not name in self._nodes_and_leaves:
@@ -1183,19 +1183,19 @@ class NaturalNamingInterface(HasLogger):
         else:
             self._nodes_and_leaves[name][full_name] = new_node
 
-        if add_to_run_dict:
+        if run_name is None:
             run_name = new_node._run_branch
-            if not name in self._nodes_and_leaves_runs_sorted:
-                self._nodes_and_leaves_runs_sorted[name] = {run_name:
-                                                                {full_name:
-                                                                     new_node}}
+        if not name in self._nodes_and_leaves_runs_sorted:
+            self._nodes_and_leaves_runs_sorted[name] = {run_name:
+                                                            {full_name:
+                                                                 new_node}}
+        else:
+            if not run_name in self._nodes_and_leaves_runs_sorted[name]:
+                self._nodes_and_leaves_runs_sorted[name][run_name] = \
+                    {full_name: new_node}
             else:
-                if not run_name in self._nodes_and_leaves_runs_sorted[name]:
-                    self._nodes_and_leaves_runs_sorted[name][run_name] = \
-                        {full_name: new_node}
-                else:
-                    self._nodes_and_leaves_runs_sorted[name][run_name]\
-                        [full_name] = new_node
+                self._nodes_and_leaves_runs_sorted[name][run_name]\
+                    [full_name] = new_node
 
     def _add_to_tree(self, start_node, name, type_name, group_type_name,
                      instance, constructor, args, kwargs):
@@ -1331,15 +1331,22 @@ class NaturalNamingInterface(HasLogger):
         del act_node._links[name]
         del act_node._children[name]
 
+        run_name = act_node._run_branch
+        if name.startswith(pypetconstants.RUN_NAME) and name != pypetconstants.RUN_NAME_DUMMY:
+            run_name = name
+
         self._remove_from_nodes_and_leaves(name, linked_node,
                                            full_name=act_node.v_full_name + '.' + name,
-                                           delete_from_run_dict=False)
+                                           run_name=run_name)
 
     def _create_link_inner(self, act_node, name, instance):
         """ Creates a link without costly name checking
         """
+        run_name = act_node._run_branch
         if name.startswith(pypetconstants.RUN_NAME):
             self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
+            if name != pypetconstants.RUN_NAME_DUMMY:
+                run_name = name
 
         act_node._links[name] = instance
         act_node._children[name] = instance
@@ -1354,7 +1361,7 @@ class NaturalNamingInterface(HasLogger):
         linking[act_node.v_full_name][1].add(name)
 
         self._add_to_nodes_and_leaves(instance, name, full_name=act_node.v_full_name + '.' + name,
-                                      add_to_run_dict=False)
+                                      run_name=run_name)
 
         return instance
 
@@ -1432,7 +1439,7 @@ class NaturalNamingInterface(HasLogger):
             # if ' ' in split_name:
             # faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
 
-            if not self._translate_into_shortcut(split_name) is None:
+            if not self._translate_shortcut(split_name) is None:
                 faulty_names = '%s `%s` is already an important shortcut,' % (
                     faulty_names, split_name)
 
@@ -1866,15 +1873,17 @@ class NaturalNamingInterface(HasLogger):
             if goal_name.startswith(parent_full_name):
 
                 # In case of several solutions raise an error:
-                if not result_node is None:
+                if result_node is not None:
                     raise pex.NotUniqueNodeError('Node `%s` has been found more than once,'
                                                  'full name of first occurrence is `%s` and of'
                                                  'second `%s`'
                                                  % (key, goal_name, result_node.v_full_name))
 
                 candidate = candidate_dict[goal_name]
-                # name and key can differ if it is actually a link
-                if with_links or key == candidate.v_name:
+                # name and key can differ if it is actually a link, this also holds
+                # if the found node's name does not start with the full parent name
+                if with_links or (key == candidate.v_name and
+                                      candidate.v_full_name.startswith(parent_full_name)):
                     result_node = candidate
 
         return result_node
@@ -1949,7 +1958,7 @@ class NaturalNamingInterface(HasLogger):
 
         return result_node
 
-    def _backwards_search(self, start_node, split_name, max_depth=float('inf')):
+    def _backwards_search(self, start_node, split_name, max_depth=float('inf'), shortcuts=True):
         """ Performs a backwards search from the terminal node back to the start node
 
         :param start_node:
@@ -1959,17 +1968,24 @@ class NaturalNamingInterface(HasLogger):
 
         :param split_name:
 
-            List of node names that must exist on the path from split_name[-1] back to start node.
+            List of names
 
         :param max_depth:
 
             Maximum search depth where to look for
 
-        :return:
+        :param shortcuts:
+
+            If shortcuts are allowed
+
         """
 
-        result_list = []
+        result_list = [] # Result list of all found items
+        full_name_set = set() # Set containing full names of all found items to avoid finding items
+        # twice due to links
         crun = self._get_crun()
+
+        colon_name = '.'.join(split_name)
         key = split_name[-1]
         candidate_dict = self._get_candidate_dict(key, crun, use_upper_bound=False)
         parent_full_name = start_node.v_full_name
@@ -1984,8 +2000,12 @@ class NaturalNamingInterface(HasLogger):
                                  (LENGTH_WARNING_THRESHOLD, len(candidate_dict), key))
 
         for candidate_name in candidate_dict:
-
             # Check if candidate startswith the parent's name
+            candidate = candidate_dict[candidate_name]
+            if key != candidate.v_name or candidate.v_full_name in full_name_set:
+                # If this is not the case we do have link, that we need to skip
+                continue
+
             if candidate_name.startswith(parent_full_name):
                 if parent_full_name != '':
                     reduced_candidate_name = candidate_name[len(parent_full_name) + 1:]
@@ -1997,14 +2017,16 @@ class NaturalNamingInterface(HasLogger):
                 if len(candidate_split_name) > max_depth:
                     break
 
-                if len(split_name) == 1:
-                    result_list.append(candidate_dict[candidate_name])
-                else:
+                if len(split_name) == 1 or reduced_candidate_name.endswith(colon_name):
+                    result_list.append(candidate)
+                    full_name_set.add(candidate.v_full_name)
+
+                elif shortcuts:
 
                     candidate_set = set(candidate_split_name)
                     climbing = True
                     for name in split_name:
-                        if not name in candidate_set:
+                        if name not in candidate_set:
                             climbing = False
                             break
 
@@ -2019,12 +2041,13 @@ class NaturalNamingInterface(HasLogger):
                             if split_name[count] == candidate_split_name[idx]:
                                 count += 1
                                 if count == len(split_name):
-                                    result_list.append(candidate_dict[candidate_name])
+                                    result_list.append(candidate)
+                                    full_name_set.add(candidate.v_full_name)
                                     break
 
         return result_list
 
-    def _get_all(self, node, name, max_depth):
+    def _get_all(self, node, name, max_depth, shortcuts):
         """ Searches for all occurrences of `name` under `node`.
 
         :param node:
@@ -2040,6 +2063,10 @@ class NaturalNamingInterface(HasLogger):
 
             Maximum depth to search for relative to start node.
 
+        :param shortcuts:
+
+            If shortcuts are allowed
+
         :return:
 
             List of nodes that match the name, empty list if nothing was found.
@@ -2049,7 +2076,24 @@ class NaturalNamingInterface(HasLogger):
         if max_depth is None:
             max_depth = float('inf')
 
-        return self._backwards_search(node, name.split('.'), max_depth)
+        if isinstance(name, list):
+            split_name = name
+        elif isinstance(name, tuple):
+            split_name = list(name)
+        elif isinstance(name, int):
+            split_name = [name]
+        else:
+            split_name = name.split('.')
+
+        for idx, key in enumerate(split_name):
+            translated_shortcut = self._translate_shortcut(key)
+            if translated_shortcut:
+                key = translated_shortcut
+            if key == '$':
+                key = self._replace_wildcards(key)
+            split_name[idx] = key
+
+        return self._backwards_search(node, split_name, max_depth, shortcuts)
 
     def _check_flat_dicts(self, node, split_name):
 
@@ -2108,8 +2152,11 @@ class NaturalNamingInterface(HasLogger):
 
         if auto_load and not with_links:
             raise ValueError('If you allow auto-loading you mus allow links.')
-        if isinstance(name, (tuple, list)):
+
+        if isinstance(name, list):
             split_name = name
+        elif isinstance(name, tuple):
+            split_name = list(name)
         elif isinstance(name, int):
             split_name = [name]
         else:
@@ -2129,7 +2176,7 @@ class NaturalNamingInterface(HasLogger):
 
         # # Rename shortcuts and check keys:
         for idx, key in enumerate(split_name):
-            translated_shortcut = self._translate_into_shortcut(key)
+            translated_shortcut = self._translate_shortcut(key)
             if translated_shortcut:
                 key = translated_shortcut
                 split_name[idx] = key
@@ -2693,7 +2740,7 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._iter_leaves(self, with_links=with_links)
 
-    def f_get_all(self, name, max_depth=None):
+    def f_get_all(self, name, max_depth=None, shortcuts=True):
         """ Searches for all occurrences of `name` under `node`.
 
         Links are NOT considered since nodes are searched bottom up in the tree.
@@ -2705,19 +2752,26 @@ class NNGroupNode(NNTreeNode):
         :param name:
 
             Name of what to look for, can be separated by colons, i.e.
-            `mygroupA.mygroupB.myparam`.
+            ``'mygroupA.mygroupB.myparam'``.
 
         :param max_depth:
 
             Maximum search depth relative to start node.
             `None` for no limit.
 
+        :param shortcuts:
+
+            If shortcuts are allowed, otherwise the stated name defines a
+            consecutive name.For instance. ``'mygroupA.mygroupB.myparam'`` would
+            also find ``mygroupA.mygroupX.mygroupB.mygroupY.myparam`` if shortcuts
+            are allowed, otherwise not.
+
         :return:
 
             List of nodes that match the name, empty list if nothing was found.
 
         """
-        return self._nn_interface._get_all(self, name, max_depth=max_depth)
+        return self._nn_interface._get_all(self, name, max_depth=max_depth, shortcuts=shortcuts)
 
     @kwargs_api_change('backwards_search')
     def f_get_default(self, name, default=None, fast_access=True, with_links=True,

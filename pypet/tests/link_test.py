@@ -25,6 +25,17 @@ else:
 
 class LinkTrajectoryTests(TrajectoryComparator):
 
+
+    def test_iteration_failure(self):
+        traj = Trajectory()
+
+        traj.f_add_parameter_group('test.test3')
+        traj.f_add_parameter_group('test2')
+        traj.test2.f_add_link(traj.test3)
+
+        with self.assertRaises(pex.NotUniqueNodeError):
+            traj.test3
+
     def test_link_creation(self):
         traj = Trajectory()
 
@@ -175,9 +186,15 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(len(traj._linked_by), len(traj2._linked_by))
         self.compare_trajectories(traj, traj2)
 
+        self.assertTrue('jj' in traj2._nn_interface._nodes_and_leaves)
+        self.assertTrue('jj' in traj2._nn_interface._nodes_and_leaves_runs_sorted)
         traj2.f_remove_child('jj')
+        self.assertTrue('jj' not in traj2._nn_interface._nodes_and_leaves)
+        self.assertTrue('jj' not in traj2._nn_interface._nodes_and_leaves_runs_sorted)
         traj2.f_remove_child('hh')
         traj2.f_remove_child('ii')
+
+
 
         traj2.f_remove_child('parameters', recursive=True)
 
@@ -200,6 +217,65 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(traj2.jj is traj2.par)
         traj2.f_load(load_all=2)
         self.assertTrue(traj2.ii == traj2.res.kk)
+
+    def test_get_all_not_links(self):
+
+        traj = Trajectory()
+
+        traj.f_add_parameter('test.hi', 44)
+        traj.f_explore({'hi': [1,2,3]})
+
+        traj.f_add_parameter_group('test.test.test2')
+        traj.f_add_parameter_group('test2')
+        traj.test2.f_add_link('test', traj.test)
+
+        nodes = traj.f_get_all('par.test')
+
+        self.assertTrue(len(nodes) == 2)
+
+        nodes = traj.f_get_all('par.test', shortcuts=False)
+
+        self.assertTrue(len(nodes) == 1)
+
+        traj.f_set_crun(0)
+
+        traj.f_add_group('f.$.h')
+        traj.f_add_group('f.$.g.h')
+        traj.f_add_group('f.$.i')
+        traj.crun.i.f_add_link('h', traj.crun.h)
+
+        nodes = traj.f_get_all('$.h')
+
+        self.assertTrue(len(nodes)==2)
+
+        nodes = traj.f_get_all('h')
+
+        self.assertTrue(len(nodes)==2)
+
+        traj.v_idx = -1
+
+        nodes = traj.f_get_all('h')
+
+        self.assertTrue(len(nodes)==2)
+
+        traj.v_idx = 2
+
+        nodes = traj.f_get_all('h')
+
+        self.assertTrue(len(nodes) == 0)
+
+    def test_links_according_to_run(self):
+
+        traj = Trajectory()
+
+        traj.f_add_parameter('test.hi', 44)
+        traj.f_explore({'hi': [1,2,3]})
+
+        traj.f_add_parameter_group('test.test.test2')
+        traj.f_add_parameter_group('test2')
+        traj.test2.f_add_link('test', traj.test)
+
+        traj.v_idx = 1
 
 
     def test_link_deletion(self):

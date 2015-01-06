@@ -47,6 +47,11 @@ pypet 0.1b.9
 
 *   Backwards search no longer supported!
 
+*   `f_get_all` now supports shortcuts and abbreviations like `crun` or `par`
+
+*   `$` always translates to the run the trajectory is set to, also for
+    adding new items to the tree
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
