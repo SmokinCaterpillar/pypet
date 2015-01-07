@@ -99,7 +99,7 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 # If there are more candidate solutions found by the fast search
 # (that need to be checked sequentially) than this number
 # a slow search with a full tree traversal is initiated.
-FAST_UPPER_BOUND = 2
+FAST_UPPER_BOUND = 3
 
 SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
 
@@ -244,8 +244,7 @@ class NNTreeNode(WithAnnotations):
             head, tail = full_name.split(pypetconstants.RUN_NAME)
             self._run_branch_pos = head.count('.')
             branch = pypetconstants.RUN_NAME + tail.split('.')[0]
-            if branch != pypetconstants.RUN_NAME_DUMMY:
-                self._run_branch = branch
+            self._run_branch = branch
 
     def f_get_class_name(self):
         """ Returns the class name of the parameter or result or group.
@@ -435,6 +434,9 @@ class NaturalNamingInterface(HasLogger):
 
         # Context Manager to disable logging for auto-loading
         self._disable_logger = DisableLogger()
+
+        # Filter for blinding out runs
+        self._run_filter = None
 
 
     def _map_type_to_dict(self, type_name):
@@ -931,6 +933,8 @@ class NaturalNamingInterface(HasLogger):
                     if index.isdigit():
                         if len(index) < pypetconstants.FORMAT_ZEROS:
                             return pypetconstants.FORMATTED_RUN_NAME % int(index)
+                    elif index == 'A':
+                        return pypetconstants.RUN_NAME_DUMMY
 
         if name in SHORTCUT_SET:
             if name == 'crun':
@@ -1166,7 +1170,7 @@ class NaturalNamingInterface(HasLogger):
         return self._add_to_tree(start_node, name, type_name, group_type_name, instance,
                                  constructor, args, kwargs)
 
-    def _replace_wildcards(self, name):
+    def _replace_wildcards(self, name,):
         """Replaces the $ wildcards"""
         if self._root_instance._idx != -1:
             name = name.replace('$', self._root_instance.v_crun)
@@ -1332,7 +1336,7 @@ class NaturalNamingInterface(HasLogger):
         del act_node._children[name]
 
         run_name = act_node._run_branch
-        if name.startswith(pypetconstants.RUN_NAME) and name != pypetconstants.RUN_NAME_DUMMY:
+        if name.startswith(pypetconstants.RUN_NAME):
             run_name = name
 
         self._remove_from_nodes_and_leaves(name, linked_node,
@@ -1345,8 +1349,7 @@ class NaturalNamingInterface(HasLogger):
         run_name = act_node._run_branch
         if name.startswith(pypetconstants.RUN_NAME):
             self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
-            if name != pypetconstants.RUN_NAME_DUMMY:
-                run_name = name
+            run_name = name
 
         act_node._links[name] = instance
         act_node._children[name] = instance
@@ -1590,7 +1593,7 @@ class NaturalNamingInterface(HasLogger):
 
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
-                    with_links=True, in_search=False, ):
+                    with_links=True, in_search=False, predicate=None):
         """Returns an iterator over nodes hanging below a given start node.
 
         :param node:
@@ -1613,21 +1616,48 @@ class NaturalNamingInterface(HasLogger):
 
             If links should be considered
 
+        :param predicate:
+
+            A predicate to filter nodes
+
         :return: Iterator
 
         """
-        crun = self._get_crun()
+        def _run_predicate(x, run_name_set):
+            branch = x.v_run_branch
+            return branch == 'trajectory' or branch in run_name_set
+
+        crun = self._run_filter
+
+        if predicate is None:
+            predicate = lambda x: True
+        elif isinstance(predicate, (tuple, list)):
+            # Create a predicate from a list of run names or run indices
+            run_list = predicate
+            run_name_set = set()
+            for item in run_list:
+                if item == -1:
+                    run_name_set.add(pypetconstants.RUN_NAME_DUMMY)
+                elif isinstance(item, int):
+                    run_name_set.add(pypetconstants.FORMATTED_RUN_NAME % item)
+                elif item.startswith(pypetconstants.RUN_NAME):
+                    run_name_set.add(item)
+                else:
+                    raise ValueError('Your tuple of runs is not understood to form a predicate.')
+            predicate = lambda x: _run_predicate(x, run_name_set)
 
         if recursive:
             return NaturalNamingInterface._recursive_traversal_bfs(node,
                                             self._root_instance._linked_by,
                                             crun, max_depth, with_links,
-                                            in_search)
+                                            in_search, predicate)
         else:
             if in_search:
-                return self._make_child_iterator(node, crun, with_links)
+                return (x for x in self._make_child_iterator(node, crun, with_links) if
+                        predicate(x[1][1]))
             else:
-                return (x[1][1] for x in self._make_child_iterator(node, crun, with_links))
+                return (x[1][1] for x in self._make_child_iterator(node, crun, with_links) if
+                predicate(x[1][1]))
 
 
 
@@ -1709,11 +1739,11 @@ class NaturalNamingInterface(HasLogger):
 
         """
         cdp1 = current_depth+1
-        if run_name != pypetconstants.RUN_NAME_DUMMY and run_name in node._children:
+        if run_name is not None:
             # Only consider one particular run and blind out the rest, but include
             # all other subbranches
 
-            if with_links or not run_name in node._links:
+            if run_name in node._children and (with_links or run_name not in node._links):
                 node_list = [(cdp1,
                               run_name,
                               node._children[run_name])]
@@ -1721,21 +1751,18 @@ class NaturalNamingInterface(HasLogger):
                 node_list = []
             if with_links:
                 for child_name in node._children:
-                    if not (child_name.startswith(pypetconstants.RUN_NAME)
-                            and child_name != pypetconstants.RUN_NAME_DUMMY):
+                    if not child_name.startswith(pypetconstants.RUN_NAME):
                         node_list.append((cdp1,
                                           child_name,
                                           node._children[child_name]))
             else:
                 for leaf_name in node._leaves:
-                    if not (leaf_name.startswith(pypetconstants.RUN_NAME)
-                            and leaf_name != pypetconstants.RUN_NAME_DUMMY):
+                    if not leaf_name.startswith(pypetconstants.RUN_NAME):
                         node_list.append((cdp1,
                                           leaf_name,
                                           node._leaves[leaf_name]))
                 for group_name in node._groups:
-                    if not (group_name.startswith(pypetconstants.RUN_NAME)
-                            and group_name != pypetconstants.RUN_NAME_DUMMY):
+                    if not group_name.startswith(pypetconstants.RUN_NAME):
                         node_list.append((cdp1,
                                           group_name,
                                           node._groups[group_name]))
@@ -1752,13 +1779,17 @@ class NaturalNamingInterface(HasLogger):
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None, run_name=None, max_depth=float('inf'),
-                                 with_links=True, in_search=False):
+                                 with_links=True, in_search=False, predicate=None):
         """Iterator function traversing the tree below `node` in breadth first search manner.
 
         If `run_name` is given only sub branches of this run are considered and the rest is
         blinded out.
 
         """
+
+        if predicate is None:
+            predicate = lambda x: True
+
         queue = iter([(0, node.v_name, node)])
         start = True
         visited_linked_nodes = set([])
@@ -1767,38 +1798,39 @@ class NaturalNamingInterface(HasLogger):
             try:
                 depth, name, item = next(queue)
                 full_name = item._full_name
-                if full_name in visited_linked_nodes:
-                    if in_search:
-                        # We need to return the node again to check if a link to the node
-                        # has to be found
-                        yield depth, name, item
-                elif depth <= max_depth:
-                    if start:
-                        start = False
-                    else:
+                if start or predicate(item):
+                    if full_name in visited_linked_nodes:
                         if in_search:
+                            # We need to return the node again to check if a link to the node
+                            # has to be found
                             yield depth, name, item
+                    elif depth <= max_depth:
+                        if start:
+                            start = False
                         else:
-                            yield item
+                            if in_search:
+                                yield depth, name, item
+                            else:
+                                yield item
 
-                    if full_name in linked_by:
-                        visited_linked_nodes.add(full_name)
+                        if full_name in linked_by:
+                            visited_linked_nodes.add(full_name)
 
-                    if not item._leaf and depth < max_depth:
-                        child_iterator = NaturalNamingInterface._make_child_iterator(item,
-                                                                                     run_name,
-                                                                                     with_links,
-                                                                             current_depth=depth)
-                        queue = itools.chain(queue, child_iterator)
+                        if not item._leaf and depth < max_depth:
+                            child_iterator = NaturalNamingInterface._make_child_iterator(item,
+                                                                        run_name,
+                                                                        with_links,
+                                                                        current_depth=depth)
+                            queue = itools.chain(queue, child_iterator)
             except StopIteration:
                 break
 
     def _get_candidate_dict(self, key, crun, use_upper_bound=True):
         # First find all nodes where the key matches the (short) name of the node
-        if crun == pypetconstants.RUN_NAME_DUMMY:
+        if crun is None:
             return self._nodes_and_leaves[key]
         # This can be false in case of links which are not added to the run sorted nodes and leaves
-        elif key in self._nodes_and_leaves_runs_sorted:
+        else:
             temp_dict = {}
             if crun in self._nodes_and_leaves_runs_sorted[key]:
                 temp_dict = self._nodes_and_leaves_runs_sorted[key][crun]
@@ -1808,16 +1840,14 @@ class NaturalNamingInterface(HasLogger):
             temp_dict2 = {}
             if 'trajectory' in self._nodes_and_leaves_runs_sorted[key]:
                 temp_dict2 = self._nodes_and_leaves_runs_sorted[key]['trajectory']
-                if use_upper_bound and len(temp_dict2) > FAST_UPPER_BOUND:
+                if use_upper_bound and len(temp_dict) + len(temp_dict2) > FAST_UPPER_BOUND:
                     raise pex.TooManyGroupsError('Too many nodes')
 
             return ChainMap(temp_dict, temp_dict2)
-        else:
-            return {}
 
-    def _get_crun(self):
-        """ Returns the run name in case of 'v_crun' is set, otherwise None."""
-        return self._root_instance._crun
+    # def _get_crun(self):
+    #     """ Returns the run name in case of 'v_crun' is set, otherwise None."""
+    #     return self._run_filter
 
     def _very_fast_search(self, node, key, crun,
                           with_links):
@@ -1918,7 +1948,7 @@ class NaturalNamingInterface(HasLogger):
         if key in node._children and (with_links or key not in node._links):
             return node._children[key]
 
-        crun = self._get_crun()
+        crun = self._run_filter
 
         # First the very fast search is tried that does not need tree traversal.
         if max_depth == float('inf'):
@@ -1986,11 +2016,10 @@ class NaturalNamingInterface(HasLogger):
         result_list = [] # Result list of all found items
         full_name_set = set() # Set containing full names of all found items to avoid finding items
         # twice due to links
-        crun = self._get_crun()
 
         colon_name = '.'.join(split_name)
         key = split_name[-1]
-        candidate_dict = self._get_candidate_dict(key, crun, use_upper_bound=False)
+        candidate_dict = self._get_candidate_dict(key, None, use_upper_bound=False)
         parent_full_name = start_node.v_full_name
 
         split_length = len(split_name)
@@ -2152,85 +2181,88 @@ class NaturalNamingInterface(HasLogger):
             item cannot be found.
 
         """
+        try:
+            if auto_load and not with_links:
+                raise ValueError('If you allow auto-loading you mus allow links.')
 
-        if auto_load and not with_links:
-            raise ValueError('If you allow auto-loading you mus allow links.')
+            if isinstance(name, list):
+                split_name = name
+            elif isinstance(name, tuple):
+                split_name = list(name)
+            elif isinstance(name, int):
+                split_name = [name]
+            else:
+                split_name = name.split('.')
 
-        if isinstance(name, list):
-            split_name = name
-        elif isinstance(name, tuple):
-            split_name = list(name)
-        elif isinstance(name, int):
-            split_name = [name]
-        else:
-            split_name = name.split('.')
+            if max_depth is None:
+                max_depth = float('inf')
 
-        if max_depth is None:
-            max_depth = float('inf')
+            if len(split_name) > max_depth and shortcuts:
+                raise ValueError(
+                    'Name of node to search for (%s) is longer thant the maximum depth %d' %
+                    (str(name), max_depth))
 
-        if len(split_name) > max_depth and shortcuts:
-            raise ValueError(
-                'Name of node to search for (%s) is longer thant the maximum depth %d' %
-                (str(name), max_depth))
+            try_auto_load_directly1 = False
+            try_auto_load_directly2 = False
+            wildcard_pos = -1
+            run_pos = -1
 
-        try_auto_load_directly1 = False
-        try_auto_load_directly2 = False
-        wildcard_pos = -1
+            # # Rename shortcuts and check keys:
+            for idx, key in enumerate(split_name):
+                translated_shortcut = self._translate_shortcut(key)
+                if translated_shortcut:
+                    key = translated_shortcut
+                    split_name[idx] = key
 
-        # # Rename shortcuts and check keys:
-        for idx, key in enumerate(split_name):
-            translated_shortcut = self._translate_shortcut(key)
-            if translated_shortcut:
-                key = translated_shortcut
-                split_name[idx] = key
+                if key[0] == '_':
+                    raise AttributeError('Leading underscores are not allowed for group or parameter '
+                                         'names. Cannot return %s.' % key)
 
-            if key[0] == '_':
-                raise AttributeError('Leading underscores are not allowed for group or parameter '
-                                     'names. Cannot return %s.' % key)
-
-            if not key in self._nodes_and_leaves and key != '$':
-                try_auto_load_directly1 = True
-                try_auto_load_directly2 = True
-
-            if key == '$':
-                wildcard_pos = idx
-                if self._root_instance._crun not in self._nodes_and_leaves:
+                if not key in self._nodes_and_leaves and key != '$':
                     try_auto_load_directly1 = True
-                if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
                     try_auto_load_directly2 = True
 
-            # if key.startswith(pypetconstants.RUN_NAME) and key != pypetconstants.RUN_NAME_DUMMY:
-            #     wildcard_pos = idx
-            #     if key not in self._nodes_and_leaves:
-            #         try_auto_load_directly1 = True
-            #     if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
-            #         try_auto_load_directly2 = True
+                if key == '$':
+                    wildcard_pos = idx
+                    if self._root_instance._crun not in self._nodes_and_leaves:
+                        try_auto_load_directly1 = True
+                    if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
+                        try_auto_load_directly2 = True
 
-        if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
-            raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
-                                 str(name))
+                if key.startswith(pypetconstants.RUN_NAME):
+                    run_pos = idx
 
-        if wildcard_pos > -1:
-            # If we count the wildcard we have to perform the search twice,
-            # one with a run name and one with the dummy:
+            if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
+                raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
+                                     str(name))
 
-            with self._disable_logger:
-                try:
-                    crun = self._root_instance._crun
-                    if crun == pypetconstants.RUN_NAME_DUMMY:
-                        # If our trajectory is not set to a particular run we can skip this part
-                        raise AttributeError
-                    split_name[wildcard_pos] = crun
-                    result = self._perform_get(node, split_name, fast_access,
-                                               shortcuts, max_depth, auto_load, with_links,
-                                               try_auto_load_directly1)
-                    return result
-                except (pex.DataNotInStorageError, AttributeError):
-                    split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+            crun = self._root_instance._crun
 
-        return self._perform_get(node, split_name, fast_access,
-                                 shortcuts, max_depth, auto_load, with_links,
-                                 try_auto_load_directly2)
+            if crun is not None and run_pos == -1:
+                # If we count the wildcard we have to perform the search twice,
+                # one with a run name and one with the dummy:
+                with self._disable_logger:
+                    try:
+                        if wildcard_pos > -1:
+                            split_name[wildcard_pos] = crun
+                        self._run_filter = crun
+
+                        result = self._perform_get(node, split_name, fast_access,
+                                                   shortcuts, max_depth, auto_load, with_links,
+                                                   try_auto_load_directly1)
+                        return result
+                    except (pex.DataNotInStorageError, AttributeError):
+                        if wildcard_pos > -1:
+                            split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+                        self._run_filter = pypetconstants.RUN_NAME_DUMMY
+            elif wildcard_pos > -1:
+                split_name[wildcard_pos] = pypetconstants.RUN_NAME_DUMMY
+
+            return self._perform_get(node, split_name, fast_access,
+                                     shortcuts, max_depth, auto_load, with_links,
+                                     try_auto_load_directly2)
+        finally:
+            self._run_filter = None
 
     def _perform_get(self, node, split_name, fast_access,
                      shortcuts, max_depth, auto_load, with_links,
@@ -2559,7 +2591,7 @@ class NNGroupNode(NNTreeNode):
                                max_depth=self._nn_interface._get_max_depth(),
                                with_links=self._nn_interface._get_with_links())
 
-    def f_remove_child(self, name, recursive=False, keep_predicate=None):
+    def f_remove_child(self, name, recursive=False, predicate=None):
         """Removes a child of the group.
 
         Note that groups and leaves are only removed from the current trajectory in RAM.
@@ -2579,9 +2611,10 @@ class NNGroupNode(NNTreeNode):
             Must be true if child is a group that has children. Will remove
             the whole subtree in this case. Otherwise a Type Error is thrown.
 
-        :param keep_predicate:
+        :param predicate:
 
-            Predicate which can evaluate for each node to true in order to not erase the node
+            Predicate which can evaluate for each node to ``True`` in order to remove the node or
+            ``False`` if the node should be kept. Leave ``None`` if you want to remove all nodes.
 
         :raises:
 
@@ -2605,7 +2638,7 @@ class NNGroupNode(NNTreeNode):
                 raise TypeError('Cannot remove child. It is a group with links. Use '
                                 'r_remove with ``recursive = True`` or remove links manually.')
             else:
-                self._nn_interface._remove_subtree(self, name, keep_predicate)
+                self._nn_interface._remove_subtree(self, name, predicate)
 
     @kwargs_api_change('backwards_search')
     def f_contains(self, item, with_links=True, shortcuts=False, max_depth=None):
@@ -2724,22 +2757,54 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._root_instance
 
-    def f_iter_nodes(self, recursive=True, with_links=True):
+    def f_iter_nodes(self, recursive=True, with_links=True, predicate=None):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
         :param with_links: If links should be considered
 
+        :param predicate:
+
+            A predicate function that is applied for each node and only returns the node
+            if it evaluates to ``True``. If ``False``
+            and you iterate recursively also the children are spared.
+
+            Leave to `None` if you don't want to filter and simply iterate over all nodes.
+
+
+            For example, to iterate only over groups you could use:
+
+            >>> traj.f_iter_nodes(recursive=True, predicate=lambda x: x.v_is_group)
+
+            To blind out all runs except for a particular set, you can simply pass a tuple
+            of run indices with -1 referring to the ``run_ALL`` node.
+
+            For instance
+
+            >>> traj.f_iter_nodes(recursive=True, predicate=(0,3,-1))
+
+            Will blind out all nodes hanging below a group named ``run_XXXXXXXXX``
+            (including the group) except ``run_00000000``, ``run_00000003``, and ``run_ALL``.
+
+
         :return: Iterator over nodes
 
         """
-        return self._nn_interface._iter_nodes(self, recursive=recursive, with_links=with_links)
+        return self._nn_interface._iter_nodes(self, recursive=recursive, with_links=with_links,
+                                              predicate=predicate)
 
     def f_iter_leaves(self, with_links=True):
         """Iterates (recursively) over all leaves hanging below the current group.
 
-        If links should be ignored, leaves hanging below linked nodes are not listed.
+        :param with_links:
+
+            If links should be ignored, leaves hanging below linked nodes are not listed.
+
+        :returns:
+
+            Iterator over all leaf nodes
+
         """
         return self._nn_interface._iter_leaves(self, with_links=with_links)
 
@@ -2949,7 +3014,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
                                            with_links=with_links)
 
-    def f_store_child(self, name, recursive=False, skip_existing=False):
+    def f_store_child(self, name, recursive=False, skip_stored=False):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -2961,14 +3026,14 @@ class NNGroupNode(NNTreeNode):
 
             Whether recursively all children's children should be stored too.
 
-        :param skip_existing:
+        :param skip_stored:
 
             Set this to ``True`` if you want faster storage. *pypet* will automatically skip
             all checks if new data can be added to a node that has already been stored.
             For example, this will skip checking of new entries to annotations in group nodes or
             data items within results.
 
-            Be aware that data is not overwritten or deleted even in case ``skip_existing=False``.
+            Be aware that data is not overwritten or deleted even in case ``skip_stored=False``.
             Only new data is added to dist. If you want to overwrite existing data,
             check :func:`~pypet.trajectory.Trajectory.f_store_item` and
             :func:`~pypet.trajectory.Trajectory.f_delete_item`.
@@ -2987,7 +3052,7 @@ class NNGroupNode(NNTreeNode):
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_trajectory_name,
                               recursive=recursive,
-                              skip_existing=skip_existing)
+                              skip_stored=skip_stored)
 
     def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
         """Loads a child or recursively a subtree from disk.

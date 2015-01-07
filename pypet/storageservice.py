@@ -2340,7 +2340,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             paramtable.flush()
 
-    def _trj_store_trajectory(self, traj, only_init=False, skip_existing=False):
+    def _trj_store_trajectory(self, traj, only_init=False, skip_stored=False):
         """ Stores a trajectory to an hdf5 file
 
         Stores all groups, parameters and results
@@ -2391,7 +2391,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Store recursively the derived parameters subtree
                 self._tree_store_nodes(pypetconstants.LEAF, traj, child_name,
                                        self._trajectory_group, recursive=True,
-                                       skip_existing=skip_existing)
+                                       skip_stored=skip_stored)
 
             self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
         else:
@@ -2401,7 +2401,7 @@ class HDF5StorageService(StorageService, HasLogger):
         traj._stored = True
 
     def _tree_store_sub_branch(self, msg, traj_node, branch_name, hdf5_group, recursive=True,
-                               store_links=True, skip_existing=False):
+                               store_links=True, skip_stored=False):
         """Stores data starting from a node along a branch and starts recursively loading
         all data at end of branch.
 
@@ -2427,7 +2427,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             If links should be stored
 
-        :param skip_existing:
+        :param skip_stored:
 
             If data of existing data should be stored or skipped
 
@@ -2439,7 +2439,7 @@ class HDF5StorageService(StorageService, HasLogger):
         for name in split_names:
             # Store along a branch
             self._tree_store_nodes(msg, traj_node, name, hdf5_group, recursive=False,
-                                   store_links=store_links, skip_existing=skip_existing)
+                                   store_links=store_links, skip_stored=skip_stored)
 
             traj_node = traj_node._children[name]
 
@@ -2447,12 +2447,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Store final group and recursively everything below it
         self._tree_store_nodes(msg, traj_node, leaf_name, hdf5_group, recursive=recursive,
-                               store_links=store_links, skip_existing=skip_existing)
+                               store_links=store_links, skip_stored=skip_stored)
 
 
     ########################  Storing and Loading Sub Trees #######################################
 
-    def _tree_store_tree(self, traj_node, child_name, recursive, skip_existing=False):
+    def _tree_store_tree(self, traj_node, child_name, recursive, skip_stored=False):
         """Stores a node and potentially recursively all nodes below
 
         :param traj_node: Parent node where storing starts
@@ -2461,7 +2461,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param recursive: Whether to store everything below `traj_node`.
 
-        :param skip_existing: If data should be added to existing nodes or skipped
+        :param skip_stored: If data should be added to existing nodes or skipped
 
         """
         location = traj_node.v_full_name
@@ -2480,7 +2480,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._tree_store_sub_branch(pypetconstants.LEAF, traj_node, child_name,
                                         parent_hdf5_node,
                                         recursive=recursive,
-                                        skip_existing=skip_existing)
+                                        skip_stored=skip_stored)
 
         except pt.NoSuchNodeError:
             self._logger.debug('Cannot store `%s` the parental hdf5 node with path `%s` does '
@@ -2502,7 +2502,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                             traj_node.v_full_name + '.' + child_name,
                                             self._trajectory_group,
                                             recursive=recursive,
-                                            skip_existing=skip_existing)
+                                            skip_stored=skip_stored)
 
 
     def _tree_load_tree(self, parent_traj_node, child_name, recursive, load_data, trajectory):
@@ -2722,7 +2722,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                (new_hdf5group._v_name, new_traj_node.v_full_name))
 
     def _tree_store_nodes(self, msg, parent_traj_node, name, parent_hdf5_group, recursive=True,
-                          store_links=True, skip_existing=False):
+                          store_links=True, skip_stored=False):
         """Stores a node to hdf5 and if desired stores recursively everything below it.
 
         :param msg: 'LEAF'
@@ -2755,7 +2755,7 @@ class HDF5StorageService(StorageService, HasLogger):
             new_hdf5_group = getattr(parent_hdf5_group, name)
 
         if traj_node.v_is_leaf:
-            if store_new or not skip_existing:
+            if store_new or not skip_stored:
                 # If we have a leaf node, store it as a parameter or result
                 self._prm_store_parameter_or_result(store_msg, traj_node,
                                                     _hdf5_group=new_hdf5_group,
@@ -2777,7 +2777,7 @@ class HDF5StorageService(StorageService, HasLogger):
             #              (traj_node.v_comment != '' and
             #               not HDF5StorageService.COMMENT not in new_hdf5_group._v_attrs))
 
-            if store_new or not skip_existing:
+            if store_new or not skip_stored:
                 self._grp_store_group(traj_node, _hdf5_group=new_hdf5_group)
             else:
                 self._logger.debug('Already found `%s` on disk I will not store it!' %
@@ -2790,7 +2790,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 for child in compat.iterkeys(traj_node._children):
                     self._tree_store_nodes(store_msg, traj_node, child, new_hdf5_group,
                                            recursive=recursive, store_links=store_links,
-                                           skip_existing= skip_existing)
+                                           skip_stored= skip_stored)
 
     def _tree_store_link(self, node_in_traj, link, _hdf5_group, _msg):
 
@@ -2819,7 +2819,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, traj, store_data, store_final, skip_existing=False):
+    def _srn_store_single_run(self, traj, store_data, store_final, skip_stored=False):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data:
@@ -2828,7 +2828,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 group = traj._run_parent_groups[group_name]
                 if group.f_contains(traj.v_crun):
                     self._tree_store_tree(group, traj.v_crun, recursive=True,
-                                          skip_existing=skip_existing)
+                                          skip_stored=skip_stored)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
@@ -2987,7 +2987,7 @@ class HDF5StorageService(StorageService, HasLogger):
         if where in ['config', 'parameters']:
             return where
         else:
-            if creator_name == 'trajectory':
+            if creator_name == 'trajectory' or creator_name == pypetconstants.RUN_NAME_DUMMY:
                 return '%s_trajectory' % where
             else:
                 return '%s_runs' % where
@@ -3394,17 +3394,10 @@ class HDF5StorageService(StorageService, HasLogger):
         table.flush()
 
         if len(multiple_entries) > 0:
-            self._logger.error('There is something entirely wrong, `%s` '
+            self._logger.error('There is something wrong, `%s` '
                                'appears more than once in table %s.'
                                % (item_name, table._v_name))
-            self._logger.error('I will fix this by removing all entries except the last')
-            removed = 0
-            for row_number in sorted(multiple_entries):
-                ptcompat.remove_rows(table, start=row_number - removed,
-                                     stop=row_number - removed + 1)
-                removed += 1 # keep track of how many have been removed, because
-                             # the index of the later rows are decreased thereby
-                table.flush()
+            self._srvc_fix_table(table, multiple_entries)
 
         # Check if we added something. Note that row is also not None in case REMOVE_ROW,
         # then it refers to the deleted row
@@ -3412,7 +3405,21 @@ class HDF5StorageService(StorageService, HasLogger):
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' % (item_name, table._v_name))
 
+    def _srvc_fix_table(self, table, multiple_entries):
+        """ Fixes mutliple entries in a table.
 
+        This may happen due to deleting leaves,
+        because the last row cannot be removed with PyTables
+
+        """
+        self._logger.error('I will fix this by removing all entries except the last')
+        removed = 0
+        for row_number in sorted(multiple_entries):
+            ptcompat.remove_rows(table, start=row_number - removed,
+                                 stop=row_number - removed + 1)
+            removed += 1 # keep track of how many have been removed, because
+                         # the index of the later rows are decreased thereby
+            table.flush()
 
     def _all_insert_into_row(self, row, insert_dict):
         """Copies data from `insert_dict` into a pytables `row`."""
@@ -3567,8 +3574,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ################# Storing and loading Annotations ###########################################
 
-    def _ann_store_annotations(self, item_with_annotations, node):
+    def _ann_store_annotations(self, item_with_annotations, node, overwrite=False):
         """Stores annotations into an hdf5 file."""
+
+        # If we overwrite delete all annotations first
+        if overwrite:
+            annotated = self._all_get_from_attrs(node, HDF5StorageService.ANNOTATED)
+            if annotated:
+                current_attrs = node._v_attrs
+                for attr_name in current_attrs._v_attrnames:
+                    if attr_name.startswith(HDF5StorageService.ANNOTATION_PREFIX):
+                        delattr(current_attrs, attr_name)
+                delattr(current_attrs, HDF5StorageService.ANNOTATED)
+                self._hdf5file.flush()
 
         # Only store annotations if the item has some
         if not item_with_annotations.v_annotations.f_is_empty():
@@ -3583,7 +3601,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 val = anno_dict[field_name]
 
                 field_name_with_prefix = HDF5StorageService.ANNOTATION_PREFIX + field_name
-                if not field_name_with_prefix in current_attrs:
+                if field_name_with_prefix not in current_attrs:
                     # Only store *new* annotations, if they already exist on disk, skip storage
                     setattr(current_attrs, field_name_with_prefix, val)
                     changed = True
@@ -3620,7 +3638,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ############################################## Storing Groups ################################
 
-    def _grp_store_group(self, node_in_traj, _hdf5_group=None):
+    def _grp_store_group(self, node_in_traj, overwrite=False, _hdf5_group=None):
         """Stores a group node.
 
         For group nodes only annotations and comments need to be stored.
@@ -3629,10 +3647,11 @@ class HDF5StorageService(StorageService, HasLogger):
         if _hdf5_group is None:
             _hdf5_group, _ = self._all_create_or_get_groups(node_in_traj.v_full_name)
 
-        if node_in_traj.v_comment != '' and HDF5StorageService.COMMENT not in _hdf5_group._v_attrs:
+        if (node_in_traj.v_comment != '' and
+                (HDF5StorageService.COMMENT not in _hdf5_group._v_attrs or overwrite)):
             setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, node_in_traj.v_comment)
 
-        self._ann_store_annotations(node_in_traj, _hdf5_group)
+        self._ann_store_annotations(node_in_traj, _hdf5_group, overwrite=overwrite)
         self._hdf5file.flush()
 
         node_in_traj._stored = True
@@ -3672,7 +3691,8 @@ class HDF5StorageService(StorageService, HasLogger):
         if where in ['derived_parameters', 'results']:
             # There are only summaries for derived parameters and results
             creator_name = instance.v_run_branch
-            if creator_name.startswith(pypetconstants.RUN_NAME):
+            if (creator_name.startswith(pypetconstants.RUN_NAME) and
+                creator_name != pypetconstants.RUN_NAME_DUMMY):
                 run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
 
                 split_name[instance._run_branch_pos] = run_mask
@@ -3694,15 +3714,21 @@ class HDF5StorageService(StorageService, HasLogger):
                     row['number_of_items'] = nitems
                     row.update()
 
+                    table.flush()
+
+                    multiple_entries = []
+
                     try:
-                        next(row_iterator)
-                        raise RuntimeError('There is something completely wrong, found '
-                                           '`%s` twice in a table!' %
-                                           instance.v_full_name)
+                        for new_row in row_iterator:
+                            multiple_entries.append(new_row.nrow)
                     except StopIteration:
                         pass
 
-                    table.flush()
+                    if len(multiple_entries) > 0:
+                        self._logger.error('There is something wrong, `%s` '
+                                           'appears more than once in table %s.'
+                                           % (instance.v_full_name, table._v_name))
+                        self._srvc_fix_table(table, multiple_entries)
 
                     if nitems == 0:
                         # Here the summary became obsolete
@@ -3740,7 +3766,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Check if we are in the subtree that has runs overview tables
         creator_name = instance.v_run_branch
-        if creator_name.startswith(pypetconstants.RUN_NAME):
+        if (creator_name.startswith(pypetconstants.RUN_NAME) and
+                    creator_name != pypetconstants.RUN_NAME_DUMMY):
 
             try:
                 # Get the overview table
@@ -3840,15 +3867,21 @@ class HDF5StorageService(StorageService, HasLogger):
                     row['number_of_items'] = nitems
                     row.update()
 
+                    table.flush()
+
+                    multiple_entries = []
+
                     try:
-                        next(row_iterator)
-                        raise RuntimeError('There is something completely wrong, '
-                                           'found `%s` twice in a table!' %
-                                           instance.v_full_name)
+                        for new_row in row_iterator:
+                            multiple_entries.append(new_row.nrow)
                     except StopIteration:
                         pass
 
-                    table.flush()
+                    if len(multiple_entries) > 0:
+                        self._logger.error('There is something wrong, `%s` '
+                                           'appears more than once in table %s.'
+                                           % (instance.v_full_name, table._v_name))
+                        self._srvc_fix_table(table, multiple_entries)
 
                     if (self._purge_duplicate_comments and erase_old_comment and
                                 HDF5StorageService.COMMENT in example_item_node._v_attrs):
@@ -3875,17 +3908,21 @@ class HDF5StorageService(StorageService, HasLogger):
 
         return where, definitely_store_comment
 
-    def _prm_add_meta_info(self, instance, group, msg):
+    def _prm_add_meta_info(self, instance, group, overwrite=False):
         """Adds information to overview tables and meta information to
         the `instance`s hdf5 `group`.
 
         :param instance: Instance to store meta info about
         :param group: HDF5 group of instance
         :param msg: Whether to update leaf (we need to modify a row) or just store it
+        :param overwrite: If data should be explicitly overwritten
 
         """
 
-        flags = (HDF5StorageService.ADD_ROW,)
+        if overwrite:
+            flags = (HDF5StorageService.ADD_ROW, HDF5StorageService.MODIFY_ROW)
+        else:
+            flags = (HDF5StorageService.ADD_ROW,)
 
         definitely_store_comment = True
         try:
@@ -3974,7 +4011,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             try:
                 # Ask the instance for storage flags
-                instance_flags = instance._store_flags()
+                instance_flags = instance._store_flags().copy() # copy to avoid modifying the
+                # original data
             except AttributeError:
                 # If it does not provide any, set it to the empty dictionary
                 instance_flags = {}
@@ -4038,12 +4076,12 @@ class HDF5StorageService(StorageService, HasLogger):
                     raise RuntimeError('You shall not pass!')
 
             # Store annotations
-            self._ann_store_annotations(instance, _hdf5_group)
+            self._ann_store_annotations(instance, _hdf5_group, overwrite=overwrite is True)
 
-            if newly_created:
+            if newly_created or overwrite is True:
                 # If we created a new group or the parameter was extended we need to
                 # update the meta information and summary tables
-                self._prm_add_meta_info(instance, _hdf5_group, msg)
+                self._prm_add_meta_info(instance, _hdf5_group, overwrite=overwrite is True)
 
             instance._stored = True
 

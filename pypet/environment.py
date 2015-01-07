@@ -1333,10 +1333,15 @@ class Environment(HasLogger):
 
         return self._execute_runs(None)
 
-    @ property
+    @property
     def v_trajectory(self):
         """ The trajectory of the Environment"""
         return self._traj
+
+    @property
+    def v_traj(self):
+        """ Equivalent to env.v_trajectory"""
+        return self.v_trajectory
 
     @property
     def v_log_path(self):

@@ -267,7 +267,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_crun'.
         self._idx = -1
-        self._crun = pypetconstants.RUN_NAME_DUMMY
+        self._crun = None
 
         self._standard_parameter = Parameter
         self._standard_result = Result
@@ -810,7 +810,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @not_in_run
     @kwargs_api_change('backwards_search')
-    def f_get_from_runs(self, name, where='results', use_indices=False,
+    @kwargs_api_change('where')
+    def f_get_from_runs(self, name, include_default_run=True, use_indices=False,
                         fast_access=False, with_links = True,
                         shortcuts=True, max_depth=None, auto_load=False):
         """Searches for all occurrences of `name` in each run.
@@ -824,12 +825,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         OrderedDict([(0, 42), (1, 42), (2, 'fortytwo), (4, 43)])
 
 
-        :param name: String description of the item(s) to find
+        :param name:
 
-        :param where:
+            String description of the item(s) to find.
+            Cannot be full names but the part of the names that are below
+            a `run_XXXXXXXXX` group.
 
-            Either `'results'` (short 'r' works, too) or 'derived_parameters' (short 'd' works,
-            too)
+        :param include_default_run:
+
+            If results found under ``run_ALL``should be accounted for every run or simply be
+            ignored.
 
         :param use_indices:
 
@@ -869,53 +874,59 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             Will only include runs where an item was actually found.
 
         """
-
-        if where in ['results', 'r']:
-            if not 'results.runs' in self:
-                raise TypeError('Trajectory does not contain any results from single runs.')
-
-            search_group = self.results.runs
-        elif where in ['derived_parameters', 'd']:
-            if not 'derived_parameters.runs' in self:
-                raise TypeError('Trajectory does not contain any derived parameters '
-                                'from single runs.')
-
-            search_group = self.derived_parameters.runs
-        else:
-            raise ValueError('Subtree `%s` unknown or not supported, please use '
-                             '`where=` `results`, `derived_parameters` or short forms '
-                             ' `r` or `d`.' % where)
-
         result_dict = OrderedDict()
+        old_crun = self.v_crun
 
-        child_dict = search_group.f_get_children(copy=False)
+        try:
+            for run_name in self.f_iter_runs():
+                # Iterate over all runs
+                old_value = None
+                value = None
+                if len(self._run_parent_groups)>0:
+                    for run_parent_group in compat.itervalues(self._run_parent_groups):
+                        try:
+                            value = run_parent_group.f_get(name, fast_access=False,
+                                                    with_links=with_links,
+                                                    shortcuts=shortcuts,
+                                                    max_depth=max_depth,
+                                                  auto_load=auto_load)
 
-        for run_name in self.f_get_run_names():
-            # Iterate over all runs
-            if run_name in child_dict:
-                run_group = child_dict[run_name]
+                            if old_value is not None:
+                                raise pex.NotUniqueNodeError('`%s` has been found twice: '
+                                                             '`%s` and `%s`' % (name,
+                                                                            old_value.v_full_name,
+                                                                            value.v_full_name))
 
-                try:
-                    value = run_group.f_get(name, fast_access=fast_access,
-                                            with_links=with_links,
-                                            shortcuts=shortcuts,
-                                            max_depth=max_depth,
-                                            auto_load=auto_load)
-                except pex.NotUniqueNodeError:
-                    raise
-                except AttributeError:
-                    # In case the item cannot found in a run we do not add the run
-                    # to the dictionary
-                    continue
 
-                if use_indices:
-                    key = self.f_idx_to_run(run_name)
-                else:
-                    key = run_name
 
-                result_dict[key] = value
+                            if pypetconstants.RUN_NAME not in value.v_full_name:
+                                value = old_value
+                                raise  AttributeError('Item does not belong to run')
+                            elif (not include_default_run
+                                and pypetconstants.RUN_NAME_DUMMY in value.v_full_name):
+                                value = old_value
+                                raise AttributeError('I was told to ignore default runs')
 
-        return result_dict
+                            old_value = value
+
+                        except AttributeError, pex.DataNotInStorageError:
+                            pass
+
+                    if value is not None:
+
+                        if value.v_is_leaf:
+                            value = self._nn_interface._apply_fast_access(value, fast_access)
+
+                        if use_indices:
+                            key = self.f_idx_to_run(run_name)
+                        else:
+                            key = run_name
+
+                        result_dict[key] = value
+
+            return result_dict
+        finally:
+            self.v_crun = old_crun
 
     def __len__(self):
         """Length of trajectory, minimum length is 1"""
@@ -1170,23 +1181,24 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 linking = self._linked_by[full_name]
                 for linking_name in compat.iterkeys(linking):
                     linking_node, link_set = linking[linking_name]
-                    if linking_node.v_run_branch == 'trajectory':
+                    if (linking_node.v_run_branch == 'trajectory'):
                         for link in link_set:
                             if (not (link.startswith(pypetconstants.RUN_NAME) and
                                         link != pypetconstants.RUN_NAME_DUMMY) or
                                     not self.f_is_completed(link)):
-                                    return True
-                        return False
-                    if not self.f_is_completed(linking_node.v_run_branch):
+                                    return False
                         return True
-            return False
+                    if not self.f_is_completed(linking_node.v_run_branch):
+                        return False
+            return True
+
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
             for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
                             child_name != pypetconstants.RUN_NAME_DUMMY and
                             self.f_is_completed(child_name)):
-                    group.f_remove_child(child_name, recursive=True, keep_predicate=_keep_linked)
+                    group.f_remove_child(child_name, recursive=True, predicate=_keep_linked)
 
     def _finalize(self):
         """Final rollback initiated by the environment
@@ -1779,7 +1791,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         # Write out the merged data to disk
         self._logger.info('Writing merged data to disk')
-        self.f_store(skip_existing=True)
+        self.f_store(skip_stored=True)
 
 
         self._logger.info('Finished Merging!')
@@ -2223,7 +2235,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if traj.f_contains(where):
             group = traj[where]
             for leaf in group.f_iter_leaves(with_links=False):
-                if leaf.v_run_branch == 'trajectory':
+                if (leaf.v_run_branch == 'trajectory' or
+                            leaf.v_run_branch == pypetconstants.RUN_NAME_DUMMY):
                     result_dict[leaf.v_full_name] = leaf
 
         return result_dict
@@ -2237,7 +2250,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         if traj.f_contains(where):
             group = traj[where]
-            predicate = lambda x: x.v_run_branch == 'trajectory'
+            predicate = lambda x: (x.v_run_branch == 'trajectory' or
+                                   x.v_run_branch == pypetconstants.RUN_NAME_DUMMY)
             return filter(predicate, group.f_iter_nodes(recursive=True))
         else:
             return iter([])
@@ -2495,7 +2509,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._stored = in_store
 
-    def f_store(self, new_name=None, new_filename=None, only_init=False, skip_existing=False):
+    def f_store(self, new_name=None, new_filename=None, only_init=False, skip_stored=False):
         """Stores the trajectory to disk.
 
         :param filename:
@@ -2515,14 +2529,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             If you just want to initialise the store. If yes, only meta information about
             the trajectory is stored and none of the nodes/leaves within the trajectory.
 
-        :param skip_existing:
+        :param skip_stored:
 
             Set this to ``True`` if you want faster storage. *pypet* will automatically skip
             all checks if new data can be added to a node that has already been stored.
             For example, this will skip checking of new entries to annotations in group nodes or
             data items within results.
 
-            Be aware that data is not overwritten or deleted even in case ``skip_existing=False``.
+            Be aware that data is not overwritten or deleted even in case ``skip_stored=False``.
             Only new data is added to disk. If you want to overwrite existing data,
             check :func:`~pypet.trajectory.Trajectory.f_store_item` and
             :func:`~pypet.trajectory.Trajectory.f_delete_item`.
@@ -2553,7 +2567,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
                                     store_final=False, store_data=True,
-                                    skip_existing=skip_existing)
+                                    skip_stored=skip_stored)
         else:
             if new_filename is not None or new_name is not None:
                 self.f_migrate(new_name, new_filename)
@@ -2562,9 +2576,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self._store_expansion()
                 self._expansion_not_stored = False
 
-            self._storage_service.store(pypetconstants.TRAJECTORY, self, trajectory_name=self.v_name,
+            self._storage_service.store(pypetconstants.TRAJECTORY, self,
+                                        trajectory_name=self.v_name,
                                         only_init=only_init,
-                                        skip_existing=skip_existing)
+                                        skip_stored=skip_stored)
             self._stored = True
 
     @not_in_run
@@ -2580,7 +2595,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """Restores the default value in all explored parameters and sets the
         v_idx property back to -1 and v_crun to None."""
         self._idx = -1
-        self._crun = pypetconstants.RUN_NAME_DUMMY
+        self._crun = None
         for param in compat.itervalues(self._explored_parameters):
             param._restore_default()
 
@@ -3522,10 +3537,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                    ' item(s) was/were never stored to disk.' % str(fetched_items))
                 raise
 
-            if remove_from_trajectory:
-                for msg, item, dummy1, dummy2 in fetched_items:
+            
+            for msg, item, dummy1, dummy2 in fetched_items:
+                if remove_from_trajectory:
                     self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
-
+                else:
+                    item._stored = False
+            
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
                                  'item to remove.')

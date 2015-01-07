@@ -26,6 +26,7 @@ import random
 import tables
 import inspect
 import pypet.compat as compat
+import pypet.utils.ptcompat as ptcompat
 
 import tables as pt
 
@@ -65,6 +66,137 @@ class StorageTest(TrajectoryComparator):
 
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
+
+    def test_clean_up_multiple_table_entries(self):
+
+        filename = make_temp_file('cleanup.hdf5')
+
+        env = Environment(trajectory='Testmigrate', filename=filename)
+        logpath = env.v_log_path
+        traj = env.v_trajectory
+        traj.f_add_parameter('x', 5)
+
+        traj.f_store()
+
+        traj.f_delete_item(traj.f_get('x'))
+
+        traj.f_get('x').f_unlock()
+        traj.x = 10
+
+        traj.f_add_parameter('y', 43)
+
+        store = ptcompat.open_file(filename, mode='r')
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
+        self.assertTrue(table.nrows == 1)
+
+        store.close()
+
+        traj.f_store()
+
+        store = ptcompat.open_file(filename, mode='r')
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
+        self.assertTrue(table.nrows == 3)
+
+        store.close()
+
+        traj.f_delete_item(traj.f_get('x'))
+
+
+        store = ptcompat.open_file(filename, mode='r')
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
+        self.assertTrue(table.nrows == 1)
+
+        store.close()
+
+        with open(os.path.join(logpath, 'main.txt')) as fh:
+            text = fh.read()
+
+            etext ='appears more than once in table'
+            self.assertTrue(etext in text)
+
+    def test_clean_up_multiple_table_entries2(self):
+
+        filename = make_temp_file('cleanup.hdf5')
+
+        env = Environment(trajectory='Testmigrate2', filename=filename)
+        logpath = env.v_log_path
+        traj = env.v_trajectory
+        traj.f_add_parameter('x', 5)
+
+        traj.f_store()
+
+        traj.f_delete_item(traj.f_get('x'))
+
+
+
+        traj.f_add_parameter('y', 43)
+
+        store = ptcompat.open_file(filename, mode='r')
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
+        self.assertTrue(table.nrows == 1)
+
+        store.close()
+
+        traj.f_store()
+
+        traj.f_get('x').f_unlock()
+        traj.x = 10
+
+        traj.f_store_item(traj.f_get('x'), overwrite=True)
+
+        store = ptcompat.open_file(filename, mode='r')
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
+        self.assertTrue(table.nrows == 2)
+        self.assertTrue(table[0]['value'] == '10')
+
+        store.close()
+
+
+        with open(os.path.join(logpath, 'main.txt')) as fh:
+            text = fh.read()
+
+            etext ='appears more than once in table'
+            self.assertTrue(etext in text)
+
+
+    def test_overwrite(self):
+
+        filename = make_temp_file('overwrite.hdf5')
+
+        env = Environment(trajectory='testoverwrite', filename=filename)
+
+        traj = env.v_traj
+
+        traj.f_add_parameter('grp.x', 5, comment='hi')
+        traj.grp.v_comment='hi'
+        traj.grp.v_annotations['a'] = 'b'
+
+        traj.f_store()
+
+        traj.f_remove_child('parameters', recursive=True)
+
+        traj.f_load(load_all=2)
+
+        self.assertTrue(traj.x == 5)
+        self.assertTrue(traj.grp.v_comment == 'hi')
+        self.assertTrue(traj.grp.v_annotations['a'] == 'b')
+
+        traj.f_get('x').f_unlock()
+        traj.x = 22
+        traj.f_get('x').v_comment='hu'
+        traj.grp.v_annotations['a'] = 'c'
+        traj.grp.v_comment = 'hu'
+
+        traj.f_store_item(traj.f_get('x'), overwrite=True)
+        traj.f_store_item(traj.grp, overwrite=True)
+
+        traj.f_remove_child('parameters', recursive=True)
+
+        traj.f_load(load_all=2)
+
+        self.assertTrue(traj.x == 22)
+        self.assertTrue(traj.grp.v_comment == 'hu')
+        self.assertTrue(traj.grp.v_annotations['a'] == 'c')
 
 
     def test_migrations(self):
@@ -1094,14 +1226,15 @@ class ResultSortTest(TrajectoryComparator):
             self.traj.v_as_run == run_name
             self.traj.v_idx = idx
             newtraj.v_idx = idx
-
-            self.assertTrue('run_%08d' % (idx+1) not in traj)
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
 
             self.assertTrue(newtraj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
                                                   (str(newtraj.z),str(traj.x),str(traj.y)))
 
         self.assertTrue(traj.v_idx == -1)
-        self.assertTrue(traj.v_as_run == 'run_ALL')
+        self.assertTrue(traj.v_as_run == None)
         self.assertTrue(newtraj.v_idx == idx)
 
 

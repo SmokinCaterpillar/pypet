@@ -146,7 +146,7 @@ class TrajectoryTest(unittest.TestCase):
 
         all_nodes=self.traj.f_get_all('x.y')
 
-        self.assertTrue(len(all_nodes)==4)
+        self.assertTrue(len(all_nodes)==5, '%s != 5' % str(len(all_nodes)))
 
     # def test_backwards_search(self):
     #
@@ -397,45 +397,12 @@ class TrajectoryTest(unittest.TestCase):
 
             depth_dict[node.v_depth].remove(node)
 
-
-    #
-    #
-    # def test_iter_dfs(self):
-    #
-    #     prev_node = None
-    #
-    #     x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
-    #
-    #     for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
-    #         if not prev_node is None:
-    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-    #                 self.assertTrue(node.v_name in prev_node._children)
-    #
-    #         prev_node = node
-    #
-    #     prev_node = None
-    #
-    #     self.traj.v_iter_recursive=True
-    #     self.traj.v_search_strategy='DFS'
-    #
-    #     y = [y for y in self.traj]
-    #
-    #     self.assertEqual(x,y)
-    #
-    #     for node in self.traj:
-    #         if not prev_node is None:
-    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-    #                 self.assertTrue(node.v_name in prev_node._children)
-    #
-    #         prev_node = node
-
     def test_iter_bfs_as_run(self):
         as_run = 1
 
+        self.traj.f_add_result('results.run_ALL.resulttest', 42)
         self.traj.f_add_result('results.run_00000000.resulttest', 42)
         self.traj.f_add_result('results.run_00000001.resulttest', 43)
-
-        self.traj.f_as_run(as_run)
 
         depth_dict = self.get_depth_dict(self.traj, self.traj.f_idx_to_run(as_run))
 
@@ -443,34 +410,13 @@ class TrajectoryTest(unittest.TestCase):
 
         prev_depth = 0
 
-        for node in self.traj.f_iter_nodes(recursive=True):
+        for node in self.traj.f_iter_nodes(recursive=True, predicate=('run_00000001',-1)):
             self.assertTrue('run_00000000' not in node.v_full_name)
             if prev_depth != node.v_depth:
                 self.assertEqual(len(depth_dict[prev_depth]),0)
                 prev_depth = node.v_depth
 
             depth_dict[node.v_depth].remove(node)
-
-    # def test_iter_dfs_as_run(self):
-    #
-    #     self.traj.f_add_result('results.run_00000000.resulttest', 42)
-    #     self.traj.f_add_result('results.run_00000001.resulttest', 43)
-    #
-    #     self.traj.f_as_run('run_00000001')
-    #
-    #     prev_node = None
-    #
-    #     x= [x for x in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS')]
-    #
-    #     for node in self.traj.f_iter_nodes(recursive=True, search_strategy='DFS'):
-    #         self.assertTrue('run_00000000' not in node.v_full_name)
-    #
-    #         if not prev_node is None:
-    #             if not prev_node.v_is_leaf and len(prev_node._children) > 0:
-    #                 self.assertTrue(node.v_name in prev_node._children)
-    #
-    #         prev_node = node
-
 
     def test_find_in_all_runs(self):
 
@@ -481,6 +427,8 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_result('results.runs.run_00000002.sub.resulttest2', 42)
         self.traj.f_add_result('results.runs.run_00000003.sub.resulttest2', 43)
+
+
 
         self.traj.f_add_derived_parameter('derived_parameters.runs.run_00000002.testing', 44)
 
@@ -497,21 +445,33 @@ class TrajectoryTest(unittest.TestCase):
         res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
 
         self.assertTrue(len(res_dict)==2)
-        self.assertTrue(res_dict[3]is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
         self.assertTrue(1 not in res_dict)
 
         res_dict = self.traj.f_get_from_runs(name='testing', where='derived_parameters')
 
         self.assertTrue(len(res_dict)==1)
 
-        self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.sub.resulttest2', 444)
-        self.traj.f_add_result('results.runs.run_00000002.sub.sub.sub.resulttest2', 444)
+        self.traj.f_add_result('results.runs.run_ALL.sub.resulttest2', 44)
 
-        # with self.assertRaises(pex.NotUniqueNodeError):
-        #     self.traj.f_get_from_runs('sub.sub.resulttest2', backwards_search=True)
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
 
-        with self.assertRaises(ValueError):
-            self.traj.f_get_from_runs('test', where='Portland')
+        self.assertTrue(len(res_dict)==4)
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(res_dict[1] is self.traj.f_get('run_ALL.resulttest2'))
+        self.assertTrue(res_dict[0] is self.traj.f_get('run_ALL.resulttest2'))
+        self.assertTrue(1 in res_dict)
+
+
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', include_default_run=False,
+                                             use_indices=True)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(1 not in res_dict)
+
+        res_dict =  self.traj.f_get_from_runs('test', where='Portland')
+        self.assertTrue(len(res_dict) == 0)
 
     def test_illegal_namings(self):
         self.traj=Trajectory('resulttest2')

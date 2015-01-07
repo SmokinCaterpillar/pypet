@@ -218,6 +218,54 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj2.f_load(load_all=2)
         self.assertTrue(traj2.ii == traj2.res.kk)
 
+
+    def test_find_in_all_runs_with_links(self):
+
+        traj = Trajectory()
+
+        traj.f_add_parameter('FloatParam')
+        traj.FloatParam=4.0
+        self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
+        traj.f_explore(self.explore_dict)
+
+        self.assertTrue(len(traj) == 4)
+
+        traj.f_add_result('results.runs.run_00000000.sub.resulttest', 42)
+        traj.f_add_result('results.runs.run_00000001.sub.resulttest', 43)
+        traj.f_add_result('results.runs.run_00000002.sub.resulttest', 44)
+
+        traj.f_add_result('results.runs.run_00000002.sub.resulttest2', 42)
+        traj.f_add_result('results.runs.run_00000003.sub.resulttest2', 43)
+
+        traj.f_add_derived_parameter('derived_parameters.runs.run_00000002.testing', 44)
+
+        res_dict = traj.f_get_from_runs('resulttest', fast_access=True)
+
+        self.assertTrue(len(res_dict)==3)
+        self.assertTrue(res_dict['run_00000001']==43)
+        self.assertTrue('run_00000003' not in res_dict)
+
+        res_dict = traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(res_dict[3] is traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(1 not in res_dict)
+
+        traj.res.runs.r_0.f_add_link('resulttest2', traj.r_1.f_get('resulttest'))
+
+        res_dict = traj.f_get_from_runs(name='resulttest2', use_indices=True)
+
+        self.assertTrue(len(res_dict)==3)
+        self.assertTrue(res_dict[0] is traj.f_get('run_00000001.resulttest'))
+        self.assertTrue(1 not in res_dict)
+
+        res_dict = traj.f_get_from_runs(name='resulttest2', use_indices=True, with_links=False)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(0 not in res_dict)
+        self.assertTrue(1 not in res_dict)
+
+
     def test_get_all_not_links(self):
 
         traj = Trajectory()
@@ -258,11 +306,6 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         self.assertTrue(len(nodes)==2)
 
-        traj.v_idx = 2
-
-        nodes = traj.f_get_all('h')
-
-        self.assertTrue(len(nodes) == 0)
 
     def test_links_according_to_run(self):
 

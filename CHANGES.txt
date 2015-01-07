@@ -52,6 +52,16 @@ pypet 0.1b.9
 *   `$` always translates to the run the trajectory is set to, also for
     adding new items to the tree
 
+*   If the current run is not set, ``traj.v_crun`` is set to ``None``
+
+*   Moreover, ``f_iter_nodes`` and ``f_iter_leaves`` is no longer affected by the setting
+    of a current run and always returns all nodes and leaves
+
+*   The iteration function now allow for a predicate function to filter potential nodes
+
+*   Storing a leaf or a group via ``traj.f_store_item(item, overwrite=True)`` now also
+    replaces all annotations and comments
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!
