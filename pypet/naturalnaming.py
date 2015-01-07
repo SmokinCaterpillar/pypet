@@ -1861,7 +1861,10 @@ class NaturalNamingInterface(HasLogger):
         candidate_dict = self._get_candidate_dict(key, crun)
 
         # If there are to many potential candidates sequential search might be too slow
-        if len(candidate_dict) > FAST_UPPER_BOUND:
+        if with_links and len(candidate_dict) > 1:
+            raise pex.TooManyGroupsError('More than one target, '
+                                         'I might possibly be missing links.')
+        elif len(candidate_dict) > FAST_UPPER_BOUND:
             raise pex.TooManyGroupsError('Too many nodes')
 
         # Next check if the found candidates could be reached from the parent node
