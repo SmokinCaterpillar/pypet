@@ -30,7 +30,6 @@ class ChainMap(object):
         return length
 
     def __iter__(self):
-
         iter_list = [compat.iterkeys(mapping) for mapping in self._maps]
         return itools.chain(*iter_list)
 

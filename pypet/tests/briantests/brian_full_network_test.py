@@ -9,7 +9,7 @@ else:
     import unittest
 
 from pypet.parameter import Parameter
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.storageservice import LazyStorageService
 
 from pypet.environment import Environment
@@ -122,6 +122,8 @@ def run_net(traj):
 
 class BrianFullNetworkTest(TrajectoryComparator):
 
+    def tearDown(self):
+        self.env.f_disable_logging()
 
     def setUp(self):
         logging.basicConfig(level = logging.INFO)

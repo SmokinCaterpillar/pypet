@@ -1,7 +1,7 @@
 __author__ = 'Robert Meyer'
 
 
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 from pypet.tests.test_helpers import TEMPDIR
@@ -13,11 +13,6 @@ import os
 import numpy as np
 import time
 import shutil
-
-from pycallgraph import PyCallGraph
-from pycallgraph.output import GraphvizOutput
-
-
 
 def add_data(traj):
     for irun in range(traj.par.res_per_run):
@@ -54,6 +49,8 @@ def run_experiments():
 
         traj_names.append(traj.v_name)
         filenames.append(traj.v_storage_service.filename)
+
+        env.f_disable_logging()
 
     return filenames, traj_names, pathfolder
 
@@ -126,6 +123,8 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
 
     if profile_loading:
         cProfile.runctx('load()', {'load': load},globals(), filename='load_stats.profile', sort=1)
+
+    env.f_disable_logging()
 
 
 

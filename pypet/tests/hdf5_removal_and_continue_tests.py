@@ -18,7 +18,7 @@ import dill
 
 import tables as pt
 from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
-    TrajectoryComparator, make_temp_file, multiply
+    TrajectoryComparator, make_temp_file, multiply, make_trajectory_name
 
 class CustomParameter(Parameter):
 
@@ -40,6 +40,10 @@ class Multiply(object):
 
 class ContinueTest(TrajectoryComparator):
 
+    def tearDown(self):
+        if hasattr(self, 'envs'):
+            for env in self.envs:
+                env.f_disable_logging()
 
     def make_run(self,env):
 
@@ -55,7 +59,7 @@ class ContinueTest(TrajectoryComparator):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         self.logfolder = make_temp_file('experiments/tests/Log')
         self.cnt_folder = make_temp_file('experiments/tests/cnt/')
-        trajname = 'Test%d' % idx
+        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
                           filename=filename,
@@ -314,7 +318,7 @@ class ContinueMPTest(ContinueTest):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         self.logfolder = make_temp_file('experiments/tests/Log')
         self.cnt_folder = make_temp_file('experiments/tests/cnt/')
-        trajname = 'Test%d' % idx
+        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
                           dynamically_imported_classes=[CustomParameter],
@@ -453,7 +457,7 @@ class ContinueMPPoolTest(ContinueMPTest):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         self.logfolder = make_temp_file('experiments/tests/Log')
         self.cnt_folder = make_temp_file('experiments/tests/cnt/')
-        trajname = 'Test%d' % idx
+        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],

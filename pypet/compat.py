@@ -29,10 +29,14 @@ if python == 2:
     # Returns an iterator over values
     iterkeys = lambda dictionary: dictionary.iterkeys()
     # Returns an iterator over keys
+    iteritems = lambda dictionary: dictionary.iteritems()
+    # Returns iterator over items
     listkeys = lambda dictionary: dictionary.keys()
     # Returns a list of keys
     listvalues = lambda dictionary: dictionary.values()
     # Returns a list of values
+    listitems = lambda dictionary: dictionary.items()
+    # Returns list items
 
     tobytetype = lambda string: string
     # Converts a string to byte type (in python 2 str and 3 bytestr)
@@ -55,8 +59,10 @@ elif python == 3:
 
     itervalues = lambda dictionary: dictionary.values()
     iterkeys = lambda dictionary: dictionary.keys()
+    iteritems = lambda dictionary: dictionary.items()
     listkeys = lambda dictionary: list(dictionary.keys())
     listvalues = lambda dictionary: list(dictionary.values())
+    listitems = lambda dictionary: list(dictionary.items())
 
     tobytetype = lambda string: string.encode('utf-8')
 

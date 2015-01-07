@@ -7,7 +7,7 @@
 Welcome to pypet's documentation!
 ==================================
 
-The new python parameter exploration toolkit:
+The new python (2 and 3) parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
 of any numerical simulation in python,
 thereby storing your data into HDF5_ files for you.
@@ -41,70 +41,6 @@ Thanks!
 
 .. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
-============================
-Requirements
-============================
-
-Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
-
-* tables >= 2.3.1
-
-* pandas >= 0.12.0 [#pandasversion]_
-
-* numpy >= 1.6.1
-
-* scipy >= 0.9.0
-
-If you use Python 2.6 you also need
-
-* ordereddict_ >= 1.1
-
-.. _ordereddict: https://pypi.python.org/pypi/ordereddict
-
-For git integration you additionally need
-
-* GitPython_ >= 0.3.1 [#gitpythonversion]_
-
-.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
-
-To utilize the cap feature for :ref:`more-on-multiprocessing` you need
-
-* psutil_ >= 2.0.0
-
-.. _psutil: http://pythonhosted.org/psutil/
-
-To utilize the continuing of crashed trajectories you need
-
-* dill_ >= 0.2.1
-
-.. _dill: https://pypi.python.org/pypi/dill
-
-Automatic sumatra records are supported for
-
-* Sumatra_ >= 0.6.0
-
-.. _Sumatra: http://neuralensemble.org/sumatra/
-
-.. rubric:: Footnotes
-
-.. [#pythonversion]
-
-    *pypet* might also work under python 3.0-3.2 but has not been tested.
-
-.. [#pandasversion]
-
-    Preferably use pandas 0.14.1 or 0.12.0 since there are some
-    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
-    *pypet* works under 0.13.x but not all features are fully supported.
-    For instance, these upcasting issues may prevent you from storing
-    Trajectories containing ArrayParameters to disk.
-    These unwanted upcastings did not happen in previous pandas versions and will be, or more
-    precisely, have already been removed in the next pandas version.
-    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
-
-.. [#gitpythonversion]
-
-    Keep in mind that GitPython currently does not support python 3.
 
 ==========================
 ToC

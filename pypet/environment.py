@@ -65,7 +65,6 @@ from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug
 
-
 def _single_run(args):
     """ Performs a single run of the experiment.
 
@@ -77,25 +76,23 @@ def _single_run(args):
 
         2. Boolean whether to log stdout
 
-        3. A queue object, only necessary in case of multiprocessing in queue mode.
+        3. The user's job function
 
-        4. The user's job function
+        4. Number of total runs (int)
 
-        5. Number of total runs (int)
+        5. Whether to use multiprocessing
 
-        6. Whether to use multiprocessing
+        6. A queue object to store results into in case a pool is used, otherwise None
 
-        7. A queue object to store results into in case a pool is used, otherwise None
+        7. The arguments handed to the user's job function (as *args)
 
-        8. The arguments handed to the user's job function (as *args)
+        8. The keyword arguments handed to the user's job function (as **kwargs)
 
-        9. The keyword arguments handed to the user's job function (as **kwargs)
+        9. Whether to clean up after the run
 
-        10. Whether to clean up after the run
+        10. Path for continue files, `None` if continue is not supported
 
-        11. Path for continue files, `None` if continue is not supported
-
-        12. Whether or not the data should be automatically stored
+        11. Whether or not the data should be automatically stored
 
     :return:
 
@@ -108,16 +105,15 @@ def _single_run(args):
         traj = args[0]
         log_path = args[1]
         log_stdout = args[2]
-        queue = args[3]
-        runfunc = args[4]
-        total_runs = args[5]
-        multiproc = args[6]
-        result_queue = args[7]
-        runparams = args[8]
-        kwrunparams = args[9]
-        clean_up_after_run = args[10]
-        continue_path = args[11]
-        automatic_storing = args[12]
+        runfunc = args[3]
+        total_runs = args[4]
+        multiproc = args[5]
+        result_queue = args[6]
+        runparams = args[7]
+        kwrunparams = args[8]
+        clean_up_after_run = args[9]
+        continue_path = args[10]
+        automatic_storing = args[11]
 
         use_pool = result_queue is None
 
@@ -146,9 +142,6 @@ def _single_run(args):
                 errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
                 sys.stderr = errstl
 
-        # Add the queue for storage in case of multiprocessing in queue mode.
-        if queue is not None:
-            traj.v_storage_service.queue = queue
 
         root.info('\n===================================\n '
                   'Starting single run #%d of %d '
@@ -167,7 +160,7 @@ def _single_run(args):
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
-            traj._finalize()
+            traj._finalize_run()
 
         root.info('\n===================================\n '
                   'Finished single run #%d of %d '
@@ -432,8 +425,16 @@ class Environment(HasLogger):
         differs a lot between individual runs. Accordingly, you don't have to wait for a very
         long run to finish to start post-processing.
 
+        In case you use immediate postprocessing, the storage service of your trajectory is still
+        multiprocessing safe. Moreover, internally the lock securing the
+        storage service will be supervised by a multiprocessing manager.
+        Accordingly, you could even use multiprocessing in your immediate post-processing phase
+        if you dare, like use a multiprocessing pool_, for instance.
+
         Note that after the execution of the final run, your post-processing routine will
         be called again as usual.
+
+        .. _pool: https://docs.python.org/2/library/multiprocessing.html
 
     :param continuable:
 
@@ -912,6 +913,10 @@ class Environment(HasLogger):
         self._traj._environment_hexsha = self._hexsha
         self._traj._environment_name = self._name
 
+        # Helper variables to clean up logging if wanted:
+        self._main_log_handler = None
+        self._error_log_handler = None
+
         # If no log folder is provided, create the default log folder
         log_path = None
         if log_level is not None:
@@ -923,7 +928,8 @@ class Environment(HasLogger):
             log_path = os.path.join(log_folder, self._traj.v_name)
             log_path = os.path.join(log_path, self.v_name)
             # Create the loggers
-            self._make_logging_handlers(log_path, log_level, log_stdout)
+            self._main_log_handler, self._error_log_handler = self._make_logging_handlers(
+                log_path, log_level, log_stdout)
 
         if dill is not None:
             # If you do not set this log-level dill will flood any logging file :-(
@@ -956,6 +962,7 @@ class Environment(HasLogger):
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
+        self._multiproc_wrapper = None # The wrapper Service
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logger does not exist at this point, yet.
@@ -1068,17 +1075,12 @@ class Environment(HasLogger):
         except AttributeError:
             pass  # We end up here if we use pypet within an ipython console
 
-        if self._traj.v_version != VERSION:
-            config_name = 'environment.%s.version' % self.v_name
-            self._traj.f_add_config(config_name, self.v_trajectory.v_version,
-                                    comment='Pypet version if it differs from the version'
-                                            ' of the trajectory').f_lock()
-
-        if self._traj.v_python != compat.python_version_string:
-            config_name = 'environment.%s.python' % self.v_name
-            self._traj.f_add_config(config_name, self.v_trajectory.v_python,
-                                    comment='Python version if it differs from the version'
-                                            ' of the trajectory').f_lock()
+        for package_name, version in pypetconstants.VERSIONS_TO_STORE.items():
+            config_name = 'environment.%s.versions.%s' % (self.v_name, package_name)
+            self._traj.f_add_config(config_name, version,
+                                    comment='Particular version of a package or distribution '
+                                            'used during experiment. N/A if package could not '
+                                            'be imported.').f_lock()
 
         self._traj.config.environment.v_comment = 'Settings for the different environments ' \
                                                   'used to run the experiments'
@@ -1162,30 +1164,59 @@ class Environment(HasLogger):
                                           self.v_trajectory.v_name)
         return repr_string
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.f_disable_logging()
+
+    def f_disable_logging(self):
+        """Removes all logging handlers and stops logging to files and logging stdout."""
+        if self._log_stdout:
+            self._logger.info('Restoring stdout')
+            sys.stdout = sys.__stdout__
+            self._logger.info('Restoring stderr')
+            sys.stderr = sys.__stderr__
+        if self._error_log_handler is not None:
+            self._logger.info('Disabling logging to the error file')
+            root = logging.getLogger()
+            root.removeHandler(self._error_log_handler)
+            self._error_logger_handler = None
+        if self._main_log_handler is not None:
+            self._logger.info('Disabling logging to main file')
+            root = logging.getLogger()
+            root.removeHandler(self._main_log_handler)
+            self._main_log_handler = None
+        # #logging.shutdown()
+        pass
+
     @staticmethod
     def _make_logging_handlers(log_path, log_level, log_stdout):
+        """Creates logging handlers and redirects stdout.
 
+        Moreover, returns the handlers.
+
+        """
         # Make the log folders, the lowest folder in hierarchy has the trajectory name
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
 
-        # Check if there already exist logging handlers, if so, we assume the user
-        # has already set a log  level. If not, we set the log level to INFO
-        if len(logging.getLogger().handlers) == 0:
-            logging.basicConfig(level=log_level)
-
+        # Set the log level to the specified one
+        logging.basicConfig(level=log_level)
+        #
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
             '%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        h = logging.FileHandler(filename=log_path + '/main.txt')
+        main_log_handler = logging.FileHandler(filename=log_path + '/main.txt')
         root = logging.getLogger()
-        root.addHandler(h)
-
+        root.addHandler(main_log_handler)
+        #
         # Add a handler for storing warnings and errors to a text file
-        h = logging.FileHandler(filename=log_path + '/errors_and_warnings.txt')
-        h.setLevel(logging.WARNING)
+        error_log_handler = logging.FileHandler(filename=log_path +
+                                                               '/errors_and_warnings.txt')
+        error_log_handler.setLevel(logging.WARNING)
         root = logging.getLogger()
-        root.addHandler(h)
+        root.addHandler(error_log_handler)
 
         if log_stdout:
             # Also copy standard out and error to the log files
@@ -1197,6 +1228,8 @@ class Environment(HasLogger):
 
         for handler in root.handlers:
             handler.setFormatter(f)
+
+        return main_log_handler, error_log_handler
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
@@ -1300,10 +1333,20 @@ class Environment(HasLogger):
 
         return self._execute_runs(None)
 
-    @ property
+    @property
     def v_trajectory(self):
         """ The trajectory of the Environment"""
         return self._traj
+
+    @property
+    def v_traj(self):
+        """ Equivalent to env.v_trajectory"""
+        return self.v_trajectory
+
+    @property
+    def v_log_path(self):
+        """The full path to the (sub) folder where log files are stored"""
+        return self._log_path
 
     @property
     def v_hexsha(self):
@@ -1357,11 +1400,26 @@ class Environment(HasLogger):
         This can be useful if the user has an `optimization` task.
 
         Either the function calls `f_expand` directly on the trajectory or returns
-        an dictionary. If latter `f_expand` is called by the environemnt.
+        an dictionary. If latter `f_expand` is called by the environment.
 
-        Note that after expansion of the trajectory, the postprocessing function is called
-        again (and aigan for further expansions). Thus, this allows an iterative approach
+        Note that after expansion of the trajectory, the post-processing function is called
+        again (and again for further expansions). Thus, this allows an iterative approach
         to parameter exploration.
+
+        Note that in case post-processing is called after all runs have been executed,
+        the storage service of the trajectory is no longer multiprocessing safe.
+        If you want to use multiprocessing in your post-processing you can still
+        manually wrap the storage service with the :class:`~pypet.environment.MultiprocessWrapper`.
+
+        Nonetheless, in case you use **immediate** post-processing, the storage service is still
+        multiprocessing safe. In fact, it has to be because some single runs are still being
+        executed and write data to your HDF5 file. Accordingly, you can
+        also use multiprocessing during the immediate post-processing without having
+        to use the :class:`~pypet.environment.MultiprocessWrapper`.
+
+        You can easily check in your post-processing function if the storage service is
+        multiprocessing safe via the ``multiproc_safe`` attribute, i.e.
+        ``traj.v_storage_service.multiproc_safe``.
 
         :param postproc:
 
@@ -1797,13 +1855,12 @@ class Environment(HasLogger):
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)
 
-    def _make_iterator(self, queue, result_queue, start_run_idx):
+    def _make_iterator(self, result_queue, start_run_idx, total_runs):
         """Returns an iterator over all runs for multiprocessing"""
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._log_stdout,
-                 queue,
-                 self._runfunc, len(self._traj),
+                 self._runfunc, total_runs,
                  self._multiproc,
                  result_queue,
                  self._args,
@@ -1811,8 +1868,8 @@ class Environment(HasLogger):
                  self._clean_up_runs,
                  self._continue_path,
                  self._automatic_storing)
-                for n in compat.xrange(start_run_idx, len(self._traj))
-                if not self._traj.f_is_completed(n))
+                for n in compat.xrange(start_run_idx, total_runs)
+                if not self._traj._is_completed(n))
 
     def _execute_postproc(self, results):
         """Executes a postprocessing function
@@ -1909,70 +1966,45 @@ class Environment(HasLogger):
 
             result_queue = None  # Queue for results of `runfunc` in case of multiproc without pool
             self._storage_service = self._traj.v_storage_service
+            self._multiproc_wrapper = None
 
             if self._continuable:
                 self._trigger_continue_snapshot()
 
+
+
             while True:
+                total_runs = len(self._traj)
+
                 if self._multiproc:
+
                     manager = multip.Manager()
+
 
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue
                         # for the results of `runfunc`
-                        if self._postproc is None:
-                            result_queue = manager.Queue(maxsize=len(self._traj))
+                        if result_queue is None and not self._immediate_postproc:
+                            result_queue = manager.Queue(maxsize=total_runs)
                         else:
                             result_queue = manager.Queue()
 
-                    # Prepare Multiprocessing
-                    if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                        # For queue mode we need to have a queue in a block of shared memory.
-                        queue = manager.Queue()
-
-                        self._logger.info('Starting the Storage Queue!')
-
-                        # Wrap a queue writer around the storage service
-                        queue_writer = QueueStorageServiceWriter(self._storage_service, queue)
-
-                        # Start the queue process
-                        queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
-                                                       args=(queue_writer, self._log_path,
-                                                             self._log_stdout))
-                        queue_process.start()
-
-                        # Replace the storage service of the trajectory by a sender.
-                        # The sender will put all data onto the queue.
-                        # The writer from above will receive the data from
-                        # the queue and hand it over to
-                        # the storage service
-                        queue_sender = QueueStorageServiceSender()
-                        queue_sender.queue = queue
-                        self._traj.v_storage_service = queue_sender
-
-                    elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
-
-                        if self._use_pool:
-                            # We need a lock that is shared by all processes.
-                            lock = manager.Lock()
-                        else:
-                            lock = multip.Lock()
-
-                        queue = None
-
-                        # Wrap around the storage service to allow the placement of locks around
-                        # the storage procedure.
-                        lock_wrapper = LockWrapper(self._storage_service, lock)
-                        self._traj.v_storage_service = lock_wrapper
-
-                    elif self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
+                    if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
                         # We assume that storage and loading is multiprocessing safe
                         pass
                     else:
-                        raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                           'not supported, use `%s` or `%s`.'
-                                           % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
-                                              pypetconstants.WRAP_MODE_LOCK))
+                        # Prepare Multiprocessing
+                        lock_with_manager = self._use_pool or self._immediate_postproc
+                        self._multiproc_wrapper = MultiprocessWrapper(self._traj,
+                                                           self._wrap_mode,
+                                                           full_copy=None,
+                                                           manager=manager,
+                                                           lock=None,
+                                                           lock_with_manager=lock_with_manager,
+                                                           queue=None,
+                                                           start_queue_process=True,
+                                                           log_path=self._log_path,
+                                                           log_stdout=self._log_stdout,)
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -1981,9 +2013,10 @@ class Environment(HasLogger):
                         (self._traj.v_name, self._ncores))
 
                     # Create a generator to generate the tasks for multiprocessing
-                    iterator = self._make_iterator(queue, result_queue, start_run_idx)
+                    iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
 
                     if self._use_pool:
+                        self._logger.info('Starting pool')
                         mpool = multip.Pool(self._ncores)
                         # Let the pool workers do their jobs provided by the generator
                         pool_results = mpool.imap(_single_run, iterator)
@@ -1991,6 +2024,8 @@ class Environment(HasLogger):
                         # Everything is done
                         mpool.close()
                         mpool.join()
+
+                        self._logger.info('Pool has joined, will delete it.')
 
                         del mpool
 
@@ -2010,7 +2045,7 @@ class Environment(HasLogger):
                         no_cap = True  # Evaluates if new processes are allowed to be started
                         # or if cap is reached
                         signal_cap = True  # If True cap warning is emitted
-                        keep_running = True  # Evaluates to falls if trajectory produces
+                        keep_running = True  # Evaluates to false if trajectory produces
                         # no more single runs
                         process_dict = {}  # Dict containing all subprocees
 
@@ -2074,8 +2109,8 @@ class Environment(HasLogger):
                                     if self._postproc is not None and self._immediate_postproc:
                                         while not result_queue.empty():
                                             result = result_queue.get()
-
                                             results.append(result)
+                                            result_queue.task_done()
 
                                         self._logger.info(
                                             '\n***********************************'
@@ -2086,6 +2121,8 @@ class Environment(HasLogger):
                                             '*************************\n' %
                                             self._traj.v_name)
 
+                                        # Do some finalization to allow normal post-processing
+                                        self._traj._finalize()
                                         keep_running, start_run_idx, new_runs = \
                                             self._execute_postproc(results)
 
@@ -2101,27 +2138,26 @@ class Environment(HasLogger):
                                                 new_runs
                                             )
 
-                                            iterator = self._make_iterator(queue, result_queue,
-                                                                           start_run_idx)
+                                            total_runs = len(self._traj)
+                                            iterator = self._make_iterator(result_queue,
+                                                                           start_run_idx,
+                                                                           total_runs)
                             time.sleep(0.01)
 
                         # Get all results from the result queue
                         while not result_queue.empty():
                             result = result_queue.get()
-
                             results.append(result)
+                            result_queue.task_done()
 
-                    # In case of queue mode, we need to signal to the queue writer
-                    # that no more data
-                    # will be put onto the queue
-                    if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-                        self._traj.v_storage_service.send_done()
-                        queue_process.join()
+                    # Finalize the wrapper
+                    if self._multiproc_wrapper is not None:
+                        self._multiproc_wrapper.f_finalize()
+                        self._multiproc_wrapper = None
 
-                    # Replace the wrapped storage service with the original one
-                    # and do some finalization
-                    self._traj.v_storage_service = self._storage_service
-                    self._traj._finalize()
+                    # Finalize the result queue
+                    if result_queue is not None:
+                        result_queue = None
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2149,8 +2185,8 @@ class Environment(HasLogger):
                         self._traj.v_name)
 
                     # Sequentially run all single runs and append the results to a queue
-                    for n in compat.xrange(start_run_idx, len(self._traj)):
-                        if not self._traj.f_is_completed(n):
+                    for n in compat.xrange(start_run_idx, total_runs):
+                        if not self._traj._is_completed(n):
 
                             if self._deep_copy_data:  # Not supported ATM,
                             # here for future reference
@@ -2162,8 +2198,8 @@ class Environment(HasLogger):
                                 result = _single_run((deep_copied_data[1]._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
-                                                      None, deep_copied_data[0],
-                                                      len(self._traj),
+                                                      deep_copied_data[0],
+                                                      total_runs,
                                                       self._multiproc,
                                                       None,
                                                       deep_copied_data[2],
@@ -2175,8 +2211,8 @@ class Environment(HasLogger):
                                 result = _single_run((self._traj._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
-                                                      None, self._runfunc,
-                                                      len(self._traj),
+                                                      self._runfunc,
+                                                      total_runs,
                                                       self._multiproc,
                                                       None,
                                                       self._args,
@@ -2187,14 +2223,16 @@ class Environment(HasLogger):
 
                             results.append(result)
 
-                    # Do some finalization
-                    self._traj._finalize()
 
                     self._logger.info(
                         '\n************************************************************\n'
                         'FINISHED all runs of trajectory\n`%s`.'
                         '\n************************************************************\n' %
                         self._traj.v_name)
+
+
+                # Do some finalization
+                self._traj._finalize()
 
                 repeat = False
                 if self._postproc is not None:
@@ -2271,7 +2309,7 @@ class Environment(HasLogger):
         self._traj.f_load(load_all=pypetconstants.LOAD_NOTHING)
         all_completed = True
         for run_name in self._traj.f_get_run_names():
-            if not self._traj.f_is_completed(run_name):
+            if not self._traj._is_completed(run_name):
                 all_completed = False
                 self._logger.error('Run `%s` did NOT completed!' % run_name)
         if all_completed:
@@ -2282,3 +2320,196 @@ class Environment(HasLogger):
             self._finish_sumatra()
 
         return results
+
+class MultiprocessWrapper(HasLogger):
+    """ A lightweight environment that allows the usage of multiprocessing.
+
+    Can be used if you don't want a full-blown :class:`~pypet.environment.Environment` to
+    enable multiprocessing or you want to implement your own custom multiprocessing.
+
+    This Wrapper tool will take a trajectory container and take care that the storage
+    service is multiprocessing safe. Support the ``'LOCK'`` as well as the ``'QUEUE'`` mode.
+    In case of the latter an extra queue process is created if desired.
+    This process will handle all storage requests and write data to the hdf5 file.
+
+    Not that in case of ``'QUEUE'`` wrapping data can only be stored not loaded, because
+    the queue will only be read in one direction.
+
+    :param trajectory:
+
+        The trajectory which storage service should be wrapped
+
+    :param wrap_mode:
+
+        There are two options:
+
+         :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
+
+             If desirued another process for storing the trajectory is spawned.
+             The sub processes running the individual trajectories will add their results to a
+             multiprocessing queue that is handled by an additional process.
+             Note that this requires additional memory since data
+             will be pickled and send over the queue for storage!
+
+         :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('LOCK')
+
+             Each individual process takes care about storage by itself. Before
+             carrying out the storage, a lock is placed to prevent the other processes
+             to store data. Accordingly, sometimes this leads to a lot of processes
+             waiting until the lock is released.
+             Yet, data does not need to be pickled before storage!
+
+    :param full_copy:
+
+        In case the trajectory gets pickled (sending over a queue or a pool of processors)
+        if the full trajectory should be copied each time (i.e. all parameter points) or
+        only a particular point. A particular point can be chosen beforehand with
+        :func:`~pypet.trajectory.Trajectory.f_as_run`.
+
+        Leave ``full_copy=None`` if the setting from the passed trajectory should be used.
+        Otherwise ``v_full_copy`` of the trajectory is changed to your chosen value.
+
+    :param manager:
+
+        You can pass an optional multiprocessing manager here,
+        if you already have instantiated one.
+        Leave ``None`` if you want the wrapper to create one.
+
+    :param lock:
+
+        You can pass a multiprocessing lock here, if you already have instantiated one.
+        Leave ``None`` if you want the wrapper to create one in case of ``'LOCK'`` wrapping.
+
+    :param lock_with_manager:
+
+        In case you use ``'LOCK'`` wrapping if a lock should be created from the multiprocessing
+        module directly ``multiprocessing.Lock()`` or via a manager
+        ``multiprocessing.Manager().Lock()`` (if you specified a manager, this manager will be
+        used). The former is usually faster whereas the latter is more flexible and can
+        be used with a pool of processes, for instance.
+
+    :param queue:
+
+        You can pass a multiprocessing queue here, if you already instantiated one.
+        Leave ``None`` if you want the wrapper to create one in case of ''`QUEUE'`` wrapping.
+
+    :param log_path:
+
+        You can specify a absolute path to a folder where log files should be stored
+        in case you instantiated logging.
+        Only useful in case of you use the ``'QUEUE'`` wrapping. Messages from the newly
+        started queue process will be logged to a file. Note that
+        messages of your custom sub-processes are not automatically logged,
+        you have to enable this manually in your processes.
+
+        Leave ``None`` if you don't want messages from the queue process to be logged to
+        a file.
+
+    :param log_stdout
+
+        If stdout and stderr should also be logged.
+
+    """
+    def __init__(self, trajectory,
+                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 full_copy=None,
+                 manager=None,
+                 lock=None,
+                 lock_with_manager=True,
+                 queue=None,
+                 start_queue_process=True,
+                 log_path=None,
+                 log_stdout=False):
+
+        self._set_logger()
+
+        if full_copy is not None:
+            self._traj.v_full_copy=full_copy
+
+        self._manager = manager
+        self._traj = trajectory
+        self._storage_service = self._traj.v_storage_service
+        self._queue_process = None
+        self._lock_wrapper = None
+        self._queue_sender = None
+        self._wrap_mode = wrap_mode
+        self._queue = queue
+        self._lock = lock
+
+        self._log_path = log_path
+        self._log_stdout = log_stdout
+        self._lock_with_manager = lock_with_manager
+        self._start_queue_process = start_queue_process
+
+        self._do_wrap()
+
+    def _do_wrap(self):
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+            self._prepare_queue()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
+            self._prepare_lock()
+        else:
+            raise RuntimeError('The mutliprocessing mode %s, your choice is '
+                                           'not supported, use `%s` or `%s`.'
+                                           % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
+                                              pypetconstants.WRAP_MODE_LOCK))
+
+    def _prepare_lock(self):
+        if self._lock is None:
+            if self._lock_with_manager:
+                if self._manager is None:
+                    self._manager = multip.Manager()
+                # We need a lock that is shared by all processes.
+                self._lock = self._manager.Lock()
+            else:
+                self._lock = multip.Lock()
+
+        # Wrap around the storage service to allow the placement of locks around
+        # the storage procedure.
+        lock_wrapper = LockWrapper(self._storage_service, self._lock)
+        self._traj.v_storage_service = lock_wrapper
+        self._lock_wrapper = lock_wrapper
+
+    def _prepare_queue(self):
+        # For queue mode we need to have a queue in a block of shared memory.
+        if self._queue is None:
+            if self._manager is None:
+                self._manager = multip.Manager()
+            self._queue = self._manager.Queue()
+
+        self._logger.info('Starting the Storage Queue!')
+        # Wrap a queue writer around the storage service
+        queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
+
+        # Start the queue process
+        self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
+                                       args=(queue_writer, self._log_path,
+                                             self._log_stdout))
+        self._queue_process.start()
+
+        # Replace the storage service of the trajectory by a sender.
+        # The sender will put all data onto the queue.
+        # The writer from above will receive the data from
+        # the queue and hand it over to
+        # the storage service
+        self._queue_sender = QueueStorageServiceSender(self._queue)
+        self._traj.v_storage_service = self._queue_sender
+
+    def f_finalize(self):
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+            self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
+                              'store!')
+            self._traj.v_storage_service.send_done()
+            self._queue_process.join()
+
+        if self._manager is not None:
+            self._manager.shutdown()
+
+        self._manager = None
+        self._queue_process = None
+        self._queue = None
+        self._queue_sender = None
+        self._lock = None
+        self._lock_wrapper = None
+
+        self._traj._storage_service = self._storage_service

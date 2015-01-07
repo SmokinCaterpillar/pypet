@@ -33,12 +33,19 @@ if tables == 2:
     create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
                                                                         **kwargs)
+    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.createSoftLink(*args, **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
 
     remove_rows = lambda table, *args, **kwargs: table.removeRows(*args, **kwargs)
 
     set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setAttr(*args, **kwargs)
+
+    get_objectid = lambda ptitem: ptitem._v_objectID
+
+    iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iterNodes(*args, **kwargs)
+
+    deleteattr = lambda ptitem, attr: ptitem._f_delAttr(attr)
 
 elif tables == 3:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
@@ -52,12 +59,20 @@ elif tables == 3:
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.create_table(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.create_array(*args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_carray(*args, **kwargs)
+    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.create_soft_link(*args,
+                                                                                     **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_get_child(*args, **kwargs)
 
     remove_rows = lambda table, *args, **kwargs: table.remove_rows(*args, **kwargs)
 
     set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setattr(*args, **kwargs)
+
+    get_objectid = lambda ptitem: ptitem._v_objectid
+
+    iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iter_nodes(*args, **kwargs)
+
+    deleteattr = lambda ptitem, attr: ptitem._f_delattr(attr)
 
 else:
     raise RuntimeError('You shall not pass! Your PyTables version is weird!')

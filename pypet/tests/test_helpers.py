@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from pypet import BaseParameter, BaseResult
 
 __author__ = 'Robert Meyer'
@@ -10,7 +13,7 @@ import pypet.pypetconstants
 import pypet.compat as compat
 import scipy.sparse as spsp
 import os
-import logging
+
 import random
 
 import sys
@@ -22,6 +25,7 @@ else:
 import shutil
 import numpy as np
 import pandas as pd
+
 
 
 import tempfile
@@ -236,9 +240,18 @@ def simple_calculations(traj, arg1, simple_kwarg):
         for idx,key in enumerate(keys[0:10]):
             keys[idx] = key.replace('.', '_')
 
-        traj.f_add_result_group('List', comment='Im a result group')
+        listy=traj.f_add_result_group('List', comment='Im a result group')
         traj.f_add_result_group('Iwiiremainempty.yo', comment='Empty group!')
         traj.Iwiiremainempty.f_store_child('yo')
+
+        traj.Iwiiremainempty.f_add_link('kkk',listy )
+        listy.f_add_link('hhh', traj.Iwiiremainempty)
+
+        if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.v_full_name:
+            raise RuntimeError()
+
+        if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.hhh.kkk.v_full_name:
+            raise RuntimeError()
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.List.f_store_child('Of', recursive=True)
@@ -315,6 +328,11 @@ def to_dict_wo_config(traj):
 
 class TrajectoryComparator(unittest.TestCase):
 
+    @classmethod
+    def tearDownClass(cls):
+        root = logging.getLogger()
+        root.handlers = [] # delete all handlers
+
     def compare_trajectories(self,traj1,traj2):
 
         trajlength = len(traj1)
@@ -340,7 +358,7 @@ class TrajectoryComparator(unittest.TestCase):
                                 'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
             elif isinstance(item,BaseResult):
                 self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+                                'For key %s: %s not equal to %s' %(key, str(old_item),str(item)))
             else:
                 raise RuntimeError('You shall not pass')
 
@@ -355,7 +373,7 @@ class TrajectoryComparator(unittest.TestCase):
                 if node.v_comment != '' and node.v_full_name in traj2:
                     second_comment = traj2.f_get(node.v_full_name).v_comment
                     self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %
-                                                                     (node.v_comment, second_comment, node.v_full_name))
+                                                (node.v_comment, second_comment, node.v_full_name))
 
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations

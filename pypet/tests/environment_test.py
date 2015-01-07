@@ -57,6 +57,9 @@ class EnvironmentTest(unittest.TestCase):
         self.env = env
         self.traj = traj
 
+    def tearDown(self):
+        self.env.f_disable_logging()
+
     def test_multiprocessing(self):
 
         self.env.f_run(just_printing_bro)

@@ -111,6 +111,9 @@ class TestPostProc(TrajectoryComparator):
 
         self.compare_trajectories(traj1, traj2)
 
+        env1.f_disable_logging()
+        env2.f_disable_logging()
+
 
     def test_pipeline(self):
 
@@ -141,6 +144,9 @@ class TestPostProc(TrajectoryComparator):
         traj2.f_load(load_all = 2)
 
         self.compare_trajectories(traj1, traj2)
+
+        env1.f_disable_logging()
+        env2.f_disable_logging()
 
 
 

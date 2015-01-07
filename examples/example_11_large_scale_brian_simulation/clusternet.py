@@ -6,7 +6,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pypet.trajectory import Trajectory, SingleRun
+from pypet.trajectory import Trajectory
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 from pypet.brian.network import NetworkComponent, NetworkRunner, NetworkAnalyser
 from brian.stdunits import ms
@@ -202,7 +202,6 @@ class CNNeuronGroup(NetworkComponent):
         Adds the neuron groups to `brian_list` and `network_dict`.
 
         """
-        assert(isinstance(traj,SingleRun))
 
         model = traj.parameters.model
 

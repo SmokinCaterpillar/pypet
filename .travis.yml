@@ -82,4 +82,5 @@ branches:
     - develop
     - master
     - python6
+    - link_feature
 

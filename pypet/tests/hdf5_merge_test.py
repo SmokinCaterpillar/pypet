@@ -24,6 +24,10 @@ from pypet.tests.hdf5_storage_test import ResultSortTest
 
 class MergeTest(TrajectoryComparator):
 
+    def tearDown(self):
+        if hasattr(self, 'envs'):
+            for env in self.envs:
+                env.f_disable_logging()
 
     def make_run(self,env):
 
@@ -31,9 +35,6 @@ class MergeTest(TrajectoryComparator):
         simple_arg = -13
         simple_kwarg= 13.0
         env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
-
-
-
 
     def make_environment(self, idx, filename):
 
@@ -518,6 +519,12 @@ class TestMergeResultsSort(ResultSortTest):
 
         self.env2=env2
         self.traj2=traj2
+
+    def tearDown(self):
+        if hasattr(self, 'env'):
+            self.env.f_disable_logging()
+        if hasattr(self, 'env2'):
+            self.env2.f_disable_logging()
 
     def test_merge_normally(self):
 
