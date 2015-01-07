@@ -909,7 +909,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                             old_value = value
 
-                        except AttributeError, pex.DataNotInStorageError:
+                        except (AttributeError, pex.DataNotInStorageError) as e:
                             pass
 
                     if value is not None:
