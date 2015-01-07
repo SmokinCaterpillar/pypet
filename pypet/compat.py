@@ -38,7 +38,7 @@ if python == 2:
     listitems = lambda dictionary: dictionary.items()
     # Returns list items
 
-    tobytetype = lambda string: string
+    tobytetype = lambda string: str(string)
     # Converts a string to byte type (in python 2 str and 3 bytestr)
 
     xrange = xrange

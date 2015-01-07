@@ -147,7 +147,7 @@ class StorageTest(TrajectoryComparator):
         store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 2)
-        self.assertTrue(table[0]['value'] == '10')
+        self.assertTrue(compat.tostrtype(table[0]['value']) == '10')
 
         store.close()
 
