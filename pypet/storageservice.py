@@ -870,7 +870,6 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
-
         except pt.NoSuchNodeError as e:
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise pex.DataNotInStorageError(str(e))
