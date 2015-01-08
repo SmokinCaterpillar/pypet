@@ -38,7 +38,6 @@ install:
     - powershell .\\ciscripts\\appveyor\\install.ps1
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     # Install non-conda packages
-    - pip install brian
     - pip install psutil
     - pip install dill
     # Finally install pypet
@@ -49,9 +48,13 @@ build: false
 
 test_script:
     - cd pypet\\tests
-    # One simple test script first to see if it works in general
+    # Some simple test script first to see if it works in general
+    - cd simpletests
     - python simple_traj_test.py
-    # Full test suite
-    - python all_tests.py --folder=TESTDATA
+    - python simple_env_test.py
+    - python simple_mp_env_test.py
+    - cd ..
+#    # Full test suite
+#    - python all_tests.py --folder=TESTDATA
 
 
