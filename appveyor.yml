@@ -37,8 +37,13 @@ install:
     # and all required packages
     - powershell .\\ciscripts\\appveyor\\install.ps1
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+    # Install non-conda packages
+    - pip install brian
+    - pip install psutil dill
+    - pip install dill
     # Finally install pypet
     - python setup.py install
+
 
 build: false
 
