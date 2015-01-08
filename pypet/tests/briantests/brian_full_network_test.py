@@ -21,6 +21,7 @@ from brian import *
 from pypet.utils.explore import cartesian_product
 import shutil
 import time
+import os
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_run
 
 
