@@ -5,7 +5,7 @@ set -u # Treat references to unset variables as an error
 
 if [[ $COVERAGE == ON ]]
     then
-        coverage run --parallel-mode --timid --source=pypet --omit=../pypet/brian/*,pypet/tests/* -m pypet.tests.all_single_core_tests
+        coverage run --parallel-mode --timid --source=pypet --omit=../../pypet/brian/*,pypet/tests/* -m pypet.tests.all_single_core_tests
         coverage combine
         exit 0
     fi
@@ -13,10 +13,9 @@ if [[ $COVERAGE == ON ]]
 if [[ $EXAMPLES == ON ]]
     then
         conda install matplotlib
-        cd ../pypet/tests
+        cd ../../pypet/tests
         python run_all_examples.py
-        cd ..
-        cd ../ciscripts
+        cd ../../ciscripts/travis
     fi
 
 if [[ $GIT_TEST == ON ]]
@@ -27,7 +26,7 @@ if [[ $GIT_TEST == ON ]]
         pip install django==1.5
         pip install Sumatra
         mkdir git_sumatra_test
-        cp ../pypet/tests/test_git.py git_sumatra_test
+        cp ../../pypet/tests/test_git.py git_sumatra_test
         cd git_sumatra_test
         git init
         smt init GitTest
@@ -49,7 +48,7 @@ if [[ $GIT_TEST == ON ]]
         echo "Removal complete"
 
     else
-        python ../pypet/tests/all_tests.py
+        python ../../pypet/tests/all_tests.py
     fi
 
 
