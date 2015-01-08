@@ -12,6 +12,7 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
+import platform
 
 try:
     import queue
@@ -1359,9 +1360,22 @@ class HDF5StorageService(StorageService, HasLogger):
                     os.fsync(f_fd)
             except OSError as e:
                 # This seems to be the only way to avoid an OSError under Windows
-                self._logger.error('Encountered OSError while flushing file. '
+                errmsg = ('Encountered OSError while flushing file.'
+                                   'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
                                    'Original error: %s' % str(e))
+                operating_system = platform.system()
+                if operating_system == 'Windows':
+                    # Under Windows give the message a low priority, because ``fsnyc`` does not
+                    # work properly and this happens all the time
+                    self._logger.debug(errmsg)
+                elif operating_system == 'Linux':
+                    # This should not happen under Linux, re-raise the error
+                    raise
+                else:
+                    # If the OS cannot be determined log the message as error, but continue
+                    self._logger.error(errmsg)
+
             self._hdf5store.close()
             self._hdf5store = None
             self._hdf5file = None
