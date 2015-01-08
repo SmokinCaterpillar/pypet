@@ -75,7 +75,7 @@ install:
   - python setup.py install
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 # Script command for all tests
-script: chmod +x runtests.sh; ./runtests.sh
+script: cd ciscripts; chmod +x runtests_travis.sh; ./runtests_travis.sh
 after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
 branches:
   only:
