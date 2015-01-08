@@ -39,7 +39,7 @@ install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     # Install non-conda packages
     - pip install brian
-    - pip install psutil dill
+    - pip install psutil
     - pip install dill
     # Finally install pypet
     - python setup.py install
@@ -49,12 +49,5 @@ build: false
 
 test_script:
     - cd pypet\\tests
-    - python all_tests.py
+    - python all_tests.py --folder=TESTDATA
 
-
-branches:
-  only:
-    - develop
-    - master
-    - python6
-    - link_feature

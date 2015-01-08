@@ -1,4 +1,4 @@
-The *appveyor* scripts are all taken from:
+The *appveyor* script is taken from:
 
 https://github.com/rmcgibbo/python-appveyor-conda-example.
 
