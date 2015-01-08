@@ -48,6 +48,7 @@ before_install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy
   - source activate test-environment
   - pip freeze
+
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
@@ -74,6 +75,7 @@ install:
   - echo "+++++++++++ Installing PYPET +++++++++++"
   - python setup.py install
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
+
 # Script command for all tests
 script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
 after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
