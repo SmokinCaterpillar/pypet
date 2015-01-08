@@ -11,6 +11,7 @@ from pypet.tests.test_helpers import add_params, create_param_dict, simple_calcu
 from pypet.utils.explore import cartesian_product
 
 import random
+import os
 import numpy as np
 import scipy.sparse as spsp
 
@@ -97,8 +98,11 @@ class CapTest(EnvironmentTest):
 
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.filename = make_temp_file(os.path.join('experiments',
+                                                    'tests',
+                                                    'HDF5',
+                                                    'test.hdf5'))
+        self.logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)

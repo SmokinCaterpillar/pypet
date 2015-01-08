@@ -1405,7 +1405,7 @@ class HDF5StorageService(StorageService, HasLogger):
         mypath, filename = os.path.split(self._filename)
 
         if backup_filename is None:
-            backup_filename = '%s/backup_%s.hdf5' % (mypath, traj.v_name)
+            backup_filename = os.path.join('%s' % mypath, 'backup_%s.hdf5' % traj.v_name)
 
         backup_hdf5file = ptcompat.open_file(filename=backup_filename,
                                              mode='a', title=backup_filename)

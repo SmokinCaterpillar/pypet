@@ -31,7 +31,7 @@ import pandas as pd
 import tempfile
 
 
-TEMPDIR = 'temp_folder_for_pypet_tests/'
+TEMPDIR = 'temp_folder_for_pypet_tests'
 ''' Temporary directory for the hdf5 files'''
 
 REMOVE=True

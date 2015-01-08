@@ -57,8 +57,10 @@ class ContinueTest(TrajectoryComparator):
 
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                     'tests',
+                                                     'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments','tests','cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
@@ -208,7 +210,10 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_removal(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
+        self.filenames = [make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'HDF5',
+                                                      'merge1.hdf5')), 0]
 
 
 
@@ -262,7 +267,10 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_multiple_storage_and_loading(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
+        self.filenames = [make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'HDF5',
+                                                      'merge1.hdf5')), 0]
 
 
 
@@ -316,8 +324,12 @@ class ContinueMPTest(ContinueTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                     'tests',
+                                                     'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
@@ -455,8 +467,12 @@ class ContinueMPPoolTest(ContinueMPTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,

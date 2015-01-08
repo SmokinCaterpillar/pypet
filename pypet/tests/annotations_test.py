@@ -6,6 +6,7 @@ from pypet.tests.test_helpers import make_temp_file
 from pypet.utils import comparisons as comp
 import numpy as np
 import sys
+import os
 
 try:
     import cPickle as pickle # will fail under python 3
@@ -21,7 +22,7 @@ class AnnotationsTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.filename = make_temp_file('experiments/tests/HDF5/annotations.hdf5')
+        self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','annotations.hdf5'))
 
         self.traj = Trajectory(name='Annotations', filename = self.filename)
 

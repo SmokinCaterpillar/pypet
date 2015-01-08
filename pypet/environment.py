@@ -127,7 +127,7 @@ def _single_run(args):
 
             filename = '%s_%s.txt' % (traj.v_name, process_name)
 
-            filename = log_path + '/' + filename
+            filename = os.path.join(log_path, filename)
 
             handler = logging.FileHandler(filename=filename)
             formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
@@ -194,7 +194,7 @@ def _queue_handling(handler, log_path, log_stdout):
     if log_path is not None:
         # Create a new log file for the queue writer
         filename = 'queue_process.txt'
-        filename = log_path + '/' + filename
+        filename = os.path.join(log_path, filename)
         root = logging.getLogger()
 
         h = logging.FileHandler(filename=filename)
@@ -1090,7 +1090,7 @@ class Environment(HasLogger):
             if not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False):
 
                 # Print which file we use for storage
-                self._logger.info('I will us the hdf5 file `%s`.' % self._filename)
+                self._logger.info('I will use the hdf5 file `%s`.' % self._filename)
 
                 for table_name in HDF5StorageService.NAME_TABLE_MAPPING.values():
                     self._traj.f_add_config('hdf5.overview.' + table_name,
@@ -1207,13 +1207,13 @@ class Environment(HasLogger):
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
             '%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        main_log_handler = logging.FileHandler(filename=log_path + '/main.txt')
+        main_log_handler = logging.FileHandler(filename=os.path.join(log_path, 'main.txt'))
         root = logging.getLogger()
         root.addHandler(main_log_handler)
         #
         # Add a handler for storing warnings and errors to a text file
-        error_log_handler = logging.FileHandler(filename=log_path +
-                                                               '/errors_and_warnings.txt')
+        error_log_handler = logging.FileHandler(filename=os.path.join(log_path,
+                                                               'errors_and_warnings.txt'))
         error_log_handler.setLevel(logging.WARNING)
         root = logging.getLogger()
         root.addHandler(error_log_handler)

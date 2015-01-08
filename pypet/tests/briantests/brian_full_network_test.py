@@ -130,9 +130,18 @@ class BrianFullNetworkTest(TrajectoryComparator):
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
-                          filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
+                          filename=make_temp_file(os.path.join(
+                              'experiments',
+                              'tests',
+                              'briantests',
+                              'HDF5',
+                               'briantest.hdf5')),
                           file_title='test',
-                          log_folder=make_temp_file('experiments/tests/briantests/log'),
+                          log_folder=make_temp_file(os.path.join(
+                              'experiments',
+                              'tests',
+                              'briantests',
+                              'log')),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=False)
@@ -163,7 +172,12 @@ class BrianFullNetworkTest(TrajectoryComparator):
         self.traj.f_load(load_derived_parameters=2, load_results=2)
 
         traj2 = Trajectory(name = self.traj.v_name, add_time=False,
-                           filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
+                           filename=make_temp_file(os.path.join(
+                               'experiments',
+                               'tests',
+                               'briantests',
+                               'HDF5',
+                               'briantest.hdf5')),
                            dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult])
 
@@ -179,9 +193,18 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
-                          filename=make_temp_file('experiments/tests/briantests/HDF5/briantest.hdf5'),
+                          filename=make_temp_file(os.path.join(
+                              'experiments',
+                              'tests',
+                              'briantests',
+                              'HDF5',
+                              'briantest.hdf5')),
                           file_title='test',
-                          log_folder=make_temp_file('experiments/tests/briantests/log'),
+                          log_folder=make_temp_file(os.path.join(
+                              'experiments',
+                              'tests',
+                              'briantests',
+                              'log')),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=True,

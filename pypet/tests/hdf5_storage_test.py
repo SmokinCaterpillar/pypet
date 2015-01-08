@@ -737,11 +737,16 @@ class EnvironmentTest(TrajectoryComparator):
         logging.basicConfig(level = logging.INFO)
 
 
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)
-        self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname)
+        self.filename = make_temp_file(os.path.join('experiments',
+                                                    'tests',
+                                                    'HDF5',
+                                                    'test%s.hdf5' % self.trajname))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
@@ -1141,8 +1146,10 @@ class ResultSortTest(TrajectoryComparator):
         self.set_mode()
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','test.hdf5'))
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
         self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,

@@ -4,6 +4,7 @@ from pypet.environment import Environment
 from pypet.utils.explore import cartesian_product
 
 import sys
+import os
 
 def multiply(traj):
     z=traj.x*traj.y
@@ -13,13 +14,17 @@ def multiply(traj):
 def main():
     try:
         # Create an environment that handles running
-        with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',filename='experiments/example_01/HDF5/',
-                          file_title='Example1_Quick_And_Not_So_Dirty', log_folder='experiments/example_01/LOGS/',
+        with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
+                         filename=os.path.join('experiments',
+                                               'example_01',
+                                               'HDF5',),
+                          file_title='Example1_Quick_And_Not_So_Dirty',
+                          log_folder=os.path.join('experiments', 'example_01', 'LOGS'),
                           comment='The first example!',
                           complib='blosc',
                           small_overview_tables=False,
-                          git_repository='./', git_message='Im a message!',
-                          sumatra_project='./', sumatra_reason='Testing!') as env:
+                          git_repository='.', git_message='Im a message!',
+                          sumatra_project='.', sumatra_reason='Testing!') as env:
 
             # Get the trajectory from the environment
             traj = env.v_trajectory

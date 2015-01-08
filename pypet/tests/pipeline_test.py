@@ -64,8 +64,12 @@ class TestPostProc(TrajectoryComparator):
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         filename = make_temp_file(filename)
-        logfolder = make_temp_file('experiments/tests/Log')
-        cntfolder = make_temp_file('experiments/tests/cnt/')
+        logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
+        cntfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'cnt'))
 
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],

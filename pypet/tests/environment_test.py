@@ -14,6 +14,7 @@ from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging
 from pypet.tests.test_helpers import make_run,make_temp_file
+import os
 
 
 def just_printing_bro(traj):
@@ -28,8 +29,8 @@ class EnvironmentTest(unittest.TestCase):
 
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.filename = make_temp_file(os.path.join('experiments','tests', 'HDF5', 'test.hdf5'))
+        self.logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
         self.trajname = 'Test'
 
         env = Environment(trajectory=self.trajname,

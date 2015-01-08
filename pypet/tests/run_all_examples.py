@@ -12,7 +12,7 @@ import os
 import sys
 
 
-os.chdir('../../examples')
+os.chdir(os.path.join('..','..','examples'))
 sys.path.append(os.getcwd())
 simple_examples = glob.glob('*.py')
 
