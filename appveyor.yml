@@ -49,5 +49,6 @@ build: false
 
 test_script:
     - cd pypet\\tests
-    - python all_tests.py --folder=TESTDATA
+    #- python all_tests.py --folder=TESTDATA
+    -  python simple_traj_test.py
 
