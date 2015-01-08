@@ -17,7 +17,6 @@ try:
     import queue
 except ImportError:
     import Queue as queue
-import itertools as itools
 import numpy as np
 from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
 
@@ -1350,13 +1349,19 @@ class HDF5StorageService(StorageService, HasLogger):
         if closing and self._hdf5file is not None and self._hdf5file.isopen:
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
-            os.fsync(f_fd)
             try:
-                self._hdf5store.flush(fsync=True)
-            except TypeError:
-                f_fd = self._hdf5store._handle.fileno()
-                self._hdf5store.flush()
                 os.fsync(f_fd)
+                try:
+                    self._hdf5store.flush(fsync=True)
+                except TypeError:
+                    f_fd = self._hdf5store._handle.fileno()
+                    self._hdf5store.flush()
+                    os.fsync(f_fd)
+            except OSError as e:
+                # This seems to be the only way to avoid an OSError under Windows
+                self._logger.error('Encountered OSError while flushing file. '
+                                   'I will ignore the error and try to close the file. '
+                                   'Original error: %s' % str(e))
             self._hdf5store.close()
             self._hdf5store = None
             self._hdf5file = None
