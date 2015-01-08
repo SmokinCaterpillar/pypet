@@ -870,15 +870,14 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
-            self._srvc_closing_routine(opened)
         except pt.NoSuchNodeError as e:
-            self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise pex.DataNotInStorageError(str(e))
         except:
-            self._srvc_closing_routine(opened)
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
+        finally:
+            self._srvc_closing_routine(opened)
 
     def store(self, msg, stuff_to_store, *args, **kwargs):
         """ Stores a particular item to disk.
@@ -1151,13 +1150,11 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
-            self._srvc_closing_routine(opened)
-
         except:
-
-            self._srvc_closing_routine(opened)
             self._logger.error('Failed storing `%s`' % str(stuff_to_store))
             raise
+        finally:
+            self._srvc_closing_routine(opened)
 
     def _srvc_load_several_items(self, iterable, *args, **kwargs):
         """Loads several items from an iterable

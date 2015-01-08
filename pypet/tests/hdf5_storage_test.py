@@ -85,15 +85,16 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_add_parameter('y', 43)
 
-        store = ptcompat.open_file(filename, mode='r')
+        store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 1)
 
         store.close()
 
-        traj.f_store()
+        traj.f_store_item(traj.f_get('y'))
+        traj.f_store_item(traj.f_get('x'))
 
-        store = ptcompat.open_file(filename, mode='r')
+        store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 3)
 
@@ -102,7 +103,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_delete_item(traj.f_get('x'))
 
 
-        store = ptcompat.open_file(filename, mode='r')
+        store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 1)
 
@@ -127,27 +128,26 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_delete_item(traj.f_get('x'))
 
-
-
         traj.f_add_parameter('y', 43)
 
-        store = ptcompat.open_file(filename, mode='r')
+        store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 1)
 
         store.close()
 
-        traj.f_store()
+        traj.f_store_item(traj.f_get('y'))
+        traj.f_store_item(traj.f_get('x'))
 
         traj.f_get('x').f_unlock()
         traj.x = 10
 
         traj.f_store_item(traj.f_get('x'), overwrite=True)
 
-        store = ptcompat.open_file(filename, mode='r')
+        store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 2)
-        self.assertTrue(table[0]['value'] == '10')
+        self.assertTrue(compat.tostrtype(table[0]['value']) == '10')
 
         store.close()
 
