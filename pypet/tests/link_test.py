@@ -14,9 +14,10 @@ from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 import time
 import os
+import getopt
 import pypet.pypetexceptions as pex
 
-from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name
+from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -575,3 +576,20 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
+
+
+if __name__ == '__main__':
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
+    remove = None
+    folder = None
+    for opt, arg in opt_list:
+        if opt == '-k':
+            remove = False
+            print('I will keep all files.')
+
+        if opt == '--folder':
+            folder = arg
+            print('I will put all data into folder `%s`.' % folder)
+
+    sys.argv=[sys.argv[0]]
+    make_run(remove, folder)
