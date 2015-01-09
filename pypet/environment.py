@@ -127,15 +127,18 @@ def _single_run(args):
 
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-', '_')
+            short_filename = '%s_%s.txt' % (traj.v_name, process_name)
+            try:
+                filename = os.path.join(log_path, short_filename)
 
-            filename = '%s_%s.txt' % (traj.v_name, process_name)
-
-            filename = os.path.join(log_path, filename)
-
-            handler = logging.FileHandler(filename=filename)
-            formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-            handler.setFormatter(formatter)
-            root.addHandler(handler)
+                handler = logging.FileHandler(filename=filename)
+                formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+                handler.setFormatter(formatter)
+                root.addHandler(handler)
+            except IOError as e:
+                root.error('Could not create file `%s`. I will NOT store log messages of '
+                           'process `%s` to disk. Original Error: `%s`' %
+                           (short_filename, process_name, str(e)))
 
             if log_stdout:
                 # Also copy standard out and error to the log files
@@ -146,9 +149,9 @@ def _single_run(args):
                 sys.stderr = errstl
 
 
-        root.info('\n===================================\n '
+        root.info('\n=========================================\n '
                   'Starting single run #%d of %d '
-                  '\n===================================\n' % (idx, total_runs))
+                  '\n=========================================\n' % (idx, total_runs))
 
         # Measure start time
         traj._set_start_time()
@@ -165,9 +168,9 @@ def _single_run(args):
         if clean_up_after_run and not multiproc:
             traj._finalize_run()
 
-        root.info('\n===================================\n '
+        root.info('\n=========================================\n '
                   'Finished single run #%d of %d '
-                  '\n===================================\n' % (idx, total_runs))
+                  '\n=========================================\n' % (idx, total_runs))
 
         # Add the index to the result
         result = (traj.v_idx, result)
