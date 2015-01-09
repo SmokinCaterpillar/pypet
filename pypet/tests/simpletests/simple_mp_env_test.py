@@ -29,7 +29,7 @@ def main():
                       log_folder=make_temp_file(os.path.join('experiments','example_01','LOGS')),
                       comment='The first example!',
                       multiproc=True,
-                      ncores=2)
+                      ncores=3)
 
     # The environment has created a trajectory container for us
     traj = env.v_trajectory

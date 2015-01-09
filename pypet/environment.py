@@ -127,6 +127,10 @@ def _single_run(args):
 
             filename = '%s_%s.txt' % (traj.v_name, process_name)
 
+            #Bug fix for Windows?
+            if not os.path.isdir(log_path):
+                os.makedirs(log_path)
+
             filename = os.path.join(log_path, filename)
 
             handler = logging.FileHandler(filename=filename)
