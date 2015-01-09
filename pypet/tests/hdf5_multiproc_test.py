@@ -96,6 +96,9 @@ class CapTest(EnvironmentTest):
 
     def setUp(self):
 
+        self.multiproc = True
+        self.mode = 'LOCK'
+
         logging.basicConfig(level = logging.INFO)
 
         self.filename = make_temp_file(os.path.join('experiments',

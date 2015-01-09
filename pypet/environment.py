@@ -76,23 +76,23 @@ def _single_run(args):
 
         2. Boolean whether to log stdout
 
-        3. The user's job function
+        4. The user's job function
 
-        4. Number of total runs (int)
+        5. Number of total runs (int)
 
-        5. Whether to use multiprocessing
+        6. Whether to use multiprocessing
 
-        6. A queue object to store results into in case a pool is used, otherwise None
+        7. A queue object to store results into in case a pool is used, otherwise None
 
-        7. The arguments handed to the user's job function (as *args)
+        8. The arguments handed to the user's job function (as *args)
 
-        8. The keyword arguments handed to the user's job function (as **kwargs)
+        9. The keyword arguments handed to the user's job function (as **kwargs)
 
-        9. Whether to clean up after the run
+        10. Whether to clean up after the run
 
-        10. Path for continue files, `None` if continue is not supported
+        11. Path for continue files, `None` if continue is not supported
 
-        11. Whether or not the data should be automatically stored
+        12. Whether or not the data should be automatically stored
 
     :return:
 
@@ -105,15 +105,16 @@ def _single_run(args):
         traj = args[0]
         log_path = args[1]
         log_stdout = args[2]
-        runfunc = args[3]
-        total_runs = args[4]
-        multiproc = args[5]
-        result_queue = args[6]
-        runparams = args[7]
-        kwrunparams = args[8]
-        clean_up_after_run = args[9]
-        continue_path = args[10]
-        automatic_storing = args[11]
+        log_level = args[3]
+        runfunc = args[4]
+        total_runs = args[5]
+        multiproc = args[6]
+        result_queue = args[7]
+        runparams = args[8]
+        kwrunparams = args[9]
+        clean_up_after_run = args[10]
+        continue_path = args[11]
+        automatic_storing = args[12]
 
         use_pool = result_queue is None
 
@@ -122,14 +123,12 @@ def _single_run(args):
 
         if multiproc and log_path is not None:
 
+            logging.basicConfig(level=log_level)
+
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-', '_')
 
             filename = '%s_%s.txt' % (traj.v_name, process_name)
-
-            #Bug fix for Windows?
-            if not os.path.isdir(log_path):
-                os.makedirs(log_path)
 
             filename = os.path.join(log_path, filename)
 
@@ -944,6 +943,7 @@ class Environment(HasLogger):
         self._log_folder = log_folder
         self._log_path = log_path
         self._log_stdout = log_stdout
+        self._log_level = log_level
 
         self._continuable = continuable
 
@@ -1864,6 +1864,7 @@ class Environment(HasLogger):
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._log_stdout,
+                 self._log_level,
                  self._runfunc, total_runs,
                  self._multiproc,
                  result_queue,
@@ -2202,6 +2203,7 @@ class Environment(HasLogger):
                                 result = _single_run((deep_copied_data[1]._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
+                                                      self._log_level,
                                                       deep_copied_data[0],
                                                       total_runs,
                                                       self._multiproc,
@@ -2215,6 +2217,7 @@ class Environment(HasLogger):
                                 result = _single_run((self._traj._make_single_run(n),
                                                       self._log_path,
                                                       self._log_stdout,
+                                                      self._log_level,
                                                       self._runfunc,
                                                       total_runs,
                                                       self._multiproc,
