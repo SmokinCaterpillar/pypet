@@ -54,7 +54,7 @@ test_script:
     - python simple_env_test.py
     - python simple_mp_env_test.py
     - cd ..
-#    # Full test suite
-#    - python all_tests.py --folder=TESTDATA
+    # Full test suite
+    - python all_tests.py --folder=TESTDATA
 
 
