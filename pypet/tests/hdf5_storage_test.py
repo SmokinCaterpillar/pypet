@@ -816,6 +816,47 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    def test_logfile_creation(self):
+        # if not self.multiproc:
+        #     return
+        self.traj.f_add_parameter('TEST', 'test_run')
+        ###Explore
+        self.explore(self.traj)
+
+        self.make_run()
+
+        log_path = self.env.v_log_path
+
+        file_list = [file for file in os.listdir(log_path)]
+
+        if self.multiproc:
+            if self.mode == 'LOCK':
+                length = len(self.traj) + 2
+            elif self.mode == 'QUEUE':
+                length = len(self.traj) + 3
+            else:
+                raise RuntimeError('You shall not pass!')
+        else:
+            length = 2
+
+        self.assertTrue(len(file_list) == length ) # assert that there are as many
+        # files as runs plus main.txt and errors and warnings
+
+        for file in file_list:
+            if 'main.txt' in file:
+                pass
+            elif 'errors_and_warnings.txt' in file:
+                pass
+            elif 'process' in file:
+                pass
+            elif 'poolworker' in file:
+                pass
+            elif 'queue' in file:
+                pass
+            else:
+                self.assertTrue(False, 'There`s a file in the log folder that does not '
+                                       'belong there: %s' % str(file))
+
 
     def test_run_complex(self):
         self.traj.f_add_parameter('TEST', 'test_run_complex')

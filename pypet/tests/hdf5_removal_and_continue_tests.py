@@ -425,7 +425,7 @@ class ContinueMPTest(ContinueTest):
             if isinstance(filename,int):
                 filename = self.filenames[filename]
 
-            self.make_environment_mp( irun, filename)
+            self.make_environment_mp(irun, filename)
 
         self.param_dict={'x':1.0, 'y':2.0}
 

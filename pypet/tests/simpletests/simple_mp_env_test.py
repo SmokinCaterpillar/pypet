@@ -39,7 +39,8 @@ def main():
     traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 
     # Explore the parameters with a cartesian product
-    traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
+    traj.f_explore(cartesian_product({'x':[1,2,3,4,5,6,7,8,9,10],
+                                      'y':[6,7,8,11,12,13,14,18,100,1000]}))
 
     # Run the simulation
     env.f_run(multiply)
