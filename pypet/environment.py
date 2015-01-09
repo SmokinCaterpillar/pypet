@@ -128,6 +128,7 @@ def _single_run(args):
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-', '_')
             short_filename = '%s_%s.txt' % (traj.v_name, process_name)
+            handler = None
             try:
                 filename = os.path.join(log_path, short_filename)
 
@@ -179,7 +180,7 @@ def _single_run(args):
             # Trigger Snapshot
             _trigger_result_snapshot(result, continue_path)
 
-        if multiproc:
+        if multiproc and handler is not None:
             root.removeHandler(handler)
 
         if not use_pool:
