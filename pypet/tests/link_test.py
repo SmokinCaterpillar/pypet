@@ -386,6 +386,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        super(LinkEnvironmentTest, self).tearDown()
 
     def setUp(self):
         self.set_mode()

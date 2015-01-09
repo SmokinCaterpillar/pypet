@@ -6,7 +6,7 @@ import time
 import logging
 
 from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
+    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name, remove_data
 
 from pypet.trajectory import Trajectory
 
@@ -131,6 +131,8 @@ class TestNewTreeTranslation(unittest.TestCase):
 
             if 'run_' in node.v_full_name:
                 self.assertTrue('.runs.' in node.v_full_name)
+
+        remove_data()
 
 
 if __name__ == '__main__':

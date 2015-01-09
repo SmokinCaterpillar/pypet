@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService
-from pypet.tests.test_helpers import make_temp_file
+from pypet.tests.test_helpers import make_temp_file, remove_data
 from pypet.utils import comparisons as comp
 import numpy as np
 import sys
@@ -36,6 +36,8 @@ class AnnotationsTest(unittest.TestCase):
 
         self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 5)
 
+    def tearDown(self):
+        remove_data()
 
     def make_annotations(self):
 

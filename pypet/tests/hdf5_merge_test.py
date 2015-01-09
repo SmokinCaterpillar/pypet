@@ -30,6 +30,8 @@ class MergeTest(TrajectoryComparator):
             for env in self.envs:
                 env.f_disable_logging()
 
+        super(MergeTest, self).tearDown()
+
     def make_run(self,env):
 
         ### Make a test run
@@ -568,6 +570,8 @@ class TestMergeResultsSort(ResultSortTest):
             self.env.f_disable_logging()
         if hasattr(self, 'env2'):
             self.env2.f_disable_logging()
+
+        super(TestMergeResultsSort, self).tearDown()
 
     def test_merge_normally(self):
 

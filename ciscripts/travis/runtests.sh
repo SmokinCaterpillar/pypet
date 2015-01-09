@@ -48,7 +48,15 @@ if [[ $GIT_TEST == ON ]]
         echo "Removal complete"
 
     else
-        python ../../pypet/tests/all_tests.py
+        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
+            then
+                # try with many files, i.e. do not remove data after every test
+                # but only for one particular setting of the test matrix python = 2.7 and newest
+                # packages
+                python ../../pypet/tests/all_tests.py -k
+            else
+                python ../../pypet/tests/all_tests.py
+            fi
     fi
 
 

@@ -731,6 +731,8 @@ class EnvironmentTest(TrajectoryComparator):
     def tearDown(self):
         self.env.f_disable_logging()
 
+        super(EnvironmentTest, self).tearDown()
+
     def setUp(self):
         self.set_mode()
 
@@ -1141,6 +1143,7 @@ class ResultSortTest(TrajectoryComparator):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        super(ResultSortTest, self).tearDown()
 
     def setUp(self):
         self.set_mode()

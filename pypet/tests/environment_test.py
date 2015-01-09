@@ -13,7 +13,7 @@ else:
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging
-from pypet.tests.test_helpers import make_run,make_temp_file
+from pypet.tests.test_helpers import make_run,make_temp_file, remove_data
 import os
 
 
@@ -60,10 +60,12 @@ class EnvironmentTest(unittest.TestCase):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        remove_data()
 
     def test_multiprocessing(self):
 
         self.env.f_run(just_printing_bro)
+
 
 
 

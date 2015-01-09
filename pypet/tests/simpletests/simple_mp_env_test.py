@@ -3,6 +3,7 @@ import os
 
 from pypet import Environment
 from pypet.utils.explore import cartesian_product
+from pypet.tests.test_helpers import make_temp_file, remove_data
 
 def multiply(traj):
     """Example of a sophisticated simulation that involves multiplying two values.
@@ -19,10 +20,11 @@ def multiply(traj):
 
 def main():
 
+    filename = make_temp_file(os.path.join('experiments','example_01','HDF5',
+                                            'example_01.hdf5'))
     # Create an environment that handles running
     env = Environment(trajectory='Multiplication',
-                      filename=os.path.join('experiments','example_01','HDF5',
-                                            'example_01.hdf5'),
+                      filename=filename,
                       file_title='Example_01_First_Steps',
                       log_folder=os.path.join('experiments','example_01','LOGS'),
                       comment='The first example!',
@@ -52,8 +54,7 @@ def main():
     # Yet, to be very clear let's delete all the old stuff.
     del traj
     del env
-    traj = Trajectory(filename=os.path.join('experiments','example_01','HDF5',
-                                            'example_01.hdf5'))
+    traj = Trajectory(filename=filename)
 
     # Now we want to load all stored data.
     traj.f_load(index=-1, load_parameters=2, load_results=2)
@@ -75,6 +76,8 @@ def main():
     # Let's take the second run named `run_00000001` (Note that counting starts at 0!).
     print 'The result of `run_00000001` is: '
     print traj.run_00000001.z
+
+    remove_data()
 
 if __name__ == '__main__':
     main()

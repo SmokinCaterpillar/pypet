@@ -125,6 +125,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        super(BrianFullNetworkTest, self).tearDown()
 
     def setUp(self):
         logging.basicConfig(level = logging.INFO)

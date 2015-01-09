@@ -30,37 +30,36 @@ import pandas as pd
 
 import tempfile
 
-
-TEMPDIR = 'temp_folder_for_pypet_tests'
-''' Temporary directory for the hdf5 files'''
-
-REMOVE=True
-''' Whether or not to remove the temporary directory after the tests'''
-
-actual_tempdir=''
-''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
-
-user_tempdir=''
-'''If the user specifies in run all test a folder, this variable will be used'''
+testParams=dict(
+    tempdir = 'tmp_pypet_tests',
+    #''' Temporary directory for the hdf5 files'''
+    remove=True,
+    #''' Whether or not to remove the temporary directory after the tests'''
+    actual_tempdir='',
+    #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
+    user_tempdir='',
+    #'''If the user specifies in run all test a folder, this variable will be used'''
+)
 
 def make_temp_file(filename):
-    global actual_tempdir
-    global user_tempdir
-    global TEMPDIR
+    global testParams
     try:
 
-        if not (user_tempdir == '' or user_tempdir is None) and actual_tempdir=='':
-            actual_tempdir=user_tempdir
+        if not ((testParams['user_tempdir'] == '' or
+                        testParams['user_tempdir'] is None) and
+                        testParams['actual_tempdir'] == ''):
+            testParams['actual_tempdir'] = testParams['user_tempdir']
 
-        if not os.path.isdir(actual_tempdir):
-            os.makedirs(actual_tempdir)
+        if not os.path.isdir(testParams['actual_tempdir']):
+            os.makedirs(testParams['actual_tempdir'])
 
-        return os.path.join(actual_tempdir,filename)
+        return os.path.join(testParams['actual_tempdir'],filename)
     except OSError:
         logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
-                                    actual_tempdir +
+                                    testParams['actual_tempdir'] +
                                     ' I will use pythons gettempdir method instead.')
-        actual_tempdir = os.path.join(tempfile.gettempdir(),TEMPDIR)
+        actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
+        testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir,filename)
     except:
         logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
@@ -68,18 +67,23 @@ def make_temp_file(filename):
 
 def make_run(remove=None, folder=None):
 
-    if remove is None:
-        remove = REMOVE
+    global testParams
 
-    global user_tempdir
-    user_tempdir=folder
+    if remove is not None:
+        testParams['remove'] = remove
 
-    global actual_tempdir
+    testParams['user_tempdir'] = folder
+
     try:
         unittest.main()
     finally:
-        if remove:
-            shutil.rmtree(actual_tempdir,True)
+        remove_data()
+
+
+def remove_data():
+    global testParams
+    if testParams['remove']:
+        shutil.rmtree(testParams['actual_tempdir'], True)
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name best on the current `testcase`"""
@@ -332,6 +336,9 @@ class TrajectoryComparator(unittest.TestCase):
     def tearDownClass(cls):
         root = logging.getLogger()
         root.handlers = [] # delete all handlers
+
+    def tearDown(self):
+        remove_data()
 
     def compare_trajectories(self,traj1,traj2):
 

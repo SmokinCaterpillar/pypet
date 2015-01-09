@@ -45,6 +45,8 @@ class ContinueTest(TrajectoryComparator):
             for env in self.envs:
                 env.f_disable_logging()
 
+        super(ContinueTest, self).tearDown()
+
     def make_run(self,env):
 
         ### Make a test run
