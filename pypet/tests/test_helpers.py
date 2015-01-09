@@ -45,15 +45,14 @@ def make_temp_file(filename):
     global testParams
     try:
 
-        if not ((testParams['user_tempdir'] == '' or
-                        testParams['user_tempdir'] is None) and
+        if ((testParams['user_tempdir'] is not None and testParams['user_tempdir'] != '') and
                         testParams['actual_tempdir'] == ''):
             testParams['actual_tempdir'] = testParams['user_tempdir']
 
         if not os.path.isdir(testParams['actual_tempdir']):
             os.makedirs(testParams['actual_tempdir'])
 
-        return os.path.join(testParams['actual_tempdir'],filename)
+        return os.path.join(testParams['actual_tempdir'], filename)
     except OSError:
         logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
                                     testParams['actual_tempdir'] +
@@ -83,6 +82,7 @@ def make_run(remove=None, folder=None):
 def remove_data():
     global testParams
     if testParams['remove']:
+        print('REMOVING ALL TEMPORARY DATA')
         shutil.rmtree(testParams['actual_tempdir'], True)
 
 def make_trajectory_name(testcase):
