@@ -47,7 +47,10 @@ if [[ $GIT_TEST == ON ]]
         rm -rvf git_sumatra_test
         echo "Removal complete"
 
-    else
+    fi
+
+if [[ $TEST_SUITE == ON ]]
+    then
         if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
             then
                 # try with many files, i.e. do not remove data after every test

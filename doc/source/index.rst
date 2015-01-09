@@ -158,7 +158,7 @@ If you do not want to browse to your installation folder, you can also download 
 
 Running all tests can take up to 15 minutes and might temporarily take up to
 8 GB of disk space. The test suite encompasses more than **400** tests
-(including the BRIAN based tests) and has a code coverage of about *90%*!
+(including the BRIAN based tests) and has a code coverage of almost *90%*!
 
 =====================
 Contact

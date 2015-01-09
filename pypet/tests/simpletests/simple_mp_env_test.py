@@ -26,7 +26,7 @@ def main():
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_01_First_Steps',
-                      log_folder=os.path.join('experiments','example_01','LOGS'),
+                      log_folder=make_temp_file(os.path.join('experiments','example_01','LOGS')),
                       comment='The first example!',
                       multiproc=True,
                       ncores=2)
