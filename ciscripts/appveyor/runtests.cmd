@@ -2,10 +2,10 @@
 ECHO "------> TESTING <------"
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"
-    cd ..\..\tests
+    cd ..\..\pypet\tests
     python all_multi_core_tests.py
 ) ELSE (
     ECHO "##### Running all single core tests #####"
-    cd ..\..\tests
+    cd ..\..\pypet\tests
     python all_single_core_tests.py
 )
