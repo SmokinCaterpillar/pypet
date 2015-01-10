@@ -1,5 +1,5 @@
 :: Runs either all single core or all multicore tests
-
+ECHO "------> TESTING <------"
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"
     cd ..\..\tests

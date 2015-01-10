@@ -57,6 +57,6 @@ test_script:
     - python simple_mp_env_test.py
     - cd ..\\..\\..\\ciscripts\\appveyor
     # Full test suite
-    - cmd runtests.cmd
+    - runtests.cmd
 
 
