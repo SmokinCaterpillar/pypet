@@ -100,7 +100,9 @@ def _single_run(args):
         Returns a tuple of run index and result: ``(traj.v_idx, result)``
 
     """
-
+    multiproc = False # Defined here for the finally block
+    handler = None
+    root = logging.getLogger()
     try:
         traj = args[0]
         log_path = args[1]
@@ -117,8 +119,6 @@ def _single_run(args):
         automatic_storing = args[12]
 
         use_pool = result_queue is None
-
-        root = logging.getLogger()
         idx = traj.v_idx
 
         if multiproc and log_path is not None:
@@ -128,10 +128,9 @@ def _single_run(args):
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-', '_')
             short_filename = '%s_%s.txt' % (traj.v_name, process_name)
-            handler = None
+            filename = os.path.join(log_path, short_filename)
             try:
-                filename = os.path.join(log_path, short_filename)
-
+                # Under Windows creating a file handler may fail from time to time
                 handler = logging.FileHandler(filename=filename)
                 formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
                 handler.setFormatter(formatter)
@@ -180,9 +179,6 @@ def _single_run(args):
             # Trigger Snapshot
             _trigger_result_snapshot(result, continue_path)
 
-        if multiproc and handler is not None:
-            root.removeHandler(handler)
-
         if not use_pool:
             result_queue.put(result)
         else:
@@ -193,32 +189,44 @@ def _single_run(args):
                  "".join(traceback.format_exception(*sys.exc_info())) + "\n"
         logging.getLogger('STDERR').error(errstr)
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
+    finally:
+        if multiproc and handler is not None:
+            root.removeHandler(handler)
 
 
-def _queue_handling(handler, log_path, log_stdout):
+def _queue_handling(queue_handler, log_path, log_stdout):
     """ Starts running a queue handler and creates a log file for the queue."""
+    handler=None # Defined here for the finally block
+    root = logging.getLogger()
+    try:
+        if log_path is not None:
+            # Create a new log file for the queue writer
+            short_filename = 'queue_process.txt'
+            filename = os.path.join(log_path, short_filename)
+            try:
+                handler = logging.FileHandler(filename=filename)
+                formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+                handler.setFormatter(formatter)
+                root.addHandler(handler)
+            except IOError as e:
+                root.error('Could not create file `%s`. I will NOT store log messages of '
+                           'queue process to disk. Original Error: `%s`' %
+                           (short_filename, str(e)))
 
-    if log_path is not None:
-        # Create a new log file for the queue writer
-        filename = 'queue_process.txt'
-        filename = os.path.join(log_path, filename)
-        root = logging.getLogger()
+            if log_stdout:
+                # Redirect standard out and error to the file
+                outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+                sys.stdout = outstl
 
-        h = logging.FileHandler(filename=filename)
-        f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
-        h.setFormatter(f)
-        root.addHandler(h)
+                errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+                sys.stderr = errstl
 
-        if log_stdout:
-            # Redirect standard out and error to the file
-            outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
-            sys.stdout = outstl
-
-            errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
-            sys.stderr = errstl
-
-    # Main job, make the listener to the queue start receiving message for writing to disk.
-    handler.run()
+        # Main job, make the listener to the queue start receiving message for writing to disk.
+        queue_handler.run()
+    finally:
+        # After termination remove the file handler
+        if handler is not None:
+            root.removeHandler(handler)
 
 
 def _trigger_result_snapshot(result, continue_path):
@@ -1211,20 +1219,32 @@ class Environment(HasLogger):
 
         # Set the log level to the specified one
         logging.basicConfig(level=log_level)
-        #
+        root = logging.getLogger()
+
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
             '%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-        main_log_handler = logging.FileHandler(filename=os.path.join(log_path, 'main.txt'))
-        root = logging.getLogger()
-        root.addHandler(main_log_handler)
-        #
+
+        main_log_handler = None
+        try:
+            # Handler creation might fail under Windows sometimes
+            main_log_handler = logging.FileHandler(filename=os.path.join(log_path, 'main.txt'))
+            root.addHandler(main_log_handler)
+        except IOError as e:
+            root.error('Could not create file `errors_and_warnings.txt`. '
+                       'I will NOT store log messages to disk. Original Error: `%s`' % str(e))
+
         # Add a handler for storing warnings and errors to a text file
-        error_log_handler = logging.FileHandler(filename=os.path.join(log_path,
-                                                               'errors_and_warnings.txt'))
-        error_log_handler.setLevel(logging.WARNING)
-        root = logging.getLogger()
-        root.addHandler(error_log_handler)
+        error_log_handler = None
+        try:
+            # Handler creation might fail under Windows sometimes
+            error_log_handler = logging.FileHandler(filename=os.path.join(log_path,
+                                                                   'errors_and_warnings.txt'))
+            error_log_handler.setLevel(logging.WARNING)
+            root.addHandler(error_log_handler)
+        except IOError as e:
+            root.error('Could not create file `errors_and_warnings.txt`. '
+                       'I will NOT store log messages to disk. Original Error: `%s`' % str(e))
 
         if log_stdout:
             # Also copy standard out and error to the log files

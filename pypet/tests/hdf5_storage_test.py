@@ -5,6 +5,7 @@ __author__ = 'Robert Meyer'
 import numpy as np
 import os
 import warnings
+import platform
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
@@ -386,6 +387,7 @@ class StorageTest(TrajectoryComparator):
 
         print('Mismatch testing done!')
 
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         env = Environment(filename=make_temp_file(filename),
@@ -816,6 +818,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation(self):
         # if not self.multiproc:
         #     return
