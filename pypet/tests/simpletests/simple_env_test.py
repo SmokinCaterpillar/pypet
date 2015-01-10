@@ -70,7 +70,7 @@ traj.f_load(index=-1, load_parameters=2, load_results=2)
 
 # Finally we want to print a result of a particular run.
 # Let's take the second run named `run_00000001` (Note that counting starts at 0!).
-print 'The result of `run_00000001` is: '
-print traj.run_00000001.z
+print('The result of `run_00000001` is: ')
+print(traj.run_00000001.z)
 
 remove_data()
