@@ -126,7 +126,7 @@ def add_parameters(traj):
     traj.f_add_parameter('simulation.duration', 1000.0,
                          comment='The duration of the experiment in '
                                 'milliseconds.')
-    traj.f_add_parameter('simulation.dt', 0.1,
+    traj.f_add_parameter('simulation.dt', 0.25,
                          comment='The step size of an Euler integration step.')
 
 def add_exploration(traj):
