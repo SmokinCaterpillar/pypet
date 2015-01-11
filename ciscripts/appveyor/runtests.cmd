@@ -7,9 +7,9 @@ IF "%EXAMPLES%"=="ON" (
     python run_all_examples.py
     ECHO "#### Examples completed #####"
 )
-IF NOT "%errorlevel%" == 0 (
+IF ERRORLEVEL 1 (
     ECHO "### Examples failed ###
-    EXIT /b "%errorlevel%"
+    EXIT /b "%ERRORLEVEL%"
 ) ELSE (
     ECHO "### Examples successful ###
 )
@@ -19,9 +19,9 @@ IF "%MULTIPROC%"=="ON" (
     python all_multi_core_tests.py
     ECHO "#### Multiproc completed #####"
 )
-IF NOT "%errorlevel%" == 0 (
+IF ERRORLEVEL 1 (
 ECHO "### Multiproc failed ###
-    EXIT /b "%errorlevel%"
+    EXIT /b "%ERRORLEVEL%"
 ) ELSE (
     ECHO "### Multiproc successful ###
 )
@@ -31,9 +31,9 @@ IF "%SINGLECORE%"=="ON" (
     python all_single_core_tests.py
     ECHO "#### ESingle core completed #####"
 )
-IF NOT "%errorlevel%" == 0 (
+IF ERRORLEVEL 1 (
     ECHO "### Single core failed ###
-    EXIT /b "%errorlevel%"
+    EXIT /b "%ERRORLEVEL%"
 ) ELSE (
     ECHO "### Single core successful ###
 )
