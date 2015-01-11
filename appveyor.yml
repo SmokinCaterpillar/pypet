@@ -46,11 +46,6 @@ build: false
 
 
 test_script:
-    - cd pypet\\tests\\simpletests
-    # Some simple test script first to see if it works in general
-    - python simple_traj_test.py
-    - python simple_env_test.py
-    - python simple_mp_env_test.py
-    - cd ..\\..\\..\\ciscripts\\appveyor
+    - cd ciscripts\\appveyor
     # Full test suite
     - runtests.cmd
