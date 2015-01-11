@@ -23,7 +23,7 @@ to_skip = set()
 if brian is None:
     to_skip.add('07')
     to_skip.add('11')
-if system == 'Widnows':
+if system == 'Windows':
     # Appveyor is too slow for this example, so we skip it
     to_skip.add('13')
 
