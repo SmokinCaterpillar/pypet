@@ -31,35 +31,31 @@ except ImportError as e:
     print(repr(e))
     pass
 
-extend_suite = combine_test_classes(ContinueMPTest,
-                                    ContinueMPPoolTest,
-                                    BrianFullNetworkMPTest)
 
-no_pool_suite = combine_test_classes(MultiprocNoPoolLockTest,
-                                 MultiprocNoPoolQueueTest)
+big_suite_1 = combine_test_classes(MultiprocNoPoolLockTest,
+                                   MultiprocSortQueueTest,
+                                   MultiprocLinkLockTest,
+                                   CapTest)
 
-env_suite = combine_test_classes(MultiprocLockTest,
-                                 MultiprocQueueTest,
-                                 CapTest)
+big_suite_2 = combine_test_classes(MultiprocNoPoolQueueTest,
+                                   MultiprocSortLockTest,
+                                   MultiprocLinkNoPoolLockTest,
+                                   TestMPPostProc,
+                                   ContinueMPPoolTest)
 
-sort_suite = combine_test_classes(MultiprocSortLockTest,
-                                  MultiprocSortQueueTest,
-                                  MultiprocNoPoolSortLockTest,
-                                  MultiprocNoPoolSortQueueTest)
+big_suite_3 = combine_test_classes(MultiprocLockTest,
+                                   MultiprocNoPoolSortQueueTest,
+                                   MultiprocLinkNoPoolQueueTest,
+                                   TestMPImmediatePostProc)
 
-link_post_suite = combine_test_classes(MultiprocLinkLockTest,
-                                       MultiprocLinkNoPoolLockTest,
-                                       MultiprocLinkNoPoolQueueTest,
-                                       MultiprocLinkQueueTest,
-                                       TestMPPostProc,
-                                       TestMPImmediatePostProc)
+big_suite_4 = combine_test_classes(MultiprocQueueTest,
+                                   MultiprocNoPoolSortLockTest,
+                                   MultiprocLinkQueueTest,
+                                   ContinueMPTest,
+                                   BrianFullNetworkMPTest)
 
 
-big_suite_1 = no_pool_suite
-big_suite_2 = env_suite
-big_suite_3 = combined_suites(sort_suite, link_post_suite, extend_suite)
-
-suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3}
+suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3, '4': big_suite_4}
 
 
 if __name__ == '__main__':
