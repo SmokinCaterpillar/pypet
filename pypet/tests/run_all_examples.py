@@ -19,13 +19,21 @@ except ImportError:
 
 system = platform.system()
 
+print('*** Running under %s ***' % str(system))
+
 if system == 'Windows':
-    skiplist = ['04', '07', '11', '13']
+    to_skip = set(['04', '07', '11', '13'])
 else:
-    skiplist = []
+    to_skip = set([])
+
+if brian is None:
+    to_skip.add('07')
+    to_skip.add('11')
+
+print('----- I will skip the following tests: `%s` ----' % to_skip)
 
 def skip(name):
-    for item in skiplist:
+    for item in to_skip:
         if item in name:
             return True
     return False
