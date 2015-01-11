@@ -29,8 +29,8 @@ characters = traj['characters']
 characters.f_add_parameter('luke_skywalker', 'Mark Hamill', comment='May the force be with you!')
 
 #The full name of luke skywalker is now `parameters.starwars.characters.luke_skywalker`:
-print 'The full name of the new Skywalker Parameter is %s' % \
-      traj.f_get('luke_skywalker').v_full_name
+print('The full name of the new Skywalker Parameter is %s' %
+      traj.f_get('luke_skywalker').v_full_name)
 
 #Lets see what happens if we have not unique entries:
 traj.f_add_parameter_group('spaceballs.characters')
@@ -39,7 +39,7 @@ traj.f_add_parameter_group('spaceballs.characters')
 try:
     traj.characters
 except NotUniqueNodeError as e:
-    print 'Damn it, there are two characters groups in the trajectory: %s' % e._msg
+    print('Damn it, there are two characters groups in the trajectory: %s' % e._msg)
 
 # But if we are more specific we have again a unique finding
 characters = traj.starwars.characters

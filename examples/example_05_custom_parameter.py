@@ -199,7 +199,7 @@ def main():
                     load_derived_parameters=2,load_results=1)
     except ImportError as e:
 
-        print 'That did\'nt work, I am sorry. %s ' % e.message
+        print('That did\'nt work, I am sorry: %s ' % str(e))
 
         # Ok, let's try again but this time with adding our parameter to the imports
         traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5',
@@ -211,7 +211,7 @@ def main():
 
 
     #For the fun of it, let's print the source code
-    print '\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq
+    print('\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq)
 
     # Let's get the exploration array:
     initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_range()

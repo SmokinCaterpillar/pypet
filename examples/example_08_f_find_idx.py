@@ -42,7 +42,7 @@ my_filter_predicate= lambda x,y: x==2 or y==8
 idx_iterator = traj.f_find_idx(['x','y'], my_filter_predicate)
 
 # Now we can print the corresponding results:
-print 'The run names and results for parameter combinations with x==2 or y==8:'
+print('The run names and results for parameter combinations with x==2 or y==8:')
 for idx in idx_iterator:
     # We focus on one particular run. This is equivalent to calling `traj.f_as_run(idx)`.
     traj.v_idx=idx

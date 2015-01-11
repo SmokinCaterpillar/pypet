@@ -58,8 +58,8 @@ with open(filename) as f:
     code = compile(f.read(), filename, 'exec')
     exec(code, globals(), locals())
 
+ex11 = 'example_11_large_scale_brian_simulation'
 if brian is not None:
-    ex11 = 'example_11_large_scale_brian_simulation'
     print("########## Running %s ###########" % ex11)
     os.chdir('..')
     os.chdir(ex11)
@@ -74,3 +74,5 @@ if brian is not None:
     with open(filename) as f:
         code = compile(f.read(), filename, 'exec')
         exec(code, globals(), locals())
+else:
+    print("------- Skipping %s -------" % ex11)

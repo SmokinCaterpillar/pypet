@@ -128,7 +128,7 @@ def main():
     traj.f_update_skeleton()
 
     #For the fun of it, let's print the source code
-    print '\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq
+    print('\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq)
 
     # Let's get the exploration array:
     initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_range()
