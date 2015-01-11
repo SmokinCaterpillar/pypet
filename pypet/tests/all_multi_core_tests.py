@@ -55,9 +55,9 @@ link_post_suite = combine_test_classes(MultiprocLinkLockTest,
                                        TestMPImmediatePostProc)
 
 
-big_suite_1 = combined_suites(no_pool_suite, extend_suite)
+big_suite_1 = no_pool_suite
 big_suite_2 = env_suite
-big_suite_3 = combined_suites(sort_suite, link_post_suite)
+big_suite_3 = combined_suites(sort_suite, link_post_suite, extend_suite)
 
 suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3}
 
