@@ -32,7 +32,10 @@ for simple_example in simple_examples:
         print("---------- Skipping %s ----------" % simple_example)
     else:
         print("########## Running %s ###########" % simple_example)
-        execfile(filename, globals(), locals())
+        #execfile(filename, globals(), locals())
+        with open(filename) as f:
+            code = compile(f.read(), filename, 'exec')
+            exec(code, globals(), locals())
 
 
 ex13 = 'example_13_post_processing'
@@ -41,22 +44,33 @@ os.chdir(ex13)
 sys.path.append(os.getcwd())
 print("Running main")
 filename = os.path.join(os.getcwd(), 'main.py')
-execfile(filename)
+with open(filename) as f:
+    code = compile(f.read(), filename, 'exec')
+    exec(code, globals(), locals())
 print("Running analysis")
 filename = os.path.join(os.getcwd(), 'analysis.py')
-execfile(filename)
+with open(filename) as f:
+    code = compile(f.read(), filename, 'exec')
+    exec(code, globals(), locals())
 print("Running pipeline")
 filename = os.path.join(os.getcwd(), 'pipeline.py')
-execfile(filename)
+with open(filename) as f:
+    code = compile(f.read(), filename, 'exec')
+    exec(code, globals(), locals())
 
-ex11 = 'example_11_large_scale_brian_simulation'
-print("########## Running %s ###########" % ex11)
-os.chdir('..')
-os.chdir(ex11)
-sys.path.append(os.getcwd())
-print("Running script")
-filename = os.path.join(os.getcwd(), 'runscript.py')
-execfile(filename)
-print("Running analysis")
-filename = os.path.join(os.getcwd(), 'plotff.py')
-execfile(filename)
+if brian is not None:
+    ex11 = 'example_11_large_scale_brian_simulation'
+    print("########## Running %s ###########" % ex11)
+    os.chdir('..')
+    os.chdir(ex11)
+    sys.path.append(os.getcwd())
+    print("Running script")
+    filename = os.path.join(os.getcwd(), 'runscript.py')
+    with open(filename) as f:
+        code = compile(f.read(), filename, 'exec')
+        exec(code, globals(), locals())
+    print("Running analysis")
+    filename = os.path.join(os.getcwd(), 'plotff.py')
+    with open(filename) as f:
+        code = compile(f.read(), filename, 'exec')
+        exec(code, globals(), locals())
