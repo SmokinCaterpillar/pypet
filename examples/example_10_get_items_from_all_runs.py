@@ -27,8 +27,8 @@ traj.f_add_parameter('x', 1, comment='I am the first dimension!')
 traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 
 # Explore the parameters with a cartesian product:
-x_length = 15
-y_length = 15
+x_length = 12
+y_length = 12
 traj.f_explore(cartesian_product({'x': range(x_length), 'y': range(y_length)}))
 
 # Run the simulation

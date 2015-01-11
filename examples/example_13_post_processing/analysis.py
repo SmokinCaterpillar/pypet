@@ -30,7 +30,7 @@ def main():
     plt.xlabel('I')
     plt.ylabel('f[Hz]')
     plt.title('Firing as a function of input current `I`')
-    plt.legend()
+    plt.legend(loc='best')
 
     # Also let's plot an example run, how about run 13 ?
     example_run = 13

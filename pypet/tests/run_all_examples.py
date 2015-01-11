@@ -74,48 +74,51 @@ def execute_example(filename):
             os.remove(new_filename)
 
 
+def main():
+    os.chdir(os.path.join('..','..','examples'))
+    sys.path.append(os.getcwd())
+    simple_examples = glob.glob('*.py')
+    assert len(simple_examples) == 11 + 1
 
-os.chdir(os.path.join('..','..','examples'))
-sys.path.append(os.getcwd())
-simple_examples = glob.glob('*.py')
-assert len(simple_examples) == 11 + 1
+    for simple_example in simple_examples:
+        if simple_example == '__init__':
+            continue
 
-for simple_example in simple_examples:
-    if simple_example == '__init__':
-        continue
+        if skip(simple_example):
+            print("---------- Skipping %s ----------" % simple_example)
+        else:
+            print("########## Running %s ###########" % simple_example)
+            execute_example(simple_example)
 
-    if skip(simple_example):
-        print("---------- Skipping %s ----------" % simple_example)
+
+    ex13 = 'example_13_post_processing'
+    if skip(ex13):
+        print("------- Skipping %s -------" % ex13)
     else:
-        print("########## Running %s ###########" % simple_example)
-        execute_example(simple_example)
+        print("########## Running %s ###########" % ex13)
+        os.chdir(ex13)
+        sys.path.append(os.getcwd())
+        print("Running main")
+        execute_example('main.py')
+        print("Running analysis")
+        execute_example('analysis.py')
+        print("Running pipeline")
+        execute_example('pipeline.py')
+        os.chdir('..')
 
+    ex11 = 'example_11_large_scale_brian_simulation'
+    if skip(ex11):
+        print("------- Skipping %s -------" % ex11)
+    else:
+        print("########## Running %s ###########" % ex11)
 
-ex13 = 'example_13_post_processing'
-if skip(ex13):
-    print("------- Skipping %s -------" % ex13)
-else:
-    print("########## Running %s ###########" % ex13)
-    os.chdir(ex13)
-    sys.path.append(os.getcwd())
-    print("Running main")
-    execute_example('main.py')
-    print("Running analysis")
-    execute_example('analysis.py')
-    print("Running pipeline")
-    execute_example('pipeline.py')
-    os.chdir('..')
+        os.chdir(ex11)
+        sys.path.append(os.getcwd())
+        print("Running script")
+        execute_example('runscript.py')
+        print("Running analysis")
+        execute_example('plotff.py')
+        os.chdir('..')
 
-ex11 = 'example_11_large_scale_brian_simulation'
-if skip(ex11):
-    print("------- Skipping %s -------" % ex11)
-else:
-    print("########## Running %s ###########" % ex11)
-
-    os.chdir(ex11)
-    sys.path.append(os.getcwd())
-    print("Running script")
-    execute_example('runscript.py')
-    print("Running analysis")
-    execute_example('plotff.py')
-    os.chdir('..')
+if __name__ == '__main__':
+    main()
