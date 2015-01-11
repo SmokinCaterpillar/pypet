@@ -1,11 +1,13 @@
 __author__ = 'Robert Meyer'
 
+import os # To allow pathnames under Windows and Linux
 
 from pypet import Trajectory, NotUniqueNodeError
 
 
 # We first generate a new Trajectory
-traj = Trajectory('Example', filename='experiments/example_02/HDF5/example_02.hdf5',
+filename = os.path.join('experiments', 'example_02', 'HDF5', 'example_02.hdf5')
+traj = Trajectory('Example', filename=filename,
                   comment='Access and Storage!')
 
 
@@ -65,7 +67,7 @@ traj.gross_income_of_film.f_empty()
 
 # Now lets reload the trajectory
 del traj
-traj = Trajectory(filename='experiments/example_02/HDF5/example_02.hdf5')
+traj = Trajectory(filename=filename)
 # We want to load the last trajectory in the file, therefore index = -1
 # We want to load the parameters, therefore load_parameters=2
 # We only want to load the skeleton of the results, so load_results=1

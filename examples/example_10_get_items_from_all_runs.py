@@ -3,6 +3,7 @@ __author__ = 'Robert Meyer'
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import numpy as np
+import os # For path names working under Windows ans Linux
 
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
@@ -15,8 +16,10 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-env = Environment(trajectory='Example10', filename='experiments/example_08/HDF5/example_10.hdf5',
-                  file_title='Example10', log_folder='experiments/example_08/LOGS/',
+filename = os.path.join('experiments', 'example_08', 'HDF5', 'example_10.hdf5')
+log_folder = os.path.join('experiments', 'example_08', 'LOGS')
+env = Environment(trajectory='Example10', filename=filename,
+                  file_title='Example10', log_folder=log_folder,
                   comment='Another example!')
 
 # Get the trajectory from the environment

@@ -1,16 +1,19 @@
 __author__ = 'Robert Meyer'
 
+import numpy as np
+import os # For path names being viable under Windows and Linux
+
 from pypet.trajectory import Trajectory
 from pypet import pypetconstants
-import numpy as np
 
 # Here I show how to store and load results in parts if they are quite large.
 # I will skip using an environment and only work with a trajectory.
 
 # We can create a trajectory and hand it a filename directly and it will create an
 # HDF5StorageService for us:
+filename = os.path.join('experiments', 'example_09', 'HDF5', 'example_09.hdf5')
 traj = Trajectory(name='example_09_huge_data',
-                  filename='experiments/example_09/HDF5/example_09.hdf5')
+                  filename=filename)
 
 # Now we directly add a huge result. Note that we could do the exact same procedure during
 # a single run, there is no syntactical difference.
@@ -59,7 +62,7 @@ traj.f_store_item('huge_matrices')
 # Thus, the name is not `example_09_huge_data`, but `example_09_huge_data_XXXX_XX_XX_XXhXXmXXs`:
 old_traj_name = traj.v_name
 del traj
-traj = Trajectory(filename='experiments/example_09/HDF5/example_09.hdf5')
+traj = Trajectory(filename=filename)
 
 # We only want to load the skeleton but not the data:
 traj.f_load(name=old_traj_name, load_results=pypetconstants.LOAD_SKELETON)

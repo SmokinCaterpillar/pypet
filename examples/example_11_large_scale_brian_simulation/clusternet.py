@@ -674,7 +674,8 @@ class CNMonitorAnalysis(NetworkAnalyser):
     def add_parameters( traj):
         traj.f_add_parameter('analysis.neuron_records',(0,1,100,101),
                              comment='Neuron indices to record from.')
-        traj.f_add_parameter('analysis.plot_folder', 'experiments/example_11/PLOTS/',
+        traj.f_add_parameter('analysis.plot_folder',
+                             os.path.join('experiments', 'example_11', 'PLOTS'),
                              comment='Folder for plots')
         traj.f_add_parameter('analysis.show_plots', 0, comment='Whether to show plots.')
         traj.f_add_parameter('analysis.make_plots', 1, comment='Whether to make plots.')
@@ -752,8 +753,8 @@ class CNMonitorAnalysis(NetworkAnalyser):
         :return: Path name to print folder
 
         """
-        sub_folder = '%s/%s/' % (traj.v_trajectory_name, traj.v_name)
-        print_folder = os.path.join(traj.analysis.plot_folder, sub_folder )
+        print_folder = os.path.join(traj.analysis.plot_folder,
+                                    traj.v_trajectory_name, traj.v_crun)
         print_folder = os.path.abspath(print_folder)
         if not os.path.isdir(print_folder):
             os.makedirs(print_folder)

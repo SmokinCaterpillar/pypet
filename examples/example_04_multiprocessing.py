@@ -1,5 +1,6 @@
 __author__ = 'Robert Meyer'
 
+import os # For path names being viable under Windows and Linux
 
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
@@ -25,10 +26,12 @@ def main():
 
     # Create an environment that handles running.
     # Let's enable multiprocessing with 2 workers.
+    filename = os.path.join('experiments', 'example_04', 'HDF5', 'example_04.hdf5')
+    log_folder = os.path.join('experiments', 'example_04', 'LOGS')
     env = Environment(trajectory='Example_04_MP',
-                      filename='experiments/example_04/HDF5/example_04.hdf5',
+                      filename=filename,
                       file_title='Example_04_MP',
-                      log_folder='experiments/example_04/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Multiprocessing example!',
                       multiproc=True,
                       ncores=2,

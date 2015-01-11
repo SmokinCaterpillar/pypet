@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
+import os # For path names being viable under Windows and Linux
 
 # Let's reuse the stuff from the previous example
 from example_05_custom_parameter import euler_scheme, FunctionParameter, diff_lorenz
@@ -74,11 +75,12 @@ def diff_roessler(value_array, a, c):
 # And here goes our main function
 def main():
 
-
+    filename = os.path.join('experiments', 'example_06', 'HDF5', 'example_06.hdf5')
+    log_folder = os.path.join('experiments', 'example_06', 'LOGS')
     env = Environment(trajectory='Example_06_Euler_Integration',
-                      filename='experiments/example_06/HDF5/example_06.hdf5',
+                      filename=filename,
                       file_title='Example_06_Euler_Integration',
-                      log_folder='experiments/example_06/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Go for Euler!')
 
 

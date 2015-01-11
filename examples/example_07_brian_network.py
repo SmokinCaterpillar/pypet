@@ -1,11 +1,13 @@
 __author__ = 'Robert Meyer'
 
+import logging
+import os # For path names being viable under Windows and Linux
+
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter,BrianMonitorResult
 from pypet.utils.explore import cartesian_product
 # Don't do this at home:
 from brian import *
-import logging
 
 # We define a function to set all parameter
 def add_params(traj):
@@ -93,10 +95,12 @@ def main():
 
 
     # Let's do multiprocessing this time with a lock (which is default)
+    filename = os.path.join('experiments', 'example_07', 'HDF5', 'example_07.hdf5')
+    log_folder = os.path.join('experiments', 'example_07', 'LOGS')
     env = Environment(trajectory='Example_07_BRIAN',
-                      filename='experiments/example_07/HDF5/example_07.hdf5',
+                      filename=filename,
                       file_title='Example_07_Euler_Integration',
-                      log_folder='experiments/example_07/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Go Brian!',
                       dynamically_imported_classes=[BrianMonitorResult, BrianParameter],
                       multiproc=True,

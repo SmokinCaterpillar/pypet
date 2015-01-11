@@ -3,7 +3,10 @@ __author__ = 'robert'
 import numpy as np
 import pandas as pd
 import logging
+import os # For path names working under Linux and Windows
+
 from pypet import Environment, cartesian_product
+
 
 def run_neuron(traj):
     """Runs a simulation of a model neuron.
@@ -143,21 +146,20 @@ def add_exploration(traj):
 
 def main():
 
+    filename = os.path.join('hdf5', 'FiringRate.hdf5')
     env = Environment(trajectory='FiringRate',
                       comment='Experiment to measure the firing rate '
                             'of a leaky integrate and fire neuron. '
                             'Exploring different input currents, '
                             'as well as refractory periods',
                       add_time=False, # We don't want to add the current time to the name,
-                      log_folder='./logs/',
+                      log_folder='logs',
                       log_level=logging.INFO,
                       log_stdout=True,
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       wrap_mode='QUEUE',
-                      filename='./hdf5/', # We only pass a folder here, so the name is chosen
-                      # automatically to be the same as the Trajectory
-                      )
+                      filename=filename)
 
     traj = env.v_trajectory
 

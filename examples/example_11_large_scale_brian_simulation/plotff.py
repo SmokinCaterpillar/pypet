@@ -15,7 +15,7 @@ from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurat
 
 def main():
 
-    folder = 'experiments/example_11/HDF5/'
+    folder = os.path.join('experiments', 'example_11', 'HDF5')
     filename = 'Clustered_Network.hdf5'
 
     filename = os.path.join(folder, filename)

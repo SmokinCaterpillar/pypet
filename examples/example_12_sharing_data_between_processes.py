@@ -2,6 +2,7 @@ __author__ = 'Robert Meyer'
 
 import multiprocessing as mp
 import numpy as np
+import os # For path names working under Windows and Linux
 
 from pypet import Environment, cartesian_product
 
@@ -25,10 +26,12 @@ def multiply(traj, result_list):
 
 def main():
     # Create an environment that handles running
+    filename = os.path.join('experiments', 'example_12', 'HDF5', 'example_12.hdf5')
+    log_folder = os.path.join('experiments', 'example_12', 'LOGS')
     env = Environment(trajectory='Multiplication',
-                      filename='experiments/example_01/HDF5/example_01.hdf5',
-                      file_title='Example_01_First_Steps',
-                      log_folder='experiments/example_01/LOGS/',
+                      filename=filename,
+                      file_title='Example_12_Sharing_Data',
+                      log_folder=log_folder,
                       comment='The first example!',
                       continuable=False, # We have shared data in terms of a multiprocessing list,
                       # so we CANNOT use the continue feature.

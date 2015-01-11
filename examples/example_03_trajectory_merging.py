@@ -1,5 +1,6 @@
 __author__ = 'Robert Meyer'
 
+import os # For using pathnames under Windows and Linux
 
 from pypet import Environment, cartesian_product
 
@@ -13,12 +14,14 @@ def multiply(traj):
 
 
 # Create 2 environments that handle running
-env1 = Environment(trajectory='Traj1',filename='experiments/example_03/HDF5/example_03.hdf5',
-                  file_title='Example_03', log_folder='experiments/example_03/LOGS/',
+filename = os.path.join('experiments', 'example_03', 'HDF5', 'example_03.hdf5')
+log_folder = os.path.join('experiments', 'example_03', 'LOGS')
+env1 = Environment(trajectory='Traj1',filename=filename,
+                  file_title='Example_03', log_folder=log_folder,
                   comment='I will be increased!')
 
-env2 = Environment(trajectory='Traj2',filename='experiments/example_03/HDF5/example_03.hdf5',
-                  file_title='Example_03', log_folder='experiments/example_03/LOGS/',
+env2 = Environment(trajectory='Traj2',filename=filename,
+                  file_title='Example_03', log_folder=log_folder,
                   comment = 'I am going to be merged into some other trajectory!')
 
 # Get the trajectories from the environment
@@ -51,7 +54,7 @@ env2.f_run(multiply)
 # We want to move the hdf5 nodes from one trajectory to the other.
 # Thus we set move_nodes=True.
 # Finally,we want to delete the other trajectory afterwards since we already have a backup.
-traj1.f_merge(traj2,remove_duplicates=True,backup_filename=True,
+traj1.f_merge(traj2, remove_duplicates=True, backup_filename=True,
               move_nodes=True, delete_other_trajectory=True)
 
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.

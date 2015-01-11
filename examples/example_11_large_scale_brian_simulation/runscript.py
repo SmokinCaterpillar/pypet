@@ -8,7 +8,7 @@ The network has been implemented using the *pypet* network framework.
 __author__ = 'Robert Meyer'
 
 import numpy as np
-import logging
+import os # To allow path names work under Windows and Linux
 
 from pypet.environment import Environment
 from pypet.brian.network import NetworkManager, run_network
@@ -18,11 +18,12 @@ from clusternet import CNMonitorAnalysis, CNNeuronGroup, CNNetworkRunner, CNConn
 
 
 def main():
-
+    filename = os.path.join('experiments', 'example_11', 'HDF5', 'Clustered_Network.hdf5')
+    log_folder = os.path.join('experiments', 'example_11', 'LOGS')
     env = Environment(trajectory='Clustered_Network',
                       add_time=False,
-                      filename='experiments/example_11/HDF5/',
-                      log_folder='experiments/example_11/LOGS/',
+                      filename=filename,
+                      log_folder=log_folder,
                       continuable=False,
                       lazy_debug=False,
                       multiproc=True,

@@ -1,5 +1,7 @@
 __author__ = 'Robert Meyer'
 
+import os # For path names being viable under Windows and Linux
+
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
 
@@ -12,8 +14,10 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-env = Environment(trajectory='Example08',filename='experiments/example_08/HDF5/example_08.hdf5',
-                  file_title='Example08', log_folder='experiments/example_08/LOGS/',
+filename = os.path.join('experiments', 'example_08', 'HDF5', 'example_08.hdf5')
+log_folder = os.path.join('experiments', 'example_08', 'LOGS')
+env = Environment(trajectory='Example08',filename=filename,
+                  file_title='Example08', log_folder=log_folder,
                   comment='Another example!')
 
 # Get the trajectory from the environment

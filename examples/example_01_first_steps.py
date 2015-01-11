@@ -1,5 +1,6 @@
 __author__ = 'Robert Meyer'
 
+import os # To allow file paths working under Windows and Linux
 
 from pypet import Environment
 from pypet.utils.explore import cartesian_product
@@ -20,10 +21,12 @@ def multiply(traj):
 
 
 # Create an environment that handles running
+filename = os.path.join('experiments', 'example_01', 'HDF5','example_01.hdf5')
+log_folder = os.path.join('experiments','example_01', 'LOGS')
 env = Environment(trajectory='Multiplication',
-                  filename='experiments/example_01/HDF5/example_01.hdf5',
+                  filename=filename,
                   file_title='Example_01_First_Steps',
-                  log_folder='experiments/example_01/LOGS/',
+                  log_folder=log_folder,
                   comment='The first example!')
 
 # The environment has created a trajectory container for us
@@ -49,7 +52,7 @@ from pypet.trajectory import Trajectory
 # Yet, to be very clear let's delete all the old stuff.
 del traj
 del env
-traj = Trajectory(filename='experiments/example_01/HDF5/example_01.hdf5')
+traj = Trajectory(filename=filename)
 
 # Now we want to load all stored data.
 traj.f_load(index=-1, load_parameters=2, load_results=2)

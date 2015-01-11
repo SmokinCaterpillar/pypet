@@ -2,6 +2,8 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import inspect
+import os # For path names being viable under Windows and Linux
+
 from pypet import Environment, Parameter, ArrayParameter, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -148,10 +150,12 @@ def diff_lorenz(value_array, sigma, beta, rho):
 # And here goes our main function
 def main():
 
+    filename = os.path.join('experiments', 'example_05', 'HDF5', 'example_05.hdf5')
+    log_folder = os.path.join('experiments', 'example_05', 'LOGS')
     env = Environment(trajectory='Example_05_Euler_Integration',
-                      filename='experiments/example_05/HDF5/example_05.hdf5',
+                      filename=filename,
                       file_title='Example_05_Euler_Integration',
-                      log_folder='experiments/example_05/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Go for Euler!')
 
 
@@ -188,7 +192,7 @@ def main():
     # Let's assume that we start all over again and load the entire trajectory new.
     # Yet, there is an error within this approach, do you spot it?
     del traj
-    traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5')
+    traj = Trajectory(filename=filename)
 
     # We will only fully load parameters and derived parameters.
     # Results will be loaded manually later on.
@@ -202,7 +206,7 @@ def main():
         print('That did\'nt work, I am sorry: %s ' % str(e))
 
         # Ok, let's try again but this time with adding our parameter to the imports
-        traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5',
+        traj = Trajectory(filename=filename,
                            dynamically_imported_classes=FunctionParameter)
 
         # Now it works:
