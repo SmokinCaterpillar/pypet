@@ -2,7 +2,7 @@
 ECHO "------> TESTING <------"
 cd ..\..\pypet\tests
 
-IF "%EXAMPLES"=="ON" (
+IF "%EXAMPLES%"=="ON" (
     ECHO "#### Running the examples #####"
     python run_all_examples.py
 )
