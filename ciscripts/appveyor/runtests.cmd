@@ -13,6 +13,7 @@ IF ERRORLEVEL 1 (
     ECHO "### Examples successful ###
 )
 
+
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"
     python all_multi_core_tests.py
@@ -23,6 +24,29 @@ IF ERRORLEVEL 1 (
 ) ELSE (
     ECHO "### Multiproc successful ###
 )
+
+IF "%MULTIPROC%"=="1" (
+    ECHO "##### Running multiproc test suite 1 #####"
+    python all_multi_core_tests.py --suite=1
+)
+IF ERRORLEVEL 1 (
+    ECHO "### Multiproc failed ###
+    EXIT /b 1
+) ELSE (
+    ECHO "### Multiproc successful ###
+)
+
+IF "%MULTIPROC%"=="2" (
+    ECHO "##### Running multiproc test suite 2 #####"
+    python all_multi_core_tests.py --suite=2
+)
+IF ERRORLEVEL 1 (
+    ECHO "### Multiproc failed ###
+    EXIT /b 1
+) ELSE (
+    ECHO "### Multiproc successful ###
+)
+
 
 IF "%SINGLECORE%"=="ON" (
     ECHO "##### Running all single core tests #####"

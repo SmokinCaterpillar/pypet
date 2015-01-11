@@ -64,7 +64,7 @@ def make_temp_file(filename):
         logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
         raise
 
-def make_run(remove=None, folder=None):
+def make_run(remove=None, folder=None, suite=None):
 
     global testParams
 
@@ -74,10 +74,28 @@ def make_run(remove=None, folder=None):
     testParams['user_tempdir'] = folder
 
     try:
-        unittest.main()
+        if suite is None:
+            unittest.main()
+        else:
+            runner = unittest.TextTestRunner(verbosity=2)
+            runner.run(suite)
     finally:
         remove_data()
 
+def combined_suites(*test_suites):
+    """Combines several suites into one"""
+    combined_suite = unittest.TestSuite(test_suites)
+    return combined_suite
+
+def combine_test_classes(*test_classes):
+    """ Puts given test classes into a combined suite"""
+    loader = unittest.TestLoader()
+    suites_list = []
+    for test_class in test_classes:
+        if test_class is not None:
+            suite = loader.loadTestsFromTestCase(test_class)
+            suites_list.append(suite)
+    return combined_suites(*suites_list)
 
 def remove_data():
     global testParams

@@ -3,7 +3,7 @@ __author__ = 'robert'
 import pypet.pypetconstants as pypetconstants
 from pypet.tests.link_test import LinkEnvironmentTest
 
-class MultiprocQueueTest(LinkEnvironmentTest):
+class MultiprocLinkQueueTest(LinkEnvironmentTest):
 
     def set_mode(self):
         LinkEnvironmentTest.set_mode(self)
@@ -13,7 +13,7 @@ class MultiprocQueueTest(LinkEnvironmentTest):
         self.use_pool=True
 
 
-class MultiprocLockTest(LinkEnvironmentTest):
+class MultiprocLinkLockTest(LinkEnvironmentTest):
 
     # def test_run(self):
     #     super(MultiprocLockTest, self).test_run()
@@ -27,7 +27,7 @@ class MultiprocLockTest(LinkEnvironmentTest):
 
 
 
-class MultiprocNoPoolQueueTest(LinkEnvironmentTest):
+class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
 
     def set_mode(self):
         LinkEnvironmentTest.set_mode(self)
@@ -37,7 +37,7 @@ class MultiprocNoPoolQueueTest(LinkEnvironmentTest):
         self.use_pool=False
 
 
-class MultiprocNoPoolLockTest(LinkEnvironmentTest):
+class MultiprocLinkNoPoolLockTest(LinkEnvironmentTest):
 
 
      def set_mode(self):
