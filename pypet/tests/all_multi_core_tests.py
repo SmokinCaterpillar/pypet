@@ -35,9 +35,10 @@ extend_suite = combine_test_classes(ContinueMPTest,
                                     ContinueMPPoolTest,
                                     BrianFullNetworkMPTest)
 
-env_suite = combine_test_classes(MultiprocNoPoolLockTest,
-                                 MultiprocNoPoolQueueTest,
-                                 MultiprocLockTest,
+no_pool_suite = combine_test_classes(MultiprocNoPoolLockTest,
+                                 MultiprocNoPoolQueueTest)
+
+env_suite = combine_test_classes(MultiprocLockTest,
                                  MultiprocQueueTest,
                                  CapTest)
 
@@ -54,10 +55,11 @@ link_post_suite = combine_test_classes(MultiprocLinkLockTest,
                                        TestMPImmediatePostProc)
 
 
-big_suite_1 = combined_suites(env_suite, extend_suite)
-big_suite_2 = combined_suites(sort_suite, link_post_suite)
+big_suite_1 = combined_suites(no_pool_suite, extend_suite)
+big_suite_2 = env_suite
+big_suite_3 = combined_suites(sort_suite, link_post_suite)
 
-suite_dict = {'1': big_suite_1, '2': big_suite_2}
+suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3}
 
 
 if __name__ == '__main__':

@@ -50,6 +50,18 @@ IF "%MULTIPROC%"=="2" (
     )
 )
 
+IF "%MULTIPROC%"=="3" (
+    ECHO "##### Running multiproc test suite 2 #####"
+    python all_multi_core_tests.py --suite=3
+
+    IF ERRORLEVEL 1 (
+        ECHO "### Multiproc failed ###
+        EXIT /b 1
+    ) ELSE (
+        ECHO "### Multiproc successful ###
+    )
+)
+
 IF "%SINGLECORE%"=="ON" (
     ECHO "##### Running all single core tests #####"
     python all_single_core_tests.py
