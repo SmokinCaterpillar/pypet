@@ -69,7 +69,7 @@ for run_name in traj1.f_get_run_names():
     y=traj1.y
     # We can rely on fast access here, because the result only contains a single value with name 'z'
     z=traj1.z
-    print '%s: x=%f, y=%f, z=%f' % (run_name, x, y, z)
+    print('%s: x=%f, y=%f, z=%f' % (run_name, x, y, z))
 
 # Don't forget to reset you trajectory to the default settings, to release its belief to
 # be the last run.

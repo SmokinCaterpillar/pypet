@@ -29,8 +29,8 @@ traj.f_add_result('huge_matrices',
 # Yet, we can access data via natural naming using the names `mat1` and `mat2` e.g.:
 val_mat1 = traj.huge_matrices.mat1[10,10,10]
 val_mat2 = traj.huge_matrices.mat2[42,13]
-print 'mat1 contains %f at position [10,10,10]' % val_mat1
-print 'mat2 contains %f at position [42,13]' % val_mat2
+print('mat1 contains %f at position [10,10,10]' % val_mat1)
+print('mat2 contains %f at position [42,13]' % val_mat2)
 
 # Ok that was enough analysis of the data and should be sufficient for a phd thesis (in economics).
 # Let's store our trajectory and subsequently free the space for something completely different.
@@ -41,9 +41,9 @@ traj.huge_matrices.f_empty()
 
 # Check if the data was deleted
 if traj.huge_matrices.f_is_empty():
-    print 'As promised: Nothing there!'
+    print('As promised: Nothing there!')
 else:
-    print 'What a disappointing peace of crap this software is!'
+    print('What a disappointing peace of crap this software is!')
 
 # Lucky, it worked.
 # Ok we could it add some more stuff to the result object if we want to:
@@ -66,9 +66,9 @@ traj.f_load(name=old_traj_name, load_results=pypetconstants.LOAD_SKELETON)
 
 # Check if we only loaded the skeleton, that means the `huge_matrices` result must be empty:
 if traj.huge_matrices.f_is_empty():
-    print 'Told you!'
+    print('Told you!')
 else:
-    print 'Unbelievable, this sucks!'
+    print('Unbelievable, this sucks!')
 
 # Now let's only load `monty` and `mat1`.
 # We can do this by passing the keyword argument `load_only` to the load item function:
@@ -80,9 +80,9 @@ if ('monty' in traj.huge_matrices and
       not 'mat2' in traj.huge_matrices ):
 
     val_mat1 = traj.huge_matrices.mat1[10,10,10]
-    print 'mat1 contains %f at position [10,10,10]' % val_mat1
-    print 'And do not forget: %s' % traj.huge_matrices.monty
+    print('mat1 contains %f at position [10,10,10]' % val_mat1)
+    print('And do not forget: %s' % traj.huge_matrices.monty)
 else:
-    print 'That\'s it, I quit! I cannot work like this!'
+    print('That\'s it, I quit! I cannot work like this!')
 
 # Thanks for your attention!

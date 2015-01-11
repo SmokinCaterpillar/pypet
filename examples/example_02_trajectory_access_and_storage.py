@@ -45,11 +45,11 @@ except NotUniqueNodeError as e:
 characters = traj.starwars.characters
 
 # Now let's see what fast access is:
-print 'The name of the actor playing Luke is %s.' % traj.luke_skywalker
+print('The name of the actor playing Luke is %s.' % traj.luke_skywalker)
 
 # And now what happens if you forbid it
 traj.v_fast_access=False
-print 'The object found for luke_skywalker is `%s`.' % str(traj.luke_skywalker)
+print('The object found for luke_skywalker is `%s`.' % str(traj.luke_skywalker))
 
 #Let's store the trajectory:
 traj.f_store()
@@ -73,17 +73,17 @@ traj.f_load(index=-1,load_parameters=2,load_results=1)
 
 # Let's check if our result is really empty
 if traj.gross_income_of_film.f_is_empty():
-    print 'Nothing there!'
+    print('Nothing there!')
 else:
-    print 'I found something!'
+    print('I found something!')
 
 # Ok, let's manually reload the result
 traj.f_load_item('gross_income_of_film')
 if traj.gross_income_of_film.f_is_empty():
-    print 'Still empty :-('
+    print('Still empty :-(')
 else:
-    print 'George Lucas earned %s%s!' %(str(traj.gross_income_of_film.amount),
-                                         traj.gross_income_of_film.currency)
+    print('George Lucas earned %s%s!' %(str(traj.gross_income_of_film.amount),
+                                         traj.gross_income_of_film.currency))
 
 # And that's how it works! If you wish, you can inspect the
 # experiments/example_02/HDF5/example_02.hdf5 file to take a look at the tree structure

@@ -47,12 +47,14 @@ ys = traj.f_get('y').f_get_range()
 # the values.
 # Moreover, since `f_get_from_runs` returns an ordered dictionary
 # `values()` gives us all values already in the correct order of the runs.
-zs = traj.f_get_from_runs(name='z', fast_access=True).values()
+zs = list(traj.f_get_from_runs(name='z', fast_access=True).values())
+# We also make sure it's a list (because in python 3 ``value()`` returns an
+# iterator instead of a list)
 
 # Convert the lists to numpy 2D arrays
 x_mesh = np.reshape(np.array(xs), (x_length, y_length))
 y_mesh = np.reshape(np.array(ys), (x_length, y_length))
-z_mesh = np.reshape(np.array(list(zs)), (x_length, y_length))
+z_mesh = np.reshape(np.array(zs), (x_length, y_length))
 
 # Make fancy 3D plot
 fig=plt.figure()

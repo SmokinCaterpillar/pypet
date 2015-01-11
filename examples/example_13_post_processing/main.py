@@ -33,7 +33,7 @@ def run_neuron(traj):
     spiketimes = []
 
     # Do the Euler integration:
-    print 'Starting Euler Integration'
+    print('Starting Euler Integration')
     for step in range(1, steps):
         if V_array[step-1] >= 1:
             # The membrane potential crossed the threshold and we mark this as
@@ -49,7 +49,7 @@ def run_neuron(traj):
             dV = -1/tau_V * V_array[step-1] + I
             V_array[step] = V_array[step-1] + dV*dt
 
-    print 'Finished Euler Integration'
+    print('Finished Euler Integration')
 
     # Add the voltage trace and spike times
     traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
@@ -106,7 +106,7 @@ def neuron_postproc(traj, result_list):
 
 def add_parameters(traj):
     """Adds all parameters to `traj`"""
-    print 'Adding Results'
+    print('Adding Results')
 
     traj.f_add_parameter('neuron.V_init', 0.0,
                          comment='The initial condition for the '
@@ -129,7 +129,7 @@ def add_parameters(traj):
 def add_exploration(traj):
     """Explores different values of `I` and `tau_ref`."""
 
-    print 'Adding exploration of I and tau_ref'
+    print('Adding exploration of I and tau_ref')
 
     explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
                     'neuron.tau_ref': [5.0, 7.5, 10.0]}
