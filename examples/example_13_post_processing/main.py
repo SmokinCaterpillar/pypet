@@ -126,7 +126,7 @@ def add_parameters(traj):
     traj.f_add_parameter('simulation.duration', 1000.0,
                          comment='The duration of the experiment in '
                                 'milliseconds.')
-    traj.f_add_parameter('simulation.dt', 0.25,
+    traj.f_add_parameter('simulation.dt', 0.1,
                          comment='The step size of an Euler integration step.')
 
 def add_exploration(traj):
@@ -134,7 +134,7 @@ def add_exploration(traj):
 
     print('Adding exploration of I and tau_ref')
 
-    explore_dict = {'neuron.I': np.arange(0, 1.01, 0.025).tolist(),
+    explore_dict = {'neuron.I': np.arange(0, 1.01, 0.01).tolist(),
                     'neuron.tau_ref': [5.0, 7.5, 10.0]}
 
     explore_dict = cartesian_product(explore_dict, ('neuron.tau_ref', 'neuron.I'))

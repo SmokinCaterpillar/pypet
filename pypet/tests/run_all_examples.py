@@ -23,6 +23,9 @@ to_skip = set()
 if brian is None:
     to_skip.add('07')
     to_skip.add('11')
+if system == 'Widnows':
+    # Appveyor is too slow for this example, so we skip it
+    to_skip.add('13')
 
 if len(to_skip) == 0:
     print ('----- I will run all tests -----')
