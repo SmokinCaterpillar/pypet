@@ -5,9 +5,10 @@ set -u # Treat references to unset variables as an error
 
 if [[ $COVERAGE == ON ]]
     then
-        coverage run --parallel-mode --timid --source=pypet --omit=../../pypet/brian/*,pypet/tests/* -m pypet.tests.all_single_core_tests
+        cd ../../
+        coverage run --parallel-mode --timid --source=pypet --omit=pypet/brian/*,pypet/tests/* -m pypet.tests.all_tests.py
         coverage combine
-        exit 0
+        cd ciscripts/travis
     fi
 
 if [[ $EXAMPLES == ON ]]
@@ -27,6 +28,15 @@ if [[ $GIT_TEST == ON ]]
         pip install Sumatra
         mkdir git_sumatra_test
         cp ../../pypet/tests/test_git.py git_sumatra_test
+
+if [[ $TEST_SUITE == ON ]]
+    then
+        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
+            then
+                # try with many files, i.e. do not remove data after every test
+                # but only for one particular setting of the test matrix python = 2.7 and newest
+                # packages
+                echo "Running test suite and keeping all files"
         cd git_sumatra_test
         git init
         smt init GitTest
@@ -48,15 +58,6 @@ if [[ $GIT_TEST == ON ]]
         echo "Removal complete"
 
     fi
-
-if [[ $TEST_SUITE == ON ]]
-    then
-        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
-            then
-                # try with many files, i.e. do not remove data after every test
-                # but only for one particular setting of the test matrix python = 2.7 and newest
-                # packages
-                echo "Running test suite and keeping all files"
                 python ../../pypet/tests/all_tests.py -k
             else
                 echo "Running test suite"
