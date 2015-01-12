@@ -75,7 +75,7 @@ install:
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing PYPET +++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then python setup.py install; else export PYTHONPATH=$PYTHONPATH:./pypet/
+  - if [[ $NEWEST == TRUE ]]; then python setup.py install; else export PYTHONPATH=$PYTHONPATH:./pypet/; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 
 # Script command for all tests
