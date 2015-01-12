@@ -27,6 +27,7 @@ def coverage_multiprocessing_process(): # pragma: no cover
 ProcessCoverage = coverage_multiprocessing_process()
 if ProcessCoverage:
     mp.Process = ProcessCoverage
+    print('MONKEYPATCHED PROCESS OF MULTIPROCESSING LIBRARY!')
 
 from pypet.tests.all_single_core_tests import *
 
