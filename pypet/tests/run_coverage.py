@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 import sys
-pypetpath='/'
+import os
+pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)
 
