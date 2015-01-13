@@ -1,7 +1,11 @@
 __author__ = 'Robert Meyer'
+import sys
+pypetpath='/'
+sys.path.append(pypetpath)
+print('Appended path `%s`' % pypetpath)
+
 
 import getopt
-import sys
 import os
 
 from pypet.tests.all_single_core_tests import *
