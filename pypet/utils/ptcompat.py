@@ -14,11 +14,26 @@ def _make_pt2_carray(hdf5_file, *args, **kwargs):
     carray[:] = data[:]
     return carray
 
+def _make_pt2_earray(hdf5_file, *args, **kwargs):
+    data = kwargs.pop('obj')
+    atom = pt.Atom.from_dtype(data.dtype)
+    earray = hdf5_file.createEArray(*args, atom=atom, shape=data.shape, **kwargs)
+    earray[:] = data[:]
+    return earray
+
+def _make_pt2_vlarray(hdf5_file, *args, **kwargs):
+    data = kwargs.pop('obj')
+    if 'expectedrows' in kwargs:
+        expectedrows=kwargs.pop('expectedrows') # this is termed expetedsizeinMB in python2.7
+        kwargs['expectedsizeinMB'] = expectedrows
+    atom = pt.Atom.from_dtype(data.dtype)
+    vlarray = hdf5_file.createVLArray(*args, atom=atom, shape=data.shape, **kwargs)
+    vlarray[:] = data[:]
+    return vlarray
 
 def _make_pt2_array(hdf5_file, *args, **kwargs):
     data = kwargs.pop('obj')
     return hdf5_file.createArray(*args, object=data, **kwargs)
-
 
 if tables == 2:
     open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
@@ -32,6 +47,10 @@ if tables == 2:
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.createTable(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
+                                                                        **kwargs)
+    create_earray = lambda hdf5_file, *args, **kwargs: _make_pt2_earray(hdf5_file, *args,
+                                                                        **kwargs)
+    create_vlarray = lambda hdf5_file, *args, **kwargs: _make_pt2_vlarray(hdf5_file, *args,
                                                                         **kwargs)
     create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.createSoftLink(*args, **kwargs)
 
@@ -59,6 +78,8 @@ elif tables == 3:
     create_table = lambda hdf5_file, *args, **kwars: hdf5_file.create_table(*args, **kwars)
     create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.create_array(*args, **kwargs)
     create_carray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_carray(*args, **kwargs)
+    create_earray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_earray(*args, **kwargs)
+    create_vlarray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_vlarray(*args, **kwargs)
     create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.create_soft_link(*args,
                                                                                      **kwargs)
 

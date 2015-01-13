@@ -11,8 +11,9 @@ except ImportError:
 
 
 from pypet.environment import Environment
-from pypet.trajectory import Trajectory
+from pypet.trajectory import Trajectory, load_trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
+from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
     ResultGroup, NNGroupNode, NNLeafNode
 from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
@@ -22,6 +23,7 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     VersionMismatchError
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
+from pypet.storagedata import StorageData, StorageDataResult
 
 
 __all__ = [
@@ -53,5 +55,9 @@ __all__ = [
     TooManyGroupsError.__name__,
     VersionMismatchError.__name__,
     HasLogger.__name__,
-    cartesian_product.__name__
+    cartesian_product.__name__,
+    StorageData.__name__,
+    StorageDataResult.__name__,
+    load_trajectory.__name__,
+    compact_hdf5_file.__name__,
 ]

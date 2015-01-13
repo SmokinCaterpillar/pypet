@@ -193,6 +193,14 @@ DELETE_LINK = 'DELETE_LINK'
 """ Removes a soft link from hdf5 file"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
+STORAGE_DATA = 'HDF5_DATA'
+""" Access and manipulate data directly in the hdf5 file """
+CLOSE_FILE = 'CLOSE_FILE'
+""" Close a still opened HDF5 file """
+OPEN_FILE = 'OPEN_FILE'
+""" Opens an HDF5 file and keeps it open until `CLOSE_FILE` is passed. """
+FLUSH = 'FLUSH'
+""" Tells the storage to flush the file """
 
 
 

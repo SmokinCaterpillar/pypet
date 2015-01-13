@@ -1494,6 +1494,7 @@ class NaturalNamingInterface(HasLogger):
 
         elif type_name == DERIVED_PARAMETER_GROUP:
             instance = DerivedParameterGroup(self, full_name, *args, **kwargs)
+
         elif type_name == GROUP:
             instance = NNGroupNode(self, full_name, *args, **kwargs)
         else:
@@ -1558,8 +1559,7 @@ class NaturalNamingInterface(HasLogger):
                     constructor = root._standard_parameter
                 else:
                     constructor = root._standard_leaf
-
-            instance = constructor(full_name, *args, **kwargs)
+            instance = root._construct_instance(constructor, full_name, *args, **kwargs)
         else:
             instance._rename(full_name)
 

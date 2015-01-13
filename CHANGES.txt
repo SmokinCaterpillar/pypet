@@ -62,6 +62,9 @@ pypet 0.1b.9
 *   Storing a leaf or a group via ``traj.f_store_item(item, overwrite=True)`` now also
     replaces all annotations and comments
 
+*   New StorageDataResult and StorageData data instance to manipulate tables and arrays
+    across runs!
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

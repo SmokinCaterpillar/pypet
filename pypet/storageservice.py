@@ -29,6 +29,7 @@ from pypet._version import __version__ as VERSION
 from pypet.parameter import ObjectTable
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger
+import pypet.storagedata as hdf5data
 
 
 class MultiprocWrapper(object):
@@ -39,6 +40,15 @@ class MultiprocWrapper(object):
     ABSTRACT: Needs to be defined in subclass
 
     """
+    @property
+    def is_open(self):
+        """ Normally the file is opened and closed after each insertion.
+
+        However, the storage service may provide to keep the store open and signals
+        this via this property.
+
+        """
+        return False
 
     @property
     def multiproc_safe(self):
@@ -243,13 +253,25 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         self._storage_service = storage_service
         self._lock = lock
         self._set_logger()
+        self._keep_locked = False
+        self._is_locked = False
 
     def __repr__(self):
         return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
                                                      repr(self._storage_service))
 
     @property
-    def mp_safe(self):
+    def is_open(self):
+        """ Normally the file is opened and closed after each insertion.
+
+        However, the storage service may provide the option to keep the store open and signals
+        this via this property.
+
+        """
+        return self._storage_service.is_open
+
+    @property
+    def multiproc_safe(self):
         """Usually storage services are not supposed to be multiprocessing safe"""
         return True
 
@@ -258,15 +280,34 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
+    @property
+    def keep_locked(self):
+        """You can enforce to keep the lock acquired after interaction"""
+        return self._keep_locked
+
+    @keep_locked.setter
+    def keep_locked(self, val):
+        self._keep_locked = bool(val)
+
+    def acquire_lock(self):
+        if not self._is_locked:
+            self._lock.acquire()
+            self._is_locked = True
+
+    def release_lock(self):
+        if self._is_locked and not self._keep_locked:
+            self._lock.release()
+            self._is_locked = False
+
     def store(self, *args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
         try:
-            self._lock.acquire()
+            self.acquire_lock()
             self._storage_service.store(*args, **kwargs)
         finally:
             if self._lock is not None:
                 try:
-                    self._lock.release()
+                    self.release_lock()
                 except RuntimeError:
                     self._logger.error('Could not release lock `%s`!' % str(self._lock))
 
@@ -285,6 +326,16 @@ class LockWrapper(MultiprocWrapper, HasLogger):
 
 class StorageService(object):
     """Abstract base class defining the storage service interface."""
+
+    @property
+    def is_open(self):
+        """ Normally the file is opened and closed after each insertion.
+
+        However, the storage service may provide the option to keep the store open and signals
+        this via this property.
+
+        """
+        return False
 
     @property
     def multiproc_safe(self):
@@ -474,46 +525,46 @@ class HDF5StorageService(StorageService, HasLogger):
     STORAGE_TYPE = 'SRVC_STORE'
     '''Flag, how data was stored'''
 
-    ARRAY = 'ARRAY'
+    STORAGE_DATA_TYPE = 'SRVC_DATA_STORE_'
+
+    ARRAY = hdf5data.ARRAY
     '''Stored as array_
 
     .. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
 
     '''
-    CARRAY = 'CARRAY'
+    CARRAY = hdf5data.CARRAY
     '''Stored as carray_
 
     .. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
 
     '''
-    EARRAY = 'EARRAY'  # not supported yet
+    EARRAY = hdf5data.EARRAY
     ''' Stored as earray_
-
-    Not supported yet, maybe in near future.
 
     .. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
 
     '''
-    VLARRAY = 'VLARRAY'  # not supported yet
+    VLARRAY = hdf5data.VLARRAY
     '''Stored as vlarray_
-
-    Not supported yet, maybe in near future.
 
     .. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
 
     '''
+
     DICT = 'DICT'
     ''' Stored as dict.
 
     In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
 
-    TABLE = 'TABLE'
+    TABLE = hdf5data.TABLE
     '''Stored as pytable_
 
     .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
 
     '''
+
     FRAME = 'FRAME'
     ''' Stored as pandas DataFrame_
 
@@ -533,6 +584,9 @@ class HDF5StorageService(StorageService, HasLogger):
     DATATYPE_TABLE = 'DATATYPE_TABLE'
     '''If a table contains the data types instead of the attrs'''
 
+    STORAGE_DATA = 'STORAGE_DATA'
+    ''' An HDF5 data object for direct interaction '''
+
     TYPE_FLAG_MAPPING = {
 
         ObjectTable: TABLE,
@@ -544,7 +598,9 @@ class HDF5StorageService(StorageService, HasLogger):
         DataFrame: FRAME,
         Series: SERIES,
         Panel: PANEL,
-        Panel4D: PANEL
+        Panel4D: PANEL,
+        hdf5data.StorageData: STORAGE_DATA
+
     }
     ''' Mapping from object type to storage flag'''
 
@@ -556,6 +612,7 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Stores data type of a specific pytables column for perfect reconstruction'''
     DATA_PREFIX = 'SRVC_DATA_'
     ''' Stores data type of a pytables carray or array for perfect reconstruction'''
+
 
     # ANNOTATION CONSTANTS
     ANNOTATION_PREFIX = 'SRVC_AN_'
@@ -622,6 +679,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_results_runs_summary = False
 
         self._mode = None
+        self._keep_open = False
 
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
@@ -629,6 +687,16 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def __repr__(self):
         return '<%s (filename:`%s`)>' % (self.__class__.__name__, str(self._filename))
+
+    @property
+    def is_open(self):
+        """ Normally the file is opened and closed after each insertion.
+
+        However, the storage service may provide the option to keep the store open and signals
+        this via this property.
+
+        """
+        return self._keep_open
 
     @property
     def encoding(self):
@@ -726,11 +794,12 @@ class HDF5StorageService(StorageService, HasLogger):
         """Direct link to the overview group"""
         return self._all_create_or_get_groups('overview')[0]
 
-    def _get_filters(self):
+    def _all_get_filters(self):
         """Makes filter and closes pandas store"""
         if self._filters is None:
             self._filters = pt.Filters(complib=self._complib, complevel=self._complevel,
                                        shuffle=self._shuffle, fletcher32=self._fletcher32)
+            self._hdf5file.filters = self._filters
             self._hdf5store._filters = self._filters
             self._hdf5store._complevel = self._complevel
             self._hdf5store._complib = self._complib
@@ -1147,6 +1216,21 @@ class HDF5StorageService(StorageService, HasLogger):
             elif msg == pypetconstants.LIST:
                 self._srvc_store_several_items(stuff_to_store, *args, **kwargs)
 
+            elif msg == pypetconstants.STORAGE_DATA:
+
+                return self._hdf5_interact_with_data(stuff_to_store, *args, **kwargs)
+
+            elif msg == pypetconstants.OPEN_FILE:
+                opened = False # Wee need to keep the file open to allow later interaction
+                self._keep_open = True
+
+            elif msg == pypetconstants.CLOSE_FILE:
+                opened = True # Simply conduct the closing routine afterwards
+                self._keep_open = False
+
+            elif msg == pypetconstants.FLUSH:
+                self._hdf5file.flush()
+
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
@@ -1190,24 +1274,27 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.' + attr_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj, '
-                                     'using default value.' % attr_name)
+                self._logger.warning('Could not find `%s` in traj config, '
+                                     'using default value `%s`.' %
+                                     (attr_name, str(getattr(self, attr_name))))
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             try:
                 config = traj.f_get('config.hdf5.overview.' + table_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj, '
-                                     'using default value.' % table_name)
+                self._logger.warning('Could not find `%s` in traj config, '
+                                     'using default value `%s`.' %
+                                     (table_name, str(getattr(self, attr_name))))
 
         for attr_name, name in HDF5StorageService.PR_ATTR_NAME_MAPPING.items():
             try:
                 config = traj.f_get('config.hdf5.' + name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj, '
-                                     'using default value.' % name)
+                self._logger.warning('Could not find `%s` in traj config, '
+                                     'using default value `%s`.' %
+                                     (name, str(getattr(self, attr_name))))
 
         self._filters = None
 
@@ -1279,17 +1366,12 @@ class HDF5StorageService(StorageService, HasLogger):
                     if not msg == pypetconstants.TRAJECTORY:
                         raise ValueError('Your trajectory cannot be found in the hdf5file, '
                                          'please use >>traj.f_store()<< '
-                                         'before storing anyhting else.')
+                                         'before storing anything else.')
 
-                    # If we want to store a trajectory it has not been stored before
-                    # create a new trajectory group
-
-                    ptcompat.create_group(self._hdf5file, where='/', name=self._trajectory_name,
-                                          title=self._trajectory_name)
-
-                # Store a reference to the top trajectory node
-                self._trajectory_group = ptcompat.get_node(self._hdf5file,
-                                                           '/' + self._trajectory_name)
+                else:
+                    # Keep a reference to the top trajectory node
+                    self._trajectory_group = ptcompat.get_node(self._hdf5file,
+                                                               '/' + self._trajectory_name)
             elif mode == 'r':
 
                 if not self._trajectory_name is None and not self._trajectory_index is None:
@@ -1347,7 +1429,11 @@ class HDF5StorageService(StorageService, HasLogger):
         and closing of the file if `store` or `load` are called recursively.
 
         """
-        if closing and self._hdf5file is not None and self._hdf5file.isopen:
+        if (not self._keep_open and
+            closing and
+            self._hdf5file is not None and
+            self._hdf5file.isopen):
+
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
             try:
@@ -1933,15 +2019,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
 
-        def _extract_meta_data(attr_name, row, name_in_row, conversion_function):
-            try:
-                setattr(self, attr_name, conversion_function(row[name_in_row]))
-            except IndexError as e:
-                self._logger.error('Using default hdf5 setting, '
-                                       'could not extract `%s` hdf5 setting because of: %s' %
-                                        (name_in_row, str(e)))
-
-
         metatable = self._overview_group.info
         metarow = metatable[0]
 
@@ -2013,32 +2090,45 @@ class HDF5StorageService(StorageService, HasLogger):
                 traj._run_information[name] = info_dict
 
             # Load the hdf5 config data:
-            if 'hdf5_settings' in self._overview_group:
-                hdf5_table = self._overview_group.hdf5_settings
-                hdf5_row = hdf5_table[0]
+            self._srvc_load_hdf5_settings()
 
-                _extract_meta_data('complib', hdf5_row, 'complib', compat.tostrtype)
-                _extract_meta_data('complevel', hdf5_row, 'complevel', int)
-                _extract_meta_data('shuffle', hdf5_row, 'shuffle', bool)
-                _extract_meta_data('fletcher32', hdf5_row, 'fletcher32', bool)
-                _extract_meta_data('pandas_format', hdf5_row, 'pandas_format', compat.tostrtype)
-                _extract_meta_data('pandas_append', hdf5_row, 'pandas_append', bool)
-                _extract_meta_data('encoding', hdf5_row, 'encoding', compat.tostrtype)
 
-                _extract_meta_data('_results_per_run', hdf5_row,
-                                   'results_per_run', int)
-                _extract_meta_data('_derived_parameters_per_run', hdf5_row,
-                                   'derived_parameters_per_run', int)
-                _extract_meta_data('_purge_duplicate_comments', hdf5_row,
-                                   'purge_duplicate_comments', bool)
-                _extract_meta_data('_overview_explored_parameters_runs', hdf5_row,
-                                   'explored_parameters_runs', bool)
+    def _srvc_load_hdf5_settings(self):
 
-                for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
-                    attr_value = bool(hdf5_row[table_name])
-                    setattr(self, attr_name, attr_value)
-            else:
-                self._logger.warning(
+        def _extract_meta_data(attr_name, row, name_in_row, conversion_function):
+            try:
+                setattr(self, attr_name, conversion_function(row[name_in_row]))
+            except IndexError as e:
+                self._logger.error('Using default hdf5 setting, '
+                                       'could not extract `%s` hdf5 setting because of: %s' %
+                                        (name_in_row, str(e)))
+
+        if 'hdf5_settings' in self._overview_group:
+            hdf5_table = self._overview_group.hdf5_settings
+            hdf5_row = hdf5_table[0]
+
+            _extract_meta_data('complib', hdf5_row, 'complib', compat.tostrtype)
+            _extract_meta_data('complevel', hdf5_row, 'complevel', int)
+            _extract_meta_data('shuffle', hdf5_row, 'shuffle', bool)
+            _extract_meta_data('fletcher32', hdf5_row, 'fletcher32', bool)
+            _extract_meta_data('pandas_format', hdf5_row, 'pandas_format', compat.tostrtype)
+            _extract_meta_data('pandas_append', hdf5_row, 'pandas_append', bool)
+            _extract_meta_data('encoding', hdf5_row, 'encoding', compat.tostrtype)
+
+            _extract_meta_data('_results_per_run', hdf5_row,
+                               'results_per_run', int)
+            _extract_meta_data('_derived_parameters_per_run', hdf5_row,
+                               'derived_parameters_per_run', int)
+            _extract_meta_data('_purge_duplicate_comments', hdf5_row,
+                               'purge_duplicate_comments', bool)
+            _extract_meta_data('_overview_explored_parameters_runs', hdf5_row,
+                               'explored_parameters_runs', bool)
+
+            for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
+                attr_value = bool(hdf5_row[table_name])
+                setattr(self, attr_name, attr_value)
+        else:
+            self._logger.warning(
                     'Could not find `hdf5_settings` overview table. I will use the '
                     'standard settings (for `complib`, `complevel` etc.) instead.')
 
@@ -2339,21 +2429,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                                            tablename=table_name,
                                                            description=paramdescriptiondict)
 
-            # # Index the summary tables for faster look up
-            # # They are searched by the individual runs later on
-            # if table_name.endswith('summary'):
-            # try:
-            # paramtable.autoindex=True
-            # except AttributeError:
-            # paramtable.autoIndex=True
-            # if not paramtable.indexed:
-            # try:
-            # paramtable.cols.location.create_index(optlevel=8, kind='full')
-            # paramtable.cols.name.create_index(optlevel=8, kind='full')
-            # except AttributeError:
-            # paramtable.cols.location.createIndex(optlevel=8, kind='full')
-            # paramtable.cols.name.createIndex(optlevel=8, kind='full')
-
             paramtable.flush()
 
     def _trj_store_trajectory(self, traj, only_init=False, skip_stored=False):
@@ -2370,13 +2445,21 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # In case we accidentally chose a trajectory name that already exist
         # We do not want to mess up the stored trajectory but raise an Error
-        if not traj._stored and self._trajectory_group._v_nchildren > 0:
+        if not traj._stored and self._trajectory_group is not None:
             raise RuntimeError('You want to store a completely new trajectory with name'
                                ' `%s` but this trajectory is already found in file `%s`' %
                                (traj.v_name, self._filename))
 
         # Extract HDF5 settings from the trajectory
         self._srvc_check_hdf_properties(traj)
+
+        # Store the trajectory for the first time if necessary:
+        if self._trajectory_group is None:
+            self._trajectory_group = ptcompat.create_group(self._hdf5file,
+                                                          where='/',
+                                                          name=self._trajectory_name,
+                                                          title=self._trajectory_name,
+                                                          filters = self._all_get_filters())
 
         # Store meta information
         self._trj_store_meta_data(traj)
@@ -2630,8 +2713,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 # Create the instance with the appropriate constructor
                 class_constructor = traj._create_class(class_name)
 
-                instance = class_constructor(name,
-                                             comment=comment)
+
+                instance = traj._construct_instance(class_constructor, name, comment=comment)
 
                 instance._stored = not as_new
                 if instance.v_is_parameter:
@@ -2764,7 +2847,7 @@ class HDF5StorageService(StorageService, HasLogger):
             store_new = True
             newly_created = True
             new_hdf5_group = ptcompat.create_group(self._hdf5file, where=parent_hdf5_group,
-                                                   name=name)
+                                                   name=name, filters=self._all_get_filters())
         else:
             store_new = traj_node._stored
             newly_created = False
@@ -2934,7 +3017,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                    name='explored_parameters',
                                                    description=paramdescriptiondict,
                                                    title='explored_parameters',
-                                                   filters=self._get_filters())
+                                                   filters=self._all_get_filters())
 
         runsummary = ''
         paramlist = sorted(paramlist, key=lambda name: name.v_name + name.v_location)
@@ -3079,12 +3162,12 @@ class HDF5StorageService(StorageService, HasLogger):
                                               where=where_node, name=tablename,
                                               description=description, title=tablename,
                                               expectedrows=expectedrows,
-                                              filters=self._get_filters())
+                                              filters=self._all_get_filters())
             else:
                 table = ptcompat.create_table(self._hdf5file,
                                               where=where_node, name=tablename,
                                               description=description, title=tablename,
-                                              filters=self._get_filters())
+                                              filters=self._all_get_filters())
         else:
             table = ptcompat.get_child(where_node, tablename)
 
@@ -3580,7 +3663,7 @@ class HDF5StorageService(StorageService, HasLogger):
         for name in split_key:
             if not name in newhdf5group:
                 newhdf5group = ptcompat.create_group(self._hdf5file, where=newhdf5group, name=name,
-                                                     title=name, filters=self._get_filters())
+                                                     title=name, filters=self._all_get_filters())
                 created = True
             else:
                 newhdf5group = ptcompat.get_child(newhdf5group, name)
@@ -4066,7 +4149,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                       stuff_to_overwrite))
 
             for key, data_to_store in store_dict.items():
-
                 # Iterate through the data and store according to the storage flags
                 if key in _hdf5_group:
                     # We won't change any data that is found on disk
@@ -4074,20 +4156,27 @@ class HDF5StorageService(StorageService, HasLogger):
                         'Found %s already in hdf5 node of %s, so I will ignore it.' %
                         (key, fullname))
                     continue
-                if store_flags[key] == HDF5StorageService.TABLE:
+                flag = store_flags[key]
+                if flag == HDF5StorageService.TABLE:
                     self._prm_store_into_pytable(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.DICT:
+                elif flag == HDF5StorageService.DICT:
                     self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.ARRAY:
+                elif flag == HDF5StorageService.ARRAY:
                     self._prm_store_into_array(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.CARRAY:
+                elif flag == HDF5StorageService.CARRAY:
                     self._prm_store_into_carray(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.FRAME:
+                elif flag == HDF5StorageService.FRAME:
                     self._prm_store_data_frame(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.SERIES:
+                elif flag == HDF5StorageService.SERIES:
                     self._prm_store_series(msg, key, data_to_store, _hdf5_group, fullname)
-                elif store_flags[key] == HDF5StorageService.PANEL:
+                elif flag == HDF5StorageService.PANEL:
                     self._prm_store_panel(msg, key, data_to_store, _hdf5_group, fullname)
+                elif flag == HDF5StorageService.STORAGE_DATA:
+                    self._prm_store_hdf5_data(msg, key, data_to_store, _hdf5_group, fullname)
+                elif flag == HDF5StorageService.VLARRAY:
+                    self._prm_store_into_vlarray(msg, key, data_to_store, _hdf5_group, fullname)
+                elif flag == HDF5StorageService.EARRAY:
+                    self._prm_store_into_earray(msg, key, data_to_store, _hdf5_group, fullname)
                 else:
                     raise RuntimeError('You shall not pass!')
 
@@ -4109,6 +4198,91 @@ class HDF5StorageService(StorageService, HasLogger):
             _hdf5_group._f_remove(recursive=True)
             raise
 
+    def _prm_store_hdf5_data(self, msg, key, data_to_store, _hdf5_group, full_name):
+        try:
+            type = data_to_store._data_type
+            kwargs = data_to_store._kwargs
+
+            if type == HDF5StorageService.TABLE:
+                self._prm_store_hdf5_table(msg, key, data_to_store, _hdf5_group,
+                                           full_name, **kwargs)
+            else:
+                self._prm_store_hdf5_array(msg, key, data_to_store, _hdf5_group,
+                                           full_name, **kwargs)
+        except:
+            self._logger.error('Failed storing StorageData `%s` of `%s`.' % (key, full_name))
+            raise
+
+    def _prm_store_hdf5_array(self, msg, key, data_to_store, _hdf5_group, full_name, **kwargs):
+        """Creates and array that can be used with an HDF5 array object"""
+        data = None
+        if 'obj' in kwargs:
+            data = kwargs.pop('obj')
+        elif 'object' in kwargs:
+            data = kwargs.pop('object')
+        elif 'data' in kwargs:
+            data = kwargs.pop('data')
+
+        flag = data_to_store._data_type
+
+        if flag == HDF5StorageService.ARRAY:
+            self._prm_store_into_array(msg, key, data, _hdf5_group, full_name, **kwargs)
+        elif flag == HDF5StorageService.CARRAY:
+            self._prm_store_into_carray(msg, key, data, _hdf5_group, full_name, **kwargs)
+        elif flag == HDF5StorageService.VLARRAY:
+            self._prm_store_into_vlarray(msg, key, data, _hdf5_group, full_name, **kwargs)
+        elif flag == HDF5StorageService.EARRAY:
+            self._prm_store_into_earray(msg, key, data, _hdf5_group, full_name, **kwargs)
+        else:
+            raise RuntimeError('Flag `%s` of hdf5 data `%s` of `%s` not understood' %
+                               (flag, key, full_name))
+
+        hdf5array = ptcompat.get_child(_hdf5_group, key)
+
+        setattr(hdf5array._v_attrs, HDF5StorageService.STORAGE_TYPE,
+                HDF5StorageService.STORAGE_DATA)
+        setattr(hdf5array._v_attrs, HDF5StorageService.STORAGE_DATA_TYPE, flag)
+
+        self._hdf5file.flush()
+
+    def _prm_store_hdf5_table(self, msg, key, data_to_store, _hdf5_group, fullname, **kwargs):
+        """Creates a new empty table"""
+        first_row = None
+        description = None
+        if 'first_row' in kwargs:
+            first_row = kwargs.pop('first_row')
+            if not 'description' in kwargs:
+                description = {}
+                for colname in first_row:
+                    data = first_row[colname]
+                    column = self._prm_get_table_col(key, [data], fullname)
+                    description[colname] = column
+
+        if 'description' in kwargs:
+            description = kwargs.pop('description')
+
+        if 'filters' in kwargs:
+            filters = kwargs.pop('filters')
+        else:
+            filters = self._all_get_filters()
+
+        table = ptcompat.create_table(self._hdf5file,
+                                          where=_hdf5_group, name=key,
+                                          description=description,
+                                          filters=filters,
+                                          **kwargs)
+
+        setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.STORAGE_DATA)
+        setattr(table._v_attrs, HDF5StorageService.STORAGE_DATA_TYPE, HDF5StorageService.TABLE)
+        table.flush()
+
+        if first_row is not None:
+            row = table.row
+            for key in description:
+                row[key] = first_row[key]
+
+            row.append()
+            table.flush()
 
     def _prm_store_dict_as_table(self, msg, key, data_to_store, group, fullname):
         """Stores a python dictionary as pytable
@@ -4305,7 +4479,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed storing DataFrame `%s` of `%s`.' % (key, fullname))
             raise
 
-    def _prm_store_into_carray(self, msg, key, data, group, fullname):
+    def _prm_store_into_carray(self, msg, key, data, group, fullname, **kwargs):
         """Stores data as carray.
 
         :param msg:
@@ -4336,27 +4510,20 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError(
                     'CArray `%s` already exists in `%s`. Appending is not supported (yet).')
 
-
-            # # if isinstance(data, np.ndarray):
-            # #     size = data.size
-            # if hasattr(data,'__len__'):
-            # size = len(data)
-            # else:
-            # size = 1
-            #
-            # if size == 0:
-            # self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
-            # return
+            if 'filters' in kwargs:
+                filters = kwargs.pop('filters')
+            else:
+                filters = self._all_get_filters()
 
             try:
                 carray = ptcompat.create_carray(self._hdf5file, where=group, name=key, obj=data,
-                                                filters=self._get_filters())
+                                                filters=filters, **kwargs)
             except ValueError:
                 conv_data = data[:]
                 conv_data = np.core.defchararray.encode(conv_data, self.encoding)
                 carray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
                                                 obj=conv_data,
-                                                filters=self._get_filters())
+                                                filters=filters, **kwargs)
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data, carray,
@@ -4367,7 +4534,117 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
             raise
 
-    def _prm_store_into_array(self, msg, key, data, group, fullname):
+    def _prm_store_into_earray(self, msg, key, data, group, fullname, **kwargs):
+        """Stores data as Earray.
+
+        :param msg:
+
+            Message passed to the storage service ('LEAF').
+            Not needed here.
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            Data to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
+        try:
+
+            if key in group:
+                raise ValueError(
+                    'EArray `%s` already exists in `%s`. Appending is not supported (yet).')
+
+            if 'filters' in kwargs:
+                filters = kwargs.pop('filters')
+            else:
+                filters = self._all_get_filters()
+
+            try:
+                earray = ptcompat.create_earray(self._hdf5file, where=group, name=key, obj=data,
+                                                filters=filters, **kwargs)
+            except ValueError:
+                conv_data = data[:]
+                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
+                earray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
+                                                obj=conv_data,
+                                                filters=filters,
+                                                **kwargs)
+
+            # Remember the types of the original data to recall them on loading
+            self._all_set_attributes_to_recall_natives(data, earray,
+                                                       HDF5StorageService.DATA_PREFIX)
+            setattr(earray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.EARRAY)
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing EArray `%s` of `%s`.' % (key, fullname))
+            raise
+
+    def _prm_store_into_vlarray(self, msg, key, data, group, fullname, **kwargs):
+        """Stores data as VLArray.
+
+        :param msg:
+
+            Message passed to the storage service ('LEAF').
+            Not needed here.
+
+        :param key:
+
+            Name of data item to store
+
+        :param data:
+
+            Data to store
+
+        :param group:
+
+            Group node where to store data in hdf5 file
+
+        :param fullname:
+
+            Full name of the `data_to_store`s original container, only needed for throwing errors.
+
+        """
+        try:
+
+            if 'filters' in kwargs:
+                filters = kwargs.pop('filters')
+            else:
+                filters = self._all_get_filters()
+
+            if key in group:
+                raise ValueError(
+                    'EArray `%s` already exists in `%s`. Appending is not supported (yet).')
+
+            try:
+                vlarray = ptcompat.create_vlarray(self._hdf5file, where=group, name=key,
+                                                  obj=data, filters=filters, **kwargs)
+            except ValueError:
+                conv_data = data[:]
+                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
+                vlarray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
+                                                filters=self._all_get_filters(), **kwargs)
+
+            # Remember the types of the original data to recall them on loading
+            self._all_set_attributes_to_recall_natives(data, vlarray,
+                                                       HDF5StorageService.DATA_PREFIX)
+            setattr(vlarray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.VLARRAY)
+            self._hdf5file.flush()
+        except:
+            self._logger.error('Failed storing EArray `%s` of `%s`.' % (key, fullname))
+            raise
+
+    def _prm_store_into_array(self, msg, key, data, group, fullname, **kwargs):
         """Stores data as array.
 
         :param msg:
@@ -4398,17 +4675,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError(
                     'Array `%s` already exists in `%s`. Appending is not supported (yet).')
 
-            # if hasattr(data,'__len__'):
-            # size = len(data)
-            # else:
-            # size = 1
-            #
-            # if size == 0:
-            # self._logger.warning('`%s` of `%s` is _empty, I will skip storing.' %(key,fullname))
-            # return
             try:
+
                 array = ptcompat.create_array(self._hdf5file, where=group,
-                                              name=key, obj=data)
+                                              name=key, obj=data, **kwargs)
             except TypeError:
 
                 if isinstance(data, compat.unicode_type):
@@ -4418,7 +4688,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     for string in data:
                         conv_data.append(string.encode(self._encoding))
                 array = ptcompat.create_array(self._hdf5file, where=group,
-                                              name=key, obj=conv_data)
+                                              name=key, obj=conv_data, **kwargs)
 
             # Remember the types of the original data to recall them on loading
             self._all_set_attributes_to_recall_natives(data, array, HDF5StorageService.DATA_PREFIX)
@@ -4575,7 +4845,8 @@ class HDF5StorageService(StorageService, HasLogger):
             if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
                 # For optimzation we want to store the original data types into another table
                 new_table_group = ptcompat.create_group(self._hdf5file, where=hdf5group,
-                                                        name=tablename)
+                                                        name=tablename,
+                                                        filters=self._all_get_filters())
 
                 if len(description_dict) > ptpa.MAX_COLUMNS:
                     # For further optimization we need to split the table into several
@@ -4610,7 +4881,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                               description=descr_dict,
                                               title=tblname,
                                               expectedrows=datasize,
-                                              filters=self._get_filters())
+                                              filters=self._all_get_filters())
 
                 row = table.row
                 for n in range(datasize):
@@ -4650,7 +4921,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                               description=descr_dict,
                                               title=tblname,
                                               expectedrows=len(field_names),
-                                              filters=self._get_filters())
+                                              filters=self._all_get_filters())
 
                 row = table.row
 
@@ -4824,17 +5095,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Recall from the hdf5 node attributes how the data was stored and reload accordingly
             load_type = self._all_get_from_attrs(node, HDF5StorageService.STORAGE_TYPE)
-
             if load_type == HDF5StorageService.DICT:
                 self._prm_read_dictionary(node, load_dict, full_name)
             elif load_type == HDF5StorageService.TABLE:
                 self._prm_read_table(node, load_dict, full_name)
-            elif load_type in [HDF5StorageService.ARRAY, HDF5StorageService.CARRAY]:
+            elif load_type in (HDF5StorageService.ARRAY, HDF5StorageService.CARRAY,
+                                HDF5StorageService.EARRAY, HDF5StorageService.VLARRAY):
                 self._prm_read_array(node, load_dict, full_name)
-            elif load_type in [HDF5StorageService.FRAME,
+            elif load_type in (HDF5StorageService.FRAME,
                                HDF5StorageService.SERIES,
-                               HDF5StorageService.PANEL]:
+                               HDF5StorageService.PANEL):
                 self._prm_read_pandas(node, load_dict, full_name)
+            elif load_type == HDF5StorageService.STORAGE_DATA:
+                self._prm_read_hdf5_data(node, load_dict, full_name)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
                                              'structure of %s [%s].' %
@@ -4866,6 +5139,32 @@ class HDF5StorageService(StorageService, HasLogger):
                 param.f_empty()
                 # ...And be nice and reraise the error
                 raise
+
+    def _prm_read_hdf5_data(self, ptitem, load_dict, full_name):
+        """ Creates an HDF5Array data item to interact with the data later
+
+        :param table:
+
+            The table represented by the item
+
+        :param load_dict:
+
+            Dict to load data into
+
+        :param full_name:
+
+            The full name of the parameter or result
+
+        """
+        try:
+            data_name = ptitem._v_name
+            flag = getattr(ptitem._v_attrs, HDF5StorageService.STORAGE_DATA_TYPE)
+            storage_data = hdf5data.StorageData(data_type=flag)
+            load_dict[data_name] = storage_data
+        except:
+            self._logger.error('Failed loading hdf5 storage data '
+                               '`%s` of `%s`.' % (ptitem._v_name, full_name))
+            raise
 
 
     def _prm_read_dictionary(self, leaf, load_dict, full_name):
@@ -5055,3 +5354,9 @@ class HDF5StorageService(StorageService, HasLogger):
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (array._v_name, full_name))
             raise
+
+    def _hdf5_interact_with_data(self, item):
+        path_to_data = item._path_to_data
+        hdf5group = self._all_get_node_by_name(path_to_data)
+        hdf5data = ptcompat.get_child(hdf5group, item._data_name)
+        return hdf5data

@@ -39,6 +39,7 @@ from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup
     DerivedParameterGroup, ConfigGroup, STORE, LOAD, REMOVE
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
+from pypet.storagedata import StorageDataResult
 import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug
@@ -61,7 +62,10 @@ def load_trajectory(
 
     """
     if name is None and index is None:
-        raise ValueError('Please specify name or index')
+        raise ValueError('Please specify either a name or an index')
+    elif name is not None and index is not None:
+        raise ValueError('Please specify either a name or an index')
+
     traj = Trajectory()
     traj.f_load(name=name,
                index=index,
@@ -2792,6 +2796,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         startdatetime = datetime.datetime.fromtimestamp(self._timestamp_run)
 
         self._runtime_run = str(findatetime - startdatetime)
+
+    def _construct_instance(self, constructor, full_name, *args, **kwargs):
+        if hasattr(constructor, 'KNOWS_TRAJECTORY') and constructor.KNOWS_TRAJECTORY:
+            return constructor(full_name, self, *args, **kwargs)
+        else:
+            return constructor(full_name, *args, **kwargs)
 
     def _create_class(self, class_name):
         """Dynamically creates a class.
