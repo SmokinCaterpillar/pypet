@@ -5,8 +5,10 @@ set -u # Treat references to unset variables as an error
 
 if [[ $COVERAGE == ON ]]
     then
+        cd ../../pypet/tests
         coverage run --parallel-mode --timid --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/* -m pypet.tests.run_coverage
         coverage combine
+        cd ../../ciscripts/travis
     fi
 
 if [[ $EXAMPLES == ON ]]
