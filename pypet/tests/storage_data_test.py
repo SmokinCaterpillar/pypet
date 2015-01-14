@@ -3,13 +3,15 @@ __author__ = 'Robert Meyer'
 import numpy as np
 import tables as pt
 import os
+import platform
 
-from pypet.storagedata import StorageDataResult, StorageData, CARRAY, EARRAY, VLARRAY, ARRAY
+from pypet.storagedata import StorageDataResult, StorageData, check_hdf5_init
 from pypet import Trajectory, load_trajectory
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run
 from pypet import compact_hdf5_file
 from pypet.utils import ptcompat
 from pypet import compat
+from pypet.pypetconstants import  CARRAY, EARRAY, VLARRAY, ARRAY, TABLE
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -79,6 +81,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         self.assertTrue(traj.myres1)
         traj.myres2.f_close_store()
 
+    @unittest.skipIf(platform.system() == 'Windows', 'Not supported under Windows')
     def test_compacting(self):
         filename = make_temp_file('hdf5compacting.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
@@ -199,10 +202,15 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
                           comment='the arrays')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             traj.f_store()
 
+        with self.assertRaises(Exception):
+            check_hdf5_init(vlarray)
+
         traj.arrays['vlarray'] = StorageData(item_type=VLARRAY, obj=thevlarray)
+
+        self.assertTrue(check_hdf5_init(traj.arrays['vlarray']))
 
         traj.f_store()
 
@@ -238,6 +246,9 @@ class HDF5TrajectoryTests(TrajectoryComparator):
                 traj.arrays.f_close_store()
 
         self.assertFalse(traj.v_storage_service.is_open)
+
+        with self.assertRaises(Exception):
+            check_hdf5_init(StorageData(item_type=TABLE))
 
 
 

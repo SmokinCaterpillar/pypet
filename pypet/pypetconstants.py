@@ -214,3 +214,36 @@ RUN_NAME_DUMMY = 'run_ALL'
 FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
 
+######### DataStorage Types ####################
+ARRAY = 'ARRAY'
+'''Stored as array_
+
+.. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
+
+'''
+CARRAY = 'CARRAY'
+'''Stored as carray_
+
+.. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
+
+'''
+EARRAY = 'EARRAY'
+''' Stored as earray_e.
+
+.. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
+
+'''
+
+VLARRAY = 'VLARRAY'
+'''Stored as vlarray_
+
+.. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
+
+'''
+
+TABLE = 'TABLE'
+'''Stored as pytable_
+
+.. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
+
+'''

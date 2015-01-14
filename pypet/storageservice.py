@@ -525,25 +525,25 @@ class HDF5StorageService(StorageService, HasLogger):
 
     STORAGE_DATA_TYPE = 'SRVC_DATA_STORE_'
 
-    ARRAY = hdf5data.ARRAY
+    ARRAY = pypetconstants.ARRAY
     '''Stored as array_
 
     .. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
 
     '''
-    CARRAY = hdf5data.CARRAY
+    CARRAY = pypetconstants.CARRAY
     '''Stored as carray_
 
     .. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
 
     '''
-    EARRAY = hdf5data.EARRAY
+    EARRAY = pypetconstants.EARRAY
     ''' Stored as earray_
 
     .. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
 
     '''
-    VLARRAY = hdf5data.VLARRAY
+    VLARRAY = pypetconstants.VLARRAY
     '''Stored as vlarray_
 
     .. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
@@ -556,7 +556,7 @@ class HDF5StorageService(StorageService, HasLogger):
     In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
 
-    TABLE = hdf5data.TABLE
+    TABLE = pypetconstants.TABLE
     '''Stored as pytable_
 
     .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class

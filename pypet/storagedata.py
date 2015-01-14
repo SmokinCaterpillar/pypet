@@ -1,41 +1,33 @@
 __author__ = 'robert'
 
+import os
+
 from pypet import pypetconstants
-from pypet.parameter import BaseResult, Result
+from pypet.parameter import Result
 import pypet.compat as compat
+import pypet.utils.ptcompat as ptcompat
+import pypet.pypetconstants as pypetconstants
+from pypet.naturalnaming import NNLeafNode
 
-ARRAY = 'ARRAY'
-'''Stored as array_
-
-.. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
-
-'''
-CARRAY = 'CARRAY'
-'''Stored as carray_
-
-.. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
-
-'''
-EARRAY = 'EARRAY'
-''' Stored as earray_e.
-
-.. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
-
-'''
-
-VLARRAY = 'VLARRAY'
-'''Stored as vlarray_
-
-.. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
-
-'''
-
-TABLE = 'TABLE'
-'''Stored as pytable_
-
-.. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
-
-'''
+def check_hdf5_init(storage_data):
+    file_created = False
+    item_created = False
+    filename = '__tmp__.hdf5'
+    try:
+        with ptcompat.open_file(filename, mode='a') as file:
+            file_created = True
+            factory_dict = {pypetconstants.TABLE: ptcompat.create_table,
+                            pypetconstants.CARRAY: ptcompat.create_carray,
+                            pypetconstants.EARRAY: ptcompat.create_earray,
+                            pypetconstants.VLARRAY: ptcompat.create_vlarray}
+            factory = factory_dict[storage_data._type]
+            kwargs = storage_data._kwargs
+            factory(file, where='/', name='__test__', **kwargs)
+        item_created = True
+    finally:
+        if file_created:
+            os.remove(filename)
+    return item_created
 
 class StorageData(object):
     def __init__(self, item_type=None, **kwargs):
@@ -53,9 +45,9 @@ class StorageData(object):
 
     def _guess_type(self, kwargs):
         if 'description' in kwargs or 'first_row' in kwargs:
-            self._type = TABLE
+            self._type = pypetconstants.TABLE
         else:
-            self._type = CARRAY
+            self._type = pypetconstants.CARRAY
 
     def _set_dependencies(self, trajectory, full_name, data_name):
         self._traj = trajectory
@@ -116,7 +108,7 @@ class StorageData(object):
         return result
 
 
-class KnowingResult(BaseResult):
+class KnowsTrajectory(NNLeafNode):
     KNOWS_TRAJECTORY = True
 
 
@@ -135,7 +127,7 @@ class StorageContextManager(object):
         self._storage_result.f_flush_store()
 
 
-class StorageDataResult(Result, KnowingResult):
+class StorageDataResult(Result, KnowsTrajectory):
     def __init__(self, full_name, trajectory, *args, **kwargs):
         self._traj = trajectory
         super(StorageDataResult, self).__init__(full_name, *args, **kwargs)

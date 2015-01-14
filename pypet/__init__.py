@@ -23,7 +23,8 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     VersionMismatchError
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
-from pypet.storagedata import StorageData, StorageDataResult
+from pypet.storagedata import StorageData, StorageDataResult, check_hdf5_init, KnowsTrajectory,\
+    StorageContextManager
 
 
 __all__ = [
@@ -60,4 +61,7 @@ __all__ = [
     StorageDataResult.__name__,
     load_trajectory.__name__,
     compact_hdf5_file.__name__,
+    check_hdf5_init.__name__,
+    KnowsTrajectory.__name__,
+    StorageContextManager.__name__
 ]
