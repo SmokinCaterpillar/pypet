@@ -2000,15 +2000,12 @@ class Environment(HasLogger):
             if self._continuable:
                 self._trigger_continue_snapshot()
 
-
-
             while True:
                 total_runs = len(self._traj)
 
                 if self._multiproc:
 
                     manager = multip.Manager()
-
 
                     if not self._use_pool:
                         # If we spawn a single process for each run, we need an additional queue

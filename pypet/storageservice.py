@@ -367,14 +367,12 @@ class LazyStorageService(StorageService):
     Ignores all storage and loading requests and simply executes `pass` instead.
 
     """
-
     def load(self, *args, **kwargs):
         """Nope, I won't care, dude!"""
         pass
 
-    def store(self, *args, **kwargs):
+    def store(self, msg, stuff_to_store, *args, **kwargs):
         """Do whatever you want, I won't store anything!"""
-        pass
 
 
 class NodeProcessingTimer(HasLogger):

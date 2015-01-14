@@ -2585,6 +2585,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         only_init=only_init,
                                         skip_stored=skip_stored)
 
+            self._stored = True # We do this in case the storage service forgot to tell the
+            # Trajectory that it was actually stored
 
     @not_in_run
     def f_is_empty(self):
