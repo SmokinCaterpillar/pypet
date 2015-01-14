@@ -123,7 +123,6 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         new_size = os.path.getsize(filename)
         self.assertTrue(new_size < size, "%s > %s" %(str(new_size), str(size)))
 
-
     def test_all_arrays(self):
         filename = make_temp_file('hdf5arrays.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
