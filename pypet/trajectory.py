@@ -2584,7 +2584,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         trajectory_name=self.v_name,
                                         only_init=only_init,
                                         skip_stored=skip_stored)
-            self._stored = True
+
 
     @not_in_run
     def f_is_empty(self):

@@ -44,7 +44,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
 
         with traj.f_get('myres1').f_context():
             data = myarray.read()
-            arr = myarray.v_data_item
+            arr = myarray.v_item
             self.assertTrue(np.all(data == thedata))
             self.assertTrue(traj.v_storage_service.is_open)
             t3 = traj.myres2.t3
@@ -55,11 +55,11 @@ class HDF5TrajectoryTests(TrajectoryComparator):
                 orow.append()
             myarray[2,2] = 10
             data = myarray.read()
-            traj.myres2.f_flush_storage()
+            traj.myres2.f_flush_store()
 
 
-        self.assertTrue(myarray.v_data_item is None)
-        self.assertTrue(mytable.v_data_item is None)
+        self.assertTrue(myarray.v_item is None)
+        self.assertTrue(mytable.v_item is None)
         self.assertTrue(data[2,2] == 10 )
         self.assertFalse(traj.v_storage_service.is_open)
 
@@ -67,9 +67,9 @@ class HDF5TrajectoryTests(TrajectoryComparator):
 
         traj.f_load(load_all=2)
 
-        self.assertTrue(traj.myres1.v_data_type == 'CARRAY')
-        self.assertTrue(traj.myres2.t2.v_data_type == 'TABLE')
-        traj.myres2.f_open_storage()
+        self.assertTrue(traj.myres1.v_type == 'CARRAY')
+        self.assertTrue(traj.myres2.t2.v_type == 'TABLE')
+        traj.myres2.f_open_store()
 
         self.assertTrue(traj.myres2.t3.nrows == 2)
         self.assertTrue(traj.myres2.t3[0]['ha'] == compat.tobytes('hu'), traj.myres2.t3[0]['ha'])
@@ -77,7 +77,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         self.assertTrue('huhu' in traj.myres2.t1.colnames)
         self.assertTrue(traj.myres1[2,2] == 10)
         self.assertTrue(traj.myres1)
-        traj.myres2.f_close_storage()
+        traj.myres2.f_close_store()
 
     def test_compacting(self):
         filename = make_temp_file('hdf5compacting.hdf5')
@@ -94,7 +94,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         traj.f_store()
 
         with traj.f_get('myres').f_context():
-            tab = traj.myres.v_data_item
+            tab = traj.myres.v_item
             for irun in range(10000):
                 row = traj.myres.row
                 for key in first_row:
@@ -107,7 +107,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
             tb = traj.myres
             ptcompat.remove_rows(tb, 1000, 10000)
 
-            cm.f_flush_storage()
+            cm.f_flush_store()
             self.assertTrue(traj.myres.nrows == 1001)
 
 
@@ -131,10 +131,10 @@ class HDF5TrajectoryTests(TrajectoryComparator):
 
         npearray = np.ones((2,10,3), dtype=np.float)
         thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
-        carray = StorageData(data_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
-        earray = StorageData(data_type=EARRAY, obj=npearray)
-        vlarray = StorageData(data_type=VLARRAY, object=thevlarray)
-        array = StorageData(data_type=ARRAY, data=npearray)
+        carray = StorageData(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
+        earray = StorageData(item_type=EARRAY, obj=npearray)
+        vlarray = StorageData(item_type=VLARRAY, object=thevlarray)
+        array = StorageData(item_type=ARRAY, data=npearray)
 
         traj.v_standard_result = StorageDataResult
         traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
@@ -183,5 +183,62 @@ class HDF5TrajectoryTests(TrajectoryComparator):
                     self.assertTrue(np.all(x == np.array(toappned)))
                 else:
                     raise RuntimeError()
+
+    def test_errors(self):
+        filename = make_temp_file('hdf5errors.hdf5')
+        traj = Trajectory(name = make_trajectory_name(self), filename=filename)
+        trajname = traj.v_name
+
+        npearray = np.ones((2,10,3), dtype=np.float)
+        thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
+        carray = StorageData(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
+        earray = StorageData(item_type=EARRAY, obj=npearray)
+        vlarray = StorageData(item_type=VLARRAY)
+        array = StorageData(item_type=ARRAY, data=npearray)
+
+        traj.v_standard_result = StorageDataResult
+        traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
+                          comment='the arrays')
+
+        with self.assertRaises(ValueError):
+            traj.f_store()
+
+        traj.arrays['vlarray'] = StorageData(item_type=VLARRAY, obj=thevlarray)
+
+        traj.f_store()
+
+        self.assertTrue(traj.arrays.vlarray.v_item is None)
+
+        with self.assertRaises(AttributeError):
+            traj.arrays.array[0]
+
+        with self.assertRaises(RuntimeError):
+            traj.arrays.f_close_store()
+
+        with self.assertRaises(RuntimeError):
+            traj.arrays.f_flush_store()
+
+        with traj.arrays.f_context() as cm:
+            with self.assertRaises(RuntimeError):
+                with traj.arrays.f_context() as cm2:
+                    pass
+            traj.arrays.array.v_item
+            traj.arrays.array.f_free_item()
+            self.assertFalse(traj.arrays.array.v_uses_store)
+            self.assertTrue(traj.arrays.array._item is None)
+            traj.arrays.array.v_item
+            self.assertTrue(traj.arrays.array.v_uses_store)
+            self.assertTrue(traj.arrays.array._item is not None)
+            self.assertTrue(traj.v_storage_service.is_open)
+            with self.assertRaises(RuntimeError):
+                traj.arrays.f_open_store()
+
+        with self.assertRaises(RuntimeError):
+            with traj.arrays.f_context() as cm2:
+                self.assertTrue(True) # this should still be executed
+                traj.arrays.f_close_store()
+
+        self.assertFalse(traj.v_storage_service.is_open)
+
 
 

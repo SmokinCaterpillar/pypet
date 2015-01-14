@@ -2460,6 +2460,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                           name=self._trajectory_name,
                                                           title=self._trajectory_name,
                                                           filters = self._all_get_filters())
+        traj._stored = True
 
         # Store meta information
         self._trj_store_meta_data(traj)
@@ -4200,7 +4201,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _prm_store_hdf5_data(self, msg, key, data_to_store, _hdf5_group, full_name):
         try:
-            type = data_to_store._data_type
+            type = data_to_store._type
             kwargs = data_to_store._kwargs
 
             if type == HDF5StorageService.TABLE:
@@ -4223,7 +4224,7 @@ class HDF5StorageService(StorageService, HasLogger):
         elif 'data' in kwargs:
             data = kwargs.pop('data')
 
-        flag = data_to_store._data_type
+        flag = data_to_store._type
 
         if flag == HDF5StorageService.ARRAY:
             self._prm_store_into_array(msg, key, data, _hdf5_group, full_name,
@@ -5084,7 +5085,7 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             data_name = ptitem._v_name
             flag = getattr(ptitem._v_attrs, HDF5StorageService.STORAGE_DATA_TYPE)
-            storage_data = hdf5data.StorageData(data_type=flag)
+            storage_data = hdf5data.StorageData(item_type=flag)
             load_dict[data_name] = storage_data
         except:
             self._logger.error('Failed loading hdf5 storage data '
@@ -5283,5 +5284,5 @@ class HDF5StorageService(StorageService, HasLogger):
     def _hdf5_interact_with_data(self, item):
         path_to_data = item._path_to_data
         hdf5group = self._all_get_node_by_name(path_to_data)
-        hdf5data = ptcompat.get_child(hdf5group, item._data_name)
+        hdf5data = ptcompat.get_child(hdf5group, item._item_name)
         return hdf5data
