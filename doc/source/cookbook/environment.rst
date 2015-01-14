@@ -319,6 +319,12 @@ because most of the time the default settings are sufficient.
 
     Title of the hdf5 file (only important if file is created new)
 
+* ``overwrite``
+
+    If the file already exists it will be overwritten. Otherwise
+    the trajectory will simply be added to the file and already
+    existing trajectories are not deleted.
+
 * ``encoding``
 
     Encoding for unicode characters. The default ``'utf8'`` is highly recommended.

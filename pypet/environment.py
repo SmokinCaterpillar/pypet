@@ -505,6 +505,12 @@ class Environment(HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
+    :param overwrite:
+
+        If the file already exists it will be overwritten. Otherwise
+        the trajectory will simply be added to the file and already
+        existing trajectories are not deleted.
+
     :param encoding:
 
         Format to encode and decode unicode strings stored to disk.
@@ -756,6 +762,7 @@ class Environment(HasLogger):
                  use_hdf5=True,
                  filename=None,
                  file_title=None,
+                 overwrite=False,
                  encoding='utf8',
                  complevel=9,
                  complib='zlib',
@@ -899,7 +906,7 @@ class Environment(HasLogger):
         # Check if the user wants to use the hdf5 storage service. If yes,
         # add a service to the trajectory
         if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
-            self._add_hdf5_storage_service(lazy_debug)
+            self._add_hdf5_storage_service(lazy_debug, overwrite)
 
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit if the commit was triggered by
@@ -1400,7 +1407,7 @@ class Environment(HasLogger):
         """ Name of the Environment"""
         return self._name
 
-    def _add_hdf5_storage_service(self, lazy_debug=False):
+    def _add_hdf5_storage_service(self, lazy_debug=False, overwrite=False):
         """ Adds the standard HDF5 storage service to the trajectory.
 
         See also :class:`~pypet.storageservice.HDF5StorageService`.
@@ -1411,7 +1418,8 @@ class Environment(HasLogger):
             self._storage_service = LazyStorageService()
         else:
             self._storage_service = HDF5StorageService(self._filename,
-                                                       self._file_title)
+                                                       self._file_title,
+                                                       overwrite=overwrite)
 
         self._traj.v_storage_service = self._storage_service
 

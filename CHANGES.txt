@@ -65,6 +65,8 @@ pypet 0.1b.9
 *   New StorageDataResult and StorageData data instance to manipulate tables and arrays
     across runs!
 
+*   Passing `overwrite=True` to an environment will overwrite the hdf5 file.
+
 
 pypet 0.1b.8
 

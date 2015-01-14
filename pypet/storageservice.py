@@ -636,7 +636,7 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Whether an hdf5 node is a leaf node'''
 
 
-    def __init__(self, filename=None, file_title='Experiment', display_time=30):
+    def __init__(self, filename=None, file_title='Experiment', display_time=30, overwrite=False):
         self._filename = filename
         self._file_title = file_title
         self._trajectory_name = None
@@ -678,6 +678,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._mode = None
         self._keep_open = False
+
+        if overwrite:
+            opened = self._srvc_opening_routine(mode='w', msg=None)
+            self._srvc_closing_routine(opened)
 
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
@@ -1353,23 +1357,28 @@ class HDF5StorageService(StorageService, HasLogger):
                 if not os.path.exists(path):
                     os.makedirs(path)
 
-                self._hdf5store = HDFStore(self._filename, self._mode, complib=self._complib,
+                self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
                                            complevel=self._complevel, fletcher32=self._fletcher32)
                 self._hdf5file = self._hdf5store._handle
                 self._hdf5file.title = self._file_title
 
-                if not ('/' + self._trajectory_name) in self._hdf5file:
-                    # If we want to store individual items we we have to check if the
-                    # trajectory has been stored before
-                    if not msg == pypetconstants.TRAJECTORY:
-                        raise ValueError('Your trajectory cannot be found in the hdf5file, '
-                                         'please use >>traj.f_store()<< '
-                                         'before storing anything else.')
+                if self._trajectory_name is not None:
+                    if not ('/' + self._trajectory_name) in self._hdf5file:
+                        # If we want to store individual items we we have to check if the
+                        # trajectory has been stored before
+                        if not msg == pypetconstants.TRAJECTORY:
+                            raise ValueError('Your trajectory cannot be found in the hdf5file, '
+                                             'please use >>traj.f_store()<< '
+                                             'before storing anything else.')
 
-                else:
-                    # Keep a reference to the top trajectory node
-                    self._trajectory_group = ptcompat.get_node(self._hdf5file,
-                                                               '/' + self._trajectory_name)
+                    else:
+                        # Keep a reference to the top trajectory node
+                        self._trajectory_group = ptcompat.get_node(self._hdf5file,
+                                                                   '/' + self._trajectory_name)
+                elif msg is not None:
+                    raise ValueError('Your trajectory cannot be found in the hdf5file, '
+                                             'please use >>traj.f_store()<< '
+                                             'before storing anything else.')
             elif mode == 'r':
 
                 if not self._trajectory_name is None and not self._trajectory_index is None:
@@ -1379,7 +1388,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 if not os.path.isfile(self._filename):
                     raise ValueError('File `' + self._filename + '` does not exist.')
 
-                self._hdf5store = HDFStore(self._filename, self._mode, complib=self._complib,
+                self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
                                            complevel=self._complevel, fletcher32=self._fletcher32)
                 self._hdf5file = self._hdf5store._handle
 
@@ -1428,37 +1437,25 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if (not self._keep_open and
-            closing and
-            self._hdf5file is not None and
-            self._hdf5file.isopen):
-
-            f_fd = self._hdf5file.fileno()
+                closing and
+                self._hdf5file is not None and
+                self._hdf5file.isopen):
             self._hdf5file.flush()
             try:
-                os.fsync(f_fd)
+                self._hdf5store.flush(fsync=True)
+            except TypeError:
+                # This is for older pandas version, i.e. 0.12.0
+                f_fd = self._hdf5store._handle.fileno()
+                self._hdf5store.flush()
                 try:
-                    self._hdf5store.flush(fsync=True)
-                except TypeError:
-                    f_fd = self._hdf5store._handle.fileno()
-                    self._hdf5store.flush()
                     os.fsync(f_fd)
-            except OSError as e:
-                # This seems to be the only way to avoid an OSError under Windows
-                errmsg = ('Encountered OSError while flushing file.'
+                except Exception as e:
+                    # Syncing may cause an OSError
+                    errmsg = ('Encountered OSError while syncing file.'
                                    'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
                                    'Original error: %s' % str(e))
-                operating_system = platform.system()
-                if operating_system == 'Windows':
-                    # Under Windows give the message a low priority, because ``fsnyc`` does not
-                    # work properly and this happens all the time
                     self._logger.debug(errmsg)
-                elif operating_system == 'Linux':
-                    # This should not happen under Linux, re-raise the error
-                    raise
-                else:
-                    # If the OS cannot be determined log the message as error, but continue
-                    self._logger.error(errmsg)
 
             self._hdf5store.close()
             self._hdf5store = None
