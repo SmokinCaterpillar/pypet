@@ -782,18 +782,18 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj = traj
         self.env = env
 
-    def test_file_overwriting(self):
-        self.traj.f_store()
-
-        with ptcompat.open_file(self.filename, mode='r') as file:
-            nchildren = len(file.root._v_children)
-            self.assertTrue(nchildren > 0)
-
-        env2 = Environment(filename=self.filename, overwrite=True)
-
-        with ptcompat.open_file(self.filename, mode='r') as file:
-            nchildren = len(file.root._v_children)
-            self.assertTrue(nchildren == 0)
+    # def test_file_overwriting(self):
+    #     self.traj.f_store()
+    #
+    #     with ptcompat.open_file(self.filename, mode='r') as file:
+    #         nchildren = len(file.root._v_children)
+    #         self.assertTrue(nchildren > 0)
+    #
+    #     env2 = Environment(filename=self.filename, overwrite=True)
+    #
+    #     with ptcompat.open_file(self.filename, mode='r') as file:
+    #         nchildren = len(file.root._v_children)
+    #         self.assertTrue(nchildren == 0)
 
     def make_run_large_data(self):
         self.env.f_run(add_large_data)
