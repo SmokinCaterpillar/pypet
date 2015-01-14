@@ -12,7 +12,6 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
-import platform
 
 try:
     import queue
@@ -1437,35 +1436,27 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if (not self._keep_open and
-                closing and
-                self._hdf5file is not None and
-                self._hdf5file.isopen):
-            self._hdf5file.flush()
+            closing and
+            self._hdf5file is not None and
+            self._hdf5file.isopen):
+
             f_fd = self._hdf5file.fileno()
+            self._hdf5file.flush()
             try:
                 os.fsync(f_fd)
-            except Exception as e:
-                    # Syncing may cause an OSError
-                    errmsg = ('Encountered OSError while syncing file.'
-                                   'If you are using Windows, don`t worry! '
-                                   'I will ignore the error and try to close the file. '
-                                   'Original error: %s' % str(e))
-                    self._logger.debug(errmsg)
-            try:
-                self._hdf5store.flush(fsync=True)
-            except TypeError:
-                # This is for older pandas version, i.e. 0.12.0
-                f_fd = self._hdf5store._handle.fileno()
-                self._hdf5store.flush()
                 try:
+                    self._hdf5store.flush(fsync=True)
+                except TypeError:
+                    f_fd = self._hdf5store._handle.fileno()
+                    self._hdf5store.flush()
                     os.fsync(f_fd)
-                except Exception as e:
-                    # Syncing may cause an OSError
-                    errmsg = ('Encountered OSError while syncing file.'
+            except Exception as e:
+                # This seems to be the only way to avoid an OSError under Windows
+                errmsg = ('Encountered OSError while flushing file.'
                                    'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
                                    'Original error: %s' % str(e))
-                    self._logger.debug(errmsg)
+                self._logger.debug(errmsg)
 
             self._hdf5store.close()
             self._hdf5store = None
