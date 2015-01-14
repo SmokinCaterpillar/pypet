@@ -6,7 +6,7 @@ set -u # Treat references to unset variables as an error
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --timid --source=./pypet --omit=*/pypet/brian/*,*/pypet/tests/* /pypet/tests/run_coverage.py
+        coverage run --parallel-mode --timid --source=./pypet --omit=*/pypet/brian/*,*/pypet/tests/* ./pypet/tests/run_coverage.py
         coverage combine
         cd ciscripts/travis
     fi
@@ -47,7 +47,6 @@ if [[ $GIT_TEST == ON ]]
         cd ..
         rm -rvf git_sumatra_test
         echo "Removal complete"
-
     fi
 
 if [[ $TEST_SUITE == ON ]]
