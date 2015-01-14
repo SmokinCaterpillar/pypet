@@ -184,3 +184,4 @@ class HDF5TrajectoryTests(TrajectoryComparator):
                 else:
                     raise RuntimeError()
 
+

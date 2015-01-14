@@ -80,7 +80,7 @@ install:
 
 # Script command for all tests
 script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
-after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
+#after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
 branches:
   only:
     - develop
