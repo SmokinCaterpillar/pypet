@@ -913,7 +913,7 @@ class Environment(HasLogger):
 
         if not new_commit:
             # Otherwise we need to create a novel hexsha
-            self._hexsha = hashlib.sha1(compat.tobytetype(self.v_trajectory.v_name +
+            self._hexsha = hashlib.sha1(compat.tobytes(self.v_trajectory.v_name +
                                                           str(self.v_trajectory.v_timestamp) +
                                                           str(self.v_timestamp) +
                                                           VERSION)).hexdigest()

@@ -8,42 +8,55 @@ tables = int(pt.__version__[0])
 
 
 def _make_pt2_carray(hdf5_file, *args, **kwargs):
+    read_data = False
     if 'obj' in kwargs:
         data = kwargs.pop('obj')
-        atom = pt.Atom.from_dtype(data.dtype)
-        if 'atom' not in kwargs:
-            kwargs['atom']  = atom
-        if 'shape' not in kwargs:
-            kwargs['shape'] = data.shape
+        if data is not None:
+            read_data = True
+            atom = pt.Atom.from_dtype(data.dtype)
+            if 'atom' not in kwargs:
+                kwargs['atom']  = atom
+            if 'shape' not in kwargs:
+                kwargs['shape'] = data.shape
     carray = hdf5_file.createCArray(*args, **kwargs)
-    carray[:] = data[:]
+    if read_data:
+        carray[:] = data[:]
     return carray
 
 def _make_pt2_earray(hdf5_file, *args, **kwargs):
+    read_data = False
     if 'obj' in kwargs:
         data = kwargs.pop('obj')
-        atom = pt.Atom.from_dtype(data.dtype)
-        if 'atom' not in kwargs:
-            kwargs['atom']  = atom
-        if 'shape' not in kwargs:
-            kwargs['shape'] = data.shape
+        if data is not None:
+            read_data = True
+            atom = pt.Atom.from_dtype(data.dtype)
+            if 'atom' not in kwargs:
+                kwargs['atom']  = atom
+            if 'shape' not in kwargs:
+                shape = list(data.shape)
+                shape[0] = 0 # set first dimension to the one that can be enlarged
+                shape = tuple(shape)
+                kwargs['shape'] =  shape# add 0th dimension
     earray = hdf5_file.createEArray(*args, **kwargs)
-    earray[:] = data[:]
+    if read_data:
+        earray.append(data)
     return earray
 
 def _make_pt2_vlarray(hdf5_file, *args, **kwargs):
     if 'expectedrows' in kwargs:
         expectedrows=kwargs.pop('expectedrows') # this is termed expetedsizeinMB in python2.7
         kwargs['expectedsizeinMB'] = expectedrows
+    read_data = False
     if 'obj' in kwargs:
         data = kwargs.pop('obj')
-        atom = pt.Atom.from_dtype(data.dtype)
-        if 'atom' not in kwargs:
-            kwargs['atom']  = atom
-        if 'shape' not in kwargs:
-            kwargs['shape'] = data.shape
+        if data is not None:
+            read_data = True
+            atom = pt.Atom.from_dtype(data.dtype)
+            if 'atom' not in kwargs:
+                kwargs['atom']  = atom
     vlarray = hdf5_file.createVLArray(*args, **kwargs)
-    vlarray[:] = data[:]
+    if read_data:
+        vlarray.append(data)
     return vlarray
 
 def _make_pt2_array(hdf5_file, *args, **kwargs):

@@ -8,6 +8,8 @@ from pypet.storagedata import StorageDataResult, StorageData, CARRAY, EARRAY, VL
 from pypet import Trajectory, load_trajectory
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run
 from pypet import compact_hdf5_file
+from pypet.utils import ptcompat
+from pypet import compat
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -25,8 +27,8 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         thedata = np.zeros((1000,1000))
         myarray = StorageData(data=thedata)
         mytable = StorageData(description={'hi':pt.IntCol(), 'huhu':pt.StringCol(33)})
-        mytable2 = StorageData(first_row={'ha': 'hi', 'haha':np.zeros((3,3))})
-        mytable3 = StorageData(first_row={'ha': 'hu', 'haha':np.ones((3,3))})
+        mytable2 = StorageData(first_row={'ha': compat.tobytes('hi'), 'haha':np.zeros((3,3))})
+        mytable3 = StorageData(first_row={'ha': compat.tobytes('hu'), 'haha':np.ones((3,3))})
 
         traj.f_add_result(StorageDataResult, 'myres1', myarray)
         traj.f_add_result(StorageDataResult, 'myres2', t1=mytable, t2=mytable2, t3=mytable3)
@@ -70,8 +72,8 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         traj.myres2.f_open_storage()
 
         self.assertTrue(traj.myres2.t3.nrows == 2)
-        self.assertTrue(traj.myres2.t3[0]['ha'] == 'hu', traj.myres2.t3[0]['ha'])
-        self.assertTrue(traj.myres2.t3[1]['ha'] == 'hi', traj.myres2.t3[1]['ha'])
+        self.assertTrue(traj.myres2.t3[0]['ha'] == compat.tobytes('hu'), traj.myres2.t3[0]['ha'])
+        self.assertTrue(traj.myres2.t3[1]['ha'] == compat.tobytes('hi'), traj.myres2.t3[1]['ha'])
         self.assertTrue('huhu' in traj.myres2.t1.colnames)
         self.assertTrue(traj.myres1[2,2] == 10)
         self.assertTrue(traj.myres1)
@@ -83,7 +85,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
         traj.v_storage_service.complevel = 7
 
-        first_row = {'ha': 'hi', 'haha':np.zeros((3,3))}
+        first_row = {'ha': compat.tobytes('hi'), 'haha':np.zeros((3,3))}
         mytable = StorageData(first_row=first_row)
 
         traj.f_add_result(StorageDataResult, 'myres', mytable)
@@ -103,7 +105,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         with traj.f_get('myres').f_context() as cm:
             tb = traj.myres
-            tb.remove_rows(1000, 10000, 1)
+            ptcompat.remove_rows(tb, 1000, 10000)
 
             cm.f_flush_storage()
             self.assertTrue(traj.myres.nrows == 1001)
@@ -128,7 +130,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
 
         npearray = np.ones((2,10,3), dtype=np.float)
-        thevlarray = ['j',22.2,'gutter']
+        thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
         carray = StorageData(data_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
         earray = StorageData(data_type=EARRAY, obj=npearray)
         vlarray = StorageData(data_type=VLARRAY, object=thevlarray)
@@ -142,7 +144,7 @@ class HDF5TrajectoryTests(TrajectoryComparator):
 
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
 
-        toappned = [44,'k']
+        toappned = [44, compat.tobytes('k')]
         arrays = traj.arrays
         with arrays.f_context() as cm:
             a1 = arrays.array

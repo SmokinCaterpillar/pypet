@@ -1630,7 +1630,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._logger.info('Adding merge information')
         timestamp = time.time()
         formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        hexsha = hashlib.sha1(compat.tobytetype(self.v_name +
+        hexsha = hashlib.sha1(compat.tobytes(self.v_name +
                                                 str(self.v_timestamp) +
                                                 other_trajectory.v_name +
                                                 str(other_trajectory.v_timestamp) +

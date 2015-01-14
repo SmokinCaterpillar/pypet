@@ -148,7 +148,7 @@ class StorageTest(TrajectoryComparator):
         store = ptcompat.open_file(filename, mode='r+')
         table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
         self.assertTrue(table.nrows == 2)
-        self.assertTrue(compat.tostrtype(table[0]['value']) == '10')
+        self.assertTrue(compat.tostr(table[0]['value']) == '10')
 
         store.close()
 
@@ -158,7 +158,6 @@ class StorageTest(TrajectoryComparator):
 
             etext ='appears more than once in table'
             self.assertTrue(etext in text)
-
 
     def test_overwrite(self):
 
@@ -570,12 +569,12 @@ class StorageTest(TrajectoryComparator):
 
             self.assertTrue(row['complevel'] == 4)
 
-            self.assertTrue(row['complib'] == compat.tobytetype('zlib'))
+            self.assertTrue(row['complib'] == compat.tobytes('zlib'))
 
             self.assertTrue(row['shuffle'])
             self.assertTrue(row['fletcher32'])
             self.assertTrue(row['pandas_append'])
-            self.assertTrue(row['pandas_format'] == compat.tobytetype('t'))
+            self.assertTrue(row['pandas_format'] == compat.tobytes('t'))
 
             for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
                 self.assertTrue(row[table_name])

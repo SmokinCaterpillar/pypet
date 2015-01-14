@@ -22,8 +22,10 @@ if python == 2:
     func_code = lambda func: func.func_code
     # Returns the source code of a given python function
 
-    tostrtype = lambda string: str(string)
+    tostr = lambda string: str(string)
     # Converts to the string type, str in python 2 and unicode in 3
+    tobytes = lambda string: str(string)
+    # Converts a string to byte type (in python 2 str and 3 bytestr)
 
     itervalues = lambda dictionary: dictionary.itervalues()
     # Returns an iterator over values
@@ -38,12 +40,8 @@ if python == 2:
     listitems = lambda dictionary: dictionary.items()
     # Returns list items
 
-    tobytetype = lambda string: str(string)
-    # Converts a string to byte type (in python 2 str and 3 bytestr)
-
     xrange = xrange
     # Returns the iterator function range
-
 
 elif python == 3:
 
@@ -55,7 +53,9 @@ elif python == 3:
     base_type = str
 
     func_code = lambda func: func.__code__
-    tostrtype = lambda string: str(string.decode('utf-8'))
+
+    tostr = lambda string: str(string.decode('utf-8'))
+    tobytes = lambda string: string.encode('utf-8')
 
     itervalues = lambda dictionary: dictionary.values()
     iterkeys = lambda dictionary: dictionary.keys()
@@ -63,8 +63,6 @@ elif python == 3:
     listkeys = lambda dictionary: list(dictionary.keys())
     listvalues = lambda dictionary: list(dictionary.values())
     listitems = lambda dictionary: list(dictionary.items())
-
-    tobytetype = lambda string: string.encode('utf-8')
 
     xrange = range
 

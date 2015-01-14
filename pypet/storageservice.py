@@ -1603,8 +1603,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in other_table:
                 # Iterate through the rows of the overview table
-                location = compat.tostrtype(row['location'])
-                name = compat.tostrtype(row['name'])
+                location = compat.tostr(row['location'])
+                name = compat.tostr(row['name'])
                 full_name = location + '.' + name
 
                 # If we need the overview entry mark it for merging
@@ -1617,8 +1617,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in table:
                 # Iterate through the current rows
-                location = compat.tostrtype(row['location'])
-                name = compat.tostrtype(row['name'])
+                location = compat.tostr(row['location'])
+                name = compat.tostr(row['name'])
                 full_name = location + '.' + name
 
                 # Update the number of items according to the number or merged items
@@ -1702,8 +1702,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             for row in other_table.iterrows():
                 # Iterate through the summary table
-                location = compat.tostrtype(row['location'])
-                name = compat.tostrtype(row['name'])
+                location = compat.tostr(row['location'])
+                name = compat.tostr(row['name'])
                 full_name = location + '.' + name
 
                 if full_name in rename_dict:
@@ -1719,8 +1719,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Insert data into the current overview table
             for row in table.iterrows():
-                location = compat.tostrtype(row['location'])
-                name = compat.tostrtype(row['name'])
+                location = compat.tostr(row['location'])
+                name = compat.tostr(row['name'])
                 full_name = location + '.' + name
 
                 if full_name in new_row_dict:
@@ -2023,13 +2023,13 @@ class HDF5StorageService(StorageService, HasLogger):
         metarow = metatable[0]
 
         try:
-            version = compat.tostrtype(metarow['version'])
+            version = compat.tostr(metarow['version'])
         except IndexError as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             version = '`COULD NOT BE LOADED`'
 
         try:
-            python = compat.tostrtype(metarow['python'])
+            python = compat.tostr(metarow['python'])
         except IndexError as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             python = '`COULD NOT BE LOADED`'
@@ -2041,12 +2041,12 @@ class HDF5StorageService(StorageService, HasLogger):
             for irun in range(length):
                 traj._add_run_info(irun)
         else:
-            traj._comment = compat.tostrtype(metarow['comment'])
+            traj._comment = compat.tostr(metarow['comment'])
             traj._timestamp = float(metarow['timestamp'])
             traj._trajectory_timestamp = traj._timestamp
-            traj._time = compat.tostrtype(metarow['time'])
+            traj._time = compat.tostr(metarow['time'])
             traj._trajectory_time = traj._time
-            traj._name = compat.tostrtype(metarow['name'])
+            traj._name = compat.tostr(metarow['name'])
             traj._trajectory_name = traj._name
             traj._version = version
             traj._python = python
@@ -2055,18 +2055,18 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Load the run information about the single runs
             for row in single_run_table.iterrows():
-                name = compat.tostrtype(row['name'])
+                name = compat.tostr(row['name'])
                 idx = int(row['idx'])
                 timestamp = float(row['timestamp'])
-                time = compat.tostrtype(row['time'])
+                time = compat.tostr(row['time'])
                 completed = int(row['completed'])
-                summary = compat.tostrtype(row['parameter_summary'])
-                hexsha = compat.tostrtype(row['short_environment_hexsha'])
+                summary = compat.tostr(row['parameter_summary'])
+                hexsha = compat.tostr(row['short_environment_hexsha'])
 
 
                 # To allow backwards compatibility we need this try catch block
                 try:
-                    runtime = compat.tostrtype(row['runtime'])
+                    runtime = compat.tostr(row['runtime'])
                     finish_timestamp = float(row['finish_timestamp'])
                 except IndexError as ke:
                     runtime = ''
@@ -2107,13 +2107,13 @@ class HDF5StorageService(StorageService, HasLogger):
             hdf5_table = self._overview_group.hdf5_settings
             hdf5_row = hdf5_table[0]
 
-            _extract_meta_data('complib', hdf5_row, 'complib', compat.tostrtype)
+            _extract_meta_data('complib', hdf5_row, 'complib', compat.tostr)
             _extract_meta_data('complevel', hdf5_row, 'complevel', int)
             _extract_meta_data('shuffle', hdf5_row, 'shuffle', bool)
             _extract_meta_data('fletcher32', hdf5_row, 'fletcher32', bool)
-            _extract_meta_data('pandas_format', hdf5_row, 'pandas_format', compat.tostrtype)
+            _extract_meta_data('pandas_format', hdf5_row, 'pandas_format', compat.tostr)
             _extract_meta_data('pandas_append', hdf5_row, 'pandas_append', bool)
-            _extract_meta_data('encoding', hdf5_row, 'encoding', compat.tostrtype)
+            _extract_meta_data('encoding', hdf5_row, 'encoding', compat.tostr)
 
             _extract_meta_data('_results_per_run', hdf5_row,
                                'results_per_run', int)
@@ -3553,25 +3553,25 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['length'] = len(item)
 
         if 'comment' in colnames:
-            comment = self._all_cut_string(compat.tobytetype(item.v_comment),
+            comment = self._all_cut_string(compat.tobytes(item.v_comment),
                                            pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH,
                                            self._logger)
 
             insert_dict['comment'] = comment
 
         if 'location' in colnames:
-            insert_dict['location'] = compat.tobytetype(item.v_location)
+            insert_dict['location'] = compat.tobytes(item.v_location)
 
         if 'name' in colnames:
             name = item._name if (not item.v_is_root or not item.v_is_run) else item._crun
-            insert_dict['name'] = compat.tobytetype(name)
+            insert_dict['name'] = compat.tobytes(name)
 
         if 'class_name' in colnames:
-            insert_dict['class_name'] = compat.tobytetype(item.f_get_class_name())
+            insert_dict['class_name'] = compat.tobytes(item.f_get_class_name())
 
         if 'value' in colnames:
             insert_dict['value'] = self._all_cut_string(
-                compat.tobytetype(item.f_val_to_str()),
+                compat.tobytes(item.f_val_to_str()),
                 pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
                 self._logger)
 
@@ -3591,22 +3591,22 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if 'range' in colnames:
             insert_dict['range'] = self._all_cut_string(
-                compat.tobytetype(repr(item.f_get_range())),
+                compat.tobytes(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
             insert_dict['array'] = self._all_cut_string(
-                compat.tobytetype(repr(item.f_get_range())),
+                compat.tobytes(repr(item.f_get_range())),
                 pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
                 self._logger)
 
         if 'version' in colnames:
-            insert_dict['version'] = compat.tobytetype(item.v_version)
+            insert_dict['version'] = compat.tobytes(item.v_version)
 
         if 'python' in colnames:
-            insert_dict['python'] = compat.tobytetype(item.v_python)
+            insert_dict['python'] = compat.tobytes(item.v_python)
 
         if 'finish_timestamp' in colnames:
             insert_dict['finish_timestamp'] = item._finish_timestamp_run
@@ -3617,10 +3617,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 # If string is too long we cut the microseconds
                 runtime = runtime.split('.')[0]
 
-            insert_dict['runtime'] = compat.tobytetype(runtime)
+            insert_dict['runtime'] = compat.tobytes(runtime)
 
         if 'short_environment_hexsha' in colnames:
-            insert_dict['short_environment_hexsha'] = compat.tobytetype(
+            insert_dict['short_environment_hexsha'] = compat.tobytes(
                 item.v_environment_hexsha[0:7])
 
         return insert_dict
@@ -3641,7 +3641,7 @@ class HDF5StorageService(StorageService, HasLogger):
             logger.debug('The string `%s` was too long I truncated it to'
                          ' %d characters' %
                          (string, max_length))
-            string = string[0:max_length - 3] + compat.tobytetype('...')
+            string = string[0:max_length - 3] + compat.tobytes('...')
 
         return string
 
@@ -3911,10 +3911,10 @@ class HDF5StorageService(StorageService, HasLogger):
                     nitems = row['number_of_items'] + 1
 
                     # Get the run name of the example
-                    example_item_run_name = compat.tostrtype(row['example_item_run_name'])
+                    example_item_run_name = compat.tostr(row['example_item_run_name'])
 
                     # Get the old comment:
-                    location_string = compat.tostrtype(row['location'])
+                    location_string = compat.tostr(row['location'])
                     other_parent_node_name = location_string.replace(run_mask,
                                                                      example_item_run_name)
                     other_parent_node_name = '/' + self._trajectory_name + '/' + \
