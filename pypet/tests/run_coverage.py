@@ -12,8 +12,8 @@ import os
 from pypet.tests.all_single_core_tests import *
 
 from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
-    MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest, MultiprocLinkLockTest,\
-    MultiprocLinkQueueTest
+    MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\
+    MultiprocLinkQueueTest, CapTest
 
 
 if __name__ == '__main__':

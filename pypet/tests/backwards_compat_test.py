@@ -13,7 +13,7 @@ import pypet
 import platform
 
 class LoadOldTrajectoryTest(unittest.TestCase):
-    @unittest.skipIf(platform.system() == 'Windows' or sys.version_info < (3, 0, 0))
+    @unittest.skipIf(not sys.version_info < (3, 0, 0), 'Can only be run in python 2.7')
     def test_backwards_compatibility(self):
         # Test only makes sense with python 2.7 or lower
         old_pypet_traj = Trajectory()
