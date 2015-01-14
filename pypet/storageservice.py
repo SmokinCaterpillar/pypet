@@ -1441,6 +1441,16 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._hdf5file is not None and
                 self._hdf5file.isopen):
             self._hdf5file.flush()
+            f_fd = self._hdf5file.fileno()
+            try:
+                os.fsync(f_fd)
+            except Exception as e:
+                    # Syncing may cause an OSError
+                    errmsg = ('Encountered OSError while syncing file.'
+                                   'If you are using Windows, don`t worry! '
+                                   'I will ignore the error and try to close the file. '
+                                   'Original error: %s' % str(e))
+                    self._logger.debug(errmsg)
             try:
                 self._hdf5store.flush(fsync=True)
             except TypeError:
