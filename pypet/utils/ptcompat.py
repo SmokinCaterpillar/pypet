@@ -8,32 +8,49 @@ tables = int(pt.__version__[0])
 
 
 def _make_pt2_carray(hdf5_file, *args, **kwargs):
-    data = kwargs.pop('obj')
-    atom = pt.Atom.from_dtype(data.dtype)
-    carray = hdf5_file.createCArray(*args, atom=atom, shape=data.shape, **kwargs)
+    if 'obj' in kwargs:
+        data = kwargs.pop('obj')
+        atom = pt.Atom.from_dtype(data.dtype)
+        if 'atom' not in kwargs:
+            kwargs['atom']  = atom
+        if 'shape' not in kwargs:
+            kwargs['shape'] = data.shape
+    carray = hdf5_file.createCArray(*args, **kwargs)
     carray[:] = data[:]
     return carray
 
 def _make_pt2_earray(hdf5_file, *args, **kwargs):
-    data = kwargs.pop('obj')
-    atom = pt.Atom.from_dtype(data.dtype)
-    earray = hdf5_file.createEArray(*args, atom=atom, shape=data.shape, **kwargs)
+    if 'obj' in kwargs:
+        data = kwargs.pop('obj')
+        atom = pt.Atom.from_dtype(data.dtype)
+        if 'atom' not in kwargs:
+            kwargs['atom']  = atom
+        if 'shape' not in kwargs:
+            kwargs['shape'] = data.shape
+    earray = hdf5_file.createEArray(*args, **kwargs)
     earray[:] = data[:]
     return earray
 
 def _make_pt2_vlarray(hdf5_file, *args, **kwargs):
-    data = kwargs.pop('obj')
     if 'expectedrows' in kwargs:
         expectedrows=kwargs.pop('expectedrows') # this is termed expetedsizeinMB in python2.7
         kwargs['expectedsizeinMB'] = expectedrows
-    atom = pt.Atom.from_dtype(data.dtype)
-    vlarray = hdf5_file.createVLArray(*args, atom=atom, shape=data.shape, **kwargs)
+    if 'obj' in kwargs:
+        data = kwargs.pop('obj')
+        atom = pt.Atom.from_dtype(data.dtype)
+        if 'atom' not in kwargs:
+            kwargs['atom']  = atom
+        if 'shape' not in kwargs:
+            kwargs['shape'] = data.shape
+    vlarray = hdf5_file.createVLArray(*args, **kwargs)
     vlarray[:] = data[:]
     return vlarray
 
 def _make_pt2_array(hdf5_file, *args, **kwargs):
-    data = kwargs.pop('obj')
-    return hdf5_file.createArray(*args, object=data, **kwargs)
+    if 'obj' in kwargs:
+        data = kwargs.pop('obj')
+        kwargs['object'] = data
+    return hdf5_file.createArray(*args, **kwargs)
 
 if tables == 2:
     open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)

@@ -4163,8 +4163,12 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._prm_store_dict_as_table(msg, key, data_to_store, _hdf5_group, fullname)
                 elif flag == HDF5StorageService.ARRAY:
                     self._prm_store_into_array(msg, key, data_to_store, _hdf5_group, fullname)
-                elif flag == HDF5StorageService.CARRAY:
-                    self._prm_store_into_carray(msg, key, data_to_store, _hdf5_group, fullname)
+                elif flag in (HDF5StorageService.CARRAY,
+                              HDF5StorageService.EARRAY,
+                              HDF5StorageService.VLARRAY):
+                    self._prm_store_into_other_array(msg, key, data_to_store,
+                                                     _hdf5_group, fullname,
+                                                     flag=flag)
                 elif flag == HDF5StorageService.FRAME:
                     self._prm_store_data_frame(msg, key, data_to_store, _hdf5_group, fullname)
                 elif flag == HDF5StorageService.SERIES:
@@ -4173,10 +4177,6 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._prm_store_panel(msg, key, data_to_store, _hdf5_group, fullname)
                 elif flag == HDF5StorageService.STORAGE_DATA:
                     self._prm_store_hdf5_data(msg, key, data_to_store, _hdf5_group, fullname)
-                elif flag == HDF5StorageService.VLARRAY:
-                    self._prm_store_into_vlarray(msg, key, data_to_store, _hdf5_group, fullname)
-                elif flag == HDF5StorageService.EARRAY:
-                    self._prm_store_into_earray(msg, key, data_to_store, _hdf5_group, fullname)
                 else:
                     raise RuntimeError('You shall not pass!')
 
@@ -4226,13 +4226,13 @@ class HDF5StorageService(StorageService, HasLogger):
         flag = data_to_store._data_type
 
         if flag == HDF5StorageService.ARRAY:
-            self._prm_store_into_array(msg, key, data, _hdf5_group, full_name, **kwargs)
-        elif flag == HDF5StorageService.CARRAY:
-            self._prm_store_into_carray(msg, key, data, _hdf5_group, full_name, **kwargs)
-        elif flag == HDF5StorageService.VLARRAY:
-            self._prm_store_into_vlarray(msg, key, data, _hdf5_group, full_name, **kwargs)
-        elif flag == HDF5StorageService.EARRAY:
-            self._prm_store_into_earray(msg, key, data, _hdf5_group, full_name, **kwargs)
+            self._prm_store_into_array(msg, key, data, _hdf5_group, full_name,
+                                       recall=False, **kwargs)
+        elif flag in (HDF5StorageService.CARRAY,
+                      HDF5StorageService.EARRAY,
+                      HDF5StorageService.VLARRAY):
+            self._prm_store_into_other_array(msg, key, data, _hdf5_group, full_name,
+                                             flag=flag, recall=False,**kwargs)
         else:
             raise RuntimeError('Flag `%s` of hdf5 data `%s` of `%s` not understood' %
                                (flag, key, full_name))
@@ -4479,8 +4479,9 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed storing DataFrame `%s` of `%s`.' % (key, fullname))
             raise
 
-    def _prm_store_into_carray(self, msg, key, data, group, fullname, **kwargs):
-        """Stores data as carray.
+    def _prm_store_into_other_array(self, msg, key, data, group, fullname,
+                                    flag, recall=True, **kwargs):
+        """Stores data as carray, earray or vlarray depending on `flag`.
 
         :param msg:
 
@@ -4503,8 +4504,26 @@ class HDF5StorageService(StorageService, HasLogger):
 
             Full name of the `data_to_store`s original container, only needed for throwing errors.
 
+        :param recall:
+
+            If container type and data type for perfect recall should be stored
+
+        :param flag:
+
+            How to store:
+                CARRAY, EARRAY, VLARRAY
+
         """
         try:
+
+            if flag == HDF5StorageService.CARRAY:
+                factory = ptcompat.create_carray
+            elif flag == HDF5StorageService.EARRAY:
+                factory = ptcompat.create_earray
+            elif flag == HDF5StorageService.VLARRAY:
+                factory = ptcompat.create_vlarray
+            else:
+                raise RuntimeError('You shall not pass!')
 
             if key in group:
                 raise ValueError(
@@ -4516,135 +4535,31 @@ class HDF5StorageService(StorageService, HasLogger):
                 filters = self._all_get_filters()
 
             try:
-                carray = ptcompat.create_carray(self._hdf5file, where=group, name=key, obj=data,
+                other_array = factory(self._hdf5file, where=group, name=key, obj=data,
                                                 filters=filters, **kwargs)
-            except ValueError:
+            except (ValueError, TypeError) as e:
+                if not recall:
+                    # If we do not store the original data type, there is no use of unicode
+                    # anyway
+                    raise
                 conv_data = data[:]
                 conv_data = np.core.defchararray.encode(conv_data, self.encoding)
-                carray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
+                other_array = factory(self._hdf5file, where=group, name=key,
                                                 obj=conv_data,
                                                 filters=filters, **kwargs)
 
-            # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data, carray,
+
+            if recall:
+                # Remember the types of the original data to recall them on loading
+                self._all_set_attributes_to_recall_natives(data, other_array,
                                                        HDF5StorageService.DATA_PREFIX)
-            setattr(carray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.CARRAY)
+                setattr(other_array._v_attrs, HDF5StorageService.STORAGE_TYPE, flag)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
+            self._logger.error('Failed storing %s `%s` of `%s`.' % (flag, key, fullname))
             raise
 
-    def _prm_store_into_earray(self, msg, key, data, group, fullname, **kwargs):
-        """Stores data as Earray.
-
-        :param msg:
-
-            Message passed to the storage service ('LEAF').
-            Not needed here.
-
-        :param key:
-
-            Name of data item to store
-
-        :param data:
-
-            Data to store
-
-        :param group:
-
-            Group node where to store data in hdf5 file
-
-        :param fullname:
-
-            Full name of the `data_to_store`s original container, only needed for throwing errors.
-
-        """
-        try:
-
-            if key in group:
-                raise ValueError(
-                    'EArray `%s` already exists in `%s`. Appending is not supported (yet).')
-
-            if 'filters' in kwargs:
-                filters = kwargs.pop('filters')
-            else:
-                filters = self._all_get_filters()
-
-            try:
-                earray = ptcompat.create_earray(self._hdf5file, where=group, name=key, obj=data,
-                                                filters=filters, **kwargs)
-            except ValueError:
-                conv_data = data[:]
-                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
-                earray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
-                                                obj=conv_data,
-                                                filters=filters,
-                                                **kwargs)
-
-            # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data, earray,
-                                                       HDF5StorageService.DATA_PREFIX)
-            setattr(earray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.EARRAY)
-            self._hdf5file.flush()
-        except:
-            self._logger.error('Failed storing EArray `%s` of `%s`.' % (key, fullname))
-            raise
-
-    def _prm_store_into_vlarray(self, msg, key, data, group, fullname, **kwargs):
-        """Stores data as VLArray.
-
-        :param msg:
-
-            Message passed to the storage service ('LEAF').
-            Not needed here.
-
-        :param key:
-
-            Name of data item to store
-
-        :param data:
-
-            Data to store
-
-        :param group:
-
-            Group node where to store data in hdf5 file
-
-        :param fullname:
-
-            Full name of the `data_to_store`s original container, only needed for throwing errors.
-
-        """
-        try:
-
-            if 'filters' in kwargs:
-                filters = kwargs.pop('filters')
-            else:
-                filters = self._all_get_filters()
-
-            if key in group:
-                raise ValueError(
-                    'EArray `%s` already exists in `%s`. Appending is not supported (yet).')
-
-            try:
-                vlarray = ptcompat.create_vlarray(self._hdf5file, where=group, name=key,
-                                                  obj=data, filters=filters, **kwargs)
-            except ValueError:
-                conv_data = data[:]
-                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
-                vlarray = ptcompat.create_carray(self._hdf5file, where=group, name=key,
-                                                filters=self._all_get_filters(), **kwargs)
-
-            # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data, vlarray,
-                                                       HDF5StorageService.DATA_PREFIX)
-            setattr(vlarray._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.VLARRAY)
-            self._hdf5file.flush()
-        except:
-            self._logger.error('Failed storing EArray `%s` of `%s`.' % (key, fullname))
-            raise
-
-    def _prm_store_into_array(self, msg, key, data, group, fullname, **kwargs):
+    def _prm_store_into_array(self, msg, key, data, group, fullname, recall=True, **kwargs):
         """Stores data as array.
 
         :param msg:
@@ -4668,6 +4583,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
             Full name of the `data_to_store`s original container, only needed for throwing errors.
 
+        :param recall:
+
+            If container type and data type for perfect recall should be stored
+
         """
 
         try:
@@ -4679,8 +4598,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=data, **kwargs)
-            except TypeError:
-
+            except (TypeError, ValueError) as e:
+                if not recall:
+                    # If we do not store the original data type, there is no use of unicode
+                    # anyway
+                    raise
                 if isinstance(data, compat.unicode_type):
                     conv_data = data.encode(self._encoding)
                 else:
@@ -4690,9 +4612,12 @@ class HDF5StorageService(StorageService, HasLogger):
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=conv_data, **kwargs)
 
-            # Remember the types of the original data to recall them on loading
-            self._all_set_attributes_to_recall_natives(data, array, HDF5StorageService.DATA_PREFIX)
-            setattr(array._v_attrs, HDF5StorageService.STORAGE_TYPE, HDF5StorageService.ARRAY)
+            if recall:
+                # Remember the types of the original data to recall them on loading
+                self._all_set_attributes_to_recall_natives(data, array,
+                                                           HDF5StorageService.DATA_PREFIX)
+                setattr(array._v_attrs, HDF5StorageService.STORAGE_TYPE,
+                        HDF5StorageService.ARRAY)
             self._hdf5file.flush()
         except:
             self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))

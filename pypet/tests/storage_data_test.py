@@ -4,7 +4,7 @@ import numpy as np
 import tables as pt
 import os
 
-from pypet.storagedata import StorageDataResult, StorageData
+from pypet.storagedata import StorageDataResult, StorageData, CARRAY, EARRAY, VLARRAY, ARRAY
 from pypet import Trajectory, load_trajectory
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run
 from pypet import compact_hdf5_file
@@ -122,4 +122,63 @@ class HDF5TrajectoryTests(TrajectoryComparator):
         self.assertTrue(new_size < size, "%s > %s" %(str(new_size), str(size)))
 
 
+    def test_all_arrays(self):
+        filename = make_temp_file('hdf5arrays.hdf5')
+        traj = Trajectory(name = make_trajectory_name(self), filename=filename)
+        trajname = traj.v_name
+
+        npearray = np.ones((2,10,3), dtype=np.float)
+        thevlarray = ['j',22.2,'gutter']
+        carray = StorageData(data_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
+        earray = StorageData(data_type=EARRAY, obj=npearray)
+        vlarray = StorageData(data_type=VLARRAY, object=thevlarray)
+        array = StorageData(data_type=ARRAY, data=npearray)
+
+        traj.v_standard_result = StorageDataResult
+        traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
+                          comment='the arrays')
+
+        traj.f_store()
+
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+
+        toappned = [44,'k']
+        arrays = traj.arrays
+        with arrays.f_context() as cm:
+            a1 = arrays.array
+            a1[0,0,0] = 4.0
+
+            a2 = arrays.carray
+            a2[0,1] = 4
+
+            a4 = arrays.vlarray
+            a4.append(toappned)
+
+
+            a3 = arrays.earray
+            a3.append(np.zeros((1,10,3)))
+
+            #cm.f_flush_storage()
+
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+
+        arrays = traj.arrays
+        with arrays.f_context() as cm:
+            a1 = arrays.array
+            self.assertTrue(a1[0,0,0] == 4.0)
+
+            a2 = arrays.carray
+            self.assertTrue(a2[0,1] == 4)
+
+            a3 = arrays.earray
+            self.assertTrue(a3.read().shape == (3,10,3))
+
+            a4 = arrays.vlarray
+            for idx, x in enumerate(a4):
+                if idx == 0:
+                    self.assertTrue(np.all(x == np.array(thevlarray)))
+                elif idx == 1:
+                    self.assertTrue(np.all(x == np.array(toappned)))
+                else:
+                    raise RuntimeError()
 
