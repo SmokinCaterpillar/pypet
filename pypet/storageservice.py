@@ -1176,6 +1176,36 @@ class HDF5StorageService(StorageService, HasLogger):
                     Iterable whose items are to be stored. Iterable must contain tuples,
                     for example `[(msg1,item1,arg1,kwargs1),(msg2,item2,arg2,kwargs2),...]`
 
+            * :const:`pypet.pypetconstants.STORAGE_DATA`
+
+                Reqeuests and item from the storage, the storage must be opened.
+
+                :param stuff_to_store:
+
+                    A `pypet.storagedata.StorageData` instance
+
+                :return:
+
+                    An item from the storage, (c/vl/e)array or table
+
+            * :const:`pypet.constants.OPEN_FILE`
+
+                Opens the HDF5 file and keeps it open
+
+                :param stuff_to_store: ``None``
+
+            * :const:`pypet.constants.OPEN_FILE`
+
+                Closes an HDF5 file that was kept open, must be open before.
+
+                :param stuff_to_store: ``None``
+
+            * :const:`pypet.constants.FLUSH`
+
+                Flushes an open file, must be open before.
+
+                :param stuff_to_store: ``None``
+
         :raises: NoSuchServiceError if message or data is not understood
 
         """

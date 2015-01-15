@@ -809,10 +809,6 @@ class NaturalNamingInterface(HasLogger):
 
         :param instance: The node to be deleted
 
-        :param remove_empty_groups:
-
-            Whether groups that become empty due to deletion of the node should be erased as well.
-
         """
         full_name = instance.v_full_name
         split_name = deque(full_name.split('.'))

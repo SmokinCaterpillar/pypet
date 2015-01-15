@@ -30,6 +30,7 @@ import hashlib
 import time
 import datetime
 import pickle
+import copy
 
 
 try:
@@ -1708,7 +1709,8 @@ class Environment(HasLogger):
         cnt_file = open(cnt_filename, 'rb')
         continue_dict = dill.load(cnt_file)
         cnt_file.close()
-        traj = continue_dict['trajectory']
+        snapshot_traj = continue_dict['trajectory']
+        traj = copy.deepcopy(snapshot_traj) # We can deep copy since everything was picklable
 
         # We need to update the information about the trajectory name
         config_name = 'config.environment.%s.trajectory.name' % self.v_name
@@ -1753,6 +1755,9 @@ class Environment(HasLogger):
                           load_results=pypetconstants.LOAD_NOTHING,
                           load_other_data=pypetconstants.LOAD_NOTHING)
 
+        snapshot_traj.f_load(load_all=pypetconstants.LOAD_SKELETON) # Load the full skeleton
+        # to see what we need to remove from disk
+
         # Now we have to reconstruct previous results
         result_tuple_list = []
         full_filename_list = []
@@ -1775,7 +1780,8 @@ class Environment(HasLogger):
 
         run_indices = [result[0] for result in result_list]
         # Remove incomplete runs and check which result snapshots need to be removed
-        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
+        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices,
+                                                                 snapshot_traj)
         cleaned_run_indices_set = set(cleaned_run_indices)
 
         new_result_list = []

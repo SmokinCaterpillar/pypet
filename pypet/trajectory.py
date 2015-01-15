@@ -673,31 +673,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                         remove_from_trajectory=True)
 
                             items = []
-                            for leaf in run_node.f_to_dict(with_links=False).values:
-                                if not self.f_contains(leaf.v_full_name, shortcuts=False,
+                            for node in run_node.f_iter_nodes(with_links=False):
+                                if not self.f_contains(node.v_full_name, shortcuts=False,
                                                                 with_links=False):
-                                    items.append(leaf)
+                                    items.append(node)
+                            items = reversed(items)
                         elif not self.f_contains(run_node.v_full_name, shortcuts=False,
                                                  with_links=False):
                             items = [run_node]
 
 
                         snapshot_traj.f_delete_items(items,
-                                            remove_empty_groups=True,
                                             remove_from_trajectory=True)
-
-                        if snapshot_traj.f_contains(run_node.v_full_name, shortcuts=False):
-                            # We end here if there are still some empty groups left
-                            still_empty = []
-                            for node in run_node.f_iter_nodes(with_links=False):
-                                if (not node.f_has_children() and
-                                    not self.f_contains(node.v_full_name, shortcuts=False,
-                                                             with_links=False)):
-                                    still_empty.append(node)
-
-                            if still_empty:
-                                snapshot_traj.f_delete_items(still_empty, remove_from_trajectory=True,
-                                                    remove_empty_groups=True)
 
                         if (snapshot_traj.f_contains(run_node.v_full_name,
                                             shortcuts=False) and

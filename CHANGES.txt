@@ -67,6 +67,8 @@ pypet 0.1b.9
 
 *   Passing `overwrite=True` to an environment will overwrite the hdf5 file.
 
+*   `remove_empty_groups` is no longer supported
+
 
 pypet 0.1b.8
 
