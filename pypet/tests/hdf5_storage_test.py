@@ -807,44 +807,44 @@ class EnvironmentTest(TrajectoryComparator):
         env2.f_disable_logging()
         env3.f_disable_logging()
 
-    def test_file_OVERWRITE_ERROR(self):
-        self.traj.f_store()
-
-        with ptcompat.open_file(self.filename, mode='r') as file:
-            nchildren = len(file.root._v_children)
-            self.assertTrue(nchildren > 0)
-
-        env2 = Environment(filename=self.filename)
-        traj2 = env2.v_trajectory
-        traj2.f_store()
-
-        self.assertTrue(os.path.exists(self.filename))
-
-        with ptcompat.open_file(self.filename, mode='r') as file:
-            nchildren = len(file.root._v_children)
-            self.assertTrue(nchildren > 1)
-        if not hasattr(self, 'complib'):
-            self.set_mode()
-        hdf5store = pd.HDFStore(self.filename, mode='w', complib=self.complib,
-                                           complevel=self.complevel, fletcher32=self.fletcher32)
-        hdf5file = hdf5store._handle
-        f_fd = hdf5file.fileno()
-        hdf5file.flush()
-        try:
-            os.fsync(f_fd)
-            try:
-                hdf5store.flush(fsync=True)
-            except TypeError:
-                f_fd = hdf5store._handle.fileno()
-                hdf5store.flush()
-                os.fsync(f_fd)
-        except Exception as e:
-                # This seems to be the only way to avoid an OSError under Windows
-                errmsg = ('Encountered OSError while flushing file.'
-                                   'If you are using Windows, don`t worry! '
-                                   'I will ignore the error and try to close the file. '
-                                   'Original error: %s' % str(e))
-                print(errmsg)
+    # def test_file_OVERWRITE_ERROR(self):
+    #     self.traj.f_store()
+    #
+    #     with ptcompat.open_file(self.filename, mode='r') as file:
+    #         nchildren = len(file.root._v_children)
+    #         self.assertTrue(nchildren > 0)
+    #
+    #     env2 = Environment(filename=self.filename)
+    #     traj2 = env2.v_trajectory
+    #     traj2.f_store()
+    #
+    #     self.assertTrue(os.path.exists(self.filename))
+    #
+    #     with ptcompat.open_file(self.filename, mode='r') as file:
+    #         nchildren = len(file.root._v_children)
+    #         self.assertTrue(nchildren > 1)
+    #     if not hasattr(self, 'complib'):
+    #         self.set_mode()
+    #     hdf5store = pd.HDFStore(self.filename, mode='w', complib=self.complib,
+    #                                        complevel=self.complevel, fletcher32=self.fletcher32)
+    #     hdf5file = hdf5store._handle
+    #     f_fd = hdf5file.fileno()
+    #     hdf5file.flush()
+    #     try:
+    #         os.fsync(f_fd)
+    #         try:
+    #             hdf5store.flush(fsync=True)
+    #         except TypeError:
+    #             f_fd = hdf5store._handle.fileno()
+    #             hdf5store.flush()
+    #             os.fsync(f_fd)
+    #     except Exception as e:
+    #             # This seems to be the only way to avoid an OSError under Windows
+    #             errmsg = ('Encountered OSError while flushing file.'
+    #                                'If you are using Windows, don`t worry! '
+    #                                'I will ignore the error and try to close the file. '
+    #                                'Original error: %s' % str(e))
+    #             print(errmsg)
 
         hdf5store.close()
         hdf5store = None
