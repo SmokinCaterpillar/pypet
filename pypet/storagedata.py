@@ -167,7 +167,6 @@ class StorageDataResult(Result, KnowsTrajectory):
     #         except AttributeError:
     #             pass
 
-
     def _supports(self, data):
         if isinstance(data, StorageData):
             return True

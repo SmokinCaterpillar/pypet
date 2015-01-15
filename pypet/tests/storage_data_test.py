@@ -25,6 +25,17 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
+
+def copy_one_entry_from_giant_matrices(traj):
+    matrices = traj.matrices
+    idx = traj.v_idx
+    with matrices.f_context():
+        m1 = matrices.m1
+        m2 = matrices.m2
+        m2[idx,idx,idx] = m1[idx,idx,idx]
+    traj.f_add_result('dummy.dummy', 42)
+
+
 def write_into_shared_storage(traj):
     traj.f_add_result('ggg', 42)
     traj.f_add_derived_parameter('huuu', 46)
@@ -49,17 +60,17 @@ def write_into_shared_storage(traj):
         vla.append(np.ones(idx+1)*idx)
         cm.f_flush_store()
         root.info('5. Block')
-        if idx > ncores:
+        if idx > ncores+2:
             x, y = a[idx-ncores], idx-ncores
             if x != y:
                 raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
             x, y = ca[idx-ncores], idx-ncores
             if x != y:
                 raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-            x, y = ea[idx-ncores, 9], idx-ncores
+            x, y = ea[idx-ncores, 9], ea[idx-ncores, 8]
             if x != y:
                 raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-            x, y = vla[idx-ncores][0], idx-ncores
+            x, y = vla[idx-ncores][0], vla[idx-ncores][1]
             if x != y:
                 raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
         root.info('6. !!!!!!!!!')
@@ -436,7 +447,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         length = len(traj)
         self.assertTrue(length > 10)
         with daarrays.f_context() as cm:
-            for idx in range(length):
+            for idx in range(1, length):
                 a = daarrays.a
                 ca = daarrays.ca
                 ea = daarrays.ea
@@ -447,13 +458,12 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 x, y = ca[idx], idx
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-                x, y = ea[idx, 8], idx
+                x, y = ea[idx, 9], ea[idx, 8]
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-                x, y = vla[idx][0], idx
+                x, y = vla[idx][0], vla[idx][1]
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-                len(vla[idx]) == idx
 
         tabs = traj.tabs
 
@@ -511,6 +521,51 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size_in_mb = size/1000000.
         print('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
+
+    def add_matrix_params(self, traj):
+        shape=(300,301,305)
+        m1 = StorageData(obj=np.random.rand(*shape))
+        m2 = StorageData(obj=np.random.rand(*shape))
+        traj.f_add_result(StorageDataResult, 'matrices', m1=m1, m2=m2)
+        traj.f_store()
+
+
+    def check_matrices(self, traj):
+        length = len(traj)
+        self.assertTrue(self.length == length)
+        matrices = traj.matrices
+        for irun in range(length):
+            with matrices.f_context() as cm:
+                m1 = matrices.m1
+                m2 = matrices.m2
+                self.assertTrue(m1[irun,irun,irun] == m2[irun,irun,irun])
+
+
+    def test_giant_matrices(self):
+
+
+        self.length = 20
+        self.traj.f_explore({'trial': range(self.length)})
+
+        self.add_matrix_params(self.traj)
+
+        self.traj.f_add_parameter('TEST', 'test_run')
+
+        self.env.f_run(copy_one_entry_from_giant_matrices)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_update_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
+
+        self.check_matrices(self.traj)
+        self.check_matrices(newtraj)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        print('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
 
 
 class MultiprocStorageLockTest(StorageDataEnvironmentTest):

@@ -701,7 +701,7 @@ class HDF5StorageService(StorageService, HasLogger):
         this via this property.
 
         """
-        return self._keep_open
+        return self._hdf5file is not None and self._hdf5file.isopen
 
     @property
     def encoding(self):
@@ -1376,7 +1376,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         self._mode = mode
-        if self._hdf5file is None:
+        if not self.is_open:
 
             if 'a' in mode:
                 (path, filename) = os.path.split(self._filename)
@@ -1463,8 +1463,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         if (not self._keep_open and
             closing and
-            self._hdf5file is not None and
-            self._hdf5file.isopen):
+            self.is_open):
 
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
