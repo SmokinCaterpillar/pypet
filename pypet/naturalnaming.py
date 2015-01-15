@@ -802,7 +802,7 @@ class NaturalNamingInterface(HasLogger):
             if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
                 del self._nodes_and_leaves_runs_sorted[name]
 
-    def _remove_node_or_leaf(self, instance, remove_empty_groups):
+    def _remove_node_or_leaf(self, instance):
         """Removes a single node from the tree.
 
         Only from RAM not from hdf5 file!
@@ -812,9 +812,9 @@ class NaturalNamingInterface(HasLogger):
         """
         full_name = instance.v_full_name
         split_name = deque(full_name.split('.'))
-        self._remove_recursive(self._root_instance, split_name, remove_empty_groups)
+        self._remove_recursive(self._root_instance, split_name)
 
-    def _remove_recursive(self, actual_node, split_name, remove_empty_groups):
+    def _remove_recursive(self, actual_node, split_name):
         """Removes a given node from the tree.
 
         Starts from a given node and walks recursively down the tree to the location of the node
@@ -827,37 +827,14 @@ class NaturalNamingInterface(HasLogger):
 
         :param split_name: DEQUE of names to get the next nodes.
 
-        :param remove_empty_groups:
-
-             Whether groups that become empty due to deletion of the node should be erased as well.
-             Note that groups that were linking to the node that became empty than themselves
-             are also removed.
-
         :return: True if node was deleted, otherwise False
 
         """
 
         # If the names list is empty, we have reached the node we want to delete.
 
-        def _delete_node_and_linked(node, remove_empty_groups):
-            if remove_empty_groups:
-                full_name = node.v_full_name
-                linking_nodes = []
-                if full_name in self._root_instance._linked_by:
-                    linking = self._root_instance.linked_by[full_name]
-                    for linking_node, link_set in compat.itervalues(linking):
-                        linking_nodes.append(linking_node)
-                self._delete_node(actual_node)
-                for linking_node in linking_nodes:
-                    if len(linking_node._children) == 0:
-                        self._remove_recursive(self._root_instance,
-                                               deque(linking_node.v_full_name.split('.')),
-                                               remove_empty_groups=remove_empty_groups)
-            else:
-                self._delete_node(node)
-
         if len(split_name) == 0:
-            _delete_node_and_linked(actual_node, remove_empty_groups)
+            self._delete_node(actual_node)
             return True
 
         # Otherwise get the next node by using the first name in the list
@@ -867,12 +844,11 @@ class NaturalNamingInterface(HasLogger):
             if len(split_name)>0:
                 raise RuntimeError('You cannot remove nodes while hopping over links!')
             actual_node.f_remove_link(name)
-            return True
         else:
             child = actual_node._children[name]
 
-            # Recursively walk down the tree
-            if self._remove_recursive(child, split_name, remove_empty_groups):
+            if self._remove_recursive(child, split_name):
+
                 del actual_node._children[name]
                 if name in actual_node._groups:
                     del actual_node._groups[name]
@@ -881,15 +857,9 @@ class NaturalNamingInterface(HasLogger):
                 else:
                     raise RuntimeError('You shall not pass!')
                 del child
+                return False
 
-                # Remove empty groups on the way back if desired
-                if (remove_empty_groups and
-                    len(actual_node._children) == 0):
 
-                    _delete_node_and_linked(actual_node, remove_empty_groups)
-                    return True
-
-            return False
 
     def _translate_shortcut(self, name):
         """Maps a given shortcut to corresponding name

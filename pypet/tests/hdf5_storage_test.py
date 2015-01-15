@@ -439,9 +439,9 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('a' not in res)
         self.assertTrue('c' in res)
 
-        traj.f_delete_item(res, remove_from_trajectory=True, remove_empty_groups=True)
+        traj.f_delete_item(res, remove_from_trajectory=True)
 
-        self.assertTrue('results' not in traj)
+        self.assertTrue('results' in traj)
         self.assertTrue(res not in traj)
 
     def test_throw_warning_if_old_kw_is_used(self):
@@ -1122,10 +1122,11 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.assertTrue(self.traj.new.group.v_annotations.annotation, 42)
 
-        self.traj.f_delete_item('new.test.group', remove_empty_groups=True)
+        self.traj.f_delete_item('new.test.group')
 
         with self.assertRaises(pex.DataNotInStorageError):
-            self.traj.parameters.f_load_child('new', recursive=True, load_data=pypetconstants.LOAD_SKELETON)
+            self.traj.parameters.f_load_child('new.test.group',
+                                              load_data=pypetconstants.LOAD_SKELETON)
 
     def test_switch_on_all_comments(self):
         self.explore(self.traj)

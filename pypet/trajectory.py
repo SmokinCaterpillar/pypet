@@ -3394,11 +3394,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._logger.warning('Your loading was not successful, could not find a single item '
                                  'to load.')
 
-    def f_remove_item(self, item, remove_empty_groups=False):
+    @kwargs_api_change('remove_empty_groups')
+    def f_remove_item(self, item):
         """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
-        self.f_remove_items([item], remove_empty_groups)
+        self.f_remove_items([item])
 
-    def f_remove_items(self, iterator, remove_empty_groups=False):
+    @kwargs_api_change('remove_empty_groups')
+    def f_remove_items(self, iterator):
         """Removes parameters, results or groups from the trajectory.
 
         This function ONLY removes items from your current trajectory and does not delete
@@ -3412,12 +3414,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
 
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too. If nodes were linked too, the links are deleted.
-            If the linking node becomes empty thereby, the node is removed, too.
-
         """
 
         # Will format the request in a form that is understood by the storage service
@@ -3427,7 +3423,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if fetched_items:
 
             for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+                self._nn_interface._remove_node_or_leaf(item)
 
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
@@ -3475,10 +3471,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for group, link in group_link_pairs:
                 group.f_remove_link(link)
 
+    @kwargs_api_change('remove_empty_groups')
     def f_delete_item(self, item, *args, **kwargs):
         """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.f_delete_items`"""
         self.f_delete_items([item], *args, **kwargs)
 
+    @kwargs_api_change('remove_empty_groups')
     def f_delete_items(self, iterator, *args, **kwargs):
         """Deletes items from storage on disk.
 
@@ -3491,11 +3489,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
-
-        :param remove_empty_groups:
-
-            If your deletion of the instance leads to empty groups,
-            these will be deleted, too. Default is `False`.
 
         :param remove_from_trajectory:
 
@@ -3538,7 +3531,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
 
-        remove_empty_groups = kwargs.get('remove_empty_groups', False)
         remove_from_trajectory = kwargs.pop('remove_from_trajectory', False)
 
         # Will format the request in a form that is understood by the storage service
@@ -3558,7 +3550,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             
             for msg, item, dummy1, dummy2 in fetched_items:
                 if remove_from_trajectory:
-                    self._nn_interface._remove_node_or_leaf(item, remove_empty_groups)
+                    self._nn_interface._remove_node_or_leaf(item)
                 else:
                     item._stored = False
             

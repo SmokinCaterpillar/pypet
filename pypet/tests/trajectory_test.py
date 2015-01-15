@@ -575,7 +575,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
     def testremove(self):
-        self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'),remove_empty_groups=True)
+        self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'))
 
         with self.assertRaises(AttributeError):
             self.traj.peter.markus.yve
@@ -584,10 +584,12 @@ class TrajectoryTest(unittest.TestCase):
 
         #self.assertTrue(len(self.traj)==1)
 
-        self.traj.f_remove_item('FortyTwo',remove_empty_groups=True)
+        self.traj.f_remove_item('FortyTwo')
 
         self.traj.f_remove_item('SparseParam')
         self.traj.f_remove_item('IntParam')
+
+        self.assertTrue('IntParam' not in self.traj)
 
         #self.assertTrue(len(self.traj)==1)
 

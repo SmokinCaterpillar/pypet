@@ -215,9 +215,7 @@ class ContinueTest(TrajectoryComparator):
         self.filenames = [make_temp_file(os.path.join('experiments',
                                                       'tests',
                                                       'HDF5',
-                                                      'merge1.hdf5')), 0]
-
-
+                                                      'removal.hdf5')), 0]
 
         self.envs=[]
         self.trajs = []
@@ -245,15 +243,13 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[0].f_add_parameter('Delete.Me', 'I will be deleted!')
         self.trajs[0].f_store_item('Delete.Me')
 
-        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'),
-                                        remove_empty_groups=True)
+        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'))
 
         self.assertTrue('Delete.Me' not in self.trajs[0],'Delete.Me is still in traj')
 
         self.trajs[0].f_update_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
         self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
-                                        remove_empty_groups=True,
                                         remove_from_trajectory=True)
 
         self.trajs[0].f_update_skeleton()

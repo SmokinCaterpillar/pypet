@@ -1133,11 +1133,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 :param stuff_to_store: The item to be removed.
 
-                :param remove_empty_groups:
-
-                    Whether to also remove groups that become empty due to removal.
-                    default is False.
-
                 :param delete_only:
 
                     Potential list of parts of a leaf node that should be deleted.
@@ -4661,16 +4656,11 @@ class HDF5StorageService(StorageService, HasLogger):
         link._f_remove()
 
     def _all_delete_parameter_or_result_or_group(self, instance,
-                                                 remove_empty_groups=False,
                                                  delete_only=None,
                                                  remove_from_item=False):
         """Removes a parameter or result or group from the hdf5 file.
 
         :param instance: Instance to be removed
-
-        :param remove_empty_groups:
-
-            Whether to delete groups that might become empty due to deletion
 
         :param delete_only:
 
@@ -4729,17 +4719,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
             the_node._f_remove(recursive=True)
 
-            if remove_empty_groups:
-                for irun in reversed(list(range(len(split_name)))):
-                    where = '/' + self._trajectory_name + '/' + '/'.join(split_name[0:irun])
-                    node_name = split_name[irun]
-                    act_group = ptcompat.get_node(self._hdf5file,
-                                                  where=where, name=node_name)
-                    if len(act_group._v_groups) == 0:
-                        ptcompat.remove_node(self._hdf5file,
-                                             where=where, name=node_name, recursive=True)
-                    else:
-                        break
         else:
             if not instance.v_is_leaf:
                 raise ValueError('You can only choose `delete_only` mode for leafs.')
