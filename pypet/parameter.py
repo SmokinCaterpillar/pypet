@@ -2202,7 +2202,7 @@ class Result(BaseResult):
         try:
             if len(item) == 0:
                 self._logger.warning('The Item `%s` is empty.' % name)
-        except TypeError:
+        except (TypeError, AttributeError) as e:
             # If the item does not support `len` operation we can ignore that
             pass
 

@@ -302,7 +302,7 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """Acquires a lock before storage and releases it afterwards."""
         try:
             self.acquire_lock()
-            self._storage_service.store(*args, **kwargs)
+            return self._storage_service.store(*args, **kwargs)
         finally:
             if self._lock is not None:
                 try:
@@ -314,7 +314,7 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """Acquires a lock before loading and releases it afterwards."""
         try:
             self._lock.acquire()
-            self._storage_service.load(*args, **kwargs)
+            return self._storage_service.load(*args, **kwargs)
         finally:
             if self._lock is not None:
                 try:

@@ -13,6 +13,8 @@ from pypet.tests.link_multiproc_test import MultiprocLinkLockTest, MultiprocLink
 
 from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 
+from pypet.tests.storage_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
+
 ContinueMPTest = None
 ContinueMPPoolTest = None
 try:
@@ -35,7 +37,8 @@ except ImportError as e:
 big_suite_1 = combine_test_classes(MultiprocNoPoolLockTest,
                                    MultiprocSortQueueTest,
                                    MultiprocLinkLockTest,
-                                   CapTest)
+                                   CapTest,
+                                   MultiprocStorageLockTest)
 
 big_suite_2 = combine_test_classes(MultiprocNoPoolQueueTest,
                                    MultiprocSortLockTest,
@@ -46,7 +49,8 @@ big_suite_2 = combine_test_classes(MultiprocNoPoolQueueTest,
 big_suite_3 = combine_test_classes(MultiprocLockTest,
                                    MultiprocNoPoolSortQueueTest,
                                    MultiprocLinkNoPoolQueueTest,
-                                   TestMPImmediatePostProc)
+                                   TestMPImmediatePostProc,
+                                   MultiprocStorageNoPoolLockTest)
 
 big_suite_4 = combine_test_classes(MultiprocQueueTest,
                                    MultiprocNoPoolSortLockTest,

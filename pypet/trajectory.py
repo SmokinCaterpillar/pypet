@@ -660,8 +660,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     run_parent = snapshot_traj._run_parent_groups[where]
                     if run_parent.f_contains(run_name, shortcuts=False):
                         run_node = run_parent.f_get(run_name, shortcuts=False)
-
-
                         if run_node.v_is_group:
                             for grp in run_node.f_iter_nodes(with_links=False):
                                 if (not grp.v_is_leaf and grp.f_has_links() and
@@ -677,11 +675,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                 if not self.f_contains(node.v_full_name, shortcuts=False,
                                                                 with_links=False):
                                     items.append(node)
-                            items = reversed(items)
+                            items = reversed(items) # Reverse so that we delete
+                            # leaf nodes before group nodes, i.e. group nodes
+                            # are empty when whe delete them
                         elif not self.f_contains(run_node.v_full_name, shortcuts=False,
                                                  with_links=False):
                             items = [run_node]
-
 
                         snapshot_traj.f_delete_items(items,
                                             remove_from_trajectory=True)

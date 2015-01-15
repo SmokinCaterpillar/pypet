@@ -2034,7 +2034,7 @@ class Environment(HasLogger):
                         pass
                     else:
                         # Prepare Multiprocessing
-                        lock_with_manager = self._use_pool or self._immediate_postproc
+                        lock_with_manager = True#self._use_pool or self._immediate_postproc
                         self._multiproc_wrapper = MultiprocessWrapper(self._traj,
                                                            self._wrap_mode,
                                                            full_copy=None,

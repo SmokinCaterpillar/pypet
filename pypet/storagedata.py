@@ -43,6 +43,18 @@ class StorageData(object):
         if item_type is None:
             self._guess_type(kwargs)
 
+    def __getstate__(self):
+        """Called for pickling.
+
+        Removes the keyword arguments and the item in case it is till
+        bundled with the storage.
+
+        """
+        statedict = self.__dict__.copy()
+        statedict['_kwargs'] = {}
+        statedict['_item'] = None
+        return statedict
+
     def _guess_type(self, kwargs):
         if 'description' in kwargs or 'first_row' in kwargs:
             self._type = pypetconstants.TABLE
@@ -83,6 +95,11 @@ class StorageData(object):
             self._item = service.store(pypetconstants.STORAGE_DATA, self)
 
     def __getattr__(self, item):
+        if not (hasattr(self, '_traj') and
+                    hasattr(self, '_item') and
+                    hasattr(self,'_request_data')) :
+            raise AttributeError('This is to avoid pickle issues')
+
         self._request_data()
         return getattr(self._item, item)
 
@@ -100,6 +117,10 @@ class StorageData(object):
 
     def __del__(self):
         self.f_free_item()
+
+    def __len__(self):
+        self._request_data()
+        return len(self._item)
 
     def __dir__(self):
         result = dir(type(self)) + compat.listkeys(self.__dict__)
@@ -131,6 +152,21 @@ class StorageDataResult(Result, KnowsTrajectory):
     def __init__(self, full_name, trajectory, *args, **kwargs):
         self._traj = trajectory
         super(StorageDataResult, self).__init__(full_name, *args, **kwargs)
+
+    # def __setstate__(self, statedict):
+    #     """Called after loading a pickle dump.
+    #
+    #     Restores `__dict__` from `statedict` and sets dependencies for all results
+    #
+    #     """
+    #     super(StorageDataResult, self).__setstate__(statedict)
+    #     for name in self._data:
+    #         item = self._data[name]
+    #         try:
+    #             item._set_dependencies(self._traj, self.v_full_name, name)
+    #         except AttributeError:
+    #             pass
+
 
     def _supports(self, data):
         if isinstance(data, StorageData):
