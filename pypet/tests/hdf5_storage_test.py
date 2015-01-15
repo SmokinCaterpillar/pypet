@@ -845,16 +845,16 @@ class EnvironmentTest(TrajectoryComparator):
     #                                'I will ignore the error and try to close the file. '
     #                                'Original error: %s' % str(e))
     #             print(errmsg)
-
-        hdf5store.close()
-        hdf5store = None
-        hdf5file = None
-
-        with ptcompat.open_file(self.filename, mode='r') as file:
-            nchildren = len(file.root._v_children)
-            self.assertTrue(nchildren == 0)
-
-        env2.f_disable_logging()
+    #
+    #     hdf5store.close()
+    #     hdf5store = None
+    #     hdf5file = None
+    #
+    #     with ptcompat.open_file(self.filename, mode='r') as file:
+    #         nchildren = len(file.root._v_children)
+    #         self.assertTrue(nchildren == 0)
+    #
+    #     env2.f_disable_logging()
 
     def make_run_large_data(self):
         self.env.f_run(add_large_data)
