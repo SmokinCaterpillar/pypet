@@ -823,7 +823,8 @@ class EnvironmentTest(TrajectoryComparator):
         with ptcompat.open_file(self.filename, mode='r') as file:
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
-
+        if not hasattr(self, 'complib'):
+            self.set_mode()
         hdf5store = pd.HDFStore(self.filename, mode='w', complib=self.complib,
                                            complevel=self.complevel, fletcher32=self.fletcher32)
         hdf5file = hdf5store._handle

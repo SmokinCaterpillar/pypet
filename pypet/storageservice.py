@@ -1460,8 +1460,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._logger.debug(errmsg)
 
             self._hdf5store.close()
-            self._hdf5store = None
+            if self._hdf5file.isopen:
+                raise RuntimeError('Could not close HDF5 file!')
             self._hdf5file = None
+            self._hdf5store = None
             self._trajectory_group = None
             self._trajectory_name = None
             self._trajectory_index = None
