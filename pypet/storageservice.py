@@ -679,8 +679,12 @@ class HDF5StorageService(StorageService, HasLogger):
         self._keep_open = False
 
         if overwrite:
-            opened = self._srvc_opening_routine(mode='w', msg=None)
-            self._srvc_closing_routine(opened)
+            try:
+                os.remove(filename)
+                self._logger.info('You specified ``overwrite=True``, so I deleted file `%s`.' %
+                                  filename)
+            except OSError:
+                pass
 
         # We don't want the NN warnings of pytables to display because they can be
         # annoying as hell
@@ -1326,8 +1330,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         :param mode:
 
-            'w' for writing
-
             'a' for appending
 
             'r' for reading
@@ -1351,7 +1353,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._mode = mode
         if self._hdf5file is None:
 
-            if 'a' in mode or 'w' in mode:
+            if 'a' in mode:
                 (path, filename) = os.path.split(self._filename)
                 if not os.path.exists(path):
                     os.makedirs(path)
@@ -1374,10 +1376,9 @@ class HDF5StorageService(StorageService, HasLogger):
                         # Keep a reference to the top trajectory node
                         self._trajectory_group = ptcompat.get_node(self._hdf5file,
                                                                    '/' + self._trajectory_name)
-                elif msg is not None:
-                    raise ValueError('Your trajectory cannot be found in the hdf5file, '
-                                             'please use >>traj.f_store()<< '
-                                             'before storing anything else.')
+                else:
+                    raise ValueError('I don`t know which trajectory to load')
+
             elif mode == 'r':
 
                 if not self._trajectory_name is None and not self._trajectory_index is None:
