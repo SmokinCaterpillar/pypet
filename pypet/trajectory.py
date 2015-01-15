@@ -606,7 +606,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self.f_set_crun(None)
 
-    def _remove_incomplete_runs(self, start_timestamp, run_indices):
+    def _remove_incomplete_runs(self, start_timestamp, run_indices, snapshot_traj):
         """Requests the storage service to delete incomplete runs.
 
         Called by the environment if you resume a crashed trajectory to allow
@@ -619,6 +619,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :param nruns:
 
             Number of runs that were supposed to be executed with this environment
+
+        :param snapshot_traj:
+
+            The trajectory that was part of the snapshot, we need it to make sure, that
+            we do not remove anything that was already part of the snapshot.
 
         :return
 
@@ -651,43 +656,57 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             completed = info_dict['completed']
 
             if not completed:
-                for where in ['results', 'derived_parameters']:
+                for where in snapshot_traj._run_parent_groups:
+                    run_parent = snapshot_traj._run_parent_groups[where]
+                    if run_parent.f_contains(run_name, shortcuts=False):
+                        run_node = run_parent.f_get(run_name, shortcuts=False)
 
-                    if self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False):
-                        self[where].runs.f_remove_child(run_name, recursive=True)
 
-                    delete_items = True
-                    try:
-                        run_node = self.f_load_child('%s.runs.%s' % (where, run_name),
-                                                     recursive=True, load_data=1)
-                    except Exception:
-                        delete_items = False  # We end here if we could not load data
+                        if run_node.v_is_group:
+                            for grp in run_node.f_iter_nodes(with_links=False):
+                                if (not grp.v_is_leaf and grp.f_has_links() and
+                                    not self.f_contains(grp.v_full_name, shortcuts=False,
+                                                                 with_links=False)):
+                                    link_tuples = zip(itools.repeat(grp),
+                                                      compat.listkeys(grp._links))
+                                    snapshot_traj.f_delete_links(link_tuples,
+                                                        remove_from_trajectory=True)
 
-                    if delete_items:
-                        for grp in run_node.f_iter_nodes(with_links=False):
-                            if not grp.v_is_leaf and grp.f_has_links():
-                                link_tuples = zip(itools.repeat(grp), compat.listkeys(grp._links))
-                                self.f_delete_links(link_tuples, remove_from_trajectory=True)
+                            items = []
+                            for leaf in run_node.f_to_dict(with_links=False).values:
+                                if not self.f_contains(leaf.v_full_name, shortcuts=False,
+                                                                with_links=False):
+                                    items.append(leaf)
+                        elif not self.f_contains(run_node.v_full_name, shortcuts=False,
+                                                 with_links=False):
+                            items = [run_node]
 
-                        self.f_delete_items(run_node.f_to_dict(with_links=False).values(),
+
+                        snapshot_traj.f_delete_items(items,
                                             remove_empty_groups=True,
                                             remove_from_trajectory=True)
 
-                        if self.f_contains('%s.runs.%s' % (where, run_name), shortcuts=False):
+                        if snapshot_traj.f_contains(run_node.v_full_name, shortcuts=False):
                             # We end here if there are still some empty groups left
                             still_empty = []
                             for node in run_node.f_iter_nodes(with_links=False):
-                                if not node.f_has_children():
+                                if (not node.f_has_children() and
+                                    not self.f_contains(node.v_full_name, shortcuts=False,
+                                                             with_links=False)):
                                     still_empty.append(node)
 
                             if still_empty:
-                                self.f_delete_items(still_empty, remove_from_trajectory=True,
+                                snapshot_traj.f_delete_items(still_empty, remove_from_trajectory=True,
                                                     remove_empty_groups=True)
 
-                        if (self.f_contains('%s.runs.%s' % (where, run_name),
+                        if (snapshot_traj.f_contains(run_node.v_full_name,
                                             shortcuts=False) and
-                                self.f_get('%s.runs.%s').f_has_children()):
-                            raise RuntimeError('Something is wrong!')
+                                run_node.f_has_children()):
+                            for node in run_node.f_iter_nodes(with_links=False):
+                                if not self.f_contains(node.v_full_name,
+                                                                shortcuts=False,
+                                                                with_links=False):
+                                    raise RuntimeError('Something is wrong')
 
         return cleaned_run_indices
 
