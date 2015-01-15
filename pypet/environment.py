@@ -827,6 +827,15 @@ class Environment(HasLogger):
                              'installed psutil. Please install psutil or set '
                              'cpu_cap, memory_cap, and swap_cap to 1.0')
 
+        if multiproc and'OPENBLAS_NUM_THREADS' in os.environ:
+            openblas_num_thread = int(os.environ['OPENBLAS_NUM_THREADS'])
+            if openblas_num_thread > 1:
+                self._logger.error('You want to use multiprocessing but the '
+                                     'environment variable `OPENBLAS_NUM_THREADS` is not set '
+                                     'to 1. This can cause serious errors when using numpy or '
+                                     'scipy linear algebra operations and will yield unexpected '
+                                     'and undesired results.')
+
         self._cpu_cap = cpu_cap
         self._memory_cap = memory_cap
         self._swap_cap = swap_cap
