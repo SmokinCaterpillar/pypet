@@ -35,13 +35,15 @@ class StorageData(object):
         self._path_to_data = None
         self._item_name = None
         self._item = None
-        self.f_set_init_args(item_type, **kwargs)
+        self.f_set_init_args(item_type=item_type, **kwargs)
 
-    def f_set_init_args(self, item_type=None, **kwargs):
-        self._type = item_type
+    def f_set_init_args(self, **kwargs):
+        if 'item_type' in kwargs:
+            self._type = kwargs.pop('item_type')
+            if self._type is None:
+                self._guess_type(kwargs)
         self._kwargs = kwargs
-        if item_type is None:
-            self._guess_type(kwargs)
+
 
     def __getstate__(self):
         """Called for pickling.
@@ -95,9 +97,8 @@ class StorageData(object):
             self._item = service.store(pypetconstants.STORAGE_DATA, self)
 
     def __getattr__(self, item):
-        if not (hasattr(self, '_traj') and
-                    hasattr(self, '_item') and
-                    hasattr(self,'_request_data')) :
+        if ('_traj' not in self.__dict__ or
+                    '_item' not in self.__dict__):
             raise AttributeError('This is to avoid pickle issues')
 
         self._request_data()
@@ -186,17 +187,11 @@ class StorageDataResult(Result, KnowsTrajectory):
             raise RuntimeError('The storage service is not open, '
                                'please open via `f_open_storage`.')
         service.store(pypetconstants.CLOSE_FILE, None)
-        if service.multiproc_safe:
-            service.keep_locked = False
-            service.release_lock()
 
     def f_open_store(self):
         service = self._traj.v_storage_service
         if service.is_open:
             raise RuntimeError('Your service is already open, there is no need to re-open it.')
-        if service.multiproc_safe:
-            service.keep_locked = True
-            service.acquire_lock()
         service.store(pypetconstants.OPEN_FILE, None,
                       trajectory_name=self._traj.v_name)
 

@@ -252,7 +252,6 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         self._storage_service = storage_service
         self._lock = lock
         self._set_logger()
-        self._keep_locked = False
         self._is_locked = False
 
     def __repr__(self):
@@ -279,22 +278,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
-    @property
-    def keep_locked(self):
-        """You can enforce to keep the lock acquired after interaction"""
-        return self._keep_locked
-
-    @keep_locked.setter
-    def keep_locked(self, val):
-        self._keep_locked = bool(val)
-
     def acquire_lock(self):
         if not self._is_locked:
             self._lock.acquire()
             self._is_locked = True
 
     def release_lock(self):
-        if self._is_locked and not self._keep_locked:
+        if self._is_locked and not self._storage_service.is_open:
             self._lock.release()
             self._is_locked = False
 
@@ -309,6 +299,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
                     self.release_lock()
                 except RuntimeError:
                     self._logger.error('Could not release lock `%s`!' % str(self._lock))
+
+    def __del__(self):
+        """In order to prevent a dead-lock in case of error,
+         we close the storage on deletion and release the lock"""
+        if self._storage_service.is_open:
+            self._storage_service.store(pypetconstants.CLOSE_FILE, None)
+        self.release_lock()
 
     def load(self, *args, **kwargs):
         """Acquires a lock before loading and releases it afterwards."""
