@@ -47,7 +47,9 @@ class HasLogger(object):
 
         """
         if name is None:
-            name = type(self).__name__
+            name = 'pypet.%s' % type(self).__name__
+        else:
+            name = 'pypet.%s' % name
         self._logger = logging.getLogger(name)
 
 
