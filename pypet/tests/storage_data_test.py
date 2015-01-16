@@ -78,20 +78,22 @@ def write_into_shared_storage(traj):
     tabs = traj.tabs
 
     tabs.f_open_store()
-    t1 = tabs.t1
-    row = t1.row
-    row['run_name'] = compat.tobytes(traj.v_crun)
-    row['idx'] = idx
-    row.append()
-    t1.flush()
+    try:
+        t1 = tabs.t1
+        row = t1.row
+        row['run_name'] = compat.tobytes(traj.v_crun)
+        row['idx'] = idx
+        row.append()
+        t1.flush()
 
-    t2 = tabs.t2
-    row = t2[idx]
-    if row['run_name'] != compat.tobytes(traj.v_crun):
-        raise RuntimeError('Names in run table do not match, Run: %s != %s' % (row['run_name'],
-                                                                               traj.v_crun) )
-    tabs.f_flush_store()
-    tabs.f_close_store()
+        t2 = tabs.t2
+        row = t2[idx]
+        if row['run_name'] != compat.tobytes(traj.v_crun):
+            raise RuntimeError('Names in run table do not match, Run: %s != %s' % (row['run_name'],
+                                                                                   traj.v_crun) )
+    finally:
+        tabs.f_flush_store()
+        tabs.f_close_store()
 
 
 class StorageDataTrajectoryTests(TrajectoryComparator):
