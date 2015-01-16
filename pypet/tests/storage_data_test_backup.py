@@ -96,28 +96,37 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
 
         thedata = np.zeros((1000,1000))
-        myarray = ArrayData(data=thedata)
-        mytable = TableData(description={'hi':pt.IntCol(), 'huhu':pt.StringCol(33)})
-        mytable2 = TableData(first_row={'ha': compat.tobytes('hi'), 'haha':'lk'})
-        mytable3 = TableData(first_row={'ha': compat.tobytes('hu'), 'haha':'kk'})
+        myarray = StorageData(data=thedata)
+        mytable = StorageData(description={'hi':pt.IntCol(), 'huhu':pt.StringCol(33)})
+        mytable2 = StorageData(first_row={'ha': compat.tobytes('hi'), 'haha':np.zeros((3,3))})
+        mytable3 = StorageData(first_row={'ha': compat.tobytes('hu'), 'haha':np.ones((3,3))})
 
         traj.f_add_result(StorageDataResult, 'myres1', myarray)
         traj.f_add_result(StorageDataResult, 'myres2', t1=mytable, t2=mytable2, t3=mytable3)
 
+        with self.assertRaises(AttributeError):
+            myarray.read()
+
+        with self.assertRaises(AttributeError):
+            for irun in mytable:
+                pass
 
         traj.f_store()
 
-        data = myarray.f_read()
-        arr = myarray.f_get_store_item()
-        self.assertTrue(np.all(data == thedata))
-        t3 = traj.myres2.t3
-        for row in traj.myres2.t2:
-            orow = row
-            traj.myres2.t2.f_append([orow])
-            t3.f_append([orow])
-        myarray[2,2] = 10
-        data = myarray.read()
-        traj.myres2.f_flush_store()
+        with traj.f_get('myres1').f_context():
+            data = myarray.read()
+            arr = myarray.v_item
+            self.assertTrue(np.all(data == thedata))
+            self.assertTrue(traj.v_storage_service.is_open)
+            t3 = traj.myres2.t3
+            for row in traj.myres2.t2:
+                orow = t3.row
+                for colname in t3.colnames:
+                    orow[colname] = row[colname]
+                orow.append()
+            myarray[2,2] = 10
+            data = myarray.read()
+            traj.myres2.f_flush_store()
 
 
         self.assertTrue(myarray.v_item is None)

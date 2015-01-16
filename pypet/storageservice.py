@@ -521,28 +521,36 @@ class HDF5StorageService(StorageService, HasLogger):
 
     STORAGE_DATA_TYPE = 'SRVC_DATA_STORE_'
 
-    ARRAY = pypetconstants.ARRAY
+    ARRAY = 'ARRAY'
     '''Stored as array_
 
     .. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
 
     '''
-    CARRAY = pypetconstants.CARRAY
+    CARRAY = 'CARRAY'
     '''Stored as carray_
 
     .. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
 
     '''
-    EARRAY = pypetconstants.EARRAY
-    ''' Stored as earray_
+    EARRAY = 'EARRAY'
+    ''' Stored as earray_e.
 
     .. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
 
     '''
-    VLARRAY = pypetconstants.VLARRAY
+
+    VLARRAY = 'VLARRAY'
     '''Stored as vlarray_
 
     .. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
+
+    '''
+
+    TABLE = 'TABLE'
+    '''Stored as pytable_
+
+    .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
 
     '''
 
@@ -552,7 +560,7 @@ class HDF5StorageService(StorageService, HasLogger):
     In fact, stored as pytable, but the dictionary wil be reconstructed.
     '''
 
-    TABLE = pypetconstants.TABLE
+    TABLE = 'TABLE'
     '''Stored as pytable_
 
     .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
@@ -578,7 +586,7 @@ class HDF5StorageService(StorageService, HasLogger):
     DATATYPE_TABLE = 'DATATYPE_TABLE'
     '''If a table contains the data types instead of the attrs'''
 
-    STORAGE_DATA = 'STORAGE_DATA'
+    STORAGE_DATA = 'STORAGE_DATA_'
     ''' An HDF5 data object for direct interaction '''
 
     TYPE_FLAG_MAPPING = {
@@ -593,8 +601,11 @@ class HDF5StorageService(StorageService, HasLogger):
         Series: SERIES,
         Panel: PANEL,
         Panel4D: PANEL,
-        hdf5data.StorageData: STORAGE_DATA
-
+        hdf5data.ArrayData: STORAGE_DATA+ARRAY,
+        hdf5data.CArrayData: STORAGE_DATA+CARRAY,
+        hdf5data.EArrayData: STORAGE_DATA+EARRAY,
+        hdf5data.VLArrayData: STORAGE_DATA+VLARRAY,
+        hdf5data.TableData: STORAGE_DATA+TABLE
     }
     ''' Mapping from object type to storage flag'''
 
@@ -1244,7 +1255,6 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._srvc_store_several_items(stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.STORAGE_DATA:
-
                 return self._hdf5_interact_with_data(stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.OPEN_FILE:
@@ -4196,8 +4206,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._prm_store_series(msg, key, data_to_store, _hdf5_group, fullname)
                 elif flag == HDF5StorageService.PANEL:
                     self._prm_store_panel(msg, key, data_to_store, _hdf5_group, fullname)
-                elif flag == HDF5StorageService.STORAGE_DATA:
-                    self._prm_store_hdf5_data(msg, key, data_to_store, _hdf5_group, fullname)
+                elif flag.startswith(HDF5StorageService.STORAGE_DATA):
+                    self._prm_store_hdf5_data(msg, key, data_to_store, _hdf5_group, fullname, flag)
                 else:
                     raise RuntimeError('You shall not pass!')
 
@@ -4219,22 +4229,22 @@ class HDF5StorageService(StorageService, HasLogger):
             _hdf5_group._f_remove(recursive=True)
             raise
 
-    def _prm_store_hdf5_data(self, msg, key, data_to_store, _hdf5_group, full_name):
+    def _prm_store_hdf5_data(self, msg, key, data_to_store, _hdf5_group, full_name, flag):
         try:
-            type = data_to_store._type
             kwargs = data_to_store._kwargs
 
-            if type == HDF5StorageService.TABLE:
+            if flag.endswith(HDF5StorageService.TABLE):
                 self._prm_store_hdf5_table(msg, key, data_to_store, _hdf5_group,
                                            full_name, **kwargs)
             else:
                 self._prm_store_hdf5_array(msg, key, data_to_store, _hdf5_group,
-                                           full_name, **kwargs)
+                                           full_name, flag, **kwargs)
         except:
             self._logger.error('Failed storing StorageData `%s` of `%s`.' % (key, full_name))
             raise
 
-    def _prm_store_hdf5_array(self, msg, key, data_to_store, _hdf5_group, full_name, **kwargs):
+    def _prm_store_hdf5_array(self, msg, key, data_to_store, _hdf5_group, full_name, flag,
+                              **kwargs):
         """Creates and array that can be used with an HDF5 array object"""
         data = None
         if 'obj' in kwargs:
@@ -4244,14 +4254,12 @@ class HDF5StorageService(StorageService, HasLogger):
         elif 'data' in kwargs:
             data = kwargs.pop('data')
 
-        flag = data_to_store._type
-
-        if flag == HDF5StorageService.ARRAY:
+        if flag == HDF5StorageService.STORAGE_DATA+HDF5StorageService.ARRAY:
             self._prm_store_into_array(msg, key, data, _hdf5_group, full_name,
                                        recall=False, **kwargs)
-        elif flag in (HDF5StorageService.CARRAY,
-                      HDF5StorageService.EARRAY,
-                      HDF5StorageService.VLARRAY):
+        elif flag in (HDF5StorageService.STORAGE_DATA+HDF5StorageService.CARRAY,
+                    HDF5StorageService.STORAGE_DATA+HDF5StorageService.EARRAY,
+                    HDF5StorageService.STORAGE_DATA+HDF5StorageService.VLARRAY):
             self._prm_store_into_other_array(msg, key, data, _hdf5_group, full_name,
                                              flag=flag, recall=False,**kwargs)
         else:
@@ -5036,7 +5044,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                HDF5StorageService.SERIES,
                                HDF5StorageService.PANEL):
                 self._prm_read_pandas(node, load_dict, full_name)
-            elif load_type == HDF5StorageService.STORAGE_DATA:
+            elif load_type.startswith(HDF5StorageService.STORAGE_DATA):
                 self._prm_read_hdf5_data(node, load_dict, full_name)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
@@ -5073,9 +5081,9 @@ class HDF5StorageService(StorageService, HasLogger):
     def _prm_read_hdf5_data(self, ptitem, load_dict, full_name):
         """ Creates an HDF5Array data item to interact with the data later
 
-        :param table:
+        :param ptitem:
 
-            The table represented by the item
+            The pytables item
 
         :param load_dict:
 
@@ -5086,16 +5094,29 @@ class HDF5StorageService(StorageService, HasLogger):
             The full name of the parameter or result
 
         """
+        def _storage_factory(flag):
+            if flag.endswith(HDF5StorageService.TABLE):
+                return hdf5data.TableData
+            elif flag.endswith(HDF5StorageService.ARRAY):
+                return hdf5data.ArrayData
+            elif flag.endswith(HDF5StorageService.CARRAY):
+                return hdf5data.CArrayData
+            elif flag.endswith(HDF5StorageService.EARRAY):
+                return hdf5data.EArrayData
+            elif flag.endswith(HDF5StorageService.VLARRAY):
+                return hdf5data.VLArrayData
+            else:
+                raise RuntimeError('You shall not pass')
+
         try:
             data_name = ptitem._v_name
             flag = getattr(ptitem._v_attrs, HDF5StorageService.STORAGE_DATA_TYPE)
-            storage_data = hdf5data.StorageData(item_type=flag)
+            storage_data = _storage_factory(flag)()
             load_dict[data_name] = storage_data
         except:
             self._logger.error('Failed loading hdf5 storage data '
                                '`%s` of `%s`.' % (ptitem._v_name, full_name))
             raise
-
 
     def _prm_read_dictionary(self, leaf, load_dict, full_name):
         """Loads data that was originally a dictionary when stored
@@ -5285,8 +5306,29 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed loading `%s` of `%s`.' % (array._v_name, full_name))
             raise
 
-    def _hdf5_interact_with_data(self, item):
-        path_to_data = item._path_to_data
+    def _hdf5_interact_with_data(self, path_to_data, item_name, request, args, kwargs):
         hdf5group = self._all_get_node_by_name(path_to_data)
-        hdf5data = ptcompat.get_child(hdf5group, item._item_name)
-        return hdf5data
+        hdf5data = ptcompat.get_child(hdf5group, item_name)
+        if request == '__theitem__':
+            return hdf5data
+
+        if kwargs and kwargs.pop('_col_func', False):
+            colname = kwargs.pop('colname', None)
+            if colname is None:
+                colname = args[0]
+            name_list = colname.split('/')
+            curr = hdf5data.cols
+            for name in name_list:
+                curr = getattr(curr, name)
+            hdf5data = curr
+
+        what = getattr(hdf5data, request)
+        if args is None and kwargs is None:
+            return what
+        else:
+            if args is None:
+                args=()
+            if kwargs is None:
+                kwargs = {}
+            result = what(*args, **kwargs)
+            return result
