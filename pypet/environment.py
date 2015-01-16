@@ -1182,7 +1182,7 @@ class Environment(HasLogger):
         # inherit the log level of their parent. In this case the parent will
         # be the `pypet_root_logger`. It is possible to set the levels of the
         # logger in each class individually by using::
-        #     logging.getLogger('<class name>').setLevel(log_level)
+        #     logging.getLogger('pypet.<class name>').setLevel(log_level)
 
         pypet_root_logger = logging.getLogger('pypet')
         pypet_root_logger.setLevel(log_level)
