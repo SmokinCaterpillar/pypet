@@ -66,6 +66,7 @@ from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug
 
+
 def _single_run(args):
     """ Performs a single run of the experiment.
 
@@ -76,7 +77,9 @@ def _single_run(args):
         1. Path to log files
 
         2. Boolean whether to log stdout
-
+        
+        3, The log level
+        
         4. The user's job function
 
         5. Number of total runs (int)
@@ -103,7 +106,7 @@ def _single_run(args):
     """
     multiproc = False # Defined here for the finally block
     handler = None
-    root = logging.getLogger()
+    pypet_root_logger = logging.getLogger('pypet')
     try:
         traj = args[0]
         log_path = args[1]
@@ -135,9 +138,11 @@ def _single_run(args):
                 handler = logging.FileHandler(filename=filename)
                 formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
                 handler.setFormatter(formatter)
-                root.addHandler(handler)
+                pypet_root_logger.addHandler(handler)
+                pypet_root_logger.setLevel(log_level)
             except IOError as e:
-                root.error('Could not create file `%s`. I will NOT store log messages of '
+                pypet_root_logger.error('Could not create file `%s`. '
+                                        'I will NOT store log messages of '
                            'process `%s` to disk. Original Error: `%s`' %
                            (short_filename, process_name, str(e)))
 
@@ -169,7 +174,7 @@ def _single_run(args):
         if clean_up_after_run and not multiproc:
             traj._finalize_run()
 
-        root.info('\n=========================================\n '
+        pypet_root_logger.info('\n=========================================\n '
                   'Finished single run #%d of %d '
                   '\n=========================================\n' % (idx, total_runs))
 
@@ -192,13 +197,13 @@ def _single_run(args):
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
     finally:
         if multiproc and handler is not None:
-            root.removeHandler(handler)
+            pypet_root_logger.removeHandler(handler)
 
 
 def _queue_handling(queue_handler, log_path, log_stdout):
     """ Starts running a queue handler and creates a log file for the queue."""
     handler=None # Defined here for the finally block
-    root = logging.getLogger()
+    pypet_root_logger = logging.getLogger('pypet')
     try:
         if log_path is not None:
             # Create a new log file for the queue writer
@@ -208,9 +213,10 @@ def _queue_handling(queue_handler, log_path, log_stdout):
                 handler = logging.FileHandler(filename=filename)
                 formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
                 handler.setFormatter(formatter)
-                root.addHandler(handler)
+                pypet_root_logger .addHandler(handler)
             except IOError as e:
-                root.error('Could not create file `%s`. I will NOT store log messages of '
+                pypet_root_logger .error('Could not create file `%s`. '
+                                         'I will NOT store log messages of '
                            'queue process to disk. Original Error: `%s`' %
                            (short_filename, str(e)))
 
@@ -1203,13 +1209,13 @@ class Environment(HasLogger):
             sys.stderr = sys.__stderr__
         if self._error_log_handler is not None:
             self._logger.info('Disabling logging to the error file')
-            root = logging.getLogger()
-            root.removeHandler(self._error_log_handler)
+            pypet_root_logger = logging.getLogger('pypet')
+            pypet_root_logger.removeHandler(self._error_log_handler)
             self._error_logger_handler = None
         if self._main_log_handler is not None:
             self._logger.info('Disabling logging to main file')
-            root = logging.getLogger()
-            root.removeHandler(self._main_log_handler)
+            pypet_root_logger = logging.getLogger('pypet')
+            pypet_root_logger.removeHandler(self._main_log_handler)
             self._main_log_handler = None
         # #logging.shutdown()
         pass
@@ -1227,7 +1233,9 @@ class Environment(HasLogger):
 
         # Set the log level to the specified one
         logging.basicConfig(level=log_level)
-        root = logging.getLogger()
+        
+        pypet_root_logger = logging.getLogger('pypet')
+        pypet_root_logger.setLevel(log_level)
 
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
@@ -1237,9 +1245,9 @@ class Environment(HasLogger):
         try:
             # Handler creation might fail under Windows sometimes
             main_log_handler = logging.FileHandler(filename=os.path.join(log_path, 'main.txt'))
-            root.addHandler(main_log_handler)
+            pypet_root_logger.addHandler(main_log_handler)
         except IOError as e:
-            root.error('Could not create file `errors_and_warnings.txt`. '
+            pypet_root_logger.error('Could not create file `errors_and_warnings.txt`. '
                        'I will NOT store log messages to disk. Original Error: `%s`' % str(e))
 
         # Add a handler for storing warnings and errors to a text file
