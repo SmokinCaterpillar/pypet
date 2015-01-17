@@ -114,6 +114,7 @@ because most of the time the default settings are sufficient.
     Be aware of data loss if you set this to ``False`` and not
     manually store everything.
 
+
 * ``log_folder``
 
     The ``log_folder`` specifies where all log files will be stored.
@@ -131,18 +132,22 @@ because most of the time the default settings are sufficient.
     If you don't set a log level elsewhere before, the standard level will be *INFO*
     (if you have no clue what I am talking about, take a look at the logging_ module).
 
-* ``log_level``
+* ``logger_names``
 
-    Which log level message should be logged, default is ``logging.INFO``. If you choose
-    ``logging.DEBUG`` more verbose statements about storing parameters and results will be
-    displayed. Set to ``None`` if you want to disable logging.
-
-* ``logger_name``
-
-    Name of the logger to which the above settings apply. Default is root ``''``, i.e.
+    List or tuple of names to which the logging settings apply. Default is root ``('',)``, i.e.
     all logging messages are logged to the folder specified. If you only want
     *pypet* to save messages created by itself and not by your own loggers use
-    ``logger_name='pypet'``.
+    ``logger_names='(pypet,)'``. Or if you only want to store messages from ``stdout`` and
+    ``stderr`` set logger_names to ``('STDOUT','STERR')``.
+
+* ``log_levels``
+
+    List or tuple of log levels same length as ``logger_names``. If the length is 1 and
+    ``loger_names`` has more than one entry, the log level is used for all loggers.
+    They describe which log level message should be logged, default is ``(logging.INFO,)``.
+    If you choose
+    ``(logging.DEBUG,)`` more verbose statements about storing parameters and results will be
+    displayed. Set to ``None`` if you want to disable logging.
 
 * ``log_stdout``
 
