@@ -13,7 +13,7 @@ else:
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging
-from pypet.tests.test_helpers import make_run,make_temp_file
+from pypet.tests.test_helpers import make_run, make_temp_file
 
 
 def just_printing_bro(traj):

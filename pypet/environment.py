@@ -121,7 +121,7 @@ def _single_run(args):
 
         use_pool = result_queue is None
 
-        root = logging.getLogger()
+        pypet_root_logger = logging.getLogger('pypet')
         idx = traj.v_idx
 
         if multiproc and log_path is not None:
@@ -136,7 +136,7 @@ def _single_run(args):
             handler = logging.FileHandler(filename=filename)
             formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
             handler.setFormatter(formatter)
-            root.addHandler(handler)
+            pypet_root_logger.addHandler(handler)
 
             if log_stdout:
                 # Also copy standard out and error to the log files
@@ -150,9 +150,10 @@ def _single_run(args):
         if queue is not None:
             traj.v_storage_service.queue = queue
 
-        root.info('\n===================================\n '
-                  'Starting single run #%d of %d '
-                  '\n===================================\n' % (idx, total_runs))
+        pypet_root_logger.info('\n===================================\n '
+                               'Starting single run #%d of %d '
+                               '\n===================================\n' %
+                               (idx+1, total_runs))
 
         # Measure start time
         traj._set_start_time()
@@ -169,9 +170,10 @@ def _single_run(args):
         if clean_up_after_run and not multiproc:
             traj._finalize()
 
-        root.info('\n===================================\n '
-                  'Finished single run #%d of %d '
-                  '\n===================================\n' % (idx, total_runs))
+        pypet_root_logger.info('\n===================================\n '
+                               'Finished single run #%d of %d '
+                               '\n===================================\n'
+                               % (idx+1, total_runs))
 
         # Add the index to the result
         result = (traj.v_idx, result)
@@ -181,7 +183,7 @@ def _single_run(args):
             _trigger_result_snapshot(result, continue_path)
 
         if multiproc:
-            root.removeHandler(handler)
+            pypet_root_logger.removeHandler(handler)
 
         if not use_pool:
             result_queue.put(result)
@@ -202,12 +204,12 @@ def _queue_handling(handler, log_path, log_stdout):
         # Create a new log file for the queue writer
         filename = 'queue_process.txt'
         filename = log_path + '/' + filename
-        root = logging.getLogger()
+        pypet_root_logger = logging.getLogger('pypet')
 
         h = logging.FileHandler(filename=filename)
         f = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
         h.setFormatter(f)
-        root.addHandler(h)
+        pypet_root_logger.addHandler(h)
 
         if log_stdout:
             # Redirect standard out and error to the file
@@ -1170,22 +1172,31 @@ class Environment(HasLogger):
             os.makedirs(log_path)
 
         # Check if there already exist logging handlers, if so, we assume the user
-        # has already set a log  level. If not, we set the log level to INFO
+        # has already set a log level. If not, we set the log level to `log_level`
         if len(logging.getLogger().handlers) == 0:
             logging.basicConfig(level=log_level)
+
+        # Create pypet root logger with log level `log_level`. All the file
+        # handlers will be stored in that logger. The log level of the class
+        # logger are all set to `logging.NOTSET` by default which means they
+        # inherit the log level of their parent. In this case the parent will
+        # be the `pypet_root_logger`. It is possible to set the levels of the
+        # logger in each class individually by using::
+        #     logging.getLogger('pypet.<class name>').setLevel(log_level)
+
+        pypet_root_logger = logging.getLogger('pypet')
+        pypet_root_logger.setLevel(log_level)
 
         # Add a handler for storing everything to a text file
         f = logging.Formatter(
             '%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
         h = logging.FileHandler(filename=log_path + '/main.txt')
-        root = logging.getLogger()
-        root.addHandler(h)
+        pypet_root_logger.addHandler(h)
 
         # Add a handler for storing warnings and errors to a text file
         h = logging.FileHandler(filename=log_path + '/errors_and_warnings.txt')
         h.setLevel(logging.WARNING)
-        root = logging.getLogger()
-        root.addHandler(h)
+        pypet_root_logger.addHandler(h)
 
         if log_stdout:
             # Also copy standard out and error to the log files
@@ -1195,7 +1206,7 @@ class Environment(HasLogger):
             errstl = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
             sys.stderr = errstl
 
-        for handler in root.handlers:
+        for handler in pypet_root_logger.handlers:
             handler.setFormatter(f)
 
     @deprecated('Please use assignment in environment constructor.')
