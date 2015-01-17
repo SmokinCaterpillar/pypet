@@ -137,6 +137,13 @@ because most of the time the default settings are sufficient.
     ``logging.DEBUG`` more verbose statements about storing parameters and results will be
     displayed. Set to ``None`` if you want to disable logging.
 
+* ``logger_name``
+
+    Name of the logger to which the above settings apply. Default is root ``''``, i.e.
+    all logging messages are logged to the folder specified. If you only want
+    *pypet* to save messages created by itself and not by your own loggers use
+    ``logger_name='pypet'``.
+
 * ``log_stdout``
 
     Whether the output of STDOUT and STDERROR should be recorded into the log files.

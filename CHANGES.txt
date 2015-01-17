@@ -69,6 +69,8 @@ pypet 0.1b.9
 
 *   `remove_empty_groups` is no longer supported
 
+*   All messages logged by *pypet* are now no longer using the root logger but one called 'pypet'.
+
 
 pypet 0.1b.8
 
