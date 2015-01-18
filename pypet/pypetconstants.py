@@ -23,7 +23,7 @@ numpyversion = numpy.__version__
 import scipy
 scipyversion = scipy.__version__
 import os
-platformversion = os.uname()
+platformversion = ', '.join(os.uname())
 
 try:
     import sumatra
