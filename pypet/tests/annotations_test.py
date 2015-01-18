@@ -34,7 +34,10 @@ class AnnotationsTest(unittest.TestCase):
 
         self.add_annotations(self.traj)
 
-        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 5)
+        pred = lambda x: 'config' not in x.v_full_name
+
+        x = len([node for node in self.traj.f_iter_nodes(recursive=True, predicate=pred)])
+        self.assertTrue(x == 5, '%s != %s' % (str(x), str(5)))
 
     def tearDown(self):
         remove_data()

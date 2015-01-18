@@ -25,9 +25,9 @@ import pypet.utils.ptcompat as ptcompat
 import pypet.pypetconstants as pypetconstants
 import pypet.pypetexceptions as pex
 from pypet._version import __version__ as VERSION
-from pypet.parameter import ObjectTable
+from pypet.parameter import ObjectTable, Parameter
 import pypet.naturalnaming as nn
-from pypet.pypetlogging import HasLogger
+from pypet.pypetlogging import HasLogger, DisableLogger
 import pypet.storagedata as hdf5data
 
 
@@ -799,6 +799,8 @@ class HDF5StorageService(StorageService, HasLogger):
                  derived_parameters_per_run=0,
                  display_time=30, trajectory=None):
 
+        self._set_logger()
+
         if purge_duplicate_comments and not summary_tables:
             raise ValueError('You cannot purge duplicate comments without having the'
                              ' small overview tables.')
@@ -812,8 +814,6 @@ class HDF5StorageService(StorageService, HasLogger):
             file_title = 'Experiments'
         else:
             file_title = file_title
-
-
 
         if filename is None and trajectory is not None:
             # If no filename is supplied and the filename cannot be extracted from the
@@ -834,6 +834,9 @@ class HDF5StorageService(StorageService, HasLogger):
         elif not tail and trajectory is None:
             filename = os.path.join(filename, 'Experiments.hdf5')
 
+        # Print which file we use for storage
+        self._logger.info('I will use the hdf5 file `%s`.' % filename)
+
         self._filename = filename
         self._file_title = file_title
         self._trajectory_name = None if trajectory is None else trajectory.v_name
@@ -843,7 +846,6 @@ class HDF5StorageService(StorageService, HasLogger):
         self._trajectory_group = None  # link to the top group in hdf5 file which is the start
         # node of a trajectory
         # remembers whether to purge duplicate comments
-        self._set_logger()
         self._filters = None
         self._complevel = complevel
         self._complib = complib
@@ -873,75 +875,14 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_results_runs = large_overview_tables
         self._overview_results_runs_summary = summary_tables
 
-        if trajectory is not None:
-            # Add HDF5 config in case the that has not happened
-            if not trajectory.f_contains('config.hdf5', shortcuts=False):
+        self._disable_logger = DisableLogger()
 
-                # Print which file we use for storage
-                self._logger.info('I will use the hdf5 file `%s`.' % self._filename)
-
-                for attr_name in HDF5StorageService.NAME_TABLE_MAPPING:
-                    table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
-                    value = getattr(self, attr_name)
-                    trajectory.f_add_config('hdf5.overview.' + table_name,
-                                            value,
-                                            comment='Whether or not to have an overview '
-                                                    'table with that name')
-
-                trajectory.f_add_config('hdf5.overview.explored_parameters_runs',
-                                        self._overview_explored_parameters_runs,
-                                        comment='Whether there are overview tables about the '
-                                                'explored parameters in each run')
-
-                trajectory.f_add_config('hdf5.purge_duplicate_comments', purge_duplicate_comments,
-                                        comment='Whether comments of results and'
-                                                ' derived parameters should only'
-                                                ' be stored for the very first instance.'
-                                                ' Works only if the summary tables are'
-                                                ' active.')
-
-                trajectory.f_add_config('hdf5.results_per_run', results_per_run,
-                                        comment='Expected number of results per run,'
-                                                ' a good guess can increase storage performance')
-
-                trajectory.f_add_config('hdf5.derived_parameters_per_run',
-                                        derived_parameters_per_run,
-                                        comment='Expected number of derived parameters per run,'
-                                                ' a good guess can increase storage performance')
-
-                trajectory.f_add_config('hdf5.complevel', complevel,
-                                        comment='Compression Level (0 no compression '
-                                                'to 9 highest compression)')
-
-                trajectory.f_add_config('hdf5.complib', complib,
-                                        comment='Compression Algorithm')
-
-                trajectory.f_add_config('hdf5.encoding', encoding,
-                                        comment='Encoding for unicode characters')
-
-                trajectory.f_add_config('hdf5.fletcher32', fletcher32,
-                                        comment='Whether to use fletcher 32 checksum')
-
-                trajectory.f_add_config('hdf5.shuffle', shuffle,
-                                        comment='Whether to use shuffle filtering.')
-
-                trajectory.f_add_config('hdf5.pandas_format', pandas_format,
-                                        comment='''How to store pandas data frames, either'''
-                                                ''' 'fixed' ('f') or 'table' ('t').''')
-
-                trajectory.f_add_config('hdf5.pandas_append', pandas_append,
-                                        comment='If pandas frames are stored as tables, one can '
-                                                'enable append mode.')
-
-                trajectory.config.hdf5.v_comment = 'Settings for the standard HDF5 storage service'
-            else:
-                self._logger.warning('Your trajectory was already stored with an HDF5 storage '
-                                     'service before. I will use the old settings and ignore your '
-                                     'current HDF5 settings.')
-            trajectory.v_storage_service = self # And add the storage service
 
         self._mode = None
         self._keep_open = False
+
+        if trajectory is not None:
+            self._srvc_set_config(trajectory=trajectory, how='ADD')
 
         if overwrite:
             try:
@@ -1076,6 +1017,82 @@ class HDF5StorageService(StorageService, HasLogger):
             self._hdf5store._fletcher32 = self._fletcher32
 
         return self._filters
+
+    def _srvc_set_config(self, trajectory, how='ADD'):
+        """Sets a config value to the Trajectory or changes it if the trajectory was loaded
+        a the settings no longer match"""
+        def _set_config(name, value, comment):
+            if how == 'ADD' and not trajectory.f_contains('config.'+name, shortcuts=False):
+                trajectory.f_add_config(Parameter, name, value, comment=comment)
+            elif how == 'CHECK' and trajectory.f_contains('config.'+name, shortcuts=False):
+                conf = trajectory.f_get(name, fast_access = False)
+                with self._disable_logger:
+                    if conf.f_get() != value:
+                        conf.f_unlock()
+                        conf.f_set(value)
+
+        for attr_name in HDF5StorageService.NAME_TABLE_MAPPING:
+            table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
+            value = getattr(self, attr_name)
+            _set_config('hdf5.overview.' + table_name,
+                                    value,
+                                    comment='Whether or not to have an overview '
+                                            'table with that name')
+
+        _set_config('hdf5.overview.explored_parameters_runs',
+                                self._overview_explored_parameters_runs,
+                                comment='Whether there are overview tables about the '
+                                        'explored parameters in each run')
+
+        _set_config('hdf5.purge_duplicate_comments',
+                                self._purge_duplicate_comments,
+                                comment='Whether comments of results and'
+                                        ' derived parameters should only'
+                                        ' be stored for the very first instance.'
+                                        ' Works only if the summary tables are'
+                                        ' active.')
+
+        _set_config('hdf5.results_per_run', self._results_per_run,
+                                comment='Expected number of results per run,'
+                                        ' a good guess can increase storage performance')
+
+        _set_config('hdf5.derived_parameters_per_run',
+                                self._derived_parameters_per_run,
+                                comment='Expected number of derived parameters per run,'
+                                        ' a good guess can increase storage performance')
+
+        _set_config('hdf5.complevel', self._complevel,
+                                comment='Compression Level (0 no compression '
+                                        'to 9 highest compression)')
+
+        _set_config('hdf5.complib', self._complib,
+                                comment='Compression Algorithm')
+
+        _set_config('hdf5.encoding', self._encoding,
+                                comment='Encoding for unicode characters')
+
+        _set_config('hdf5.fletcher32', self._fletcher32,
+                                comment='Whether to use fletcher 32 checksum')
+
+        _set_config('hdf5.shuffle', self._shuffle,
+                                comment='Whether to use shuffle filtering.')
+
+        _set_config('hdf5.pandas_format', self._pandas_format,
+                                comment='''How to store pandas data frames, either'''
+                                        ''' 'fixed' ('f') or 'table' ('t').''')
+
+        _set_config('hdf5.pandas_append', self._pandas_append,
+                                comment='If pandas frames are stored as tables, one can '
+                                        'enable append mode.')
+
+        if trajectory.f_contains('config.hdf5', shortcuts=False):
+            if trajectory.config.hdf5.v_comment == '':
+                # If this has not happened yet, add a description of the hdf5 config group
+                trajectory.config.hdf5.v_comment = 'Settings for the standard HDF5 storage service'
+
+        trajectory.v_storage_service = self # And add the storage service
+
+
 
 
     def load(self, msg, stuff_to_load, *args, **kwargs):
@@ -2385,6 +2402,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Load the hdf5 config data:
             self._srvc_load_hdf5_settings()
+            self._srvc_set_config(trajectory=traj, how='CHECK')
 
 
     def _srvc_load_hdf5_settings(self):

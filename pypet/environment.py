@@ -30,7 +30,6 @@ import hashlib
 import time
 import datetime
 import pickle
-import inspect
 import copy
 
 
@@ -68,6 +67,8 @@ from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug, get_matching_kwargs
+from pypet.utils.storage_factory import storage_factory
+from pypet.parameter import Parameter
 
 
 def _single_run(args):
@@ -911,27 +912,20 @@ class Environment(HasLogger):
 
             self._time = formatted_time
 
-        if storage_service is True: # to allow compatibility with older python versions
+        if storage_service is True: # to allow compatibility with older python versions, i.e. old
+            # keyword use_hdf5
             storage_service = HDF5StorageService
+        if self._traj.v_storage_service is not None:
+            self._logger.info('Found storage service attached to Trajectory. Will use '
+                              'this storage service.')
+            self._storage_service = self.v_trajectory.v_storage_service
+        else:
+            self._storage_service, unused_factory_kwargs = storage_factory(storage_service,
+                                                                        self._traj, **kwargs)
+            unused_kwargs = unused_kwargs - (set(kwargs.keys()) - unused_factory_kwargs)
+
         if lazy_debug and is_debug():
             self._storage_service = LazyStorageService()
-        else:
-            if self.v_trajectory.v_storage_service is None:
-                if inspect.isclass(storage_service):
-                    # Check if the user wants to use the hdf5 storage service. If yes,
-                    # add a service to the trajectory
-                    # ``is True`` to allow compatibility with older versions
-                    kwargs_copy = kwargs.copy()
-                    kwargs_copy['trajectory'] = self._traj
-                    matching_kwargs = get_matching_kwargs(storage_service, kwargs_copy)
-                    self._storage_service = storage_service(**matching_kwargs)
-                    unused_kwargs = unused_kwargs - set(matching_kwargs.keys())
-                else:
-                    self._storage_service = storage_service
-            else:
-                self._logger.info('Found storage service attached Trajectory. Will use '
-                                  'this storage service.')
-                self._storage_service = self.v_trajectory.v_storage_service
 
         self._traj.v_storage_service = self._storage_service
 
@@ -1030,49 +1024,49 @@ class Environment(HasLogger):
         if self._do_single_runs:
 
             config_name = 'environment.%s.multiproc' % self.v_name
-            self._traj.f_add_config(config_name, self._multiproc,
+            self._traj.f_add_config(Parameter, config_name, self._multiproc,
                                     comment='Whether or not to use multiprocessing.').f_lock()
 
             if self._multiproc:
                 config_name = 'environment.%s.use_pool' % self.v_name
-                self._traj.f_add_config(config_name, self._use_pool,
+                self._traj.f_add_config(Parameter, config_name, self._use_pool,
                                         comment='Whether to use a pool of processes or '
                                                 'spawning individual processes for '
                                                 'each run.').f_lock()
 
                 if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
                     config_name = 'environment.%s.cpu_cap' % self.v_name
-                    self._traj.f_add_config(config_name, self._cpu_cap,
+                    self._traj.f_add_config(Parameter, config_name, self._cpu_cap,
                                             comment='Maximum cpu usage beyond '
                                                     'which no new processes '
                                                     'are spawned').f_lock()
 
                     config_name = 'environment.%s.memory_cap' % self.v_name
-                    self._traj.f_add_config(config_name, self._memory_cap,
+                    self._traj.f_add_config(Parameter, config_name, self._memory_cap,
                                             comment='Maximum RAM usage beyond which '
                                                     'no new processes '
                                                     'are spawned').f_lock()
 
                     config_name = 'environment.%s.swap_cap' % self.v_name
-                    self._traj.f_add_config(config_name, self._swap_cap,
+                    self._traj.f_add_config(Parameter, config_name, self._swap_cap,
                                             comment='Maximum Swap memory usage beyond '
                                                     'which no new '
                                                     'processes are spawned').f_lock()
 
                 config_name = 'environment.%s.ncores' % self.v_name
-                self._traj.f_add_config(config_name, self._ncores,
+                self._traj.f_add_config(Parameter, config_name, self._ncores,
                                         comment='Number of processors in case of '
                                                 'multiprocessing').f_lock()
 
                 config_name = 'environment.%s.wrap_mode' % self.v_name
-                self._traj.f_add_config(config_name, self._wrap_mode,
+                self._traj.f_add_config(Parameter, config_name, self._wrap_mode,
                                         comment='Multiprocessing mode (if multiproc),'
                                                 ' i.e. whether to use QUEUE'
                                                 ' or LOCK or NONE'
                                                 ' for thread/process safe storing').f_lock()
 
             config_name = 'environment.%s.clean_up_runs' % self._name
-            self._traj.f_add_config(config_name, self._clean_up_runs,
+            self._traj.f_add_config(Parameter, config_name, self._clean_up_runs,
                                     comment='Whether or not results should be removed after the '
                                             'completion of a single run. '
                                             'You are not advised to set this '
@@ -1080,37 +1074,37 @@ class Environment(HasLogger):
                                             'doing.').f_lock()
 
             config_name = 'environment.%s.continuable' % self._name
-            self._traj.f_add_config(config_name, self._continuable,
+            self._traj.f_add_config(Parameter, config_name, self._continuable,
                                     comment='Whether or not a continue file should'
                                             ' be created. If yes, everything is'
                                             ' handled by `dill`.').f_lock()
 
         config_name = 'environment.%s.trajectory.name' % self.v_name
-        self._traj.f_add_config(config_name, self.v_trajectory.v_name,
+        self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_name,
                                 comment='Name of trajectory').f_lock()
 
         config_name = 'environment.%s.trajectory.timestamp' % self.v_name
-        self._traj.f_add_config(config_name, self.v_trajectory.v_timestamp,
+        self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_timestamp,
                                 comment='Timestamp of trajectory').f_lock()
 
         config_name = 'environment.%s.timestamp' % self.v_name
-        self._traj.f_add_config(config_name, self.v_timestamp,
+        self._traj.f_add_config(Parameter, config_name, self.v_timestamp,
                                 comment='Timestamp of environment creation').f_lock()
 
         config_name = 'environment.%s.hexsha' % self.v_name
-        self._traj.f_add_config(config_name, self.v_hexsha,
+        self._traj.f_add_config(Parameter, config_name, self.v_hexsha,
                                 comment='SHA-1 identifier of the environment').f_lock()
 
         try:
             config_name = 'environment.%s.script' % self.v_name
-            self._traj.f_add_config(config_name, main.__file__,
+            self._traj.f_add_config(Parameter, config_name, main.__file__,
                                     comment='Name of the executed main script').f_lock()
         except AttributeError:
             pass  # We end up here if we use pypet within an ipython console
 
         for package_name, version in pypetconstants.VERSIONS_TO_STORE.items():
             config_name = 'environment.%s.versions.%s' % (self.v_name, package_name)
-            self._traj.f_add_config(config_name, version,
+            self._traj.f_add_config(Parameter, config_name, version,
                                     comment='Particular version of a package or distribution '
                                             'used during experiment. N/A if package could not '
                                             'be imported.').f_lock()
@@ -1629,13 +1623,13 @@ class Environment(HasLogger):
 
         config_name = 'sumatra.record_%s.label' % str(sumatra_label)
         if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(config_name, sumatra_label,
+            self._traj.f_add_config(Parameter, config_name, sumatra_label,
                                     comment='The label of the sumatra record')
 
         if self._sumatra_reason:
             config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
             if not self._traj.f_contains('config.' + config_name):
-                self._traj.f_add_config(config_name, self._sumatra_reason,
+                self._traj.f_add_config(Parameter, config_name, self._sumatra_reason,
                                         comment='Reason of sumatra run.')
 
         self._logger.info('Saved sumatra project record with reason: %s' % self._sumatra_reason)
@@ -1741,7 +1735,7 @@ class Environment(HasLogger):
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name = 'environment.%s.continued' % self.v_name
         if not config_name in self._traj:
-            self._traj.f_add_config(config_name, True,
+            self._traj.f_add_config(Parameter, config_name, True,
                                     comment='Added if a crashed trajectory was continued.')
 
         self._logger.info('I will resume trajectory `%s`.' % self._traj.v_name)
@@ -1932,7 +1926,7 @@ class Environment(HasLogger):
 
             config_name = 'environment.%s.start_timestamp' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
-                self._traj.f_add_config(config_name, self._start_timestamp,
+                self._traj.f_add_config(Parameter, config_name, self._start_timestamp,
                                         comment='Timestamp of starting of experiment '
                                                 '(when the actual simulation was '
                                                 'started (either by calling `f_run`, '
@@ -1941,7 +1935,7 @@ class Environment(HasLogger):
             if self._multiproc and self._postproc is not None:
                 config_name = 'environment.%s.immediate_postprocessing' % self.v_name
                 if not self._traj.f_contains('config.' + config_name):
-                    self._traj.f_add_config(config_name, self._immediate_postproc,
+                    self._traj.f_add_config(Parameter, config_name, self._immediate_postproc,
                                             comment='Whether to use immediate '
                                                     'postprocessing, only added if '
                                                     'postprocessing was used at all.')
@@ -2243,13 +2237,13 @@ class Environment(HasLogger):
         if expanded_by_postproc:
             config_name = 'environment.%s.postproc_expand' % self.v_name
             if not self._traj.f_contains('config.' + config_name):
-                self._traj.f_add_config(config_name, True,
+                self._traj.f_add_config(Parameter, config_name, True,
                                         comment='Added if trajectory was expanded '
                                                 'by postprocessing.')
 
         config_name = 'environment.%s.automatic_storing' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(config_name, self.v_trajectory.v_name,
+            self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_name,
                                     comment='If trajectory should be stored automatically in the '
                                             'end.').f_lock()
         if self._automatic_storing:
@@ -2273,13 +2267,13 @@ class Environment(HasLogger):
         conf_list = []
         config_name = 'environment.%s.finish_timestamp' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            conf1 = self._traj.f_add_config(config_name, self._finish_timestamp,
+            conf1 = self._traj.f_add_config(Parameter, config_name, self._finish_timestamp,
                                             comment='Timestamp of finishing of an experiment.')
             conf_list.append(conf1)
 
         config_name = 'environment.%s.runtime' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            conf2 = self._traj.f_add_config(config_name, self._runtime,
+            conf2 = self._traj.f_add_config(Parameter, config_name, self._runtime,
                                             comment='Runtime of whole experiment.')
             conf_list.append(conf2)
 

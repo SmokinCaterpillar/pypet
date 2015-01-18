@@ -44,8 +44,8 @@ from pypet.storagedata import StorageDataResult
 import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug
+from pypet.utils.storage_factory import storage_factory
 
-@kwargs_api_change('filename', 'storage_service')
 def load_trajectory(
                name=None,
                index=None,
@@ -56,8 +56,9 @@ def load_trajectory(
                load_other_data=pypetconstants.LOAD_SKELETON,
                load_all=None,
                force=False,
-               storage_service=None,
-               dynamic_imports=None):
+               dynamic_imports=None,
+               storage_service=storage.HDF5StorageService,
+               **kwargs):
     """Helper function that creates a novel trajectory and loads it from disk.
 
     For the parameters see :func:`~pypet.trajectory.Trajectory.f_load`.
@@ -78,8 +79,9 @@ def load_trajectory(
                load_other_data=load_other_data,
                load_all=load_all,
                force=force,
+               dynamic_imports=dynamic_imports,
                storage_service=storage_service,
-               dynamic_imports=dynamic_imports)
+               **kwargs)
     return traj
 
 
@@ -178,15 +180,19 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         If you only have a single class to import, you do not need the list brackets:
         `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
-    :param filename:
+    :param storage_service:
 
-        If you want to use the default :class:`rageService`, you can specify the
-        filename of the HDF5 file. If you specify the filename, the trajectory
-        will automatically create the corresponding service object.
+        Pass a storage service used by the Trajectory. Alternatively pass a constructor
+        and other ``**kwargs`` are passed onto the constructor.
+
+    :param kwargs:
+
+        Other arguments passed to the storage service constructor
 
     :raises:
 
-        ValueError: If the name of the trajectory contains invalid characters.
+        ValueError: If the name of the trajectory contains invalid characters or
+                    not all additional keyword arguments are used.
 
         TypeError: If the dynamically imported classes are not classes or strings.
 
@@ -197,13 +203,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     comment = 'I am a neat example!', filename='experiment.hdf5', file_title='Experiments')
 
     """
-
-    @kwargs_api_change('filename', 'storage_service')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, name='my_trajectory', add_time=True, comment='',
-                 dynamic_imports=None,
-                 storage_service=None):
+                 dynamic_imports=None, storage_service=None, **kwargs):
         self._is_run = False
+
+        # Helper variable: During a multiprocessing single run, the trajectory is usually
+        # pickled without all the parameter exploration ranges and all run information
+        # As a consequence, __len__ would return 1, so we need to store the length in this
+        # helper variable to return the correct length during single runs.
+        self._length_during_nfc = None
 
         super(Trajectory, self).__init__()
 
@@ -263,9 +272,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._environment_hexsha = None
         self._environment_name = None
 
-
-        self._storage_service = self._check_storage(storage_service)
-
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_crun'.
         self._idx = -1
@@ -278,12 +284,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._full_copy = False
 
         self._dynamic_imports = ['pypet.parameter.PickleParameter']
-
-        # Helper variable: During a multiprocessing single run, the trajectory is usually
-        # pickled without all the parameter exploration ranges and all run information
-        # As a consequence, __len__ would return 1, so we need to store the length in this
-        # helper variable to return the correct length during single runs.
-        self._length_during_nfc = None
 
         if not dynamic_imports is None:
             self.f_add_to_dynamic_imports(dynamic_imports)
@@ -303,16 +303,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._comment = ''
         self.v_comment = comment
 
-    def _check_storage(self, service_or_filename):
-        if isinstance(service_or_filename, compat.base_type):
-            name, ext = os.path.splitext(service_or_filename)
-            if ext in ('.hdf', '.h4', '.hdf4', '.he2', '.h5', '.hdf5', '.he5'):
-                return storage.HDF5StorageService(filename=service_or_filename)
-            else:
-                raise ValueError('Extension `%s` of filename `%s` not understood.' %
-                                 (ext, service_or_filename))
-        else:
-            return service_or_filename
+        self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
+                                                               trajectory=self, **kwargs)
+        if len(unused_kwargs) > 0:
+            raise ValueError('The following keyword arguments were not used: `%s`' %
+                             str(unused_kwargs))
+
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -1251,7 +1247,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
-    @kwargs_api_change('filename', 'storage_service')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @not_in_run
     def f_load(self,
@@ -1264,8 +1259,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                load_other_data=pypetconstants.LOAD_SKELETON,
                load_all=None,
                force=False,
+               dynamic_imports=None,
                storage_service=None,
-               dynamic_imports=None):
+               **kwargs):
         """Loads a trajectory via the storage service.
 
 
@@ -1354,12 +1350,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for this manually. The versions of other packages can be found under
             ``'config.environment.name_of_environment.versions.package_name'``.
 
-        :param filename:
-
-            If you haven't specified a filename on creation of the trajectory, you can
-            specify one here. The trajectory will generate an HDF5StorageService
-            automatically.
-
         :param dynamic_imports:
 
             If you've written a custom parameter that needs to be loaded dynamically
@@ -1373,14 +1363,31 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             The classes passed here are added for good and will be kept by the trajectory.
             Please add your dynamically imported classes only once.
 
+        :param storage_service:
+
+            Pass a storage service used by the Trajectory. Alternatively pass a constructor
+            and other ``**kwargs`` are passed onto the constructor. Leave `None` in combination
+            with using no other kwargs, if you don't want to change the service
+            the trajectory is currently using.
+
+        :param kwargs:
+
+            Other arguments passed to the storage service constructor. Don't pass any
+            other kwargs and ``storage_service=None`,
+            if you don't want to change the current service.
+
         :raises:
 
-            Attribute Error:
+            AttributeError:
 
                 If options 1 and 2 (load skeleton and load data) are applied but the
                 objects already exist in your trajectory. This prevents implicitly overriding
                 data in RAM. Use -1 and -2 instead to load only items that are currently not
                 in your trajectory in RAM. Or remove the items you want to 'reload' first.
+
+            ValueError:
+
+                If additional keyword arguments are not used
 
         """
 
@@ -1394,8 +1401,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             load_results = pypetconstants.LOAD_NOTHING
             load_other_data = pypetconstants.LOAD_NOTHING
 
-        if storage_service is not None:
-            self._storage_service = self._check_storage(storage_service)
+        unused_kwargs = set(kwargs.keys())
+        if self.v_storage_service is None or storage_service is not None or len(kwargs) > 0:
+            self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
+                                                               trajectory=self, **kwargs)
+        if len(unused_kwargs) > 0:
+            raise ValueError('The following keyword arguments were not used: `%s`' %
+                             str(unused_kwargs))
 
         if not dynamic_imports is None:
             self.f_add_to_dynamic_imports(dynamic_imports)

@@ -888,10 +888,17 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore_large(self.traj)
         self.make_run_large_data()
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+
+        newtraj = Trajectory()
+        newtraj.f_add_config('hdf5.pandas_append', 42) # wrong value, se if it is replaced
+        newtraj.f_load(name=self.traj.v_name, as_new=False, load_all=2, filename=self.filename)
+        self.assertTrue(newtraj.pandas_append != 42)
+
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
+        newtraj.config.hdf5.f_remove_child('pandas_append')
+        newtraj.config.hdf5.f_load_child('pandas_append', load_data=2)
         self.compare_trajectories(self.traj,newtraj)
 
         size=os.path.getsize(self.filename)
