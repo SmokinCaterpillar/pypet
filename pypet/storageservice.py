@@ -881,8 +881,8 @@ class HDF5StorageService(StorageService, HasLogger):
         self._mode = None
         self._keep_open = False
 
-        if trajectory is not None:
-            self._srvc_set_config(trajectory=trajectory, how='ADD')
+        if trajectory is not None and not trajectory.v_stored:
+            self._srvc_set_config(trajectory=trajectory)
 
         if overwrite:
             try:
@@ -1018,22 +1018,18 @@ class HDF5StorageService(StorageService, HasLogger):
 
         return self._filters
 
-    def _srvc_set_config(self, trajectory, how='ADD'):
+    def _srvc_set_config(self, trajectory):
         """Sets a config value to the Trajectory or changes it if the trajectory was loaded
         a the settings no longer match"""
         def _set_config(name, value, comment):
-            if how == 'ADD' and not trajectory.f_contains('config.'+name, shortcuts=False):
+            if not trajectory.f_contains('config.'+name, shortcuts=False):
                 trajectory.f_add_config(Parameter, name, value, comment=comment)
-            elif how == 'CHECK' and trajectory.f_contains('config.'+name, shortcuts=False):
-                conf = trajectory.f_get(name, fast_access = False)
-                with self._disable_logger:
-                    if conf.f_get() != value:
-                        conf.f_unlock()
-                        conf.f_set(value)
 
         for attr_name in HDF5StorageService.NAME_TABLE_MAPPING:
             table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
             value = getattr(self, attr_name)
+            if table_name in ('parameters', 'config'):
+                table_name += '_overview'
             _set_config('hdf5.overview.' + table_name,
                                     value,
                                     comment='Whether or not to have an overview '
@@ -1591,6 +1587,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             try:
+                if table_name in ('parameters', 'config'):
+                    table_name += '_overview'
                 config = traj.f_get('config.hdf5.overview.' + table_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
@@ -2402,8 +2400,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
             # Load the hdf5 config data:
             self._srvc_load_hdf5_settings()
-            self._srvc_set_config(trajectory=traj, how='CHECK')
-
 
     def _srvc_load_hdf5_settings(self):
 
@@ -2703,7 +2699,7 @@ class HDF5StorageService(StorageService, HasLogger):
                               'derived_parameters_runs_summary', 'results_runs_summary',
                               'config', 'parameters', 'explored_parameters']:
 
-                if table_name.startswith('derived') or table_name.endswith('parameters'):
+                if table_name.startswith('derived') or table_name in ('parameters', 'config'):
                     paramdescriptiondict['length'] = pt.IntCol()
 
                 paramdescriptiondict['comment'] = pt.StringCol(
