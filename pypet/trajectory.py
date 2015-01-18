@@ -10,6 +10,7 @@ __author__ = 'Robert Meyer'
 import datetime
 import time
 import hashlib
+import os
 import importlib
 import itertools as itools
 import inspect
@@ -44,6 +45,7 @@ import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug
 
+@kwargs_api_change('filename', 'storage_service')
 def load_trajectory(
                name=None,
                index=None,
@@ -54,7 +56,7 @@ def load_trajectory(
                load_other_data=pypetconstants.LOAD_SKELETON,
                load_all=None,
                force=False,
-               filename=None,
+               storage_service=None,
                dynamic_imports=None):
     """Helper function that creates a novel trajectory and loads it from disk.
 
@@ -76,7 +78,7 @@ def load_trajectory(
                load_other_data=load_other_data,
                load_all=load_all,
                force=force,
-               filename=filename,
+               storage_service=storage_service,
                dynamic_imports=dynamic_imports)
     return traj
 
@@ -196,10 +198,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     """
 
+    @kwargs_api_change('filename', 'storage_service')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, name='my_trajectory', add_time=True, comment='',
                  dynamic_imports=None,
-                 filename=None):
+                 storage_service=None):
         self._is_run = False
 
         super(Trajectory, self).__init__()
@@ -260,13 +263,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._environment_hexsha = None
         self._environment_name = None
 
-        if filename is None:
-            self._storage_service = None
-            self._filename = None
-        else:
-            self._filename = filename
-            self._storage_service = storage.HDF5StorageService(filename=filename,
-                                                       file_title=self.v_name)
+
+        self._storage_service = self._check_storage(storage_service)
 
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_crun'.
@@ -304,6 +302,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._comment = ''
         self.v_comment = comment
+
+    def _check_storage(self, service_or_filename):
+        if isinstance(service_or_filename, compat.base_type):
+            name, ext = os.path.splitext(service_or_filename)
+            if ext in ('.hdf', '.h4', '.hdf4', '.he2', '.h5', '.hdf5', '.he5'):
+                return storage.HDF5StorageService(filename=service_or_filename)
+            else:
+                raise ValueError('Extension `%s` of filename `%s` not understood.' %
+                                 (ext, service_or_filename))
+        else:
+            return service_or_filename
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -346,9 +355,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                  children_string)
 
     @property
+    @deprecated('No longer supported, please refer to the storage service instead.')
     def v_filename(self):
         """The name and path of the hdf5 file in case you use the HDF4StorageService"""
-        return self._filename
+        try:
+            return self.v_storage_serivce.filename
+        except Exception:
+            return None
 
     @property
     def v_version(self):
@@ -388,8 +401,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_storage_service(self, service):
         """Sets the storage service"""
         self._storage_service = service
-        if self._filename is None and hasattr(self._storage_service, 'filename'):
-            self._filename = self._storage_service.filename
 
     @property
     def v_is_run(self):
@@ -1240,6 +1251,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
+    @kwargs_api_change('filename', 'storage_service')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @not_in_run
     def f_load(self,
@@ -1252,7 +1264,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                load_other_data=pypetconstants.LOAD_SKELETON,
                load_all=None,
                force=False,
-               filename=None,
+               storage_service=None,
                dynamic_imports=None):
         """Loads a trajectory via the storage service.
 
@@ -1382,12 +1394,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             load_results = pypetconstants.LOAD_NOTHING
             load_other_data = pypetconstants.LOAD_NOTHING
 
-        if filename:
-            self._filename = filename
-            if self._storage_service is None:
-                self._storage_service = storage.HDF5StorageService(filename=filename)
-            else:
-                self._storage_service.filename = filename
+        if storage_service is not None:
+            self._storage_service = self._check_storage(storage_service)
 
         if not dynamic_imports is None:
             self.f_add_to_dynamic_imports(dynamic_imports)

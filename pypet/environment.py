@@ -30,6 +30,7 @@ import hashlib
 import time
 import datetime
 import pickle
+import inspect
 import copy
 
 
@@ -42,6 +43,8 @@ except ImportError:
 
 try:
     import dill
+    # If you do not set this log-level dill will flood any logging file :-(
+    logging.getLogger(dill.__name__).setLevel(logging.WARNING)
 except ImportError:
     dill = None
 
@@ -64,7 +67,7 @@ from pypet.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
-from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_functions import is_debug, get_matching_kwargs
 
 
 def _single_run(args):
@@ -72,7 +75,7 @@ def _single_run(args):
 
     :param args: List of arguments
 
-        0. The single run object containing all parameters set to the corresponding run index.
+        0. The trajectory containing all parameters set to the corresponding run index.
 
         1. Path to log files
 
@@ -113,8 +116,8 @@ def _single_run(args):
     try:
         traj = args[0]
         log_path = args[1]
-        log_levels = args[2]
-        logger_names = args[3]
+        logger_names = args[2]
+        log_levels = args[3]
         log_stdout = args[4]
         runfunc = args[5]
         total_runs = args[6]
@@ -327,30 +330,36 @@ class Environment(HasLogger):
 
     :param log_folder:
 
-        Path to a folder where all log files will be stored. If none is specified the default
-        `./logs/` is chosen. The log files will be added to a
-        sub-folder with the name of the trajectory and the name of the environment.
+        Path to a folder where all log files will be stored. Defaults to ``'logs'``.
+        The log files will be added to a sub-folder with the name of the trajectory
+        and the name of the environment.
+        If you don't want any log files, set to ``None``.
 
     :param logger_names:
 
-        List or tuple of names to which the logging settings apply. Default is root ``('',)``, i.e.
-        all logging messages are logged to the folder specified. If you only want
-        *pypet* to save messages created by itself and not by your own loggers use
-        ``logger_names='(pypet,)'``. Or if you only want to store messages from ``stdout`` and
-        ``stderr`` set logger_names to ``('STDOUT','STERR')``.
+        List or tuple of logger names to which the logging settings apply.
+        Default is root ``('',)``, i.e.  all logging messages are logged to the folder
+        specified above. For instance, if you only want *pypet* to save messages created by itself
+        and not by your own loggers use ``logger_names='(pypet,)'``. If you only
+        want to store message from your custom loggers, you could pass the names of your
+        loggers, like ``logger_names=('MyCustomLogger1', 'MyCustomLogger2', ...)``.
+        Or, for example, if you only want to store messages from
+        ``stdout`` and ``stderr`` set ``logger_names`` to ``('STDOUT','STDERR')``.
 
     :param log_levels:
 
-        List or tuple of log levels same length as ``logger_names``. If the length is 1 and
-        ``loger_names`` has more than one entry, the log level is used for all loggers.
-        They describe which log level message should be logged, default is ``(logging.INFO,)``.
-        If you choose
-        ``(logging.DEBUG,)`` more verbose statements about storing parameters and results will be
-        displayed. Set to ``None`` if you want to disable logging.
+        List or tuple of log levels with the same length as ``logger_names``.
+        If the length is 1 and ``loger_names`` has more than 1 entry,
+        the log level is used for all loggers.
+
+        Default is level ``(logging.INFO,)``.
+        If you choose ``(logging.DEBUG,)`` more verbose statements will be displayed.
+        Set to ``None`` if you don't want to set log-levels or if you already
+        specified log-levels somewhere else.
 
     :param log_stdout:
 
-        Whether the output of STDOUT and STDERROR should be recorded into the log files.
+        Whether the output of STDOUT and STDERR should be recorded into the log files.
         Disable if only logging statement should be recorded. Note if you work with an
         interactive console like IPython, it is a good idea to set `log_stdout=False`
         to avoid messing up the console output.
@@ -525,10 +534,125 @@ class Environment(HasLogger):
 
         If true, *pypet* will delete the continue files after a successful simulation.
 
-    :param use_hdf5:
+    :param storage_service:
 
-        Whether or not to use the standard hdf5 storage service, if false the following
-        arguments below will be ignored:
+        Pass a given storage service or a class constructor (default ``HDF5StorageService``)
+        if you want the environment to create
+        the service for you. The environment will pass the
+        additional keyword arguments you pass directly to the constructor.
+        If the trajectory already has a service attached,
+        the one from the trajectory will be used.
+
+    :param git_repository:
+
+        If your code base is under git version control you can specify here the path
+        (relative or absolute) to the folder containing the `.git` directory as a string.
+        Note in order to use this tool you need GitPython_.
+
+        If you set this path the environment will trigger a commit of your code base
+        adding all files that are currently under version control.
+        Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
+        The user can specify the commit message, see below. Note that the message
+        will be augmented by the name and the comment of the trajectory.
+        A commit will only be triggered if there are changes detected within your
+        working copy.
+
+        This will also add information about the revision to the trajectory, see below.
+
+        .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
+
+    :param git_message:
+
+        Message passed onto git command. Only relevant if a new commit is triggered.
+        If no changes are detected, the information about the previous commit and the previous
+        commit message are added to the trajectory and this user passed message is discarded.
+
+    :param sumatra_project:
+
+        If your simulation is managed by sumatra_, you can specify here the path to the
+        *sumatra* root folder. Note that you have to initialise the *sumatra* project at least
+        once before via ``smt init MyFancyProjectName``.
+
+        *pypet* will automatically ad ALL parameters to the *sumatra* record.
+        If a parameter is explored, the WHOLE range is added instead of the default value.
+
+        *pypet* will add the label and reason (only if provided, see below)
+        to your trajectory as config parameters.
+
+        .. _sumatra : http://neuralensemble.org/sumatra/
+
+    :param sumatra_reason:
+
+        You can add an additional reason string that is added to the *sumatra* record.
+        Regardless if `sumatra_reason` is empty, the name of the trajectory, the comment
+        as well as a list of all explored parameters is added to the *sumatra* record.
+
+        Note that the augmented label is not stored into the trajectory as config
+        parameter, but the original one (without the name of the trajectory, the comment,
+        and the list of explored parameters) in case it is not the empty string.
+
+    :param sumatra_label:
+
+        The label or name of your sumatra record. Set to `None` if you want sumatra
+        to choose a label in form of a timestamp for you.
+
+    :param do_single_runs:
+
+        Whether you intend to actually to compute single runs with the trajectory.
+        If you do not intend to do single runs, than set to `False` and the
+        environment won't add config information like number of processors to the
+        trajectory.
+
+    :param lazy_debug:
+
+        If `lazy_debug=True` and in case you debug your code (aka you use pydevd and
+        the expression `'pydevd' in sys.modules` is `True`), the environment will use the
+        :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
+        Accordingly, no files are created and your trajectory and results are not saved.
+        This allows faster debugging and prevents *pypet* from blowing up your hard drive with
+        trajectories that you probably not want to use anyway since you just debug your code.
+
+
+    The Environment will automatically add some config settings to your trajectory.
+    Thus, you can always look up how your trajectory was run. This encompasses most of the above
+    named parameters as well as some information about the environment.
+    This additional information includes
+    a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
+    If you use git integration, the SHA-1 hash code will be the one from your git commit.
+    Otherwise the code will be calculated from the trajectory name, the current time, and your
+    current pypet version.
+
+    The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
+    `X` are the first seven characters of the SHA-1 hash code followed by a human readable
+    timestamp.
+
+    All information about the environment can be found in your trajectory under
+    `config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. Your trajectory could
+    potentially be run by several environments due to merging or extending an existing trajectory.
+    Thus, you will be able to track how your trajectory was build over time.
+
+    Git information is added to your trajectory as follows:
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.hexsha
+
+        The SHA-1 hash of the commit.
+        `commit_XXXXXXX_XXXX_XX_XX_XXhXXmXXs` is mapped to the first seven items of the SHA-1 hash
+        and the formatted data of the commit, e.g. `commit_7ef7hd4_2015_10_21_16h29m00s`.
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.name_rev
+
+        String describing the commits hexsha based on the closest reference
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
+
+        Commit date as Unix Epoch data
+
+    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
+
+        The commit message
+
+    Moreover, if you use the standard ``HDF5StorageService`` you can pass the following keyword
+    arguments in ``**kwargs``:
 
     :param filename:
 
@@ -661,117 +785,10 @@ class Environment(HasLogger):
 
         Analogous to the above.
 
-    :param git_repository:
-
-        If your code base is under git version control you can specify here the path
-        (relative or absolute) to the folder containing the `.git` directory as a string.
-        Note in order to use this tool you need GitPython_.
-
-        If you set this path the environment will trigger a commit of your code base
-        adding all files that are currently under version control.
-        Similar to calling `git add -u` and `git commit -m 'My Message'` on the command line.
-        The user can specify the commit message, see below. Note that the message
-        will be augmented by the name and the comment of the trajectory.
-        A commit will only be triggered if there are changes detected within your
-        working copy.
-
-        This will also add information about the revision to the trajectory, see below.
-
-        .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
-
-    :param git_message:
-
-        Message passed onto git command. Only relevant if a new commit is triggered.
-        If no changes are detected, the information about the previous commit and the previous
-        commit message are added to the trajectory and this user passed message is discarded.
-
-    :param sumatra_project:
-
-        If your simulation is managed by sumatra_, you can specify here the path to the
-        *sumatra* root folder. Note that you have to initialise the *sumatra* project at least
-        once before via ``smt init MyFancyProjectName``.
-
-        *pypet* will automatically ad ALL parameters to the *sumatra* record.
-        If a parameter is explored, the WHOLE range is added instead of the default value.
-
-        *pypet* will add the label and reason (only if provided, see below)
-        to your trajectory as config parameters.
-
-        .. _sumatra : http://neuralensemble.org/sumatra/
-
-    :param sumatra_reason:
-
-        You can add an additional reason string that is added to the *sumatra* record.
-        Regardless if `sumatra_reason` is empty, the name of the trajectory, the comment
-        as well as a list of all explored parameters is added to the *sumatra* record.
-
-        Note that the augmented label is not stored into the trajectory as config
-        parameter, but the original one (without the name of the trajectory, the comment,
-        and the list of explored parameters) in case it is not the empty string.
-
-    :param sumatra_label:
-
-        The label or name of your sumatra record. Set to `None` if you want sumatra
-        to choose a label in form of a timestamp for you.
-
-    :param do_single_runs:
-
-        Whether you intend to actually to compute single runs with the trajectory.
-        If you do not intend to do single runs, than set to `False` and the
-        environment won't add config information like number of processors to the
-        trajectory.
-
-    :param lazy_debug:
-
-        If `lazy_debug=True` and in case you debug your code (aka you use pydevd and
-        the expression `'pydevd' in sys.modules` is `True`), the environment will use the
-        :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
-        Accordingly, no files are created and your trajectory and results are not saved.
-        This allows faster debugging and prevents *pypet* from blowing up your hard drive with
-        trajectories that you probably not want to use anyway since you just debug your code.
-
-
-    The Environment will automatically add some config settings to your trajectory.
-    Thus, you can always look up how your trajectory was run. This encompasses most of the above
-    named parameters as well as some information about the environment.
-    This additional information includes
-    a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
-    If you use git integration, the SHA-1 hash code will be the one from your git commit.
-    Otherwise the code will be calculated from the trajectory name, the current time, and your
-    current pypet version.
-
-    The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
-    `X` are the first seven characters of the SHA-1 hash code followed by a human readable
-    timestamp.
-
-    All information about the environment can be found in your trajectory under
-    `config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. Your trajectory could
-    potentially be run by several environments due to merging or extending an existing trajectory.
-    Thus, you will be able to track how your trajectory was build over time.
-
-    Git information is added to your trajectory as follows:
-
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.hexsha
-
-        The SHA-1 hash of the commit.
-        `commit_XXXXXXX_XXXX_XX_XX_XXhXXmXXs` is mapped to the first seven items of the SHA-1 hash
-        and the formatted data of the commit, e.g. `commit_7ef7hd4_2015_10_21_16h29m00s`.
-
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.name_rev
-
-        String describing the commits hexsha based on the closest reference
-
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.committed_date
-
-        Commit date as Unix Epoch data
-
-    * git.commit_XXXXXXX_XXXX_XX_XX_XXh_XXm_XXs.message
-
-        The commit message
-
 
     """
 
+    @kwargs_api_change('use_hdf5', 'storage_service')
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, trajectory='trajectory',
@@ -795,35 +812,15 @@ class Environment(HasLogger):
                  continuable=False,
                  continue_folder=None,
                  delete_continue=True,
-                 use_hdf5=True,
-                 filename=None,
-                 file_title=None,
-                 overwrite=False,
-                 encoding='utf8',
-                 complevel=9,
-                 complib='zlib',
-                 shuffle=True,
-                 fletcher32=False,
-                 pandas_format='fixed',
-                 pandas_append=False,
-                 purge_duplicate_comments=True,
-                 summary_tables=True,
-                 small_overview_tables=True,
-                 large_overview_tables=False,
-                 results_per_run=0,
-                 derived_parameters_per_run=0,
+                 storage_service=HDF5StorageService,
                  git_repository=None,
                  git_message='',
                  sumatra_project=None,
                  sumatra_reason='',
                  sumatra_label=None,
                  do_single_runs=True,
-                 lazy_debug=False):
-
-        # First check if purge settings are valid
-        if purge_duplicate_comments and not summary_tables:
-            raise ValueError('You cannot purge duplicate comments without having the'
-                             ' small overview tables.')
+                 lazy_debug=False,
+                 **kwargs):
 
         if git_repository is not None and git is None:
             raise ValueError('You cannot specify a git repository without having '
@@ -862,6 +859,8 @@ class Environment(HasLogger):
             raise ValueError('You cannot enable monitoring without having '
                              'installed psutil. Please install psutil or set '
                              'cpu_cap, memory_cap, and swap_cap to 1.0')
+
+        unused_kwargs = set(kwargs.keys())
 
         self._set_logger()
 
@@ -912,39 +911,29 @@ class Environment(HasLogger):
 
             self._time = formatted_time
 
-        # If no filename is supplied, take the filename from the trajectory's storage service
-        if self.v_trajectory.v_storage_service is not None and filename is None:
-            self._file_title = self._traj.v_storage_service._file_title
-            self._filename = self._traj.v_storage_service._filename
+        if storage_service is True: # to allow compatibility with older python versions
+            storage_service = HDF5StorageService
+        if lazy_debug and is_debug():
+            self._storage_service = LazyStorageService()
         else:
-            # Prepare file names and log folder
-            if file_title is None:
-                self._file_title = self._traj.v_name
+            if self.v_trajectory.v_storage_service is None:
+                if inspect.isclass(storage_service):
+                    # Check if the user wants to use the hdf5 storage service. If yes,
+                    # add a service to the trajectory
+                    # ``is True`` to allow compatibility with older versions
+                    kwargs_copy = kwargs.copy()
+                    kwargs_copy['trajectory'] = self._traj
+                    matching_kwargs = get_matching_kwargs(storage_service, kwargs_copy)
+                    self._storage_service = storage_service(**matching_kwargs)
+                    unused_kwargs = unused_kwargs - set(matching_kwargs.keys())
+                else:
+                    self._storage_service = storage_service
             else:
-                self._file_title = file_title
+                self._logger.info('Found storage service attached Trajectory. Will use '
+                                  'this storage service.')
+                self._storage_service = self.v_trajectory.v_storage_service
 
-            if filename is None:
-                # If no filename is supplied and the filename cannot be extracted from the
-                # trajectory, create the default filename
-                self._filename = os.path.join(os.getcwd(), 'hdf5', self._traj.v_name + '.hdf5')
-            else:
-                self._filename = filename
-
-        head, tail = os.path.split(self._filename)
-        if not head:
-            # If the filename contains no path information,
-            # we put it into the current working directory
-            self._filename = os.path.join(os.getcwd(), self._filename)
-
-        if not tail:
-            self._filename = os.path.join(self._filename, self._traj.v_name + '.hdf5')
-
-        self._use_hdf5 = use_hdf5  # Boolean whether to use hdf5 or not
-
-        # Check if the user wants to use the hdf5 storage service. If yes,
-        # add a service to the trajectory
-        if self._use_hdf5 and self.v_trajectory.v_storage_service is None:
-            self._add_hdf5_storage_service(lazy_debug, overwrite)
+        self._traj.v_storage_service = self._storage_service
 
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit if the commit was triggered by
@@ -983,10 +972,13 @@ class Environment(HasLogger):
             log_path = os.path.join(log_folder, self._traj.v_name)
             log_path = os.path.join(log_path, self.v_name)
 
+        # to make it work with older versions, where no lists or tuples are used but
+        # a single log level
+        if logger_names is None:
+            logger_names = ()
         if not isinstance(logger_names, (tuple, list)):
             logger_names = [logger_names]
-
-        if not isinstance(log_levels, (tuple, list)):
+        if log_levels is not None and not isinstance(log_levels, (tuple, list)):
             log_levels = [log_levels]
 
         self._log_folder = log_folder
@@ -997,10 +989,6 @@ class Environment(HasLogger):
 
         # Create the loggers
         self._main_log_handler, self._error_log_handler = self._make_logging_handlers()
-
-        if dill is not None:
-            # If you do not set this log-level dill will flood any logging file :-(
-            logging.getLogger(dill.__name__).setLevel(logging.WARNING)
 
         self._continuable = continuable
 
@@ -1082,22 +1070,6 @@ class Environment(HasLogger):
                                                 ' i.e. whether to use QUEUE'
                                                 ' or LOCK or NONE'
                                                 ' for thread/process safe storing').f_lock()
-            # else:
-            # config_name='environment.%s.deep_copy_data' % self._name
-            # self._traj.f_add_config(config_name, self._deep_copy_data,
-            # comment='Only important for single processing. If data should '
-            # 'be copied before the beginning of each run. '
-            # 'Uses dill is installed, otherwise pickle.').f_lock()
-            #
-            # if self._deep_copy_data:
-            # if dill is not None:
-            # method = 'dill'
-            # else:
-            # method = 'pickle'
-            # config_name='environment.%s.deep_copy_method' % self._name
-            # self._traj.f_add_config(config_name, method,
-            # comment='Wich method was used for deep copying, either '
-            # '`dill` or `pickle`').f_lock()
 
             config_name = 'environment.%s.clean_up_runs' % self._name
             self._traj.f_add_config(config_name, self._clean_up_runs,
@@ -1146,78 +1118,15 @@ class Environment(HasLogger):
         self._traj.config.environment.v_comment = 'Settings for the different environments ' \
                                                   'used to run the experiments'
 
-        # Add HDF5 config in case the user wants the standard service
-        if self._use_hdf5:
-            if not 'hdf5' in self.v_trajectory.config.f_get_children(copy=False):
-
-                # Print which file we use for storage
-                self._logger.info('I will use the hdf5 file `%s`.' % self._filename)
-
-                for table_name in HDF5StorageService.NAME_TABLE_MAPPING.values():
-                    self._traj.f_add_config('hdf5.overview.' + table_name,
-                                            True,
-                                            comment='Whether or not to have an overview '
-                                                    'table with that name')
-
-                self._traj.f_add_config('hdf5.overview.explored_parameters_runs', True,
-                                        comment='Whether there are overview tables about the '
-                                                'explored parameters in each run')
-
-                self._traj.f_add_config('hdf5.purge_duplicate_comments', purge_duplicate_comments,
-                                        comment='Whether comments of results and'
-                                                ' derived parameters should only'
-                                                ' be stored for the very first instance.'
-                                                ' Works only if the summary tables are'
-                                                ' active.')
-
-                self._traj.f_add_config('hdf5.results_per_run', results_per_run,
-                                        comment='Expected number of results per run,'
-                                                ' a good guess can increase storage performance')
-
-                self._traj.f_add_config('hdf5.derived_parameters_per_run',
-                                        derived_parameters_per_run,
-                                        comment='Expected number of derived parameters per run,'
-                                                ' a good guess can increase storage performance')
-
-                self._traj.f_add_config('hdf5.complevel', complevel,
-                                        comment='Compression Level (0 no compression '
-                                                'to 9 highest compression)')
-
-                self._traj.f_add_config('hdf5.complib', complib,
-                                        comment='Compression Algorithm')
-
-                self._traj.f_add_config('hdf5.encoding', encoding,
-                                        comment='Encoding for unicode characters')
-
-                self._traj.f_add_config('hdf5.fletcher32', fletcher32,
-                                        comment='Whether to use fletcher 32 checksum')
-
-                self._traj.f_add_config('hdf5.shuffle', shuffle,
-                                        comment='Whether to use shuffle filtering.')
-
-                self._traj.f_add_config('hdf5.pandas_format', pandas_format,
-                                        comment='''How to store pandas data frames, either'''
-                                                ''' 'fixed' ('f') or 'table' ('t').''')
-
-                self._traj.f_add_config('hdf5.pandas_append', pandas_append,
-                                        comment='If pandas frames are stored as tables, one can '
-                                                'enable append mode.')
-
-                self._traj.config.hdf5.v_comment = 'Settings for the standard HDF5 storage service'
-
-                self.f_set_summary(summary_tables)
-                self.f_set_small_overview(small_overview_tables)
-                self.f_set_large_overview(large_overview_tables)
-            else:
-                self._logger.warning('Your trajectory was already stored with an HDF5 storage '
-                                     'service before. I will use the old settings and ignore your '
-                                     'current HDF5 settings.')
-
         # Notify that in case of lazy debuggin we won't record anythin
         if lazy_debug and is_debug():
             self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
         self._trajectory_name = self._traj.v_name
+        if len(unused_kwargs) > 0:
+            raise ValueError('You passed keyword arguments to the environment that you '
+                                 'did not use. The following keyword arguments were ignored: '
+                                 '`%s`' % str(unused_kwargs))
         self._logger.info('Environment initialized.')
 
     def __repr__(self):
@@ -1460,22 +1369,6 @@ class Environment(HasLogger):
     def v_name(self):
         """ Name of the Environment"""
         return self._name
-
-    def _add_hdf5_storage_service(self, lazy_debug=False, overwrite=False):
-        """ Adds the standard HDF5 storage service to the trajectory.
-
-        See also :class:`~pypet.storageservice.HDF5StorageService`.
-
-        """
-
-        if lazy_debug and is_debug():
-            self._storage_service = LazyStorageService()
-        else:
-            self._storage_service = HDF5StorageService(self._filename,
-                                                       self._file_title,
-                                                       overwrite=overwrite)
-
-        self._traj.v_storage_service = self._storage_service
 
     def f_add_postprocessing(self, postproc, *args, **kwargs):
         """ Adds a post processing function.
@@ -1925,14 +1818,6 @@ class Environment(HasLogger):
             raise RuntimeError('You cannot make a run if you did create an environment '
                                'with `do_single_runs=False`.')
 
-        # Make some sanity checks if the user wants the standard hdf5 service.
-        if self._use_hdf5:
-            if ((not self._traj.f_get('results_runs_summary').f_get() or
-                    not self._traj.f_get('results_runs_summary').f_get()) and
-                    self._traj.f_get('purge_duplicate_comments').f_get()):
-                raise RuntimeError('You can only use the reduce comments if you enable '
-                                   'the summary tables.')
-
         if self._continuable and os.listdir(self._continue_path):
             raise RuntimeError('Your continue folder `%s` needs to be empty to allow continuing!')
 
@@ -1954,8 +1839,8 @@ class Environment(HasLogger):
         """Returns an iterator over all runs for multiprocessing"""
         return ((self._traj._make_single_run(n),
                  self._log_path,
-                 self._log_levels,
                  self._logger_names,
+                 self._log_levels,
                  self._log_stdout,
                  self._runfunc, total_runs,
                  self._multiproc,
@@ -2260,16 +2145,16 @@ class Environment(HasLogger):
                         (self._traj.v_name, self._ncores))
 
                 else:
-                    if self._deep_copy_data:  # Not supported ATM, here for future reference
-                        old_full_copy = self._traj.v_full_copy
-                        self._traj.v_full_copy = True
-                        deep_copied_data = [self._runfunc,
-                                            self._traj, self._args, self._kwargs]
-                        if dill is not None:
-                            deep_copy_dump = dill.dumps(deep_copied_data)
-                        else:
-                            deep_copy_dump = pickle.dumps(deep_copied_data)
-                        self._traj.v_full_copy = old_full_copy
+                    # if self._deep_copy_data:  # Not supported ATM, here for future reference
+                    #     old_full_copy = self._traj.v_full_copy
+                    #     self._traj.v_full_copy = True
+                    #     deep_copied_data = [self._runfunc,
+                    #                         self._traj, self._args, self._kwargs]
+                    #     if dill is not None:
+                    #         deep_copy_dump = dill.dumps(deep_copied_data)
+                    #     else:
+                    #         deep_copy_dump = pickle.dumps(deep_copied_data)
+                    #     self._traj.v_full_copy = old_full_copy
 
                     # Single Processing
                     self._logger.info(
@@ -2281,46 +2166,44 @@ class Environment(HasLogger):
                     # Sequentially run all single runs and append the results to a queue
                     for n in compat.xrange(start_run_idx, total_runs):
                         if not self._traj._is_completed(n):
-
-                            if self._deep_copy_data:  # Not supported ATM,
-                            # here for future reference
-                                if dill is not None:
-                                    deep_copied_data = dill.loads(deep_copy_dump)
-                                else:
-                                    deep_copied_data = pickle.loads(deep_copy_dump)
-                                deep_copied_data[1].v_full_copy = old_full_copy
-                                result = _single_run((deep_copied_data[1]._make_single_run(n),
-                                                      self._log_path,
-                                                      self._log_levels,
-                                                      self._logger_names,
-                                                      self._log_stdout,
-                                                      deep_copied_data[0],
-                                                      total_runs,
-                                                      self._multiproc,
-                                                      None,
-                                                      deep_copied_data[2],
-                                                      deep_copied_data[3],
-                                                      self._clean_up_runs,
-                                                      self._continue_path,
-                                                      self._automatic_storing))
-                            else:
-                                result = _single_run((self._traj._make_single_run(n),
-                                                      self._log_path,
-                                                      self._log_levels,
-                                                      self._logger_names,
-                                                      self._log_stdout,
-                                                      self._runfunc,
-                                                      total_runs,
-                                                      self._multiproc,
-                                                      None,
-                                                      self._args,
-                                                      self._kwargs,
-                                                      self._clean_up_runs,
-                                                      self._continue_path,
-                                                      self._automatic_storing))
+                            # if self._deep_copy_data:  # Not supported ATM,
+                            # # here for future reference
+                            #     if dill is not None:
+                            #         deep_copied_data = dill.loads(deep_copy_dump)
+                            #     else:
+                            #         deep_copied_data = pickle.loads(deep_copy_dump)
+                            #     deep_copied_data[1].v_full_copy = old_full_copy
+                            #     result = _single_run((deep_copied_data[1]._make_single_run(n),
+                            #                           self._log_path,
+                            #                           self._logger_names,
+                            #                           self._log_levels,
+                            #                           self._log_stdout,
+                            #                           deep_copied_data[0],
+                            #                           total_runs,
+                            #                           self._multiproc,
+                            #                           None,
+                            #                           deep_copied_data[2],
+                            #                           deep_copied_data[3],
+                            #                           self._clean_up_runs,
+                            #                           self._continue_path,
+                            #                           self._automatic_storing))
+                            # else:
+                            result = _single_run((self._traj._make_single_run(n),
+                                                  self._log_path,
+                                                  self._logger_names,
+                                                  self._log_levels,
+                                                  self._log_stdout,
+                                                  self._runfunc,
+                                                  total_runs,
+                                                  self._multiproc,
+                                                  None,
+                                                  self._args,
+                                                  self._kwargs,
+                                                  self._clean_up_runs,
+                                                  self._continue_path,
+                                                  self._automatic_storing))
 
                             results.append(result)
-
 
                     self._logger.info(
                         '\n************************************************************\n'

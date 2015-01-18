@@ -442,6 +442,144 @@ class HDF5StorageService(StorageService, HasLogger):
     For a list of supported items see :func:`~pypet.storageservice.HDF5StorageService.store`
     and :func:`~pypet.storageservice.HDF5StorageService.load`.
 
+    The service accepts the following parameters
+
+    :param filename:
+
+        The name of the hdf5 file. If none is specified the default
+        `./hdf5/the_name_of_your_trajectory.hdf5` is chosen. If `filename` contains only a path
+        like `filename='./myfolder/', it is changed to
+        `filename='./myfolder/the_name_of_your_trajectory.hdf5'`.
+
+    :param file_title: Title of the hdf5 file (only important if file is created new)
+
+    :param overwrite:
+
+        If the file already exists it will be overwritten. Otherwise
+        the trajectory will simply be added to the file and already
+        existing trajectories are not deleted.
+
+    :param encoding:
+
+        Format to encode and decode unicode strings stored to disk.
+        The default ``'utf8'`` is highly recommended.
+
+    :param complevel:
+
+        If you use HDF5, you can specify your compression level. 0 means no compression
+        and 9 is the highest compression level. See `PyTables Compression`_ for a detailed
+        description.
+
+        .. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
+
+    :param complib:
+
+        The library used for compression. Choose between *zlib*, *blosc*, and *lzo*.
+        Note that 'blosc' and 'lzo' are usually faster than 'zlib' but it may be the case that
+        you can no longer open your hdf5 files with third-party applications that do not rely
+        on PyTables.
+
+    :param shuffle:
+
+        Whether or not to use the shuffle filters in the HDF5 library.
+        This normally improves the compression ratio.
+
+    :param fletcher32:
+
+        Whether or not to use the *Fletcher32* filter in the HDF5 library.
+        This is used to add a checksum on hdf5 data.
+
+    :param pandas_format:
+
+        How to store pandas data frames. Either in 'fixed' ('f') or 'table' ('t') format.
+        Fixed format allows fast reading and writing but disables querying the hdf5 data and
+        appending to the store (with other 3rd party software other than *pypet*).
+
+    :param pandas_append:
+
+        If format is 'table', `pandas_append=True` allows to modify the tables after storage with
+        other 3rd party software. Currently appending is not supported by *pypet* but this
+        feature will come soon.
+
+    :param purge_duplicate_comments:
+
+        If you add a result via :func:`~pypet.trajectory.SingleRun.f_add_result` or a derived
+        parameter :func:`~pypet.trajectory.SingleRun.f_add_derived_parameter` and
+        you set a comment, normally that comment would be attached to each and every instance.
+        This can produce a lot of unnecessary overhead if the comment is the same for every
+        instance over all runs. If `purge_duplicate_comments=1` than only the comment of the
+        first result or derived parameter instance created in a run is stored or comments
+        that differ from this first comment.
+
+        For instance, during a single run you call
+        `traj.f_add_result('my_result`,42, comment='Mostly harmless!')`
+        and the result will be renamed to `results.run_00000000.my_result`. After storage
+        in the node associated with this result in your hdf5 file, you will find the comment
+        `'Mostly harmless!'` there. If you call
+        `traj.f_add_result('my_result',-43, comment='Mostly harmless!')`
+        in another run again, let's say run 00000001, the name will be mapped to
+        `results.run_00000001.my_result`. But this time the comment will not be saved to disk
+        since `'Mostly harmless!'` is already part of the very first result with the name
+        'results.run_00000000.my_result'.
+        Note that the comments will be compared and storage will only be discarded if the strings
+        are exactly the same.
+
+        If you use multiprocessing, the storage service will take care that the comment for
+        the result or derived parameter with the lowest run index will be considered regardless
+        of the order of the finishing of your runs. Note that this only works properly if all
+        comments are the same. Otherwise the comment in the overview table might not be the one
+        with the lowest run index.
+
+        You need summary tables (see below) to be able to purge duplicate comments.
+
+        This feature only works for comments in *leaf* nodes (aka Results and Parameters).
+        So try to avoid to add comments in *group* nodes within single runs.
+
+    :param summary_tables:
+
+        Whether the summary tables should be created, i.e. the 'derived_parameters_runs_summary',
+        and the `results_runs_summary`.
+
+        The 'XXXXXX_summary' tables give a summary about all results or derived parameters.
+        It is assumed that results and derived parameters with equal names in individual runs
+        are similar and only the first result or derived parameter that was created
+        is shown as an example.
+
+        The summary table can be used in combination with `purge_duplicate_comments` to only store
+        a single comment for every result with the same name in each run, see above.
+
+    :param small_overview_tables:
+
+        Whether the small overview tables should be created.
+        Small tables are giving overview about 'config','parameters',
+        'derived_parameters_trajectory', ,
+        'results_trajectory','results_runs_summary'.
+
+        Note that these tables create some overhead. If you want very small hdf5 files set
+        `small_overview_tables` to False.
+
+    :param large_overview_tables:
+
+        Whether to add large overview tables. This encompasses information about every derived
+        parameter, result, and the explored parameter in every single run.
+        If you want small hdf5 files, this is the first option to set to false.
+
+    :param results_per_run:
+
+        Expected results you store per run. If you give a good/correct estimate
+        storage to hdf5 file is much faster in case you store LARGE overview tables.
+
+        Default is 0, i.e. the number of results is not estimated!
+
+    :param derived_parameters_per_run:
+
+        Analogous to the above.
+
+    :param trajectory:
+
+        A trajectory container, the storage service will add the used parameter to
+        the trajectory container.
+
     """
 
     ADD_ROW = 'ADD'
@@ -643,10 +781,62 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Whether an hdf5 node is a leaf node'''
 
 
-    def __init__(self, filename=None, file_title='Experiment', display_time=30, overwrite=False):
+    def __init__(self, filename=None,
+                 file_title=None,
+                 overwrite=False,
+                 encoding='utf8',
+                 complevel=9,
+                 complib='zlib',
+                 shuffle=True,
+                 fletcher32=False,
+                 pandas_format='fixed',
+                 pandas_append=False,
+                 purge_duplicate_comments=True,
+                 summary_tables=True,
+                 small_overview_tables=True,
+                 large_overview_tables=False,
+                 results_per_run=0,
+                 derived_parameters_per_run=0,
+                 display_time=30, trajectory=None):
+
+        if purge_duplicate_comments and not summary_tables:
+            raise ValueError('You cannot purge duplicate comments without having the'
+                             ' small overview tables.')
+
+        # If no filename is supplied, take the filename from the trajectory's storage service
+
+        # Prepare file names and log folder
+        if file_title is None and trajectory is not None:
+            file_title = trajectory.v_name
+        elif file_title is None:
+            file_title = 'Experiments'
+        else:
+            file_title = file_title
+
+
+
+        if filename is None and trajectory is not None:
+            # If no filename is supplied and the filename cannot be extracted from the
+            # trajectory, create the default filename
+            filename = os.path.join(os.getcwd(), 'hdf5', trajectory.v_name + '.hdf5')
+        elif filename is None:
+            filename = 'Experiments.hdf5'
+        else:
+            filename = filename
+
+        head, tail = os.path.split(filename)
+        if not head:
+            # If the filename contains no path information,
+            # we put it into the current working directory
+            filename = os.path.join(os.getcwd(), filename)
+        if not tail and trajectory is not None:
+            filename = os.path.join(filename, trajectory.v_name + '.hdf5')
+        elif not tail and trajectory is None:
+            filename = os.path.join(filename, 'Experiments.hdf5')
+
         self._filename = filename
         self._file_title = file_title
-        self._trajectory_name = None
+        self._trajectory_name = None if trajectory is None else trajectory.v_name
         self._trajectory_index = None
         self._hdf5file = None
         self._hdf5store = None
@@ -655,33 +845,100 @@ class HDF5StorageService(StorageService, HasLogger):
         # remembers whether to purge duplicate comments
         self._set_logger()
         self._filters = None
-        self._complevel = 9
-        self._complib = 'zlib'
-        self._fletcher32 = False
-        self._shuffle = True
-        self._encoding = 'utf8'
+        self._complevel = complevel
+        self._complib = complib
+        self._fletcher32 = fletcher32
+        self._shuffle = shuffle
+        self._encoding = encoding
 
         self._node_processing_timer = None
 
         self._display_time = display_time
 
-        self._pandas_append = False
-        self._pandas_format = 'fixed'
+        self._pandas_append = pandas_append
+        self._pandas_format = pandas_format
 
-        self._purge_duplicate_comments = False
-        self._results_per_run = False
-        self._derived_parameters_per_run = False
+        self._purge_duplicate_comments = purge_duplicate_comments
+        self._results_per_run = results_per_run
+        self._derived_parameters_per_run = derived_parameters_per_run
 
-        self._overview_parameters = False
-        self._overview_config = False
-        self._overview_explored_parameters = False
-        self._overview_explored_parameters_runs = False
-        self._overview_derived_parameters_trajectory = False
-        self._overview_derived_parameters_runs = False
-        self._overview_derived_parameters_runs_summary = False
-        self._overview_results_trajectory = False
-        self._overview_results_runs = False
-        self._overview_results_runs_summary = False
+        self._overview_parameters = small_overview_tables
+        self._overview_config = small_overview_tables
+        self._overview_explored_parameters = small_overview_tables
+        self._overview_explored_parameters_runs = large_overview_tables
+        self._overview_derived_parameters_trajectory = small_overview_tables
+        self._overview_derived_parameters_runs = large_overview_tables
+        self._overview_derived_parameters_runs_summary = summary_tables
+        self._overview_results_trajectory = small_overview_tables
+        self._overview_results_runs = large_overview_tables
+        self._overview_results_runs_summary = summary_tables
+
+        if trajectory is not None:
+            # Add HDF5 config in case the that has not happened
+            if not trajectory.f_contains('config.hdf5', shortcuts=False):
+
+                # Print which file we use for storage
+                self._logger.info('I will use the hdf5 file `%s`.' % self._filename)
+
+                for attr_name in HDF5StorageService.NAME_TABLE_MAPPING:
+                    table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
+                    value = getattr(self, attr_name)
+                    trajectory.f_add_config('hdf5.overview.' + table_name,
+                                            value,
+                                            comment='Whether or not to have an overview '
+                                                    'table with that name')
+
+                trajectory.f_add_config('hdf5.overview.explored_parameters_runs',
+                                        self._overview_explored_parameters_runs,
+                                        comment='Whether there are overview tables about the '
+                                                'explored parameters in each run')
+
+                trajectory.f_add_config('hdf5.purge_duplicate_comments', purge_duplicate_comments,
+                                        comment='Whether comments of results and'
+                                                ' derived parameters should only'
+                                                ' be stored for the very first instance.'
+                                                ' Works only if the summary tables are'
+                                                ' active.')
+
+                trajectory.f_add_config('hdf5.results_per_run', results_per_run,
+                                        comment='Expected number of results per run,'
+                                                ' a good guess can increase storage performance')
+
+                trajectory.f_add_config('hdf5.derived_parameters_per_run',
+                                        derived_parameters_per_run,
+                                        comment='Expected number of derived parameters per run,'
+                                                ' a good guess can increase storage performance')
+
+                trajectory.f_add_config('hdf5.complevel', complevel,
+                                        comment='Compression Level (0 no compression '
+                                                'to 9 highest compression)')
+
+                trajectory.f_add_config('hdf5.complib', complib,
+                                        comment='Compression Algorithm')
+
+                trajectory.f_add_config('hdf5.encoding', encoding,
+                                        comment='Encoding for unicode characters')
+
+                trajectory.f_add_config('hdf5.fletcher32', fletcher32,
+                                        comment='Whether to use fletcher 32 checksum')
+
+                trajectory.f_add_config('hdf5.shuffle', shuffle,
+                                        comment='Whether to use shuffle filtering.')
+
+                trajectory.f_add_config('hdf5.pandas_format', pandas_format,
+                                        comment='''How to store pandas data frames, either'''
+                                                ''' 'fixed' ('f') or 'table' ('t').''')
+
+                trajectory.f_add_config('hdf5.pandas_append', pandas_append,
+                                        comment='If pandas frames are stored as tables, one can '
+                                                'enable append mode.')
+
+                trajectory.config.hdf5.v_comment = 'Settings for the standard HDF5 storage service'
+            else:
+                self._logger.warning('Your trajectory was already stored with an HDF5 storage '
+                                     'service before. I will use the old settings and ignore your '
+                                     'current HDF5 settings.')
+            trajectory.v_storage_service = self # And add the storage service
 
         self._mode = None
         self._keep_open = False
@@ -694,7 +951,7 @@ class HDF5StorageService(StorageService, HasLogger):
             except OSError:
                 pass
 
-        # We don't want the NN warnings of pytables to display because they can be
+        # We don't want the NN warnings of Pytables to display because they can be
         # annoying as hell
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
 
@@ -1332,6 +1589,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._logger.warning('Could not find `%s` in traj config, '
                                      'using default value `%s`.' %
                                      (name, str(getattr(self, attr_name))))
+
+        if ((not self._overview_results_runs_summary or
+                    not self._overview_derived_parameters_runs_summary) and
+                    self._purge_duplicate_comments):
+                raise RuntimeError('You chose to purge duplicate comments but disabled a summary '
+                                   'table. You can only use the purging if you enable '
+                                   'the summary tables.')
 
         self._filters = None
 
@@ -4829,7 +5093,6 @@ class HDF5StorageService(StorageService, HasLogger):
                         row[key] = data[key][n]
 
                     row.append()
-
 
                 # Remember the original types of the data for perfect recall
                 if idx == 0 and len(

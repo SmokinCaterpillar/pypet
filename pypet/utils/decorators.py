@@ -4,6 +4,7 @@ __author__ = 'Robert Meyer'
 
 import functools
 import warnings
+import inspect
 
 import pypet.compat as compat
 

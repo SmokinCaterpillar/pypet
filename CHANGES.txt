@@ -24,7 +24,8 @@ pypet 0.1b.9
 
 *   New LINK features allowing group nodes to refer to other parts of the tree
 
-*   The SingleRun has been removed and all interactions are with real Trajectory objects
+*   The SingleRun has been removed and all interactions are with real Trajectory objects,
+    but the API remained the same.
 
 *   All *pypet* relevant imported packages will be stored by the trajectory
 
@@ -35,7 +36,7 @@ pypet 0.1b.9
     custom multiprocessing
 
 *   StorageServices provide an ``multiproc_safe`` attribute to enable the user to check
-    if they work in a multi-process environment
+    if they work in a multi-process safe environment
 
 *   Environments can be used as context managers to disable the logging to files after the
     experiment.
@@ -55,21 +56,27 @@ pypet 0.1b.9
 *   If the current run is not set, ``traj.v_crun`` is set to ``None``
 
 *   Moreover, ``f_iter_nodes`` and ``f_iter_leaves`` is no longer affected by the setting
-    of a current run and always returns all nodes and leaves
+    of a current run and always return all nodes and leaves
 
-*   The iteration function now allow for a predicate function to filter potential nodes
+*   The iteration functions from above now allow for a predicate function to filter potential nodes
 
 *   Storing a leaf or a group via ``traj.f_store_item(item, overwrite=True)`` now also
     replaces all annotations and comments
-
-*   New StorageDataResult and StorageData data instance to manipulate tables and arrays
-    across runs!
 
 *   Passing `overwrite=True` to an environment will overwrite the hdf5 file.
 
 *   `remove_empty_groups` is no longer supported
 
 *   All messages logged by *pypet* are now no longer using the root logger but one called 'pypet'.
+
+*   Better customization of logging. The user can now pass a list of ``logger_names`` and
+    corresponding ``log_levels`` which are logged to files in the ``log_path``.
+
+*   The environment no longer adds config information about hdf5 to the trajectory directly.
+    This is now done by the service itself.
+
+*   The keyword arguments passed to the environment regarding the storage service are
+    no longer handled by the environment but are directly passed to the service.
 
 
 pypet 0.1b.8

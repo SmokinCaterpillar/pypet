@@ -14,12 +14,16 @@ import pypet.compat as compat
 from pypet._version import __version__ as VERSION
 import tables
 tablesversion = tables.__version__
+import pypet.utils.ptcompat as ptcompat
+hdf5version = ptcompat.hdf5_version
 import pandas
 pandasversion = pandas.__version__
 import numpy
 numpyversion = numpy.__version__
 import scipy
 scipyversion = scipy.__version__
+import os
+platformversion = os.uname()
 
 try:
     import sumatra
@@ -49,7 +53,8 @@ VERSIONS_TO_STORE = {'pypet': VERSION, 'python': compat.python_version_string,
                      'scipy': scipyversion, 'numpy': numpyversion, 'PyTables': tablesversion,
                      'pandas': pandasversion, 'Sumatra': sumatraversion,
                      'dill': dillversion, 'GitPython': gitversion,
-                     'psutil': psutilversion}
+                     'psutil': psutilversion, 'platform': platformversion,
+                     'HDF5': hdf5version}
 
 
 ###################### Supported Data ########################
@@ -119,8 +124,6 @@ PARAMETER_SUPPORTED_DATA = (numpy.int8,
 
 
 ################### HDF5 Naming and Comments ##########################
-
-
 HDF5_STRCOL_MAX_NAME_LENGTH = 128
 """Maximum length of a (short) name"""
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 256
@@ -133,13 +136,9 @@ HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
 """Maximum length of a parameter array summary """
 HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 """Maximum length of human readable runtime, 18 characters allows to display up to 999 days
-excluding the microseconds
-
-"""
+excluding the microseconds"""
 HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
-"""
-Maximum number of attributes before a distinct table is created
-"""
+"""Maximum number of attributes before a distinct table is created"""
 
 ######## Multiprocessing Modes #############
 

@@ -4,6 +4,7 @@ __author__ = 'Robert Meyer'
 import sys
 import datetime
 import numpy as np
+import inspect
 
 from pypet.utils.decorators import deprecated
 from pypet.utils.comparisons import nested_equal as nested_equal_new
@@ -228,6 +229,14 @@ def nested_equal(a, b):
     DEPRECATED: Use `pypet.utils.comparisons.nested_equal` instead.
     """
     return nested_equal_new(a, b)
+
+def get_matching_kwargs(func, kwargs):
+    """Takes a function and keyword arguments and retrnns the ones that can be passed."""
+    if inspect.isclass(func):
+        func = func.__init__
+    argspec = inspect.getargspec(func)
+    matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
+    return matching_kwargs
 
 
 

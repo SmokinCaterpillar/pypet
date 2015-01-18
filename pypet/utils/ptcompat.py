@@ -6,7 +6,6 @@ import tables as pt
 
 tables = int(pt.__version__[0])
 
-
 def _make_pt2_carray(hdf5_file, *args, **kwargs):
     read_data = False
     if 'obj' in kwargs:
@@ -96,6 +95,8 @@ if tables == 2:
 
     deleteattr = lambda ptitem, attr: ptitem._f_delAttr(attr)
 
+    hdf5_version = pt.hdf5Version
+
 elif tables == 3:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
 
@@ -124,6 +125,8 @@ elif tables == 3:
     iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iter_nodes(*args, **kwargs)
 
     deleteattr = lambda ptitem, attr: ptitem._f_delattr(attr)
+
+    hdf5_version = pt.hdf5_version
 
 else:
     raise RuntimeError('You shall not pass! Your PyTables version is weird!')

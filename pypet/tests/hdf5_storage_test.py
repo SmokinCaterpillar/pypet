@@ -73,7 +73,8 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_file('cleanup.hdf5')
 
-        env = Environment(trajectory='Testmigrate', filename=filename)
+        env = Environment(trajectory='Testmigrate', filename=filename,
+                          log_folder=make_temp_file('logs'))
         logpath = env.v_log_path
         traj = env.v_trajectory
         traj.f_add_parameter('x', 5)
@@ -121,7 +122,8 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_file('cleanup.hdf5')
 
-        env = Environment(trajectory='Testmigrate2', filename=filename)
+        env = Environment(trajectory='Testmigrate2', filename=filename,
+                          log_folder=make_temp_file('logs'))
         logpath = env.v_log_path
         traj = env.v_trajectory
         traj.f_add_parameter('x', 5)
@@ -164,7 +166,7 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_file('overwrite.hdf5')
 
-        env = Environment(trajectory='testoverwrite', filename=filename)
+        env = Environment(trajectory='testoverwrite', filename=filename, log_folder=None)
 
         traj = env.v_traj
 
@@ -387,11 +389,22 @@ class StorageTest(TrajectoryComparator):
 
         print('Mismatch testing done!')
 
+    def test_fail_on_wrong_kwarg(self):
+        with self.assertRaises(ValueError):
+            filename = 'testsfail.hdf5'
+            env = Environment(filename=make_temp_file(filename),
+                              log_folder=make_temp_file('logs'),
+                          log_stdout=True,
+                          logger_names=('STDERROR', 'STDOUT'),
+                          foo='bar')
+
     @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         env = Environment(filename=make_temp_file(filename),
-                          log_stdout=True)
+                          log_folder=make_temp_file('logs'),
+                          log_stdout=True,
+                          logger_names=('STDERR', 'STDOUT'))
 
         path = env.v_log_path
 
@@ -406,12 +419,14 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(mainstr in full_text)
         self.assertTrue('4444444' not in full_text)
+        self.assertTrue('pypet' not in full_text)
 
         errfilename = os.path.join(path, 'errors_and_warnings.txt')
         with open(errfilename, mode='r') as errf:
             full_text = errf.read()
 
         self.assertTrue(errstr in full_text)
+        self.assertTrue('pypet' not in full_text)
 
         env.f_disable_logging()
 
@@ -452,7 +467,7 @@ class StorageTest(TrajectoryComparator):
         with warnings.catch_warnings(record=True) as w:
 
             env = Environment(trajectory='test', filename=filename,
-                              dynamically_imported_classes=[])
+                              dynamically_imported_classes=[], log_folder=None)
 
         with warnings.catch_warnings(record=True) as w:
             traj = Trajectory(dynamically_imported_classes=[])
@@ -538,6 +553,7 @@ class StorageTest(TrajectoryComparator):
                          comment='',
                          dynamic_imports=None,
                          log_folder=None,
+                         logger_names=None,
                          log_level=None,
                          log_stdout=False,
                          multiproc=False,
@@ -790,7 +806,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 0)
 
-        env2 = Environment(filename=self.filename)
+        env2 = Environment(filename=self.filename, log_folder=None)
         traj2 = env2.v_trajectory
         traj2.f_store()
 
@@ -800,7 +816,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
 
-        env3 = Environment(filename=self.filename, overwrite=True)
+        env3 = Environment(filename=self.filename, overwrite=True, log_folder=None)
 
         self.assertFalse(os.path.exists(self.filename))
 
@@ -1002,8 +1018,7 @@ class EnvironmentTest(TrajectoryComparator):
         traj_name = self.traj.v_name
 
 
-        self.env = Environment(trajectory=self.traj,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder,
+        self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
                           log_stdout=False)
 
         self.traj = self.env.v_trajectory
@@ -1391,8 +1406,7 @@ class ResultSortTest(TrajectoryComparator):
 
         traj_name = self.env.v_trajectory.v_name
         del self.env
-        self.env = Environment(trajectory=self.traj,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder,
+        self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
                           log_stdout=False)
 
         self.traj = self.env.v_trajectory

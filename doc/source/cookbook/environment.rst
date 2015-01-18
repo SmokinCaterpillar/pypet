@@ -129,25 +129,32 @@ because most of the time the default settings are sufficient.
     *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
     id. It contains all log messages produced by the corresponding process within the single run.
 
+    If you don't want the logging message stored to the file system set to ``None``-
+
     If you don't set a log level elsewhere before, the standard level will be *INFO*
     (if you have no clue what I am talking about, take a look at the logging_ module).
 
 * ``logger_names``
 
-    List or tuple of names to which the logging settings apply. Default is root ``('',)``, i.e.
-    all logging messages are logged to the folder specified. If you only want
-    *pypet* to save messages created by itself and not by your own loggers use
-    ``logger_names='(pypet,)'``. Or if you only want to store messages from ``stdout`` and
-    ``stderr`` set logger_names to ``('STDOUT','STERR')``.
+    List or tuple of logger names to which the logging settings apply.
+    Default is root ``('',)``, i.e.  all logging messages are logged to the folder
+    specified above. For instance, if you only want *pypet* to save messages created by itself
+    and not by your own loggers use ``logger_names='(pypet,)'``. If you only
+    want to store message from your custom loggers, you could pass the names of your
+    loggers, like ``logger_names=('MyCustomLogger1', 'MyCustomLogger2', ...)``.
+    Or, for example, if you only want to store messages from
+    ``stdout`` and ``stderr`` set ``logger_names`` to ``('STDOUT','STDERR')``.
 
 * ``log_levels``
 
-    List or tuple of log levels same length as ``logger_names``. If the length is 1 and
-    ``loger_names`` has more than one entry, the log level is used for all loggers.
-    They describe which log level message should be logged, default is ``(logging.INFO,)``.
-    If you choose
-    ``(logging.DEBUG,)`` more verbose statements about storing parameters and results will be
-    displayed. Set to ``None`` if you want to disable logging.
+    List or tuple of log levels with the same length as ``logger_names``.
+    If the length is 1 and ``loger_names`` has more than 1 entry,
+    the log level is used for all loggers.
+
+    Default is level ``(logging.INFO,)``.
+    If you choose ``(logging.DEBUG,)`` more verbose statements will be displayed.
+    Set to ``None`` if you don't want to set log-levels or if you already
+    specified log-levels somewhere else.
 
 * ``log_stdout``
 
@@ -311,14 +318,45 @@ because most of the time the default settings are sufficient.
 
     If true, *pypet* will delete the continue files after a successful simulation.
 
-* ``use_hdf5``
+* `storage_service``
 
-    If you want to use the standard HDF5 storage service provided with this package, set
-    ``use_hdf5=True``. You can specify the name of the HDF5 file and, if it has to be created new,
-    the file title. If you want to use your own storage service (You don't have an SQL one do you?),
-    set ``use_hdf5=False`` and add your custom storage service directly to the trajectory:
+    Pass a given storage service or a class constructor (default ``HDF5StorageService``)
+    if you want the environment to create
+    the service for you. The environment will pass the
+    additional keyword arguments you pass directly to the constructor.
+    If the trajectory already has a service attached,
+    the one from the trajectory will be used. For the additional keyword arguments,
+    see below.
 
-    >>> env.v_trajectory.v_storage_service = MyCustomService(...)
+* ``git_repository``
+
+    If your code base is under git version control you can specify the path
+    (relative or absolute) to
+    the folder containing the `.git` directory. See also :ref:`more-on-git`.
+
+* ``git_message``
+
+    Message passed onto git command.
+
+* ``do_single_runs``
+
+    Whether you intend to actually to compute single runs with the trajectory.
+    If you do not intend to carry out single runs (probably because you loaded an old trajectory
+    for data analysis), than set to ``False`` and the
+    environment won't add config information like number of processors to the
+    trajectory.
+
+* ``lazy_debug``
+
+    If ``lazy_debug=True`` and in case you debug your code (aka you use *pydevd* and
+    the expression ``'pydevd' in sys.modules`` is ``True``), the environment will use the
+    :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
+    Accordingly, no files are created and your trajectory and results are not saved.
+    This allows faster debugging and prevents *pypet* from blowing up your hard drive with
+    trajectories that you probably not want to use anyway since you just debug your code.
+
+If you use the standard ``HDF5StorageService`` you can pass the following additional
+keyword arguments to the environment. These are handed over to the service:
 
 * ``filename``
 
@@ -418,33 +456,6 @@ because most of the time the default settings are sufficient.
 * ``derived_parameters_per_run``
 
     Analogous to the above.
-
-* ``git_repository``
-
-    If your code base is under git version control you can specify the path
-    (relative or absolute) to
-    the folder containing the `.git` directory. See also :ref:`more-on-git`.
-
-* ``git_message``
-
-    Message passed onto git command.
-
-* ``do_single_runs``
-
-    Whether you intend to actually to compute single runs with the trajectory.
-    If you do not intend to carry out single runs (probably because you loaded an old trajectory
-    for data analysis), than set to ``False`` and the
-    environment won't add config information like number of processors to the
-    trajectory.
-
-* ``lazy_debug``
-
-    If ``lazy_debug=True`` and in case you debug your code (aka you use *pydevd* and
-    the expression ``'pydevd' in sys.modules`` is ``True``), the environment will use the
-    :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
-    Accordingly, no files are created and your trajectory and results are not saved.
-    This allows faster debugging and prevents *pypet* from blowing up your hard drive with
-    trajectories that you probably not want to use anyway since you just debug your code.
 
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
