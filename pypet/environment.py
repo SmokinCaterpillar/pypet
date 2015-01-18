@@ -1276,8 +1276,8 @@ class Environment(HasLogger):
     def f_set_small_overview(self, switch):
         """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.parameters = switch
-        self._traj.config.hdf5.overview.config = switch
+        self._traj.config.hdf5.overview.parameters_overview = switch
+        self._traj.config.hdf5.overview.config_overview = switch
         self._traj.config.hdf5.overview.explored_parameters = switch
         self._traj.config.hdf5.overview.derived_parameters_trajectory = switch
         self._traj.config.hdf5.overview.results_trajectory = switch
