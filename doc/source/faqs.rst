@@ -30,7 +30,14 @@ or some similar function!?
     **A:** Numpy uses openBLAS (http://www.openblas.net/) to
     solve linear algebra operations. Yet, there are many
     issues with openBLAS and multiprocessing. To resolve this set the
-    environment variable ``OPENBLAS_NUM_THREADS=1``.
+    environment variables ``OPENBLAS_NUM_THREADS=1`` and ``OMP_NUM_THREADS=1``.
+
+
+**Q:** *pypet* produces enormously large files of several Gigabytes despite them containing
+almost no data!?
+
+    **A:** Your HDF5 version is too old (most likely you are using 1.8.5). Please update
+    to 1.8.9 or newer.
 
 
 **Q:**  GitPython does not work. If I specify my repository ``git_repository='./myrepo'``,

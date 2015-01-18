@@ -95,6 +95,8 @@ Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
 
 * pandas_ >= 0.12.0 [#pandasversion]_
 
+* HDF5_ >= 1.8.9
+
 If you use Python 2.6 you also need
 
 * ordereddict_ >= 1.1
