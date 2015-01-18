@@ -22,8 +22,12 @@ import numpy
 numpyversion = numpy.__version__
 import scipy
 scipyversion = scipy.__version__
-import os
-platformversion = ', '.join(os.uname())
+
+try:
+    import platform
+    platformversion = ', '.join(platform.uname())
+except Exception:
+    platformversion = 'N/A'
 
 try:
     import sumatra
