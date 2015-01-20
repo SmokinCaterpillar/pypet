@@ -451,12 +451,12 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         with StorageContextManager(traj):
             for row in t1:
-                run_name = str(row['run_name'])
+                run_name = compat.tostr(row['run_name'])
                 idx = row['idx']
                 self.assertTrue(traj.f_idx_to_run(run_name) == idx)
 
         for entry in traj.df.f_read().iterrows():
-            run_name = str(entry[1]['run_name'])
+            run_name = entry[1]['run_name']
             idx = entry[1]['idx']
             self.assertTrue(traj.f_idx_to_run(idx) == run_name)
 
@@ -469,7 +469,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         self.env.f_run(write_into_shared_storage)
 
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
