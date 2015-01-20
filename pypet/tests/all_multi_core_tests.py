@@ -17,7 +17,7 @@ from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 
 MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest = None, None
 if ptcompat.tables_version == 3:
-    from pypet.tests.storage_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
+    from pypet.tests.shared_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
 
 ContinueMPTest = None
 ContinueMPPoolTest = None
