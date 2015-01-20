@@ -4,7 +4,7 @@ __author__ = 'Robert Meyer'
 
 import tables as pt
 
-tables = int(pt.__version__[0])
+tables_version = int(pt.__version__[0])
 
 def _make_pt2_carray(hdf5_file, *args, **kwargs):
     read_data = False
@@ -64,7 +64,7 @@ def _make_pt2_array(hdf5_file, *args, **kwargs):
         kwargs['object'] = data
     return hdf5_file.createArray(*args, **kwargs)
 
-if tables == 2:
+if tables_version == 2:
     open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
 
     create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.createGroup(*args, **kwargs)
@@ -97,7 +97,7 @@ if tables == 2:
 
     hdf5_version = pt.hdf5Version
 
-elif tables == 3:
+elif tables_version == 3:
     open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
 
     create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.create_group(*args, **kwargs)

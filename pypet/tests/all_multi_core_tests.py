@@ -3,6 +3,7 @@ __author__ = 'Robert Meyer'
 import getopt
 import sys
 import os
+import pypet.utils.ptcompat as ptcompat
 
 from pypet.tests.test_helpers import make_run, combined_suites, combine_test_classes
 
@@ -13,8 +14,10 @@ from pypet.tests.link_multiproc_test import MultiprocLinkLockTest, MultiprocLink
 
 from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
 
-#MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest = None, None
-from pypet.tests.storage_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
+
+MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest = None, None
+if ptcompat.tables_version == 3:
+    from pypet.tests.storage_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
 
 ContinueMPTest = None
 ContinueMPPoolTest = None

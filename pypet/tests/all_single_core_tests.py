@@ -25,7 +25,10 @@ from pypet.tests.module_test import TestAllImport
 from pypet.tests.test_helpers import make_run
 from pypet.tests.link_test import LinkTrajectoryTests, LinkMergeTest, LinkEnvironmentTest
 
-from pypet.tests.storage_data_test import StorageDataTrajectoryTests, StorageDataEnvironmentTest
+import pypet.utils.ptcompat as ptcompat
+
+if ptcompat.tables_version == 3:
+    from pypet.tests.storage_data_test import StorageDataTrajectoryTests, StorageDataEnvironmentTest
 
 # Works only if someone has installed Brian
 try:
