@@ -590,7 +590,6 @@ class StorageTest(TrajectoryComparator):
 
             self.assertTrue(row['shuffle'])
             self.assertTrue(row['fletcher32'])
-            self.assertTrue(row['pandas_append'])
             self.assertTrue(row['pandas_format'] == compat.tobytes('t'))
 
             for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():

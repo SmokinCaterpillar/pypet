@@ -65,8 +65,11 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
             self.f_create_shared_data(**kwargs)
 
     def f_create_shared_data(self, **kwargs):
-        if not self._traj.v_stored:
-            self._traj.f_store(only_init=True)
+        if not self._traj.f_contains(self, shortcuts=False):
+            raise RuntimeError('Your trajectory must contain the shared result, otherwise '
+                               'the shared data cannot be created.')
+        if not self.v_stored:
+            self._traj.f_store_item(self)
         return self._request_data('create_shared_data', kwargs=kwargs)
 
     def _store(self):
@@ -95,6 +98,9 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
     @property
     def _storage_service(self):
         return self._traj.v_storage_service
+
+    def f_supports_fast_access(self):
+        return False
 
 
 class SharedArrayResult(SharedDataResult):

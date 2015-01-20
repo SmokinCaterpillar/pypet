@@ -95,48 +95,45 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
 
         thedata = np.zeros((1000,1000))
-        myarray = SharedArrayResult('array', data=thedata)
-        mytable = SharedTableDataResult('t1', first_row={'hi':compat.tobytes('hi'), 'huhu':np.ones(3)})
-        mytable2 = SharedTableDataResult('t2', description={'ha': pt.StringCol(2, pos=0),'haha':
-            pt.FloatCol( pos=1)})
-        mytable3 = SharedTableDataResult('t3', description={'ha': pt.StringCol(2, pos=0),'haha':
-            pt.FloatCol( pos=1)})
+        myarray = SharedArrayResult('array', trajectory=traj)
+        mytable = SharedTableDataResult('t1', trajectory=traj)
+        mytable2 = SharedTableDataResult('h.t2', trajectory=traj)
+        mytable3 = SharedTableDataResult('jjj.t3', trajectory=traj)
 
-        traj.f_add_result( myarray)
+        traj.f_store(only_init=True)
+        traj.f_add_result(myarray)
+        myarray.f_create_shared_data(data=thedata)
         traj.f_add_result(mytable)
+        mytable.f_create_shared_data(first_row={'hi':compat.tobytes('hi'), 'huhu':np.ones(3)})
         traj.f_add_result(mytable2)
+        mytable2.f_create_shared_data(description={'ha': pt.StringCol(2, pos=0),'haha': pt.FloatCol( pos=1)})
         traj.f_add_result(mytable3)
+        mytable3.f_create_shared_data(description={'ha': pt.StringCol(2, pos=0),'haha': pt.FloatCol( pos=1)})
 
         traj.f_store()
 
-        newrow = {'ha':['hu'], 'haha': [4.0]}
+        newrow = {'ha':'hu', 'haha': 4.0}
 
         with self.assertRaises(RuntimeError):
             row = traj.t2.v_row
 
         with StorageContextManager(traj) as cm:
             row = traj.t2.v_row
-            for key, val in newrow:
-                row[key] = val
-            row.append()
-            traj.t2.f_flush()
+            for irun in range(11):
+                for key, val in newrow.items():
+                    row[key] = val
+                row.append()
+            traj.t3.f_flush()
 
         data = myarray.f_read()
         arr = myarray.f_get_data_node()
         self.assertTrue(np.all(data == thedata))
 
-        with
-        t3 = traj.t3
-        for row in traj.t2:
-            orow = t3.v_row
-            orow = row
-        myarray[2,2] = 10
-        data = myarray.read()
-        traj.myres2.f_flush_store()
+        with StorageContextManager(traj) as cm:
+            myarray[2,2] = 10
+            data = myarray.f_read()
+            self.assertTrue(data[2,2] == 10)
 
-
-        self.assertTrue(myarray.v_item is None)
-        self.assertTrue(mytable.v_item is None)
         self.assertTrue(data[2,2] == 10 )
         self.assertFalse(traj.v_storage_service.is_open)
 
@@ -144,17 +141,12 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         traj.f_load(load_all=2)
 
-        self.assertTrue(traj.myres1.v_type == 'CARRAY')
-        self.assertTrue(traj.myres2.t2.v_type == 'TABLE')
-        traj.myres2.f_open_store()
 
-        self.assertTrue(traj.myres2.t3.nrows == 2)
-        self.assertTrue(traj.myres2.t3[0]['ha'] == compat.tobytes('hu'), traj.myres2.t3[0]['ha'])
-        self.assertTrue(traj.myres2.t3[1]['ha'] == compat.tobytes('hi'), traj.myres2.t3[1]['ha'])
-        self.assertTrue('huhu' in traj.myres2.t1.colnames)
-        self.assertTrue(traj.myres1[2,2] == 10)
-        self.assertTrue(traj.myres1)
-        traj.myres2.f_close_store()
+        self.assertTrue(traj.t2.v_nrows == 11, '%s != 11'  % str(traj.t2.v_nrows))
+        self.assertTrue(traj.t2[0]['ha'] == compat.tobytes('hu'), traj.t2[0]['ha'])
+        self.assertTrue(traj.t2[1]['ha'] == compat.tobytes('hu'), traj.t2[1]['ha'])
+        self.assertTrue('huhu' in traj.t1.v_colnames)
+        self.assertTrue(traj.array[2,2] == 10)
 
     @unittest.skipIf(platform.system() == 'Windows', 'Not supported under Windows')
     def test_compacting(self):

@@ -127,7 +127,7 @@ def not_in_run(func):
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
-        if len(args)>0 and hasattr(self, '_is_run') and self._is_run:
+        if self._is_run:
             raise TypeError('Function `%s` is not available during a single run.' %
                             func.__name__)
 
@@ -149,7 +149,7 @@ def with_open_store(func):
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
-        if len(args)>0 and not args[0]._traj.v_storage_service.is_open:
+        if not self._traj.v_storage_service.is_open:
             raise RuntimeError('Function `%s` is only available if the storage is open.' %
                             func.__name__)
 

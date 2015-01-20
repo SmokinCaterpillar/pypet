@@ -4496,24 +4496,24 @@ class HDF5StorageService(StorageService, HasLogger):
                 _hdf5_group._f_remove(recursive=True)
             raise
 
-    def _prm_write_shared_data(self, key, hdf5_group, full_name, flag, **kwargs):
+    def _prm_write_shared_data(self, key, hdf5group, full_name, flag, **kwargs):
         try:
 
             if flag == HDF5StorageService.TABLE:
-                self._prm_write_shared_table(key, hdf5_group,
+                self._prm_write_shared_table(key, hdf5group,
                                            full_name, **kwargs)
             elif flag in (HDF5StorageService.FRAME,
                           HDF5StorageService.SERIES,
                           HDF5StorageService.PANEL) :
 
                 self._prm_write_shared_pandas_data(self,  key,
-                                                  hdf5_group, full_name, flag,
+                                                  hdf5group, full_name, flag,
                                                  **kwargs)
             else:
-                self._prm_write_shared_array(key, hdf5_group,
+                self._prm_write_shared_array(key, hdf5group,
                                            full_name, flag, **kwargs)
 
-            hdf5data = ptcompat.get_child(hdf5_group, key)
+            hdf5data = ptcompat.get_child(hdf5group, key)
             setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE,
                 HDF5StorageService.SHARED_DATA)
             setattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE, flag)
@@ -4522,7 +4522,7 @@ class HDF5StorageService(StorageService, HasLogger):
             raise
 
     def _prm_write_shared_pandas_data(self, key,
-                                         hdf5_group, full_name, flag,
+                                         hdf5group, full_name, flag,
                                          **kwargs):
         if 'obj' in kwargs:
             data = kwargs.pop('obj')
@@ -4539,7 +4539,7 @@ class HDF5StorageService(StorageService, HasLogger):
             flag = flags_dict[key]
 
         if data is not None:
-            self._prm_write_pandas_data(key, data, hdf5_group, full_name. flag)
+            self._prm_write_pandas_data(key, data, hdf5group, full_name. flag)
 
     def _prm_read_shared_pandas_data(self, pd_node, full_name, **kwargs):
         """Reads a DataFrame from dis.
@@ -4588,7 +4588,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._hdf5file.flush()
 
-    def _prm_write_shared_table(self, key, _hdf5_group, fullname, **kwargs):
+    def _prm_write_shared_table(self, key, hdf5group, fullname, **kwargs):
         """Creates a new empty table"""
         first_row = None
         description = None
@@ -4608,12 +4608,12 @@ class HDF5StorageService(StorageService, HasLogger):
             filters = kwargs.pop('filters')
         else:
             filter_kwargs = {}
-            for key in ('complevel', 'complib', 'shuffle', 'fletcher32'):
-                filter_kwargs[key] = kwargs.pop(key, None)
+            for fkey in ('complevel', 'complib', 'shuffle', 'fletcher32'):
+                filter_kwargs[fkey] = kwargs.pop(fkey, None)
             filters = self._all_get_filters(**filter_kwargs)
 
         table = ptcompat.create_table(self._hdf5file,
-                                          where=_hdf5_group, name=key,
+                                          where=hdf5group, name=key,
                                           description=description,
                                           filters=filters,
                                           **kwargs)
@@ -5497,12 +5497,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if request == 'pandas_put':
             return self._prm_write_shared_pandas_data(key=item_name,
-                                                          hdf5_group=hdf5group,
+                                                          hdf5group=hdf5group,
                                                           full_name=path_to_data,
                                                           flag=None,
                                                           **kwargs)
         elif request == 'create_shared_data':
-            self._prm_write_shared_data(key=item_name, hdf5group=hdf5group,
+            return self._prm_write_shared_data(key=item_name, hdf5group=hdf5group,
                                         full_name=path_to_data, **kwargs)
 
         hdf5data = ptcompat.get_child(hdf5group, item_name)
