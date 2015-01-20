@@ -1766,7 +1766,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             self._hdf5store.close()
             if self._hdf5file.isopen:
-                raise RuntimeError('Could not close HDF5 file!')
+                self._logger.error('Could not close HDF5 file!')
             self._hdf5file = None
             self._hdf5store = None
             self._trajectory_group = None
@@ -4496,8 +4496,27 @@ class HDF5StorageService(StorageService, HasLogger):
                 _hdf5_group._f_remove(recursive=True)
             raise
 
-    def _prm_write_shared_data(self, key, hdf5group, full_name, flag, **kwargs):
+    def _prm_write_shared_data(self, key, hdf5group, full_name, **kwargs):
         try:
+
+            if 'obj' in kwargs:
+                data = kwargs.pop('obj')
+            elif 'object' in kwargs:
+                data = kwargs.pop('object')
+            elif 'data' in kwargs:
+                data = kwargs.pop('data')
+            else:
+                data = None
+
+            flag = kwargs.pop('flag', None)
+
+            if flag is None and data is None:
+                raise RuntimeError('You must provide at least data or a flag')
+
+            if flag is None:
+                flags_dict={}
+                self._prm_extract_missing_flags({key: data}, flags_dict)
+                flag = flags_dict[key]
 
             if flag == HDF5StorageService.TABLE:
                 self._prm_write_shared_table(key, hdf5group,
@@ -4506,11 +4525,9 @@ class HDF5StorageService(StorageService, HasLogger):
                           HDF5StorageService.SERIES,
                           HDF5StorageService.PANEL) :
 
-                self._prm_write_shared_pandas_data(self,  key,
-                                                  hdf5group, full_name, flag,
-                                                 **kwargs)
+                self._prm_write_pandas_data(key, data, hdf5group, full_name, flag, **kwargs)
             else:
-                self._prm_write_shared_array(key, hdf5group,
+                self._prm_write_shared_array(key, data, hdf5group,
                                            full_name, flag, **kwargs)
 
             hdf5data = ptcompat.get_child(hdf5group, key)
@@ -4521,27 +4538,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed storing shared data `%s` of `%s`.' % (key, full_name))
             raise
 
-    def _prm_write_shared_pandas_data(self, key,
-                                         hdf5group, full_name, flag,
-                                         **kwargs):
-        if 'obj' in kwargs:
-            data = kwargs.pop('obj')
-        elif 'object' in kwargs:
-            data = kwargs.pop('object')
-        elif 'data' in kwargs:
-            data = kwargs.pop('data')
-        else:
-            data = None
-
-        if flag is None:
-            flags_dict={}
-            self._prm_extract_missing_flags({key: data}, flags_dict)
-            flag = flags_dict[key]
-
-        if data is not None:
-            self._prm_write_pandas_data(key, data, hdf5group, full_name. flag)
-
-    def _prm_read_shared_pandas_data(self, pd_node, full_name, **kwargs):
+    def _prm_select_shared_pandas_data(self, pd_node, full_name, **kwargs):
         """Reads a DataFrame from dis.
 
         :param pd_node:
@@ -4558,29 +4555,22 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            pathname = pd_node._v_pathname + '/' + pd_node._v_name
+            pathname = pd_node._v_pathname
             pandas_store = self._hdf5store
             return pandas_store.select(pathname, **kwargs)
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name, full_name))
             raise
 
-    def _prm_write_shared_array(self, key, _hdf5_group, full_name, flag, **kwargs):
+    def _prm_write_shared_array(self, key, data, hdf5group, full_name, flag, **kwargs):
         """Creates and array that can be used with an HDF5 array object"""
-        data = None
-        if 'obj' in kwargs:
-            data = kwargs.pop('obj')
-        elif 'object' in kwargs:
-            data = kwargs.pop('object')
-        elif 'data' in kwargs:
-            data = kwargs.pop('data')
 
         if flag == HDF5StorageService.ARRAY:
-            self._prm_write_into_array(key, data, _hdf5_group, full_name, **kwargs)
+            self._prm_write_into_array(key, data, hdf5group, full_name, **kwargs)
         elif flag in (HDF5StorageService.CARRAY,
                     HDF5StorageService.EARRAY,
                     HDF5StorageService.VLARRAY):
-            self._prm_write_into_other_array(key, data, _hdf5_group, full_name,
+            self._prm_write_into_other_array(key, data, hdf5group, full_name,
                                              flag=flag, **kwargs)
         else:
             raise RuntimeError('Flag `%s` of hdf5 data `%s` of `%s` not understood' %
@@ -5495,13 +5485,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         hdf5group = self._all_get_node_by_name(path_to_data)
 
-        if request == 'pandas_put':
-            return self._prm_write_shared_pandas_data(key=item_name,
-                                                          hdf5group=hdf5group,
-                                                          full_name=path_to_data,
-                                                          flag=None,
-                                                          **kwargs)
-        elif request == 'create_shared_data':
+        if request == 'create_shared_data' or request == 'pandas_put':
             return self._prm_write_shared_data(key=item_name, hdf5group=hdf5group,
                                         full_name=path_to_data, **kwargs)
 
@@ -5511,12 +5495,10 @@ class HDF5StorageService(StorageService, HasLogger):
             return hdf5data
         elif request == 'pandas_get':
             data_dict = {}
-            self._prm_read_pandas(hdf5data, data_dict, path_to_data, **kwargs)
+            self._prm_read_pandas(hdf5data, data_dict, path_to_data)
             return data_dict[item_name]
         elif request == 'pandas_select':
-            data_dict = {}
-            self._prm_read_shared_pandas_data(hdf5data, data_dict, path_to_data, **kwargs)
-            return data_dict[item_name]
+            return self._prm_select_shared_pandas_data(hdf5data, path_to_data, **kwargs)
 
 
         if kwargs and kwargs.pop('_col_func', False):

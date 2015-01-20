@@ -24,7 +24,7 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
 from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
-    SharedVLArrayResult, SharedPandasDataResult, SharedTableDataResult,\
+    SharedVLArrayResult, SharedPandasDataResult, SharedTableResult,\
     KnowsTrajectory, StorageContextManager
 
 
@@ -67,5 +67,5 @@ __all__ = [
     SharedEArrayResult.__name__,
     SharedVLArrayResult.__name__,
     SharedPandasDataResult.__name__,
-    SharedTableDataResult.__name__
+    SharedTableResult.__name__
 ]

@@ -58,11 +58,10 @@ class KnowsTrajectory(NNLeafNode):
     KNOWS_TRAJECTORY = True
 
 class SharedDataResult(BaseResult, KnowsTrajectory):
-    def __init__(self, full_name=None, trajectory=None, comment='', **kwargs):
+    def __init__(self, full_name=None, trajectory=None, comment=''):
         super(SharedDataResult, self).__init__(full_name=full_name, comment=comment)
         self._traj=trajectory
-        if len(kwargs)>0:
-            self.f_create_shared_data(**kwargs)
+        self._set_logger()
 
     def f_create_shared_data(self, **kwargs):
         if not self._traj.f_contains(self, shortcuts=False):
@@ -172,11 +171,11 @@ class SharedVLArrayResult(SharedEArrayResult):
     FLAG = pypetconstants.VLARRAY
 
 
-class SharedTableDataResult(SharedDataResult):
+class SharedTableResult(SharedDataResult):
 
     def f_create_shared_data(self, **kwargs):
         kwargs['flag'] = pypetconstants.TABLE
-        return super(SharedTableDataResult, self).f_create_shared_data(**kwargs)
+        return super(SharedTableResult, self).f_create_shared_data(**kwargs)
 
     @property
     def v_coldescrs(self):
@@ -260,8 +259,8 @@ class SharedTableDataResult(SharedDataResult):
     def f_append(self, rows):
         return self._request_data('append', args=(rows,))
 
-    def f_append_row(self, row):
-        return self.f_append([row])
+    # def f_append_row(self, row):
+    #     return self.f_append([row])
 
     def f_modify_column(self, start=None, stop=None, step=None, column=None, colname=None):
         kwargs = dict(start=start, stop=stop, step=step, column=column, colname=colname)
@@ -390,42 +389,51 @@ class SharedTableDataResult(SharedDataResult):
 
 class SharedPandasDataResult(SharedDataResult):
 
-    def __init__(self, full_name=None, trajectory=None, comment='', **kwargs):
+    def __init__(self, full_name=None, trajectory=None, comment=''):
         self._pandas_data = None
-        self.data = kwargs.get('data', None)
         super(SharedPandasDataResult, self).__init__(full_name=full_name,
-                                                     comment=comment, **kwargs)
+                                                     trajectory=trajectory,
+                                                     comment=comment,)
 
-    def _extract_data(self, data):
+    # def _extract_data(self, data):
+    #     if data is None:
+    #         data = self.data
+    #     else:
+    #         self.data = data
+    #     return data
+
+    # @property
+    # def data(self):
+    #     return self._pandas_data
+    #
+    # @data.setter
+    # def data(self, data):
+    #     if data is not None and not isinstance(data, (pd.Series,
+    #                                                   pd.DataFrame,
+    #                                                   pd.Panel,
+    #                                                   pd.Panel4D)):
+    #         raise ValueError('Only pandas data is supported, the data is of type `%s`.' %
+    #                          str(type(data)))
+    #     self._pandas_data = data
+
+    def f_create_shared_data(self, data=None, format='table', **kwargs):
         if data is None:
-            data = self.data
+            if not self.v_stored:
+                self._traj.f_store_item(self)
         else:
-            self.data = data
-        return data
-
-    @property
-    def data(self):
-        return self._pandas_data
-
-    @data.setter
-    def data(self, data):
-        if not isinstance(data, (pd.Series, pd.DataFrame, pd.Panel, pd.Panel4D)):
-            raise ValueError('Only pandas data is supported, the data is of type `%s`.' %
-                             str(type(data)))
-        self._pandas_data = data
-
-    def f_create_shared_data(self, **kwargs):
-        return self.f_put(**kwargs)
+            return super(SharedPandasDataResult, self).f_create_shared_data(data=data,
+                                                                            format=format,
+                                                                            **kwargs)
 
     def f_put(self, data=None, format='table', append=False, **kwargs):
-        data = self._extract_data(data)
+        # data = self._extract_data(data)
         kwargs['format'] = format
         kwargs['append'] = append
         kwargs['data'] = data
         return self._request_data('pandas_put', kwargs=kwargs)
 
     def f_append(self, data=None, **kwargs):
-        data = self._extract_data(data)
+        # data = self._extract_data(data)
         return self.f_put(data, format='table', append=True, **kwargs)
 
     def f_select(self, where=None, start = None, stop=None, columns=None,
@@ -437,9 +445,9 @@ class SharedPandasDataResult(SharedDataResult):
         kwargs['chunksize']=chunksize
         if not self._storage_service.is_open:
             kwargs['iterator'] = False
-        self.data = self._request_data('pandas_select', kwargs=kwargs)
-        return self.data
+        return self._request_data('pandas_select', kwargs=kwargs)
+        # return self.data
 
-    def f_get(self):
-        self.data = self._request_data('pandas_get', args=())
-        return self.data
+    def f_read(self):
+        return self._request_data('pandas_get', args=())
+        # return self.data

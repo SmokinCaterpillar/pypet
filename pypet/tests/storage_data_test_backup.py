@@ -10,7 +10,7 @@ import scipy.sparse as spsp
 import pickle
 
 from pypet.shareddata import StorageDataResult, SharedDataResult, check_hdf5_init,\
-    SharedArrayResult, SharedCArray, SharedEArray, SharedVLArray, SharedTableDataResult
+    SharedArrayResult, SharedCArray, SharedEArray, SharedVLArray, SharedTableResult
 from pypet import Trajectory, load_trajectory
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run,\
     create_param_dict, add_params
