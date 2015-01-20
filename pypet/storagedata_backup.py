@@ -94,7 +94,7 @@ class StorageData(object):
             raise AttributeError('The storage service is not open, please open it '
                                  'with a `StorageDataResult` via the `f_open_storage`.')
         if self._item is None or not self._item._v_isopen:
-            self._item = service.store(pypetconstants.STORAGE_DATA, self)
+            self._item = service.store(pypetconstants.SHARED_DATA, self)
 
     def __getattr__(self, item):
         if ('_traj' not in self.__dict__ or
@@ -176,7 +176,7 @@ class StorageDataResult(Result, KnowsTrajectory):
 
     def f_set_single(self, name, item):
         try:
-            item._set_dependencies(self._traj, self.v_full_name, name)
+            item.f_set_dependencies(self.v_full_name, name, self._traj)
         except AttributeError:
             pass
         super(StorageDataResult, self).f_set_single(name, item)
@@ -209,7 +209,7 @@ class StorageDataResult(Result, KnowsTrajectory):
         for name in load_dict:
             item = load_dict[name]
             try:
-                item._set_dependencies(self._traj, self.v_full_name, name)
+                item.f_set_dependencies(self.v_full_name, name, self._traj)
             except AttributeError:
                 pass
             super(StorageDataResult, self)._load(load_dict)

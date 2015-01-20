@@ -40,7 +40,8 @@ from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup
     DerivedParameterGroup, ConfigGroup, STORE, LOAD, REMOVE
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
-from pypet.storagedata import StorageDataResult
+from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
+    SharedVLArrayResult, SharedPandasDataResult, SharedTableDataResult
 import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug

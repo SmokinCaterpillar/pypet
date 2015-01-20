@@ -7,10 +7,9 @@ import platform
 import logging
 import random
 import scipy.sparse as spsp
-import pickle
+import pandas as pd
 
-from pypet.storagedata import StorageDataResult, StorageData, check_hdf5_init,\
-    ArrayData, CArrayData, EArrayData, VLArrayData, TableData
+from pypet.shareddata import *
 from pypet import Trajectory, load_trajectory
 from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run,\
     create_param_dict, add_params
@@ -96,25 +95,41 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
 
         thedata = np.zeros((1000,1000))
-        myarray = ArrayData(data=thedata)
-        mytable = TableData(description={'hi':pt.IntCol(), 'huhu':pt.StringCol(33)})
-        mytable2 = TableData(first_row={'ha': compat.tobytes('hi'), 'haha':'lk'})
-        mytable3 = TableData(first_row={'ha': compat.tobytes('hu'), 'haha':'kk'})
+        myarray = SharedArrayResult('array', data=thedata)
+        mytable = SharedTableDataResult('t1', first_row={'hi':compat.tobytes('hi'), 'huhu':np.ones(3)})
+        mytable2 = SharedTableDataResult('t2', description={'ha': pt.StringCol(2, pos=0),'haha':
+            pt.FloatCol( pos=1)})
+        mytable3 = SharedTableDataResult('t3', description={'ha': pt.StringCol(2, pos=0),'haha':
+            pt.FloatCol( pos=1)})
 
-        traj.f_add_result(StorageDataResult, 'myres1', myarray)
-        traj.f_add_result(StorageDataResult, 'myres2', t1=mytable, t2=mytable2, t3=mytable3)
-
+        traj.f_add_result( myarray)
+        traj.f_add_result(mytable)
+        traj.f_add_result(mytable2)
+        traj.f_add_result(mytable3)
 
         traj.f_store()
 
+        newrow = {'ha':['hu'], 'haha': [4.0]}
+
+        with self.assertRaises(RuntimeError):
+            row = traj.t2.v_row
+
+        with StorageContextManager(traj) as cm:
+            row = traj.t2.v_row
+            for key, val in newrow:
+                row[key] = val
+            row.append()
+            traj.t2.f_flush()
+
         data = myarray.f_read()
-        arr = myarray.f_get_store_item()
+        arr = myarray.f_get_data_node()
         self.assertTrue(np.all(data == thedata))
-        t3 = traj.myres2.t3
-        for row in traj.myres2.t2:
+
+        with
+        t3 = traj.t3
+        for row in traj.t2:
+            orow = t3.v_row
             orow = row
-            traj.myres2.t2.f_append([orow])
-            t3.f_append([orow])
         myarray[2,2] = 10
         data = myarray.read()
         traj.myres2.f_flush_store()
@@ -149,7 +164,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.v_storage_service.complevel = 7
 
         first_row = {'ha': compat.tobytes('hi'), 'haha':np.zeros((3,3))}
-        mytable = StorageData(first_row=first_row)
+        mytable = SharedDataResult(first_row=first_row)
 
         traj.f_add_result(StorageDataResult, 'myres', mytable)
 
@@ -193,10 +208,10 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         npearray = np.ones((2,10,3), dtype=np.float)
         thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
-        carray = StorageData(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
-        earray = StorageData(item_type=EARRAY, obj=npearray)
-        vlarray = StorageData(item_type=VLARRAY, object=thevlarray)
-        array = StorageData(item_type=ARRAY, data=npearray)
+        carray = SharedDataResult(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
+        earray = SharedDataResult(item_type=EARRAY, obj=npearray)
+        vlarray = SharedDataResult(item_type=VLARRAY, object=thevlarray)
+        array = SharedDataResult(item_type=ARRAY, data=npearray)
 
         traj.v_standard_result = StorageDataResult
         traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
@@ -253,10 +268,10 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         npearray = np.ones((2,10,3), dtype=np.float)
         thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
-        carray = StorageData(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
-        earray = StorageData(item_type=EARRAY, obj=npearray)
-        vlarray = StorageData(item_type=VLARRAY)
-        array = StorageData(item_type=ARRAY, data=npearray)
+        carray = SharedDataResult(item_type=CARRAY, shape=(10, 10), atom=pt.atom.FloatAtom())
+        earray = SharedDataResult(item_type=EARRAY, obj=npearray)
+        vlarray = SharedDataResult(item_type=VLARRAY)
+        array = SharedDataResult(item_type=ARRAY, data=npearray)
 
         traj.v_standard_result = StorageDataResult
         traj.f_add_result('g.arrays', carray=carray, earray=earray, vlarray=vlarray, array=array,
@@ -268,7 +283,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         with self.assertRaises(Exception):
             check_hdf5_init(vlarray)
 
-        traj.arrays['vlarray'] = StorageData(item_type=VLARRAY, obj=thevlarray)
+        traj.arrays['vlarray'] = SharedDataResult(item_type=VLARRAY, obj=thevlarray)
 
         self.assertTrue(check_hdf5_init(traj.arrays['vlarray']))
 
@@ -308,7 +323,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         self.assertFalse(traj.v_storage_service.is_open)
 
         with self.assertRaises(Exception):
-            check_hdf5_init(StorageData(item_type=TABLE))
+            check_hdf5_init(SharedDataResult(item_type=TABLE))
 
 
 class StorageDataEnvironmentTest(TrajectoryComparator):
@@ -349,19 +364,19 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
     def add_array_params(self, traj):
         length = len(traj)
         da_data = np.zeros(length, dtype=np.int)
-        a = StorageData(item_type=ARRAY, obj=da_data)
-        ca = StorageData(item_type=CARRAY, obj=da_data)
-        ea = StorageData(item_type=EARRAY, shape=(0,10), atom=pt.FloatAtom(shape=()),
-                         expectedrows=length)
-        vla = StorageData(item_type=VLARRAY, atom=pt.FloatAtom(shape=()))
+        a = SharedDataResult(item_type=ARRAY, obj=da_data)
+        ca = SharedDataResult(item_type=CARRAY, obj=da_data)
+        ea = SharedDataResult(item_type=EARRAY, shape=(0, 10), atom=pt.FloatAtom(shape=()),
+                        expectedrows=length)
+        vla = SharedDataResult(item_type=VLARRAY, atom=pt.FloatAtom(shape=()))
 
         s1 = traj.f_add_result(StorageDataResult, 'daarrays', a=a, ca=ca, ea=ea, vla=vla,
                                comment='Arrays')
 
-        t1 = StorageData(description={'idx': pt.IntCol(), 'run_name':pt.StringCol(30)},
-                         expectedrows=length)
+        t1 = SharedDataResult(description={'idx': pt.IntCol(), 'run_name': pt.StringCol(30)},
+                        expectedrows=length)
 
-        t2 = StorageData(description={'run_name':pt.StringCol(3000)},)
+        t2 = SharedDataResult(description={'run_name': pt.StringCol(3000)})
 
         s2 = traj.f_add_result(StorageDataResult, 'tabs', t1=t1, t2=t2)
 
@@ -509,8 +524,8 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
     def add_matrix_params(self, traj):
         shape=(300,301,305)
-        m1 = StorageData(obj=np.random.rand(*shape))
-        m2 = StorageData(obj=np.random.rand(*shape))
+        m1 = SharedDataResult(obj=np.random.rand(*shape))
+        m2 = SharedDataResult(obj=np.random.rand(*shape))
         traj.f_add_result(StorageDataResult, 'matrices', m1=m1, m2=m2)
         traj.f_store()
 

@@ -941,7 +941,7 @@ class Parameter(BaseParameter):
                 'Your Parameter is an explored array can no longer change values!')
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored parameter. If '
+            self._logger.debug('You are changing an already stored parameter. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
@@ -2175,7 +2175,7 @@ class Result(BaseResult):
         """
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored result. If '
+            self._logger.debug('You are changing an already stored result. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
@@ -2434,7 +2434,7 @@ class PickleResult(Result):
         """
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored result. If '
+            self._logger.debug('You are changing an already stored result. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 

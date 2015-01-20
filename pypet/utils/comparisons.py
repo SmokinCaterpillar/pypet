@@ -29,7 +29,6 @@ def results_equal(a, b):
     :raises: ValueError if both inputs are no result instances
 
     """
-
     if a.v_is_parameter or b.v_is_parameter:
         raise ValueError('Both inputs are not results.')
 
@@ -45,18 +44,22 @@ def results_equal(a, b):
     if not a.v_full_name == b.v_full_name:
         return False
 
-    akeyset = set(a._data.keys())
-    bkeyset = set(b._data.keys())
-
-    if akeyset != bkeyset:
+    if hasattr(a, '_data') and not hasattr(b, '_data'):
         return False
 
-    for key in a._data:
-        val = a._data[key]
-        bval = b._data[key]
+    if hasattr(a, '_data'):
+        akeyset = set(a._data.keys())
+        bkeyset = set(b._data.keys())
 
-        if not nested_equal(val, bval):
+        if akeyset != bkeyset:
             return False
+
+        for key in a._data:
+            val = a._data[key]
+            bval = b._data[key]
+
+            if not nested_equal(val, bval):
+                return False
 
     return True
 

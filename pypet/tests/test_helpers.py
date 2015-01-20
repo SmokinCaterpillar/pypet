@@ -9,7 +9,6 @@ from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
 from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult, \
     SparseParameter, SparseResult, ObjectTable
-from pypet.storagedata import StorageDataResult, StorageData
 import pypet.pypetconstants
 import pypet.compat as compat
 import scipy.sparse as spsp
@@ -381,20 +380,10 @@ class TrajectoryComparator(unittest.TestCase):
 
             if isinstance(item, BaseParameter):
                 self.assertTrue(parameters_equal(item,old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
-            elif isinstance(item, StorageDataResult):
-                for name in item:
-                    a = item[name]
-                    b = old_item[name]
-                    if isinstance(a, StorageData):
-                        self.assertTrue(a._path_to_data == b._path_to_data)
-                        self.assertTrue(a._item_name == b._item_name)
-                        self.assertTrue(a._type == b._type)
-                    else:
-                        nested_equal(a, b)
+                                'For key %s: %s not equal to %s' % (key,str(old_item),str(item)))
             elif isinstance(item,BaseResult):
                 self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' %(key, str(old_item),str(item)))
+                                'For key %s: %s not equal to %s' % (key, str(old_item),str(item)))
             else:
                 raise RuntimeError('You shall not pass')
 

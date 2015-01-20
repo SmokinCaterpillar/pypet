@@ -324,6 +324,19 @@ class NNLeafNode(NNTreeNode):
         """
         return {}
 
+    def _load_flags(self):
+        """ Currently not used because I let the storage service infer how to load
+        stuff from the data itself.
+
+        If you write your own parameter or result you can implement this function
+        to make specifications on how to load data,
+        see also :func:`pypet.storageservice.HDF5StorageService.store`.
+
+        :returns: {} (Empty dictionary)
+
+        """
+        return {}
+
     def _store(self):
         """Method called by the storage service for serialization.
 
@@ -3016,7 +3029,7 @@ class NNGroupNode(NNTreeNode):
         storage_service = traj.v_storage_service
 
         storage_service.store(pypetconstants.TREE, self, name,
-                              trajectory_name=traj.v_trajectory_name,
+                              trajectory_name=traj.v_name,
                               recursive=recursive,
                               skip_stored=skip_stored)
 
@@ -3051,7 +3064,7 @@ class NNGroupNode(NNTreeNode):
         storage_service = traj.v_storage_service
 
         storage_service.load(pypetconstants.TREE, self, child_name=name,
-                             trajectory_name=traj.v_trajectory_name,
+                             trajectory_name=traj.v_name,
                              recursive=recursive, load_data=load_data, trajectory=traj)
 
         return self.f_get(name, shortcuts=False)

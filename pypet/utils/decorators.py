@@ -8,8 +8,6 @@ import inspect
 
 import pypet.compat as compat
 
-
-
 def deprecated(msg=''):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
@@ -131,6 +129,28 @@ def not_in_run(func):
 
         if len(args)>0 and hasattr(self, '_is_run') and self._is_run:
             raise TypeError('Function `%s` is not available during a single run.' %
+                            func.__name__)
+
+        return func(self, *args, **kwargs)
+
+    return new_func
+
+def with_open_store(func):
+    """This is a decorator that signaling that a function is only available if the storage is open.
+
+    """
+    doc = func.__doc__
+    na_string = '''\nATTENTION: This function can only be used if the store is open!\n'''
+
+    if doc is not None:
+        func.__doc__ = '\n'.join([doc, na_string])
+    func._with_open_store = True
+
+    @functools.wraps(func)
+    def new_func(self, *args, **kwargs):
+
+        if len(args)>0 and not args[0]._traj.v_storage_service.is_open:
+            raise RuntimeError('Function `%s` is only available if the storage is open.' %
                             func.__name__)
 
         return func(self, *args, **kwargs)

@@ -895,8 +895,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        newtraj.config.hdf5.f_remove_child('pandas_append')
-        newtraj.config.hdf5.f_load_child('pandas_append', load_data=2)
         self.compare_trajectories(self.traj,newtraj)
 
         size=os.path.getsize(self.filename)

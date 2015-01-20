@@ -196,7 +196,7 @@ DELETE_LINK = 'DELETE_LINK'
 """ Removes a soft link from hdf5 file"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
-STORAGE_DATA = 'HDF5_DATA'
+ACCESS_DATA = 'ACCESS_DATA'
 """ Access and manipulate data directly in the hdf5 file """
 CLOSE_FILE = 'CLOSE_FILE'
 """ Close a still opened HDF5 file """
@@ -216,3 +216,66 @@ RUN_NAME_DUMMY = 'run_ALL'
 """Dummy name if not created during run"""
 FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
+
+
+ ### Storing Data Constants
+ARRAY = 'ARRAY'
+'''Stored as array_
+
+.. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
+
+'''
+CARRAY = 'CARRAY'
+'''Stored as carray_
+
+.. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
+
+'''
+EARRAY = 'EARRAY'
+''' Stored as earray_e.
+
+.. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
+
+'''
+
+VLARRAY = 'VLARRAY'
+'''Stored as vlarray_
+
+.. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
+
+'''
+
+TABLE = 'TABLE'
+'''Stored as pytable_
+
+.. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
+
+'''
+
+DICT = 'DICT'
+''' Stored as dict.
+
+In fact, stored as pytable, but the dictionary wil be reconstructed.
+'''
+
+FRAME = 'FRAME'
+''' Stored as pandas DataFrame_
+
+.. _DataFrame: http://pandas.pydata.org/pandas-docs/dev/io.html#hdf5-pytables
+
+'''
+
+SERIES = 'SERIES'
+''' Store data as pandas Series '''
+
+PANEL = 'PANEL'
+''' Store data as pandas Panel(4D) '''
+
+SPLIT_TABLE = 'SPLIT_TABLE'
+''' If a table was split due to too many columns'''
+
+DATATYPE_TABLE = 'DATATYPE_TABLE'
+'''If a table contains the data types instead of the attrs'''
+
+SHARED_DATA = 'SHARED_DATA_'
+''' An HDF5 data object for direct interaction '''

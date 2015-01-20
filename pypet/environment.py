@@ -706,12 +706,6 @@ class Environment(HasLogger):
         Fixed format allows fast reading and writing but disables querying the hdf5 data and
         appending to the store (with other 3rd party software other than *pypet*).
 
-    :param pandas_append:
-
-        If format is 'table', `pandas_append=True` allows to modify the tables after storage with
-        other 3rd party software. Currently appending is not supported by *pypet* but this
-        feature will come soon.
-
     :param purge_duplicate_comments:
 
         If you add a result via :func:`~pypet.trajectory.SingleRun.f_add_result` or a derived
@@ -792,6 +786,7 @@ class Environment(HasLogger):
     @kwargs_api_change('use_hdf5', 'storage_service')
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
+    @kwargs_api_change('pandas_append')
     def __init__(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
