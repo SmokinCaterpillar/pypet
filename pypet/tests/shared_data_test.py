@@ -92,6 +92,142 @@ def write_into_shared_storage(traj):
 
 class StorageDataTrajectoryTests(TrajectoryComparator):
 
+    def test_converions(self):
+        filename = make_temp_file('hdf5manipulation.hdf5')
+        traj = Trajectory(name = make_trajectory_name(self), filename=filename)
+        trajname = traj.v_name
+
+        traj.f_store(only_init=True)
+
+        thedata = np.zeros((1000,1000))
+        myarray = SharedArrayResult('array', trajectory=traj)
+        mytable = SharedTableResult('t1', trajectory=traj)
+        # mytable2 = SharedTableResult('h.t2', trajectory=traj)
+        # mytable3 = SharedTableResult('jjj.t3', trajectory=traj)
+        dadict = {'hi': [ 1,2,3,4,5], 'shu':['bi', 'du', 'da', 'ha', 'hui']}
+        dadict2 = {'answer': [42]}
+        traj.f_add_result(SharedPandasDataResult, 'dfs.df').f_create_shared_data(pd.DataFrame(dadict))
+        traj.f_add_result(SharedPandasDataResult, 'dfs.df1').f_create_shared_data(data=pd.DataFrame(dadict2))
+
+        traj.f_add_result('mylist', [1,2,3])
+        traj.f_add_result('my.mytuple', k=(1,2,3), wa=42)
+        traj.f_add_result('my.myarray', np.zeros((50,50)))
+        traj.f_add_result('my.myframe', data=pd.DataFrame(dadict2))
+        traj.f_add_result('my.mytable', ObjectTable(data=dadict2))
+
+
+        traj.f_add_result(myarray)
+        myarray.f_create_shared_data(data=thedata)
+        traj.f_add_result(mytable)
+        mytable.f_create_shared_data(first_row={'hi':compat.tobytes('hi'), 'huhu':np.ones(3)})
+
+        traj.f_store()
+
+
+        data = myarray.f_read()
+        arr = myarray.f_get_data_node()
+        self.assertTrue(np.all(data == thedata))
+
+        with StorageContextManager(traj) as cm:
+            myarray[2,2] = 10
+            data = myarray.f_read()
+            self.assertTrue(data[2,2] == 10)
+
+        self.assertTrue(data[2,2] == 10 )
+        self.assertFalse(traj.v_storage_service.is_open)
+
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+
+        array = traj.array
+
+        array = make_ordinary_result(array, new_data_name='super')
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+        array = traj.array
+        self.assertTrue(isinstance(array, Result))#
+        thedata[2,2] = 10
+        self.assertTrue(np.all(array.super == thedata))
+
+        t1 = traj.t1
+        t1 = make_ordinary_result(t1)
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+        t1 = traj.t1
+        self.assertTrue(isinstance(t1, ObjectTable))#
+        self.assertTrue(np.all(t1['huhu'][0] == np.ones(3)))
+
+        df = traj.df
+        df = make_ordinary_result(df)
+        traj.f_load_item(df)
+        theframe = df.f_get()
+        self.assertTrue(isinstance(df, Result))
+        self.assertTrue(isinstance(theframe, pd.DataFrame))
+        self.assertTrue(theframe['hi'][0] == 1)
+
+        listres = traj.f_get('mylist')
+        listres = make_shared_result(listres, trajectory=traj)
+        with StorageContextManager(traj) as cm:
+            self.assertTrue(listres[2] == 3)
+            listres[0] = 4
+
+        self.assertTrue(listres[0] == 4)
+        listres = make_ordinary_result(listres, new_data_name='yuppy')
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+        listres = traj.mylist
+        self.assertTrue(isinstance(listres, Result))
+        self.assertTrue(listres.yuppy[0] == 4)
+        self.assertTrue(isinstance(listres.yuppy, list))
+
+        mytuple = traj.mytuple
+        with self.assertRaises(TypeError):
+            mytuple = make_shared_result(mytuple, traj)
+
+        mytuple.f_empty()
+        with self.assertRaises(RuntimeError):
+            mytuple = make_shared_result(mytuple, traj, old_data_name='k',
+                                         new_class=SharedArrayResult)
+
+        traj.f_load_item(mytuple)
+        traj.f_delete_item(mytuple, delete_only='wa')
+        mytuple.f_empty()
+
+        with self.assertRaises(pt.NoSuchNodeError):
+            mytuple = make_shared_result(mytuple, traj, old_data_name='hjh',
+                                         new_class=SharedArrayResult)
+
+        mytuple = make_shared_result(mytuple, traj, old_data_name='k', new_class=SharedArrayResult)
+        self.assertTrue(mytuple[1] == 2)
+
+        mytuple = make_ordinary_result(mytuple, new_data_name='k')
+        traj = load_trajectory(name=trajname, filename=filename, load_all=2)
+        mytuple = traj.mytuple
+        self.assertTrue(isinstance(mytuple.k, tuple))
+        self.assertTrue(mytuple.k[2] == 3)
+
+        myframe = traj.myframe
+        myframe = make_shared_result(myframe, traj)
+
+        theframe = myframe.f_read()
+        self.assertTrue(theframe['answer'][0] == 42)
+
+        myframe = make_ordinary_result(myframe, new_data_name='jj')
+        traj.f_load_item(myframe)
+        self.assertTrue(myframe.jj['answer'][0] == 42)
+
+        mytable = traj.f_get('mytable')
+        mytable = make_shared_result(mytable, traj)
+
+        self.assertTrue(isinstance(mytable, SharedTableResult))
+        rows = mytable.f_read()
+
+        self.assertTrue(rows[0][0] == 42)
+
+        mytable = make_ordinary_result(mytable, new_data_name='jup')
+
+        traj.f_load_item(mytable)
+
+        self.assertTrue(isinstance(mytable, Result))
+        self.assertTrue(mytable.jup['answer'][0] == 42)
+
+
     def test_storing_and_manipulating(self):
         filename = make_temp_file('hdf5manipulation.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)

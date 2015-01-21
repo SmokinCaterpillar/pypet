@@ -2699,8 +2699,8 @@ class NNGroupNode(NNTreeNode):
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
-            # We set a private item
-            self.__dict__[key] = value
+            # We set a private attribute
+            super(NNGroupNode, self).__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # If we set a property we need this work around here:
             python_property = getattr(self.__class__, key)

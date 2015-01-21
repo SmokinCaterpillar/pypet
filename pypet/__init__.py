@@ -25,7 +25,7 @@ from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
 from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
     SharedVLArrayResult, SharedPandasDataResult, SharedTableResult,\
-    KnowsTrajectory, StorageContextManager
+    KnowsTrajectory, StorageContextManager, make_ordinary_result, make_shared_result
 
 
 __all__ = [
@@ -67,5 +67,7 @@ __all__ = [
     SharedEArrayResult.__name__,
     SharedVLArrayResult.__name__,
     SharedPandasDataResult.__name__,
-    SharedTableResult.__name__
+    SharedTableResult.__name__,
+    make_ordinary_result.__name__,
+    make_shared_result.__name__,
 ]

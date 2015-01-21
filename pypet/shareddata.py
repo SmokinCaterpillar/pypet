@@ -1,17 +1,17 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
-import os
 import warnings
 import pandas as pd
+import numpy as np
 
 from pypet import pypetconstants
-from pypet.parameter import Result
+from pypet.parameter import BaseResult, Result, ObjectTable
 import pypet.compat as compat
 import pypet.utils.ptcompat as ptcompat
 from pypet.naturalnaming import NNLeafNode
 from pypet.pypetlogging import HasLogger
-from pypet.parameter import BaseResult
 from pypet.utils.decorators import with_open_store
+
 
 class StorageContextManager(HasLogger):
     def __init__(self, trajectory):
@@ -54,13 +54,60 @@ class StorageContextManager(HasLogger):
         service.store(pypetconstants.FLUSH, None)
 
 
+def make_ordinary_result(shared_result, new_data_name=None):
+    """ Irreversible!"""
+    if new_data_name is None:
+        new_data_name = shared_result.v_name
+    shared_result._request_data('make_ordinary', kwargs=dict(new_class_name=Result.__name__,
+                                                      new_data_name=new_data_name))
+    del shared_result._traj
+    del shared_result._data_name
+    shared_result.__class__ = Result
+    shared_result.__init__(shared_result.v_full_name, comment=shared_result.v_comment)
+    return shared_result
+
+
+def make_shared_result(ordinary_result, trajectory, new_class=None, old_data_name=None):
+    data_dict = ordinary_result.f_to_dict(copy=False)
+    if len(data_dict) > 1:
+        raise TypeError('Cannot make the result shared, it manages more than one data item.')
+    if old_data_name is None:
+        old_data_name = compat.listkeys(data_dict)[0]
+    if new_class is None:
+        data = data_dict[old_data_name]
+        if isinstance(data, ObjectTable):
+            new_class = SharedTableResult
+        elif isinstance(data, (pd.Series, pd.DataFrame, pd.Panel, pd.Panel4D)):
+            new_class = SharedPandasDataResult
+        elif isinstance(data, (tuple, list)):
+            new_class = SharedArrayResult
+        elif isinstance(data, (np.ndarray, np.matrix)):
+            new_class = SharedCArrayResult
+    ordinary_result.f_empty()
+    old_class = ordinary_result.__class__
+    try:
+        ordinary_result.__class__ = new_class
+        ordinary_result.__init__(ordinary_result.v_full_name, trajectory=trajectory,
+                                 comment=ordinary_result.v_comment)
+        ordinary_result._data_name = old_data_name
+        ordinary_result._request_data('make_shared', kwargs=dict(new_class_name=new_class.__name__,
+                                                              new_data_name=ordinary_result.v_name))
+        ordinary_result._data_name = ordinary_result.v_name
+        return ordinary_result
+    except Exception:
+        ordinary_result.__class__ = old_class
+        raise
+
+
 class KnowsTrajectory(NNLeafNode):
     KNOWS_TRAJECTORY = True
+
 
 class SharedDataResult(BaseResult, KnowsTrajectory):
     def __init__(self, full_name=None, trajectory=None, comment=''):
         super(SharedDataResult, self).__init__(full_name=full_name, comment=comment)
         self._traj=trajectory
+        self._data_name = self.v_name
         self._set_logger()
 
     def f_create_shared_data(self, **kwargs):
@@ -74,19 +121,18 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
     def _store(self):
         return {}
 
-    def _load(self, load_dict):
-        pass
-
     def f_is_empty(self):
-        return False
+        return True # The shared data result is always empty because the data stays on disk
 
     def f_empty(self):
         pass
 
     def _request_data(self, request, args=None, kwargs=None):
-        return self._storage_service.store(pypetconstants.ACCESS_DATA, self._full_name, 'data',
-                                       request, args, kwargs,
-                                       trajectory_name=self._traj.v_name)
+        return self._storage_service.store(pypetconstants.ACCESS_DATA, self._full_name,
+                                           self._data_name,
+                                           request, args, kwargs,
+                                           trajectory_name=self._traj.v_name)
+
 
     def f_get_data_node(self):
         if not self._storage_service.is_open:

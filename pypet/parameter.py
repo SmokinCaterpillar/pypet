@@ -2275,8 +2275,8 @@ class Result(BaseResult):
 
     def __setattr__(self, key, value):
         if key[0] == '_':
-            # Change a private attribute
-            self.__dict__[key] = value
+            # We set a private attribute
+            super(Result, self).__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # Work around for python properties
             python_property = getattr(self.__class__, key)
