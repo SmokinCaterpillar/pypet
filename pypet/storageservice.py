@@ -1950,7 +1950,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     if col_name == 'example_item_run_name':
                         # The example item run name has changed due to merging
-                        old_run_name = not_inserted_row[col_name]
+                        old_run_name = compat.tostr(not_inserted_row[col_name])
                         # Get the old name
                         old_full_name = key.replace(run_mask, old_run_name)
                         # Find the new name
