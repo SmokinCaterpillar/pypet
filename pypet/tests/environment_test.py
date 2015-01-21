@@ -22,6 +22,7 @@ def just_printing_bro(traj):
         value = traj.f_get('par.Test', fast_access=True)
         print('Current value of %s is %d' %(key, value))
 
+
 class EnvironmentTest(unittest.TestCase):
 
 
