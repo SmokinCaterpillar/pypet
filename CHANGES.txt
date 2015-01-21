@@ -80,6 +80,8 @@ pypet 0.1b.9
 
 *   BUG FIX: Fixed merging of result summaries that are only found in one trajectory
 
+*   BUG FIX: Log files are now closed when the handlers are removed
+
 
 pypet 0.1b.8
 

@@ -209,6 +209,8 @@ def _single_run(args):
         if multiproc and handler is not None:
             for logger in loggers:
                 logger.removeHandler(handler)
+            handler.close()
+
 
 def _set_log_levels(logger_names, log_levels):
     """Sets given levels to a list of loggers"""
@@ -216,6 +218,7 @@ def _set_log_levels(logger_names, log_levels):
     for idx, logger in enumerate(loggers):
         log_level = log_levels[idx] if len(log_levels) > 1 else log_levels[0]
         logger.setLevel(log_level)
+
 
 def _queue_handling(queue_handler, log_path, logger_names, log_levels, log_stdout):
     """ Starts running a queue handler and creates a log file for the queue."""
@@ -258,6 +261,7 @@ def _queue_handling(queue_handler, log_path, logger_names, log_levels, log_stdou
         if handler is not None:
             for logger in loggers:
                 logger.removeHandler(handler)
+            handler.close()
 
 
 def _trigger_result_snapshot(result, continue_path):
@@ -1143,11 +1147,13 @@ class Environment(HasLogger):
                 self._logger.info('Disabling logging to the error file')
                 for logger in loggers:
                     logger.removeHandler(self._error_log_handler)
+                self._error_log_handler.close()
                 self._error_logger_handler = None
             if self._main_log_handler is not None:
                 self._logger.info('Disabling logging to main file')
                 for logger in loggers:
                     logger.removeHandler(self._main_log_handler)
+                self._main_log_handler.close()
                 self._main_log_handler = None
         # #logging.shutdown()
         pass
