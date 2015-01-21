@@ -368,6 +368,8 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 row.append()
             traj.t2.f_flush()
 
+        traj.t2.f_create_index('run_name')
+
 
     def setUp(self):
         self.set_mode()

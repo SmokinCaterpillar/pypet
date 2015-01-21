@@ -1876,11 +1876,11 @@ class HDF5StorageService(StorageService, HasLogger):
         count_dict = {}  # Dictionary containing the number of items that are merged for
         # a particular result summary
 
+        # In the overview table location literally contains `run_XXXXXXXX`
+        run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
+
         for old_name in rename_dict:
             # Check for the summary entry in the other trajectory
-            # In the overview table location literally contains `run_XXXXXXXX`
-            run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
-
             old_split_name = old_name.split('.')
             for idx, name in enumerate(old_split_name):
                 add_to_count = False
@@ -1950,11 +1950,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     if col_name == 'example_item_run_name':
                         # The example item run name has changed due to merging
-                        old_run_idx = not_inserted_row[col_name]
-                        old_run_name = pypetconstants.FORMATTED_RUN_NAME % old_run_idx
-                        new_run_name = rename_dict[old_run_name]
-                        new_run_idx = int(new_run_name.split(pypetconstants.RUN_NAME)[1])
-                        new_row[col_name] = new_run_idx
+                        old_run_name = not_inserted_row[col_name]
+                        # Get the old name
+                        old_full_name = key.replace(run_mask, old_run_name)
+                        # Find the new name
+                        new_full_name = rename_dict[old_full_name]
+                        # Extract the new run name
+                        split_name = new_full_name.split('.')
+                        new_run_name=''
+                        for split in split_name:
+                            if split.startswith(pypetconstants.RUN_NAME):
+                                new_run_name = split
+                                break
+                        new_row[col_name] = new_run_name
                     else:
                         new_row[col_name] = not_inserted_row[col_name]
 
@@ -2021,21 +2029,22 @@ class HDF5StorageService(StorageService, HasLogger):
             table = ptcompat.get_node(self._hdf5file,
                                       '/' + self._trajectory_name + '/overview/' + tablename)
 
-            # Insert data into the current overview table
-            for row in table.iterrows():
-                location = compat.tostr(row['location'])
-                name = compat.tostr(row['name'])
-                full_name = location + '.' + name
-
-                if full_name in new_row_dict:
-                    for col_name in table.colnames:
-                        row[col_name] = new_row_dict[full_name][col_name]
-
-                    del new_row_dict[full_name]
-                    row.update()
-
-            table.flush()
-            self._hdf5file.flush()
+            # I am pretty sure this is no longer necessary
+            # # Insert data into the current overview table
+            # for row in table.iterrows():
+            #     location = compat.tostr(row['location'])
+            #     name = compat.tostr(row['name'])
+            #     full_name = location + '.' + name
+            #
+            #     if full_name in new_row_dict:
+            #         for col_name in table.colnames:
+            #             row[col_name] = new_row_dict[full_name][col_name]
+            #
+            #         del new_row_dict[full_name]
+            #         row.update()
+            #
+            # table.flush()
+            # self._hdf5file.flush()
 
             # It may be the case that the we need to insert a new row
             for key in sorted(new_row_dict.keys()):

@@ -395,27 +395,6 @@ class SharedPandasDataResult(SharedDataResult):
                                                      trajectory=trajectory,
                                                      comment=comment,)
 
-    # def _extract_data(self, data):
-    #     if data is None:
-    #         data = self.data
-    #     else:
-    #         self.data = data
-    #     return data
-
-    # @property
-    # def data(self):
-    #     return self._pandas_data
-    #
-    # @data.setter
-    # def data(self, data):
-    #     if data is not None and not isinstance(data, (pd.Series,
-    #                                                   pd.DataFrame,
-    #                                                   pd.Panel,
-    #                                                   pd.Panel4D)):
-    #         raise ValueError('Only pandas data is supported, the data is of type `%s`.' %
-    #                          str(type(data)))
-    #     self._pandas_data = data
-
     def f_create_shared_data(self, data=None, format='table', **kwargs):
         if data is None:
             if not self.v_stored:

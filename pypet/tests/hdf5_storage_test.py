@@ -29,12 +29,35 @@ import tables
 import inspect
 import pypet.compat as compat
 import pypet.utils.ptcompat as ptcompat
+from pypet import Result
+import time
 
 import tables as pt
 
 from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
 
+class FakeResult(Result):
+    def _store(self):
+        raise RuntimeError('I won`t store')
+
+class FakeResult2(Result):
+    def __init__(self, full_name, *args, **kwargs):
+        super(FakeResult2, self).__init__(full_name, *args, **kwargs)
+        self._store_call = 0
+    def _store(self):
+        res = {}
+        if self._store_call == 0:
+            res['hey'] = np.ones((10,10))
+        if self._store_call > 0:
+            res['fail']=FakeResult # This will faile
+        self._store_call += 1
+        return res
+
+class SlowResult(Result):
+    def _load(self, load_dict):
+        time.sleep(3)
+        super(SlowResult, self)._load(load_dict)
 
 
 class StorageTest(TrajectoryComparator):
@@ -68,6 +91,47 @@ class StorageTest(TrajectoryComparator):
 
         with self.assertRaises(ValueError):
             traj.f_load(name='Non-Existising-Traj')
+
+
+    def test_store_overly_long_comment(self):
+        filename = make_temp_file('remove_errored.hdf5')
+        traj = Trajectory(name='traj', add_time=True, filename=filename)
+        res=traj.f_add_result('iii', 42, 43, comment=7777 * '6')
+        traj.f_store()
+        traj.f_remove_child('results', recursive=True)
+        traj.f_load_child('results', recursive=True)
+        self.assertTrue(traj.iii.v_comment == 7777 * '6')
+
+    def test_removal_of_error_parameter(self):
+
+        filename = make_temp_file('remove_errored.hdf5')
+        traj = Trajectory(name='traj', add_time=True, filename=filename)
+        traj.f_add_result('iii', 42)
+        traj.f_add_result(FakeResult, 'j.j.josie', 43)
+
+        file = traj.v_storage_service.filename
+        traj.f_store(only_init=True)
+        with self.assertRaises(RuntimeError):
+            traj.f_store()
+
+        with ptcompat.open_file(file, mode='r') as fh:
+            jj = ptcompat.get_node(fh, where='/%s/results/j/j' % traj.v_name)
+            self.assertTrue('josie' not in jj)
+
+        traj.j.j.f_remove_child('josie')
+        traj.j.j.f_add_result(FakeResult2, 'josie2', 444)
+
+        traj.f_store()
+        with self.assertRaises(pex.NoSuchServiceError):
+            traj.f_store_child('results', recursive=True)
+
+        with ptcompat.open_file(file, mode='r') as fh:
+            jj = ptcompat.get_node(fh, where='/%s/results/j/j' % traj.v_name)
+            self.assertTrue('josie2' in jj)
+            josie2 = ptcompat.get_child(jj, 'josie2')
+            self.assertTrue('hey' in josie2)
+            self.assertTrue('fail' not in josie2)
+
 
     def test_clean_up_multiple_table_entries(self):
 
@@ -822,54 +886,22 @@ class EnvironmentTest(TrajectoryComparator):
         env2.f_disable_logging()
         env3.f_disable_logging()
 
-    # def test_file_OVERWRITE_ERROR(self):
-    #     self.traj.f_store()
-    #
-    #     with ptcompat.open_file(self.filename, mode='r') as file:
-    #         nchildren = len(file.root._v_children)
-    #         self.assertTrue(nchildren > 0)
-    #
-    #     env2 = Environment(filename=self.filename)
-    #     traj2 = env2.v_trajectory
-    #     traj2.f_store()
-    #
-    #     self.assertTrue(os.path.exists(self.filename))
-    #
-    #     with ptcompat.open_file(self.filename, mode='r') as file:
-    #         nchildren = len(file.root._v_children)
-    #         self.assertTrue(nchildren > 1)
-    #     if not hasattr(self, 'complib'):
-    #         self.set_mode()
-    #     hdf5store = pd.HDFStore(self.filename, mode='w', complib=self.complib,
-    #                                        complevel=self.complevel, fletcher32=self.fletcher32)
-    #     hdf5file = hdf5store._handle
-    #     f_fd = hdf5file.fileno()
-    #     hdf5file.flush()
-    #     try:
-    #         os.fsync(f_fd)
-    #         try:
-    #             hdf5store.flush(fsync=True)
-    #         except TypeError:
-    #             f_fd = hdf5store._handle.fileno()
-    #             hdf5store.flush()
-    #             os.fsync(f_fd)
-    #     except Exception as e:
-    #             # This seems to be the only way to avoid an OSError under Windows
-    #             errmsg = ('Encountered OSError while flushing file.'
-    #                                'If you are using Windows, don`t worry! '
-    #                                'I will ignore the error and try to close the file. '
-    #                                'Original error: %s' % str(e))
-    #             print(errmsg)
-    #
-    #     hdf5store.close()
-    #     hdf5store = None
-    #     hdf5file = None
-    #
-    #     with ptcompat.open_file(self.filename, mode='r') as file:
-    #         nchildren = len(file.root._v_children)
-    #         self.assertTrue(nchildren == 0)
-    #
-    #     env2.f_disable_logging()
+    def test_time_display_of_laoding(self):
+        filename = make_temp_file('remove_errored.hdf5')
+        log_folder = make_temp_file('logs')
+        env = Environment(trajectory='traj', add_time=True, filename=filename,
+                          dynamic_imports=SlowResult, log_folder=log_folder,
+                          display_time=1)
+        traj = env.v_traj
+        res=traj.f_add_result(SlowResult, 'iii', 42, 43, comment='llk')
+        traj.f_store()
+        traj.f_load(load_all=3)
+
+        path = env.v_log_path
+        mainfilename = os.path.join(path, 'main.txt')
+        with open(mainfilename, mode='r') as mainf:
+            full_text = mainf.read()
+        self.assertTrue('nodes/s)' in full_text)
 
     def make_run_large_data(self):
         self.env.f_run(add_large_data)

@@ -78,6 +78,8 @@ pypet 0.1b.9
 *   The keyword arguments passed to the environment regarding the storage service are
     no longer handled by the environment but are directly passed to the service.
 
+*   BUG FIX: Fixed merging of result summaries that are only found in one trajectory
+
 
 pypet 0.1b.8
 

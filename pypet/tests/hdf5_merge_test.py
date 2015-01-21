@@ -47,8 +47,9 @@ class MergeTest(TrajectoryComparator):
         logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
         trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
-        env = Environment(trajectory=trajname,filename=filename,file_title=trajname,
-                          log_folder=logfolder, log_stdout=False)
+        env = Environment(trajectory=trajname,filename=filename, file_title=trajname,
+                          log_folder=logfolder, log_stdout=False,
+                          large_overview_tables=True)
 
 
         self.envs.append(env)
@@ -399,6 +400,13 @@ class MergeTest(TrajectoryComparator):
         self.trajs[1].f_store_item('rrororo33o333o3o3oo3')
         self.trajs[2].f_add_result('rrororo33o333o3o3oo3',1234567890)
         self.trajs[2].f_store_item('rrororo33o333o3o3oo3')
+
+        run_name = pypetconstants.FORMATTED_RUN_NAME % 1
+        run_name2 = pypetconstants.FORMATTED_RUN_NAME % 5
+        self.trajs[1].f_add_result('%s.rrr' % run_name, 123)
+        self.trajs[1].f_store_item('%s.rrr' % run_name)
+        self.trajs[2].f_add_result('%s.rrr' % run_name2, 123)
+        self.trajs[2].f_store_item('%s.rrr' % run_name2)
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
