@@ -375,7 +375,7 @@ class LazyStorageService(StorageService):
 class NodeProcessingTimer(HasLogger):
     """Simple Class to display the processing of nodes"""
 
-    def __init__(self, display_time=30, logger_name=None):
+    def __init__(self, display_time=15, logger_name=None):
         self._start_time = time.time()
         self._last_time = self._start_time
         self._display_time = display_time

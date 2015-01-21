@@ -886,10 +886,11 @@ class EnvironmentTest(TrajectoryComparator):
         env2.f_disable_logging()
         env3.f_disable_logging()
 
-    def test_time_display_of_laoding(self):
-        filename = make_temp_file('remove_errored.hdf5')
+    def test_time_display_of_loading(self):
+        filename = make_temp_file('sloooow.hdf5')
         log_folder = make_temp_file('logs')
         env = Environment(trajectory='traj', add_time=True, filename=filename,
+                          log_stdout=False,
                           dynamic_imports=SlowResult, log_folder=log_folder,
                           display_time=1)
         traj = env.v_traj
@@ -901,7 +902,9 @@ class EnvironmentTest(TrajectoryComparator):
         mainfilename = os.path.join(path, 'main.txt')
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
-        self.assertTrue('nodes/s)' in full_text)
+            self.assertTrue('nodes/s)' in full_text)
+
+        env.f_disable_logging()
 
     def make_run_large_data(self):
         self.env.f_run(add_large_data)
