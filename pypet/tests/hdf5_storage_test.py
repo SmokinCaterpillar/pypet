@@ -494,6 +494,36 @@ class StorageTest(TrajectoryComparator):
 
         env.f_disable_logging()
 
+    def test_delete_whole_subtrees(self):
+        traj = Trajectory(name='TestDelete',
+                          filename=make_temp_file('testdeltree.hdf5'))
+
+        res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
+
+        traj.f_store()
+
+        with self.assertRaises(TypeError):
+            traj.f_remove_item(traj.yourtest)
+
+        with self.assertRaises(TypeError):
+            traj.f_delete_item(traj.yourtest)
+
+        traj.f_remove_item(traj.yourtest, recursive=True)
+
+        self.assertTrue('mytest' in traj)
+        self.assertTrue('yourtest' not in traj)
+
+        traj.f_load(load_all=2)
+
+        self.assertTrue('yourtest.test' in traj)
+
+        traj.f_delete_item(traj.yourtest, recursive=True, remove_from_trajectory=True)
+
+        traj.f_load(load_all=2)
+
+        self.assertTrue('yourtest.test' not in traj)
+        self.assertTrue('yourtest' not in traj)
+
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',
@@ -551,10 +581,10 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        res['a'] = 333
+        res['a'] = np.array([1,2,3])
         res['c'] = 123445
 
-        traj.f_store_item(res, overwrite='a')
+        traj.f_store_item(res, overwrite='a', complevel=4)
 
         # Should emit a warning
         traj.f_store_item(res, overwrite=['a', 'b'])
@@ -563,7 +593,7 @@ class StorageTest(TrajectoryComparator):
 
         res = traj.test
 
-        self.assertTrue(res['a']==333)
+        self.assertTrue((res['a']==np.array([1,2,3])).all())
         self.assertTrue(res['c']=='d')
 
         res['c'] = 123445

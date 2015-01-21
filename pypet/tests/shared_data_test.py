@@ -162,6 +162,9 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         traj.f_store(only_init=True)
 
+        res1 = traj.f_add_result('My.Tree.Will.Be.Deleted', 42)
+        res2 = traj.f_add_result('Mine.Too.HomeBoy', 42, comment='Don`t cry for me!')
+
         traj.f_add_result(SharedTableResult, 'myres').f_create_shared_data(first_row=first_row)
 
         with StorageContextManager(traj):
@@ -171,7 +174,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
                 for key in first_row:
                     row[key] = first_row[key]
                 row.append()
-
+        traj.f_store()
         del traj
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         with StorageContextManager(traj) as cm:
@@ -181,6 +184,8 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
             cm.f_flush_store()
             self.assertTrue(traj.myres.v_nrows == 1001)
 
+        traj.f_delete_item(traj.My, recursive=True)
+        traj.f_delete_item(traj.Mine, recursive=True)
 
         size =  os.path.getsize(filename)
         print('Filesize is %s' % str(size))
@@ -192,6 +197,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         backup_size = os.path.getsize(backup_file_name)
         self.assertTrue(backup_size == size)
         new_size = os.path.getsize(filename)
+        print('New filesize is %s' % str(new_size))
         self.assertTrue(new_size < size, "%s > %s" %(str(new_size), str(size)))
 
     def test_all_arrays(self):

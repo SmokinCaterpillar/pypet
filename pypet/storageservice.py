@@ -987,24 +987,30 @@ class HDF5StorageService(StorageService, HasLogger):
         """Direct link to the overview group"""
         return self._all_create_or_get_groups('overview')[0]
 
-    def _all_get_filters(self, complib=None, complevel=None, shuffle=None, fletcher32=None):
-        """Makes filter and closes pandas store"""
+    def _all_get_filters(self, kwargs=None):
+        """Makes filters"""
+        if kwargs is None:
+            kwargs = {}
+        complib = kwargs.pop('complib', None)
+        complevel = kwargs.pop('complevel', None)
+        shuffle = kwargs.pop('shuffle', None)
+        fletcher32 = kwargs.pop('fletcher32', None)
         if complib is not None:
             self._filters = None
         else:
-            complib=self._complib
+            complib = self._complib
         if complevel is not None:
             self._filters = None
         else:
-            complevel=self._complevel
+            complevel = self._complevel
         if shuffle is not None:
             self._filters = None
         else:
-            shuffle=self._shuffle
+            shuffle = self._shuffle
         if fletcher32 is not None:
             self._filters = None
         else:
-            fletcher32=self._fletcher32
+            fletcher32 = self._fletcher32
 
         if self._filters is None:
             self._filters = pt.Filters(complib=complib, complevel=complevel,
@@ -4606,10 +4612,7 @@ class HDF5StorageService(StorageService, HasLogger):
         if 'filters' in kwargs:
             filters = kwargs.pop('filters')
         else:
-            filter_kwargs = {}
-            for fkey in ('complevel', 'complib', 'shuffle', 'fletcher32'):
-                filter_kwargs[fkey] = kwargs.pop(fkey, None)
-            filters = self._all_get_filters(**filter_kwargs)
+            filters = self._all_get_filters(kwargs)
 
         table = ptcompat.create_table(self._hdf5file,
                                           where=hdf5group, name=key,
@@ -4782,7 +4785,7 @@ class HDF5StorageService(StorageService, HasLogger):
             if 'filters' in kwargs:
                 filters = kwargs.pop('filters')
             else:
-                filters = self._all_get_filters()
+                filters = self._all_get_filters(kwargs)
 
             try:
                 other_array = factory(self._hdf5file, where=group, name=key, obj=data,
@@ -4869,7 +4872,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _all_delete_parameter_or_result_or_group(self, instance,
                                                  delete_only=None,
-                                                 remove_from_item=False):
+                                                 remove_from_item=False,
+                                                 recursive=False):
         """Removes a parameter or result or group from the hdf5 file.
 
         :param instance: Instance to be removed
@@ -4886,6 +4890,10 @@ class HDF5StorageService(StorageService, HasLogger):
             If using `delete_only` and `remove_from_item=True` after deletion the data item is
             also removed from the `instance`.
 
+        :param recursive:
+
+            If a group node has children, you will can delete it if recursive is True.
+
 
         """
         split_name = instance.v_location.split('.')
@@ -4897,11 +4905,6 @@ class HDF5StorageService(StorageService, HasLogger):
         if delete_only is None:
 
             the_node = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
-
-            if not instance.v_is_leaf:
-                if len(the_node._v_groups) != 0:
-                    raise TypeError('You cannot remove the group `%s`, it is not empty!' %
-                                    instance.v_full_name)
 
             if instance.v_is_leaf:
                 # If we delete a leaf we need to take care about overview tables
@@ -4929,7 +4932,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 self._prm_meta_remove_summary(instance)
 
-            the_node._f_remove(recursive=True)
+                the_node._f_remove(recursive=True)
+            else:
+                if not recursive and len(the_node._v_groups) != 0:
+                    raise TypeError('You cannot remove the group `%s`, it has children, please '
+                                    'use `recursive=True` to enforce removal.' %
+                                    instance.v_full_name)
+                the_node._f_remove(recursive=recursive)
 
         else:
             if not instance.v_is_leaf:
@@ -4987,8 +4996,8 @@ class HDF5StorageService(StorageService, HasLogger):
             if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
                 # For optimzation we want to store the original data types into another table
                 new_table_group = ptcompat.create_group(self._hdf5file, where=hdf5group,
-                                                        name=tablename,
-                                                        filters=self._all_get_filters(**kwargs))
+                                                    name=tablename,
+                                                    filters=self._all_get_filters(kwargs.copy()))
 
                 if len(description_dict) > ptpa.MAX_COLUMNS:
                     # For further optimization we need to split the table into several
@@ -5023,7 +5032,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                               description=descr_dict,
                                               title=tblname,
                                               expectedrows=datasize,
-                                              filters=self._all_get_filters(**kwargs))
+                                              filters=self._all_get_filters(kwargs.copy()))
 
                 row = table.row
                 for n in range(datasize):
@@ -5062,7 +5071,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                               description=descr_dict,
                                               title=tblname,
                                               expectedrows=len(field_names),
-                                              filters=self._all_get_filters(**kwargs))
+                                              filters=self._all_get_filters(kwargs))
 
                 row = table.row
 

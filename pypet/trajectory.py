@@ -3415,12 +3415,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                  'to load.')
 
     @kwargs_api_change('remove_empty_groups')
-    def f_remove_item(self, item):
+    def f_remove_item(self, item, recursive=False):
         """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
-        self.f_remove_items([item])
+        self.f_remove_items([item], recursive=recursive)
 
     @kwargs_api_change('remove_empty_groups')
-    def f_remove_items(self, iterator):
+    def f_remove_items(self, iterator, recursive=False):
         """Removes parameters, results or groups from the trajectory.
 
         This function ONLY removes items from your current trajectory and does not delete
@@ -3434,6 +3434,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             A sequence of items you want to remove. Either the instances themselves
             or strings with the names of the items.
 
+        :param recursive:
+
+            In case you want to remove group nodes, if the children should be removed, too.
+
         """
 
         # Will format the request in a form that is understood by the storage service
@@ -3441,9 +3445,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, (), {})
 
         if fetched_items:
-
             for msg, item, dummy1, dummy2 in fetched_items:
-                self._nn_interface._remove_node_or_leaf(item)
+                self._nn_interface._remove_node_or_leaf(item, recursive=recursive)
 
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
@@ -3549,9 +3552,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 If data that you want to delete from storage should also be removed from
                 the items in `iterator` if they contain these. Default is `False`.
 
+            :param recursive:
+
+                If you want to delete a group node and it has children you need to
+                set `recursive` to `True. Default is `False`.
+
         """
 
         remove_from_trajectory = kwargs.pop('remove_from_trajectory', False)
+        recursive = kwargs.get('recursive', False)
 
         # Will format the request in a form that is understood by the storage service
         # aka (msg, item, args, kwargs)
@@ -3567,10 +3576,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                    ' item(s) was/were never stored to disk.' % str(fetched_items))
                 raise
 
-            
+
             for msg, item, dummy1, dummy2 in fetched_items:
                 if remove_from_trajectory:
-                    self._nn_interface._remove_node_or_leaf(item)
+                    self._nn_interface._remove_node_or_leaf(item, recursive=recursive)
                 else:
                     item._stored = False
             

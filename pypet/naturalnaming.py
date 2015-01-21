@@ -815,19 +815,21 @@ class NaturalNamingInterface(HasLogger):
             if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
                 del self._nodes_and_leaves_runs_sorted[name]
 
-    def _remove_node_or_leaf(self, instance):
+    def _remove_node_or_leaf(self, instance, recursive=False):
         """Removes a single node from the tree.
 
         Only from RAM not from hdf5 file!
 
         :param instance: The node to be deleted
 
+        :param recursive: If group nodes with children should be deleted
+
         """
         full_name = instance.v_full_name
         split_name = deque(full_name.split('.'))
-        self._remove_recursive(self._root_instance, split_name)
+        self._remove_along_branch(self._root_instance, split_name, recursive)
 
-    def _remove_recursive(self, actual_node, split_name):
+    def _remove_along_branch(self, actual_node, split_name, recursive=False):
         """Removes a given node from the tree.
 
         Starts from a given node and walks recursively down the tree to the location of the node
@@ -840,6 +842,10 @@ class NaturalNamingInterface(HasLogger):
 
         :param split_name: DEQUE of names to get the next nodes.
 
+        :param recursive:
+
+            To also delete all children of a group node
+
         :return: True if node was deleted, otherwise False
 
         """
@@ -847,6 +853,13 @@ class NaturalNamingInterface(HasLogger):
         # If the names list is empty, we have reached the node we want to delete.
 
         if len(split_name) == 0:
+            if actual_node.v_is_group and actual_node.f_has_children():
+                if recursive:
+                    for child in compat.listkeys(actual_node._children):
+                        actual_node.f_remove_child(child, recursive=True)
+                else:
+                    raise TypeError('Cannot remove group `%s` it contains children. Please '
+                                    'remove with `recursive=True`.' % actual_node.v_full_name)
             self._delete_node(actual_node)
             return True
 
@@ -860,7 +873,7 @@ class NaturalNamingInterface(HasLogger):
         else:
             child = actual_node._children[name]
 
-            if self._remove_recursive(child, split_name):
+            if self._remove_along_branch(child, split_name, recursive=recursive):
 
                 del actual_node._children[name]
                 if name in actual_node._groups:
