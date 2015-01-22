@@ -24,9 +24,9 @@ else:
     from collections import OrderedDict
 try:
     from future_builtins import zip, map, filter
-except ImportError:  # not 2.6+ or is 3.x
+except ImportError:  # python 3.x
     try:
-        from itertools import izip as zip  # < 2.5 or 3.x
+        from itertools import izip as zip
         from itertools import imap as map
         from itertools import ifilter as filter
     except ImportError:
@@ -58,11 +58,16 @@ def load_trajectory(
                load_all=None,
                force=False,
                dynamic_imports=None,
+               new_name='my_trajectory',
+               add_time=True,
                storage_service=storage.HDF5StorageService,
                **kwargs):
     """Helper function that creates a novel trajectory and loads it from disk.
 
     For the parameters see :func:`~pypet.trajectory.Trajectory.f_load`.
+
+    ``new_name`` and ``add_time`` are only used in case ``as_new`` is ``True``.
+    Accordingly, they determine the new name of trajectory.
 
     """
     if name is None and index is None:
@@ -70,7 +75,7 @@ def load_trajectory(
     elif name is not None and index is not None:
         raise ValueError('Please specify either a name or an index')
 
-    traj = Trajectory()
+    traj = Trajectory(name=new_name, add_time=add_time, dynamic_imports=dynamic_imports)
     traj.f_load(name=name,
                index=index,
                as_new=as_new,
@@ -80,10 +85,33 @@ def load_trajectory(
                load_other_data=load_other_data,
                load_all=load_all,
                force=force,
-               dynamic_imports=dynamic_imports,
                storage_service=storage_service,
                **kwargs)
     return traj
+
+
+def _keep_linked(traj, node):
+    """Helper predicate to keep nodes that were linked from somewhere else.
+
+    Returns ``True`` for nodes that can be deleted and ``False`` for nodes that cannot.
+    """
+    full_name = node.v_full_name
+    if full_name in traj._linked_by:
+        linking = traj._linked_by[full_name]
+        for linking_name in compat.iterkeys(linking):
+            linking_node, link_set = linking[linking_name]
+            if linking_node.v_run_branch == 'trajectory':
+                for link in link_set:
+                    if (link == pypetconstants.RUN_NAME_DUMMY or
+                            not link.startswith(pypetconstants.RUN_NAME)):
+                        return False
+                    elif not traj._is_completed(link):
+                        return False
+            elif linking_node.v_run_branch == pypetconstants.RUN_NAME_DUMMY:
+                return False
+            elif not traj._is_completed(linking_node.v_run_branch):
+                return False
+    return True
 
 
 class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup):
@@ -1192,30 +1220,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         Keeps data that is externally linked.
 
         """
-        def _keep_linked(node):
-            full_name = node.v_full_name
-            if full_name in self._linked_by:
-                linking = self._linked_by[full_name]
-                for linking_name in compat.iterkeys(linking):
-                    linking_node, link_set = linking[linking_name]
-                    if (linking_node.v_run_branch == 'trajectory'):
-                        for link in link_set:
-                            if (not (link.startswith(pypetconstants.RUN_NAME) and
-                                        link != pypetconstants.RUN_NAME_DUMMY) or
-                                    not self.f_is_completed(link)):
-                                    return False
-                        return True
-                    if not self.f_is_completed(linking_node.v_run_branch):
-                        return False
-            return True
 
+        _keep_linked_lambda = lambda node: _keep_linked(self, node)
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
             for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
                             child_name != pypetconstants.RUN_NAME_DUMMY and
                             self.f_is_completed(child_name)):
-                    group.f_remove_child(child_name, recursive=True, predicate=_keep_linked)
+                    group.f_remove_child(child_name, recursive=True,
+                                         predicate=_keep_linked_lambda)
 
     def _finalize(self):
         """Final rollback initiated by the environment
@@ -1851,37 +1865,29 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     not (my_param.f_has_range() or param.f_has_range())):
                     continue
 
-                first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                          new_first_run_name)
+            first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
+                                                      new_first_run_name)
 
-                rename_dict[param_name] = first_new_param_name
-                comment = param.v_comment
-                param_type = param.f_get_class_name()
-                param_type = self._create_class(param_type)
-                first_param = self.f_add_leaf(param_type, first_new_param_name,
-                                                           comment=comment)
-                for run_name in run_name_dict.values():
-                    if run_name == new_first_run_name:
-                        continue
-                    next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                          run_name)
-                    split_name = next_name.split('.')
-                    link_name = split_name.pop()
-                    location_name = '.'.join(split_name)
-                    if not self.f_contains(location_name, shortcuts=False):
-                        the_group = self.f_add_group(location_name)
-                    else:
-                        the_group = self.f_get(location_name)
+            rename_dict[param_name] = first_new_param_name
+            comment = param.v_comment
+            param_type = param.f_get_class_name()
+            param_type = self._create_class(param_type)
+            first_param = self.f_add_leaf(param_type, first_new_param_name,
+                                                       comment=comment)
+            for run_name in run_name_dict.values():
+                if run_name == new_first_run_name:
+                    continue
+                next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
+                                                      run_name)
+                split_name = next_name.split('.')
+                link_name = split_name.pop()
+                location_name = '.'.join(split_name)
+                if not self.f_contains(location_name, shortcuts=False):
+                    the_group = self.f_add_group(location_name)
+                else:
+                    the_group = self.f_get(location_name)
 
-                    the_group.f_add_link(link_name, first_param)
-            else:
-                param = other_derived_parameters[param_name]
-                rename_dict[param_name] = param_name
-                comment = param.v_comment
-                param_type = param.f_get_class_name()
-                param_type = self._create_class(param_type)
-                self.f_add_result(param_type, param_name, comment=comment)
-
+                the_group.f_add_link(link_name, first_param)
 
     def _merge_links(self, other_trajectory, run_name_dict):
         """ Merges all links"""
@@ -3068,10 +3074,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         of all runs.
 
         """
+        self._run_information[self.v_crun]['completed'] = 1
+        _keep_linked_lambda = lambda node: _keep_linked(self, node)
+
         for group_name in self._run_parent_groups:
             group = self._run_parent_groups[group_name]
             if group.f_contains(self.v_crun):
-                group.f_remove_child(self.v_crun, recursive=True)
+                group.f_remove_child(self.v_crun, recursive=True, predicate=_keep_linked_lambda)
 
     def f_to_dict(self, fast_access=False, short_names=False, copy=True,
                   with_links=True):

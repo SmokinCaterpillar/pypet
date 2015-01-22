@@ -285,10 +285,14 @@ class MergeTest(TrajectoryComparator):
                                     load_other_data=pypetconstants.UPDATE_DATA)
 
 
-        self.trajs[1].f_add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].f_add_result('gg.rrororo33o333o3o3oo3',1234567890)
         self.trajs[1].f_store_item('rrororo33o333o3o3oo3')
-        self.trajs[2].f_add_result('rrororo33o333o3o3oo3',1234567890)
+        self.trajs[1].gg.v_annotations['lala'] = 'Sonnenschein'
+        self.trajs[1].f_store_item('gg')
+        self.trajs[2].f_add_result('gg.rrororo33o333o3o3oo3',1234567890)
         self.trajs[2].f_store_item('rrororo33o333o3o3oo3')
+        self.trajs[2].gg.v_annotations['lala'] = 'Sonnenschein'
+        self.trajs[2].f_store_item('gg')
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]

@@ -8,7 +8,7 @@ import os
 import warnings
 import platform
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
-from pypet.trajectory import Trajectory
+from pypet.trajectory import Trajectory, load_trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
@@ -605,6 +605,32 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.test['c']==123445)
 
+    def test_loading_as_new(self):
+        filename = make_temp_file('asnew.h5')
+        traj = Trajectory(name='TestPartial', filename=filename)
+
+        traj.f_add_parameter('x', 3)
+        traj.f_add_parameter('y', 2)
+
+        traj.f_explore({'x': [12,3,44], 'y':[1,23,4]})
+
+        traj.f_store()
+
+        traj = load_trajectory(name=traj.v_name, filename=filename)
+
+        with self.assertRaises(TypeError):
+            traj.f_shrink()
+
+        traj = load_trajectory(name=traj.v_name, filename=filename, as_new=True,
+                               new_name='TestTraj', add_time=False)
+
+        self.assertTrue(traj.v_name == 'TestTraj')
+
+        self.assertTrue(len(traj) == 3)
+
+        traj.f_shrink()
+
+        self.assertTrue(len(traj) == 1)
 
 
     def test_partial_loading(self):
@@ -977,7 +1003,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_update_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.

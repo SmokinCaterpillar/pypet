@@ -23,7 +23,14 @@ class Multiply(object):
 
     def __call__(self, traj, i):
         z = traj.x * traj.y + i
-        traj.f_add_result('z', z)
+        zres = traj.f_add_result('z', z)
+        g=traj.res.f_add_group('I.link.to.$')
+        g.f_add_link('z', zres)
+        if 'jjj.kkk' not in traj:
+            h = traj.res.f_add_group('jjj.kkk')
+        else:
+            h = traj.jjj.kkk
+        h.f_add_link('$', zres)
         return z
 
 class CustomParameter(Parameter):
@@ -90,9 +97,14 @@ class TestPostProc(TrajectoryComparator):
 
         trajs = [traj1, traj2]
 
+        traj1.f_add_result('test.run_00000000.f', 555)
+        traj2.f_add_result('test.run_00000000.f', 555)
+        traj1.f_add_link('linking', traj1.f_get('f'))
+        traj2.f_add_link('linking', traj2.f_get('f'))
+
         for traj in trajs:
             traj.f_add_parameter('x', 1, comment='1st')
-            traj.f_add_parameter('y', 1, comment='1st')
+            traj.f_add_parameter('y', 1, comment='2nd')
 
         exp_dict2 = {'x':[1, 2, 3, 4, 1, 2, 2, 3],
                      'y':[1, 2, 3, 4, 1, 2, 0, 1]}

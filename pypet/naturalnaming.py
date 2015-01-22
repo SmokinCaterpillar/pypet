@@ -242,7 +242,7 @@ class NNTreeNode(WithAnnotations):
         # -1 if there is no branching
         if pypetconstants.RUN_NAME in full_name:
             head, tail = full_name.split(pypetconstants.RUN_NAME)
-            self._run_branch_pos = head.count('.')
+            self._run_branch_pos = head.count('.') + 1 # + 1 to be in accordance with depth
             branch = pypetconstants.RUN_NAME + tail.split('.')[0]
             self._run_branch = branch
 
@@ -673,29 +673,30 @@ class NaturalNamingInterface(HasLogger):
         return item_list
 
 
-    def _remove_subtree(self, start_node, name, keep_predicate=None):
+    def _remove_subtree(self, start_node, name, predicate=None):
         """Removes a subtree from the trajectory tree.
 
         Does not delete stuff from disk only from RAM.
 
         :param start_node: The parent node from where to start
         :param name: Name of child which will be deleted and recursively all nodes below the child
-        :param keep_predicate:
+        :param predicate:
 
-            Predicate that can be used to compute for individual nodes if they should be kept
+            Predicate that can be used to compute for individual nodes if they should be removed
+            ``True`` or kept ``False``.
 
         """
 
-        def _remove_subtree_inner(node, keep_predicate):
+        def _remove_subtree_inner(node, predicate):
 
-            if keep_predicate(node):
+            if not predicate(node):
                 return False
 
             if node.v_is_group:
                 for name_ in itools.chain(compat.listkeys(node._leaves),
                                           compat.listkeys(node._groups)):
                     child_ = node._children[name_]
-                    child_deleted = _remove_subtree_inner(child_, keep_predicate)
+                    child_deleted = _remove_subtree_inner(child_, predicate)
                     if child_deleted:
                         del node._children[name_]
                         if name_ in node._groups:
@@ -719,10 +720,10 @@ class NaturalNamingInterface(HasLogger):
                 return True
 
         child = start_node._children[name]
-        if keep_predicate is None:
-            keep_predicate = lambda x: False
+        if predicate is None:
+            predicate = lambda x: True
 
-        if _remove_subtree_inner(child, keep_predicate):
+        if _remove_subtree_inner(child, predicate):
             del start_node._children[name]
             return True
         else:
@@ -1407,7 +1408,7 @@ class NaturalNamingInterface(HasLogger):
             parent_run_count = 0
         else:
             parent_length = len(parent_node.v_full_name)
-            parent_run_count = int(parent_node._run_branch_pos >= 0)
+            parent_run_count = int(parent_node._run_branch_pos > 0)
 
         faulty_names = ''
 
@@ -2497,7 +2498,7 @@ class NNGroupNode(NNTreeNode):
         """
         if isinstance(name_or_item, compat.base_type):
             name = name_or_item
-            if isinstance( full_name_or_item, compat.base_type):
+            if isinstance(full_name_or_item, compat.base_type):
                 instance = self.f_get_root().f_get(full_name_or_item)
             else:
                 instance =  full_name_or_item
