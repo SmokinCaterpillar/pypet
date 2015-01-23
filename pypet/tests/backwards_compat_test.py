@@ -19,8 +19,7 @@ class LoadOldTrajectoryTest(unittest.TestCase):
         old_pypet_traj = Trajectory()
         module_path, init_file = os.path.split(pypet.__file__)
         filename= os.path.join(module_path, 'tests','testdata','pypet_v0_1b_6.hdf5')
-        old_pypet_traj.f_load(filename=filename,
-                              load_all=2, force=True, index=-1)
+        old_pypet_traj.f_load(index=-1, load_data=2, force=True, filename=filename)
 
         self.assertTrue(old_pypet_traj.v_version=='0.1b.6')
         self.assertTrue(old_pypet_traj.par.x==0)

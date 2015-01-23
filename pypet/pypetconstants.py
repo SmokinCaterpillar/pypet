@@ -172,6 +172,17 @@ UPDATE_DATA = 2
 adds only items that are not part of your current trajectory."""
 
 
+######### Storing Constants
+STORE_NOTHING = 0
+"""Stores nothing to disk"""
+STORE_DATA_SKIPPING = 1
+"""Stores only data of instances that have not been stored before"""
+STORE_DATA = 2
+"""Stored all data to disk adds to existing data"""
+OVERWRITE_DATA = OVERWRITE_DATA
+"""Overwrites data on disk"""
+
+
 ##################### STORING Message Constants ################################
 
 LEAF = 'LEAF'

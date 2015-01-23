@@ -71,7 +71,7 @@ traj = Trajectory(filename=filename)
 # We want to load the last trajectory in the file, therefore index = -1
 # We want to load the parameters, therefore load_parameters=2
 # We only want to load the skeleton of the results, so load_results=1
-traj.f_load(index=-1,load_parameters=2,load_results=1)
+traj.f_load(index=-1, load_parameters=2, load_results=1)
 
 # Let's check if our result is really empty
 if traj.gross_income_of_film.f_is_empty():

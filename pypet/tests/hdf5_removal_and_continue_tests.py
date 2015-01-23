@@ -160,7 +160,7 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -202,7 +202,7 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -247,17 +247,17 @@ class ContinueTest(TrajectoryComparator):
 
         self.assertTrue('Delete.Me' not in self.trajs[0],'Delete.Me is still in traj')
 
-        self.trajs[0].f_update_skeleton()
+        self.trajs[0].f_load_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
         self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
                                         remove_from_trajectory=True)
 
-        self.trajs[0].f_update_skeleton()
+        self.trajs[0].f_load_skeleton()
         self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')
 
 
         for irun in range(len(self.filenames)):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load_child('results',recursive=True,load_data=pypetconstants.UPDATE_DATA)
             self.trajs[irun].f_load_child('derived_parameters',recursive=True,load_data=pypetconstants.UPDATE_DATA)
 
@@ -305,11 +305,11 @@ class ContinueTest(TrajectoryComparator):
 
         self.trajs[0] = Trajectory()
         self.trajs[0].v_storage_service=temp_sservice
-        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2,
-                             load_other_data=2)
+        self.trajs[0].f_load(name=temp_name, as_new=False, load_parameters=2,
+                             load_derived_parameters=2, load_results=2, load_other_data=2)
         #self.trajs[0].f_load(trajectory_name=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
 
-        self.trajs[1].f_update_skeleton()
+        self.trajs[1].f_load_skeleton()
         self.trajs[1].f_load_items(self.trajs[1].f_to_dict().values(),only_empties=True)
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
@@ -395,7 +395,7 @@ class ContinueMPTest(ContinueTest):
 
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -450,7 +450,7 @@ class ContinueMPTest(ContinueTest):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,

@@ -199,8 +199,8 @@ def main():
     try:
         # However, this will fail because our trajectory does not know how to
         # build the FunctionParameter. You have seen this coming, right?
-        traj.f_load(name=trajectory_name,load_parameters=2,
-                    load_derived_parameters=2,load_results=1)
+        traj.f_load(name=trajectory_name, load_parameters=2, load_derived_parameters=2,
+                    load_results=1)
     except ImportError as e:
 
         print('That did\'nt work, I am sorry: %s ' % str(e))
@@ -210,8 +210,8 @@ def main():
                            dynamically_imported_classes=FunctionParameter)
 
         # Now it works:
-        traj.f_load(name=trajectory_name,load_parameters=2,
-                    load_derived_parameters=2,load_results=1)
+        traj.f_load(name=trajectory_name, load_parameters=2, load_derived_parameters=2,
+                    load_results=1)
 
 
     #For the fun of it, let's print the source code

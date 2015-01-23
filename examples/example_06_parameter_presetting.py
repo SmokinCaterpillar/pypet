@@ -127,7 +127,7 @@ def main():
     # I would recommend to do the analysis completely independent from the simulation
     # but for simplicity let's do it here.
     # We won't reload the trajectory this time but simply update the skeleton
-    traj.f_update_skeleton()
+    traj.f_load_skeleton()
 
     #For the fun of it, let's print the source code
     print('\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq)

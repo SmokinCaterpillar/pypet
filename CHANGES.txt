@@ -419,6 +419,21 @@ pypet 0.1b.0
 *   New trajectory function `f_as_run` that makes the trajectory belief it is a particular
     single run and results and derived parameters of other runs are blinded out.
 
+*   Every group node now knows how to store and load itself via `f_load` and `f_store`.
+
+*   Storage of data is now analogous to loading with constants in (1,2,3).
+    1 Storing data only of items not been stored before, 2 for storing data as
+    previously known. 3 For overwriting data. For instance, ``traj.f_load(store_data=3)``
+    overwrites all data on disk.
+
+*   f_update_skeleton is now f_load_skeleton to be more in line with naming scheme.
+
+*   setattr no longer supports shortcuts, i.e. ``traj.x = 4`` only works if ``x`` is directly
+    below the trajectory root.
+
+*   Using setattr with a tuple of exactly length 2 whereas the second element is a string,
+    sets the value as well as a comment
+
 
 pypet 0.1a.6
 

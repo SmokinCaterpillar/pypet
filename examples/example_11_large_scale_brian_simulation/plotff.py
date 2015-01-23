@@ -31,10 +31,7 @@ def main():
 
 
     # Load the trajectory, but onyl laod the skeleton of the results
-    traj.f_load(index=-1, # Change if you do not want to load the very last trajectory
-                load_parameters=2,
-                load_derived_parameters=2,
-                load_results=1)
+    traj.f_load(index=-1, load_parameters=2, load_derived_parameters=2, load_results=1)
 
     # Find the result instances related to the fano factor
     fano_dict = traj.f_get_from_runs('mean_fano_factor', fast_access=False)

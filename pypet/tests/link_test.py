@@ -180,7 +180,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.f_store()
 
         traj2 = Trajectory(filename=filename)
-        traj2.f_load(name=traj.v_name, load_all=2)
+        traj2.f_load(name=traj.v_name, load_data=2)
 
         self.assertTrue(traj.kk == traj2.gg, '%s != %s' % (traj.kk, traj2.gg))
         self.assertTrue(traj.cd.test is traj.test)
@@ -217,7 +217,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj2.v_auto_load = False
         traj2.f_load_child('jj')
         self.assertTrue(traj2.jj is traj2.par)
-        traj2.f_load(load_all=2)
+        traj2.f_load(load_data=2)
         self.assertTrue(traj2.ii == traj2.res.kk)
 
 
@@ -226,7 +226,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj = Trajectory()
 
         traj.f_add_parameter('FloatParam')
-        traj.FloatParam=4.0
+        traj.par.FloatParam=4.0
         self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
         traj.f_explore(self.explore_dict)
 
@@ -340,7 +340,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.f_delete_link('par.gg')
 
         traj2 = Trajectory(filename=filename)
-        traj2.f_load(name=traj.v_name, load_all=2)
+        traj2.f_load(name=traj.v_name, load_data=2)
 
         with self.assertRaises(AttributeError):
             traj2.gg
@@ -440,13 +440,13 @@ class LinkEnvironmentTest(TrajectoryComparator):
     def test_run(self):
         self.env.f_run(dostuff_and_add_links)
 
-        self.traj.f_load(load_all=2)
+        self.traj.f_load(load_data=2)
 
         traj2 = Trajectory()
 
         traj2.f_load(name=self.traj.v_name, filename=self.filename)
 
-        traj2.f_load(load_all=2)
+        traj2.f_load(load_data=2)
 
         for run in self.traj.f_get_run_names():
             self.assertTrue(self.traj.res.runs[run].paraBL is self.traj.paramB)
@@ -501,7 +501,7 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.traj1.f_merge(self.traj2, remove_duplicates=True)
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
         for run in self.traj1.f_get_run_names():
             self.traj1.f_as_run(run)
@@ -540,7 +540,7 @@ class LinkMergeTest(TrajectoryComparator):
                                                      'HDF5',
                                                      'backup_test%s.hdf5' % self.trajname1))
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
         self.traj1.f_backup(self.bfilename)
 
@@ -552,7 +552,7 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.assertTrue(len(self.traj1) > old_length)
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
         for run in self.traj1.f_get_run_names():
             self.traj1.f_as_run(run)

@@ -15,8 +15,8 @@ def main():
     # Let's load the trajectory from the file
     # Only load the parameters, we will load the results on the fly as we need them
     filename = os.path.join('hdf5', 'FiringRate.hdf5')
-    traj.f_load(filename=filename, load_parameters=2,
-                load_results=0, load_derived_parameters=0)
+    traj.f_load(load_parameters=2, load_derived_parameters=0, load_results=0,
+                load_derived_parameters=0)
 
     # We'll simply use auto loading so all data will be loaded when needed.
     traj.v_auto_load = True

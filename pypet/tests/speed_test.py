@@ -65,7 +65,7 @@ def test_loading(filenames, traj_names):
         filename = filenames[idx]
         traj = Trajectory(name=traj_name, filename=filename, add_time=False)
         start = time.time()
-        traj.f_load(load_parameters=2, load_results=1, load_derived_parameters=1)
+        traj.f_load(load_parameters=2, load_derived_parameters=1, load_results=1)
         elapsed = (time.time() - start)
         loading_times[idx]=elapsed
 
@@ -74,7 +74,7 @@ def test_loading(filenames, traj_names):
 
         traj = Trajectory(name=traj_name, filename=filename, add_time=False)
         start = time.time()
-        traj.f_load(load_all=2)
+        traj.f_load(load_data=2)
         elapsed = (time.time() - start)
         loading_times_wd[idx]=elapsed
 

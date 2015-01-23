@@ -278,7 +278,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         traj = load_trajectory(name=trajname, filename=filename)
 
-        traj.f_load(load_all=2)
+        traj.f_load(load_data=2)
 
 
         self.assertTrue(traj.t2.v_nrows == 11, '%s != 11'  % str(traj.t2.v_nrows))
@@ -559,10 +559,9 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
     def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory(filename=self.filename)
-        newtraj.f_load(name=trajectory_name, load_parameters=2,
-                       load_derived_parameters=2,load_results=2,
-                       load_other_data=2,
-                       index=trajectory_index, as_new=as_new)
+        newtraj.f_load(name=trajectory_name, index=trajectory_index, as_new=as_new,
+                       load_parameters=2, load_derived_parameters=2, load_results=2,
+                       load_other_data=2)
         return newtraj
 
     def check_insertions(self, traj):
@@ -614,7 +613,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.env.f_run(write_into_shared_storage)
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
-        self.traj.f_update_skeleton()
+        self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj, newtraj)
@@ -637,7 +636,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.env.f_run(write_into_shared_storage)
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
+        self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj, newtraj)
@@ -682,7 +681,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.env.f_run(copy_one_entry_from_giant_matrices)
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
+        self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj, newtraj)

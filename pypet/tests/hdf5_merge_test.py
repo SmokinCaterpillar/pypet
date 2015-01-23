@@ -84,7 +84,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in [0,1,2]:
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -110,9 +110,9 @@ class MergeTest(TrajectoryComparator):
                             delete_other_trajectory=True)
 
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
+                           load_derived_parameters=pypetconstants.UPDATE_DATA,
+                           load_results=pypetconstants.UPDATE_DATA,
+                           load_other_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
@@ -146,7 +146,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in [0,1]:
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -278,7 +278,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in [0,1,2]:
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -287,11 +287,11 @@ class MergeTest(TrajectoryComparator):
 
         self.trajs[1].f_add_result('gg.rrororo33o333o3o3oo3',1234567890)
         self.trajs[1].f_store_item('rrororo33o333o3o3oo3')
-        self.trajs[1].gg.v_annotations['lala'] = 'Sonnenschein'
+        self.trajs[1].res.gg.v_annotations['lala'] = 'Sonnenschein'
         self.trajs[1].f_store_item('gg')
         self.trajs[2].f_add_result('gg.rrororo33o333o3o3oo3',1234567890)
         self.trajs[2].f_store_item('rrororo33o333o3o3oo3')
-        self.trajs[2].gg.v_annotations['lala'] = 'Sonnenschein'
+        self.trajs[2].res.gg.v_annotations['lala'] = 'Sonnenschein'
         self.trajs[2].f_store_item('gg')
 
         ##f_merge without destroying the original trajectory
@@ -309,9 +309,9 @@ class MergeTest(TrajectoryComparator):
                             trial_parameter='trial')
 
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
-                                    load_derived_parameters=pypetconstants.UPDATE_DATA,
-                                    load_results=pypetconstants.UPDATE_DATA,
-                                    load_other_data=pypetconstants.UPDATE_DATA)
+                           load_derived_parameters=pypetconstants.UPDATE_DATA,
+                           load_results=pypetconstants.UPDATE_DATA,
+                           load_other_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
@@ -343,7 +343,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in [0,1,2]:
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -358,9 +358,10 @@ class MergeTest(TrajectoryComparator):
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial',
                             backup_filename=1)
-        merged_traj.f_update_skeleton()
-        merged_traj.f_load(load_results=pypetconstants.UPDATE_DATA,load_derived_parameters=pypetconstants.UPDATE_DATA,
-                           load_parameters=pypetconstants.UPDATE_DATA,
+        merged_traj.f_load_skeleton()
+        merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
+                           load_derived_parameters=pypetconstants.UPDATE_DATA,
+                           load_results=pypetconstants.UPDATE_DATA,
                            load_other_data=pypetconstants.UPDATE_DATA)
 
         self.compare_trajectories(merged_traj,self.trajs[2])
@@ -393,7 +394,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in range(ntrajs):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -415,7 +416,7 @@ class MergeTest(TrajectoryComparator):
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
-        merged_traj.f_update_skeleton()
+        merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,
                            load_results=pypetconstants.UPDATE_DATA,
@@ -450,7 +451,7 @@ class MergeTest(TrajectoryComparator):
             self.make_run(self.envs[irun])
 
         for irun in [0,1]:
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.UPDATE_DATA,
                                     load_derived_parameters=pypetconstants.UPDATE_DATA,
                                     load_results=pypetconstants.UPDATE_DATA,
@@ -465,7 +466,7 @@ class MergeTest(TrajectoryComparator):
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
         merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
-        merged_traj.f_update_skeleton()
+        merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,
                            load_results=pypetconstants.UPDATE_DATA,

@@ -178,7 +178,7 @@ def _single_run(args):
         # Measure time of finishing
         traj._set_finish_time()
         # And store some meta data and all other data if desired
-        traj._store_final(store_data=automatic_storing)
+        traj._store_final(do_store_data=automatic_storing)
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
@@ -1696,7 +1696,7 @@ class Environment(HasLogger):
                           load_results=pypetconstants.LOAD_NOTHING,
                           load_other_data=pypetconstants.LOAD_NOTHING)
 
-        snapshot_traj.f_load(load_all=pypetconstants.LOAD_SKELETON) # Load the full skeleton
+        snapshot_traj.f_load(load_data=pypetconstants.LOAD_SKELETON)  # Load the full skeleton
         # to see what we need to remove from disk
 
         # Now we have to reconstruct previous results

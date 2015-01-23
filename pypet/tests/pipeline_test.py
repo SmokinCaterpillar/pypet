@@ -41,7 +41,7 @@ class CustomParameter(Parameter):
 def postproc(traj, results, idx):
     print(idx)
 
-    traj.f_update_skeleton()
+    traj.f_load_skeleton()
 
     if len(results) <= 4 and len(traj) == 4:
         return {'x':[1,2], 'y':[1,2]}
@@ -122,8 +122,8 @@ class TestPostProc(TrajectoryComparator):
 
         env1.f_run(Multiply(), 22)
 
-        traj1.f_load(load_all = 2)
-        traj2.f_load(load_all = 2)
+        traj1.f_load(load_data=2)
+        traj2.f_load(load_data=2)
 
         self.compare_trajectories(traj1, traj2)
 
@@ -156,8 +156,8 @@ class TestPostProc(TrajectoryComparator):
 
         env2.f_run(Multiply(), 22)
 
-        traj1.f_load(load_all = 2)
-        traj2.f_load(load_all = 2)
+        traj1.f_load(load_data=2)
+        traj2.f_load(load_data=2)
 
         self.compare_trajectories(traj1, traj2)
 

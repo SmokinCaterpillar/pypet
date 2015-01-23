@@ -63,7 +63,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
 
-        self.traj.FloatParam=4.0
+        self.traj.par.FloatParam=4.0
 
 
         self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
@@ -865,7 +865,7 @@ class TrajectoryMergeTest(unittest.TestCase):
 
         self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
 
-        self.traj.FloatParam=4.0
+        self.traj.par.FloatParam=4.0
         self.traj.v_storage_service = LazyStorageService()
 
 

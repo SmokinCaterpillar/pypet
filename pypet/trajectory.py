@@ -55,7 +55,7 @@ def load_trajectory(
                load_derived_parameters=pypetconstants.LOAD_SKELETON,
                load_results=pypetconstants.LOAD_SKELETON,
                load_other_data=pypetconstants.LOAD_SKELETON,
-               load_all=None,
+               load_data=None,
                force=False,
                dynamic_imports=None,
                new_name='my_trajectory',
@@ -76,17 +76,10 @@ def load_trajectory(
         raise ValueError('Please specify either a name or an index')
 
     traj = Trajectory(name=new_name, add_time=add_time, dynamic_imports=dynamic_imports)
-    traj.f_load(name=name,
-               index=index,
-               as_new=as_new,
-               load_parameters=load_parameters,
-               load_derived_parameters=load_derived_parameters,
-               load_results=load_results,
-               load_other_data=load_other_data,
-               load_all=load_all,
-               force=force,
-               storage_service=storage_service,
-               **kwargs)
+    traj.f_load(name=name, index=index, as_new=as_new, load_parameters=load_parameters,
+                load_derived_parameters=load_derived_parameters, load_results=load_results,
+                load_other_data=load_other_data, load_data=load_data, force=force,
+                storage_service=storage_service, **kwargs)
     return traj
 
 
@@ -295,6 +288,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._max_depth = None
         self._auto_load = False
         self._with_links = True
+        self._fast_adding = True
 
         self._expansion_not_stored = False
 
@@ -337,7 +331,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if len(unused_kwargs) > 0:
             raise ValueError('The following keyword arguments were not used: `%s`' %
                              str(unused_kwargs))
-
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -526,6 +519,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._full_copy = val
             for param in compat.itervalues(self._explored_parameters):
                 param.v_full_copy = val
+
+    def f_set_properties(self, **kwargs):
+        """Sets properties like ``v_fast_access``.
+
+        For example: ``traj.f_set_properties(v_fast_access=True, v_auto_load=False)``
+        """
+        for name in kwargs:
+            val = kwargs[name]
+            if not name.startswith('v_'):
+                name = 'v_' + name
+            if not name in self._nn_interface._not_admissible_names:
+                raise AttributeError('Cannot set property `%s` does not exist.' % name)
+            else:
+                setattr(self, name, val)
 
     @not_in_run
     def f_add_to_dynamic_imports(self, dynamic_imports):
@@ -1246,8 +1253,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_results=pypetconstants.LOAD_NOTHING,
                     load_other_data=pypetconstants.LOAD_NOTHING)
 
-    @not_in_run
+    @deprecated('Please use `f_load_skeleton` instead.')
     def f_update_skeleton(self):
+        return self.f_load_skeleton()
+
+    @not_in_run
+    def f_load_skeleton(self):
         """Loads the full skeleton from the storage service.
 
         This needs to be done after a successful exploration in order to update the
@@ -1256,27 +1267,19 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         and load annotations.
 
         """
-        self.f_load(self.v_name, as_new=False,
-                    load_parameters=pypetconstants.LOAD_SKELETON,
+        self.f_load(self.v_name, as_new=False, load_parameters=pypetconstants.LOAD_SKELETON,
                     load_derived_parameters=pypetconstants.LOAD_SKELETON,
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
+    @kwargs_api_change('load_all', 'load_data')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @not_in_run
-    def f_load(self,
-               name=None,
-               index=None,
-               as_new=False,
-               load_parameters=pypetconstants.LOAD_DATA,
+    def f_load(self, name=None, index=None, as_new=False, load_parameters=pypetconstants.LOAD_DATA,
                load_derived_parameters=pypetconstants.LOAD_SKELETON,
                load_results=pypetconstants.LOAD_SKELETON,
-               load_other_data=pypetconstants.LOAD_SKELETON,
-               load_all=None,
-               force=False,
-               dynamic_imports=None,
-               storage_service=None,
-               **kwargs):
+               load_other_data=pypetconstants.LOAD_SKELETON, load_data=None, force=False,
+               dynamic_imports=None, storage_service=None, **kwargs):
         """Loads a trajectory via the storage service.
 
 
@@ -1348,9 +1351,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 annotations will be reloaded if the corresponding instance
                 is created or the annotations of an existing instance were emptied before.
 
-        :param load_all:
+        :param load_data:
 
-            As the above, per default set to `None`. If not `None` the setting of `load_all`
+            As the above, per default set to `None`. If not `None` the setting of `load_data`
             will overwrite the settings of `load_parameters`, `load_derived_parameters`,
             `load_results`, and `load_other_data`. This is more or less or shortcut if all
             types should be loaded the same.
@@ -1427,11 +1430,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if not dynamic_imports is None:
             self.f_add_to_dynamic_imports(dynamic_imports)
 
-        if load_all is not None:
-            load_parameters = load_all
-            load_derived_parameters = load_all
-            load_results = load_all
-            load_other_data = load_all
+        if load_data is not None:
+            load_parameters = load_data
+            load_derived_parameters = load_data
+            load_results = load_data
+            load_other_data = load_data
 
         self._storage_service.load(pypetconstants.TRAJECTORY, self, trajectory_name=name,
                                    trajectory_index=index,
@@ -1463,9 +1466,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             ' is of type `%s`.' % str(type(other_trajectory)))
 
         if self._stored:
-            self.f_update_skeleton()
+            self.f_load_skeleton()
         if other_trajectory._stored:
-            other_trajectory.f_update_skeleton()
+            other_trajectory.f_load_skeleton()
 
         # Load all parameters of the current and the other trajectory
         if self._stored:
@@ -1835,7 +1838,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         # Write out the merged data to disk
         self._logger.info('Writing merged data to disk')
-        self.f_store(skip_stored=True)
+        self.f_store(store_data=True)
 
 
         self._logger.info('Finished Merging!')
@@ -2545,7 +2548,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._stored = in_store
 
-    def f_store(self, new_name=None, new_filename=None, only_init=False, skip_stored=False):
+    def f_store(self, new_name=None, new_filename=None, only_init=False,
+                store_data=pypetconstants.STORE_DATA):
         """Stores the trajectory to disk.
 
         :param filename:
@@ -2565,19 +2569,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             If you just want to initialise the store. If yes, only meta information about
             the trajectory is stored and none of the nodes/leaves within the trajectory.
 
-        :param skip_stored:
+        :param store_data:
 
-            Set this to ``True`` if you want faster storage. *pypet* will automatically skip
-            all checks if new data can be added to a node that has already been stored.
-            For example, this will skip checking of new entries to annotations in group nodes or
-            data items within results.
-
-            Be aware that data is not overwritten or deleted even in case ``skip_stored=False``.
-            Only new data is added to disk. If you want to overwrite existing data,
-            check :func:`~pypet.trajectory.Trajectory.f_store_item` and
-            :func:`~pypet.trajectory.Trajectory.f_delete_item`.
-
-            Only considered if ``only_init=False``.
+            For how to choose 'store_data' see :ref:`more-on-storing`.
 
         If you use the HDF5 Storage Service only novel data is stored to disk.
 
@@ -2602,8 +2596,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
-                                    store_final=False, store_data=True,
-                                    skip_stored=skip_stored)
+                                    store_final=False,
+                                    store_data=store_data)
         else:
             if new_filename is not None or new_name is not None:
                 self.f_migrate(new_name, new_filename)
@@ -2615,7 +2609,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service.store(pypetconstants.TRAJECTORY, self,
                                         trajectory_name=self.v_name,
                                         only_init=only_init,
-                                        skip_stored=skip_stored)
+                                        store_data=store_data)
 
             self._stored = True # We do this in case the storage service forgot to tell the
             # Trajectory that it was actually stored
@@ -2997,6 +2991,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_fast_access(self, value):
         """Sets fast access"""
         self._fast_access = bool(value)
+        
+    @property
+    def v_fast_adding(self):
+        """If you can add items to the trajectory simply by calling ``setattr``
+
+        For example, ``traj.par.a = 4`` would add a parameter named `a` with the value 4.
+
+        """
+        return self._fast_adding
+
+    @v_fast_adding.setter
+    def v_fast_adding(self, value):
+        """Sets fast adding"""
+        self._fast_adding = bool(value)
 
     @property
     def v_environment_hexsha(self):
@@ -3239,12 +3247,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def _store_final(self, store_data=False):
+    def _store_final(self, do_store_data=False):
         """Signals the storage service that single run is completed
 
-        :param store_data: If all data should be stored as in `f_store`.
+        :param do_store_data: If all data should be stored as in `f_store`.
 
         """
+        if do_store_data:
+            store_data = pypetconstants.STORE_DATA
+        else:
+            store_data = pypetconstants.STORE_NOTHING
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
                                     store_final=True, store_data=store_data)

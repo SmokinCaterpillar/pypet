@@ -268,7 +268,7 @@ class NNLeafNode(NNTreeNode):
         ABSTRACT: Needs to be implemented by subclass.
 
         """
-        raise NotImplementedError('You should implement this!')
+        return False
 
     @property
     @deprecated(msg='Please use function `f_supports_fast_access()` instead.')
@@ -441,15 +441,15 @@ class NaturalNamingInterface(HasLogger):
         # a particular run (by setting the v_crun property).
         self._nodes_and_leaves_runs_sorted = {}
 
-        # List of names that are taboo. The user cannot create parameters or results that
-        # contain these names.
-        self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
-
         # Context Manager to disable logging for auto-loading
         self._disable_logger = DisableLogger()
 
         # Filter for blinding out runs
         self._run_filter = None
+
+        # List of names that are taboo. The user cannot create parameters or results that
+        # contain these names.
+        self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
 
 
     def _map_type_to_dict(self, type_name):
@@ -471,24 +471,6 @@ class NaturalNamingInterface(HasLogger):
             return root._other_leaves
         else:
             raise RuntimeError('You shall not pass!')
-
-    def _get_fast_access(self):
-        return self._root_instance.v_fast_access
-
-    def _get_shortcuts(self):
-        return self._root_instance.v_shortcuts
-
-    def _get_max_depth(self):
-        return self._root_instance.v_max_depth
-
-    def _get_iter_recursive(self):
-        return self._root_instance.v_iter_recursive
-
-    def _get_auto_load(self):
-        return self._root_instance.v_auto_load
-
-    def _get_with_links(self):
-        return self._root_instance.v_with_links
 
     def _fetch_from_string(self, store_load, name, args, kwargs):
         """Method used by f_store/load/remove_items to find a corresponding item in the tree.
@@ -1380,6 +1362,9 @@ class NaturalNamingInterface(HasLogger):
         if instance.v_is_root:
             raise ValueError('You cannot create a link to the root node')
 
+        if act_node.v_is_root and name in SUBTREE_MAPPING:
+            raise ValueError('`%s` is a reserved name for a group under root.' % name)
+
         if name in act_node._children:
             raise ValueError('`%s` has already a child or link called `%s`, '
                              'cannot add a link with this name.' % (act_node.v_full_name, name))
@@ -2187,6 +2172,16 @@ class NaturalNamingInterface(HasLogger):
             else:
                 split_name = name.split('.')
 
+            if node.v_is_root:
+                # We want to add `parameters`, `config`, `derived_parameters` and `results`
+                # on the fly if they don't exist
+                key = split_name[0]
+                translated_shortcut = self._translate_shortcut(key)
+                if translated_shortcut:
+                    key = translated_shortcut
+                if key in SUBTREE_MAPPING and key not in node._children:
+                    node.f_add_group(key)
+
             if max_depth is None:
                 max_depth = float('inf')
 
@@ -2412,7 +2407,7 @@ class NNGroupNode(NNTreeNode):
         Whether to iterate recursively is determined by `v_iter_recursive`.
 
         """
-        return self.f_iter_nodes(recursive=self._nn_interface._get_iter_recursive())
+        return self.f_iter_nodes(recursive=self.v_root.v_iter_recursive)
 
     def f_debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
@@ -2580,9 +2575,9 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self.f_contains(item,
-                               shortcuts=self._nn_interface._get_shortcuts(),
-                               max_depth=self._nn_interface._get_max_depth(),
-                               with_links=self._nn_interface._get_with_links())
+                               shortcuts=self.v_root.v_shortcuts,
+                               max_depth=self.v_root.v_max_depth,
+                               with_links=self.v_root.v_with_links)
 
     def f_remove_child(self, name, recursive=False, predicate=None):
         """Removes a child of the group.
@@ -2710,15 +2705,29 @@ class NNGroupNode(NNTreeNode):
             else:
                 python_property.fset(self, value)
         else:
-            # Otherwise we will set a value to an existing parameter.
-            # Only works if the parameter exists. There is no new parameter created!
-            instance = self.f_get(key)
+            # Convert the value to a tuple
+            if (isinstance(value, tuple) and len(value) == 2 and
+                    isinstance(value[1], compat.base_type)):
+                value, comment = value
+            else:
+                comment = ''
 
-            if not instance.v_is_parameter:
-                raise AttributeError('You cannot assign values to a tree node or a list of nodes '
-                                     'and results, it only works for parameters ')
+            if key in self._children:
+                instance = self._children[key]
+                # if not instance.v_is_leaf or not instance.v_is_parameter:
+                #     raise AttributeError('You cannot assign values to a tree node or a list of nodes '
+                #                          'and results, it only works for parameters ')
+                instance.f_set(value)
+                if comment != '':
+                    instance.v_comment = comment
 
-            instance.f_set(value)
+            elif self.v_root.v_fast_adding:
+
+                self.f_add_leaf(key, value, comment=comment)
+            else:
+                raise AttributeError('Did not find `%s` under `%s`, if you want to add a new item '
+                                     'this way please enable `v_fast_adding`.' %
+                                     (key, self.v_full_name))
 
     def __getitem__(self, item):
         """Equivalent to calling `__getattr__`.
@@ -2736,12 +2745,18 @@ class NNGroupNode(NNTreeNode):
             raise AttributeError('This is to avoid pickling issues')
 
         return self._nn_interface._get(self, name,
-                                       fast_access=self._nn_interface._get_fast_access(),
-                                       shortcuts=self._nn_interface._get_shortcuts(),
-                                       max_depth=self._nn_interface._get_max_depth(),
-                                       auto_load=self._nn_interface._get_auto_load(),
-                                       with_links=self._nn_interface._get_with_links())
+                                       fast_access=self.v_root.v_fast_access,
+                                       shortcuts=self.v_root.v_shortcuts,
+                                       max_depth=self.v_root.v_max_depth,
+                                       auto_load=self.v_root.v_auto_load,
+                                       with_links=self.v_root.v_with_links)
 
+    @property
+    def v_root(self):
+        """Link to the root of the tree, i.e. the trajectory"""
+        return self._nn_interface._root_instance
+
+    @deprecated('Please use `v_root` instead`')
     def f_get_root(self):
         """Returns the root node of the tree.
 
@@ -3007,7 +3022,7 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
                                            with_links=with_links)
 
-    def f_store_child(self, name, recursive=False, skip_stored=False):
+    def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -3019,17 +3034,9 @@ class NNGroupNode(NNTreeNode):
 
             Whether recursively all children's children should be stored too.
 
-        :param skip_stored:
+        :param store_data:
 
-            Set this to ``True`` if you want faster storage. *pypet* will automatically skip
-            all checks if new data can be added to a node that has already been stored.
-            For example, this will skip checking of new entries to annotations in group nodes or
-            data items within results.
-
-            Be aware that data is not overwritten or deleted even in case ``skip_stored=False``.
-            Only new data is added to dist. If you want to overwrite existing data,
-            check :func:`~pypet.trajectory.Trajectory.f_store_item` and
-            :func:`~pypet.trajectory.Trajectory.f_delete_item`.
+            For how to choose 'store_data' see :ref:`more-on-storing`.
 
         :raises: ValueError if the child does not exist.
 
@@ -3045,7 +3052,27 @@ class NNGroupNode(NNTreeNode):
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_name,
                               recursive=recursive,
-                              skip_stored=skip_stored)
+                              store_data=store_data)
+
+    def f_store(self, recursive=False, store_data=pypetconstants.STORE_DATA):
+        """Stores a group node to disk
+
+        :param recursive:
+
+            Whether recursively all children's children should be stored too.
+
+        :param store_data:
+
+            For how to choose 'store_data' see :ref:`more-on-storing`.
+
+        """
+        traj = self._nn_interface._root_instance
+        storage_service = traj.v_storage_service
+
+        storage_service.store(pypetconstants.GROUP, self,
+                              trajectory_name=traj.v_name,
+                              recursive=recursive,
+                              store_data=store_data)
 
     def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
         """Loads a child or recursively a subtree from disk.
@@ -3079,9 +3106,41 @@ class NNGroupNode(NNTreeNode):
 
         storage_service.load(pypetconstants.TREE, self, child_name=name,
                              trajectory_name=traj.v_name,
-                             recursive=recursive, load_data=load_data, trajectory=traj)
+                             load_data=load_data,
+                             recursive=recursive)
 
         return self.f_get(name, shortcuts=False)
+
+    def f_load(self, recursive=False, load_data=pypetconstants.LOAD_DATA):
+        """Loads a group from disk.
+
+        :param recursive:
+
+            Whether recursively all nodes below the last child should be loaded, too.
+            Note that links are never evaluated recursively. Only the linked node
+            will be loaded if it does not exist in the tree, yet. Any nodes or links
+            of this linked node are not loaded.
+
+        :param load_data:
+
+            Flag how to load the data.
+            For how to choose 'load_data' see :ref:`more-on-loading`.
+
+        :returns:
+
+            The loaded child, in case of grouping ('groupA.groupB.childC') the last
+            node (here 'childC') is returned.
+
+        """
+
+        traj = self._nn_interface._root_instance
+        storage_service = traj.v_storage_service
+
+        storage_service.load(pypetconstants.GROUP, self,
+                             trajectory_name=traj.v_name,
+                             load_data=load_data,
+                             recursive=recursive)
+        return self
 
 
 class ParameterGroup(NNGroupNode):
@@ -3134,6 +3193,7 @@ class ParameterGroup(NNGroupNode):
                                                group_type_name=PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_apar = f_add_parameter
 
 class ResultGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.results`.
@@ -3192,6 +3252,7 @@ class ResultGroup(NNGroupNode):
                                                group_type_name=RESULT_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_ares = f_add_result
 
 class DerivedParameterGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.derived_parameters`.
@@ -3231,6 +3292,8 @@ class DerivedParameterGroup(NNGroupNode):
                                                group_type_name=DERIVED_PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_adpar = f_add_derived_parameter
+
 
 class ConfigGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.config`.
@@ -3267,6 +3330,6 @@ class ConfigGroup(NNGroupNode):
                                                group_type_name=CONFIG_GROUP,
                                                args=args, kwargs=kwargs)
 
-
+    f_aconf=f_add_config
 
 
