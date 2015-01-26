@@ -457,7 +457,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
-    :param overwrite:
+    :param new_file:
 
         If the file already exists it will be overwritten. Otherwise
         the trajectory will simply be added to the file and already
@@ -767,7 +767,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def __init__(self, filename=None,
                  file_title=None,
-                 overwrite=False,
+                 new_file=False,
                  encoding='utf8',
                  complevel=9,
                  complib='zlib',
@@ -867,10 +867,10 @@ class HDF5StorageService(StorageService, HasLogger):
         if trajectory is not None and not trajectory.v_stored:
             self._srvc_set_config(trajectory=trajectory)
 
-        if overwrite:
+        if new_file:
             try:
                 os.remove(filename)
-                self._logger.info('You specified ``overwrite=True``, so I deleted file `%s`.' %
+                self._logger.info('You specified ``new_file=True``, so I deleted file `%s`.' %
                                   filename)
             except OSError:
                 pass

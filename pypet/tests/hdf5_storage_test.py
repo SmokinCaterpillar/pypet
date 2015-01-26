@@ -179,7 +179,7 @@ class StorageTest(TrajectoryComparator):
         cg = ConfigGroup('a.g')
         traj.conf.a = cg
 
-        self.assertTrue(traj.f_get('conf.a.g', shortcuts=False) is cg)
+        self.assertTrue(traj.f_get('conf.a.a.g', shortcuts=False) is cg)
 
         dg = DerivedParameterGroup('ttt')
         traj.dpar.ttt = dg
@@ -1151,7 +1151,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
 
-        env3 = Environment(filename=self.filename, overwrite=True, log_folder=None)
+        env3 = Environment(filename=self.filename, new_file=True, log_folder=None)
 
         self.assertFalse(os.path.exists(self.filename))
 

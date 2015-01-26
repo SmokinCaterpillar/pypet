@@ -16,7 +16,7 @@ def main():
     # Only load the parameters, we will load the results on the fly as we need them
     filename = os.path.join('hdf5', 'FiringRate.hdf5')
     traj.f_load(load_parameters=2, load_derived_parameters=0, load_results=0,
-                load_other_data=0)
+                load_other_data=0, filename=filename)
 
     # We'll simply use auto loading so all data will be loaded when needed.
     traj.v_auto_load = True

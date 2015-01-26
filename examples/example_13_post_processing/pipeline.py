@@ -38,7 +38,8 @@ def main():
                       log_stdout=True,
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
-                      filename=filename)
+                      filename=filename,
+                      new_file=True)
 
     env.f_pipeline(mypipeline)
 

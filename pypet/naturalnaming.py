@@ -2761,7 +2761,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                     name = value.v_full_name
                     if name == '':
                         value._rename(key)
-                    elif name != key and not name.startswith(key + '.'):
+                    elif name != key:
                         value._rename(key + '.' + name)
                     if isinstance(value, NNGroupNode):
                         self.f_add_group(value)

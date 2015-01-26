@@ -668,7 +668,7 @@ class Environment(HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
-    :param overwrite:
+    :param new_file:
 
         If the file already exists it will be overwritten. Otherwise
         the trajectory will simply be added to the file and already

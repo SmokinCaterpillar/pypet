@@ -369,7 +369,7 @@ keyword arguments to the environment. These are handed over to the service:
 
     Title of the hdf5 file (only important if file is created new)
 
-* ``overwrite``
+* ``new_file``
 
     If the file already exists it will be overwritten. Otherwise
     the trajectory will simply be added to the file and already

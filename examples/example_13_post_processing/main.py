@@ -159,7 +159,8 @@ def main():
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       wrap_mode='QUEUE',
-                      filename=filename)
+                      filename=filename,
+                      new_file=True)
 
     traj = env.v_trajectory
 
