@@ -567,9 +567,10 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
     def check_insertions(self, traj):
         daarrays = traj.daarrays
         length = len(traj)
+        the_short_one = 0
         self.assertTrue(length > 10)
         with StorageContextManager(traj) as cm:
-            for idx in range(self.ncores, length):
+            for idx in range(0, length):
                 a = daarrays.a
                 ca = daarrays.ca
                 ea = daarrays.ea
@@ -583,7 +584,12 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 x, y = ea[idx, 9], ea[idx, 8]
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-                x, y = vla[idx][0], vla[idx][1]
+                if len(vla[idx])>1:
+                    x, y = vla[idx][0], vla[idx][1]
+                else:
+                    the_short_one += 1
+                if the_short_one > 1:
+                    raise RuntimeError('You have more than one vl entry with length 1')
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
 

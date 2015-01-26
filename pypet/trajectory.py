@@ -2991,20 +2991,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_fast_access(self, value):
         """Sets fast access"""
         self._fast_access = bool(value)
-        
-    @property
-    def v_fast_adding(self):
-        """If you can add items to the trajectory simply by calling ``setattr``
 
-        For example, ``traj.par.a = 4`` would add a parameter named `a` with the value 4.
-
-        """
-        return self._fast_adding
-
-    @v_fast_adding.setter
-    def v_fast_adding(self, value):
-        """Sets fast adding"""
-        self._fast_adding = bool(value)
+    # @property
+    # def v_fast_adding(self):
+    #     """If you can add items to the trajectory simply by calling ``setattr``
+    #
+    #     For example, ``traj.par.a = 4`` would add a parameter named `a` with the value 4.
+    #
+    #     """
+    #     return self._fast_adding
+    #
+    # @v_fast_adding.setter
+    # def v_fast_adding(self, value):
+    #     """Sets fast adding"""
+    #     self._fast_adding = bool(value)
 
     @property
     def v_environment_hexsha(self):

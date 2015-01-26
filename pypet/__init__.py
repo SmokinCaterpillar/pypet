@@ -15,7 +15,7 @@ from pypet.trajectory import Trajectory, load_trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
-    ResultGroup, NNGroupNode, NNLeafNode
+    ResultGroup, NNGroupNode, NNLeafNode, KnowsTrajectory
 from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
     PickleParameter, Result, SparseResult, PickleResult, ObjectTable, BaseParameter, BaseResult
 from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\

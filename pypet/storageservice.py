@@ -28,8 +28,7 @@ from pypet._version import __version__ as VERSION
 from pypet.parameter import ObjectTable, Parameter
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger, DisableLogger
-import pypet.shareddata as hdf5data
-from pypet.utils.decorators import deprecated, kwargs_api_change
+from pypet.utils.decorators import deprecated
 
 
 class MultiprocWrapper(object):
@@ -3096,12 +3095,20 @@ class HDF5StorageService(StorageService, HasLogger):
                     traj_group.v_annotations.f_empty()
                     traj_group.v_comment = ''
             else:
+                if HDF5StorageService.CLASS_NAME in hdf5_group._v_attrs:
+                    class_name = self._all_get_from_attrs(hdf5_group,
+                                                          HDF5StorageService.CLASS_NAME)
+                    class_constructor = trajectory._create_class(class_name)
+                    instance = trajectory._construct_instance(class_constructor, name)
+                    args = (instance,)
+                else:
+                    args = (name,)
                 # If the group does not exist create it'
                 traj_group = parent_traj_node._nn_interface._add_generic(
                     parent_traj_node,
                     type_name=nn.GROUP,
                     group_type_name=nn.GROUP,
-                    args=(name,),
+                    args=args,
                     kwargs={},
                     add_prefix=False)
 
@@ -3189,7 +3196,8 @@ class HDF5StorageService(StorageService, HasLogger):
         else:
             self._grp_store_group(traj_node, store_data=store_data, with_links=with_links,
                                   recursive=recursive,
-                                  _hdf5_group=new_hdf5_group)
+                                  _hdf5_group=new_hdf5_group,
+                                  _newly_created=newly_created)
 
     def _tree_store_link(self, node_in_traj, link, hdf5_group):
         """Creates a soft link.
@@ -4049,7 +4057,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _grp_store_group(self, traj_group, store_data=pypetconstants.STORE_DATA,
                          with_links=True, recursive=False,
-                         _hdf5_group=None):
+                         _hdf5_group=None, _newly_created=False):
         """Stores a group node.
 
         For group nodes only annotations and comments need to be stored.
@@ -4062,7 +4070,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                    traj_group.v_full_name)
         else:
             if _hdf5_group is None:
-                _hdf5_group, _ = self._all_create_or_get_groups(traj_group.v_full_name)
+                _hdf5_group, _newly_created = self._all_create_or_get_groups(traj_group.v_full_name)
 
             overwrite = store_data == pypetconstants.OVERWRITE_DATA
 
@@ -4070,9 +4078,16 @@ class HDF5StorageService(StorageService, HasLogger):
                     (HDF5StorageService.COMMENT not in _hdf5_group._v_attrs or overwrite)):
                 setattr(_hdf5_group._v_attrs, HDF5StorageService.COMMENT, traj_group.v_comment)
 
+            if ((_newly_created or overwrite) and
+                type(traj_group) not in (nn.NNGroupNode, nn.ConfigGroup, nn.ParameterGroup,
+                                             nn.DerivedParameterGroup, nn.ResultGroup)):
+                # We only store the name of the class if it is not one of the standard groups,
+                # that are always used.
+                setattr(_hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME,
+                        traj_group.f_get_class_name())
+
             self._ann_store_annotations(traj_group, _hdf5_group, overwrite=overwrite)
             self._hdf5file.flush()
-
             traj_group._stored = True
 
         if recursive:
@@ -4498,9 +4513,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if _hdf5_group is None:
             # If no group is provided we might need to create one
-            _hdf5_group, newly_created = self._all_create_or_get_groups(fullname)
-        else:
-            newly_created = _newly_created
+            _hdf5_group, _newly_created = self._all_create_or_get_groups(fullname)
 
         # kwargs_flags = {} # Dictionary to change settings
         # old_kwargs = {}
@@ -4594,7 +4607,7 @@ class HDF5StorageService(StorageService, HasLogger):
             # Store annotations
             self._ann_store_annotations(instance, _hdf5_group, overwrite=overwrite)
 
-            if newly_created or overwrite is True:
+            if _newly_created or overwrite is True:
                 # If we created a new group or the parameter was extended we need to
                 # update the meta information and summary tables
                 self._prm_add_meta_info(instance, _hdf5_group, overwrite=overwrite is True)

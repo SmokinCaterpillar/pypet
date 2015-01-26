@@ -105,6 +105,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(str(self.traj.non_suiting_subgroups).endswith('...'))
 
+
     def test_shrink(self):
 
         self.assertTrue(len(self.traj)>1)

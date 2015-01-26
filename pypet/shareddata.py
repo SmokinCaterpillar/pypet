@@ -1,14 +1,14 @@
 __author__ = 'Robert Meyer'
 
 import warnings
+
 import pandas as pd
 import numpy as np
 
 from pypet import pypetconstants
 from pypet.parameter import BaseResult, Result, ObjectTable
 import pypet.compat as compat
-import pypet.utils.ptcompat as ptcompat
-from pypet.naturalnaming import NNLeafNode
+from pypet.naturalnaming import KnowsTrajectory
 from pypet.pypetlogging import HasLogger
 from pypet.utils.decorators import with_open_store
 
@@ -97,10 +97,6 @@ def make_shared_result(ordinary_result, trajectory, new_class=None, old_data_nam
     except Exception:
         ordinary_result.__class__ = old_class
         raise
-
-
-class KnowsTrajectory(NNLeafNode):
-    KNOWS_TRAJECTORY = True
 
 
 class SharedDataResult(BaseResult, KnowsTrajectory):
