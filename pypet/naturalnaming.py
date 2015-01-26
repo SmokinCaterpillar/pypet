@@ -2752,7 +2752,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                 len(value) == 2 and isinstance(value[1], compat.base_type)):
                 value, comment = value
                 self.f_add_leaf(key, value, comment=comment)
-        elif isinstance(value, NNTreeNode):
+        elif isinstance(value, (NNGroupNode, NNLeafNode)):
             old_name = value.v_full_name
             try:
                 if self.v_root.f_contains(value, shortcuts=False, with_links=False):
@@ -2765,12 +2765,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                         value._rename(key + '.' + name)
                     if isinstance(value, NNGroupNode):
                         self.f_add_group(value)
-                    elif isinstance(value, NNLeafNode):
-                        self.f_add_leaf(value)
                     else:
-                        raise RuntimeError('Cannot add your node `%s` to `%s`, I don`t understand '
-                                           'the type of your new node:b`%s`' %
-                                           (str(value), self.v_full_name, str(type(value))))
+                        self.f_add_leaf(value)
             except:
                 value._rename(old_name)
                 raise
