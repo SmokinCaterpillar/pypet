@@ -740,14 +740,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         return cleaned_run_indices
 
     @not_in_run
-    def f_shrink(self):
+    def f_shrink(self, force=False):
         """ Shrinks the trajectory and removes all exploration ranges from the parameters.
         Only possible if the trajectory has not been stored to disk before or was loaded as new.
+
+        :param force:
+
+            Usually you cannot shrink the trajectory if it has been stored to disk,
+            because there's no guarantee that it is actually shrunk if there
+            still exist explored parameters on disk. In case you are certain that
+            you did not store explored parameters to disk set `force=True`.
 
         :raises: TypeError if the trajectory was stored before.
 
         """
-        if self._stored:
+        if self._stored and not force:
             raise TypeError('Your trajectory is already stored to disk or database, shrinking is '
                             'not allowed.')
 

@@ -1089,6 +1089,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         with self.assertRaises(pex.NotUniqueNodeError):
             traj.f_explore(self.explore_dict)
+        traj.f_shrink(force=True)
 
         par_dict = traj.parameters.f_to_dict()
         for param_name in par_dict:
