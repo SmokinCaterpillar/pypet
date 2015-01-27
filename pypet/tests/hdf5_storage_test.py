@@ -1272,6 +1272,24 @@ class EnvironmentTest(TrajectoryComparator):
         print('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
 
+    def test_just_one_run(self):
+        self.make_run()
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
+
+        self.assertTrue(len(newtraj) == 1)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        print('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+
+        with self.assertRaises(TypeError):
+            self.explore(self.traj)
+
 
     @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation(self):
