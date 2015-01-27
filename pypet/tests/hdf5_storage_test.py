@@ -1593,7 +1593,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj._run_information['run_00000000']['completed']=1
         self.make_run()
 
-        # Noe we make the first run
+        # Now we make the first run
         self.traj._run_information['run_00000000']['completed']=0
         self.make_run()
 

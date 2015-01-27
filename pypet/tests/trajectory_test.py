@@ -659,6 +659,27 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(pex.PresettingError):
             self.traj._prepare_experiment()
 
+    def test_f_get_run_information(self):
+        traj = Trajectory()
+
+        traj.f_add_parameter('test', 42)
+
+        traj.f_explore({'test':[1,2,3,4]})
+
+        self.assertFalse(traj.f_is_completed())
+
+        runinfo = traj.f_get_run_information()
+
+        self.assertTrue(len(runinfo) == 4)
+        self.assertTrue(runinfo == traj._run_information)
+        self.assertTrue(runinfo is not traj._run_information)
+
+        runinfo = traj.f_get_run_information(copy=False)
+
+        self.assertTrue(len(runinfo) == 4)
+        self.assertTrue(runinfo == traj._run_information)
+        self.assertTrue(runinfo is traj._run_information)
+
     def test_f_is_completed(self):
         traj = Trajectory()
 
