@@ -3013,14 +3013,13 @@ class HDF5StorageService(StorageService, HasLogger):
                                    trajectory=_trajectory, as_new=_as_new, hdf5_group=_hdf5_group)
 
     def _tree_create_leaf(self, name, trajectory, hdf5_group):
+        """ Creates a new pypet leaf instance.
+
+        Returns the leaf and if it is an explored parameter the length of the range.
+
+        """
         class_name = self._all_get_from_attrs(hdf5_group, HDF5StorageService.CLASS_NAME)
         range_length = self._all_get_from_attrs(hdf5_group, HDF5StorageService.LENGTH)
-
-        if not range_length is None and range_length != len(trajectory):
-            raise RuntimeError('Something is completely odd. You load parameter'
-                               ' `%s` of length %d into a trajectory of length'
-                               ' %d. They should be equally long!' %
-                               (name, range_length, len(trajectory)))
 
         # Create the instance with the appropriate constructor
         class_constructor = trajectory._create_class(class_name)
@@ -3070,6 +3069,13 @@ class HDF5StorageService(StorageService, HasLogger):
             # Otherwise we need to create a new instance
             else:
                 instance, range_length = self._tree_create_leaf(name, trajectory, hdf5_group)
+
+                if range_length is not None and range_length != len(trajectory):
+                    raise RuntimeError('Something is completely odd. You load parameter'
+                               ' `%s` of length %d into a trajectory of length'
+                               ' %d. They should be equally long!' %
+                               (name, range_length, len(trajectory)))
+
                 # Add the instance to the trajectory tree
                 parent_traj_node._nn_interface._add_generic(parent_traj_node,
                                                             type_name=nn.LEAF,
@@ -5068,8 +5074,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 for hdf5_sub_group in leaf_deletion_list:
                     full_name = '.'.join(hdf5_sub_group._v_pathname.split('/')[2:])
-                    new_instance, _ = self._tree_create_leaf(full_name, trajectory,
+                    new_instance, range_length = self._tree_create_leaf(full_name, trajectory,
                                                              hdf5_sub_group)
+                    if range_length:
+                        raise RuntimeError('Your want to delete the explored parameter `%s`. '
+                                           'Sorry, I cannot delete explored parameters, please '
+                                           'create a new empty trajectory instead or load '
+                                           'as new.' % full_name)
                     self._all_delete_parameter_or_result_or_group(new_instance,
                                                                   delete_only=None,
                                                                   remove_from_item=False,
