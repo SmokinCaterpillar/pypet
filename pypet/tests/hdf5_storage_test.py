@@ -681,7 +681,8 @@ class StorageTest(TrajectoryComparator):
     @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
-        env = Environment(filename=make_temp_file(filename),
+        filename = make_temp_file(filename)
+        env = Environment(filename=filename,
                           log_folder=make_temp_file('logs'),
                           log_stdout=True,
                           logger_names=('STDERR', 'STDOUT'))
@@ -711,12 +712,25 @@ class StorageTest(TrajectoryComparator):
         env.f_disable_logging()
 
     def test_delete_whole_subtrees(self):
+        filename = make_temp_file('testdeltree.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=make_temp_file('testdeltree.hdf5'))
+                          filename=filename)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
+        dpar = traj.f_adpar('mmm.gr.dpdp', 666)
+
+
+        res = traj.f_add_result('hhh.ll', a='b', c='d')
+        res = traj.f_add_derived_parameter('hhh.gg', 555)
 
         traj.f_store()
+
+        with ptcompat.open_file(filename) as fh:
+            daroot = ptcompat.get_child(fh.root, traj.v_name)
+            dpar_table = daroot.overview.derived_parameters_trajectory
+            self.assertTrue(len(dpar_table) == 2)
+            res_table = daroot.overview.results_trajectory
+            self.assertTrue((len(res_table)) == 2)
 
         with self.assertRaises(TypeError):
             traj.f_remove_item(traj.yourtest)
@@ -734,12 +748,44 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('yourtest.test' in traj)
 
         traj.f_delete_item(traj.yourtest, recursive=True, remove_from_trajectory=True)
+        traj.f_delete_item(traj.mmm, recursive=True, remove_from_trajectory=True)
 
         traj.f_load(load_data=2)
 
         self.assertTrue('yourtest.test' not in traj)
         self.assertTrue('yourtest' not in traj)
 
+        with ptcompat.open_file(filename) as fh:
+            daroot = ptcompat.get_child(fh.root, traj.v_name)
+            dpar_table = daroot.overview.derived_parameters_trajectory
+            self.assertTrue(len(dpar_table) == 1)
+            res_table = daroot.overview.results_trajectory
+            self.assertTrue((len(res_table)) == 1)
+
+        traj.f_apar('ggg', 43)
+        traj.f_apar('hhh.mmm', 45)
+        traj.f_apar('jjj', 55)
+        traj.f_apar('hhh.nnn', 55555)
+
+        traj.f_explore({'ggg':[1,2,3]})
+
+        traj.f_store()
+
+        with ptcompat.open_file(filename) as fh:
+            daroot = ptcompat.get_child(fh.root, traj.v_name)
+            par_table = daroot.overview.parameters
+            self.assertTrue(len(par_table) == 4)
+
+        traj.f_delete_item('par.hhh', recursive=True)
+
+        with ptcompat.open_file(filename) as fh:
+            daroot = ptcompat.get_child(fh.root, traj.v_name)
+            par_table = daroot.overview.parameters
+            self.assertTrue(len(par_table) == 2)
+
+        with self.assertRaises(RuntimeError):
+            # We cannot delete something containing an explored parameter
+            traj.f_delete_item('par', recursive=True)
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',

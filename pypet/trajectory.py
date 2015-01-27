@@ -1148,7 +1148,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
 
-        if self._stored:
+        if len(self) > 1 or len(self._explored_parameters) > 0:
             raise TypeError('Cannot explore an already stored trajectory, '
                             'please use `f_expand` instead.')
 

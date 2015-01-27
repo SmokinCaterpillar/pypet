@@ -4558,7 +4558,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 if overwrite is True:
                     to_delete = [key for key in store_dict.keys() if key in _hdf5_group]
                     self._all_delete_parameter_or_result_or_group(instance,
-                                                                  delete_only=to_delete)
+                                                                  delete_only=to_delete,
+                                                                  _hdf5_group=_hdf5_group)
                 elif isinstance(overwrite, (list, tuple)):
                     overwrite_set = set(overwrite)
                     key_set = set(store_dict.keys())
@@ -5022,16 +5023,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         split_name = instance.v_location.split('.')
-
-        where = '/' + self._trajectory_name + '/' + '/'.join(split_name)
-
-        node_name = instance.v_name
+        if _hdf5_group is None:
+            where = '/' + self._trajectory_name + '/' + '/'.join(split_name)
+            node_name = instance.v_name
+            _hdf5_group = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
 
         if delete_only is None:
-
-            if _hdf5_group is None:
-                _hdf5_group = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
-
             if instance.v_is_leaf:
                 # If we delete a leaf we need to take care about overview tables
                 base_group = split_name[0]
@@ -5073,21 +5070,22 @@ class HDF5StorageService(StorageService, HasLogger):
                         leaf_deletion_list.append(hdf5_sub_group)
 
                 for hdf5_sub_group in leaf_deletion_list:
+                    # Delete every leaf one by one to ensure removal from overview tables
                     full_name = '.'.join(hdf5_sub_group._v_pathname.split('/')[2:])
-                    new_instance, range_length = self._tree_create_leaf(full_name, trajectory,
+                    mock_instance, range_length = self._tree_create_leaf(full_name, trajectory,
                                                              hdf5_sub_group)
                     if range_length:
+                        # You cannot delete an explored parameter
                         raise RuntimeError('Your want to delete the explored parameter `%s`. '
                                            'Sorry, I cannot delete explored parameters, please '
                                            'create a new empty trajectory instead or load '
                                            'as new.' % full_name)
-                    self._all_delete_parameter_or_result_or_group(new_instance,
+                    self._all_delete_parameter_or_result_or_group(mock_instance,
                                                                   delete_only=None,
                                                                   remove_from_item=False,
                                                                   recursive=False,
                                                                   _hdf5_group=hdf5_sub_group)
                 _hdf5_group._f_remove(recursive=recursive)
-
         else:
             if not instance.v_is_leaf:
                 raise ValueError('You can only choose `delete_only` mode for leafs.')
@@ -5095,7 +5093,6 @@ class HDF5StorageService(StorageService, HasLogger):
             if isinstance(delete_only, compat.base_type):
                 delete_only = [delete_only]
 
-            path_to_leaf = where + '/' + node_name
             for delete_item in delete_only:
                 if (remove_from_item and
                         hasattr(instance, '__contains__') and
@@ -5103,15 +5100,13 @@ class HDF5StorageService(StorageService, HasLogger):
                             delete_item in instance):
                     delattr(instance, delete_item)
                 try:
-                    if _hdf5_group is None:
-                        _hdf5_group = ptcompat.get_node(self._hdf5file,
-                                                 where=path_to_leaf, name=delete_item)
-
-                    _hdf5_group._f_remove(recursive=True)
+                    _hdf5_sub_group = ptcompat.get_node(self._hdf5file,
+                                                        where=_hdf5_group,
+                                                        name=delete_item)
+                    _hdf5_sub_group._f_remove(recursive=True)
                 except pt.NoSuchNodeError:
                     self._logger.warning('Could not delete `%s` from `%s`. HDF5 node not found!' %
                                          (delete_item, instance.v_full_name))
-
 
     def _prm_write_into_pytable(self, tablename, data, hdf5_group, fullname, **kwargs):
         """Stores data as pytable.
