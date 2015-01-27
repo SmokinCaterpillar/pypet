@@ -3012,6 +3012,26 @@ class HDF5StorageService(StorageService, HasLogger):
                                    with_links=with_links, recursive=recursive,
                                    trajectory=_trajectory, as_new=_as_new, hdf5_group=_hdf5_group)
 
+    def _tree_create_leaf(self, name, trajectory, hdf5_group):
+        class_name = self._all_get_from_attrs(hdf5_group, HDF5StorageService.CLASS_NAME)
+        range_length = self._all_get_from_attrs(hdf5_group, HDF5StorageService.LENGTH)
+
+        if not range_length is None and range_length != len(trajectory):
+            raise RuntimeError('Something is completely odd. You load parameter'
+                               ' `%s` of length %d into a trajectory of length'
+                               ' %d. They should be equally long!' %
+                               (name, range_length, len(trajectory)))
+
+        # Create the instance with the appropriate constructor
+        class_constructor = trajectory._create_class(class_name)
+
+        instance = trajectory._construct_instance(class_constructor, name)
+
+        if instance.v_is_parameter:
+            instance._explored = range_length is not None
+
+        return instance, range_length
+
     def _tree_load_nodes(self, parent_traj_node, load_data, with_links, recursive, trajectory,
                          as_new, hdf5_group):
         """Loads a node from hdf5 file and if desired recursively everything below
@@ -3036,7 +3056,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                    'I am not allowed to load the link.' %
                                    (hdf5_group._v_name, parent_traj_node.v_full_name))
 
-        location_name = parent_traj_node.v_full_name
+
         name = hdf5_group._v_name
         is_leaf = self._all_get_from_attrs(hdf5_group, HDF5StorageService.LEAF)
         in_trajectory = name in parent_traj_node._children
@@ -3049,25 +3069,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 instance = parent_traj_node._children[name]
             # Otherwise we need to create a new instance
             else:
-
-                class_name = self._all_get_from_attrs(hdf5_group, HDF5StorageService.CLASS_NAME)
-                range_length = self._all_get_from_attrs(hdf5_group, HDF5StorageService.LENGTH)
-
-                if not range_length is None and range_length != len(trajectory):
-                    full_name = location_name+'.'+name if location_name != '' else name
-                    raise RuntimeError('Something is completely odd. You load parameter'
-                                       ' `%s` of length %d into a trajectory of length'
-                                       ' %d. They should be equally long!' %
-                                       (full_name, range_length, len(trajectory)))
-
-                # Create the instance with the appropriate constructor
-                class_constructor = trajectory._create_class(class_name)
-
-                instance = trajectory._construct_instance(class_constructor, name)
-
-                if instance.v_is_parameter:
-                    instance._explored = range_length is not None
-
+                instance, range_length = self._tree_create_leaf(name, trajectory, hdf5_group)
                 # Add the instance to the trajectory tree
                 parent_traj_node._nn_interface._add_generic(parent_traj_node,
                                                             type_name=nn.LEAF,
@@ -4989,7 +4991,8 @@ class HDF5StorageService(StorageService, HasLogger):
     def _all_delete_parameter_or_result_or_group(self, instance,
                                                  delete_only=None,
                                                  remove_from_item=False,
-                                                 recursive=False):
+                                                 recursive=False,
+                                                 _hdf5_group=None):
         """Removes a parameter or result or group from the hdf5 file.
 
         :param instance: Instance to be removed
@@ -5020,7 +5023,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if delete_only is None:
 
-            the_node = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
+            if _hdf5_group is None:
+                _hdf5_group = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
 
             if instance.v_is_leaf:
                 # If we delete a leaf we need to take care about overview tables
@@ -5048,13 +5052,30 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 self._prm_meta_remove_summary(instance)
 
-                the_node._f_remove(recursive=True)
+                _hdf5_group._f_remove(recursive=True)
             else:
-                if not recursive and len(the_node._v_groups) != 0:
+                if not recursive and len(_hdf5_group._v_groups) != 0:
                     raise TypeError('You cannot remove the group `%s`, it has children, please '
                                     'use `recursive=True` to enforce removal.' %
                                     instance.v_full_name)
-                the_node._f_remove(recursive=recursive)
+                trajectory = instance.v_root
+                leaf_deletion_list = []
+                for hdf5_sub_group in ptcompat.walk_groups(_hdf5_group):
+                    # We have to manually remove all leaves to ensure deletion from the
+                    # overview tables
+                    if self._all_get_from_attrs(hdf5_sub_group, HDF5StorageService.LEAF):
+                        leaf_deletion_list.append(hdf5_sub_group)
+
+                for hdf5_sub_group in leaf_deletion_list:
+                    full_name = '.'.join(hdf5_sub_group._v_pathname.split('/')[2:])
+                    new_instance, _ = self._tree_create_leaf(full_name, trajectory,
+                                                             hdf5_sub_group)
+                    self._all_delete_parameter_or_result_or_group(new_instance,
+                                                                  delete_only=None,
+                                                                  remove_from_item=False,
+                                                                  recursive=False,
+                                                                  _hdf5_group=hdf5_sub_group)
+                _hdf5_group._f_remove(recursive=recursive)
 
         else:
             if not instance.v_is_leaf:
@@ -5071,10 +5092,11 @@ class HDF5StorageService(StorageService, HasLogger):
                             delete_item in instance):
                     delattr(instance, delete_item)
                 try:
-                    the_node = ptcompat.get_node(self._hdf5file,
+                    if _hdf5_group is None:
+                        _hdf5_group = ptcompat.get_node(self._hdf5file,
                                                  where=path_to_leaf, name=delete_item)
 
-                    the_node._f_remove(recursive=True)
+                    _hdf5_group._f_remove(recursive=True)
                 except pt.NoSuchNodeError:
                     self._logger.warning('Could not delete `%s` from `%s`. HDF5 node not found!' %
                                          (delete_item, instance.v_full_name))

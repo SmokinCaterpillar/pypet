@@ -95,6 +95,8 @@ if tables_version == 2:
 
     deleteattr = lambda ptitem, attr: ptitem._f_delAttr(attr)
 
+    walk_groups = lambda ptitem: ptitem._f_walkGroups()
+
     hdf5_version = pt.hdf5Version
 
 elif tables_version == 3:
@@ -125,6 +127,8 @@ elif tables_version == 3:
     iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iter_nodes(*args, **kwargs)
 
     deleteattr = lambda ptitem, attr: ptitem._f_delattr(attr)
+
+    walk_groups = lambda ptitem: ptitem._f_walk_groups()
 
     hdf5_version = pt.hdf5_version
 
