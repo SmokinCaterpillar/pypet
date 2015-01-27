@@ -771,7 +771,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     def _preset(self, name, args, kwargs):
         """Generic preset function, marks a parameter or config for presetting."""
-        if name in self:
+        if self.f_contains(name, shortcuts=False):
             raise ValueError('Parameter `%s` is already part of your trajectory, use the normal'
                              'accessing routine to change config.' % name)
         else:
@@ -1845,7 +1845,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         # Write out the merged data to disk
         self._logger.info('Writing merged data to disk')
-        self.f_store(store_data=True)
+        self.f_store(store_data=pypetconstants.STORE_DATA)
 
 
         self._logger.info('Finished Merging!')
@@ -2515,17 +2515,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         return use_runs, compat.listkeys(params_to_change)
 
     @not_in_run
-    def f_migrate(self, new_name=None, new_filename=None, new_file_tile=None, in_store=False):
+    def f_migrate(self, new_name=None, in_store=False,
+                  new_storage_service=None, **kwargs):
         """Can be called to rename and relocate the trajectory.
 
         Choosing a new filename only works with the original HDF5StorageService.
         In case the trajectory has no storage service, a new HDF5StorageService is created
 
         :param new_name: New name of the trajectory, None if you do not want to change the name.
-
-        :param new_filename:
-
-            New file_name of the trajectory, None if you do not want to change the filename.
 
         :param in_store:
 
@@ -2537,39 +2534,34 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             the very same name as another trajectory. If set to `True` and trajectory is not found
             in the file, the trajectory is simply stored to the file.
 
+        :param new_storage_service:
+
+            New service where you want to migrate to. Leave none if you want to keep the olde one.
+
+        :param kwargs:
+
+            Additional keyword arguments passed to the service.
+
         """
 
         if new_name is not None:
             self._name = new_name
 
-        if new_file_tile is None:
-            new_file_tile = self.v_name
-
-        if new_filename is not None:
-            if self._storage_service is None:
-                self._storage_service = storage.HDF5StorageService(filename=new_filename,
-                                                           file_title=new_file_tile)
-            else:
-                self._storage_service.filename = new_filename
-            self._filename = new_filename
+        unused_kwargs = set(kwargs.keys())
+        if new_storage_service is not None or len(kwargs) > 0:
+            self._storage_service, unused_kwargs = storage_factory(
+                                                               storage_service=new_storage_service,
+                                                               trajectory=self, **kwargs)
+        if len(unused_kwargs) > 0:
+            raise ValueError('The following keyword arguments were not used: `%s`' %
+                             str(unused_kwargs))
 
         self._stored = in_store
 
-    def f_store(self, new_name=None, new_filename=None, only_init=False,
-                store_data=pypetconstants.STORE_DATA):
+    @kwargs_api_change('new_name', 'new_filename')
+    def f_store(self, only_init=False, store_data=pypetconstants.STORE_DATA,
+                store_full_in_run=False):
         """Stores the trajectory to disk.
-
-        :param filename:
-
-            You can give another filename here if you want to store the trajectory somewhere
-            else than in the filename you have specified on trajectory creation.
-            This will change the file for good. Calling `f_store` again will keep the
-            new file location.
-
-        :param new_name:
-
-            If you want to store the trajectory under a new name. If name is changed, name
-            remains for good and the trajectory keeps the new name.
 
         :param only_init
 
@@ -2595,19 +2587,24 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         ATTENTION calling f_store during a single run the behavior is different:
 
-        Then the functio looks for new data that is added below a group called `run_XXXXXXXXXX`
-        and stores it where `XXXXXXXXX` is the index of this run. All arguments to
-        the function are ignored than.
+        Then the function looks for new data that is added below groups called `run_XXXXXXXXXX`
+        and stores it where `XXXXXXXXX` is the index of this run. The `only init` function is
+        ignored in this case. You can avoid this behavior by using the argument from below.
+
+        :param store_full_in_run:
+
+            Only useful during single runs. If ``store_full_in_run=True`` the full tree
+            is traversed instead of just items below groups called `run_XXXXXXXXXX`.
+            Accordingly, storing is analogous to storing a trajectory not during a single run.
 
         """
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
                                     store_final=False,
-                                    store_data=store_data)
+                                    store_data=store_data,
+                                    store_full_in_run=store_full_in_run)
         else:
-            if new_filename is not None or new_name is not None:
-                self.f_migrate(new_name, new_filename)
 
             if self._stored and self._expansion_not_stored:
                 self._store_expansion()
@@ -3266,7 +3263,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             store_data = pypetconstants.STORE_NOTHING
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
-                                    store_final=True, store_data=store_data)
+                                    store_final=True,
+                                    store_data=store_data,
+                                    store_full_in_run=False)
 
     def f_store_item(self, item, *args, **kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""

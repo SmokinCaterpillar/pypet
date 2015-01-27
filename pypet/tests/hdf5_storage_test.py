@@ -64,6 +64,47 @@ class SlowResult(Result):
 class MyParamGroup(ParameterGroup):
     pass
 
+def add_one_particular_item(traj, store_full):
+    traj.hi = 42, 'hi!'
+    traj.f_store(store_full_in_run=store_full)
+    traj.f_remove_child('hi')
+
+class FullStorageTest(TrajectoryComparator):
+
+    def test_not_full_store(self):
+        filename = make_temp_file('full_store.hdf5')
+        logfolder = make_temp_file('logs')
+        env = Environment(log_folder=logfolder, filename=filename)
+
+        traj = env.v_trajectory
+
+        traj.par.x = 3, 'jj'
+
+        traj.f_explore({'x': [1,2,3]})
+
+        env.f_run(add_one_particular_item, False)
+
+        traj = load_trajectory(index=-1, filename=filename)
+
+        self.assertTrue('hi' not in traj)
+
+    def test_full_store(self):
+        filename = make_temp_file('full_store.hdf5')
+        logfolder = make_temp_file('logs')
+        env = Environment(log_folder=logfolder, filename=filename)
+
+        traj = env.v_trajectory
+
+        traj.par.x = 3, 'jj'
+
+        traj.f_explore({'x': [1,2,3]})
+
+        env.f_run(add_one_particular_item, True)
+
+        traj = load_trajectory(index=-1, filename=filename)
+
+        self.assertTrue('hi' in traj)
+
 class StorageTest(TrajectoryComparator):
 
     def test_new_assignment_method(self):
@@ -492,13 +533,13 @@ class StorageTest(TrajectoryComparator):
         traj.f_store()
 
         new_file = make_temp_file('migrate2.hdf5')
-        traj.f_migrate(new_filename=new_file)
+        traj.f_migrate(filename=new_file)
 
         traj.f_store()
 
         new_traj = Trajectory()
 
-        new_traj.f_migrate(new_name=traj.v_name, new_filename=new_file, in_store=True)
+        new_traj.f_migrate(new_name=traj.v_name, filename=new_file, in_store=True)
 
         new_traj.v_auto_load=True
 
@@ -783,9 +824,12 @@ class StorageTest(TrajectoryComparator):
             par_table = daroot.overview.parameters
             self.assertTrue(len(par_table) == 2)
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             # We cannot delete something containing an explored parameter
             traj.f_delete_item('par', recursive=True)
+
+        with self.assertRaises(TypeError):
+            traj.f_delete_item('ggg')
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',

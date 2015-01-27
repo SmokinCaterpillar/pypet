@@ -82,6 +82,16 @@ pypet 0.1b.9
 
 *   BUG FIX: Log files are now closed when the handlers are removed
 
+*   BUG FIX: ``max_depth`` is now really alway in relation to the start node and not
+    in relation to intermediate results
+
+*   API change for `f_migrate` to match new concept of storage service
+
+*   Short function names for item additions like `f_apar` besides `f_add_parameter`.
+
+*   One can now set ``store_full_in_run=True`` to store the entire trajectory during a
+    single run
+
 
 pypet 0.1b.8
 

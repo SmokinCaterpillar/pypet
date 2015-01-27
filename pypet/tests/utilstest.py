@@ -18,7 +18,7 @@ else:
 
 from pypet.utils.explore import cartesian_product
 
-from pypet.utils.helpful_functions import progressbar
+from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
 
 from pypet.utils.comparisons import nested_equal
 
@@ -92,6 +92,21 @@ class ProgressBarTest(unittest.TestCase):
         for irun in range(total):
             time.sleep(0.005)
             progressbar(irun, total, logger=logger)
+
+
+class TestDictionaryMethods(unittest.TestCase):
+
+    def test_nest_dicitionary(self):
+        mydict = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
+        nested = nest_dictionary(mydict, separator='.')
+        expected = {'a':{'b':{'c':4}, 'c':5}, 'd':4}
+        self.assertTrue(expected == nested)
+
+    def test_flatten_dictionary(self):
+        mydict = {'a':{'b':{'c':4}, 'c':5}, 'd':4}
+        flattened = flatten_dictionary(mydict, separator='.')
+        expected = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
+        self.assertTrue(flattened == expected)
 
 class TestNewTreeTranslation(unittest.TestCase):
 

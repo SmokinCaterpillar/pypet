@@ -2903,7 +2903,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def _tree_store_tree(self, traj_node, child_name, store_data=pypetconstants.STORE_DATA,
                          with_links=True,
-                         recursive=False,_parent_hdf5_group=None):
+                         recursive=False, _parent_hdf5_group=None):
         """Stores a node and potentially recursively all nodes below
 
         :param traj_node: Parent node where storing starts
@@ -3243,18 +3243,28 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, traj, store_final=False, store_data=pypetconstants.STORE_DATA):
+    def _srn_store_single_run(self, traj, store_final=False,
+                              store_data=pypetconstants.STORE_DATA,
+                              store_full_in_run=False):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data != pypetconstants.STORE_NOTHING:
-            self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
-            for group_name in traj._run_parent_groups:
-                group = traj._run_parent_groups[group_name]
-                if group.f_contains(traj.v_crun):
-                    self._tree_store_tree(group, traj.v_crun, store_data=store_data,
-                                          with_links=True,
+            if store_full_in_run:
+                self._logger.info('Storing full date tree of trajectory during single run!')
+                for child in traj._children:
+                    self._tree_store_tree(traj_node=traj, child_name=child,
+                                          store_data=store_data, with_links=True,
                                           recursive=True,
-                                          _parent_hdf5_group=None)
+                                          _parent_hdf5_group=self._trajectory_group)
+            else:
+                self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
+                for group_name in traj._run_parent_groups:
+                    group = traj._run_parent_groups[group_name]
+                    if group.f_contains(traj.v_crun):
+                        self._tree_store_tree(group, traj.v_crun, store_data=store_data,
+                                              with_links=True,
+                                              recursive=True,
+                                              _parent_hdf5_group=None)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
@@ -5076,7 +5086,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                              hdf5_sub_group)
                     if range_length:
                         # You cannot delete an explored parameter
-                        raise RuntimeError('Your want to delete the explored parameter `%s`. '
+                        raise TypeError('Your want to delete the explored parameter `%s`. '
                                            'Sorry, I cannot delete explored parameters, please '
                                            'create a new empty trajectory instead or load '
                                            'as new.' % full_name)

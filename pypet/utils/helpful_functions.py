@@ -22,6 +22,11 @@ def is_debug():
 
 
 def flatten_dictionary(nested_dict, separator):
+    """Flattens a nested dictionary.
+
+    New keys are concatenations of nested keys with the `separator` in between.
+
+    """
     flat_dict = {}
     for key, val in nested_dict.items():
         if isinstance(val, dict):
@@ -36,6 +41,11 @@ def flatten_dictionary(nested_dict, separator):
 
 
 def nest_dictionary(flat_dict, separator):
+    """ Nests a given flat dictionary.
+
+    Nested keys are created by splitting given keys around the `separator`.
+
+    """
     nested_dict = {}
     for key, val in flat_dict.items():
         split_key = key.split(separator)

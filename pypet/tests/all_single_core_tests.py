@@ -8,7 +8,8 @@ import os
 from pypet.tests.parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest, \
     ResultTest,SparseResultTest,PickleResultTest
 from pypet.tests.trajectory_test import SingleRunQueueTest, SingleRunTest, TrajectoryFindTest, TrajectoryMergeTest, TrajectoryTest
-from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest, StorageTest, TestOtherHDF5Settings, TestOtherHDF5Settings2
+from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest, StorageTest,\
+    TestOtherHDF5Settings, TestOtherHDF5Settings2, FullStorageTest
 from pypet.tests.hdf5_merge_test import TestMergeResultsSort, MergeTest
 from pypet.tests.pipeline_test import TestPostProc
 from pypet.tests.backwards_compat_test import LoadOldTrajectoryTest
@@ -18,7 +19,8 @@ except ImportError as e:
     print('NO DILL TESTS!!!')
     print(repr(e)) # We end up here if `dill` is not installed
     pass
-from pypet.tests.utilstest import CartesianTest
+from pypet.tests.utilstest import CartesianTest, ProgressBarTest, TestNewTreeTranslation, \
+    TestDictionaryMethods
 from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
 from pypet.tests.module_test import TestAllImport

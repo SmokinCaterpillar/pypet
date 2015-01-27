@@ -39,6 +39,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
             traj.test3
 
     def test_link_creation(self):
+
         traj = Trajectory()
 
         traj.f_add_parameter_group('test.test3')
@@ -46,6 +47,15 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         with self.assertRaises(ValueError):
             traj.par.f_add_link('test', traj.test2)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('parameters', traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('ps.ss', traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('kkkk', PickleResult('fff', 555))
 
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)

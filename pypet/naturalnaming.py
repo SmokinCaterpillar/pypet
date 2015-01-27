@@ -87,8 +87,6 @@ LINK = 'LINK'
 # Types are not allowed to be added during single runs
 SENSITIVE_TYPES = set([PARAMETER, PARAMETER_GROUP, CONFIG, CONFIG_GROUP])
 
-LENGTH_WARNING_THRESHOLD = 100
-
 # SUBTREE Mapping
 SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
                    'parameters': (PARAMETER_GROUP, PARAMETER),
@@ -894,7 +892,7 @@ class NaturalNamingInterface(HasLogger):
         if name == -1:
             return pypetconstants.RUN_NAME_DUMMY
         elif name == -2:
-            if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
+            if self._root_instance._crun is not None:
                 return '$'
             else:
                 return pypetconstants.RUN_NAME_DUMMY
@@ -914,7 +912,7 @@ class NaturalNamingInterface(HasLogger):
 
         if name in SHORTCUT_SET:
             if name == 'crun':
-                if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
+                if self._root_instance._crun is not None:
                     return '$'
                 else:
                     return pypetconstants.RUN_NAME_DUMMY
@@ -1009,16 +1007,16 @@ class NaturalNamingInterface(HasLogger):
                                                      group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
-                    add = add + 'runs.' + root.v_crun + '.'
+                    add += 'runs.' + root.v_crun + '.'
 
                 elif start_node.v_depth == 1:
 
                     if name == 'runs':
                         return name
                     else:
-                        add = add + 'runs.' + root.v_crun + '.'
+                        add += 'runs.' + root.v_crun + '.'
 
-                elif start_node.v_depth == 2 and start_node.v_crun == 'runs':
+                elif (start_node.v_depth == 2 and start_node.v_name == 'runs'):
                     add += root.v_crun + '.'
 
         name = add + name
@@ -1583,14 +1581,13 @@ class NaturalNamingInterface(HasLogger):
         if full_name in where_dict:
             raise AttributeError(full_name + ' is already part of trajectory,')
 
-        if type_name != RESULT:
-            if full_name in root._changed_default_parameters:
-                self._logger.info(
-                    'You have marked parameter %s for change before, so here you go!' %
-                    full_name)
+        if type_name != RESULT and full_name in root._changed_default_parameters:
+            self._logger.info(
+                'You have marked parameter %s for change before, so here you go!' %
+                full_name)
 
-                change_args, change_kwargs = root._changed_default_parameters.pop(full_name)
-                instance.f_set(*change_args, **change_kwargs)
+            change_args, change_kwargs = root._changed_default_parameters.pop(full_name)
+            instance.f_set(*change_args, **change_kwargs)
 
         where_dict[full_name] = instance
 
@@ -1642,6 +1639,9 @@ class NaturalNamingInterface(HasLogger):
             branch = x.v_run_branch
             return branch == 'trajectory' or branch in run_name_set
 
+        if max_depth is None:
+            max_depth = float('inf')
+
         crun = self._run_filter
 
         if predicate is None:
@@ -1667,12 +1667,12 @@ class NaturalNamingInterface(HasLogger):
                                             crun, max_depth, with_links,
                                             in_search, predicate)
         else:
+            iterator = (x for x in self._make_child_iterator(node, crun, with_links) if
+                        predicate(x[2]))
             if in_search:
-                return (x for x in self._make_child_iterator(node, crun, with_links) if
-                        predicate(x[1][1]))
+                return iterator # Here we return tuples: (depth, name, object)
             else:
-                return (x[1][1] for x in self._make_child_iterator(node, crun, with_links) if
-                predicate(x[1][1]))
+                return (x[2] for x in iterator) # Here we only want the objects themselves
 
 
 
@@ -1955,13 +1955,13 @@ class NaturalNamingInterface(HasLogger):
 
             If links should be considered
 
-        :return: The found node
+        :return: The found node and the depth it was found for
 
         """
 
         # If we find it directly there is no need for an exhaustive search
         if key in node._children and (with_links or key not in node._links):
-            return node._children[key]
+            return node._children[key], 1
 
         crun = self._run_filter
 
@@ -1970,7 +1970,7 @@ class NaturalNamingInterface(HasLogger):
             try:
                 result_node = self._very_fast_search(node, key, crun, with_links)
                 if result_node is not None:
-                    return result_node
+                    return result_node, 0
             except pex.TooManyGroupsError:
                 pass
             except pex.NotUniqueNodeError:
@@ -2004,7 +2004,7 @@ class NaturalNamingInterface(HasLogger):
                 result_node = child
                 result_depth = depth
 
-        return result_node
+        return result_node, result_depth
 
     def _backwards_search(self, start_node, split_name, max_depth=float('inf'), shortcuts=True):
         """ Performs a backwards search from the terminal node back to the start node
@@ -2038,13 +2038,6 @@ class NaturalNamingInterface(HasLogger):
         parent_full_name = start_node.v_full_name
 
         split_length = len(split_name)
-
-        if len(candidate_dict) > LENGTH_WARNING_THRESHOLD:
-            self._logger.warning('Backwards search found more than %d possible candidates'
-                                 '(it found %d potential terminal nodes for `%s`). '
-                                 'Better use forward search and try to avoid '
-                                 'shortcuts for faster performance.' %
-                                 (LENGTH_WARNING_THRESHOLD, len(candidate_dict), key))
 
         for candidate_name in candidate_dict:
             # Check if candidate startswith the parent's name
@@ -2331,6 +2324,12 @@ class NaturalNamingInterface(HasLogger):
         result = None
         name = '.'.join(split_name)
 
+        if len(split_name) > max_depth:
+            raise AttributeError('The node or param/result `%s`, cannot be found under `%s`'
+                                 'The name you are looking for is larger than the maximum '
+                                 'search depth.' %
+                                 (name, node.v_full_name))
+
         if shortcuts and not try_auto_load_directly:
             first = split_name[0]
 
@@ -2347,7 +2346,8 @@ class NaturalNamingInterface(HasLogger):
                     # since looking into a single dict costs O(1)].
                     result = node
                     for key in split_name:
-                        result = self._search(result, key, max_depth, with_links)
+                        result, depth = self._search(result, key, max_depth, with_links)
+                        max_depth -= depth
                         if result is None:
                             break
         elif not try_auto_load_directly:
@@ -2662,9 +2662,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             elif not child.v_is_leaf and child.f_has_children and not recursive:
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with ``recursive = True``')
-            elif not child.v_is_leaf and child.f_has_links and not recursive:
-                raise TypeError('Cannot remove child. It is a group with links. Use '
-                                'r_remove with ``recursive = True`` or remove links manually.')
             else:
                 self._nn_interface._remove_subtree(self, name, predicate)
 
@@ -2810,12 +2807,14 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         """
         return self._nn_interface._root_instance
 
-    def f_iter_nodes(self, recursive=True, with_links=True, predicate=None):
+    def f_iter_nodes(self, recursive=True, with_links=True, max_depth=None, predicate=None):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
         :param with_links: If links should be considered
+
+        :param max_depth: Maximum depth in search tree relative to start node (inclusive)
 
         :param predicate:
 
@@ -2845,6 +2844,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         return self._nn_interface._iter_nodes(self, recursive=recursive, with_links=with_links,
+                                              max_depth=max_depth,
                                               predicate=predicate)
 
     def f_iter_leaves(self, with_links=True):
@@ -2939,8 +2939,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         :param max_depth:
 
-            Maximum depth (relative to start node) how search should progress in tree.
-            `None` means no depth limit.  Only relevant if `shortcuts` are allowed.
+            Maximum depth relative to starting node (inclusive).
+            `None` means no depth limit.
 
         :param auto_load:
 

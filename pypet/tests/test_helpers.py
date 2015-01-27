@@ -232,6 +232,9 @@ def multiply(traj):
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
+        if not 'runs' in traj.res:
+            traj.res.f_add_result_group('runs')
+
         print('>>>>>Starting Simple Calculations')
         my_dict = {}
 
@@ -273,6 +276,25 @@ def simple_calculations(traj, arg1, simple_kwarg):
             raise RuntimeError()
 
         if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.hhh.kkk.v_full_name:
+            raise RuntimeError()
+
+        traj.f_add_result('runs.' + traj.v_crun + '.ggg', 5555)
+        traj.res.runs.f_add_result(traj.v_crun + '.ggjg', 5555)
+        traj.res.runs.f_add_result('hhg', 5555)
+
+        traj.res.f_add_result(name='lll', comment='duh', data=444)
+
+        try:
+            traj.f_add_config('teeeeest', 12)
+            raise RuntimeError()
+        except TypeError:
+            pass
+
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
+            raise RuntimeError()
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
+            raise RuntimeError()
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.hhg', shortcuts=False):
             raise RuntimeError()
 
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
