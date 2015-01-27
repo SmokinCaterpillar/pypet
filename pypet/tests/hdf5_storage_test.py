@@ -74,36 +74,36 @@ class FullStorageTest(TrajectoryComparator):
     def test_not_full_store(self):
         filename = make_temp_file('full_store.hdf5')
         logfolder = make_temp_file('logs')
-        env = Environment(log_folder=logfolder, filename=filename)
+        with Environment(log_folder=logfolder, filename=filename) as env:
 
-        traj = env.v_trajectory
+            traj = env.v_trajectory
 
-        traj.par.x = 3, 'jj'
+            traj.par.x = 3, 'jj'
 
-        traj.f_explore({'x': [1,2,3]})
+            traj.f_explore({'x': [1,2,3]})
 
-        env.f_run(add_one_particular_item, False)
+            env.f_run(add_one_particular_item, False)
 
-        traj = load_trajectory(index=-1, filename=filename)
+            traj = load_trajectory(index=-1, filename=filename)
 
-        self.assertTrue('hi' not in traj)
+            self.assertTrue('hi' not in traj)
 
     def test_full_store(self):
         filename = make_temp_file('full_store.hdf5')
         logfolder = make_temp_file('logs')
-        env = Environment(log_folder=logfolder, filename=filename)
+        with Environment(log_folder=logfolder, filename=filename) as env:
 
-        traj = env.v_trajectory
+            traj = env.v_trajectory
 
-        traj.par.x = 3, 'jj'
+            traj.par.x = 3, 'jj'
 
-        traj.f_explore({'x': [1,2,3]})
+            traj.f_explore({'x': [1,2,3]})
 
-        env.f_run(add_one_particular_item, True)
+            env.f_run(add_one_particular_item, True)
 
-        traj = load_trajectory(index=-1, filename=filename)
+            traj = load_trajectory(index=-1, filename=filename)
 
-        self.assertTrue('hi' in traj)
+            self.assertTrue('hi' in traj)
 
 class StorageTest(TrajectoryComparator):
 
@@ -439,6 +439,8 @@ class StorageTest(TrajectoryComparator):
             etext ='appears more than once in table'
             self.assertTrue(etext in text)
 
+        env.f_disable_logging()
+
     def test_clean_up_multiple_table_entries2(self):
 
         filename = make_temp_file('cleanup.hdf5')
@@ -483,6 +485,8 @@ class StorageTest(TrajectoryComparator):
             etext ='appears more than once in table'
             self.assertTrue(etext in text)
 
+        env.f_disable_logging()
+
     def test_overwrite_annotations_and_results(self):
 
         filename = make_temp_file('overwrite.hdf5')
@@ -521,6 +525,8 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(traj.x == 22)
         self.assertTrue(traj.grp.v_comment == 'hu')
         self.assertTrue(traj.grp.v_annotations['a'] == 'c')
+
+        env.f_disable_logging()
 
 
     def test_migrations(self):
