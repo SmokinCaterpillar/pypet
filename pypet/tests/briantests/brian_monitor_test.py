@@ -271,6 +271,32 @@ class BrianMonitorTest(ResultTest):
             else:
                 raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
 
+    def test_dir(self):
+        res = self.results['SpikeMonitor']
+        self.assertTrue('spikes' in res)
+        self.assertTrue('spikes' in dir(res))
+
+    def test_set_item_via_number(self):
+        res = self.results['SpikeMonitor']
+        res[0] = 'Hi'
+        res[777] = 777
+
+        self.assertTrue(getattr(res, res.v_name) == 'Hi')
+        self.assertTrue(res.f_get(0) == 'Hi')
+        self.assertTrue(getattr(res, res.v_name + '_777') == 777)
+        self.assertTrue(res[777] == 777)
+        self.assertTrue(res.f_get(777) == 777)
+
+        self.assertTrue(0 in res)
+        self.assertTrue(777 in res)
+        self.assertTrue(99999999 not in res)
+
+        del res[0]
+        self.assertTrue(0 not in res)
+
+        del res[777]
+        self.assertTrue(777 not in res)
+
     def make_results(self):
         self.results={}
         for key,monitor in self.monitors.items():
