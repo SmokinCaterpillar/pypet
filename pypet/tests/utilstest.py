@@ -17,12 +17,11 @@ else:
     import unittest
 
 from pypet.utils.explore import cartesian_product
-
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
-
 from pypet.utils.comparisons import nested_equal
-
 from pypet.utils.to_new_tree import FileUpdater
+import pypet.compat as compat
+
 
 
 class CartesianTest(unittest.TestCase):
@@ -47,7 +46,7 @@ class CartesianTest(unittest.TestCase):
                                                     (str(cartesian_dict),str(result_dict)))
 
 
-
+@unittest.skipIf(sys.version_info < (2, 7, 0), 'progressbar does not work under python 2.6')
 class ProgressBarTest(unittest.TestCase):
 
     def test_progressbar(self):
@@ -108,6 +107,8 @@ class TestDictionaryMethods(unittest.TestCase):
         expected = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
         self.assertTrue(flattened == expected)
 
+
+@unittest.skipIf(compat.python >= 3, 'Only supported for python 2')
 class TestNewTreeTranslation(unittest.TestCase):
 
     def test_file_translation(self):
