@@ -1919,6 +1919,7 @@ class Result(BaseResult):
         return result
 
     @property
+    @deprecated('No longer supported')
     def v_no_data_string(self):
         """Whether or not to give a short summarizing string when calling
          :func:`~pypet.parameter.Result.f_val_to_str` or `__str__`.
@@ -1942,8 +1943,13 @@ class Result(BaseResult):
         self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
                              'longer have an effect. Data will always be printed.')
 
-    def __contains__(self, item):
-        return item in self._data
+    def __contains__(self, key):
+        if isinstance(key, int):
+            if key == 0:
+                key = self.v_name
+            else:
+                key = self.v_name + '_%d' % key
+        return key in self._data
 
 
     def f_val_to_str(self):
@@ -2122,7 +2128,7 @@ class Result(BaseResult):
 
         if len(args) == 0:
             if len(self._data) == 1:
-                return self._data[compat.listkeys(self._data)[0]]
+                return compat.listvalues(self._data)[0]
             elif len(self._data) > 1:
                 raise ValueError('Your result `%s` contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
