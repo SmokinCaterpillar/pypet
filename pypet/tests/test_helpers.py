@@ -282,7 +282,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.res.runs.f_add_result(traj.v_crun + '.ggjg', 5555, comment='didili')
         traj.res.runs.f_add_result('hhg', 5555, comment='jjjj')
 
-        traj.res.f_add_result(name='lll', comment='duh', data=444, comment='42')
+        traj.res.f_add_result(name='lll', comment='duh', data=444)
 
         try:
             traj.f_add_config('teeeeest', 12)
