@@ -278,11 +278,11 @@ def simple_calculations(traj, arg1, simple_kwarg):
         if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.hhh.kkk.v_full_name:
             raise RuntimeError()
 
-        traj.f_add_result('runs.' + traj.v_crun + '.ggg', 5555)
-        traj.res.runs.f_add_result(traj.v_crun + '.ggjg', 5555)
-        traj.res.runs.f_add_result('hhg', 5555)
+        traj.f_add_result('runs.' + traj.v_crun + '.ggg', 5555, comment='ladida')
+        traj.res.runs.f_add_result(traj.v_crun + '.ggjg', 5555, comment='didili')
+        traj.res.runs.f_add_result('hhg', 5555, comment='jjjj')
 
-        traj.res.f_add_result(name='lll', comment='duh', data=444)
+        traj.res.f_add_result(name='lll', comment='duh', data=444, comment='42')
 
         try:
             traj.f_add_config('teeeeest', 12)
