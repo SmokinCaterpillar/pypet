@@ -1,3 +1,12 @@
+"""
+New module allowing to share data across processes in a multiprocessing environment.
+
+Already functional but not yet documented or thoroughly tested.
+
+Use at your own risk!
+
+"""
+
 __author__ = 'Robert Meyer'
 
 import warnings
@@ -44,7 +53,6 @@ class StorageContextManager(HasLogger):
             raise RuntimeError('Your service is already open, there is no need to re-open it.')
         service.store(pypetconstants.OPEN_FILE, None,
                       trajectory_name=self._traj.v_name)
-
 
     def f_flush_store(self):
         service = self._traj.v_storage_service
@@ -128,7 +136,6 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
                                            self._data_name,
                                            request, args, kwargs,
                                            trajectory_name=self._traj.v_name)
-
 
     def f_get_data_node(self):
         if not self._storage_service.is_open:

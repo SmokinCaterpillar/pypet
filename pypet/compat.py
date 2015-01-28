@@ -5,7 +5,6 @@ Module to allow the same code to work with both Python 2 and 3.
 import sys
 
 python = sys.version_info[0]
-
 python_version_string = '.'.join([str(x) for x in sys.version_info[0:3]])
 
 if python == 2:

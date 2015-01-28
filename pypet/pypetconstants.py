@@ -172,7 +172,8 @@ UPDATE_DATA = 2
 adds only items that are not part of your current trajectory."""
 
 
-######### Storing Constants
+######### Storing Constants #####
+
 STORE_NOTHING = 0
 """Stores nothing to disk"""
 STORE_DATA_SKIPPING = 1
@@ -217,8 +218,8 @@ FLUSH = 'FLUSH'
 """ Tells the storage to flush the file """
 
 
-
 ########## Names of Runs ####################
+
 FORMAT_ZEROS = 8
 """ Number of leading zeros"""
 RUN_NAME = 'run_'
@@ -229,64 +230,65 @@ FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
 
 
- ### Storing Data Constants
+### Constants how to store individual leaf data into HDF5 ######
+
 ARRAY = 'ARRAY'
-'''Stored as array_
+"""Stored as array_
 
 .. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
 
-'''
+"""
 CARRAY = 'CARRAY'
-'''Stored as carray_
+"""Stored as carray_
 
 .. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
 
-'''
+"""
 EARRAY = 'EARRAY'
-''' Stored as earray_e.
+""" Stored as earray_e.
 
 .. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
 
-'''
+"""
 
 VLARRAY = 'VLARRAY'
-'''Stored as vlarray_
+"""Stored as vlarray_
 
 .. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
 
-'''
+"""
 
 TABLE = 'TABLE'
-'''Stored as pytable_
+"""Stored as pytable_
 
 .. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
 
-'''
+"""
 
 DICT = 'DICT'
-''' Stored as dict.
+""" Stored as dict.
 
 In fact, stored as pytable, but the dictionary wil be reconstructed.
-'''
+"""
 
 FRAME = 'FRAME'
-''' Stored as pandas DataFrame_
+""" Stored as pandas DataFrame_
 
 .. _DataFrame: http://pandas.pydata.org/pandas-docs/dev/io.html#hdf5-pytables
 
-'''
+"""
 
 SERIES = 'SERIES'
-''' Store data as pandas Series '''
+""" Store data as pandas Series """
 
 PANEL = 'PANEL'
-''' Store data as pandas Panel(4D) '''
+""" Store data as pandas Panel(4D) """
 
 SPLIT_TABLE = 'SPLIT_TABLE'
-''' If a table was split due to too many columns'''
+""" If a table was split due to too many columns"""
 
 DATATYPE_TABLE = 'DATATYPE_TABLE'
-'''If a table contains the data types instead of the attrs'''
+"""If a table contains the data types instead of the attrs"""
 
 SHARED_DATA = 'SHARED_DATA_'
-''' An HDF5 data object for direct interaction '''
+""" An HDF5 data object for direct interaction """

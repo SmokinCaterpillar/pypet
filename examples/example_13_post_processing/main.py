@@ -160,7 +160,7 @@ def main():
                       ncores=2, #My laptop has 2 cores ;-)
                       wrap_mode='QUEUE',
                       filename=filename,
-                      new_file=True)
+                      overwrite_file=True)
 
     traj = env.v_trajectory
 

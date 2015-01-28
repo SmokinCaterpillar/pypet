@@ -457,7 +457,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
-    :param new_file:
+    :param overwrite_file:
 
         If the file already exists it will be overwritten. Otherwise
         the trajectory will simply be added to the file and already
@@ -572,6 +572,11 @@ class HDF5StorageService(StorageService, HasLogger):
     :param derived_parameters_per_run:
 
         Analogous to the above.
+
+    :param display_time:
+
+        How often status messages about loading and storing time should be displayed.
+        Interval in seconds.
 
     :param trajectory:
 
@@ -767,7 +772,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     def __init__(self, filename=None,
                  file_title=None,
-                 new_file=False,
+                 overwrite_file=False,
                  encoding='utf8',
                  complevel=9,
                  complib='zlib',
@@ -780,7 +785,7 @@ class HDF5StorageService(StorageService, HasLogger):
                  large_overview_tables=False,
                  results_per_run=0,
                  derived_parameters_per_run=0,
-                 display_time=30,
+                 display_time=20,
                  trajectory=None):
 
         self._set_logger()
@@ -788,8 +793,6 @@ class HDF5StorageService(StorageService, HasLogger):
         if purge_duplicate_comments and not summary_tables:
             raise ValueError('You cannot purge duplicate comments without having the'
                              ' small overview tables.')
-
-        # If no filename is supplied, take the filename from the trajectory's storage service
 
         # Prepare file names and log folder
         if file_title is None and trajectory is not None:
@@ -805,8 +808,6 @@ class HDF5StorageService(StorageService, HasLogger):
             filename = os.path.join(os.getcwd(), 'hdf5', trajectory.v_name + '.hdf5')
         elif filename is None:
             filename = 'Experiments.hdf5'
-        else:
-            filename = filename
 
         head, tail = os.path.split(filename)
         if not head:
@@ -829,7 +830,7 @@ class HDF5StorageService(StorageService, HasLogger):
         self._hdf5store = None
         self._trajectory_group = None  # link to the top group in hdf5 file which is the start
         # node of a trajectory
-        # remembers whether to purge duplicate comments
+
         self._filters = None
         self._complevel = complevel
         self._complib = complib
@@ -867,10 +868,10 @@ class HDF5StorageService(StorageService, HasLogger):
         if trajectory is not None and not trajectory.v_stored:
             self._srvc_set_config(trajectory=trajectory)
 
-        if new_file:
+        if overwrite_file:
             try:
                 os.remove(filename)
-                self._logger.info('You specified ``new_file=True``, so I deleted file `%s`.' %
+                self._logger.info('You specified ``overwrite_file=True``, so I deleted file `%s`.' %
                                   filename)
             except OSError:
                 pass
@@ -931,7 +932,6 @@ class HDF5StorageService(StorageService, HasLogger):
         self._complevel = complevel
         self._filters = None
 
-
     @property
     def fletcher32(self):
         """ Whether fletcher 32 should be used """
@@ -984,7 +984,6 @@ class HDF5StorageService(StorageService, HasLogger):
     def filename(self, filename):
         self._filename = filename
 
-
     @property
     def _overview_group(self):
         """Direct link to the overview group"""
@@ -993,7 +992,7 @@ class HDF5StorageService(StorageService, HasLogger):
     def _all_get_filters(self, kwargs=None):
         """Makes filters
 
-        Takes pops filter arguments from `kwargs` such that they are not passed
+        Pops filter arguments from `kwargs` such that they are not passed
         on to other functions also using kwargs.
 
         """
@@ -1021,6 +1020,7 @@ class HDF5StorageService(StorageService, HasLogger):
             fletcher32 = self._fletcher32
 
         if self._filters is None:
+            # Recreate the filters if something was changed
             self._filters = pt.Filters(complib=complib, complevel=complevel,
                                        shuffle=shuffle, fletcher32=fletcher32)
             self._hdf5file.filters = self._filters
@@ -1097,9 +1097,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         trajectory.v_storage_service = self # And add the storage service
 
-
-
-
     def load(self, msg, stuff_to_load, *args, **kwargs):
         """Loads a particular item from disk.
 
@@ -1138,7 +1135,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 You can specify how to load the parameters, derived parameters and results
                 as follows:
 
-                 :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
+                :const:`pypet.pypetconstants.LOAD_NOTHING`: (0)
 
                     Nothing is loaded
 
@@ -1164,6 +1161,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 Loads a parameter or result.
 
                 :param stuff_to_load: The item to be loaded
+
+                :param load_data: How to load data
 
                 :param load_only:
 
@@ -1192,7 +1191,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     How to load stuff if ``recursive=True``
                     accepted values as above for loading the trajectory
-
 
             * :const:`pypet.pypetconstants.TREE` ('TREE')
 
@@ -1334,20 +1332,45 @@ class HDF5StorageService(StorageService, HasLogger):
                     If you just want to initialise the store. If yes, only meta information about
                     the trajectory is stored and none of the nodes/leaves within the trajectory.
 
+                :param store_data:
+
+                    How to store data, the following settings are understood:
+
+                     :const:`pypet.pypetconstants.STORE_NOTHING`: (0)
+
+                        Nothing is stored
+
+                    :const:`pypet.pypetconstants.STORE_DATA_SKIPPING`: (1)
+
+                        Data of not already stored nodes is stored
+
+                    :const:`pypet.pypetconstants.STORE_DATA`: (2)
+
+                        Data of all nodes is stored. However, existing data on disk is left
+                        untouched.
+
+                    :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
+
+                        Data of all nodes is stored and data on disk is overwritten.
+                        May lead to fragmentation of the HDF5 file. The user is adviced
+                        to recompress the file manually later on.
+
             * :const:`pypet.pypetconstants.SINGLE_RUN` ('SINGLE_RUN')
 
-                :param stuff_to_store: The single run to be stored
+                :param stuff_to_store: The trajectory
 
-                :param store_data: If all data below `run_XXXXXXXX` should be stored
+                :param store_data: How to store data see above
 
                 :param store_final: If final meta info should be stored
 
+                :param store_full_in_run:
+
+                    If the whole trajectory should be stored and not only data below
+                    run groups of the current run.
+
             * :const:`pypet.pypetconstants.LEAF`
 
-                Stores a parameter or result.
-
-                Modification of results is not supported (yet). Everything stored to disk is
-                set in stone!
+                Stores a parameter or result
 
                 Note that everything that is supported by the storage service and that is
                 stored to disk will be perfectly recovered.
@@ -1393,6 +1416,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     The keys from the '_store' dictionaries determine how the data will be named
                     in the hdf5 file.
+
+                :param store_data:
+
+                    How to store the data, see above for a descitpion.
 
                 :param store_flags: Flags describing how to store data.
 
@@ -1446,15 +1473,26 @@ class HDF5StorageService(StorageService, HasLogger):
                     If `delete_only` is used, whether deleted nodes should also be erased
                     from the leaf nodes themseleves.
 
+                :param recursive:
+
+                    If you want to delete a group node you can recursively delete all its
+                    children.
+
             * :const:`pypet.pypetconstants.GROUP` ('GROUP')
 
                 :param stuff_to_store: The group to store
+
+                :param store_data: How to store data
+
+                :param recursive: To recursively load everything below.
 
             * :const:`pypet.pypetconstants.TREE`
 
                 Stores a single node or a full subtree
 
                 :param stuff_to_store: Node to store
+
+                :param store_data: How to store data
 
                 :param recursive: Whether to store recursively the whole sub-tree
 
@@ -1475,17 +1513,30 @@ class HDF5StorageService(StorageService, HasLogger):
                     Iterable whose items are to be stored. Iterable must contain tuples,
                     for example `[(msg1,item1,arg1,kwargs1),(msg2,item2,arg2,kwargs2),...]`
 
-            * :const:`pypet.pypetconstants.STORAGE_DATA`
+            * :const:`pypet.pypetconstants.ACCESS_DATA`
 
-                Reqeuests and item from the storage, the storage must be opened.
+                Requests and manipulates data within the storage.
+                Storage must be open.
 
                 :param stuff_to_store:
 
-                    A `pypet.storagedata.StorageData` instance
+                    A colon separated name to the data path
 
-                :return:
+                :param item_name:
 
-                    An item from the storage, (c/vl/e)array or table
+                    The name of the data item to interact with
+
+                :param request:
+
+                    A functional request in form of a string
+
+                :param args:
+
+                    Positional arguments passed to the reques
+
+                :param kwargs:
+
+                    Keyword arguments passed to the request
 
             * :const:`pypet.constants.OPEN_FILE`
 

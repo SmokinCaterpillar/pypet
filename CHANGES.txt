@@ -63,7 +63,7 @@ pypet 0.1b.9
 *   Storing a leaf or a group via ``traj.f_store_item(item, overwrite=True)`` now also
     replaces all annotations and comments
 
-*   Passing `new_file=True` to an environment will overwrite the hdf5 file.
+*   Passing `overwrite_file=True` to an environment will overwrite the hdf5 file.
 
 *   `remove_empty_groups` is no longer supported
 

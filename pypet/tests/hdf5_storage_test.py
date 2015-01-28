@@ -1248,7 +1248,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
 
-        env3 = Environment(filename=self.filename, new_file=True, log_folder=None)
+        env3 = Environment(filename=self.filename, overwrite_file=True, log_folder=None)
 
         self.assertFalse(os.path.exists(self.filename))
 

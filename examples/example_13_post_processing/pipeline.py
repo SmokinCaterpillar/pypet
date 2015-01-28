@@ -39,7 +39,7 @@ def main():
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       filename=filename,
-                      new_file=True)
+                      overwrite_file=True)
 
     env.f_pipeline(mypipeline)
 

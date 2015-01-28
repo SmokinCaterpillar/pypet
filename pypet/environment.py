@@ -5,8 +5,8 @@ parameter exploration.
 
 The environment contains and might even create a :class:`~pypet.trajectory.Trajectory`
 container which can be filled with parameters and results (see :mod:`pypet.parameter`).
-Instance of :class:`~pypet.trajectory.SingleRun` based on this trajectory are
-distributed to the user's job function to perform a single run of an experiment.
+Instance of this trajectory are distributed to the user's job function to perform a single run
+of an experiment.
 
 An `Environment` is the handyman for scheduling, it can be used for multiprocessing and takes
 care of organizational issues like logging.
@@ -42,7 +42,7 @@ except ImportError:
 
 try:
     import dill
-    # If you do not set this log-level dill will flood any logging file :-(
+    # If you do not set this log-level dill will flood any log file :-(
     logging.getLogger(dill.__name__).setLevel(logging.WARNING)
 except ImportError:
     dill = None
@@ -80,7 +80,7 @@ def _single_run(args):
 
         1. Path to log files
 
-        2. Names of logger to apply settings to
+        2. Names of loggers to apply settings to
 
         3, The log levels
 
@@ -137,10 +137,9 @@ def _single_run(args):
             _set_log_levels(logger_names, log_levels)
 
         if multiproc and log_path is not None:
-
             # In case of multiprocessing we want to have a log file for each individual process.
             process_name = multip.current_process().name.lower().replace('-', '_')
-            short_filename = '%s_%s.txt' % (traj.v_name, process_name)
+            short_filename = '%s_%s.txt' % (traj.v_crun, process_name)
             filename = os.path.join(log_path, short_filename)
             loggers = [logging.getLogger(logger_name) for logger_name in logger_names]
             try:
@@ -153,8 +152,8 @@ def _single_run(args):
             except IOError as e:
                 pypet_root_logger.error('Could not create file `%s`. '
                                         'I will NOT store log messages of '
-                           'process `%s` to disk. Original Error: `%s`' %
-                           (short_filename, process_name, str(e)))
+                                        'process `%s` to disk. Original Error: `%s`' %
+                                        (short_filename, process_name, str(e)))
 
             if log_stdout:
                 # Also copy standard out and error to the log files
@@ -177,6 +176,7 @@ def _single_run(args):
 
         # Measure time of finishing
         traj._set_finish_time()
+
         # And store some meta data and all other data if desired
         traj._store_final(do_store_data=automatic_storing)
 
@@ -206,6 +206,7 @@ def _single_run(args):
         logging.getLogger('STDERR').error(errstr)
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
     finally:
+        # Finally remove of logging handlers
         if multiproc and handler is not None:
             for logger in loggers:
                 logger.removeHandler(handler)
@@ -213,7 +214,7 @@ def _single_run(args):
 
 
 def _set_log_levels(logger_names, log_levels):
-    """Sets given levels to a list of loggers"""
+    """Sets a given list of levels to a list of loggers"""
     loggers = [logging.getLogger(logger_name) for logger_name in logger_names]
     for idx, logger in enumerate(loggers):
         log_level = log_levels[idx] if len(log_levels) > 1 else log_levels[0]
@@ -222,7 +223,7 @@ def _set_log_levels(logger_names, log_levels):
 
 def _queue_handling(queue_handler, log_path, logger_names, log_levels, log_stdout):
     """ Starts running a queue handler and creates a log file for the queue."""
-    handler = None # Defined here for the finally block
+    handler = None  # Defined here for the finally block
     loggers = []
     if log_levels is not None:
         logging.basicConfig(level=logging.INFO)
@@ -242,12 +243,11 @@ def _queue_handling(queue_handler, log_path, logger_names, log_levels, log_stdou
             except IOError as e:
                 pypet_root_logger = logging.getLogger('pypet')
                 pypet_root_logger.error('Could not create file `%s`. '
-                                         'I will NOT store log messages of '
-                           'queue process to disk. Original Error: `%s`' %
-                           (short_filename, str(e)))
-
+                                        'I will NOT store log messages of '
+                                        'queue process to disk. Original Error: `%s`' %
+                                        (short_filename, str(e)))
             if log_stdout:
-                # Redirect standard out and error to the file
+                # Redirect standard out and error to a logger
                 outstl = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
                 sys.stdout = outstl
 
@@ -335,7 +335,7 @@ class Environment(HasLogger):
 
     :param log_folder:
 
-        Path to a folder where all log files will be stored. Defaults to ``'logs'``.
+        Path to a folder where all log files will be stored. Defaults to ``'./logs'``.
         The log files will be added to a sub-folder with the name of the trajectory
         and the name of the environment.
         If you don't want any log files, set to ``None``.
@@ -354,7 +354,7 @@ class Environment(HasLogger):
     :param log_levels:
 
         List or tuple of log levels with the same length as ``logger_names``.
-        If the length is 1 and ``loger_names`` has more than 1 entry,
+        If the length is 1 and ``logger_names`` has more than 1 entry,
         the log level is used for all loggers.
 
         Default is level ``(logging.INFO,)``.
@@ -366,12 +366,12 @@ class Environment(HasLogger):
 
         Whether the output of STDOUT and STDERR should be recorded into the log files.
         Disable if only logging statement should be recorded. Note if you work with an
-        interactive console like IPython, it is a good idea to set `log_stdout=False`
+        interactive console like IPython, it is a good idea to set ``log_stdout=False``
         to avoid messing up the console output.
 
     :param multiproc:
 
-        Whether or not to use multiprocessing. Default is `False`.
+        Whether or not to use multiprocessing. Default is ``False``.
         Besides the wrap_mode (see below) that deals with how
         storage to disk is carried out in case of multiprocessing, there
         are two ways to do multiprocessing. By using a fixed pool of
@@ -392,7 +392,7 @@ class Environment(HasLogger):
 
     :param ncores:
 
-        If multiproc is `True`, this specifies the number of processes that will be spawned
+        If multiproc is ``True``, this specifies the number of processes that will be spawned
         to run your experiment. Note if you use QUEUE mode (see below) the queue process
         is not included in this number and will add another extra process for storing.
 
@@ -406,7 +406,7 @@ class Environment(HasLogger):
         If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
         0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
         usage is above the specified level (averaged across all cores),
-        pypet will not spawn a new process and wait until
+        *pypet* will not spawn a new process and wait until
         activity falls below the threshold again. Note that in order to avoid dead-lock at least
         one process will always be running regardless of the current utilization.
         If the threshold is crossed a warning will be issued. The warning won't be repeated as
@@ -415,7 +415,7 @@ class Environment(HasLogger):
         For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
         used. Moreover, let's assume that at the moment only 2 processes are
         computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
-        pypet will wait until cpu usage drops below (or equal to) 70 percent again
+        *pypet* will wait until cpu usage drops below (or equal to) 70 percent again
         until it starts a third process to carry out another single run.
 
         The parameters `memory_cap` and `swap_cap` are analogous. These three thresholds are
@@ -440,7 +440,7 @@ class Environment(HasLogger):
 
     :param wrap_mode:
 
-         If multiproc is 1 (True), specifies how storage to disk is handled via
+         If multiproc is ``1`` (``True``), specifies how storage to disk is handled via
          the storage service.
 
          There are two options:
@@ -450,7 +450,7 @@ class Environment(HasLogger):
              Another process for storing the trajectory is spawned. The sub processes
              running the individual single runs will add their results to a
              multiprocessing queue that is handled by an additional process.
-             Note that this requires additional memory since single runs
+             Note that this requires additional memory since the trajectory
              will be pickled and send over the queue for storage!
 
          :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('LOCK')
@@ -471,7 +471,7 @@ class Environment(HasLogger):
         the run. Note in case of multiprocessing this happens anyway since the single run
         container will be destroyed after finishing of the process.
 
-        Moreover, if set to `True` after post-processing it is checked if there is still data
+        Moreover, if set to ``True`` after post-processing it is checked if there is still data
         under `run_XXXXXXXX` and this data is removed if the trajectory is expanded.
 
     :param immediate_postproc:
@@ -502,7 +502,7 @@ class Environment(HasLogger):
     :param continuable:
 
         Whether the environment should take special care to allow to resume or continue
-        crashed trajectories. Default is `False`.
+        crashed trajectories. Default is ``False``.
 
         You need to install dill_ to use this feature. *dill* will make snapshots
         of your simulation function as well as the passed arguments.
@@ -524,7 +524,7 @@ class Environment(HasLogger):
         that is manipulated during runtime (like a multiprocessing manager list)
         in the positional and keyword arguments passed to the run function.
 
-        If you use postprocessing, the expansion of trajectories and continuing of trajectories
+        If you use post-processing, the expansion of trajectories and continuing of trajectories
         is NOT supported properly. There is no guarantee that both work together.
 
 
@@ -604,14 +604,14 @@ class Environment(HasLogger):
     :param do_single_runs:
 
         Whether you intend to actually to compute single runs with the trajectory.
-        If you do not intend to do single runs, than set to `False` and the
+        If you do not intend to do single runs, than set to ``False`` and the
         environment won't add config information like number of processors to the
         trajectory.
 
     :param lazy_debug:
 
-        If `lazy_debug=True` and in case you debug your code (aka you use pydevd and
-        the expression `'pydevd' in sys.modules` is `True`), the environment will use the
+        If ``lazy_debug=True`` and in case you debug your code (aka you use pydevd and
+        the expression ``'pydevd' in sys.modules`` is ``True``), the environment will use the
         :class:`~pypet.storageservice.LazyStorageService` instead of the HDF5 one.
         Accordingly, no files are created and your trajectory and results are not saved.
         This allows faster debugging and prevents *pypet* from blowing up your hard drive with
@@ -625,7 +625,7 @@ class Environment(HasLogger):
     a timestamp as well as a SHA-1 hash code that uniquely identifies your environment.
     If you use git integration, the SHA-1 hash code will be the one from your git commit.
     Otherwise the code will be calculated from the trajectory name, the current time, and your
-    current pypet version.
+    current *pypet* version.
 
     The environment will be named `environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. The first seven
     `X` are the first seven characters of the SHA-1 hash code followed by a human readable
@@ -634,7 +634,7 @@ class Environment(HasLogger):
     All information about the environment can be found in your trajectory under
     `config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs`. Your trajectory could
     potentially be run by several environments due to merging or extending an existing trajectory.
-    Thus, you will be able to track how your trajectory was build over time.
+    Thus, you will be able to track how your trajectory was built over time.
 
     Git information is added to your trajectory as follows:
 
@@ -668,11 +668,11 @@ class Environment(HasLogger):
 
     :param file_title: Title of the hdf5 file (only important if file is created new)
 
-    :param new_file:
+    :param overwrite_file:
 
-        If the file already exists it will be overwritten. Otherwise
+        If the file already exists it will be overwritten. Otherwise,
         the trajectory will simply be added to the file and already
-        existing trajectories are not deleted.
+        existing trajectories are **not** deleted.
 
     :param encoding:
 
@@ -783,7 +783,6 @@ class Environment(HasLogger):
     :param derived_parameters_per_run:
 
         Analogous to the above.
-
 
     """
 
@@ -915,10 +914,12 @@ class Environment(HasLogger):
             # keyword use_hdf5
             storage_service = HDF5StorageService
         if self._traj.v_storage_service is not None:
+            # Use the service of the trajectory
             self._logger.info('Found storage service attached to Trajectory. Will use '
                               'this storage service.')
             self._storage_service = self.v_trajectory.v_storage_service
         else:
+            # Create a new service
             self._storage_service, unused_factory_kwargs = storage_factory(storage_service,
                                                                         self._traj, **kwargs)
             unused_kwargs = unused_kwargs - (set(kwargs.keys()) - unused_factory_kwargs)
@@ -1007,7 +1008,8 @@ class Environment(HasLogger):
         self._multiproc_wrapper = None # The wrapper Service
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
-        # commit, because the logger does not exist at this point, yet.
+        # commit, because the logging files do not exist yet,
+        # and we want this commit to be tracked
         if self._git_repository is not None:
             if new_commit:
                 self._logger.info('Triggered NEW GIT commit `%s`.' % str(self._hexsha))
@@ -1018,10 +1020,10 @@ class Environment(HasLogger):
         self._do_single_runs = do_single_runs
         self._automatic_storing = automatic_storing
         self._clean_up_runs = clean_up_runs
-        self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
+        # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
         if self._do_single_runs:
-
+            # Only add parameters if we actually want single runs to be performed
             config_name = 'environment.%s.multiproc' % self.v_name
             self._traj.f_add_config(Parameter, config_name, self._multiproc,
                                     comment='Whether or not to use multiprocessing.').f_lock()
@@ -1123,6 +1125,7 @@ class Environment(HasLogger):
         self._logger.info('Environment initialized.')
 
     def __repr__(self):
+        """String representation of environment"""
         repr_string = '<%s %s for Trajectory %s>' % (self.__class__.__name__, self.v_name,
                                           self.v_trajectory.v_name)
         return repr_string
@@ -1172,6 +1175,7 @@ class Environment(HasLogger):
         main_log_handler, error_log_handler = None, None
         if self._log_path is not None:
 
+            # Make the log folder
             if not os.path.isdir(self._log_path):
                 os.makedirs(self._log_path)
 
@@ -1260,6 +1264,7 @@ class Environment(HasLogger):
         """
         self.f_set_small_overview(0)
 
+    @deprecated('Please use assignment in environment constructor.')
     def f_set_large_overview(self, switch):
         """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
@@ -1267,6 +1272,7 @@ class Environment(HasLogger):
         self._traj.config.hdf5.overview.derived_parameters_runs = switch
         self._traj.config.hdf5.overview.explored_parameters_runs = switch
 
+    @deprecated('Please use assignment in environment constructor.')
     def f_set_summary(self, switch):
         """Switches summary tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
@@ -1274,6 +1280,7 @@ class Environment(HasLogger):
         self._traj.config.hdf5.overview.results_runs_summary = switch
         self._traj.config.hdf5.purge_duplicate_comments = switch
 
+    @deprecated('Please use assignment in environment constructor.')
     def f_set_small_overview(self, switch):
         """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
@@ -1347,7 +1354,7 @@ class Environment(HasLogger):
 
         It is identical to the SHA1 of the git commit.
         If version control is not used, the environment hash is computed from the
-        trajectory name, the current timestamp and your current pypet version."""
+        trajectory name, the current timestamp and your current *pypet* version."""
         return self._hexsha
 
     @property
@@ -1570,7 +1577,7 @@ class Environment(HasLogger):
         self._traj.v_storage_service = prev_storage_service
 
     def _prepare_sumatra(self):
-        """ Prepares a sumatra record"""
+        """ Prepares a sumatra record """
         reason = self._sumatra_reason
         if reason:
             reason += ' -- '
@@ -1613,7 +1620,7 @@ class Environment(HasLogger):
             reason=reason)
 
     def _finish_sumatra(self):
-        """ Saves a sumatra record"""
+        """ Saves a sumatra record """
 
         finish_time = self._start_timestamp - self._finish_timestamp
         self._record.duration = finish_time
@@ -1636,7 +1643,7 @@ class Environment(HasLogger):
         self._logger.info('Saved sumatra project record with reason: %s' % self._sumatra_reason)
 
     def _prepare_continue(self):
-        """Prepares the continuation of a crashed trajectory"""
+        """ Prepares the continuation of a crashed trajectory """
         if not self._continuable:
             raise RuntimeError('If you create an environment to continue a run, you need to '
                                'set `continuable=True`.')
@@ -1750,10 +1757,6 @@ class Environment(HasLogger):
 
             A pipeline function that defines the task
 
-        :return:
-
-            The number of runs to be executed
-
         """
 
         pip_result = pipeline(self._traj)  # Call the pipeline function
@@ -1773,7 +1776,7 @@ class Environment(HasLogger):
         elif (len(pip_result) == 2 and
               isinstance(pip_result[0], tuple) and
               isinstance(pip_result[1], tuple)):
-
+            # Extract the run and post-processing functions and arguments
             run_tuple = pip_result[0]
             self._runfunc = run_tuple[0]
             if len(run_tuple) > 1:
@@ -1831,7 +1834,7 @@ class Environment(HasLogger):
         self._traj.f_store(only_init=True)
 
     def _make_iterator(self, result_queue, start_run_idx, total_runs):
-        """Returns an iterator over all runs for multiprocessing"""
+        """ Returns an iterator over all runs for multiprocessing """
         return ((self._traj._make_single_run(n),
                  self._log_path,
                  self._logger_names,
@@ -1849,7 +1852,7 @@ class Environment(HasLogger):
                 if not self._traj._is_completed(n))
 
     def _execute_postproc(self, results):
-        """Executes a postprocessing function
+        """ Executes a postprocessing function
 
         :param results:
 
@@ -2304,7 +2307,7 @@ class MultiprocessWrapper(HasLogger):
     enable multiprocessing or you want to implement your own custom multiprocessing.
 
     This Wrapper tool will take a trajectory container and take care that the storage
-    service is multiprocessing safe. Support the ``'LOCK'`` as well as the ``'QUEUE'`` mode.
+    service is multiprocessing safe. Supports the ``'LOCK'`` as well as the ``'QUEUE'`` mode.
     In case of the latter an extra queue process is created if desired.
     This process will handle all storage requests and write data to the hdf5 file.
 
@@ -2321,7 +2324,7 @@ class MultiprocessWrapper(HasLogger):
 
          :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
-             If desirued another process for storing the trajectory is spawned.
+             If desired another process for storing the trajectory is spawned.
              The sub processes running the individual trajectories will add their results to a
              multiprocessing queue that is handled by an additional process.
              Note that this requires additional memory since data
@@ -2371,7 +2374,7 @@ class MultiprocessWrapper(HasLogger):
 
     :param log_path:
 
-        You can specify a absolute path to a folder where log files should be stored
+        You can specify an absolute path to a folder where log files should be stored
         in case you instantiated logging.
         Only useful in case of you use the ``'QUEUE'`` wrapping. Messages from the newly
         started queue process will be logged to a file. Note that
@@ -2383,7 +2386,7 @@ class MultiprocessWrapper(HasLogger):
 
     :param logger_names:
 
-        List of logger names
+        List of logger names for the queue process
 
     :param log_levels:
 
@@ -2391,7 +2394,7 @@ class MultiprocessWrapper(HasLogger):
 
     :param log_stdout
 
-        If stdout and stderr should also be logged.
+        If stdout and stderr of the queue process should also be logged.
 
     """
     def __init__(self, trajectory,
@@ -2432,6 +2435,7 @@ class MultiprocessWrapper(HasLogger):
         self._do_wrap()
 
     def _do_wrap(self):
+        """ Wraps a Storage Service """
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._prepare_queue()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
@@ -2443,6 +2447,7 @@ class MultiprocessWrapper(HasLogger):
                                               pypetconstants.WRAP_MODE_LOCK))
 
     def _prepare_lock(self):
+        """ Replaces the trajectorie's service with a LockWrapper """
         if self._lock is None:
             if self._lock_with_manager:
                 if self._manager is None:
@@ -2459,6 +2464,9 @@ class MultiprocessWrapper(HasLogger):
         self._lock_wrapper = lock_wrapper
 
     def _prepare_queue(self):
+        """ Replaces the trajectorie's service with a queue sender and starts the queue process.
+
+        """
         # For queue mode we need to have a queue in a block of shared memory.
         if self._queue is None:
             if self._manager is None:
@@ -2487,6 +2495,11 @@ class MultiprocessWrapper(HasLogger):
         self._traj.v_storage_service = self._queue_sender
 
     def f_finalize(self):
+        """ Restores the original storage service.
+
+        If a queue process and a manager were used both are shut down.
+
+        """
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
                               'store!')

@@ -30,7 +30,7 @@ def main():
                       ncores=2,
                       use_pool=False, # We cannot use a pool, our network cannot be pickled
                       wrap_mode='QUEUE',
-                      new_file=True)
+                      overwrite_file=True)
 
     #Get the trajectory container
     traj = env.v_trajectory

@@ -1,3 +1,11 @@
+"""
+Module to create storage service from given settings.
+
+Currently only the HDF5StorageService is supported.
+But to be extended in the future.
+
+"""
+
 __author__ = 'Robert Meyer'
 
 import inspect
@@ -16,6 +24,7 @@ def _create_storage(storage_service, trajectory=None, **kwargs):
     storage_service = storage_service(**matching_kwargs)
     unused_kwargs = set(kwargs.keys()) - set(matching_kwargs.keys())
     return storage_service, unused_kwargs
+
 
 def storage_factory(storage_service, trajectory=None, **kwargs):
     """Creates a storage service, to be extended if new storage services are added

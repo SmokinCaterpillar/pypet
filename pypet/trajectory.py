@@ -2558,7 +2558,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._stored = in_store
 
-    @kwargs_api_change('new_name', 'new_filename')
+    @kwargs_api_change('new_filename')
+    @kwargs_api_change('new_name')
     def f_store(self, only_init=False, store_data=pypetconstants.STORE_DATA,
                 store_full_in_run=False):
         """Stores the trajectory to disk.

@@ -38,6 +38,11 @@ Contains the following classes:
 
         Analogous to the above
 
+    * :class:`~pypet.naturalnaming.KnowsTrajectory`
+
+        A dummy class which adds the constant ``KNOWS_TRAJECTORY=True`` to a given class.
+        This signals the trajectory to pass itself onto the class constructor.
+
 """
 
 __author__ = 'Robert Meyer'
@@ -73,7 +78,7 @@ REMOVE = 'REMOVE'  # We want to remove stuff, potentially from disk
 
 # Group Constants
 RESULT = 'RESULT'
-RESULT_GROUP = 'RESULTGROUP'
+RESULT_GROUP = 'RESULT_GROUP'
 PARAMETER = 'PARAMETER'
 PARAMETER_GROUP = 'PARAMETER_GROUP'
 DERIVED_PARAMETER = 'DERIVED_PARAMETER'
@@ -251,8 +256,19 @@ class NNTreeNode(WithAnnotations):
         """
         return self.__class__.__name__
 
+
 class KnowsTrajectory(object):
+    """ A dummy class which adds the constant ``KNOWS_TRAJECTORY=True`` to a given class.
+
+    This signals the trajectory to pass itself onto the class constructor.
+
+    Group nodes *know* the trajectory whereas leaf nodes don't.
+    This has the advantage in case leaf nodes are pickled (because they are sent over a
+    queue, for instance) only the item itself serialized and not the full tree.
+
+    """
     KNOWS_TRAJECTORY = True
+
 
 class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
@@ -653,7 +669,6 @@ class NaturalNamingInterface(HasLogger):
 
         return item_list
 
-
     def _remove_subtree(self, start_node, name, predicate=None):
         """Removes a subtree from the trajectory tree.
 
@@ -866,8 +881,6 @@ class NaturalNamingInterface(HasLogger):
                     raise RuntimeError('You shall not pass!')
                 del child
                 return False
-
-
 
     def _translate_shortcut(self, name):
         """Maps a given shortcut to corresponding name
@@ -1603,7 +1616,6 @@ class NaturalNamingInterface(HasLogger):
         else:
             return data
 
-
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
                     with_links=True, in_search=False, predicate=None):
         """Returns an iterator over nodes hanging below a given start node.
@@ -1674,17 +1686,6 @@ class NaturalNamingInterface(HasLogger):
             else:
                 return (x[2] for x in iterator) # Here we only want the objects themselves
 
-
-
-    @staticmethod
-    def _iter_leaves(node, with_links=True):
-        """ Iterates over all leaves hanging below `node`."""
-        for node in node.f_iter_nodes(recursive=True, with_links=with_links):
-            if node.v_is_leaf:
-                yield node
-            else:
-                continue
-
     def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
                  with_links=True):
         """ Returns a dictionary with pairings of (full) names as keys and instances as values.
@@ -1727,7 +1728,7 @@ class NaturalNamingInterface(HasLogger):
             else:
                 iterator = compat.itervalues(temp_dict)
         else:
-            iterator = self._iter_leaves(node, with_links=with_links)
+            iterator = node.f_iter_leaves(with_links=with_links)
 
         # If not we need to build the dict by iterating recursively over all leaves:
         result_dict = {}
@@ -2859,7 +2860,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             Iterator over all leaf nodes
 
         """
-        return self._nn_interface._iter_leaves(self, with_links=with_links)
+        for node in self.f_iter_nodes(with_links=with_links):
+            if node.v_is_leaf:
+                yield node
 
     def f_get_all(self, name, max_depth=None, shortcuts=True):
         """ Searches for all occurrences of `name` under `node`.
@@ -2906,7 +2909,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         In contrast to `f_get`, fast access is True by default.
 
-
         """
         try:
             return self.f_get(name, fast_access=fast_access,
@@ -2930,7 +2932,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         :param with_links:
 
             If links are considered. Cannot be set to ``False`` if ``auto_load`` is ``True``.
-
 
         :param shortcuts:
 
@@ -2964,10 +2965,11 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                 particular depth of the tree. In case of backwards search if more than
                 one candidate is found regardless of the depth.
 
+            DataNotInStorageError:
+
+                In case auto-loading fails
+
             Any exception raised by the StorageService in case auto-loading is enabled
-
-
-
 
         """
         return self._nn_interface._get(self, name, fast_access=fast_access,
@@ -3104,7 +3106,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         :param recursive:
 
-            Whether recursively all children's children should be stored too.
+            Whether recursively all children should be stored too.
 
         :param store_data:
 
@@ -3161,7 +3163,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         :param recursive:
 
-            Whether recursively all nodes below the last child should be loaded, too.
+            Whether recursively all nodes below the current node should be loaded, too.
             Note that links are never evaluated recursively. Only the linked node
             will be loaded if it does not exist in the tree, yet. Any nodes or links
             of this linked node are not loaded.
@@ -3173,8 +3175,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         :returns:
 
-            The loaded child, in case of grouping ('groupA.groupB.childC') the last
-            node (here 'childC') is returned.
+            The node itself.
 
         """
 
@@ -3243,7 +3244,8 @@ class ParameterGroup(NNGroupNode):
                                                group_type_name=PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
-    f_apar = f_add_parameter
+    f_apar = f_add_parameter  # Abbreviation of the function
+
 
 class ResultGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.results`.
@@ -3302,7 +3304,8 @@ class ResultGroup(NNGroupNode):
                                                group_type_name=RESULT_GROUP,
                                                args=args, kwargs=kwargs)
 
-    f_ares = f_add_result
+    f_ares = f_add_result  # Abbreviation of the function
+
 
 class DerivedParameterGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.derived_parameters`.
@@ -3342,7 +3345,7 @@ class DerivedParameterGroup(NNGroupNode):
                                                group_type_name=DERIVED_PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
-    f_adpar = f_add_derived_parameter
+    f_adpar = f_add_derived_parameter  # Abbreviation of the function
 
 
 class ConfigGroup(NNGroupNode):
@@ -3380,4 +3383,4 @@ class ConfigGroup(NNGroupNode):
                                                group_type_name=CONFIG_GROUP,
                                                args=args, kwargs=kwargs)
 
-    f_aconf=f_add_config
+    f_aconf=f_add_config  # Abbreviation of the function
