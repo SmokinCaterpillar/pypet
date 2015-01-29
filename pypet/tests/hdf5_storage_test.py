@@ -773,7 +773,7 @@ class StorageTest(TrajectoryComparator):
                           filename=filename)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
-        dpar = traj.f_adpar('mmm.gr.dpdp', 666)
+        dpar = traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
 
 
         res = traj.f_add_result('hhh.ll', a='b', c='d')
@@ -818,10 +818,10 @@ class StorageTest(TrajectoryComparator):
             res_table = daroot.overview.results_trajectory
             self.assertTrue((len(res_table)) == 1)
 
-        traj.f_apar('ggg', 43)
-        traj.f_apar('hhh.mmm', 45)
-        traj.f_apar('jjj', 55)
-        traj.f_apar('hhh.nnn', 55555)
+        traj.f_add_parameter('ggg', 43)
+        traj.f_add_parameter('hhh.mmm', 45)
+        traj.f_add_parameter('jjj', 55)
+        traj.f_add_parameter('hhh.nnn', 55555)
 
         traj.f_explore({'ggg':[1,2,3]})
 

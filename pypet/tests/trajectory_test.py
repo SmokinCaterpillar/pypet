@@ -1151,7 +1151,7 @@ class SingleRunTest(unittest.TestCase):
         self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
 
         with self.assertRaises(ValueError):
-            self.traj.f_ares(comment='55')
+            self.traj.f_add_result(comment='55')
 
 
     def test_standard_change_param_change(self):
