@@ -657,7 +657,7 @@ class TrajectoryTest(unittest.TestCase):
 
         ### should raise an error because 'I_do_not_exist', does not exist:
         with self.assertRaises(pex.PresettingError):
-            self.traj._prepare_experiment()
+            self.traj._prepare_experiment(True)
 
     def test_f_get_run_information(self):
         traj = Trajectory()

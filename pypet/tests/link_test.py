@@ -552,13 +552,13 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.traj1.f_load(load_data=2)
 
-        self.traj1.f_backup(self.bfilename)
+        self.traj1.f_backup(backup_filename=self.bfilename)
 
         self.traj3 = load_trajectory(index=-1, filename=self.bfilename, load_all=2)
 
         old_length = len(self.traj1)
 
-        self.traj1.f_merge(self.traj3, remove_duplicates=False)
+        self.traj1.f_merge(self.traj3, backup=False, remove_duplicates=False)
 
         self.assertTrue(len(self.traj1) > old_length)
 
