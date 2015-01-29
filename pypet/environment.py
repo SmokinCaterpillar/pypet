@@ -1828,7 +1828,7 @@ class Environment(HasLogger):
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and '
                           'initialise the store.')
-        self._traj._prepare_experiment()
+        self._traj._prepare_experiment(self._clean_up_runs)
 
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)

@@ -138,8 +138,9 @@ class StorageTest(TrajectoryComparator):
             conf = traj.conf.jjjj
         traj.f_set_properties(fast_access=True)
 
-        with self.assertRaises(ValueError):
-            traj.crun = 43, 'JJJ'
+
+        traj.crun = 43, 'JJJ'
+        self.assertTrue(traj.run_A == 43)
 
         with self.assertRaises(AttributeError):
             traj.f_set_properties(j=7)
@@ -162,7 +163,7 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.hui == ('445', 'kkkk',))
 
-        traj.f_add_link('$', traj.par) # for shizzle
+        traj.f_add_link('klkikju', traj.par) # for shizzle
 
 
         traj.meee = Result('h', 43, hui = 3213, comment='du')
@@ -251,6 +252,14 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(isinstance(traj.rrr, NNGroupNode))
         self.assertTrue(isinstance(traj.rrr.ff, MyParamGroup))
         self.assertTrue(isinstance(traj.par.g, MyParamGroup))
+
+        traj.par = Parameter('hiho', 42, comment='you')
+        traj.par = Parameter('g1.g2.g3.g4.g5', 43)
+
+        self.assertTrue(traj.hiho == 42)
+        self.assertTrue(isinstance(traj.par.g1, ParameterGroup ))
+        self.assertTrue(isinstance(traj.par.g3, ParameterGroup ))
+        self.assertTrue(traj.g3.g5 == 43)
 
 
     def test_shortenings_of_names(self):

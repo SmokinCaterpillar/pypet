@@ -99,14 +99,7 @@ class MergeTest(TrajectoryComparator):
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
 
-        # We cannot copy nodes and delete the other trajectory
-        with self.assertRaises(ValueError):
-            merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=True,
-                                trial_parameter='trial')
-
-
-
-        merged_traj.f_merge(self.trajs[1], move_nodes=True,
+        merged_traj.f_merge(self.trajs[1], move_data=True,
                             delete_other_trajectory=True)
 
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
@@ -297,14 +290,7 @@ class MergeTest(TrajectoryComparator):
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
 
-        # We cannot copy nodes and delete the other trajectory
-        with self.assertRaises(ValueError):
-            merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=True,
-                                trial_parameter='trial')
-
-
-
-        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes,
+        merged_traj.f_merge(self.trajs[1], move_data=not copy_nodes,
                             delete_other_trajectory=delete_traj,
                             trial_parameter='trial')
 
@@ -356,7 +342,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial',
+        merged_traj.f_merge(self.trajs[1], move_data=not copy_nodes, delete_other_trajectory=False, trial_parameter='trial',
                             backup_filename=1)
         merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
@@ -415,7 +401,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_data=False, delete_other_trajectory=False, remove_duplicates=True)
         merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,
@@ -465,7 +451,7 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_nodes=False, delete_other_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_data=False, delete_other_trajectory=False, remove_duplicates=True)
         merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,

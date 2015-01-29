@@ -3132,7 +3132,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                                             type_name=nn.LEAF,
                                                             group_type_name=nn.GROUP,
                                                             args=(instance,), kwargs={},
-                                                            add_prefix=False)
+                                                            add_prefix=False,
+                                                            check_naming=False)
 
                 # If it has a range we add it to the explored parameters
                 if range_length:
@@ -3163,13 +3164,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 else:
                     args = (name,)
                 # If the group does not exist create it'
-                traj_group = parent_traj_node._nn_interface._add_generic(
-                    parent_traj_node,
-                    type_name=nn.GROUP,
-                    group_type_name=nn.GROUP,
-                    args=args,
-                    kwargs={},
-                    add_prefix=False)
+                traj_group = parent_traj_node._nn_interface._add_generic(parent_traj_node,
+                                                                        type_name=nn.GROUP,
+                                                                        group_type_name=nn.GROUP,
+                                                                        args=args,
+                                                                        kwargs={},
+                                                                        add_prefix=False,
+                                                                        check_naming=False)
 
             # Load annotations and comment
             self._grp_load_group(traj_group, load_data=load_data, with_links=with_links,
@@ -3201,14 +3202,16 @@ class HDF5StorageService(StorageService, HasLogger):
                                                with_links=False, recursive=False, trajectory=traj,
                                                as_new=as_new, hdf5_group=self._trajectory_group)
                 if not link_name in new_traj_node._links:
-                    new_traj_node._nn_interface._create_link_inner(new_traj_node ,
+                    new_traj_node._nn_interface._create_link(new_traj_node ,
                                                                    link_name,
-                                                                   traj.f_get(full_name))
+                                                                   traj.f_get(full_name),
+                                                                   check_naming=False)
                 elif load_data == pypetconstants.OVERWRITE_DATA:
                     new_traj_node.f_remove_link(link_name)
-                    new_traj_node._nn_interface._create_link_inner(new_traj_node ,
-                                                                   link_name,
-                                                                   traj.f_get(full_name))
+                    new_traj_node._nn_interface._create_link(new_traj_node ,
+                                                               link_name,
+                                                               traj.f_get(full_name),
+                                                               check_naming=False)
                 else:
                     raise RuntimeError('You shall not pass!')
         except pt.NoSuchNodeError:

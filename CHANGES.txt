@@ -92,6 +92,11 @@ pypet 0.1b.9
 *   One can now set ``store_full_in_run=True`` to store the entire trajectory during a
     single run
 
+*   Abbreviations like `par` and `dpar` can now also be used for item creation and
+    are always translated
+
+*   To streamline the API you can now no longer specify the name of backup files for merging
+
 
 pypet 0.1b.8
 

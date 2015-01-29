@@ -495,7 +495,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('crun',22)
+            self.traj.f_add_parameter('_crun',22)
 
     def test_f_getting_of_children(self):
         my_groups = self.traj.par.f_get_groups()

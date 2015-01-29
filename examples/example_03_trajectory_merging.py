@@ -55,7 +55,7 @@ env2.f_run(multiply)
 # Thus we set move_nodes=True.
 # Finally,we want to delete the other trajectory afterwards since we already have a backup.
 traj1.f_merge(traj2, remove_duplicates=True, backup_filename=True,
-              move_nodes=True, delete_other_trajectory=True)
+              move_data=True, delete_other_trajectory=True)
 
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.
 # But before that we need to load the data we computed during the runs from disk.

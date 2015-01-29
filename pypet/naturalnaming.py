@@ -944,7 +944,7 @@ class NaturalNamingInterface(HasLogger):
 
         return None
 
-    def _add_prefix(self, name, start_node, group_type_name):
+    def _add_prefix(self, split_names, start_node, group_type_name):
         """Adds the correct sub branch prefix to a given name.
 
         Usually the prefix is the full name of the parent node. In case items are added
@@ -953,10 +953,9 @@ class NaturalNamingInterface(HasLogger):
         For example, this could be 'parameters' for parameters or 'results.run_00000004' for
         results added to the fifth single run.
 
-        :param name:
+        :param split_names:
 
-            Name of new node. Colon notation is possible to generate group nodes on the
-            fly (e.g. 'mynewgroupA.mynewgroupB.myresult').
+            List of names of the new node (e.g. ``['mynewgroupA', 'mynewgroupB', 'myresult']``).
 
         :param start_node:
 
@@ -978,69 +977,67 @@ class NaturalNamingInterface(HasLogger):
         # In case of derived parameters and results we also need to add prefixes containing the
         # subbranch and the current run in case of a single run.
         # For instance, a prefix could be 'results.runs.run_00000007'.
-
-        add = ''
-
+        prepend = []
         if start_node.v_depth < 3 and not group_type_name == GROUP:
             if start_node.v_depth == 0:
 
                 if group_type_name == DERIVED_PARAMETER_GROUP:
-                    if name == 'derived_parameters' or name.startswith('derived_parameters.'):
-                        return name
+                    if split_names[0] == 'derived_parameters':
+                        return split_names
                     else:
-                        add += 'derived_parameters.'
+                        prepend += ['derived_parameters']
 
                 elif group_type_name == RESULT_GROUP:
-                    if name == 'results' or name.startswith('results.'):
-                        return name
+                    if split_names[0] == 'results':
+                        return split_names
                     else:
-                        add += 'results.'
+                        prepend += ['results']
 
                 elif group_type_name == CONFIG_GROUP:
-                    if name == 'config' or name.startswith('config.'):
-                        return name
+                    if split_names[0] == 'config':
+                        return split_names
                     else:
-                        add += 'config.'
+                        prepend += ['config']
 
                 elif group_type_name == PARAMETER_GROUP:
-                    if name == 'parameters' or name.startswith('parameters.'):
-                        return name
+                    if split_names[0] == 'parameters':
+                        return split_names[0]
                     else:
-                        add += 'parameters.'
+                        prepend += ['parameters']
                 else:
                     raise RuntimeError('Why are you here?')
 
-            # Check if we have to add
-            if ('.$.' in name or name.startswith('$.') or name.endswith('.$') or name == '$' or
-                            '.' + pypetconstants.RUN_NAME in name or
-                    name.startswith(pypetconstants.RUN_NAME)):
+            # Check if we have to add a prefix containing the current run
+            if '$' in split_names:
                 pass
-
-            elif name and (root._is_run and (group_type_name == RESULT_GROUP or
+            elif any([name.startswith(pypetconstants.RUN_NAME) for name in split_names]):
+                pass
+            elif split_names and (root._is_run and (group_type_name == RESULT_GROUP or
                                                      group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
-                    add += 'runs.' + root.v_crun + '.'
+                    prepend += ['runs', root.v_crun]
 
                 elif start_node.v_depth == 1:
 
-                    if name == 'runs':
-                        return name
+                    if len(split_names) == 1 and split_names[0] == 'runs':
+                        return split_names
                     else:
-                        add += 'runs.' + root.v_crun + '.'
+                        prepend += ['runs', root.v_crun]
 
-                elif (start_node.v_depth == 2 and start_node.v_name == 'runs'):
-                    add += root.v_crun + '.'
+                elif start_node.v_depth == 2 and start_node.v_name == 'runs':
+                    prepend += [root.v_crun]
 
-        name = add + name
+        if prepend:
+            split_names = prepend + split_names
 
-        return name
+        return split_names
 
     @staticmethod
-    def _determine_types(start_node, name, add_leaf):
+    def _determine_types(start_node, first_name, add_leaf):
         """Determines types for generic additions"""
         if start_node.v_is_root:
-            where = name.split('.')[0]
+            where = first_name
         else:
             where = start_node._branch
 
@@ -1054,7 +1051,8 @@ class NaturalNamingInterface(HasLogger):
         else:
             return type_tuple[0], type_tuple[0]
 
-    def _add_generic(self, start_node, type_name, group_type_name, args, kwargs, add_prefix=True):
+    def _add_generic(self, start_node, type_name, group_type_name, args, kwargs,
+                     add_prefix=True, check_naming=True):
         """Adds a given item to the tree irrespective of the subtree.
 
         Infers the subtree from the arguments.
@@ -1094,6 +1092,15 @@ class NaturalNamingInterface(HasLogger):
 
             Additional keyword arguments that might be handed over to the instance constructor.
 
+        :param add_prefix:
+
+            If a prefix group, i.e. `results`, `config`, etc. should be added
+
+        :param check_naming:
+
+            If it should be checked for correct namings, can be set to ``False`` if data is loaded
+            and we know that all names are correct.
+
         :return: The new added instance
 
         """
@@ -1131,22 +1138,40 @@ class NaturalNamingInterface(HasLogger):
                                  'Either pass the name as positional argument or as a keyword '
                                  'argument `name`.')
 
+        if check_naming:
+            name = self._replace_wildcards(name)
+            split_names = name.split('.')
+            for idx, name in enumerate(split_names):
+                translated_shortcut = self._translate_shortcut(name)
+                if translated_shortcut:
+                    split_names[idx] = translated_shortcut
+
+            # First check if the naming of the new item is appropriate
+            faulty_names = self._check_names(split_names, start_node)
+
+            if faulty_names:
+                full_name = '.'.join(split_names)
+                raise ValueError(
+                    'Your Parameter/Result/Node `%s` contains the following not admissible names: '
+                    '%s please choose other names.' % (full_name, faulty_names))
+        else:
+            split_names = name.split('.')
+
+        # Check if the name fulfils the prefix conditions, if not change the name accordingly.
+        if add_prefix:
+            split_names = self._add_prefix(split_names, start_node, group_type_name)
+
         if group_type_name == GROUP:
             add_leaf = type_name != group_type_name # If this is equal we add a group node
-            group_type_name, type_name = self._determine_types(start_node, name, add_leaf)
+            group_type_name, type_name = self._determine_types(start_node, split_names[0],
+                                                               add_leaf)
 
         # Check if we are allowed to add the data
         if self._root_instance._is_run and type_name in SENSITIVE_TYPES:
             raise TypeError('You are not allowed to add config or parameter data or groups '
                             'during a single run.')
 
-        # Check if the name fulfils the prefix conditions, if not change the name accordingly.
-        if add_prefix:
-            name = self._add_prefix(name, start_node, group_type_name)
-
-        name = self._replace_wildcards(name)
-
-        return self._add_to_tree(start_node, name, type_name, group_type_name, instance,
+        return self._add_to_tree(start_node, split_names, type_name, group_type_name, instance,
                                  constructor, args, kwargs)
 
     def _replace_wildcards(self, name,):
@@ -1180,7 +1205,7 @@ class NaturalNamingInterface(HasLogger):
                 self._nodes_and_leaves_runs_sorted[name][run_name]\
                     [full_name] = new_node
 
-    def _add_to_tree(self, start_node, name, type_name, group_type_name,
+    def _add_to_tree(self, start_node, split_names, type_name, group_type_name,
                      instance, constructor, args, kwargs):
         """Adds a new item to the tree.
 
@@ -1190,9 +1215,9 @@ class NaturalNamingInterface(HasLogger):
 
             Parental node the adding of the item was initiated from.
 
-        :param name:
+        :param split_names:
 
-            Name of the new item
+            List of names of the new item
 
         :param type_name:
 
@@ -1228,24 +1253,13 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        # First check if the naming of the new item is appropriate
-        split_name = name.split('.')
-
-        faulty_names = self._check_names(split_name, start_node)
-
-        if faulty_names:
-            raise ValueError(
-                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
-                '%s please choose other names.'
-                % (name, faulty_names))
-
         # Then walk iteratively from the start node as specified by the new name and create
         # new empty groups on the fly
         try:
             act_node = start_node
-            last_idx = len(split_name) - 1
+            last_idx = len(split_names) - 1
             # last_name = start_node.v_crun
-            for idx, name in enumerate(split_name):
+            for idx, name in enumerate(split_names):
 
                 if name not in act_node._children:
 
@@ -1323,9 +1337,40 @@ class NaturalNamingInterface(HasLogger):
                                            full_name=act_node.v_full_name + '.' + name,
                                            run_name=run_name)
 
-    def _create_link_inner(self, act_node, name, instance):
-        """ Creates a link without costly name checking
+    def _create_link(self, act_node, name, instance, check_naming=True):
+        """Creates a link and checks if names are appropriate
         """
+        if check_naming:
+            if '.' in name:
+                raise ValueError('`.` is not allowed in the name of a link!')
+
+            translated_shortcut = self._translate_shortcut(name)
+            if translated_shortcut:
+                name = translated_shortcut
+
+            name = self._replace_wildcards(name)
+
+            faulty_names = self._check_names([name], act_node)
+
+            if faulty_names:
+                raise ValueError(
+                    'Your Parameter/Result/Node `%s` contains the following not admissible names: '
+                    '%s please choose other names.'
+                    % (name, faulty_names))
+
+            if instance.v_is_root:
+                raise ValueError('You cannot create a link to the root node')
+
+            if act_node.v_is_root and name in SUBTREE_MAPPING:
+                raise ValueError('`%s` is a reserved name for a group under root.' % name)
+
+            if name in act_node._children:
+                raise ValueError('`%s` has already a child or link called `%s`, '
+                                 'cannot add a link with this name.' % (act_node.v_full_name, name))
+
+            if not self._root_instance.f_contains(instance):
+                raise ValueError('You can only link to items within the trajectory tree!')
+
         run_name = act_node._run_branch
         if name.startswith(pypetconstants.RUN_NAME):
             self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
@@ -1347,37 +1392,6 @@ class NaturalNamingInterface(HasLogger):
                                       run_name=run_name)
 
         return instance
-
-    def _create_link(self, act_node, name, instance):
-        """Creates a link and checks if names are appropriate
-        """
-        if '.' in name:
-            raise ValueError('`.` is not allowed in the name of a link!')
-
-        name = self._replace_wildcards(name)
-
-        faulty_names = self._check_names([name], act_node)
-
-        if faulty_names:
-            raise ValueError(
-                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
-                '%s please choose other names.'
-                % (name, faulty_names))
-
-        if instance.v_is_root:
-            raise ValueError('You cannot create a link to the root node')
-
-        if act_node.v_is_root and name in SUBTREE_MAPPING:
-            raise ValueError('`%s` is a reserved name for a group under root.' % name)
-
-        if name in act_node._children:
-            raise ValueError('`%s` has already a child or link called `%s`, '
-                             'cannot add a link with this name.' % (act_node.v_full_name, name))
-
-        if not self._root_instance.f_contains(instance):
-            raise ValueError('You can only link to items within the trajectory tree!')
-
-        return self._create_link_inner(act_node, name, instance)
 
     def _check_names(self, split_names, parent_node=None):
         """Checks if a list contains strings with invalid names.
@@ -1425,9 +1439,9 @@ class NaturalNamingInterface(HasLogger):
             # if ' ' in split_name:
             # faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
 
-            if not self._translate_shortcut(split_name) is None:
-                faulty_names = '%s `%s` is already an important shortcut,' % (
-                    faulty_names, split_name)
+            # if not self._translate_shortcut(split_name) is None:
+            #     faulty_names = '%s `%s` is already an important shortcut,' % (
+            #         faulty_names, split_name)
 
         name = split_names[-1]
         location = '.'.join(split_names[:-1])
