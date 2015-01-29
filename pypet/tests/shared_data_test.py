@@ -53,7 +53,7 @@ def write_into_shared_storage(traj):
     ea.f_append(np.ones((1,10))*idx)
     root.info('4. sequential')
     vla = daarrays.vla
-    vla.f_append(np.ones(idx+1)*idx)
+    vla.f_append(np.ones(idx+2)*idx)
     root.info('5. Block')
     if idx > ncores+2:
         x, y = a[idx-ncores], idx-ncores
@@ -584,12 +584,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 x, y = ea[idx, 9], ea[idx, 8]
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-                if len(vla[idx])>1:
-                    x, y = vla[idx][0], vla[idx][1]
-                else:
-                    the_short_one += 1
-                if the_short_one > 1:
-                    raise RuntimeError('You have more than one vl entry with length 1')
+                x, y = vla[idx][0], vla[idx][1]
                 if x != y:
                     raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
 
