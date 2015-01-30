@@ -11,6 +11,9 @@ import os
 
 from pypet.tests.all_single_core_tests import *
 
+del TestOtherHDF5Settings
+del TestOtherHDF5Settings2
+
 from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
     MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\
     MultiprocLinkQueueTest, CapTest
