@@ -2,8 +2,7 @@ __author__ = 'Robert Meyer'
 
 import os # To allow file paths working under Windows and Linux
 
-from pypet import Environment
-from pypet.utils.explore import cartesian_product
+from pypet import Environment, Result
 
 def multiply(traj):
     """Example of a sophisticated simulation that involves multiplying two values.
@@ -17,7 +16,7 @@ def multiply(traj):
     """
     z=traj.mylink1*traj.mylink2 # And again we now can also use the different names
     # due to the creation of links
-    traj.res.z =  z, 'Result of our simulation!'
+    traj.res = Result('runs.$.z', z, 'Result of our simulation!')
 
 
 # Create an environment that handles running
