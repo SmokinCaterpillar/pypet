@@ -12,10 +12,11 @@ comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
 
+
 .. _more-on-trajectories:
 
 ======================================
-More on Trajectories and Single Runs
+More on Trajectories
 ======================================
 
 ------------------------------------
@@ -31,16 +32,6 @@ Throughout the documentation instantiated objects of the
 :class:`~pypet.trajectory.Trajectory` class are usually labeled ``traj``.
 Probably you as user want to follow this convention, because writing the not abbreviated expression
 ``trajectory`` all the time in your code can become a bit annoying after some time.
-
-If you carry out an experiment and actively explore the parameter space,
-you will encounter a second class of top-level container called
-:class:`~pypet.trajectory.SingleRun`. This one is derived or created by the original *trajectory*
-[#]_ and is used during the individual runs of your experiment. *Single runs* are not much
-different from *trajectories* except that they provide a little bit less functionality and
-only contain on particular parameter combination out of the full explored ranges.
-Since they are not much different from the original *trajectory*, within code they are
-also labeled with ``traj``. We will come back to *single runs* later, but for now let's focus
-on a *trajectory*.
 
 The *trajectory* container instantiates a tree with *groups* and *leaf* nodes, whereas
 the trajectory object itself is the root node of the tree.
@@ -140,8 +131,8 @@ you can only add parameters (i.e. ``traj.parameters.f_add_parameter(...)`` but
 ``traj.parameters.f_add_result(...)`` does not work). For other subbranches
 this is analogous.
 
-There are two ways to add these objects, either you already have an instantiation of the
-object, i.e. you add a given parameter:
+There are two ways to add these objects with the above functions,
+either you already have an instantiation of the object, i.e. you add a given parameter:
 
     >>> my_param = Parameter('subgroup1.subgroup2.myparam',42, comment='I am an example')
     >>> traj.f_add_parameter(my_param)
@@ -169,16 +160,22 @@ the subgroups ``traffic`` and inside there the group ``mobiles``.
 If you add the parameter ``traj.f_add_parameter('traffic.mobiles.ncycles', data = 11)`` afterwards,
 you will find this parameter also in the group ``traj.parameters.traffic.ncycles``.
 
+
+^^^^^^^^^^^^^^^^^
+Group Nodes
+^^^^^^^^^^^^^^^^^
+
+
 Besides *leaves* you can also add empty *groups* to the trajectory
 (and to all subgroups, of course) via:
 
-* :func:`~pypet.naturalnaming.ConfigGroup.f_add_config_group`
+    * :func:`~pypet.naturalnaming.ConfigGroup.f_add_config_group`
 
-* :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter_group`
+    * :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter_group`
 
-* :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
+    * :func:`~pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter_group`
 
-* :func:`~pypet.naturalnaming.ResultGroup.f_add_result_group`
+    * :func:`~pypet.naturalnaming.ResultGroup.f_add_result_group`
 
 As before, if you create the group ``groupA.groupB.groupC`` and
 if group A and B were non-existent before, they will be created on the way.
@@ -277,6 +274,72 @@ a group called ``run_XXXXXXXX`` (where *run_XXXXXXXXX* is
 the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
 via :func:`~pypet.trajectory.SingleRun.f_store_items`.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+More Ways to Add Data (and how to manipulate it)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Moreover, for each of the adding functions,
+there exists a shorter abbreviation that spares you typing:
+
+    * :func:`~pypet.naturalnaming.ConfigGroup.f_aconf`
+
+    * :func:`~pypet.naturalnaming.ParameterGroup.f_apar`
+
+    * :func:`~pypet.naturalnaming.DerivedParameterGroup.f_adpar`
+
+    * :func:`~pypet.naturalnaming.ResultGroup.f_ares`
+
+Besides these functions, there exists the possibility to add new leaves via generic
+attribute setting.
+
+For example, you could also add a parameter (or result) as follows:
+
+    >>> traj.parameters.myparam = Parameter('myparam', 42, comment='I am a useful comment!')
+
+Which creates a novel parameter `myparam` under ``traj.parameters``.
+It is important how you choose the name of your parameter or result.
+If the names match (``.myparam`` and ``'myparam'``) as above,
+or if your parameter has the empty string as a name
+(``traj.parameters.myparam = Parameter('', 42)``), the parameter will be added
+and named as the generic attribute, here ``myparam``.
+However, if the names disagree or if the parameter or result name contains groups,
+the generic attribute will become also a group node.
+For instance,
+
+    >>> traj.parameters.mygroup = Parameter('myparam', 42)
+
+creates a new parameter at ``traj.parameters.mygroup.myparam`` and ``mygroup`` is a new
+group node, respectively.
+Likewise
+
+    >>> traj.parameters.mygroup = Parameter('mysubgroup.myparam', 42)
+
+adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
+
+Finally, there`s an even simpler way to add a parameter or result:
+
+    >>> traj.parameters.myparam = 42, 'I am a useful comment'
+
+Accordingly, this is internally translated into
+
+    >>> traj.parameters.f_add_leaf('myparam', 42, comment='I am a useful comment')
+
+This only works in case of using the assignment operator ``=`` in combination with
+a tuple of exactly length 2 and the second entry of the tuple being
+a comment string.
+
+For instance, the following does not work in terms of creating a new parameter:
+
+    >>> traj.parameters.anotherparam = 42
+
+Instead, this will search for the leaf ``anotherparam`` in the trajectory tree and
+try to change it's value to ``42``. If it doesn't find the parameter, *pypet*
+throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Test'`` may also
+throw an ``AtributeError`` but in the opposite case if ``myparam`` already exists in your tree.
+
+The different ways of adding data are also explained in example :ref:`example-15`.
+
 
 .. _more-on-access:
 

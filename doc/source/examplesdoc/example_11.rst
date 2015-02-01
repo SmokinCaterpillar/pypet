@@ -2,7 +2,7 @@
 .. _example-11:
 
 =================================
-11 Large scale BRIAN simulation
+Large scale BRIAN simulation
 =================================
 
 This example involves a large scale simulation of a BRIAN_ network :ref:`brian-framework`.

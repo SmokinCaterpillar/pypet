@@ -2,7 +2,7 @@
 .. _example-13:
 
 ========================
-13 Post-Processing
+Post-Processing
 ========================
 
 Here you find an example of post-processing.

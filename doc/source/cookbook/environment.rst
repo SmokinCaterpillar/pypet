@@ -27,50 +27,7 @@ lost if not manually stored.
 
 You start your simulations by creating an environment object:
 
->>> env = Environment(trajectory='trajectory',
-                 add_time=True,
-                 comment='',
-                 dynamic_imports=None,
-                 automatic_storing=True,
-                 log_folder=None,
-                 log_level=logging.INFO,
-                 log_stdout=True,
-                 multiproc=False,
-                 ncores=1,
-                 use_pool=False,
-                 cpu_cap=1.0,
-                 memory_cap=1.0,
-                 swap_cap=1.0,
-                 wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                 clean_up_runs=True,
-                 immediate_postproc=False,
-                 deep_copy_data=False,
-                 continuable=False,
-                 continue_folder=None,
-                 delete_continue=True,
-                 use_hdf5=True,
-                 filename=None,
-                 file_title=None,
-                 encoding='utf8',
-                 complevel=9,
-                 complib='zlib',
-                 shuffle=True,
-                 fletcher32=False,
-                 pandas_format='fixed',
-                 pandas_append=False,
-                 purge_duplicate_comments=True,
-                 summary_tables = True,
-                 small_overview_tables=True,
-                 large_overview_tables=False,
-                 results_per_run=0,
-                 derived_parameters_per_run=0,
-                 git_repository = None,
-                 git_message='',
-                 sumatra_project=None,
-                 sumatra_reason = '',
-                 sumatra_label = None,
-                 do_single_runs=True,
-                 lazy_debug=False):
+>>> env = Environment(trajectory='trajectory', comment='A useful comment',)
 
 You can pass the following arguments. Note usually you only have to change very few of these
 because most of the time the default settings are sufficient.
@@ -107,7 +64,7 @@ because most of the time the default settings are sufficient.
     two classes named ``'MyCustomParameterClass'`` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
-* automatic_storing
+* ``automatic_storing``
 
     If ``True`` the trajectory will be stored at the end of the simulation and
     single runs will be stored after their completion.
@@ -355,6 +312,7 @@ because most of the time the default settings are sufficient.
     This allows faster debugging and prevents *pypet* from blowing up your hard drive with
     trajectories that you probably not want to use anyway since you just debug your code.
 
+
 If you use the standard ``HDF5StorageService`` you can pass the following additional
 keyword arguments to the environment. These are handed over to the service:
 
@@ -468,6 +426,7 @@ keyword arguments to the environment. These are handed over to the service:
 
 .. _config-added-by-environment:
 
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Config Data added by the Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -510,11 +469,11 @@ The following tables are created:
 
 * The branch tables:
 
-    `parameters`
+    `parameters_overview`
 
         Containing all parameters, and some information about comments, length etc.
 
-    `config`,
+    `config_overview`,
 
         As above, but config parameters
 
@@ -759,9 +718,7 @@ Running an Experiment
 
 In order to run an experiment, you need to define a job or a top level function that specifies
 your simulation. This function gets as first positional argument the :
-:class:`~pypet.trajectory.Trajectory` container,
-or to be more precise a :class:`~pypet.trajectory.SingleRun` container
-(see :ref:`more-on-trajectories` and :class:`~pypet.trajectory.SingleRun`),
+:class:`~pypet.trajectory.Trajectory` container (see :ref:`more-on-trajectories`),
 and optionally other positional and keyword arguments of your choice.
 
 .. code-block:: python
@@ -785,8 +742,8 @@ The argument list ``args`` and keyword dictionary ``kwargs`` are directly handed
 
 The :func:`~pypet.environment.Environment.f_run` will return a list of tuples.
 Whereas the first tuple entry is the index of the corresponding run and the second entry
-of the tuple
-is the result returned by your run function (for the example above this would simply always be
+of the tuple is the result returned by your run function
+(for the example above this would simply always be
 the string ``'fortytwo'``). In case you use multiprocessing these tuples are **NOT** in the order
 of the run indices but in the order of their finishing time!
 
@@ -956,6 +913,7 @@ the run function followed by the positional and keyword arguments:
     def mypipeline(traj):
         #...
         return myjobfunc, args, kwargs
+
 
 .. _more-on-continuing:
 

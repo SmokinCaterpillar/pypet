@@ -2,7 +2,7 @@
 .. _example-02:
 
 =======================================
-02 Natural Naming, Storage and Loading
+Natural Naming, Storage and Loading
 =======================================
 
 Download: :download:`example_02_trajectory_access_and_storage.py <../../../examples/example_02_trajectory_access_and_storage.py>`

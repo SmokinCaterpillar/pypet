@@ -421,7 +421,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @property
     def v_is_run(self):
-        """`True if trajectory is used during a single run initiated by an environment.
+        """ ``True`` mak if trajectory is used during a single run initiated by an environment.
 
         Accordingly, the functionality of the trajectory is reduced.
 
@@ -877,7 +877,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         :param include_default_run:
 
-            If results found under ``run_ALL``should be accounted for every run or simply be
+            If results found under ``run_ALL`` should be accounted for every run or simply be
             ignored.
 
         :param use_indices:
@@ -1379,7 +1379,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :param kwargs:
 
             Other arguments passed to the storage service constructor. Don't pass any
-            other kwargs and ``storage_service=None`,
+            other kwargs and ``storage_service=None``,
             if you don't want to change the current service.
 
         """
@@ -2519,7 +2519,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         :param store_data:
 
-            Only considered if ``only_init=False`. Choose of the following:
+            Only considered if ``only_init=False``. Choose of the following:
 
                 * :const:`pypet.pypetconstants.STORE_NOTHING`: (0)
 

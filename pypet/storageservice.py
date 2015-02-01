@@ -1179,7 +1179,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     that should NOT be loaded here. You cannot use `load_except` and
                     `load_only` at the same time.
 
-            * :conts:`pypet.pyetconstants.GROUP`
+            * :const:`pypet.pyetconstants.GROUP`
 
                 Loads a group a node (comment and annotations)
 

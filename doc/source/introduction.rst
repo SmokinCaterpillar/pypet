@@ -157,20 +157,20 @@ Next, simply install *pypet* via ``pip install --pre pypet``
 The package release can also be found on `pypi.python.org`_. Download, unpack
 and ``python setup.py install`` it.
 
+**Or**
 
-*pypet* has been tested for python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
-Travis-CI_. However, so far there was only limited testing under
-Windows.
-
-In principle, *pypet* should work for **Windows** out of the box if you have installed
-all prerequisites. You have to download the tar file from `pypi.python.org`_ and
+In case you use **Windows**, you have to download the tar file from `pypi.python.org`_ and
 unzip it [#tar]_. Next, open a windows terminal [#win]_
 and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
 As above run from the terminal ``python setup.py install``.
 
+*pypet* has been tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
 By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
 
 .. _Travis-CI: https://www.travis-ci.org/
+
+.. _Appveyor: http://www.appveyor.com/
 
 .. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
 
@@ -248,9 +248,8 @@ of your simulation.
 As in the example code snippet in the next subsection, the environment will provide a
 :class:`~pypet.trajectory.Trajectory` container for you to fill in your parameters.
 During the execution of your simulation with individual parameter combinations
-a so called :class:`~pypet.trajectory.SingleRun` container (a reduced version of the
-*trajectory* containing only one particular parameter combination) can be used to store results.
-All data that you hand over to a *trajectory* or *single run* is automatically
+the trajectory can also be used to store results.
+All data that you hand over to a *trajectory* is automatically
 stored into an HDF5 file by the :class:`~pypet.storageservice.HDF5StorageService`.
 
 .. image:: figures/layout.png
@@ -328,24 +327,23 @@ two values:
         z=traj.x * traj.y
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
-This is our simulation function `multiply`. The function makes use of a
+This is our simulation function ``multiply``. The function makes use of a
 :class:`~pypet.trajectory.Trajectory` container which manages our parameters.
-To be precise here, `traj` is in fact
-a :class:`~pypet.trajectory.SingleRun` container and not a full *trajectory*.
-The full *trajectory* contains all parameter combinations for which we want to evaluate
-our simulation. This concept of parameter exploration will be introduced soon below.
-Yet, a *single run* is a reduced version of a full *trajectory* that usually only
-contains one particular parameter combination and not the full explored parameter ranges.
-But for convenience over the course of this documentation, I also use the variable
-``traj`` in the individual runs to refer to a *single run* container. You can treat a *single run* and
-operate with this container almost in the same way as a *trajectory*, apart from slightly reduced
-functionality.
+Here the *trajectory* holds a particular parameter space point, i.e. a particular
+choice of :math:`x` and :math:`y`. In general a *trajectory* contains many parameter settings,
+i.e. choices of points sampled from the parameter space. Thus, by sampling points from
+the space one follows a trajectory through the parameter space -
+therefore the name of the container.
+
+Moreover, the *envrionment* will take
+care that the function ``multiply`` is called with each choice of parameters once.
+The underlying concept of parameter exploration will be introduced soon below.
 
 We can access the parameters simply by natural naming,
 as seen above via ``traj.x`` and ``traj.y``. The value of `z` is simply added as a result to the
 ``traj`` container.
 
-After the definition of the job that we want to simulate, we create an environment which
+After the definition of the job that we want to simulate, we create an *environment* which
 will run the simulation.
 
 .. code-block:: python
@@ -362,8 +360,7 @@ descriptive comment that is attached to the trajectory. You can pass many more (
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
-the property ``v_trajectory``. This time we work with a full :class:`~pypet.trajectory.Trajectory`
-and not with a :class:`~pypet.trajectory.SingleRun`.
+the property ``v_trajectory``.
 
 .. code-block::python
 
@@ -486,8 +483,6 @@ Cheers,
 .. _pandas: http://pandas.pydata.org/
 
 .. _BRIAN: http://briansimulator.org/
-
-.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 

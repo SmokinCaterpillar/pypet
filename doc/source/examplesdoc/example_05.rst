@@ -2,7 +2,7 @@
 .. _example-05:
 
 ================================================
-05 Custom Parameter (Strange Attractor Inside!)
+Custom Parameter (Strange Attractor Inside!)
 ================================================
 
 Download: :download:`example_05_custom_parameter.py <../../../examples/example_05_custom_parameter.py>`

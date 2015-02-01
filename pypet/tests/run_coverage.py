@@ -11,8 +11,8 @@ import os
 
 from pypet.tests.all_single_core_tests import *
 
-del TestOtherHDF5Settings
-del TestOtherHDF5Settings2
+del TestOtherHDF5Settings # remove the test for speed
+del TestOtherHDF5Settings2 # remove the test for speed
 
 from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
     MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\

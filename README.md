@@ -46,6 +46,8 @@ Python 2.6, 2.7, 3.3, 3.4
 
 * scipy >= 0.9.0
 
+* HDF5 >= 1.8.9
+
 If you use Python 2.6 you also need
 
 * ordereddict >= 1.1
@@ -116,26 +118,28 @@ This project encompasses these core modules:
 Install
 ---------------------------
 
-Simply install via `pip install --pre pypet` (`--pre` since the current version is still *beta*)
+If you don't have all prerequisites (*numpy*, *scipy*, *tables*, *pandas*) install them first.
+These are standard python packages, so chances are high that they are already installed.
+By the way, in case you use the python package manager ``pip``
+you can list all installed packages with ``pip freeze``.
 
-Or
+Next, simply install *pypet* via ``pip install --pre pypet``
+(``--pre`` since the current version is still *beta*)
 
-Package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
-and `python setup.py install` it.
+**Or**
 
+The package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
+and ``python setup.py install`` it.
 
-*pypet* has been tested for python 2.6 and python 2.7 for Linux using
-*Travis-CI* (https://www.travis-ci.org/). However, so far there was only limited testing under
-Windows.
+**Or**
 
-In principle, *pypet* should work for **Windows** out of the box if you have installed
-all prerequisites (pytables, pandas, scipy, numpy). Yet, installing with
-pip is not possible. You have to download the tar file from https://pypi.python.org/pypi/pypet and
-unzip it (using WinRaR, 7zip, etc. You might need to unpack it twice, first
-the `tar.gz` file and then the remaining `tar` file in the subfolder). Next, open a windows
-terminal and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above run from the terminal `python setup.py install`.
+In case you use **Windows**, you have to download the tar file from https://pypi.python.org/pypi/pypet 
+and unzip it. Next, open a windows terminal
+and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
+As above run from the terminal ``python setup.py install``.
 
+*pypet* has been tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
 By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
 
@@ -339,7 +343,7 @@ Miscellaneous
 Acknowledgements
 ---------------------------
 
-*   Thanks to Robert Pröpper and Philipp Meier for answering all my python questions
+*   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
     You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
     tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
@@ -369,7 +373,7 @@ they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 15 minutes. The test suite encompasses more than **400** tests
+Running all tests can take up to 15 minutes. The test suite encompasses more than **500** tests
 (including the BRIAN based tests) and has a code coverage of almost *90%*!
 
 ------------------------------------

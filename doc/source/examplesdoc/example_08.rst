@@ -2,7 +2,7 @@
 .. _example-08:
 
 ===================================
-08 Using the f_find_idx Function
+Using the f_find_idx Function
 ===================================
 
 Download: :download:`example_08_f_find_idx.py <../../../examples/example_08_f_find_idx.py>`

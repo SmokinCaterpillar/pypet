@@ -95,7 +95,7 @@ action potential, i.e. :math:`V \geq 1`, we will keep the voltage :math:`V` clam
 for the refractory period after the threshold crossing and freeze the differential equation.
 
 Regarding parameter exploration, we will hold the
-neuron's time constant :math:`\frac{1}{\tau_V}=10ms` fixed and explore the parameter space
+neuron's time constant :math:`\frac{1}{\tau_V}=10 ms` fixed and explore the parameter space
 by varying different input currents :math:`I` and different lengths of the refractory period
 :math:`\tau_{ref}`.
 
@@ -282,6 +282,21 @@ Let's fill it using the
 Again we can provide descriptive comments.
 All these parameters will be added to the branch *parameters*.
 
+As a side remark, if you think there's a bit too much typing involved here, you can
+also make use of much shorter notations. For example, granted you imported the
+:class:`~pypet.parameters.Parameter`, you could replace the last addition by:
+
+.. code-block:: python
+
+    traj.parameters.simulation.dt = Parameter('dt', 0.1, comment='The step size of an Euler integration step.')
+
+Or even shorter:
+
+.. code-block:: python
+
+    traj.par.simulation.dt = 0.1, 'The step size of an Euler integration step.'
+
+
 Note that we can *group* the parameters. For instance, we have a group `neuron` that contains
 parameters defining our neuron model and a group *simulation* that defines the details of the simulation,
 like the euler step size and the whole runtime.
@@ -379,14 +394,14 @@ you can use the :func:`~pypet.utils.explore.cartesian_product` builder function.
 This will return a dictionary of lists of the same length and all combinations of
 the parameters.
 
-Here is our exploration, we try dimensionless currents ``I`` ranging from 0 to 1.5 in steps of 0.02
+Here is our exploration, we try dimensionless currents ``I`` ranging from 0 to 1.01 in steps of 0.01
 for three different refractory periods ``tau_ref``:
 
 .. code-block:: python
 
     from pypet.utils.explore import cartesian_product
 
-    explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
+    explore_dict = {'neuron.I': np.arange(0, 1.01, 0.01).tolist(),
                     'neuron.tau_ref': [5.0, 7.5, 10.0]}
 
     explore_dict = cartesian_product(explore_dict, ('neuron.tau_ref', 'neuron.I'))
@@ -412,12 +427,12 @@ This function will be called and executed with every parameter combination we sp
 with :func:`~pypet.trajectory.Trajectory.f_explore` in
 the trajectory container.
 
-In our neuron simulation we have 225 different runs of our simulation and each run has particular index
-ranging from 0 to 224 and a particular name that follows the structure `run_XXXXXXXX`
-where `XXXXXXXX` is replaced with the index and some trailing zeros. Thus, our runs names
-range from `run_00000000` to `run_00000224`.
+In our neuron simulation we have 303 different runs of our simulation and each run has particular index
+ranging from 0 to 302 and a particular name that follows the structure `run_XXXXXXXX`
+where `XXXXXXXX` is replaced with the index and some trailing zeros. Thus, our run names
+range from `run_00000000` to `run_00000302`.
 
-To emphasize this, we start counting with 0, so the second run is called
+Note that we start counting with 0, so the second run is called
 `run_00000001` and has index 1!
 
 So here is our top-level simulation or run function:
@@ -478,23 +493,21 @@ So here is our top-level simulation or run function:
 
 
         # And finally we return the estimate of the firing rate
-        return len(spiketimes) / float(traj.par.simulation.duration) *1000
+        return len(spiketimes) / float(traj.par.simulation.duration) * 1000
         # *1000 since we have defined duration in terms of milliseconds
 
 
 
 
 Our function has to accept at least one argument and this is our ``traj`` container.
-To be precise here the ``traj`` variable here refers no longer to the full
-:class:`~pypet.trajectory.Trajectory` but is a
-:class:`~pypet.trajectory.SingleRun` container instead. The differences are rather small. This
-type of container has a little less functionality than a full :class:`~pypet.trajectory.Trajectory`
-and all explored parameters are set to the values for a particular run.
-For simplicity, I will stick to the variable name ``traj`` here.
+During the execution of our simulation function the *trajectory* will contain just one parameter
+setting out of our 303 different ones from above.
+The *environment* will make sure that our function is called
+with each of our parameter choices once.
 
 For instance, if we currently execute the second run (aka `run_00000001`)
 all parameters will contain their default values, except ``tau_ref`` and ``I``, they will
-be set to 5.0 and 0.02, respectively.
+be set to 5.0 and 0.01, respectively.
 
 
 Let's take a look at the first few instructions
@@ -552,6 +565,7 @@ This is just the core of our neuron simulation:
 
     print 'Finished Euler Integration'
 
+
 This is simply the python description of the following set of equations:
 
 .. math::
@@ -605,6 +619,7 @@ So executing the following statement during the run phase
 .. code-block:: python
 
     traj.f_add_result('fundamental.wisdom.answer', 42, comment='The answer')
+
 
 will yield a renaming to ``results.runs.run_XXXXXXXXX.fundamental.wisdom.answer``.
 Where `run_XXXXXXXXX` is the name of the corresponding run, of course.
@@ -693,7 +708,7 @@ At first we extract the range of parameters we used:
     ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
 
 Note that we use ``f_get`` here since we are interested in the parameter container not the
-data value. We can directly extract the parameter range from the container.
+data value. We can directly extract the parameter range from the container via ``f_get_range``.
 
 Next, we create a two dimensional table aka pandas_ DataFrame with the currents as the
 row indices and the refractory periods as column indices.
@@ -765,6 +780,7 @@ For instance,
 
     env.f_run(myjob, 42, 'fortytwo', test=33.3)
 
+
 will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.3`` as the
 keyword argument ``test`` to your run function. So the definition of the run function could look
 like this:
@@ -773,6 +789,7 @@ like this:
 
     def myjob(traj, number, text, test):
         # do something
+
 
 Remember that the trajectory will always be passed as first argument.
 This works analogously for the
@@ -896,15 +913,13 @@ Furthermore,
 
     traj.v_idx = example_run
 
+
 is an important statement in the code.
-Setting the properties ``v_idx`` or ``v_as_run`` or
-using the function :func:`~pypet.trajectory.Trajectory.f_as_run` are equivalent.
+Setting the properties ``v_idx`` or ``v_crun`` or
+using the function :func:`~pypet.trajectory.Trajectory.f_set_crun` are equivalent.
 These give you a powerful tool in data analysis because they make your trajectory
 behave like a particular single run. Thus, all explored parameter's values will be
-set to the corresponding values of one particular run and all iterator functions
-like :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` will be affected to spare
-all data below groups `run_XXXXXXXX` except for the current chosen run
-and won't enumerate their children.
+set to the corresponding values of one particular run.
 
 To restore everythin back to normal simply call
 :func:`~pypet.trajectory.Trajectory.f_restore_default`.

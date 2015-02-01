@@ -2,7 +2,7 @@
 .. _example-12:
 
 =======================================
-12 Sharing Data during Multiprocessing
+Sharing Data during Multiprocessing
 =======================================
 
 Here we show how data can be shared among multiple processes.

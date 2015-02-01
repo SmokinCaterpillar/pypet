@@ -2,7 +2,7 @@
 .. _example-04:
 
 ===================================
-04 Multiprocessing
+Multiprocessing
 ===================================
 
 Download: :download:`example_04_multiprocessing.py <../../../examples/example_04_multiprocessing.py>`
