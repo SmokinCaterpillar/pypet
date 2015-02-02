@@ -4,6 +4,7 @@ import getopt
 import sys
 import os
 
+from pypet.tests.test_helpers import make_run
 
 from pypet.tests.parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest, \
     ResultTest,SparseResultTest,PickleResultTest
@@ -24,7 +25,7 @@ from pypet.tests.utilstest import CartesianTest, ProgressBarTest, TestNewTreeTra
 from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
 from pypet.tests.module_test import TestAllImport
-from pypet.tests.test_helpers import make_run
+
 from pypet.tests.link_test import LinkTrajectoryTests, LinkMergeTest, LinkEnvironmentTest
 
 import pypet.utils.ptcompat as ptcompat
@@ -48,6 +49,11 @@ except ImportError as e:
     print(repr(e)) # We end up here if `brian` is not installed
     pass
 
+if os.getenv('APPVEYOR', False):
+    print('Running on APPVEYOR, will skip some tests for a faster built')
+    # Skipping for speed, otherwise the built may run too long on the slow appveyor platform
+    del TestOtherHDF5Settings2
+    del TestOtherHDF5Settings
 
 if __name__ == '__main__':
     opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
