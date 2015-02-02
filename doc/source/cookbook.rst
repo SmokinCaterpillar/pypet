@@ -9,6 +9,8 @@ Here you can find some more explanations on various concepts of *pypet*.
 
 
 .. toctree::
+      :maxdepth: 2
+
       cookbook/trajectory
       cookbook/parameter
       cookbook/environment

@@ -10,7 +10,7 @@ except ImportError:
     __version__ = "unknown"
 
 
-from pypet.environment import Environment
+from pypet.environment import Environment, MultiprocContext
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.hdf5compression import compact_hdf5_file
@@ -31,6 +31,7 @@ from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArray
 __all__ = [
     Trajectory.__name__,
     Environment.__name__,
+    MultiprocContext.__name__,
     HDF5StorageService.__name__,
     LazyStorageService.__name__,
     ParameterGroup.__name__,

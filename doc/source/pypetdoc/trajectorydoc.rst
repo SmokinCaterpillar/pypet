@@ -1,5 +1,5 @@
 ============================================
-The Trajectory, Single Runs and Group Nodes
+The Trajectory and Group Nodes
 ============================================
 
 
@@ -52,6 +52,7 @@ Trajectory
 .. autoclass:: pypet.trajectory.Trajectory
     :members:
 
+.. py:function:: pypet.trajectory.load_trajectory
 
 -------------------
 NNGroupNode

@@ -81,7 +81,7 @@ def main():
     os.chdir(os.path.join('..','..','examples'))
     sys.path.append(os.getcwd())
     simple_examples = glob.glob('*.py')
-    assert len(simple_examples) == 13 + 1
+    assert len(simple_examples) == 14 + 1
 
     for simple_example in simple_examples:
         if simple_example == '__init__':

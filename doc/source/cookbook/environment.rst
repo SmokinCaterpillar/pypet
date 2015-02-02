@@ -83,7 +83,7 @@ because most of the time the default settings are sufficient.
 
     Moreover, if you use multiprocessing,
     there will be a log file for every single run and process named
-    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYYY* the process
+    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYY* the process
     id. It contains all log messages produced by the corresponding process within the single run.
 
     If you don't want the logging message stored to the file system set to ``None``-
@@ -115,9 +115,9 @@ because most of the time the default settings are sufficient.
 
 * ``log_stdout``
 
-    Whether the output of STDOUT and STDERROR should be recorded into the log files.
+    Whether the output of ``stdout`` and ``stderr`` should be recorded into the log files.
     Disable if only logging statement should be recorded. Note if you work with an
-    interactive console like IPython, it is a good idea to set ``log_stdout=False``
+    interactive console like *IPython*, it is a good idea to set ``log_stdout=False``
     to avoid messing up the console output.
 
 * ``multiproc``
@@ -642,6 +642,12 @@ If you chose the ``'LOCK'`` mode, every process will pace a lock before it opens
 for writing data. Thus, only one process at a time stores data. The advantage is that your data
 does not need to be send over a queue over and over again. Yet, your simulations might take longer
 since processes have to wait for each other to release locks quite often.
+
+Finally, there also exist a lightweight multiprocessing environment
+:class:`~pypet.environment.MultiprocContext`. It allows to use *trajectories* in a
+multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
+For instance, you might use this if you also want to analyse the trajectory with
+multiprocessing.
 
 
 .. _pickle: http://docs.python.org/2/library/pickle.html

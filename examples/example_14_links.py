@@ -36,7 +36,7 @@ traj.par.x = 1, 'I am the first dimension!'
 traj.par.y = 1, 'I am the second dimension!'
 
 # Explore just two points
-traj.f_explore({'x':[3, 4]})
+traj.f_explore({'x': [3, 4]})
 
 # So far everything was as in the first example. However now we add links:
 traj.f_add_link('mylink1', traj.f_get('x'))

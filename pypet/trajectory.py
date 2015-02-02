@@ -2510,12 +2510,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @kwargs_api_change('new_name')
     def f_store(self, only_init=False, store_data=pypetconstants.STORE_DATA,
                 store_full_in_run=False):
-        """ Stores the trajectory to disk.
+        """ Stores the trajectory to disk and recursively all data in the tree.
 
         :param only_init
 
             If you just want to initialise the store. If yes, only meta information about
-            the trajectory is stored and none of the nodes/leaves within the trajectory.
+            the trajectory is stored and none of the groups/leaves within the trajectory.
 
         :param store_data:
 

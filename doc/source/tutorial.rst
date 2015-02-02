@@ -156,8 +156,33 @@ Yet, we will shortly discuss the most important ones here.
 
 * ``log_folder``
 
-    The environment makes use of logging_. You can specify a folder where all
-    log-files should be stored. Default is `current_working_directory/logs/`.
+    The environment automatically makes use of logging_. You can specify a folder where all
+    log-files should be stored. Default is `current_working_directory/logs/`. If
+    *pypet* should not create any log files, set ``log_folder=None``.
+
+* ``logger_names``
+
+    If your ``log_folder`` is not ``None`` you can specify a list (or tuple) of logger names for which
+    logging statements are actually recorded and stored into the files in the ``log_folder``.
+    Default is ``('',)``, that is the *root* logger. Accordingly, all loggers of your
+    program are recorded. If you only want to record from your own loggers and spare
+    all messages emitted by *pypet* (all *pypet* logger names start with ``'pypet.'``)
+    you could pass something like ``logger_names=('MyCustomLogger1, MyCustomLogger2, ...')``.
+
+* ``log_levels``
+
+    A list (or tuple) of levels, one for each logger you specified in ``logger_names``.
+    Only messages emitted by the loggers equal or higher than the level are recorded.
+    If ``logger_names`` contains several names but ``log_levels`` has only one entry,
+    the level is considered for all loggers. Default is ``log_levels=(logging.INFO,)``
+
+* ``log_stdout``
+
+    If ``log_stdout=True`` *pypet* will not only record logger messages but also all
+    ``print(...)`` statements within your program (to be precise ``stdout`` and ``stderr``
+    are redirected to loggers with names ``'STDOUT'`` and ``'STDERR'``).
+    Keep in mind if you use *pypet* in an interactive console like *IPython*,
+    you must set ``log_stdout=False``.
 
 * ``multiproc``
 
@@ -187,7 +212,8 @@ Yet, we will shortly discuss the most important ones here.
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
     root folder here. *pypet* will automatically trigger the recording of your experiments
-    if you use :func:`~pypet.environment.Environment.f_run`, :func:`~pypet.environment.Environment.f_continue` or
+    if you use :func:`~pypet.environment.Environment.f_run`,
+    :func:`~pypet.environment.Environment.f_continue` or
     :func:`~pypet.environment.Environment.f_pipeline` to start your single runs or whole experiment.
     If you use *pypet* + git_ + sumatra_ there's no doubt that you ensure
     the repeatability of your experiments!

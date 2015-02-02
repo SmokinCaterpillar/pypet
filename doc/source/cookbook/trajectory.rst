@@ -12,6 +12,19 @@ comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
 
+Moreover, the following abbreviations are supported by *pypet* for interaction with a
+:class:`~pypet.trajectory.Trajectory`:
+
+    * ``conf`` is directly mapped to ``config``
+    * ``par`` to ``parameters``
+    * ``dpar`` to ``derived_parameters``
+    * ``res`` to ``results``
+    * ``crun`` or the ``$`` symbol to the name of the
+      current single run, e.g. ``run_00000002``
+
+If you add or request data by using the abbreviations, these are automatically
+translated into the corresponding long forms.
+
 
 .. _more-on-trajectories:
 
@@ -275,11 +288,12 @@ the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
 via :func:`~pypet.trajectory.SingleRun.f_store_items`.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-More Ways to Add Data (and how to manipulate it)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Moreover, for each of the adding functions,
+^^^^^^^^^^^^^^^^^^^^^^^^
+More Ways to Add Data
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Moreover, for each of the adding functions
 there exists a shorter abbreviation that spares you typing:
 
     * :func:`~pypet.naturalnaming.ConfigGroup.f_aconf`
@@ -290,7 +304,7 @@ there exists a shorter abbreviation that spares you typing:
 
     * :func:`~pypet.naturalnaming.ResultGroup.f_ares`
 
-Besides these functions, there exists the possibility to add new leaves via generic
+Besides these functions, *pypet* gives you the possibility to add new leaves via generic
 attribute setting.
 
 For example, you could also add a parameter (or result) as follows:
@@ -327,7 +341,9 @@ Accordingly, this is internally translated into
 
 This only works in case of using the assignment operator ``=`` in combination with
 a tuple of exactly length 2 and the second entry of the tuple being
-a comment string.
+a comment string. Thus, if you try to add a new parameter or result this way
+you have to provide a (useful) comment explaining what your data is about.
+And don't you dare simply writing the empty string ``''``!
 
 For instance, the following does not work in terms of creating a new parameter:
 
@@ -335,7 +351,7 @@ For instance, the following does not work in terms of creating a new parameter:
 
 Instead, this will search for the leaf ``anotherparam`` in the trajectory tree and
 try to change it's value to ``42``. If it doesn't find the parameter, *pypet*
-throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Test'`` may also
+throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Comment'`` may also
 throw an ``AtributeError`` but in the opposite case if ``myparam`` already exists in your tree.
 
 The different ways of adding data are also explained in example :ref:`example-15`.
@@ -351,7 +367,7 @@ To access data that you have put into your trajectory you can use
 
 *   :func:`~pypet.trajectory.Trajectory.f_get` method. You might want to take a look at the function
     definition to check out the other arguments you can pass to
-    :func:`~pypet.trajectory.Trajectory.f_get`. ``f_get`` not only works for the trajectory object,
+    ``f_get``. ``f_get`` not only works for the trajectory object,
     but for any group node in your tree.
 
 *   Use natural naming dot notation like  ``traj.nzebras``.
@@ -444,7 +460,7 @@ depths within the tree, the one with the lowest depth is returned. For performan
 *pypet* actually stops the search if an item was found and there is no other item within the tree
 with the same name and same depth. If there happen to be
 two or more items with the same name and with the same depth in the tree, *pypet* will
-raise a ``NotUniqueNodeError`` since *pypet* cannot know which of the two items you want. [#previous]_
+raise a ``NotUniqueNodeError`` since *pypet* cannot know which of the two items you want.
 
 
 The method that performs the natural naming search in the tree can be called directly, it is
@@ -480,61 +496,28 @@ cannot be switched off):
 For instance, ``traj.par.traffic.street.nzebras`` is equivalent to
 ``traj.parameters.traffic.street.nzebras``.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^
-Backwards search
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------
+Links
+-----------
 
-Finally, there exists the possibility to perform bottom up search within the tree.
-If you enable backwards search (set ``traj.v_backwards_search=True``, default is ``False``)
-and use the square bracket notation or
-:func:`~pypet.trajectory.Trajectory.f_get` and don't pass a single name but a grouped
-name separated via colons like
-and using ``traj['groubA.groupB.paramC']`` or
-``traj.f_get('groubA.groupB.paramC', backwards_search=True)``
-you can make *pypet* search the tree bottom up.
-Thus, *pypet* won't look for *groupA* first and than start looking for *grougB* from there and
-finally search for *paramC*. But since it keeps internal indices and links to all it's nodes
-it will directly locate all entries within the tree named *paramC* and climb up the tree back
-to the start node and
-check if it passes by *groupB* and *groupA* on the way to the top.
-Thus, the search complexity is
-:math:`O(kd)` with :math:`k` the number of occurrences of nodes named *paramC* and
-:math:`d` the depth of
-your search tree. By the way, this backwards search always checks if your search term yields a
-unique result irrespective of the depth of any of the nodes.
+Although each node in the trajectory tree is identified by a unique *full name*, there
+can potentially many paths to a particular node established via links.
 
-*pypet* will issue a performance warning if backwards search has to check too many terminal nodes.
-In this case you are advised to avoid shortcutting through the tree and state the full name of
-a parameter or result.
+One can add a link to every group node simply via :func:`~pypet.naturalnaming.NNGroupNode.f_add_link`.
 
-Note that backwards search is not triggered if the name can be directly found without shortcuts.
 For instance:
 
-::
+    >>> traj.parameters.f_add_link('mylink', traj.f_get('x'))
 
-    traj.f_add_parameters('groupA.groupB.paramC')
-    traj.v_backwards_search = True
-    traj['groupB.paramC'] # this will trigger backwards search
-    traj.parameters['groupA.groupB.paramC'] # this won't because
-    # 'parameters.groupA.groupB.paramC' is the real full name of the parameter
 
-How is this backwards searching useful? Well, it will succeed in many more situations than
-simple breadth first forward traversal of the tree.
-For instance, let's assume you have the following tree structure.
-``traj.f_add_parameter('groupX.groupY.groupZ.paramA')`` adds a parameter `paramA` to your trajectory,
-similarly does ``traj.f_add_parameter('groupX.groupZ.paramB')``.
-However, note the difference between the location of `groupZ`. These are in fact two different
-groups that have different depths in the trajectory tree! Now calling ``traj.groupZ.paramA`` will
-fail with an error, whereas ``traj['groupZ.paramA']`` succeeds and will find `paramA` in your tree.
+Thus, ``traj.mylink`` now points to the same object as ``traj.x``.
 
-Why? ``traj.groupZ.paramA`` will initiate a breadth first forward tree traversal. To be
-precise, it will do so twice: At first *pypet* finds
-the group `groupZ` directly below `groupX` and, next, it tries to locate `paramA` from there.
-However, in ``groupX.groupZ`` it can only find `paramB`.
-Yet, if you enable backwards search and call ``traj['groupZ.paramA']``,
-*pypet* directly looks for `paramA` and then moves
-up the tree back to the root note. It will find `groupZ` (the one below `groupY`) on the way and,
-therefore, knows that it has found the proper `paramA`.
+Links can also be created via generic attribute setting:
+
+    >>> traj.mylink2 = traj.f_get('x')
+
+See also example :ref:`example-14`.
+
 
 .. _parameter-exploration:
 
@@ -651,7 +634,7 @@ of your simulations it will be checked if all parameters marked for presetting w
 if not a :class:`~pypet.pypetexceptions.PresettingError` will be thrown.
 
 
-.. _more-on-storage:
+.. _more-on-storing:
 
 ---------------------------------
 Storing
@@ -670,25 +653,7 @@ constructor and you pass it a ``filename``, the trajectory will create an
 You don't have to interact with the service directly, storage can be initiated by several methods
 of the trajectory and it's groups and subbranches (they format and hand over the request to the
 service).
-There is a general scheme to storage, which is *whatever is stored to disk is the ground truth and
-therefore cannot/should not be changed*.
-So basically as soon as you store parts of your trajectory to disk they will stay there!
-So far there is no real support for changing data that was stored to disk (you can
-delete or rewrite some of it, see below).
 
-Why being so restrictive? Well, first of all, if you do
-simulations, they are like numerical *scientific experiments*, so you run them, collect your
-data and keep these results.
-There is usually no need to modify the first raw data after collecting it.
-You may analyse it and create novel results from the raw data, but you usually should have
-no incentive to modify your original raw data.
-Second of all, HDF5 is bad for modifying data which usually leads
-to fragmented HDF5 files and does not free memory on your hard drive. So there are already
-constraints by the file system used (but trust me this is minor compared to the awesome
-advantages of using HDF5, and as I said, why the heck do you wanna change your results, anyway?).
-
-Just to state that again, if you save stuff to disk, it is set in stone! So if you modify
-data in RAM and store it again, the HDF5 storage service will simply ignore these modifications!
 
 The most straightforward way to store everything is to say:
 
@@ -705,6 +670,49 @@ They can be found under the top-group `overview`, the different tables are liste
 :ref:`more-on-overview` section.
 By the way, you can switch the creation of these tables off passing the appropriate arguments to the
 :class:`~pypet.environment.Environment` constructor to reduce the size of the final HDF5 file.
+
+There are three different storage modes that can be chosen for ``f_store`` as well as the other
+storage methods (see below).
+
+* :const:`pypet.pypetconstants.STORE_NOTHING`: (0)
+
+    Nothing is stored.
+
+* :const:`pypet.pypetconstants.STORE_DATA_SKIPPING`: (1)
+
+    A speedy version of the choice below. Data of nodes that have not been stored before
+    are written to disk. Thus, skips all nodes (groups and leaves) that have been stored before,
+    even if they contain new data that has not been stored before.
+
+* :const:`pypet.pypetconstants.STORE_DATA`: (2)
+
+    Stores data of groups and leaves to disk. Note that individual data already
+    found on disk is not overwritten. If leaves or groups contain new data that is not
+    found on disk, the new data is added. Here addition only means
+    creation of new data items like tables and arrays, but data is **not** appended
+    to existing data arrays or tables.
+
+* :const:`pypet.pypetconstants.OVERWRITE_DATA`: (3)
+
+    Stores data of groups and leaves to disk. All data on disk is overwritten with
+    data found in RAM. Be aware that this may yield fragmented HDF5 files. Therefore,
+    use with care. Overwriting data is not recommended as explained below.
+
+
+Although you can delete or overwrite data you should try to stick to this general scheme:
+*whatever is stored to disk is the ground truth and therefore should not be changed*.
+
+Why being so strict? Well, first of all, if you do
+simulations, they are like numerical *scientific experiments*, so you run them, collect your
+data and keep these results.
+There is usually no need to modify the first raw data after collecting it.
+You may analyse it and create novel results from the raw data, but you usually should have
+no incentive to modify your original raw data.
+Second of all, HDF5 is bad for modifying data which usually leads
+to fragmented HDF5 files and does not free memory on your hard drive. So there are already
+constraints by the file system used (but trust me this is minor compared to the awesome
+advantages of using HDF5, and as I said, why the heck do you wanna change your results, anyway?).
+
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Storing data individually
@@ -729,7 +737,8 @@ ensure that you do not have any external reference of your own in your code to t
 
 To avoid re-opening an closing of the HDF5 file over and over again there is also the
 possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
-or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
+or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child` or
+:func:`~pypet.naturalnaming.NNGroupNode.f_store`.
 
 
 .. _more-on-loading:
@@ -910,7 +919,7 @@ But usually it is enough to simply free the data and keep empty results by using
 the :func:`f_empty()` function of a result or parameter. This will leave the actual skeleton
 of the trajectory untouched.
 
-Although I made it pretty clear that in general what is stored to disk is set in stone,
+Although I made it pretty clear that in general what is stored to disk should be set in stone,
 there are a functions to delete items not only from RAM but also from disk:
 :func:`~pypet.trajectory.f_delete_item` and :func:`~pypet.trajectory.f_delete_items`.
 Note that you cannot delete explored parameters.
@@ -942,38 +951,21 @@ Also checkout the example in :ref:`example-03`.
 Single Runs
 -------------------------------------
 
-As said before a :class:`~mypet.trajectory.SingleRun` is like a smaller version of a trajectory.
-If you explore the parameter space,
-a single run is exactly one parameter space point that you visit on your trajectory during
-your numerical simulations. It is also the root node of your tree and offers slightly less
-functionality as the full trajectory.
-
-How do you get single runs?
-They are the objects passed to your job functions.
-In :ref:`example-01` they are the ``traj`` parameter of the ``multiply`` function:
-
-.. code-block:: python
-
-    def multiply(traj):
-        z=traj.x*traj.y
-        traj.f_add_result('z', z, comment='Im the product of two values!')
-
-As said before, they are not much different from trajectories, the best is you treat them
-as you would treat a trajectory object. Accordingly, the function argument is also named `traj`
-instead of `singlerun`.
-
-
-A run is identified by it's index and position in your trajectory, you can access this via
-``v_idx``. As a proper informatics nerd, if you have N runs, than your first run's index is 0
+A single run of your simulation function identified by it's index and position in your trajectory,
+you can access this via ``v_idx`` of your trajectory.
+As a proper informatics nerd, if you have N runs, than your first run's index is 0
 and the last is indexed as N-1! Also each run has a name ``run_XXXXXXXX`` where `XXXXXXXX` is the
-index of the run with some leading zeros, like ``run_00000007``.
+index of the run with some leading zeros, like ``run_00000007``. You can access the name
+via the ``v_crun`` property.
 
-Single run objects lack some functionality compared to trajectories:
+During the execution of individual runs the functionality of your trajectory is reduced:
 
-* You can no longer add *config* and *parameters*
+    * You can no longer add *config* and *parameters*
 
-* You can usually not access the full exploration range of parameters but only the current
-    value that corresponds to the index of the run.
+    * You can usually not access the full exploration range of parameters but only the current
+        value that corresponds to the index of the run.
+
+    * Some functions like :func:`~pypet.trajectory.Trajectory.f_explore` are not supported.
 
 Conceptually one should regard all single runs to be *independent*. As a consequence,
 you should **NOT** load data during a particular run that was computed by a previous one.
@@ -1002,14 +994,10 @@ is quite tedious to write ``run_XXXXXXXX`` each time.
 
 There is a way to tell the trajectory
 to only consider the subbranches that are associated with a single run and blind out everything else.
-You can use the function :func:`~pypet.trajectory.Trajectory.f_as_run` to make the
+You can use the function :func:`~pypet.trajectory.Trajectory.f_set_crun` to make the
 trajectory only consider a particular run (it accepts run indices as well as names).
 Alternatively you can set the run idx via changing
-``v_idx`` of your trajectory object. In addition to blinding out all branches that are
-not part of this run, all explored parameters within the trajectory are also set to the
-value associated with the corresponding index. Note that blinding out will also affect
-the functions :func:`~pypet.naturalnaming.NNGroupNode.f_iter_leaves` and
-:func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes`.
+``v_idx`` of your trajectory object.
 
 In order to set everything back to normal call :func:`~pypet.trajectory.Trajectory.f_restore_default`
 or set ``v_idx`` to ``-1``.
@@ -1118,22 +1106,3 @@ For storage of annotations apply the same rule as for results and parameters,
 whatever is stored to disk is set in stone!
 
 .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
-
-
-
-.. rubric: Footnotes
-
-.. [#previous]
-
-    In previous versions, *pypet* would stop immediately after the first encounter of a matching node.
-    You had to force the lookup of unique matchings via ``v_check_uniqueness``.
-    This feature has been abolished
-    since the behavior is inconsistent within different simulations. There is no ordering
-    in nodes. So the children of a node are traversed arbitrarily since they are stored
-    in dictionaries. Searching for one node could yield
-    different results every time it was performed if two or more nodes happened to
-    have the same name and were found within the same depth in the tree.
-    Also in previous versions, you could choose
-    depth first search instead of breadth first search. Yet, again since nodes are in arbitrary
-    order, this search strategy is rather useless because the user cannot determine the
-    traversal order of tree nodes.

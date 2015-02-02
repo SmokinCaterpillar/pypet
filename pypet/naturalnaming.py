@@ -3115,12 +3115,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                               recursive=recursive,
                               store_data=store_data)
 
-    def f_store(self, recursive=False, store_data=pypetconstants.STORE_DATA):
+    def f_store(self, recursive=True, store_data=pypetconstants.STORE_DATA):
         """Stores a group node to disk
 
         :param recursive:
 
-            Whether recursively all children should be stored too.
+            Whether recursively all children should be stored too. Default is ``True``.
 
         :param store_data:
 
@@ -3172,11 +3172,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         return self.f_get(name, shortcuts=False)
 
-    def f_load(self, recursive=False, load_data=pypetconstants.LOAD_DATA):
+    def f_load(self, recursive=True, load_data=pypetconstants.LOAD_DATA):
         """Loads a group from disk.
 
         :param recursive:
 
+            Default is ``True``.
             Whether recursively all nodes below the current node should be loaded, too.
             Note that links are never evaluated recursively. Only the linked node
             will be loaded if it does not exist in the tree, yet. Any nodes or links

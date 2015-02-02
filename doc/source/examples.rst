@@ -15,6 +15,8 @@ Basic Concepts
 ---------------
 
 .. toctree::
+    :maxdepth: 1
+
     examplesdoc/example_01
     examplesdoc/example_02
     examplesdoc/example_04
@@ -25,16 +27,19 @@ Basic Concepts
 
 
 ------------------
-Advance Concepts
+Advanced Concepts
 ------------------
 
 .. toctree::
+    :maxdepth: 1
+
     examplesdoc/example_03
     examplesdoc/example_05
     examplesdoc/example_06
     examplesdoc/example_08
     examplesdoc/example_10
     examplesdoc/example_12
+    examplesdoc/example_16
 
 
 -----------------
@@ -42,5 +47,7 @@ BRIAN Examples
 -----------------
 
 .. toctree::
+    :maxdepth: 1
+
     examplesdoc/example_07
     examplesdoc/example_11

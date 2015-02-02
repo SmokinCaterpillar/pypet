@@ -364,9 +364,9 @@ class Environment(HasLogger):
 
     :param log_stdout:
 
-        Whether the output of STDOUT and STDERR should be recorded into the log files.
+        Whether the output of ``stdout`` and ``stderr`` should be recorded into the log files.
         Disable if only logging statement should be recorded. Note if you work with an
-        interactive console like IPython, it is a good idea to set ``log_stdout=False``
+        interactive console like *IPython*, it is a good idea to set ``log_stdout=False``
         to avoid messing up the console output.
 
     :param multiproc:
@@ -1972,7 +1972,7 @@ class Environment(HasLogger):
                     else:
                         # Prepare Multiprocessing
                         lock_with_manager = self._use_pool or self._immediate_postproc
-                        self._multiproc_wrapper = MultiprocessWrapper(self._traj,
+                        self._multiproc_wrapper = MultiprocContext(self._traj,
                                                            self._wrap_mode,
                                                            full_copy=None,
                                                            manager=manager,
@@ -2300,7 +2300,7 @@ class Environment(HasLogger):
 
         return results
 
-class MultiprocessWrapper(HasLogger):
+class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
 
     Can be used if you don't want a full-blown :class:`~pypet.environment.Environment` to
@@ -2392,9 +2392,12 @@ class MultiprocessWrapper(HasLogger):
 
         The logging levels if you use logging
 
-    :param log_stdout
+    :param log_stdout:
 
         If stdout and stderr of the queue process should also be logged.
+
+
+    For an usage example see :ref:`example-16`.
 
     """
     def __init__(self, trajectory,
@@ -2434,8 +2437,17 @@ class MultiprocessWrapper(HasLogger):
 
         self._do_wrap()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.f_finalize()
+
     def _do_wrap(self):
         """ Wraps a Storage Service """
+
+        # First take care that the storage is initialised
+        self._traj.f_store(only_init=True)
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._prepare_queue()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
@@ -2500,7 +2512,7 @@ class MultiprocessWrapper(HasLogger):
         If a queue process and a manager were used both are shut down.
 
         """
-        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE and self._queue_process is not None:
             self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
                               'store!')
             self._traj.v_storage_service.send_done()
