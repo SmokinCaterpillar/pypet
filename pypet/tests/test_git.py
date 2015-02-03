@@ -9,8 +9,10 @@ except ImportError:
     print('Adding path to pypet')
     sys.path.append(os.getcwd())
 
-from pypet.environment import Environment
-from pypet.utils.explore import cartesian_product
+print(os.getcwd())
+
+from pypet import Environment
+from pypet import cartesian_product
 
 
 def multiply(traj):
@@ -23,6 +25,7 @@ def main():
     abspath = os.path.abspath(__file__)
     dname = os.path.dirname(abspath)
     os.chdir(dname)
+    print(os.getcwd())
     print('Current working directory:`%s`' % dname)
     try:
         # Create an environment that handles running
