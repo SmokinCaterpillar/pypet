@@ -1840,7 +1840,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     f_fd = self._hdf5store._handle.fileno()
                     self._hdf5store.flush()
                     os.fsync(f_fd)
-            except Exception as e:
+            except OSError as e:
                 # This seems to be the only way to avoid an OSError under Windows
                 errmsg = ('Encountered OSError while flushing file.'
                                    'If you are using Windows, don`t worry! '

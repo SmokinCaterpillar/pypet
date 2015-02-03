@@ -443,13 +443,13 @@ Thus, you will be able to track how your trajectory was built over time.
 
 .. _more-on-multiprocessing:
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 Multiprocessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 For an  example on multiprocessing see :ref:`example-04`.
 
-The following code snippet shows how to enable multiprocessing with 4 cpus, a pool, and a queue.
+The following code snippet shows how to enable multiprocessing with 4 CPUs, a pool, and a queue.
 
 .. code-block:: python
 
@@ -477,6 +477,8 @@ for some BRIAN networks, for example), don't worry either. Set ``use_pool=False`
 (and also ``continuable=False``) and for every simulation run
 *pypet* will spawn an entirely new subprocess.
 The data is than passed to the subprocess by forking on OS level and not by pickling.
+Be aware, that this only works under **Linux**. If you use **Windows** and choose ``use_pool=False``
+you still need to rely on pickle_ because **Windows** does not support forking of python processes.
 
 Moreover, if you **ENABLE** multiprocessing and **DISABLE** pool usage, besides the maximum number of
 utilized processors ``ncores``, you can specify usage cap levels with ``cpu_cap``, ``memory_cap``,
@@ -529,7 +531,7 @@ Finally, there also exist a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use *trajectories* in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
 For instance, you might use this if you also want to analyse the trajectory with
-multiprocessing.
+multiprocessing. You can find an example here: :ref:`example-16`
 
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
@@ -539,9 +541,9 @@ multiprocessing.
 .. _more-on-git:
 
 
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 Git Integration
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 The environment can make use of version control. If you manage your code with
 git_ you can trigger automatic commits with the environment to get a proper snapshot
@@ -574,9 +576,9 @@ in your linux console!
 
 .. _more-on-sumatra:
 
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 Sumatra Integration
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 The environment can make use of a Sumatra_ experimental lab-book.
 
@@ -587,7 +589,6 @@ reason for you sumatra simulation. *pypet* will automatically add the name, comm
 the names of all explored parameters to the reason.
 You can also pick a ``sumatra_label`` (string),
 set this to ``None`` if you want Sumatra to pick a label for you.
-
 
 Note in contrast to the automatic git commits (see above)
 which are done as soon as the environment is created, a sumatra record is only created and
@@ -606,6 +607,7 @@ are added with their full range instead of the default values.
 HDF5 Overview Tables
 ^^^^^^^^^^^^^^^^^^^^
 
+The :class:`~pypet.storageserivce.HDF5StorageService`
 Overview tables give you a nice summary about all *parameters* and *results* you needed and
 computed during your simulations. They will be placed under the subgroup
 ``overview`` at the top-level in your trajectory group in the HDF5 file.

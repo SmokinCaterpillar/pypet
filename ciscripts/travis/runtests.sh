@@ -3,15 +3,6 @@
 set -e # To exit upon any error
 set -u # Treat references to unset variables as an error
 
-if [[ $COVERAGE == ON ]]
-    then
-        cd ../../
-        coverage run --parallel-mode --timid --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py ./pypet/tests/run_coverage.py
-        coverage combine
-        coveralls --verbose
-        cd ciscripts/travis
-    fi
-
 if [[ $EXAMPLES == ON ]]
     then
         conda install matplotlib
@@ -34,17 +25,34 @@ if [[ $GIT_TEST == ON ]]
         smt init GitTest
         git config --global user.email "you@example.com"
         git config --global user.name "Your Name"
-        echo "DummyDummyDummy">>dummy.txt
+        echo "DummyDummyDummy">>dummy.txt # Create a new dummy file
         git add dummy.txt
         git add test_git.py
         git commit -m "First Commit"
-        echo "Dummy2">>dummy.txt
+        echo "Dummy2">>dummy.txt # Change the file
         echo "Running First Git Test"
-        python test_git.py
+        if [[ $COVERAGE == ON ]]
+            then
+                echo "Running git coverage"
+                coverage run --parallel-mode --source=../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
+            else
+                python test_git.py
+            fi
         rm -rvf experiments
         echo "Running Second Git Test (without actual commit)"
-        python test_git.py
+        if [[ $COVERAGE == ON ]]
+            then
+                echo "Running git coverage"
+                coverage run --parallel-mode --source=../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
+            else
+                python test_git.py
+            fi
         echo "Git Test complete, removing folder"
+        if [[ $COVERAGE == ON ]]
+            then
+                echo "Moving coverage data"
+                mv .coverage* ../
+            fi
         cd ..
         rm -rvf git_sumatra_test
         echo "Removal complete"
@@ -63,6 +71,15 @@ if [[ $TEST_SUITE == ON ]]
                 echo "Running test suite"
                 python ../../pypet/tests/all_tests.py
             fi
+    fi
+
+if [[ $COVERAGE == ON ]]
+    then
+        cd ../../
+        coverage run --parallel-mode --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py ./pypet/tests/run_coverage.py
+        coverage combine
+        coveralls --verbose
+        cd ciscripts/travis
     fi
 
 

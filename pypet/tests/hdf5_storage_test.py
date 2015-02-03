@@ -1301,6 +1301,10 @@ class EnvironmentTest(TrajectoryComparator):
         self.explore_large(self.traj)
         self.make_run_large_data()
 
+        # Check if printing and repr work
+        print(str(self.env))
+        print(repr(self.env))
+
         newtraj = Trajectory()
         newtraj.f_load(name=self.traj.v_name, as_new=False, load_data=2, filename=self.filename)
 

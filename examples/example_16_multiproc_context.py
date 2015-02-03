@@ -46,7 +46,7 @@ def main():
         iterable = (traj for x in range(20))
         pool = mp.Pool(processes=4)
         # Pass the trajectory and the function to the pool and execute it 20 times
-        pool.imap(manipulate_multiproc_safe, iterable)
+        pool.map_async(manipulate_multiproc_safe, iterable)
         pool.close()
         # Wait for all processes to join
         pool.join()

@@ -1002,6 +1002,9 @@ class Environment(HasLogger):
 
         self._multiproc = multiproc
         self._ncores = ncores
+        if wrap_mode is None:
+            # None cannot be used in HDF5 files, accordingly we need a string representation
+            wrap_mode = pypetconstants.WRAP_MODE_NONE
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
@@ -1596,7 +1599,7 @@ class Environment(HasLogger):
         self._sumatra_reason = reason
         self._project = load_project(self._sumatra_project)
 
-        if self._traj.f_contains('parameters'):
+        if self._traj.f_contains('parameters', shortcuts=False):
             param_dict = self._traj.parameters.f_to_dict(fast_access=False)
 
             for param_name in compat.listkeys(param_dict):
@@ -1981,7 +1984,9 @@ class Environment(HasLogger):
                                                            queue=None,
                                                            start_queue_process=True,
                                                            log_path=self._log_path,
-                                                           log_stdout=self._log_stdout,)
+                                                           logger_names=self._logger_names,
+                                                           log_levels=self._log_levels,
+                                                           log_stdout=self._log_stdout)
 
                     self._logger.info(
                         '\n************************************************************\n'

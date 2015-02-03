@@ -22,7 +22,6 @@ def coverage_multiprocessing_process(): # pragma: no cover
                                omit=['*/pypet/brian/*',
                                       '*/pypet/tests/*',
                                       '*/pypet/shareddata.py'],
-                               timid=True,
                                )
                 cov.start()
                 try:
@@ -50,8 +49,8 @@ import os
 
 from pypet.tests.all_single_core_tests import *
 
-del TestOtherHDF5Settings # remove the test for speed
-del TestOtherHDF5Settings2 # remove the test for speed
+# del TestOtherHDF5Settings # remove the test for speed
+# del TestOtherHDF5Settings2 # remove the test for speed
 
 from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
     MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\

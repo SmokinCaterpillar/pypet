@@ -118,9 +118,9 @@ class CapTest(EnvironmentTest):
                           derived_parameters_per_run=5,
                           multiproc=True,
                           ncores=3,
-                          cpu_cap=0.5,
-                          memory_cap=0.7,
-                          swap_cap=0.5,
+                          cpu_cap=0.001, # Ensure that these are triggered
+                          memory_cap=0.001,
+                          swap_cap=0.001,
                           use_pool=False)
 
         traj = env.v_trajectory
