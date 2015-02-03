@@ -34,7 +34,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
+                coverage run --parallel-mode --source=../../../pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
             else
                 python test_git.py
             fi
@@ -43,8 +43,8 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
-                mv .coverage* ../../../
+                coverage run --parallel-mode --source=../../../pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
+                mv -v .coverage* ../../../
             else
                 python test_git.py
             fi
@@ -72,7 +72,7 @@ if [[ $TEST_SUITE == ON ]]
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py ./pypet/tests/run_coverage.py
+        coverage run --parallel-mode --source=pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/pypet/shareddata.py ./pypet/tests/run_coverage.py
         coverage combine
         coveralls --verbose
         cd ciscripts/travis

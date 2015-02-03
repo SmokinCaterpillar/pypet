@@ -1942,7 +1942,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             git_node = other_trajectory.f_get('config.git')
             param_list = []
             for param in git_node.f_iter_leaves(with_links=False):
-                if not param.v_full_name in self:
+                if not self.f_contains(param.v_full_name, shortcuts=False):
                     param_list.append(self.f_add_config(param))
 
             if param_list:
@@ -1957,7 +1957,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             env_node = other_trajectory.f_get('config.environment')
             param_list = []
             for param in env_node.f_iter_leaves(with_links=False):
-                if not param.v_full_name in self:
+                if not self.f_contains(param.v_full_name, shortcuts=False):
                     param_list.append(self.f_add_config(param))
 
             if param_list:
@@ -1972,7 +1972,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             merge_node = other_trajectory.f_get('config.merge')
             param_list = []
             for param in merge_node.f_iter_leaves(with_links=False):
-                if not param.v_full_name in self:
+                if not self.f_contains(param.v_full_name, shortcuts=False):
                     param_list.append(self.f_add_config(param))
 
             if param_list:

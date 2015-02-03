@@ -38,7 +38,7 @@ def skip(name):
             return True
     return False
 
-def prepend_matlab_import(filename):
+def prepend_mpl_import(filename):
     """Writes a new python file and prepends the a matplotlib import.
 
     This avoids opening the plots within the test suite
@@ -65,7 +65,7 @@ def execute_example(filename):
     #filename = os.path.join(os.getcwd(), filename)
     new_filename = None
     try:
-        new_filename = prepend_matlab_import(filename)
+        new_filename = prepend_mpl_import(filename)
         retcode = subprocess.call(sys.executable + ' ' + new_filename, shell=True)
         if retcode != 0:
             print('### ERROR: Example `%s` failed! ###' % filename)
