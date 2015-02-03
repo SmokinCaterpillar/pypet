@@ -50,7 +50,7 @@ except ImportError as e:
     pass
 
 if os.getenv('APPVEYOR', False):
-    print('Running on APPVEYOR, will skip some tests for a faster built')
+    print('Running on APPVEYOR, will skip some tests for a faster build')
     # Skipping for speed, otherwise the built may run too long on the slow appveyor platform
     del TestOtherHDF5Settings2
     del TestOtherHDF5Settings
