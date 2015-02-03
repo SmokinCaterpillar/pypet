@@ -34,9 +34,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                cd ../../../
-                coverage run --parallel-mode --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py ./ciscripts/travis/git_sumatra_test/test_git.py
-                cd ciscripts/travis/git_sumatra_test
+                coverage run --parallel-mode --source=../../../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
             else
                 python test_git.py
             fi
@@ -45,9 +43,8 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                cd ../../../
-                coverage run --parallel-mode --source=pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py ./ciscripts/travis/git_sumatra_test/test_git.py
-                cd ciscripts/travis/git_sumatra_test
+                coverage run --parallel-mode --source=../../../pypet --omit=*/pypet/brian/*,*/pypet/tests/*,*/pypet/shareddata.py test_git.py
+                mv .coverage* ../../../
             else
                 python test_git.py
             fi

@@ -6,10 +6,10 @@ try:
 except ImportError:
     # Check if pypet is installed otherwise append /pypet folder
     # this is important for travis-ci
-    print('Adding path to pypet')
-    sys.path.append(os.getcwd())
+    path = os.path.abspath('../../../')
+    print('Adding pypet path:`%s`' % path)
+    sys.path.append(path)
 
-print(os.getcwd())
 
 from pypet import Environment
 from pypet import cartesian_product
@@ -21,12 +21,6 @@ def multiply(traj):
 
 
 def main():
-    # First change to the current location of the file
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
-    os.chdir(dname)
-    print(os.getcwd())
-    print('Current working directory:`%s`' % dname)
     try:
         # Create an environment that handles running
         with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
