@@ -6,10 +6,12 @@ try:
 except ImportError:
     # Check if pypet is installed otherwise append /pypet folder
     # this is important for travis-ci
-    sys.path.append('/pypet')
+    print('Adding path to pypet')
+    sys.path.append('./pypet')
 
 from pypet.environment import Environment
 from pypet.utils.explore import cartesian_product
+
 
 def multiply(traj):
     z=traj.x*traj.y
