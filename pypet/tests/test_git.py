@@ -1,3 +1,6 @@
+import sys
+import os
+
 try:
     import pypet
 except ImportError:
@@ -7,9 +10,6 @@ except ImportError:
 
 from pypet.environment import Environment
 from pypet.utils.explore import cartesian_product
-
-import sys
-import os
 
 def multiply(traj):
     z=traj.x*traj.y
