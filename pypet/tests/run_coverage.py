@@ -18,7 +18,11 @@ def coverage_multiprocessing_process(): # pragma: no cover
         original = multiprocessing.Process._bootstrap
         class Process_WithCoverage(multiprocessing.Process):
             def _bootstrap(self):
-                cov = coverage(data_suffix=True,config_file=os.environ['COVERAGE_PROCESS_START'])
+                cov = coverage(data_suffix=True,
+                               omit=['*/pypet/brian/*',
+                                      '*/pypet/tests/*',
+                                      '*/pypet/shareddata.py'],
+                               )
                 cov.start()
                 try:
                     return original(self)

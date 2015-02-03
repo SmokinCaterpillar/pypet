@@ -2556,7 +2556,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         write once, but read often.
 
         If you want to store individual parameters or results, you might want to
-        take a look at :func:`~pypet.SingleRun.f_store_items`.
+        take a look at :func:`~pypet.Trajectory.f_store_items`.
         To store whole subtrees of your trajectory check out
         :func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
         Note both functions require that your trajectory was stored to disk with `f_store`
@@ -3252,7 +3252,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                     store_full_in_run=False)
 
     def f_store_item(self, item, *args, **kwargs):
-        """Stores a single item, see also :func:`~pypet.trajectory.SingleRun.f_store_items`."""
+        """Stores a single item, see also :func:`~pypet.trajectory.Trajectory.f_store_items`."""
         self.f_store_items([item], *args, **kwargs)
 
     def f_store_items(self, iterator, *args, **kwargs):
@@ -3342,7 +3342,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                              'to store.')
 
     def f_load_item(self, item, *args, **kwargs):
-        """Loads a single item, see also :func:`~pypet.trajectory.SingleRun.f_load_items`"""
+        """Loads a single item, see also :func:`~pypet.trajectory.Trajectory.f_load_items`"""
         self.f_load_items([item], *args, **kwargs)
 
     def f_load_items(self, iterator, *args, **kwargs):
@@ -3350,7 +3350,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         You can directly list the Parameter objects or just their names.
 
-        If names are given the `~pypet.trajectory.SingleRun.f_get` method is applied to find the
+        If names are given the `~pypet.naturalnaming.NNGroupNode.f_get` method is applied to find the
         parameters or results in the trajectory. Accordingly, the parameters and results
         you want to load must already exist in your trajectory (in RAM), probably they
         are just empty skeletons waiting desperately to handle data.
@@ -3427,7 +3427,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @kwargs_api_change('remove_empty_groups')
     def f_remove_item(self, item, recursive=False):
-        """Removes a single item, see :func:`~pypet.trajectory.SingleRun.remove_items`"""
+        """Removes a single item, see :func:`~pypet.trajectory.Trajectory.f_remove_items`"""
         self.f_remove_items([item], recursive=recursive)
 
     @kwargs_api_change('remove_empty_groups')
@@ -3436,7 +3436,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         This function ONLY removes items from your current trajectory and does not delete
         data stored to disk. If you want to delete data from disk, take a look at
-        :func:`~pypet.trajectory.SingleRun.f_delete_items`.
+        :func:`~pypet.trajectory.Trajectory.f_delete_items`.
 
         This will also remove all links if items are linked.
 
@@ -3464,7 +3464,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                  'item to remove.')
 
     def f_delete_link(self, link, remove_from_trajectory=False):
-        """Deletes a single link see :func:`~pypet.trajectory.SingleRun.f_delete_links`"""
+        """Deletes a single link see :func:`~pypet.trajectory.Trajectory.f_delete_links`"""
         self.f_delete_links((link,), remove_from_trajectory)
 
     def f_delete_links(self, iterator_of_links, remove_from_trajectory=False):
@@ -3507,7 +3507,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @kwargs_api_change('remove_empty_groups')
     def f_delete_item(self, item, *args, **kwargs):
-        """Deletes a single item, see :func:`~pypet.trajectory.SingleRun.f_delete_items`"""
+        """Deletes a single item, see :func:`~pypet.trajectory.Trajectory.f_delete_items`"""
         self.f_delete_items([item], *args, **kwargs)
 
     @kwargs_api_change('remove_empty_groups')

@@ -2562,7 +2562,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         """ Removes a link from from the current group node with a given name.
 
         Does not delete the link from the hard drive. If you want to do this,
-        checkout :func:`~pypet.trajectory.SingleRun.f_delete_links`
+        checkout :func:`~pypet.trajectory.Trajectory.f_delete_links`
 
         """
         if name not in self._links:

@@ -116,11 +116,6 @@ it is not shown in the result and derived parameter overview tables, see also
 :ref:`more-on-overview`). It can also be found
 as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true for all *leaves*).
 
-.. [#]
-
-    As a side remark, programming-wise the :class:`~pypet.trajectory.Trajectory` class
-    inherits from the :class:`~pypet.trajectory.SingleRun` class. This yields a cleaner implementation
-    than the other way round.
 
 .. _more-on-adding:
 
@@ -286,7 +281,7 @@ Note however, if you add any items during a single run, which are not located be
 a group called ``run_XXXXXXXX`` (where *run_XXXXXXXXX* is
 the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
-via :func:`~pypet.trajectory.SingleRun.f_store_items`.
+via :func:`~pypet.trajectory.Trajectory.f_store_items`.
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -736,7 +731,7 @@ the result is deleted. So in order to make the python garbage collector free the
 ensure that you do not have any external reference of your own in your code to the giant data.
 
 To avoid re-opening an closing of the HDF5 file over and over again there is also the
-possibility to store a list of items via :func:`~pypet.trajectory.SingleRun.f_store_items`
+possibility to store a list of items via :func:`~pypet.trajectory.Trajectory.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child` or
 :func:`~pypet.naturalnaming.NNGroupNode.f_store`.
 
@@ -801,17 +796,17 @@ If you choose the latter load mode, you can specify how the individual subtrees 
 
 
 Compared to manual storage, you can also load single items manually via
-:func:`~pypet.trajectory.SingleRun.f_load_item`. If you load a large result with many entries
-you might consider loading only parts of it (see :func:`~pypet.trajectory.SinleRun.f_load_items`)
+:func:`~pypet.trajectory.Trajectroy.f_load_item`. If you load a large result with many entries
+you might consider loading only parts of it (see :func:`~pypet.trajectory.Trajectory.f_load_items`)
 Note in order to load a parameter, result or group, with
-:func:`~pypet.trajectory.SingleRun.f_load_item` it must exist in the current trajectory in RAM,
+:func:`~pypet.trajectory.Trajectory.f_load_item` it must exist in the current trajectory in RAM,
 if it does not you can always bring your skeleton of your trajectory tree up to date
 with :func:`~pypet.trajectory.Trajectory.f_update_skeleton`. This will load all items stored
 to disk and create empty instances. After a simulation is completed, you need to call this function
 to get the whole trajectory tree containing all new results and derived parameters.
 
-And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child`
-in order to load whole subtrees.
+And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` or
+:func:`~pypet.naturalnaming.NNGroupNode.f_load` in order to load whole subtrees.
 
 
 ^^^^^^^^^^^^^^^^^^^^

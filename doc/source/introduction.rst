@@ -280,7 +280,7 @@ Let's take a look at the snippet at once:
 
         :param traj:
 
-            Trajectory - or more precisely a SingleRun - containing
+            Trajectory containing
             the parameters in a particular combination,
             it also serves as a container for results.
 
@@ -319,7 +319,7 @@ two values:
 
         :param traj:
 
-            Trajectory - or more precisely a SingleRun - containing
+            Trajectory containing
             the parameters in a particular combination,
             it also serves as a container for results.
 
@@ -402,7 +402,7 @@ combinations.
     env.f_run(multiply)
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
-all parameter combinations. Every time it will pass a :class:`~pypet.trajectory.SingleRun`
+all parameter combinations. Every time it will pass a :class:`~pypet.trajectory.Trajectory`
 container with another one of these 12 combinations of different :math:`x` and :math:`y` values
 to calculate the value of :math:`z`.
 And all of this is automatically stored to disk in HDF5 format.

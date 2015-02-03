@@ -375,8 +375,8 @@ keyword arguments to the environment. These are handed over to the service:
 
 * ``purge_duplicate_comments``
 
-    If you add a result via :func:`pypet.trajectory.SingleRun.f_add_result` or a derived
-    parameter :func:`pypet.trajectory.SingleRun.f_add_derived_parameter` and
+    If you add a result via :func:`pypet.naturalnaming.ResultGroup.f_add_result` or a derived
+    parameter :func:`pypet.naturalnaming.DerivedParameterGroup.f_add_derived_parameter` and
     you set a comment, normally that comment would be attached to each and every instance.
     This can produce a lot of unnecessary overhead if the comment is the same for every
     result over all runs. If ``hdf5.purge_duplicate_comments=True`` than only the comment of the

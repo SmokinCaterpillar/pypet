@@ -9,7 +9,7 @@ def multiply(traj):
 
     :param traj:
 
-        Trajectory - or more precisely a SingleRun - containing
+        Trajectory containing
         the parameters in a particular combination,
         it also serves as a container for results.
 
