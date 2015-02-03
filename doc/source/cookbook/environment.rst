@@ -441,6 +441,71 @@ potentially be run by several environments due to merging or extending an existi
 Thus, you will be able to track how your trajectory was built over time.
 
 
+^^^^^^^
+Logging
+^^^^^^^
+
+Per default the environment will created loggers_ and stores all logged messages
+to log files. This includes also everything written to the standard streams ``stdout`` and
+``stderr``, like ``print`` statements, for instance. To disable logging of the standard streams
+set ``log_stdout=False``. Note that you should always do this in case you use an interactive
+console like *IPython*. Otherwise your console output will be garbled due to the redirection
+of standard streams.
+
+You can find the log files in the ``log_folder`` you specified. They are placed in
+a sub-folder with the name of the current *trajectory* and the current *environment*.
+To disable logging to files simply set ``log_folder=None``.
+
+Moreover, you can fine tune what is supposed to be logged to files.
+By passing a list of ``logger_names``, you tell *pypet* which loggers should be recorded
+to the files (default is the root logger, i.e.
+this encompasses all loggers, ``logger_names=('',)``).
+Accordingly, you can set individual log levels for all these
+loggers via a ``log_levels`` list of same length (default is ``log_levels=(logging.INFO,)``).
+
+After your experiments are finished you can disable logging to files via
+:func:`~pypet.environment.Environment.f_disable_logging`. This also restores the
+standard streams.
+
+Furthermore, an environment can also be used as a context manager such that logging
+is automatically disabled in the end:
+
+.. code-block:: python
+
+    import logging
+    from pypet import Environment
+
+    with Environment(trajectory='mytraj',
+                     log_folder='logs',
+                     logger_names=('',),
+                     log_levels=(logging.DEBUG),
+                     log_stdout=True) as env:
+        traj = env.v_trajectory
+
+        # do your complex experiment...
+
+This is equivalent to:
+
+.. code-block:: python
+
+    import logging
+    from pypet import Environment
+
+    env = Environment(trajectory='mytraj',
+                      log_folder='logs',
+                      logger_names=('',),
+                      log_levels=(logging.DEBUG,),
+                      log_stdout=True)
+    traj = env.v_trajectory
+
+    # do you complex experiment...
+
+    env.f_disable_logging()
+
+
+.. _loggers: https://docs.python.org/2/library/logging.html
+
+
 .. _more-on-multiprocessing:
 
 ^^^^^^^^^^^^^^^
@@ -531,7 +596,7 @@ Finally, there also exist a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use *trajectories* in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
 For instance, you might use this if you also want to analyse the trajectory with
-multiprocessing. You can find an example here: :ref:`example-16`
+multiprocessing. You can find an example here: :ref:`example-16`.
 
 
 .. _pickle: http://docs.python.org/2/library/pickle.html
@@ -607,10 +672,10 @@ are added with their full range instead of the default values.
 HDF5 Overview Tables
 ^^^^^^^^^^^^^^^^^^^^
 
-The :class:`~pypet.storageserivce.HDF5StorageService`
-Overview tables give you a nice summary about all *parameters* and *results* you needed and
-computed during your simulations. They will be placed under the subgroup
-``overview`` at the top-level in your trajectory group in the HDF5 file.
+The :class:`~pypet.storageservice.HDF5StorageService` creates summarizing information
+about your trajectory that can be found in the ``overview`` group within your HDF5 file.
+The overview tables there give you a nice summary about all *parameters* and
+*results* you needed and computed during your simulations.
 In addition, for every single run there will be a small overview
 table about the explored parameter values of that run.
 
@@ -714,9 +779,9 @@ If you do not want to purge duplicate comments, set the config parameter
 
 .. _more-on-running:
 
----------------------------------
+---------------------
 Running an Experiment
----------------------------------
+---------------------
 
 In order to run an experiment, you need to define a job or a top level function that specifies
 your simulation. This function gets as first positional argument the :
@@ -731,8 +796,8 @@ and optionally other positional and keyword arguments of your choice.
         return 'fortytwo'
 
 
-In order to run this simulation, you need to hand over the function to the environment,
-where you can also specify the additional arguments and keyword arguments using
+In order to run this simulation, you need to hand over the function to the environment.
+You can also specify the additional arguments and keyword arguments using
 :func:`~pypet.environment.Environment.f_run`:
 
 .. code-block:: python
@@ -752,9 +817,9 @@ of the run indices but in the order of their finishing time!
 
 .. _more-about-postproc:
 
------------------------------
+----------------------
 Adding Post-Processing
------------------------------
+----------------------
 
 You can add a post-processing function that should be called after the execution of all the single
 runs via :func:`pypet.environment.Environment.f_add_postproc`.
@@ -787,15 +852,17 @@ Moreover, please note that your trajectory will **NOT** contain the data compute
 during the single runs, since this has been removed after the single runs to save RAM.
 If your post-processing needs access to this data, you can simply load it via one of
 the many loading functions (:func:`~pypet.naturalnaming.NNGroupNode.f_load_child`,
-:func:`~pypet.naturalnaming.NNGroupNode.f_load_item`) or even turn on auto-loading.
+:func:`~pypet.trajectory.Trajectory.f_load_item`,
+:func:`~pypet.naturalnaming.NNGroupNode.f_load`) or even turn on :ref:`more-on-auto-loading`.
 
 Note that your post-processing function should **NOT** return any results, since these
 will simply be lost. However, there is one particular result that can be returned,
 see below.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Expanding your Trajectory via Post-Processing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If your post-processing function expands the trajectory via
 :func:`~pypet.trajectory.Trajectory.f_expand` or if your post-processing function returns
@@ -811,9 +878,10 @@ Thus, you can use post-processing for an adaptive search within your parameter s
 access will be propagated to the new single runs. So try to undo all changes before finishing
 the post-processing if you plan to trigger new single runs.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Expanding your Trajectory and using Multiprocessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you use multiprocessing and you want to adaptively expand your trajectory, it can
 be a waste of precious time to wait until all runs have finished.

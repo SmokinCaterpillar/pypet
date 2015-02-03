@@ -818,9 +818,11 @@ And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_l
 :func:`~pypet.naturalnaming.NNGroupNode.f_load` in order to load whole subtrees.
 
 
-^^^^^^^^^^^^^^^^^^^^
+.. _more-on-auto-loading:
+
+^^^^^^^^^^^^^^^^^
 Automatic Loading
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 The trajectory supports the nice feature to automatically loading data while you access it.
 Set ``traj.v_auto_load=True`` and you don't have to care about loading at all during data analysis.

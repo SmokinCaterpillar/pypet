@@ -12,6 +12,11 @@ def multiply(traj):
 
 
 def main():
+    # First change to the current location of the file
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+    print('Current working directory:`%s`' % dname)
     try:
         # Create an environment that handles running
         with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
