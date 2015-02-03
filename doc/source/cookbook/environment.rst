@@ -8,22 +8,14 @@ More about the Environment
 ============================
 
 -----------------------------
-Constructing an Environment
+Creating an Environment
 -----------------------------
 
 In most use cases you will interact with the :class:`~pypet.environment.Environment` to
 do your numerical simulations.
 The environment is your handyman for your numerical experiments, it sets up new trajectories,
-keeps log files and can be used to distribute your simulations onto several cpus.
+keeps log files and can be used to distribute your simulations onto several CPUs.
 
-Note in case you use the environment there is no need to call
-:func:`~pypet.trajectory.Trajectory.f_store`
-for data storage, this will always be called at the end of the simulation and at the end of a
-single run automatically (unless you set ``automatic_storing`` to ``False``).
-Yet, be aware that if you add any custom data during a single run not under a group named
-`run_XXXXXXXX` this data will not
-be immediately saved after the completion of the run. In case of multiprocessing this data will be
-lost if not manually stored.
 
 You start your simulations by creating an environment object:
 
@@ -275,7 +267,7 @@ because most of the time the default settings are sufficient.
 
     If true, *pypet* will delete the continue files after a successful simulation.
 
-* `storage_service``
+* ``storage_service``
 
     Pass a given storage service or a class constructor (default ``HDF5StorageService``)
     if you want the environment to create
@@ -427,9 +419,9 @@ keyword arguments to the environment. These are handed over to the service:
 .. _config-added-by-environment:
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Config Data added by the Environment
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Environment will automatically add some config settings to your trajectory.
 Thus, you can always look up how your trajectory was run. This encompasses many of the above named
@@ -446,117 +438,7 @@ timestamp.
 All information about the environment can be found in your trajectory under
 ``config.environment.environment_XXXXXXX_XXXX_XX_XX_XXhXXmXXs``. Your trajectory could
 potentially be run by several environments due to merging or extending an existing trajectory.
-Thus, you will be able to track how your trajectory was build over time.
-
-
-.. _more-on-overview:
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Overview Tables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Overview tables give you a nice summary about all *parameters* and *results* you needed and
-computed during your simulations. They will be placed under the subgroup
-``overview`` at the top-level in your trajectory group in the HDF5 file.
-In addition, for every single run there will be a small overview
-table about the explored parameter values of that run.
-
-The following tables are created:
-
-* An `info` table listing general information about your trajectory
-
-* A `runs` table summarizing the single runs
-
-* The branch tables:
-
-    `parameters_overview`
-
-        Containing all parameters, and some information about comments, length etc.
-
-    `config_overview`,
-
-        As above, but config parameters
-
-    `results_runs`
-
-        All results of all individual runs, to reduce memory size only a short value
-        summary and the name is given. Per default this table is switched off, to enable it
-        pass ``large_overview_tables=True`` to your environment.
-
-
-    `results_runs_summary`
-
-        Only the very first result with a particular name is listed. For instance
-        if you create the result 'my_result' in all runs only the result of `run_00000000`
-        is listed with detailed information.
-
-        If you use this table, you can purge duplicate comments,
-        see :ref:`more-on-duplicate-comments`.
-
-    `results_trajectory`
-
-        All results created not within single runs
-
-    `derived_parameters_trajectory`
-
-    `derived_parameters_runs`
-
-    `derived_parameters_runs_summary`
-
-        All three are analogous to the result overviews above
-
-* The `explored_parameters` overview about your parameters explored in the single runs.
-
-* In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
-  the values in each run.
-  Per default these tables are switched off, to enable it pass ``large_overview_tables=True``
-  to your environment.
-
-
-.. _more-on-duplicate-comments:
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Purging duplicate Comments
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you added a result with the same name and same comment in every single run, this would create
-a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
-For instance,
-during a single run you call ``traj.f_add_result('my_result', 42, comment='Mostly harmless!')``
-and the result will be renamed to ``results.runs.run_00000000.my_result``. After storage
-in the node associated with this result in your HDF5 file, you will find the comment
-``'Mostly harmless!'``.
-If you call ``traj.f_add_result('my_result',-55, comment='Mostly harmless!')``
-in another run again, let's say run_00000001, the name will be mapped to
-``results.runs.run_00000001.my_result``. But this time the comment will not be saved to disk,
-since ``'Mostly harmless!'`` is already part of the very first result with the name 'my_result'.
-Note that comments will be compared and storage will only be discarded if the strings
-are exactly the same. Moreover, the comment will only be compared to the comment of the very
-first result, if all comments are equal except for the very first one, all of these equal comments
-will be stored!
-
-In order to allow the purge of duplicate comments you need the `summary` overview tables.
-
-Furthermore, if you reload your data from the example above,
-the result instance ``results.runs.run_00000001.my_result``
-won't have a comment only the instance ``results.runs.run_00000000.my_result``.
-
-**IMPORTANT**: If you use multiprocessing, the storage service will take care that the comment for
-the result or derived parameter with the lowest run index will be considered, regardless
-of the order of the finishing of your runs. Note that this only works properly if all
-comments are the same. Otherwise the comment in the overview table might not be the one
-with the lowest run index. Moreover, if you merge trajectories (see ref:`more-on-merging`)
-there is no support for purging comments in the other trajectory.
-All comments of the other trajectory's results and derived parameters will be kept and
-merged into your current one.
-
-**IMPORTANT** Purging of duplicate comments requires overview tables. Since there are no
-overview tables for *group* nodes, this feature does not work for comments in *group* nodes,
-only in *leaf* nodes (aka results and parameters)!
-So try to avoid to add comments in *group* nodes within single runs.
-
-If you do not want to purge duplicate comments, set the config parameter
-``'purge_duplicate_comments'`` to 0 or ``False``.
+Thus, you will be able to track how your trajectory was built over time.
 
 
 .. _more-on-multiprocessing:
@@ -656,6 +538,7 @@ multiprocessing.
 
 .. _more-on-git:
 
+
 ^^^^^^^^^^^^^^^^
 Git Integration
 ^^^^^^^^^^^^^^^^
@@ -715,6 +598,117 @@ not crash.
 
 *pypet* automatically adds all parameters to the sumatra record. The explored parameters
 are added with their full range instead of the default values.
+
+
+.. _more-on-overview:
+
+^^^^^^^^^^^^^^^^^^^^
+HDF5 Overview Tables
+^^^^^^^^^^^^^^^^^^^^
+
+Overview tables give you a nice summary about all *parameters* and *results* you needed and
+computed during your simulations. They will be placed under the subgroup
+``overview`` at the top-level in your trajectory group in the HDF5 file.
+In addition, for every single run there will be a small overview
+table about the explored parameter values of that run.
+
+The following tables are created:
+
+* An `info` table listing general information about your trajectory
+
+* A `runs` table summarizing the single runs
+
+* The branch tables:
+
+    `parameters_overview`
+
+        Containing all parameters, and some information about comments, length etc.
+
+    `config_overview`,
+
+        As above, but config parameters
+
+    `results_runs`
+
+        All results of all individual runs, to reduce memory size only a short value
+        summary and the name is given. Per default this table is switched off, to enable it
+        pass ``large_overview_tables=True`` to your environment.
+
+
+    `results_runs_summary`
+
+        Only the very first result with a particular name is listed. For instance
+        if you create the result 'my_result' in all runs only the result of `run_00000000`
+        is listed with detailed information.
+
+        If you use this table, you can purge duplicate comments,
+        see :ref:`more-on-duplicate-comments`.
+
+    `results_trajectory`
+
+        All results created not within single runs
+
+    `derived_parameters_trajectory`
+
+    `derived_parameters_runs`
+
+    `derived_parameters_runs_summary`
+
+        All three are analogous to the result overviews above
+
+* The `explored_parameters` overview about your parameters explored in the single runs.
+
+* In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
+  the values in each run.
+  Per default these tables are switched off, to enable it pass ``large_overview_tables=True``
+  to your environment.
+
+
+.. _more-on-duplicate-comments:
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDF5 Purging  of duplicate Comments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you added a result with the same name and same comment in every single run, this would create
+a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
+For instance,
+during a single run you call ``traj.f_add_result('my_result', 42, comment='Mostly harmless!')``
+and the result will be renamed to ``results.runs.run_00000000.my_result``. After storage
+in the node associated with this result in your HDF5 file, you will find the comment
+``'Mostly harmless!'``.
+If you call ``traj.f_add_result('my_result',-55, comment='Mostly harmless!')``
+in another run again, let's say run_00000001, the name will be mapped to
+``results.runs.run_00000001.my_result``. But this time the comment will not be saved to disk,
+since ``'Mostly harmless!'`` is already part of the very first result with the name 'my_result'.
+Note that comments will be compared and storage will only be discarded if the strings
+are exactly the same. Moreover, the comment will only be compared to the comment of the very
+first result, if all comments are equal except for the very first one, all of these equal comments
+will be stored!
+
+In order to allow the purge of duplicate comments you need the `summary` overview tables.
+
+Furthermore, if you reload your data from the example above,
+the result instance ``results.runs.run_00000001.my_result``
+won't have a comment only the instance ``results.runs.run_00000000.my_result``.
+
+**IMPORTANT**: If you use multiprocessing, the storage service will take care that the comment for
+the result or derived parameter with the lowest run index will be considered, regardless
+of the order of the finishing of your runs. Note that this only works properly if all
+comments are the same. Otherwise the comment in the overview table might not be the one
+with the lowest run index. Moreover, if you merge trajectories (see ref:`more-on-merging`)
+there is no support for purging comments in the other trajectory.
+All comments of the other trajectory's results and derived parameters will be kept and
+merged into your current one.
+
+**IMPORTANT** Purging of duplicate comments requires overview tables. Since there are no
+overview tables for *group* nodes, this feature does not work for comments in *group* nodes,
+only in *leaf* nodes (aka results and parameters)!
+So try to avoid to add comments in *group* nodes within single runs.
+
+If you do not want to purge duplicate comments, set the config parameter
+``'purge_duplicate_comments'`` to 0 or ``False``.
+
 
 .. _more-on-running:
 

@@ -172,14 +172,23 @@ def progressbar(index, total, percentage_step=10, logger='print',
                  reprint=False, time=True, reset=False):
     """Plots a progress bar to the given `logger` for large for loops.
 
-    To be used inside a for-loop.
+    To be used inside a for-loop:
+
+    ::
+        for irun in range(42):
+            my_costly_job() # Your expensive function
+            progressbar(index=irun, total=42, reprint=True) # shows a growing progressbar
+
+
+    There is no initialisation of the progressbar necessary before the for-loop.
+    The progressbar will be reset automatically if used in another for-loop.
 
     :param index: Current index of for-loop
     :param total: Total size of for-loop
     :param percentage_step: Steps with which the bar should be plotted
     :param logger:
 
-        Logger to write to, if string 'print' is given, the print statement is
+        Logger to write to - with level INFO. If string 'print' is given, the print statement is
         used. Use None if you don't want to print or log the progressbar statement.
 
     :param reprint:

@@ -13,7 +13,6 @@ except ImportError:
 from pypet.environment import Environment, MultiprocContext
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
-from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
     ResultGroup, NNGroupNode, NNLeafNode, KnowsTrajectory
 from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
@@ -23,6 +22,8 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     VersionMismatchError
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product
+from pypet.utils.hdf5compression import compact_hdf5_file
+from pypet.utils.helpful_functions import progressbar
 from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
     SharedVLArrayResult, SharedPandasDataResult, SharedTableResult,\
     KnowsTrajectory, StorageContextManager, make_ordinary_result, make_shared_result
@@ -71,4 +72,5 @@ __all__ = [
     SharedTableResult.__name__,
     make_ordinary_result.__name__,
     make_shared_result.__name__,
+    progressbar.__name__
 ]

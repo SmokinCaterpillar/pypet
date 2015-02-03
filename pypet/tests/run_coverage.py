@@ -22,6 +22,7 @@ def coverage_multiprocessing_process(): # pragma: no cover
                                omit=['*/pypet/brian/*',
                                       '*/pypet/tests/*',
                                       '*/pypet/shareddata.py'],
+                               timid=True,
                                )
                 cov.start()
                 try:

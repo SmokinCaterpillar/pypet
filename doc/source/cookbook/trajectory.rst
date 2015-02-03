@@ -708,6 +708,15 @@ to fragmented HDF5 files and does not free memory on your hard drive. So there a
 constraints by the file system used (but trust me this is minor compared to the awesome
 advantages of using HDF5, and as I said, why the heck do you wanna change your results, anyway?).
 
+Note in case you use your trajectory with or via an :class:`~pypet.environment.Environment`
+there is no need to call :func:`~pypet.trajectory.Trajectory.f_store`
+for data storage, this will always be called at the end of the simulation and at the end of a
+single run automatically (unless you set ``automatic_storing`` to ``False``).
+Yet, be aware that if you add any custom data during a single run not under a group named
+`run_XXXXXXXX` this data will not
+be immediately saved after the completion of the run. In case of multiprocessing this data will be
+lost if not manually stored.
+
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Storing data individually
