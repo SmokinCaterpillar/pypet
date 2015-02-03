@@ -52,11 +52,6 @@ if [[ $GIT_TEST == ON ]]
                 python test_git.py
             fi
         echo "Git Test complete, removing folder"
-        if [[ $COVERAGE == ON ]]
-            then
-                echo "Moving coverage data"
-                mv .coverage* ../
-            fi
         cd ..
         rm -rvf git_sumatra_test
         echo "Removal complete"

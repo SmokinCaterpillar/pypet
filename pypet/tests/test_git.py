@@ -1,4 +1,9 @@
-
+try:
+    import pypet
+except ImportError:
+    # Check if pypet is installed otherwise append /pypet folder
+    # this is important for travis-ci
+    sys.path.append('/pypet')
 
 from pypet.environment import Environment
 from pypet.utils.explore import cartesian_product
