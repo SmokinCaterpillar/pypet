@@ -77,5 +77,3 @@ if [[ $COVERAGE == ON ]]
         coveralls --verbose
         cd ciscripts/travis
     fi
-
-
