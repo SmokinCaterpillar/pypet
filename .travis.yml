@@ -1,7 +1,7 @@
 language: python
 python:
   - 2.7
-#  - 2.6
+  - 2.6
 
 
 env:
@@ -22,7 +22,6 @@ matrix:
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
     - python: 3.4
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=ON TEST_SUITE=OFF
-
 
 
 # Install dependencies for PyTables
@@ -51,6 +50,7 @@ before_install:
   - source activate test-environment
   - pip freeze
 
+
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
@@ -78,8 +78,10 @@ install:
   - if [[ $COVERAGE == OFF ]]; then python setup.py install; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
 
+
 # Script command for all tests
 script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
+
 
 branches:
   only:
