@@ -131,7 +131,7 @@ def nested_equal(a, b):
         try:
             custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
             # if equality is implemented
-            if isinstance(custom_eq, bool):
+            if isinstance(custom_eq, (bool, np.bool_)):
                 return custom_eq
         except (AttributeError, NotImplementedError, TypeError, ValueError):
             pass
@@ -154,7 +154,15 @@ def nested_equal(a, b):
             try:
                 new_frame = a == b
                 new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
-                return np.all(new_frame.as_matrix())
+                if isinstance(new_frame, pd.DataFrame):
+                    return np.all(new_frame.as_matrix())
+                else:
+                    eq = new_frame.all() # In older pandas versions,
+                    # series do not support as_matrix
+                    if isinstance(eq, (bool, np.bool_)):
+                        return eq
+                    else:
+                        raise ValueError('')
             except ValueError:
                 # The Value Error can happen if the data frame is of dtype=object and contains
                 # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
