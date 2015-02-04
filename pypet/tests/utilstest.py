@@ -4,6 +4,8 @@ __author__ = 'Robert Meyer'
 
 import time
 import logging
+import pandas as pd
+import numpy as np
 
 from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name, remove_data
@@ -149,6 +151,45 @@ class TestNewTreeTranslation(unittest.TestCase):
                 self.assertTrue('.runs.' in node.v_full_name)
 
         remove_data()
+
+
+class MyDummy(object):
+    pass
+
+
+class TestEqualityOperations(unittest.TestCase):
+
+    def test_nested_equal(self):
+        self.assertTrue(nested_equal(4, 4))
+        self.assertFalse(nested_equal(4, 5))
+
+        frameA = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
+        frameB = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
+
+        self.assertTrue(nested_equal(frameA, frameB))
+
+        frameB.loc[0,'a'][0,0] = 3
+        self.assertFalse(nested_equal(frameA, frameB))
+
+        seriesA = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
+        seriesB = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
+
+        self.assertTrue(nested_equal(seriesA, seriesB))
+
+        seriesA.loc[0] = 777
+        self.assertFalse(nested_equal(seriesA, seriesB))
+
+        a = MyDummy()
+        a.g = 4
+        b = MyDummy()
+        b.g = 4
+
+        self.assertTrue(nested_equal(a, b))
+
+        a.h = [1, 2, 42]
+        b.h = [1, 2, 43]
+
+        self.assertFalse(nested_equal(a, b))
 
 
 if __name__ == '__main__':
