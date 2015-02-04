@@ -143,8 +143,6 @@ def nested_equal(a, b):
             return a == b
         if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
             return a == b
-        if isinstance(a, np.ndarray):
-            return np.all(a == b)
         if isinstance(a, (pd.Panel, pd.Panel4D)):
             return nested_equal(a.to_frame(), b.to_frame())
         if spsp.isspmatrix(a):
@@ -180,7 +178,8 @@ def nested_equal(a, b):
                         if not nested_equal(itema, itemb):
                             return False
                 return True
-
+        if isinstance(a, np.ndarray):
+            return np.all(a == b)
         if isinstance(a, Sequence):
             return all(nested_equal(x, y) for x, y in zip(a, b))
         if isinstance(a, Mapping):
