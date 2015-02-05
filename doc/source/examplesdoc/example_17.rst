@@ -10,7 +10,11 @@ The original project (``original.py``) simulates `elementary cellular automata`_
 
 The code explores different starting conditions and automata rules.
 ``pypetwrap.py`` shows how to include *pypet* into the project without
-changing much of the original code. Moreover, introducing *pypet* allows
+changing much of the original code. Basically, the core code of the simulation is left
+untouched. Only the *boilerplate* of the main script changes and a short wrapper function
+is needed that passes parameters from the *trajectory* to the core simulation.
+
+Moreover, introducing *pypet* allows
 much easier exploration of the parameter space. Now exploring different
 parameter sets requires no more code changes.
 

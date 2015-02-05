@@ -1189,7 +1189,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
         if not self.f_has_range():
-            raise TypeError('Cannot shrink non-array Parameter.')
+            raise TypeError('Cannot shrink Parameter without a range.')
 
         if self.f_is_empty():
             raise TypeError('Cannot shrink empty Parameter.')

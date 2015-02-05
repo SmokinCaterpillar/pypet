@@ -1,13 +1,13 @@
 
 .. _tutorial:
 
-================
+========
 Tutorial
-================
+========
 
---------------------------------------------
+-------------------------------------------
 Conceptualization of a Numerical Experiment
---------------------------------------------
+-------------------------------------------
 
 I will give a simple but comprehensive tutorial on *pypet* and how to use it for parameter
 exploration of numerical experiments in python.
@@ -952,6 +952,8 @@ To restore everythin back to normal simply call
 
 This concludes our small tutorial. If you are interested in more advance concepts
 look into the cookbook or check out the code snippets in the example section.
+Notably, if you consider using *pypet* with an already existing project of yours, you might
+want to pay attention to :ref:`example-17`.
 
 Cheers,
     Robert

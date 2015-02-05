@@ -463,7 +463,9 @@ Instead, ``2`` means we want to load the parameters and results including the da
 
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
 a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants
-hands-on experience, check out the :ref:`theexamples`.
+hands-on experience, check out the :ref:`tutorial` or :ref:`theexamples`.
+If you consider using *pypet* with an already existing project of yours, I may
+direct your attention to :ref:`example-17`.
 
 Cheers,
     Robert

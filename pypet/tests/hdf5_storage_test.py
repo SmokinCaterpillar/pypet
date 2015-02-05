@@ -1769,6 +1769,10 @@ class ResultSortTest(TrajectoryComparator):
 
 
     def expand(self,traj):
+        self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12,13]}
+        with self.assertRaises(ValueError):
+            traj.f_expand(self.expand_dict)
+
         self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12]}
         traj.f_expand(self.expand_dict)
 

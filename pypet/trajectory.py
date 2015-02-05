@@ -17,6 +17,7 @@ import inspect
 import copy as cp
 import numpy as np
 import sys
+from copy import deepcopy
 
 if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
@@ -754,7 +755,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         for param in compat.itervalues(self._explored_parameters):
             param.f_unlock()
-            param._shrink()
+            try:
+                param._shrink()
+            except Exception as e:
+                self._logger.error('Could not shrink `%s` because of:`%s`' %
+                                   (param.v_full_name, str(e)))
 
         # If we shrink, we do not have any explored parameters left and we can erase all
         # run information, and the length of the trajectory is 1 again.
@@ -995,11 +1000,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return self.f_get_run_information(name_or_id)['completed']
 
     @not_in_run
-    def f_expand(self, build_dict):
+    def f_expand(self, build_dict, fail_safe=True):
         """Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
 
         Please ensure before usage, that all explored parameters are loaded!
+
+        :param build_dict:
+
+            Dictionary containing the expansion
+
+        :param fail_safe:
+
+            If old ranges should be **deep-copied** in order to allow to restore
+            the original exploration if something fails during expansion.
+            Set to `False` if deep-copying your parameter ranges causes errors.
 
         :raises:
 
@@ -1015,47 +1030,73 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
 
-        enlarge_set = [self.f_get(key).v_full_name
-                       for key in build_dict.keys()]
-
+        enlarge_set = set([self.f_get(key).v_full_name
+                           for key in build_dict.keys()])
 
         # Check if all explored parameters will be enlarged, otherwise
         # We cannot enlarge the trajectory
-        if not set(self._explored_parameters.keys()) == set(enlarge_set):
+        if not set(self._explored_parameters.keys()) == enlarge_set:
             raise TypeError('You have to enlarge dimensions you have explored before! Currently'
                             ' explored parameters are not the ones you specified in your building'
                             ' dictionary, i.e. %s != %s' %
                             (str(set(self._explored_parameters.keys())),
                              str(set(build_dict.keys()))))
 
-        count = 0
-        length = None
-        for key, builditerable in build_dict.items():
-            act_param = self.f_get(key)
+        old_ranges = None
+        if fail_safe:
+            old_ranges = {}
+            for param_name in self._explored_parameters:
+                old_ranges[param_name] = self._explored_parameters[param_name].f_get_range()
+            try:
+                old_ranges = deepcopy(old_ranges)
+            except Exception:
+                self._logger.error('Cannot deepcopy old parameter ranges, if '
+                                     'something fails during `f_expand` I cannot revert the '
+                                     'trajectory to old settings.')
+                old_ranges = None
 
-            act_param.f_unlock()
-            act_param._expand(builditerable)
+        try:
+            count = 0
+            length = None
+            for key, builditerable in build_dict.items():
+                act_param = self.f_get(key)
 
-            name = act_param.v_full_name
+                act_param.f_unlock()
+                act_param._expand(builditerable)
 
-            self._explored_parameters[name] = act_param
+                name = act_param.v_full_name
 
-            # Compare the length of two consecutive parameters in the `build_dict`
-            if count == 0:
-                length = act_param.f_get_range_length()
-            elif not length == act_param.f_get_range_length():
-                    raise ValueError('The parameters to explore have not the same size!')
+                self._explored_parameters[name] = act_param
 
-            count += 1
+                # Compare the length of two consecutive parameters in the `build_dict`
+                if count == 0:
+                    length = act_param.f_get_range_length()
+                elif not length == act_param.f_get_range_length():
+                        raise ValueError('The parameters to explore have not the same size!')
 
-        original_length = len(self)
-        for irun in range(original_length, length):
-            self._add_run_info(irun)
+                count += 1
 
-        # We need to update the explored parameters:
-        if self._stored:
-            self._expansion_not_stored = True
+            original_length = len(self)
+            for irun in range(original_length, length):
+                self._add_run_info(irun)
 
+            # We need to update the explored parameters:
+            if self._stored:
+                self._expansion_not_stored = True
+        except Exception:
+            if old_ranges is not None:
+                # Try to restore the original parameter exploration
+                for param_name in old_ranges:
+                    param_range = old_ranges[param_name]
+                    param = self._explored_parameters[param_name]
+                    param.f_unlock()
+                    try:
+                        param._shrink()
+                    except Exception as e:
+                        self._logger.error('Could not shrink parameter `%s` '
+                                           'because of:`%s`' % (param_name, str(e)))
+                    param._explore(param_range)
+            raise
 
     def _store_expansion(self):
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
@@ -1156,8 +1197,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 act_param._explore(builditerable)
                 added_explored_parameters.append(act_param)
 
-                name = act_param.v_full_name
-                self._explored_parameters[name] = act_param
+                full_name = act_param.v_full_name
+                self._explored_parameters[full_name] = act_param
 
                 # Compare the length of two consecutive parameters in the `build_dict`
                 if len(self._explored_parameters) == 1:
@@ -1171,9 +1212,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self._add_run_info(irun)
 
         except Exception:
+            # Remove the added parameters again
             for param in added_explored_parameters:
                 param.f_unlock()
                 param._shrink()
+                full_name = param.v_full_name
+                del self._explored_parameters[full_name]
             raise
 
     def _add_run_info(self, idx, name=None, timestamp=42.0, finish_timestamp=1.337,
