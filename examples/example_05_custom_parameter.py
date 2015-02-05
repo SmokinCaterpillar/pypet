@@ -246,6 +246,9 @@ def main():
 
     # You have to click through the images to stop the example_05 module!
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 
 if __name__ == '__main__':
     main()

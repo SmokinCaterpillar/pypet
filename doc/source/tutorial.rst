@@ -658,9 +658,9 @@ during the run phase under a group node called `run_XXXXXXXX` (where this is the
 current run, which will be automatically chosen if you use the ``'$'`` wildcard)
 will be stored at the end of the particular run.
 
--------------------
+------------------
 #3 Post-Processing
--------------------
+------------------
 
 Each single run of our ``run_neuron`` function returned an estimate of the firing rate.
 In the post processing phase we want to collect these estimates and sort them into a
@@ -778,9 +778,9 @@ You can even expand the trajectory to trigger a new run phase. Accordingly, you 
 and iteratively search the parameter space. You may even do this on the fly while there
 are still single runs being executed, see :ref:`more-about-postproc`.
 
---------------------------------------
+------------------------------
 Final Steps in the Main Script
---------------------------------------
+------------------------------
 
 Still we actually need to make the environment execute all the stuff, so this is our main
 script after we generated the environment and added the parameters.
@@ -823,10 +823,18 @@ post-processing function as well. Yet, there is the slight difference that your 
 function needs to accept the result list as second positional argument followed by your
 positional and keyword arguments.
 
+Finally, if you used *pypet*'s logging feature, it is usually a good idea to tell the
+environment to stop logging and close all log files:
 
---------------
+.. code-block:: python
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
+
+-----------
 #4 Analysis
---------------
+-----------
 
 The final stage of our experiment encompasses the analysis of our raw data. We won't do much
 here, simply plot our firing rate table and show one example voltage trace.

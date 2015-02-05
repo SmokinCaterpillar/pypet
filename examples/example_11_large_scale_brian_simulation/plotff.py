@@ -27,7 +27,7 @@ def main():
                                                   BrianParameter])
 
     # Let's create and fake environment to enable logging:
-    Environment(traj, do_single_runs=False)
+    env = Environment(traj, do_single_runs=False)
 
 
     # Load the trajectory, but onyl laod the skeleton of the results
@@ -49,6 +49,9 @@ def main():
     plt.xlabel('R_ee')
     plt.ylabel('Avg. Fano Factor')
     plt.show()
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 
 if __name__ == '__main__':

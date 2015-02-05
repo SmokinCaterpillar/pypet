@@ -159,6 +159,9 @@ def main():
         del euler_data
         euler_result.f_empty()
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 
 if __name__ == '__main__':
     main()

@@ -103,6 +103,9 @@ def main():
         plot_pattern(traj.pattern, traj.rule_number, filename)
         progressbar(idx, len(traj), logger=logger)
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 
 if __name__ == '__main__':
     main()

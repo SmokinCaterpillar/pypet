@@ -307,6 +307,8 @@ Let's take a look at the snippet at once:
     # Run the simulation with all parameter combinations
     env.f_run(multiply)
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 
 And now let's go through it one by one. At first, we have a job to do, that is multiplying
@@ -413,9 +415,9 @@ we can find our *trajectory* containing all parameters and results.
 .. image:: /figures/example_01.png
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 Loading the data
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 We end this example by showing how we can reload the data that we have computed before.
 Here we want to load all data at once, but as an example just print the result of `run_00000001`

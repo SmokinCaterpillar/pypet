@@ -64,3 +64,6 @@ fig=plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot_wireframe(x_mesh, y_mesh, z_mesh, rstride=1, cstride=1)
 plt.show()
+
+# Finally disable logging and close all log-files
+env.f_disable_logging()

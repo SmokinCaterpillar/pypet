@@ -43,5 +43,8 @@ def main():
 
     env.f_pipeline(mypipeline)
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 if __name__ == '__main__':
     main()

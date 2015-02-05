@@ -51,7 +51,10 @@ from pypet.trajectory import Trajectory
 # So, first let's create a new trajectory and pass it the path and name of the HDF5 file.
 # Yet, to be very clear let's delete all the old stuff.
 del traj
+# Before deleting the environment let's disable logging and close all log-files
+env.f_disable_logging()
 del env
+
 traj = Trajectory(filename=filename)
 
 # Now we want to load all stored data.
@@ -74,3 +77,4 @@ traj.f_load(index=-1, load_parameters=2, load_results=2)
 # Let's take the second run named `run_00000001` (Note that counting starts at 0!).
 print('The result of `run_00000001` is: ')
 print(traj.run_00000001.z)
+

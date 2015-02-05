@@ -56,3 +56,6 @@ for idx in idx_iterator:
 
 # And we do not forget to set everything back to normal
 traj.f_restore_default()
+
+# Finally disable logging and close all log-files
+env.f_disable_logging()

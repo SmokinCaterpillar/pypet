@@ -21,7 +21,8 @@ env1 = Environment(trajectory='Traj1',filename=filename,
                   comment='I will be increased!')
 
 env2 = Environment(trajectory='Traj2',filename=filename,
-                  file_title='Example_03', log_folder=log_folder,
+                  file_title='Example_03', log_folder=None, # One environment keeping log files
+                  # is enough
                   comment = 'I am going to be merged into some other trajectory!')
 
 # Get the trajectories from the environment
@@ -81,3 +82,6 @@ traj1.f_restore_default()
 # As you can see duplicate parameter space points have been removed.
 # If you wish you can take a look at the files and backup files in
 # the experiments/example_03/HDF5 directory
+
+# Finally, disable logging and close log files
+env1.f_disable_logging()

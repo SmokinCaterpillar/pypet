@@ -121,6 +121,9 @@ def main():
 
     # You can take a look at the results in the hdf5 file if you want!
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 
 if __name__ == '__main__':
     main()

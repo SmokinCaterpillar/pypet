@@ -62,5 +62,8 @@ def main():
     # Finally let's print the result to see that it worked
     print(traj.z)
 
+    #Disable logging and close all log-files
+    env.f_disable_logging()
+
 if __name__ == '__main__':
     main()

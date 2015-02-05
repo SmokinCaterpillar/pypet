@@ -52,6 +52,9 @@ def main():
     # Run the simulation
     env.f_run(multiply)
 
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 if __name__ == '__main__':
     # This will execute the main function in case the script is called from the one true
     # main process and not from a child processes spawned by your environment.
