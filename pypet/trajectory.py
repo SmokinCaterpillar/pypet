@@ -1073,7 +1073,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     length = act_param.f_get_range_length()
                 elif not length == act_param.f_get_range_length():
                         raise ValueError('The parameters to explore have not the same size!')
-
                 count += 1
 
             original_length = len(self)
@@ -1187,7 +1186,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         added_explored_parameters = []
         try:
-            count = 0
             length = len(self)
             for key, builditerable in build_dict.items():
                 act_param = self.f_get(key)
@@ -1206,8 +1204,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 elif not length == act_param.f_get_range_length():
                     raise ValueError('The parameters to explore have not the same size!')
 
-                count += 1
-
             for irun in range(length):
                 self._add_run_info(irun)
 
@@ -1218,6 +1214,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 param._shrink()
                 full_name = param.v_full_name
                 del self._explored_parameters[full_name]
+            if len(self._explored_parameters) == 0:
+                self.f_shrink(force=True)
             raise
 
     def _add_run_info(self, idx, name=None, timestamp=42.0, finish_timestamp=1.337,
