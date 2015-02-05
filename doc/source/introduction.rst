@@ -1,8 +1,8 @@
-================================
+========================
 What is pypet all about?
-================================
+========================
 
-Whenever you do numerical simulations in science you come across two major problems.
+Whenever you do numerical simulations in science you come across two major problems:
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
 In order to accomplish both you write some hacky I/O functionality to get it done the quick and
 dirty way. Storing stuff into text files, as *MATLAB* *m*-files, or whatever comes in handy.
@@ -50,7 +50,7 @@ Main Features
 
     * Scipy sparse matrices
 
-    * pandas_ DataFrames
+    * pandas_ Series, DataFrames, and Panels
 
     * BRIAN_ quantities and monitors
 
@@ -85,7 +85,7 @@ Getting Started!
 Requirements
 -----------------------------
 
-Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_
+Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_ and
 
 * numpy_ >= 1.6.1
 
@@ -103,7 +103,7 @@ If you use Python 2.6 you also need
 
 For git integration you additionally need
 
-* GitPython_ >= 0.3.1 [#gitpythonversion]_
+* GitPython_ >= 0.3.1
 
 To utilize the cap feature for :ref:`more-on-multiprocessing` you need
 
@@ -125,7 +125,7 @@ Automatic sumatra records are supported for
 
 .. [#pandasversion]
 
-    Preferably use pandas 0.14.1 or 0.12.0 since there are some
+    Preferably use pandas 0.14.1 or higher or 0.12.0 since there are some
     upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
     *pypet* works under 0.13.x but not all features are fully supported.
     For instance, these upcasting issues may prevent you from storing
@@ -134,15 +134,10 @@ Automatic sumatra records are supported for
     precisely, have already been removed in the next pandas version.
     So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
-.. [#gitpythonversion]
 
-    Keep in mind that GitPython currently does not work under python 3. However,
-    there's active development to support python 3 in the near future
-    (see https://github.com/gitpython-developers/GitPython/issues/114).
-
----------------------------
+-------
 Install
----------------------------
+-------
 
 If you don't have all prerequisites (numpy_, scipy_, tables_, pandas_) install them first.
 These are standard python packages, so chances are high that they are already installed.
@@ -162,19 +157,10 @@ and ``python setup.py install`` it.
 In case you use **Windows**, you have to download the tar file from `pypi.python.org`_ and
 unzip it [#tar]_. Next, open a windows terminal [#win]_
 and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above run from the terminal ``python setup.py install``.
+As above, run from the terminal ``python setup.py install``.
 
-*pypet* has been tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
-Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
-By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
-
-.. _Travis-CI: https://www.travis-ci.org/
-
-.. _Appveyor: http://www.appveyor.com/
 
 .. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
-
-.. _`github.com/SmokinCaterpillar/pypet`: https://github.com/SmokinCaterpillar/pypet
 
 .. [#tar]
 
@@ -186,9 +172,10 @@ By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`
     In case you forgot how, you open a terminal by pressing *Windows Button* + *R*.
     Then type *cmd* into the dialog box and press *OK*.
 
-^^^^^^^^^^^^^^^^
+
+^^^^^^^
 Support
-^^^^^^^^^^^^^^^^
+^^^^^^^
 
 Checkout the `pypet Google Group`_.
 
@@ -197,9 +184,10 @@ To report bugs please use the issue functionality on **github**
 
 .. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
----------------------------------
-What to do with pypet?
----------------------------------
+
+------------------------
+What to do with *pypet*?
+------------------------
 
 The whole project evolves around a novel container object called *trajectory*.
 A *trajectory* is a container for *parameters* and *results* of numerical simulations
@@ -227,28 +215,29 @@ and investigate the effect of changing the *parameters*. To phrase that differen
 *trajectory* that you want to investigate how different amounts of cars and pedestrians
 influence traffic problems in Rome. So you define sets of combinations of cars and pedestrians
 and make individual simulation *runs* for these sets. To phrase that differently,
-you follow a predefined *trajectory* of points through your *parameter* space.
-And that's why the container is called *trajectory*.
+you follow a predefined *trajectory* of points through your *parameter* space and evaluate their
+outcome. And that's why the container is called *trajectory*.
 
 For each *run* of your simulation, with a particular combination of cars and pedestrians, you
 record time series data of traffic densities at major sites in Rome. This time series data
 (let's say they are pandas_ DataFrames) can also be added to your *trajectory* container.
 In the end everything will be stored to disk. The storage is handled by an
 extra service to store the *trajectory* into an
-HDF5_ file on your hard drive. Probably other formats like SQL will come soon (or maybe you
-want to contribute some code and write an SQL storage service?).
+HDF5_ file on your hard drive. Probably other formats like SQL might be implemented
+in the future
+(or maybe **you** want to contribute some code and write an SQL storage service?).
 
-------------------
+---------------
 Basic Work Flow
-------------------
+---------------
 
 Basic workflow is summarized in the image you can find below.
 Usually you use an :class:`~pypet.environment.Environment` for handling the execution and running
 of your simulation.
 As in the example code snippet in the next subsection, the environment will provide a
 :class:`~pypet.trajectory.Trajectory` container for you to fill in your parameters.
-During the execution of your simulation with individual parameter combinations
-the trajectory can also be used to store results.
+During the execution of your simulation with individual parameter combinations,
+the *trajectory* can also be used to store results.
 All data that you hand over to a *trajectory* is automatically
 stored into an HDF5 file by the :class:`~pypet.storageservice.HDF5StorageService`.
 
@@ -285,14 +274,15 @@ Let's take a look at the snippet at once:
             it also serves as a container for results.
 
         """
-        z=traj.x * traj.y
+        z = traj.x * traj.y
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
-                      comment='I am a simple example!')
+                      comment='I am a simple example!',
+                      large_overview_tables=True)
 
     # Get the trajectory from the environment
     traj = env.v_trajectory
@@ -329,6 +319,7 @@ two values:
         z=traj.x * traj.y
         traj.f_add_result('z',z, comment='I am the product of two values!')
 
+
 This is our simulation function ``multiply``. The function makes use of a
 :class:`~pypet.trajectory.Trajectory` container which manages our parameters.
 Here the *trajectory* holds a particular parameter space point, i.e. a particular
@@ -337,37 +328,41 @@ i.e. choices of points sampled from the parameter space. Thus, by sampling point
 the space one follows a trajectory through the parameter space -
 therefore the name of the container.
 
-Moreover, the *envrionment* will take
-care that the function ``multiply`` is called with each choice of parameters once.
-The underlying concept of parameter exploration will be introduced soon below.
-
 We can access the parameters simply by natural naming,
 as seen above via ``traj.x`` and ``traj.y``. The value of `z` is simply added as a result to the
 ``traj`` container.
 
 After the definition of the job that we want to simulate, we create an *environment* which
-will run the simulation.
+will run the simulation. Moreover, the environment will take
+care that the function ``multiply`` is called with each choice of parameters once.
 
 .. code-block:: python
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
                       file_title='Example_01', log_folder='./LOGS/',
-                      comment = 'I am a simple example!')
+                      comment = 'I am a simple example!',
+                      large_overview_tables=True)
 
 
-We pass some arguments here to the constructor. This is the name of the new trajectory, a filename to
-store the trajectory into, the title of the file, a folder for the log files, and a
-descriptive comment that is attached to the trajectory. You can pass many more (or less) arguments
+We pass some arguments here to the constructor. This is the name of the new trajectory,
+a filename to store the trajectory into, the title of the file, a folder for the log files, and a
+descriptive comment that is attached to the trajectory. We also set
+``large_overview_tables=True`` to get a nice summary of all our computed :math:`z` values
+in a single table. This is disabled by default to yield smaller and more compact HDF5 files.
+But for smaller projects with only a few results, you can enable it without
+wasting much space.
+You can pass many more (or less) arguments
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
 the property ``v_trajectory``.
 
-.. code-block::python
+.. code-block:: python
 
     # Get the trajectory from the environment
     traj = env.v_trajectory
+
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
 of :math:`x=y=1.0`.
@@ -377,6 +372,7 @@ of :math:`x=y=1.0`.
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
     traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+
 
 Well, calculating :math:`1.0 * 1.0` is quite boring, we want to figure out more products. Let's
 find the results of the cartesian product set :math:`\{1.0, 2.0, 3.0, 4.0\} \times \{6.0, 7.0, 8.0\}`.
@@ -395,6 +391,7 @@ are two lists of length 12 containing all pairings of points.
     # Explore the parameters with a cartesian product:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
+
 Finally, we need to tell the environment to run our job `multiply` with all parameter
 combinations.
 
@@ -402,6 +399,16 @@ combinations.
 
     # Run the simulation with all parameter combinations
     env.f_run(multiply)
+
+
+Usually, if you let *pypet* manage logging for you, it is a good idea in the end to tell
+the environment to stop logging and close all log files.
+
+.. code-block:: python
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
 all parameter combinations. Every time it will pass a :class:`~pypet.trajectory.Trajectory`
@@ -411,6 +418,7 @@ And all of this is automatically stored to disk in HDF5 format.
 
 If we now inspect the new HDF5 file in `examples/HDF/example_01.hdf5`,
 we can find our *trajectory* containing all parameters and results.
+Here you can see the summarizing overview table discussed above.
 
 .. image:: /figures/example_01.png
 
@@ -422,8 +430,8 @@ Loading the data
 We end this example by showing how we can reload the data that we have computed before.
 Here we want to load all data at once, but as an example just print the result of `run_00000001`
 where :math:`x` was 2.0 and :math:`y` was 6.0.
-For loading of data we do not need an *environment*. Instead, we can construct an
-empty *trajectory* container and load all data into it by ourselves.
+For loading of data we do not need an environment. Instead, we can construct an
+empty trajectory container and load all data into it by ourselves.
 
 .. code-block:: python
 
@@ -465,7 +473,7 @@ Instead, ``2`` means we want to load the parameters and results including the da
 
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
 a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants
-hands-on experience, check out the :ref:`tutorial` or :ref:`theexamples`.
+hands-on experience, check out the :ref:`tutorial` or the :ref:`theexamples`.
 If you consider using *pypet* with an already existing project of yours, I may
 direct your attention to :ref:`example-17`.
 

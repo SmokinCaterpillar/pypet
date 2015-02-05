@@ -112,9 +112,10 @@ input current :math:`I` and the refractory period :math:`\tau_{ref}`.
 
 The entire source code of this example can be found here: :ref:`example-13`.
 
--------------------
+
+-----------------
 Naming Convention
--------------------
+-----------------
 
 To avoid confusion with natural naming scheme (see below)
 and the functionality provided by the environment, trajectory,
@@ -126,9 +127,10 @@ comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
 
--------------------------
+
+-----------------
 #1 Pre-Processing
--------------------------
+-----------------
 
 Your experiment usually starts with the creation of an :class:`~pypet.environment.Environment`.
 Don't worry about the huge amount of parameters you can pass to the constructor,
@@ -243,9 +245,10 @@ The environment provides a new trajectory container for us:
 
     traj = env.v_trajectory
 
--------------------------
+
+------------------------
 The Trajectory Container
--------------------------
+------------------------
 
 A :class:`~pypet.trajectory.Trajectory` is the container for your parameters and results.
 It basically instantiates a tree.
@@ -275,9 +278,10 @@ We won't have any of these in the tutorial so you can ignore this branch for the
 
 Anything found under *results* is, as expected, a result of your numerical simulation.
 
-^^^^^^^^^^^^^^^^^^^^^^^^
+
+^^^^^^^^^^^^^^^^^^^^
 Adding of Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 Ok, for the moment let's fill the trajectory with parameters for our simulation.
 
@@ -380,9 +384,9 @@ your particular needs you can simply
 implement your own leaf containers and put them into the *trajectory*.
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 Accessing Data
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 Data can be accessed in several ways.
 You can, for instance, access data via *natural naming*:
@@ -401,9 +405,9 @@ for ``tau_ref`` and not the corresponding :class:`~pypet.parameter.Parameter` co
 To learn more about this *fast access* of data look at :ref:`more-on-access`.
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 Exploring the Data
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 Next, we can tell the trajectory which parameters we want to explore. We simply need
 need to pass a dictionary of lists (or other iterables) of the **same length** with
@@ -443,9 +447,9 @@ via :func:`~pypet.naturalnaming.ParameterGroup.f_add_parameter` are no longer us
 If you still want to simulate these, make sure they are part of the lists in the
 exploration dictionary.
 
--------------------------
+----------------
 #2 The Run Phase
--------------------------
+----------------
 
 Next, we define a job or top-level simulation run function (that
 not necessarily has to be a real python function, any callable object will do the job).

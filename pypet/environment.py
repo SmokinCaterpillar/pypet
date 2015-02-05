@@ -2039,7 +2039,8 @@ class Environment(HasLogger):
 
                                 # Delete the terminated processes
                                 if not proc.is_alive():
-                                    process_dict.pop(pid)
+                                    del process_dict[pid]
+                                    del proc
 
                             # Check if caps are reached.
                             # Cap is only checked if there is at least one

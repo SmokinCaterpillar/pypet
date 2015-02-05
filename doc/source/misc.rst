@@ -2,12 +2,15 @@
 Publication Information
 =======================
 
----------------------
+---------------
 Citation Policy
----------------------
+---------------
 
-If you use *pypet*, it would be very kind of you to cite this in your amazing research article.
-For *bibtex* you can use:
+If you use *pypet* in your research,
+it would be very kind of you to cite this in your amazing work.
+Currently, a research article about *pypet* is in preparation which will be the basis
+for citations in the future.
+Until its publication you can cite the software as given below. For *bibtex* you can use:
 
 ::
 
@@ -22,13 +25,13 @@ For *bibtex* you can use:
 
 Otherwise you can cite it as:
 
-*   Robert Meyer and Klaus Obermayer. pypet: The Python Parameter
+*   Robert Meyer and Klaus Obermayer. *pypet*: The Python Parameter
     Exploration Toolkit, 2015. http://pypet.readthedocs.org/.
 
 
----------------------------------
+--------------------------------
 Brain Days and EuroPython Poster
----------------------------------
+--------------------------------
 
 There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_ and
 the `EuroPython 2014`_.
@@ -73,9 +76,9 @@ Acknowledgments
 
 .. _`Neural Information Processing Group`: http://www.ni.tu-berlin.de/
 
-====================
+=====
 Tests
-====================
+=====
 
 Tests can be found in `pypet/tests`.
 Note that they involve heavy file IO and you need privileges
@@ -97,3 +100,13 @@ If you do not want to browse to your installation folder, you can also download 
 Running all tests can take up to 15 minutes and might temporarily take up to
 8 GB of disk space. The test suite encompasses more than **500** tests
 (including the BRIAN based tests) and has a code coverage of about **90%**!
+
+Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
+By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
+
+.. _Travis-CI: https://www.travis-ci.org/
+
+.. _Appveyor: http://www.appveyor.com/
+
+.. _`github.com/SmokinCaterpillar/pypet`: https://github.com/SmokinCaterpillar/pypet

@@ -1,6 +1,6 @@
-=========
+=====
 pypet
-=========
+=====
 
 [![Travis Build Status](https://travis-ci.org/SmokinCaterpillar/pypet.svg?branch=master)](https://travis-ci.org/SmokinCaterpillar/pypet)
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true)](https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master)
@@ -15,9 +15,9 @@ lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
-===========================
-IMPORTANT!
-===========================
+====================
+IMPORTANT DISCLAIMER
+====================
 
 The program is currently under development,
 please keep that in mind and use it very carefully.
@@ -25,18 +25,19 @@ please keep that in mind and use it very carefully.
 Before publishing the official *0.1.0* release I will integrate *pypet* first in my own research
 project. Thus, I have a more profound testing environment than only using
 unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
-However, unless it is really, really, really necessary I do not plan to change the API anymore.
-So feel free to use this beta version and feel free to give feedback,
+However, unless it is really, really, really necessary I do not plan to introduce drastic
+API changes anymore.
+So feel free to use this beta version and even more so feel free to give feedback,
 suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
 write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet) :-)
 
 Thanks!
 
----------------------
+------------
 Requirements
----------------------
+------------
 
-Python 2.6, 2.7, 3.3, 3.4
+Python 2.6, 2.7, 3.3, 3.4 and
 
 * tables >= 2.3.1
 
@@ -68,14 +69,15 @@ Automatic Sumatra records are supported for
 
 * Sumatra >= 0.6.0
 
-=========================
+========================
 What is pypet all about?
-=========================
+========================
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
 In order to accomplish both you write some hacky I/O functionality to get it done the quick and
-dirty way. This means storing stuff into text files, as *MATLAB* *m*-files, or whatever comes in handy.
+dirty way. This means storing stuff into text files, as *MATLAB* *m*-files, 
+or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
 first results. But because of unforeseen circumstances, you changed a lot of your code.
@@ -96,9 +98,9 @@ And finally, you can get your *results* together and store everything appropriat
 The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
 (http://www.pytables.org/).
 
----------------------------
+--------------------
 Package Organization
----------------------------
+--------------------
 
 This project encompasses these core modules:
 
@@ -114,9 +116,9 @@ This project encompasses these core modules:
 *  The `pypet.storageservice` for saving your data to disk
 
 
----------------------------
+-------
 Install
----------------------------
+-------
 
 If you don't have all prerequisites (*numpy*, *scipy*, *tables*, *pandas*) install them first.
 These are standard python packages, so chances are high that they are already installed.
@@ -138,14 +140,10 @@ and unzip it. Next, open a windows terminal
 and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
 As above run from the terminal ``python setup.py install``.
 
-*pypet* has been tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
-Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
-By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
-
----------------------------
+-------------------------
 Documentation and Support
----------------------------
+-------------------------
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
@@ -154,9 +152,9 @@ There is a Google Groups mailing list for support: https://groups.google.com/for
 If you have any further questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
---------------
+-------------
 Main Features
---------------
+-------------
 
 * **Novel tree container** `Trajectory`, for handling and managing of
   parameters and results of numerical simulations
@@ -204,9 +202,9 @@ Main Features
   Sumatra (http://neuralensemble.org/sumatra/)
 
 
-======================
+=====================
 Quick Working Example
-======================
+=====================
 
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
@@ -375,6 +373,10 @@ If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
 Running all tests can take up to 15 minutes. The test suite encompasses more than **500** tests
 (including the BRIAN based tests) and has a code coverage of about **90%**!
+
+Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
+By the way, the source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
 ------------------------------------
 License

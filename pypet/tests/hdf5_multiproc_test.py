@@ -15,6 +15,7 @@ import os
 import numpy as np
 import scipy.sparse as spsp
 
+
 class MultiprocQueueTest(EnvironmentTest):
 
     def set_mode(self):
@@ -67,13 +68,13 @@ class MultiprocNoPoolQueueTest(EnvironmentTest):
 
 class MultiprocNoPoolLockTest(EnvironmentTest):
 
-
      def set_mode(self):
         EnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 2
         self.use_pool=False
+
 
 class MultiprocNoPoolSortQueueTest(ResultSortTest):
 
@@ -91,6 +92,7 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
         self.multiproc = True
         self.ncores = 3
         self.use_pool=False
+
 
 class CapTest(EnvironmentTest):
 

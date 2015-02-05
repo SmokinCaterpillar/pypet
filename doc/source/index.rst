@@ -3,11 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-==================================
+=================================
 Welcome to pypet's documentation!
-==================================
+=================================
 
-The new python (2 and 3) parameter exploration toolkit:
+The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
 of any numerical simulation in python,
 thereby storing your data into HDF5_ files for you.
@@ -22,9 +22,9 @@ Latest version: `0.1b.9`_
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
-===========================
-IMPORTANT!
-===========================
+====================
+IMPORTANT DISCLAIMER
+====================
 
 The program is currently under development,
 please keep that in mind and use it very carefully.
@@ -32,19 +32,20 @@ please keep that in mind and use it very carefully.
 Before publishing the official *0.1.0* release I will integrate *pypet* first in my own research
 project. Thus, I have a more profound testing environment than only using
 unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
-However, unless it is really, really, really necessary I do not plan to change the API anymore.
-So feel free to use this beta version and feel free to give feedback,
+However, unless it is really, really, really necessary I do not plan to introduce
+drastic API changes anymore.
+So feel free to use this beta version and even more so feel free to give feedback,
 suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
-write to the `pypet Google Group`_ :-)
+write to the `pypet Google Group`_.)
 
 Thanks!
 
 .. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
 
-==========================
-ToC
-==========================
+========
+Contents
+========
 
 .. toctree::
    :maxdepth: 1
@@ -58,11 +59,9 @@ ToC
    misc
 
 
-
-
-=====================
+=======
 Contact
-=====================
+=======
 
 Robert Meyer
 
@@ -75,15 +74,16 @@ MAR 5.046
 D-10587 Berlin
 
 
-===================
+=======
 License
-===================
+=======
 
 .. literalinclude:: ../../LICENSE
 
-===================
+
+=====
 Index
-===================
+=====
 
 * :ref:`genindex`
 

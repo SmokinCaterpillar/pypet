@@ -15,9 +15,8 @@ def multiply(traj):
         it also serves as a container for results.
 
     """
-    z=traj.x*traj.y
+    z = traj.x * traj.y
     traj.f_add_result('z', z, comment='Result of our simulation!')
-
 
 
 # Create an environment that handles running
@@ -27,7 +26,11 @@ env = Environment(trajectory='Multiplication',
                   filename=filename,
                   file_title='Example_01_First_Steps',
                   log_folder=log_folder,
-                  comment='The first example!')
+                  comment='The first example!',
+                  large_overview_tables=True,  # To see a nice overview of all
+                  # computed `z` values in the resulting HDF5 file.
+                  # Per default disabled for more compact HDF5 files.
+                  )
 
 # The environment has created a trajectory container for us
 traj = env.v_trajectory

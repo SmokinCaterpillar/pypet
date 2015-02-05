@@ -1,8 +1,6 @@
 __author__ = 'Robert Meyer'
 
 import multiprocessing
-
-
 # Monkey Patch from here: https://bitbucket.org/ned/coveragepy/issue/117/enable-coverage-measurement-of-code-run-by
 def coverage_multiprocessing_process(): # pragma: no cover
     try:
@@ -19,7 +17,8 @@ def coverage_multiprocessing_process(): # pragma: no cover
         class Process_WithCoverage(multiprocessing.Process):
             def _bootstrap(self):
                 cov = coverage(data_suffix=True,
-                               omit='*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py'.split(','))
+                    omit='*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py'.split(','))
+
                 cov.start()
                 try:
                     return original(self)
@@ -40,14 +39,7 @@ pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)
 
-
-import getopt
-import os
-
 from pypet.tests.all_single_core_tests import *
-
-# del TestOtherHDF5Settings # remove the test for speed
-# del TestOtherHDF5Settings2 # remove the test for speed
 
 from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
     MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\
