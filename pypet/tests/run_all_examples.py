@@ -93,6 +93,17 @@ def main():
             print("########## Running %s ###########" % simple_example)
             execute_example(simple_example)
 
+    ex17 = 'example_17_wrapping_an_existing_project'
+    if skip(ex17):
+        print("------- Skipping %s -------" % ex17)
+    else:
+        os.chdir(ex17)
+        sys.path.append(os.getcwd())
+        print('Running original')
+        execute_example('original.py')
+        print('Running pypet wrapping')
+        execute_example('pypetwrap.py')
+        os.chdir('..')
 
     ex13 = 'example_13_post_processing'
     if skip(ex13):

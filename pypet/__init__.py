@@ -21,7 +21,7 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     NotUniqueNodeError, ParameterLockedException, PresettingError, TooManyGroupsError,\
     VersionMismatchError
 from pypet.pypetlogging import HasLogger
-from pypet.utils.explore import cartesian_product
+from pypet.utils.explore import cartesian_product, find_unique
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.utils.helpful_functions import progressbar
 from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
@@ -72,5 +72,6 @@ __all__ = [
     SharedTableResult.__name__,
     make_ordinary_result.__name__,
     make_shared_result.__name__,
-    progressbar.__name__
+    progressbar.__name__,
+    find_unique.__name__
 ]

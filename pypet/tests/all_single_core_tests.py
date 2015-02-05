@@ -21,7 +21,7 @@ except ImportError as e:
     print(repr(e)) # We end up here if `dill` is not installed
     pass
 from pypet.tests.utilstest import CartesianTest, ProgressBarTest, TestNewTreeTranslation, \
-    TestDictionaryMethods, TestEqualityOperations
+    TestDictionaryMethods, TestEqualityOperations, TestFindUnique
 from pypet.tests.environment_test import EnvironmentTest
 from pypet.tests.annotations_test import AnnotationsTest
 from pypet.tests.module_test import TestAllImport

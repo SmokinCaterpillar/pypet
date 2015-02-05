@@ -91,9 +91,11 @@ def parameters_equal(a, b):
     if not a.v_full_name == b.v_full_name:
         return False
 
-    # I allow different comments for now
-    # if not a.get_comment() == b.get_comment():
-    # return False
+    if a.f_is_empty() and b.f_is_empty():
+        return True
+
+    if a.f_is_empty() != b.f_is_empty():
+        return False
 
     if not a._values_of_same_type(a.f_get(), b.f_get()):
         return False
@@ -101,14 +103,16 @@ def parameters_equal(a, b):
     if not a._equal_values(a.f_get(), b.f_get()):
         return False
 
-    if not len(a) == len(b):
+    if a.f_has_range() != b.f_has_range():
         return False
 
     if a.f_has_range():
+        if a.f_get_range_length() != b.f_get_range_length():
+            return False
+
         for myitem, bitem in zip(a.f_get_range(), b.f_get_range()):
             if not a._values_of_same_type(myitem, bitem):
                 return False
-
             if not a._equal_values(myitem, bitem):
                 return False
 
@@ -187,6 +191,8 @@ def nested_equal(a, b):
                             return False
                 return True
         if isinstance(a, np.ndarray):
+            if a.shape != b.shape:
+                return False
             return np.all(a == b)
         if isinstance(a, Sequence):
             return all(nested_equal(x, y) for x, y in zip(a, b))

@@ -1,9 +1,9 @@
 
 .. _example-13:
 
-========================
-Post-Processing
-========================
+==================================================
+Post-Processing and Pipelining (from the Tutorial)
+==================================================
 
 Here you find an example of post-processing.
 

@@ -236,7 +236,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # pickled without all the parameter exploration ranges and all run information
         # As a consequence, __len__ would return 1, so we need to store the length in this
         # helper variable to return the correct length during single runs.
-        self._length_during_nfc = None
+        self._length = 1
 
         super(Trajectory, self).__init__()
 
@@ -340,14 +340,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Do not copy run information in case `v_full_copy` is `False`.
         # Accordingly, we need to store the length in the helper variable
         # `_length_during_nfc`.
-        if not self.v_full_copy:
-            if self.v_idx != -1:
-                runname = self._single_run_ids[self.v_idx]
-                result['_run_information'] = {runname: self._run_information[runname]}
-                result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
-            if self._length_during_nfc is None:
-                result['_length_during_nfc'] = len(self)
-
+        if not self.v_full_copy and self.v_crun is not None:
+            runname = self._single_run_ids[self.v_idx]
+            result['_run_information'] = {runname: self._run_information[runname]}
+            result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
         del result['_logger']
         return result
 
@@ -973,12 +969,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     def __len__(self):
         """Length of trajectory, minimum length is 1"""
-        # If `v_full_copy` is False then `run_information` is not pickled, so we
-        # need to rely on the helper variable `_length_during_run`.
-        if self._length_during_nfc is not None:
-            return self._length_during_nfc
-        else:
-            return len(self._run_information)
+        return self._length
 
     @not_in_run
     def f_is_completed(self, name_or_id=None):
@@ -1007,6 +998,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def f_expand(self, build_dict):
         """Similar to :func:`~pypet.trajectory.Trajectory.f_explore`, but can be used to enlarge
         already completed trajectories.
+
+        Please ensure before usage, that all explored parameters are loaded!
 
         :raises:
 
@@ -1049,9 +1042,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             # Compare the length of two consecutive parameters in the `build_dict`
             if count == 0:
-                length = len(act_param)
-            else:
-                if not length == len(act_param):
+                length = act_param.f_get_range_length()
+            elif not length == act_param.f_get_range_length():
                     raise ValueError('The parameters to explore have not the same size!')
 
             count += 1
@@ -1100,7 +1092,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         Example usage:
 
-        >>> traj.explore({'groupA.param1' : [1,2,3,4,5], 'groupA.param2':['a','b','c','d','e']})
+        >>> traj.f_explore({'groupA.param1' : [1,2,3,4,5], 'groupA.param2':['a','b','c','d','e']})
+
+        Could also be called consecutively:
+
+        >>> traj.f_explore({'groupA.param1' : [1,2,3,4,5]})
+        >>> traj.f_explore({'groupA.param2':['a','b','c','d','e']})
 
         NOTE:
 
@@ -1139,80 +1136,85 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             traj.f_add_parameter('my_float_parameter', np.float64(42.4),
                                    comment='My value is a numpy 64 bit float')
 
-        """
 
-        if len(self) > 1 or len(self._explored_parameters) > 0 or self.f_is_completed(0):
-            raise TypeError('Cannot explore an already explored trajectory, '
-                            'please use `f_expand` instead.')
-
-        if len(self._explored_parameters) > 0:
-            self._logger.info('Your trajectory is already explored. But if the parameters'
-                              ' you want to explore matche the current trajectory length.'
-                              ' I will add them to'
-                              ' the existing explored parameters.')
-
-        count = 0
-        lenght = None
-        for key, builditerable in build_dict.items():
-            act_param = self.f_get(key)
-            if not act_param.v_is_leaf or not act_param.v_is_parameter:
-                raise ValueError('%s is not an appropriate search string for a parameter.' % key)
-
-            act_param._explore(builditerable)
-
-            name = act_param.v_full_name
-
-            self._explored_parameters[name] = act_param
-
-            # Compare the length of two consecutive parameters in the `build_dict`
-            if count == 0 and len(self) == 1:
-                length = len(act_param)
-            elif len(self) > 1:
-                # We end up here if we increase the explored parameters
-                length = len(self)
-            if not length == len(act_param):
-                raise ValueError('The parameters to explore have not the same size!')
-
-            count += 1
-
-        for irun in range(length):
-            self._add_run_info(irun)
-
-    def _add_run_info(self, idx):
-        """Adds a new run to the `_run_information` dict.
-
-        :param idx: Integer index of the new run
 
         """
-        runname = pypetconstants.FORMATTED_RUN_NAME % idx
+        for run_idx in range(len(self)):
+            if self.f_is_completed(run_idx):
+                raise TypeError('You cannot explore a trajectory which has been explored before, '
+                                'please use `f_expand` instead.')
+
+        added_explored_parameters = []
+        try:
+            count = 0
+            length = len(self)
+            for key, builditerable in build_dict.items():
+                act_param = self.f_get(key)
+                if not act_param.v_is_leaf or not act_param.v_is_parameter:
+                    raise ValueError('%s is not an appropriate search string for a parameter.' % key)
+
+                act_param._explore(builditerable)
+                added_explored_parameters.append(act_param)
+
+                name = act_param.v_full_name
+                self._explored_parameters[name] = act_param
+
+                # Compare the length of two consecutive parameters in the `build_dict`
+                if len(self._explored_parameters) == 1:
+                    length = act_param.f_get_range_length()
+                elif not length == act_param.f_get_range_length():
+                    raise ValueError('The parameters to explore have not the same size!')
+
+                count += 1
+
+            for irun in range(length):
+                self._add_run_info(irun)
+
+        except Exception:
+            for param in added_explored_parameters:
+                param.f_unlock()
+                param._shrink()
+            raise
+
+    def _add_run_info(self, idx, name=None, timestamp=42.0, finish_timestamp=1.337,
+                      runtime='forever and ever', time='>>Maybe time`s gone on strike',
+                      completed=0, parameter_summary='Not yet my friend!',
+                      short_environment_hexsha='notyet!'):
+        """Adds a new run to the `_run_information` dict."""
+
+        if name is None:
+            name = pypetconstants.FORMATTED_RUN_NAME % idx
         # The `_single_run_ids` dict is bidirectional and maps indices to run names and vice versa
-        self._single_run_ids[runname] = idx
-        self._single_run_ids[idx] = runname
+        self._single_run_ids[name] = idx
+        self._single_run_ids[idx] = name
 
         info_dict = {}
         info_dict['idx'] = idx
-        info_dict['timestamp'] = 42.0
-        info_dict['finish_timestamp'] = 1.337
-        info_dict['runtime'] = 'forever and ever'
-        info_dict['time'] = '>>Maybe time`s gone on strike.<<'
-        info_dict['completed'] = 0
-        info_dict['name'] = runname
-        info_dict['parameter_summary'] = 'Not yet my friend!'
-        info_dict['short_environment_hexsha'] = 'notyet1'
+        info_dict['timestamp'] = timestamp
+        info_dict['finish_timestamp'] = finish_timestamp
+        info_dict['runtime'] = runtime
+        info_dict['time'] = time
+        info_dict['completed'] = completed
+        info_dict['name'] = name
+        info_dict['parameter_summary'] = parameter_summary
+        info_dict['short_environment_hexsha'] = short_environment_hexsha
 
-        self._run_information[runname] = info_dict
+        self._run_information[name] = info_dict
+        self._length = len(self._run_information)
 
     @not_in_run
     def f_lock_parameters(self):
-        """Locks all parameters"""
+        """Locks all non-empty parameters"""
         for par in compat.itervalues(self._parameters):
-            par.f_lock()
+            if not par.f_is_empty():
+                par.f_lock()
 
     @not_in_run
     def f_lock_derived_parameters(self):
-        """Locks all derived parameters"""
+        """Locks all non-empty derived parameters"""
         for par in compat.itervalues(self._derived_parameters):
-            par.f_lock()
+            if not par.f_is_empty():
+                par.f_lock()
 
     def _remove_run_data(self):
         """ Removes all data of completed runs.
@@ -1422,9 +1424,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if as_new:
             for param in compat.itervalues(self._parameters):
                 param.f_unlock()
-        else:
-            self.f_lock_parameters()
-            self.f_lock_derived_parameters()
+        self._length = len(self._run_information)
+
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
                                             ignore_trajectory_derived_parameters):
@@ -2148,7 +2149,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 run_name_dict[run_name] = new_runname
 
-                self._run_information[new_runname] = dict(
+                info_dict = dict(
                     idx=count,
                     time=time,
                     timestamp=timestamp,
@@ -2157,8 +2158,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     finish_timestamp=finish_timestamp,
                     runtime=runtime)
 
-                self._single_run_ids[count] = new_runname
-                self._single_run_ids[new_runname] = count
+                self._add_run_info(**info_dict)
 
                 count += 1
 
@@ -3593,7 +3593,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     self._nn_interface._remove_node_or_leaf(item, recursive=recursive)
                 else:
                     item._stored = False
-            
+
         else:
             self._logger.warning('Your removal was not successful, could not find a single '
                                  'item to remove.')

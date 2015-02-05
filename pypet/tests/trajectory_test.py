@@ -65,8 +65,14 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.par.FloatParam=4.0
 
+        self.traj.par.expexp = 42, 'another param to explore'
 
-        self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
+
+        self.explore_dict = {'FloatParam':[1.0, 1.1, 1.2, 1.3]}
+
+        self.traj.f_explore(self.explore_dict)
+
+        self.explore_dict = {'expexp': [42, 42, 42, 43]}
 
         self.traj.f_explore(self.explore_dict)
 
@@ -306,7 +312,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_not_increase_exploration(self):
 
-        self.assertTrue(len(self.traj._explored_parameters)==1)
+        self.assertTrue(len(self.traj._explored_parameters)==2)
 
         with self.assertRaises(TypeError):
             self.traj.f_explore(self.explore_dict)

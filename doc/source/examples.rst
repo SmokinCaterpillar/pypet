@@ -24,6 +24,7 @@ Basic Concepts
     examplesdoc/example_04
     examplesdoc/example_09
     examplesdoc/example_13
+    examplesdoc/example_17
 
 ..
     Ex1: First steps
@@ -33,6 +34,7 @@ Basic Concepts
     Ex4: Multiprocessing
     Ex9: Large Results
     Ex13: Pipeline and post-processing
+    Ex17: Wrapping an existing project
 
 
 ------------------

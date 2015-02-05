@@ -97,6 +97,11 @@ pypet 0.1b.9
 
 *   To streamline the API you can now no longer specify the name of backup files for merging
 
+*   Locked parameters can no longer be loaded and must be unlocked before.
+
+*   Parameters are no longer required to implement ``__len__`` because it can be
+    ambiguous, instead they must implement ``f_get_range_length`` function.
+
 
 pypet 0.1b.8
 

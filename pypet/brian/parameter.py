@@ -20,6 +20,7 @@ ___author__ = 'Robert Meyer'
 from pypet.parameter import Parameter, Result, ObjectTable
 # Unfortunately I have to do this for read the docs to be able to mock brian
 from pypet.utils.decorators import copydoc
+import pypet.pypetexceptions as pex
 
 try:
     from brian.units import *
@@ -183,6 +184,8 @@ class BrianParameter(Parameter):
 
 
     def _load(self, load_dict):
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
         try:
             data_table = load_dict['data' + BrianParameter.IDENTIFIER]

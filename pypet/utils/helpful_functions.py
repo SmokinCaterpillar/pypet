@@ -90,7 +90,7 @@ class _Progressbar(object):
                  reprint=False, time=True, reset=False):
         """Plots a progress bar to the given `logger` for large for loops.
 
-        To be used inside a for-loop.
+        To be used inside a for-loop at the end of the loop.
 
         :param index: Current index of for-loop
         :param total: Total size of for-loop
@@ -104,7 +104,7 @@ class _Progressbar(object):
 
             If no new line should be plotted but carriage return (works only for printing)
 
-        :param time: If the lasting and remaining time should be calculated and displayed
+        :param time: If the remaining time should be calculated and displayed
         :param reset:
 
             If the progressbar should be restarted. If progressbar is called with a lower
@@ -115,27 +115,28 @@ class _Progressbar(object):
             The progressbar string or None if the string has not been updated.
 
         """
+        indexp1 = index + 1
+
         reset = reset or index <= self._current_index
         if reset:
             self._reset(index, total, percentage_step)
 
-        next = int(int((index + 1) / self._total_norm) / self._percentage_step)
+        next = int(int(indexp1 / self._total_norm) / self._percentage_step)
         statement = None
 
         if next > self._current or index == self._total_minus_one or reset:
             current_time = datetime.datetime.now()
 
-            indexp1 = index + 1
-
             if time:
                 time_delta = current_time - self._start_time
-                remaining_seconds = int(np.round((self._total_float - indexp1)/indexp1 *
-                                        time_delta.total_seconds()))
+                remaining_seconds = int(np.round(
+                            (self._total_float - indexp1)*(indexp1 + 1.0)/(indexp1 * indexp1) *
+                             time_delta.total_seconds()))
                 remaining_delta = datetime.timedelta(seconds=remaining_seconds)
-                time_delta = datetime.timedelta(seconds =
-                                                int(np.round(time_delta.total_seconds())))
+                # time_delta = datetime.timedelta(seconds =
+                #                                 int(np.round(time_delta.total_seconds())))
 
-                runtime_str = ' runtime: ' + str(time_delta)
+                # runtime_str = ' runtime: ' + str(time_delta)
                 remaining_str = ', remaining: ' + str(remaining_delta)
             else:
                 runtime_str = ''
@@ -143,14 +144,16 @@ class _Progressbar(object):
 
             ending = False
             if index == self._total_minus_one:
-                statement = '[' + '=' * self._steps +']100.0%' + runtime_str
+                statement = '[' + '=' * self._steps +']100.0%'
                 ending=True
             elif reset:
-                statement = '[' + ' ' * self._steps +']  0.0%'
+                statement = ('[' + '=' * min(next, self._steps) +
+                             ' ' * max(self._steps - next, 0) + ']' + ' %4.1f' % (
+                             (index + 1) / (0.01 * total)) + '%')
             else:
                 statement = ('[' + '=' * min(next, self._steps) +
                              ' ' * max(self._steps - next, 0) + ']' + ' %4.1f' % (
-                             (index + 1) / (0.01 * total)) + '%' + runtime_str + remaining_str)
+                             (index + 1) / (0.01 * total)) + '%' + remaining_str)
 
             if logger == 'print':
                 if reprint and not ending:
@@ -169,10 +172,10 @@ _progressbar = _Progressbar()
 
 
 def progressbar(index, total, percentage_step=10, logger='print',
-                 reprint=False, time=True, reset=False):
+                 reprint=True, time=True, reset=False):
     """Plots a progress bar to the given `logger` for large for loops.
 
-    To be used inside a for-loop:
+    To be used inside a for-loop at the end of the loop:
 
     ::
         for irun in range(42):
@@ -195,7 +198,7 @@ def progressbar(index, total, percentage_step=10, logger='print',
 
         If no new line should be plotted but carriage return (works only for printing)
 
-    :param time: If the lasting and remaining time should be calculated and displayed
+    :param time: If the remaining time should be estimated and displayed
     :param reset:
 
         If the progressbar should be restarted. If progressbar is called with a lower

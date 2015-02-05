@@ -258,17 +258,21 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError("Should have implemented this.")
 
-    def __len__(self):
-        """Returns the length of the parameter
+    def f_get_range_length(self):
+        """Returns the length of the parameter range.
 
-        Only parameters that have a defined range can have a length larger than 1.
-        If the parameter only contains a default value its length is 1.
-        If the parameter is empty its length is 0.
+        Raises TypeError if the parameter has no range.
 
-        ABSTRACT: Needs to be defined in subclass
+        Does not need to be implemented if the parameter supports
+        ``__len__`` appropriately.
 
         """
-        raise NotImplementedError("Should have implemented this.")
+        if not self.f_has_range():
+            raise TypeError('Not applicable, parameter does not have a range')
+        elif hasattr(self, '__len__'):
+            return len(self)
+        else:
+            raise NotImplementedError("Should have implemented this.")
 
     def f_val_to_str(self):
         """String summary of the value handled by the parameter.
@@ -383,7 +387,7 @@ class BaseParameter(NNLeafNode):
 
         """
         if self.f_has_range():
-            lenstr = 'len:%d' % len(self)
+            lenstr = 'len:%d' % self.f_get_range_length()
         else:
             lenstr = ''
 
@@ -627,7 +631,8 @@ class BaseParameter(NNLeafNode):
         False
 
         """
-        return len(self) == 0
+        raise NotImplementedError('Implement this!')
+
 
     def _shrink(self):
         """If a parameter is explored, i.e. it has a range, the whole exploration range is deleted.
@@ -780,8 +785,34 @@ class Parameter(BaseParameter):
         """
         self._data = self._default
 
-    @copydoc(BaseParameter.__len__)
+    @copydoc(BaseParameter.f_is_empty)
+    def f_is_empty(self):
+        """True if no data has been assigned to the parameter.
+
+        Example usage:
+
+        >>> param = Parameter('myname.is.example', comment='I am _empty!')
+        >>> param.f_is_empty()
+        True
+        >>> param.f_set(444)
+        >>> param.f_is_empty()
+        False
+
+        """
+        return self._data is None
+
     def __len__(self):
+        """Returns length of parameter.
+
+        :return:
+
+            0 if empty
+
+            1 if not explored
+
+            length of range if explored and has range
+
+        """
         if self._data is None:
             return 0
         elif len(self._explored_range) > 0:
@@ -844,7 +875,7 @@ class Parameter(BaseParameter):
         if idx >= len(self) and self.f_has_range():
             raise ValueError('You try to access data item No. %d in the parameter range, '
                              'yet there are only %d potential items.' % (idx, len(self)))
-        elif self.f_has_range:
+        elif self.f_has_range():
             self._data = self._explored_range[idx]
         else:
             self._logger.warning('You try to change the access to a parameter range of parameter'
@@ -1129,6 +1160,9 @@ class Parameter(BaseParameter):
         :func:`~pypet.parameter.Parameter._store` method.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         self._data = self._convert_data(load_dict['data']['data'][0])
         self._default = self._data
 
@@ -1287,6 +1321,9 @@ class ArrayParameter(Parameter):
         as it was stored in :func:`~pypet.parameter.ArrayParameter._store`.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         try:
             self._data = load_dict['data' + ArrayParameter.IDENTIFIER]
 
@@ -1594,6 +1631,9 @@ class SparseParameter(ArrayParameter):
         as it was stored in :func:`~pypet.parameter.SparseParameter._store`.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         try:
             is_dia = load_dict['data%sis_dia' % SparseParameter.IDENTIFIER]
 
@@ -1759,6 +1799,9 @@ class PickleParameter(Parameter):
         Sets the `v_protocol` property to the protocol used to store 'data'.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         dump = load_dict['data']
 
         self._data = pickle.loads(dump)

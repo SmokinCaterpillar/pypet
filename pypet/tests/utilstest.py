@@ -11,6 +11,7 @@ from pypet.tests.test_helpers import add_params, create_param_dict, simple_calcu
     make_temp_file, TrajectoryComparator, multiply, make_trajectory_name, remove_data
 
 from pypet.trajectory import Trajectory
+from pypet.parameter import ArrayParameter, Parameter
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -18,7 +19,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.utils.explore import cartesian_product
+from pypet.utils.explore import cartesian_product, find_unique
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
@@ -60,6 +61,29 @@ class ProgressBarTest(unittest.TestCase):
             time.sleep(0.005)
             progressbar(irun, total, percentage_step)
 
+    def test_progressbar_w_wo_time(self):
+
+        total = 55
+        percentage_step = 17
+
+        shows_time = False
+        for irun in range(total):
+            time.sleep(0.005)
+            s = progressbar(irun, total, percentage_step, time=True)
+            if s and 'remaining' in s:
+               shows_time = True
+
+        self.assertTrue(shows_time)
+
+        shows_time = False
+        for irun in range(total):
+            time.sleep(0.005)
+            s = progressbar(irun, total, percentage_step, time=False)
+            if s and 'remaining' in s:
+                shows_time = True
+
+        self.assertFalse(shows_time)
+
     def test_progressbar_resume(self):
 
         total = 55
@@ -93,6 +117,35 @@ class ProgressBarTest(unittest.TestCase):
         for irun in range(total):
             time.sleep(0.005)
             progressbar(irun, total, logger=logger)
+
+class TestFindUnique(unittest.TestCase):
+
+    def test_find_unique(self):
+        paramA = Parameter('ggg', 33)
+        paramA._explore([1, 2, 1, 2, 1, 2])
+        paramB = Parameter('hhh', 'a')
+        paramB._explore(['a', 'a', 'a', 'a', 'b', 'b'])
+        unique_elements = find_unique([paramA, paramB])
+        self.assertTrue(len(unique_elements) == 4)
+        self.assertTrue(len(unique_elements[1][1]) == 2)
+        self.assertTrue(len(unique_elements[3][1]) == 1)
+
+        paramC = ArrayParameter('jjj', np.zeros((3,3)))
+        paramC._explore([np.ones((3,3)),
+                         np.ones((3,3)),
+                         np.ones(499),
+                         np.ones((3,3)),
+                         np.zeros((3,3,3)),
+                         np.ones(1)])
+        unique_elements = find_unique([paramA, paramC])
+        self.assertTrue(len(unique_elements) == 5)
+        self.assertTrue(len(unique_elements[1][1]) == 2)
+        self.assertTrue(len(unique_elements[0][1]) == 1)
+
+        unique_elements = find_unique([paramC, paramB])
+        self.assertTrue((len(unique_elements))==4)
+        self.assertTrue(len(unique_elements[0][1])==3)
+        self.assertTrue(len(unique_elements[3][1])==1)
 
 
 class TestDictionaryMethods(unittest.TestCase):

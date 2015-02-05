@@ -2468,9 +2468,6 @@ class HDF5StorageService(StorageService, HasLogger):
                     finish_timestamp = 0.0
                     self._logger.warning('Could not load runtime, ' + repr(ke))
 
-                traj._single_run_ids[idx] = name
-                traj._single_run_ids[name] = idx
-
                 info_dict = {}
                 info_dict['idx'] = idx
                 info_dict['timestamp'] = timestamp
@@ -2482,7 +2479,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 info_dict['runtime'] = runtime
                 info_dict['finish_timestamp'] = finish_timestamp
 
-                traj._run_information[name] = info_dict
+                traj._add_run_info(**info_dict)
 
             # Load the hdf5 config data:
             self._srvc_load_hdf5_settings()
@@ -4513,7 +4510,7 @@ class HDF5StorageService(StorageService, HasLogger):
         if instance.v_is_parameter and instance.f_has_range():
             # If the stored parameter was an explored one we need to mark this in the
             # explored overview table
-            setattr(group._v_attrs, HDF5StorageService.LENGTH, len(instance))
+            setattr(group._v_attrs, HDF5StorageService.LENGTH, instance.f_get_range_length())
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group, tablename)
@@ -5435,8 +5432,10 @@ class HDF5StorageService(StorageService, HasLogger):
             _hdf5_group = self._all_get_node_by_name(instance.v_full_name)
 
         if load_data == pypetconstants.OVERWRITE_DATA:
-            if instance.v_is_parameter:
-                instance.f_unlock()
+            if instance.v_is_parameter and instance.v_locked:
+                self._logger.warning('Parameter `%s` is locked, I will skip loading.' %
+                                     instance.v_full_name)
+                return
             instance.f_empty()
             instance.v_annotations.f_empty()
             instance.v_comment = ''
@@ -5451,16 +5450,24 @@ class HDF5StorageService(StorageService, HasLogger):
             load_except = [load_except]
 
         if load_data == pypetconstants.LOAD_SKELETON:
-            #We only load skeletong if aksed for it
+            #We only load skeletong if asked for it
             return
         elif load_only is not None:
             if load_except is not None:
                 raise ValueError('Please use either `load_only` or `load_except` and not '
                              'both at the same time.')
+            elif instance.v_is_parameter and instance.v_locked:
+                raise pex.ParameterLockedException('Parameter `%s` is locked, '
+                                                   'I will skip loading.' %
+                                                    instance.v_full_name)
             self._logger.debug('I am in load only mode, I will only load %s.' %
                                str(load_only))
             load_only = set(load_only)
         elif load_except is not None:
+            if instance.v_is_parameter and instance.v_locked:
+                raise pex.ParameterLockedException('Parameter `%s` is locked, '
+                                                   'I will skip loading.' %
+                                                    instance.v_full_name)
             self._logger.debug('I am in load except mode, I will load everything except %s.' %
                                str(load_except))
             # We do not want to modify the original list
@@ -5542,6 +5549,9 @@ class HDF5StorageService(StorageService, HasLogger):
         if load_dict:
             try:
                 instance._load(load_dict)
+                if instance.v_is_parameter:
+                    # Lock parameter as soon as data is loaded
+                    instance.f_lock()
             except:
                 self._logger.error(
                     'Error while reconstructing data of leaf `%s`.' % full_name)

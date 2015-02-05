@@ -7,7 +7,7 @@ Exploration Functions
 ---------------------
 
 .. automodule:: pypet.utils.explore
-    :members: cartesian_product
+    :members: cartesian_product, find_unique
 
 
 -----------------

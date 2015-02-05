@@ -1,13 +1,13 @@
 
 .. _more-on-parameters:
 
-================================
+==============================
 More on Parameters and Results
-================================
+==============================
 
------------------------------
+----------
 Parameters
------------------------------
+----------
 
 The parameter container (Base API is found in :class:`~pypet.parameter.BaseParameter`)
 is used to keep data that is explicitly required as parameters for your simulations.
@@ -26,6 +26,7 @@ Parameter containers follow these two principles:
     for distinct simulations.
     How the exploration range is implemented depends on the parameter.
 
+
  *  The parameter can be **locked**, meaning as soon as the parameter is assigned to hold a specific
     value and the value has already been used somewhere,
     it cannot be changed any longer (except after being explicitly unlocked).
@@ -43,9 +44,9 @@ Parameter containers follow these two principles:
 
 .. _type_conservation:
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Values supported by Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parameters are very restrictive in terms of the
 data they except. The :class:`~pypet.parameter.Parameter` excepts only:
@@ -80,9 +81,10 @@ on to HDF5 as the pickle string.
 Note that as soon as you add data or explore data it will immediately be checked if the data
 is supported and if not a TypeError is thrown.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+^^^^^^^^^^^^^^^^^^^
 Types of Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 So far, the following parameters exist:
 
  *  :class:`~pypet.parameter.Parameter`
@@ -137,11 +139,12 @@ extension to the natural naming scheme.
 For people using BRIAN_ quantities, there also exists a
 :class:`~pypet.brian.parameter.BrianParameter`.
 
+
 .. _more-on-results:
 
-------------------------------------
+-------
 Results
-------------------------------------
+-------
 
 Results are less restrictive in their acceptance of values and they can handle more than a
 single data item.
@@ -181,9 +184,10 @@ If your result contains only a single item you can simply call ``f_get()`` witho
 But if you call ``f_get()`` without any arguments and the result contains more than one item
 a ValueError is thrown.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+^^^^^^^^^^^^^^^^
 Types of Results
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 The following results exist:
 
