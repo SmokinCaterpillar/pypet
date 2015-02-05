@@ -671,14 +671,15 @@ during the run phase under a group or leaf node called `run_XXXXXXXX` (where thi
 current run, which will be automatically chosen if you use the ``'$'`` wildcard)
 will be stored at the end of the particular run.
 
+
 ------------------
 #3 Post-Processing
 ------------------
 
 Each single run of our ``run_neuron`` function returned an estimate of the firing rate.
 In the post processing phase we want to collect these estimates and sort them into a
-table according to the value of ``I`` and ``tau_ref``. As an appropriate table we choose a
-pandas_ DataFrame. Again this is not *pypet* specific but pandas_ offers neat
+table according to the value of :math:`I` and :math:`\tau_{ref}`. As an appropriate table we choose a
+`pandas DataFrame`_. Again this is not *pypet* specific but pandas_ offers neat
 containers for series, tables and multidimensional panel data.
 The nice thing about pandas_ containers is that they except all forms of indices and not
 only integer indices like python lists or numpy arrays.
@@ -696,7 +697,7 @@ single runs did actually finish.
 .. code-block:: python
 
     def neuron_postproc(traj, result_list):
-        """Postprocessing, sorts computed firing rates into a table
+        """Postprocessing, sorts firing rates into a data frame.
 
         :param traj:
 
@@ -746,11 +747,13 @@ At first we extract the range of parameters we used:
     I_range = traj.par.neuron.f_get('I').f_get_range()
     ref_range = traj.par.neuron.f_get('tau_ref').f_get_range()
 
-Note that we use ``f_get`` here since we are interested in the parameter container not the
-data value. We can directly extract the parameter range from the container via ``f_get_range``.
+Note that we use :func:`pypet.naturalnaming.NNGroupNode.f_get` here since
+we are interested in the parameter container not the
+data value. We can directly extract the parameter range from the container
+via :math:`pypet.parameter.Parameter.f_get_range`.
 
-Next, we create a two dimensional table aka pandas_ DataFrame with the currents as the
-row indices and the refractory periods as column indices.
+Next, we create a two dimensional table aka `pandas DataFrame`_ with the current as the
+row indices and the refractory period as column indices.
 
 .. code-block:: python
 
@@ -761,8 +764,8 @@ row indices and the refractory periods as column indices.
 
 Now we iterate through the result tuples and  write the
 firing rates into the table according to the parameter settings in this run.
-As I said before, the neat thing about pandas_ is that we can use the values of
-``I`` and ``tau_ref`` as indices for our table.
+As said before, the nice thing about pandas_ is that we can use the values of
+:math:`I`` and :math:`\tau_{ref}`` as indices for our table.
 
 .. code-block:: python
 
@@ -784,12 +787,13 @@ Finally, we add the filled DataFrame to the trajectory.
 Since we are no longer in the run phase, this result will be found in
 ``traj.results.summary.firing_rate`` and **no** name of any single run will be added.
 
-So this was our post-processing where we simply collected all firing rates and sorted
-them into a table. You can do much more in the post processing phase. You can
+This was our post-processing where we simply collected all firing rates and sorted
+them into a table. You can, of course, do much more in the post processing phase. You can
 load all computed data and look at it.
 You can even expand the trajectory to trigger a new run phase. Accordingly, you can adaptively
 and iteratively search the parameter space. You may even do this on the fly while there
 are still single runs being executed, see :ref:`more-about-postproc`.
+
 
 ------------------------------
 Final Steps in the Main Script
@@ -851,12 +855,12 @@ environment to stop logging and close all log files:
 
 The final stage of our experiment encompasses the analysis of our raw data. We won't do much
 here, simply plot our firing rate table and show one example voltage trace.
-All this analysis happens in a completely different script and is executed independently
+All data analysis happens in a completely different script and is executed independently
 of the previous three steps except that we need the data from them in form of a trajectory.
 
-We will make use of the auto load functionality and load results in the background as
-we need them. Since we don't want to do any more single runs, we can spare us an
-environment and only use a trajectory container.
+We will make use of the :ref:`more-on-auto-loading` functionality and load results
+in the background as we need them. Since we don't want to do any more single runs,
+we can spare us an environment and only use a trajectory container.
 
 .. code-block:: python
 
@@ -875,8 +879,8 @@ environment and only use a trajectory container.
     # We'll simply use auto loading so all data will be loaded when needed.
     traj.v_auto_load = True
 
-    rates_frame = traj.res.summary.firing_rates.rates_frame
     # Here we load the data automatically on the fly
+    rates_frame = traj.res.summary.firing_rates.rates_frame
 
     plt.figure()
     plt.subplot(2,1,1)
@@ -890,7 +894,7 @@ environment and only use a trajectory container.
     plt.title('Firing as a function of input current `I`')
     plt.legend()
 
-    # Also let's plot an example run, how about run 13 ?
+    # Also let's plot an example run, how about run 13?
     example_run = 13
 
     traj.v_idx = example_run # We make the trajectory behave as a single run container.
@@ -931,6 +935,7 @@ environment and only use a trajectory container.
     # to do that.
     traj.f_restore_default()
 
+
 The outcome of your little experiment should be the following image:
 
 .. image:: figures/tutorial.png
@@ -942,6 +947,7 @@ Finally, I just want to make some final remarks on the analysis script.
 
     traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
                 load_results=0, load_derived_parameters=0)
+
 
 describes how the different subtrees of the trajectory are loaded (``load_parameters``
 also includes the ``config`` branch). 0 means no data at all is loaded,
@@ -968,7 +974,7 @@ These give you a powerful tool in data analysis because they make your trajector
 behave like a particular single run. Thus, all explored parameter's values will be
 set to the corresponding values of one particular run.
 
-To restore everythin back to normal simply call
+To restore everything back to normal simply call
 :func:`~pypet.trajectory.Trajectory.f_restore_default`.
 
 This concludes our small tutorial. If you are interested in more advance concepts
