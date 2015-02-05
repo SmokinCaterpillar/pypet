@@ -3,13 +3,13 @@
 
 .. _more-on-environment:
 
-============================
+==========================
 More about the Environment
-============================
+==========================
 
------------------------------
+-----------------------
 Creating an Environment
------------------------------
+-----------------------
 
 In most use cases you will interact with the :class:`~pypet.environment.Environment` to
 do your numerical simulations.
@@ -916,9 +916,9 @@ because you don't have to wrap your head around dead-locks).
 Accordingly, post-processing should be rather quick in comparison to your single runs, otherwise
 post-processing will become the bottleneck in your parallel simulations.
 
-----------------------------
+---------------------------
 Using a Experiment Pipeline
-----------------------------
+---------------------------
 
 Usually, your numerical experiments work like the following: You add some parameters to
 your trajectory, you mark a few of these for exploration, and you pass your main function
@@ -997,9 +997,9 @@ the run function followed by the positional and keyword arguments:
 
 .. _more-on-continuing:
 
---------------------------------------------
+-------------------------------------------
 Continuing or Resuming a Crashed Experiment
---------------------------------------------
+-------------------------------------------
 
 In order to use this feature you need dill_.
 
