@@ -33,7 +33,7 @@ def run_neuron(traj):
     # Create some containers for the Euler integration
     V_array = np.zeros(steps)
     V_array[0] = V_init
-    spiketimes = []
+    spiketimes = []  # List to collect all times of action potentials
 
     # Do the Euler integration:
     print('Starting Euler Integration')
