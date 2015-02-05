@@ -1,7 +1,7 @@
 
-====================
+=================
 Naming Convention
-====================
+=================
 
 To avoid confusion with natural naming scheme and the functionality provided by the trajectory,
 parameters, and so on, I followed the idea by PyTables to use prefixes:
@@ -417,10 +417,9 @@ If it is empty or contains more than one item you will always get in return the 
     11
 
 
-
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^
 Shortcuts
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^
 
 As a user you are encouraged to nicely group and structure your results as fine grain as
 possible. Yet, you might think that you will inevitably have to type a
@@ -491,34 +490,48 @@ cannot be switched off):
 For instance, ``traj.par.traffic.street.nzebras`` is equivalent to
 ``traj.parameters.traffic.street.nzebras``.
 
------------
+
+.. _more-on-links:
+
+-----
 Links
------------
+-----
 
 Although each node in the trajectory tree is identified by a unique *full name*, there
 can potentially many paths to a particular node established via links.
 
-One can add a link to every group node simply via :func:`~pypet.naturalnaming.NNGroupNode.f_add_link`.
+One can add a link to every group node simply via
+:func:`~pypet.naturalnaming.NNGroupNode.f_add_link`.
 
 For instance:
 
     >>> traj.parameters.f_add_link('mylink', traj.f_get('x'))
 
 
-Thus, ``traj.mylink`` now points to the same object as ``traj.x``.
+Thus, ``traj.mylink`` now points to the same data as ``traj.x``.
+Colon separated names are not allowed for links, i.e.
+``traj.parameters.f_add_link('mygroup.mylink', traj.f_get('x'))`` does not work.
 
 Links can also be created via generic attribute setting:
 
     >>> traj.mylink2 = traj.f_get('x')
 
-See also example :ref:`example-14`.
+See also the example :ref:`example-14`.
+
+Links will be handled as normal children during interaction with the trajectory.
+For example, using :func:`~pypet.naturalnaming.NNGroupNode.f_iter_nodes` with ``recursive=True``
+will also recursively iterate all linked groups and leaves. Moreover, *pypet* takes care
+that all nodes are only visited once. To skip linked nodes simply set ``with_links=False``.
+However, for storage and loading (see below) links are **never** evaluated recursively.
+Even setting ``recursive=True`` linked nodes are, of course,
+stored or loaded but not their children.
 
 
 .. _parameter-exploration:
 
-----------------------------------
+---------------------
 Parameter Exploration
-----------------------------------
+---------------------
 
 Exploration can be prepared with the function :func:`~pypet.trajectory.Trajectory.f_explore`.
 This function takes a dictionary with parameter names
@@ -537,9 +550,9 @@ You can extend or expand an already explored trajectory to explore the parameter
 the function :func:`~pypet.trajectory.Trajectory.f_expand`.
 
 
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 Using Numpy Iterables
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 Note since parameters are very conservative regarding the data they accept
 (see :ref:`type_conservation`), you sometimes won't be able to use Numpy arrays for exploration
@@ -577,9 +590,9 @@ Or you could specify your parameter directly as a numpy float:
 
 .. _more-on-presetting:
 
-----------------------------------
+------------------------
 Presetting of Parameters
-----------------------------------
+------------------------
 
 I suggest that before you calculate any results or derived parameters,
 you should define all parameters used during your simulations.
@@ -631,9 +644,9 @@ if not a :class:`~pypet.pypetexceptions.PresettingError` will be thrown.
 
 .. _more-on-storing:
 
----------------------------------
+-------
 Storing
----------------------------------
+-------
 
 Storage of the trajectory container and all it's content is not carried out by the
 trajectory itself but by a service. The service is known to the trajectory and can be
@@ -718,9 +731,9 @@ be immediately saved after the completion of the run. In case of multiprocessing
 lost if not manually stored.
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 Storing data individually
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 More interesting is the approach to store individual items.
 Assume you computed a result that is extremely large. So you want to store it to disk,
@@ -743,13 +756,15 @@ To avoid re-opening an closing of the HDF5 file over and over again there is als
 possibility to store a list of items via :func:`~pypet.trajectory.Trajectory.f_store_items`
 or whole subtrees via :func:`~pypet.naturalnaming.NNGroupNode.f_store_child` or
 :func:`~pypet.naturalnaming.NNGroupNode.f_store`.
+Keep in mind that links (:ref:`more-on-links`) are always stored non-recursively
+despite the setting of ``recursive`` in these functions.
 
 
 .. _more-on-loading:
 
-------------------------------------
+-------
 Loading
-------------------------------------
+-------
 
 Sometimes you start your session not running an experiment, but loading an old trajectory.
 The first step in order to do that is to create a new empty trajectory - in case
@@ -816,6 +831,9 @@ to get the whole trajectory tree containing all new results and derived paramete
 
 And last but not least there is also :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` or
 :func:`~pypet.naturalnaming.NNGroupNode.f_load` in order to load whole subtrees.
+Keep in mind that links (:ref:`more-on-links`) are always loaded non-recursively
+despite the setting of ``recursive`` in these functions.
+
 
 
 .. _more-on-auto-loading:

@@ -533,7 +533,17 @@ The following code snippet shows how to enable multiprocessing with 4 CPUs, a po
 Setting ``use_pool=True`` will create a pool of ``ncores`` worker processes which perform your
 simulation runs.
 
-**IMPORTANT**: In order to allow multiprocessing with a pool, all your data and objects of your
+**IMPORTANT**: Python multiprocessing does not work well with multi-threading of openBLAS_.
+If your simulation relies on openBLAS, you need to make sure that multi-threading is
+disabled.
+For disabling set the environment variables ``OPENBLAS_NUM_THREADS=1`` and
+``OMP_NUM_THREADS=1`` before starting python and using *pypet*.
+For instance, numpy and matplotlib (!) use openBLAS to solve linear algebra operations.
+If your simulation relies on these packages make sure the environment variables are changed
+appropriately. Otherwise your program might crash or get stuck in an infinite loop.
+
+**IMPORTANT**: In order to allow multiprocessing with a pool (or in general under **Windows**),
+all your data and objects of your
 simulation need to be serialized with pickle_.
 But don't worry, most of the python stuff you use is automatically *picklable*.
 
@@ -542,7 +552,7 @@ for some BRIAN networks, for example), don't worry either. Set ``use_pool=False`
 (and also ``continuable=False``) and for every simulation run
 *pypet* will spawn an entirely new subprocess.
 The data is than passed to the subprocess by forking on OS level and not by pickling.
-Be aware, that this only works under **Linux**. If you use **Windows** and choose ``use_pool=False``
+However, this only works under **Linux**. If you use **Windows** and choose ``use_pool=False``
 you still need to rely on pickle_ because **Windows** does not support forking of python processes.
 
 Moreover, if you **ENABLE** multiprocessing and **DISABLE** pool usage, besides the maximum number of
@@ -561,13 +571,13 @@ of the cap values always start at least one process.
 
 To disable the cap levels, simply set all three to 1.0 (which is default, anyway).
 
-**IMPORTANT**: *pypet* does not check if the processes themselves obey the cap limit. Thus,
+Be aware that *pypet* does not check if the processes themselves obey the cap limit. Thus,
 if one of the process that computes your single runs needs more RAM/Swap or CPU power than the cap
 value, this is its very own problem.
 The process will **NOT** be terminated by *pypet*. The process will only cause *pypet* to not start
 new processes until the utilization falls below the threshold again.
 
-**IMPORTANT**: In order to use this cap feature you need the psutil_ package. If
+In order to use this cap feature you need the psutil_ package. If
 psutil_ is not installed, the cap values are simply ignored.
 
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
@@ -1046,3 +1056,5 @@ crashed trajectory and post-processing with expanding will work together.
 .. _dill: https://pypi.python.org/pypi/dill
 
 .. _sumatra: http://neuralensemble.org/sumatra/
+
+.. _openBLAS: http://www.openblas.net/

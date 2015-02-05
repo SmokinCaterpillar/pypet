@@ -2543,7 +2543,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         Or can be called as ``node.f_add_link(name, other_node)`` to add a link to the
         `other_node` and the given `name` of the link.
 
-
+        In contrast to addition of groups and leaves,  colon separated names
+        are **not** allowed, i.e. ``node.f_add_link('mygroup.mylink', other_node)``
+        does not work.
 
         """
         if isinstance(name_or_item, compat.base_type):
