@@ -102,6 +102,8 @@ pypet 0.1b.9
 *   Parameters are no longer required to implement ``__len__`` because it can be
     ambiguous, instead they must implement ``f_get_range_length`` function.
 
+*   BUG FIX: ``crun`` is now also accepted for adding of data and not only for requests
+
 
 pypet 0.1b.8
 

@@ -48,21 +48,21 @@ Probably you as user want to follow this convention, because writing the not abb
 
 The *trajectory* container instantiates a tree with *groups* and *leaf* nodes, whereas
 the trajectory object itself is the root node of the tree.
-There are two types of objects that can be *leaves*, *parameters* and *results*.
-Both follow particular APIs (see :class:`~pypet.parameters.Parameter` and
-:class:`~pypet.parameters.Result` as well as their abstract base classes
+There are two types of objects that can be *leaves*: *parameters* and *results*.
+Both follow particular APIs (see :class:`~pypet.parameter.Parameter` and
+:class:`~pypet.parameter.Result` as well as their abstract base classes
 :class:`~pypet.parameter.BaseParameter`, :class:`~pypet.parameter.BaseResult`).
 Every parameters contains a single value and optionally a range of values for exploration.
 In contrast, results can contain several heterogeneous data items
 (see :ref:`more-on-parameters`).
 
-Moreover, a trajectory contains 4 major branches of its tree.
+Moreover, a trajectory contains 4 major tree branches:
 
-* config
+* ``config`` (in short ``conf``)
 
-    Parameters stored under config do not specify the outcome of your simulations but
+    Data stored under config does not specify the outcome of your simulations but
     only the way how the simulations are carried out. For instance, this might encompass
-    the number of cpu cores for multiprocessing. If you use and generate a trajectory
+    the number of CPU cores for multiprocessing. If you use and generate a trajectory
     with an environment (:ref:`more-on-environment`), the environment will add some
     config data to your trajectory.
 
@@ -72,7 +72,7 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     As normal parameters, config parameters can only be specified before the actual single runs.
 
-* parameters
+* ``parameters`` (in short ``par``)
 
     Parameters are the fundamental building blocks of your simulations. Changing a parameter
     usually effects the results you obtain in the end. The set of parameters should be
@@ -87,7 +87,7 @@ Moreover, a trajectory contains 4 major branches of its tree.
 
     Parameters can only be introduced to the trajectory before the actual simulation runs.
 
-* derived_parameters
+* ``derived_parameters`` (in short ``dpar``)
 
     Derived parameters are specifications of your simulations that, as the name says, depend
     on your original parameters but are still used to carry out your simulation.
@@ -102,28 +102,23 @@ Moreover, a trajectory contains 4 major branches of its tree.
     is a :class:`~pypet.parameter.Parameter` object (or descendant of the corresponding
     base class :class:`~pypet.parameter.BaseParameter`).
 
-* results
+* ``results`` (in short ``res``)
 
     I guess results are rather self explanatory. Any leaf added under *results*
-    is a :class:`~pypet.parameters.Results` object (or descendant of the corresponding
+    is a :class:`~pypet.parameter.Result` object (or descendant of the corresponding
     base class :class:`~pypet.parameter.BaseResult`).
 
 Note that all nodes provide the field 'v_comment', which can be filled manually or on
-construction via ``'comment='``. To allow others to understand your simulations it is very
-helpful to provide such a comment and explain what your parameter is good for. For *parameters*
-this comment will actually be shown in the parameter overview table (to reduce file size
-it is not shown in the result and derived parameter overview tables, see also
-:ref:`more-on-overview`). It can also be found
-as an HDF5 attribute of the corresponding nodes in the HDF5 file (this is true for all *leaves*).
-
+construction via ``comment=``. To allow others to understand your simulations it is very
+helpful to provide such a comment and explain what your parameter is good for.
 
 .. _more-on-adding:
 
------------------------------------------------------------
+----------------------------------------------------------
 Addition of Groups and Leaves (aka Results and Parameters)
------------------------------------------------------------
+----------------------------------------------------------
 
-Addition of *leaves* can be achieved via the functions:
+Addition of *leaves* can be achieved via these functions:
 
     * :func:`~pypet.naturalnaming.ConfigGroup.f_add_config`
 
@@ -133,13 +128,13 @@ Addition of *leaves* can be achieved via the functions:
 
     * :func:`~pypet.naturalnaming.ResultGroup.f_add_result`
 
-*Leaves* can be added to any group, including the root group, i.e. the trajectory or the single
-run object themselves. Note that if you operate in the *parameters* subbranch of the tree,
+*Leaves* can be added to any group, including the root group, i.e. the trajectory.
+Note that if you operate in the *parameters* subbranch of the tree,
 you can only add parameters (i.e. ``traj.parameters.f_add_parameter(...)`` but
 ``traj.parameters.f_add_result(...)`` does not work). For other subbranches
 this is analogous.
 
-There are two ways to add these objects with the above functions,
+There are two ways to use the above functions,
 either you already have an instantiation of the object, i.e. you add a given parameter:
 
     >>> my_param = Parameter('subgroup1.subgroup2.myparam',42, comment='I am an example')
@@ -162,17 +157,86 @@ the first positional argument followed by the name as the second argument:
 Derived parameters, config and results work analogously.
 
 You can sort *parameters/results* into groups by colons in the names.
-For instance, ``traj.f_add_parameter('traffic.mobiles.ncars', data = 42)`` would create a parameter
+For instance, ``traj.f_add_parameter('traffic.mobiles.ncars', data = 42)`` creates a parameter
 that is added to the subbranch ``parameters``. This will also automatically create
 the subgroups ``traffic`` and inside there the group ``mobiles``.
 If you add the parameter ``traj.f_add_parameter('traffic.mobiles.ncycles', data = 11)`` afterwards,
 you will find this parameter also in the group ``traj.parameters.traffic.ncycles``.
 
 
-^^^^^^^^^^^^^^^^^
-Group Nodes
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+More Ways to Add Data
+^^^^^^^^^^^^^^^^^^^^^
 
+Moreover, for each of the adding functions
+there exists a shorter abbreviation that spares you typing:
+
+    * :func:`~pypet.naturalnaming.ConfigGroup.f_aconf`
+
+    * :func:`~pypet.naturalnaming.ParameterGroup.f_apar`
+
+    * :func:`~pypet.naturalnaming.DerivedParameterGroup.f_adpar`
+
+    * :func:`~pypet.naturalnaming.ResultGroup.f_ares`
+
+Besides these functions, *pypet* gives you the possibility to add new leaves via generic
+attribute setting.
+
+For example, you could also add a parameter (or result) as follows:
+
+    >>> traj.parameters.myparam = Parameter('myparam', 42, comment='I am a useful comment!')
+
+Which creates a novel parameter `myparam` under ``traj.parameters``.
+It is important how you choose the name of your parameter or result.
+If the names match (``.myparam`` and ``'myparam'``) as above,
+or if your parameter has the empty string as a name
+(``traj.parameters.myparam = Parameter('', 42)``), the parameter will be added
+and named as the generic attribute, here ``myparam``.
+However, if the names disagree or if the parameter or result name contains groups,
+the generic attribute will become also a group node.
+For instance,
+
+    >>> traj.parameters.mygroup = Parameter('myparam', 42)
+
+creates a new parameter at ``traj.parameters.mygroup.myparam`` and ``mygroup`` is a new
+group node, respectively.
+Likewise
+
+    >>> traj.parameters.mygroup = Parameter('mysubgroup.myparam', 42)
+
+adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
+
+Finally, there's an even simpler way to add a parameter or result:
+
+    >>> traj.parameters.myparam = 42, 'I am a useful comment'
+
+Accordingly, this is internally translated into
+
+    >>> traj.parameters.f_add_leaf('myparam', 42, comment='I am a useful comment')
+
+Where :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf` is a generic addition function,
+see :ref:`generic-addition` below.
+This only works in case of using the assignment operator ``=`` in combination with
+a tuple of exactly length 2 and the second entry of the tuple being
+a comment string. Thus, if you try to add a new parameter or result this way
+you have to provide a (useful) comment explaining what your data is about.
+And don't you dare simply writing the empty string ``''``!
+
+For instance, the following does not work in terms of creating a new parameter:
+
+    >>> traj.parameters.anotherparam = 42
+
+Instead, this will search for the leaf ``anotherparam`` in the trajectory tree and
+try to change it's value to ``42``. If it doesn't find the parameter, *pypet*
+throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Comment'`` may also
+throw an ``AtributeError`` but in the opposite case if ``myparam`` already exists in your tree.
+
+The different ways of adding data are also explained in example :ref:`example-15`.
+
+
+^^^^^^^^^^^
+Group Nodes
+^^^^^^^^^^^
 
 Besides *leaves* you can also add empty *groups* to the trajectory
 (and to all subgroups, of course) via:
@@ -188,9 +252,11 @@ Besides *leaves* you can also add empty *groups* to the trajectory
 As before, if you create the group ``groupA.groupB.groupC`` and
 if group A and B were non-existent before, they will be created on the way.
 
-Note that I distinguish between three different types of name, the *full name* which would be,
+Note that *pypet* distinguishes between three different types of name descriptions,
+the *full name* of a node which would be,
 for instance, ``parameters.groupA.groupB.myparam``, the (short) *name* ``myparam`` and the
-*location* ``parameters.groupA.groupB``. All these properties are accessible for each group and
+*location* within the tree, i.e. ``parameters.groupA.groupB``.
+All these properties are accessible for each group and
 leaf via:
 
 * ``v_full_name``
@@ -199,9 +265,9 @@ leaf via:
 
 * ``v_name``
 
-*Location* and *full name* are relative to the root node, since a trajectory object
-(and single runs) is the root,
-it's *full_name* is ``''`` the empty string. Yet, the *name* property is not empty
+*Location* and *full name* are relative to the root node. Since a trajectory object
+is the root of the tree, its *full_name* is ``''``, the empty string.
+Yet, the *name* property is not empty
 but contains the user chosen name of the trajectory.
 
 Note that if you add a parameter/result/group with ``f_add_XXXXXX``
@@ -210,11 +276,11 @@ the full name will be extended by the *full name* of the group you added it to:
     >>> traj.parameters.traffic.f_add_parameter('street.nzebras')
 
 The *full name* of the new parameter is going to be ``parameters.traffic.street.nzebras``.
-If you add anything directly to the *root* group, i.e. the trajectory object (or a single run),
-the group names ``parameters``, ``config``, ``derived_parameters`` will be automatically added (of course,
-depending on what you add, config, a parameter etc.).
+If you add anything directly to the *root* group, i.e. the trajectory,
+the group names ``parameters``, ``config``, ``derived_parameters`` will be automatically added
+(of course, depending on what you add, config, a parameter etc.).
 
-If you add a result or derived parameters during a single run, the name will be changed to
+If you add a result or derived parameter during a single run, the name will be changed to
 include the current name of the run.
 
 For instance, if you add a result during a single run (let's assume it's the first run) like
@@ -265,9 +331,11 @@ Accordingly, you have to write less code and post-processing and data analysis c
 much easier.
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _generic-addition:
+
+^^^^^^^^^^^^^^^^
 Generic Addition
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 You do not have to stick to the given trajectory structure with its four subtrees:
 ``config``, ``parameters``, ``derived_parameters``, ``results``. If you just want to use a trajectory
@@ -282,74 +350,6 @@ a group called ``run_XXXXXXXX`` (where *run_XXXXXXXXX* is
 the name of your current run) these items
 are not automatically stored and you need to store them manually before the end of the run
 via :func:`~pypet.trajectory.Trajectory.f_store_items`.
-
-
-^^^^^^^^^^^^^^^^^^^^^^^^
-More Ways to Add Data
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Moreover, for each of the adding functions
-there exists a shorter abbreviation that spares you typing:
-
-    * :func:`~pypet.naturalnaming.ConfigGroup.f_aconf`
-
-    * :func:`~pypet.naturalnaming.ParameterGroup.f_apar`
-
-    * :func:`~pypet.naturalnaming.DerivedParameterGroup.f_adpar`
-
-    * :func:`~pypet.naturalnaming.ResultGroup.f_ares`
-
-Besides these functions, *pypet* gives you the possibility to add new leaves via generic
-attribute setting.
-
-For example, you could also add a parameter (or result) as follows:
-
-    >>> traj.parameters.myparam = Parameter('myparam', 42, comment='I am a useful comment!')
-
-Which creates a novel parameter `myparam` under ``traj.parameters``.
-It is important how you choose the name of your parameter or result.
-If the names match (``.myparam`` and ``'myparam'``) as above,
-or if your parameter has the empty string as a name
-(``traj.parameters.myparam = Parameter('', 42)``), the parameter will be added
-and named as the generic attribute, here ``myparam``.
-However, if the names disagree or if the parameter or result name contains groups,
-the generic attribute will become also a group node.
-For instance,
-
-    >>> traj.parameters.mygroup = Parameter('myparam', 42)
-
-creates a new parameter at ``traj.parameters.mygroup.myparam`` and ``mygroup`` is a new
-group node, respectively.
-Likewise
-
-    >>> traj.parameters.mygroup = Parameter('mysubgroup.myparam', 42)
-
-adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
-
-Finally, there`s an even simpler way to add a parameter or result:
-
-    >>> traj.parameters.myparam = 42, 'I am a useful comment'
-
-Accordingly, this is internally translated into
-
-    >>> traj.parameters.f_add_leaf('myparam', 42, comment='I am a useful comment')
-
-This only works in case of using the assignment operator ``=`` in combination with
-a tuple of exactly length 2 and the second entry of the tuple being
-a comment string. Thus, if you try to add a new parameter or result this way
-you have to provide a (useful) comment explaining what your data is about.
-And don't you dare simply writing the empty string ``''``!
-
-For instance, the following does not work in terms of creating a new parameter:
-
-    >>> traj.parameters.anotherparam = 42
-
-Instead, this will search for the leaf ``anotherparam`` in the trajectory tree and
-try to change it's value to ``42``. If it doesn't find the parameter, *pypet*
-throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Comment'`` may also
-throw an ``AtributeError`` but in the opposite case if ``myparam`` already exists in your tree.
-
-The different ways of adding data are also explained in example :ref:`example-15`.
 
 
 .. _more-on-access:

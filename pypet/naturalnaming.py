@@ -104,7 +104,7 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 # a slow search with a full tree traversal is initiated.
 FAST_UPPER_BOUND = 3
 
-SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
+SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res', '$'])
 
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
@@ -902,45 +902,37 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if name == -1:
-            return pypetconstants.RUN_NAME_DUMMY
-        elif name == -2:
-            if self._root_instance._crun is not None:
+        if isinstance(name, int):
+            if name == -1:
+                return pypetconstants.RUN_NAME_DUMMY
+            elif name == -2:
                 return '$'
             else:
-                return pypetconstants.RUN_NAME_DUMMY
-        elif isinstance(name, int):
-            return pypetconstants.FORMATTED_RUN_NAME % name
+                return pypetconstants.FORMATTED_RUN_NAME % name
 
-        if name.startswith('r'):
-            if name.startswith('run_') or name.startswith('r_'):
-                split_name = name.split('_')
-                if len(split_name) == 2:
-                    index = split_name[1]
-                    if index.isdigit():
-                        if len(index) < pypetconstants.FORMAT_ZEROS:
-                            return pypetconstants.FORMATTED_RUN_NAME % int(index)
-                    elif index == 'A':
-                        return pypetconstants.RUN_NAME_DUMMY
-
-        if name in SHORTCUT_SET:
-            if name == 'crun':
-                if self._root_instance._crun is not None:
-                    return '$'
-                else:
+        if name.startswith('r') and (name.startswith('run_') or name.startswith('r_')):
+            split_name = name.split('_')
+            if len(split_name) == 2:
+                index = split_name[1]
+                if index.isdigit():
+                    if len(index) < pypetconstants.FORMAT_ZEROS:
+                        return pypetconstants.FORMATTED_RUN_NAME % int(index)
+                elif index == 'A':
                     return pypetconstants.RUN_NAME_DUMMY
 
-            if name == 'par':
+        if name in SHORTCUT_SET:
+            if name == '$' or name == 'crun':
+                return '$'
+            elif name == 'par':
                 return 'parameters'
-
-            if name == 'dpar':
+            elif name == 'dpar':
                 return 'derived_parameters'
-
-            if name == 'res':
+            elif name == 'res':
                 return 'results'
-
-            if name == 'conf':
+            elif name == 'conf':
                 return 'config'
+            else:
+                raise RuntimeError('You shall not pass!')
 
         return None
 
@@ -1139,11 +1131,11 @@ class NaturalNamingInterface(HasLogger):
                                  'argument `name`.')
 
         if check_naming:
-            name = self._replace_wildcards(name)
             split_names = name.split('.')
             for idx, name in enumerate(split_names):
                 translated_shortcut = self._translate_shortcut(name)
                 if translated_shortcut:
+                    translated_shortcut = self._replace_wildcard(translated_shortcut)
                     split_names[idx] = translated_shortcut
 
             # First check if the naming of the new item is appropriate
@@ -1174,14 +1166,15 @@ class NaturalNamingInterface(HasLogger):
         return self._add_to_tree(start_node, split_names, type_name, group_type_name, instance,
                                  constructor, args, kwargs)
 
-    def _replace_wildcards(self, name,):
+    def _replace_wildcard(self, name,):
         """Replaces the $ wildcards"""
-        if self._root_instance._idx != -1:
-            name = name.replace('$', self._root_instance.v_crun)
+        if name == '$':
+            if self._root_instance._idx != -1:
+                return self._root_instance.v_crun
+            else:
+                return pypetconstants.RUN_NAME_DUMMY
         else:
-            name = name.replace('$', pypetconstants.RUN_NAME_DUMMY)
-
-        return name
+            return name
 
     def _add_to_nodes_and_leaves(self, new_node, name, full_name=None, run_name=None):
         if full_name is None:
@@ -1346,9 +1339,7 @@ class NaturalNamingInterface(HasLogger):
 
             translated_shortcut = self._translate_shortcut(name)
             if translated_shortcut:
-                name = translated_shortcut
-
-            name = self._replace_wildcards(name)
+                name = self._replace_wildcard(translated_shortcut)
 
             faulty_names = self._check_names([name], act_node)
 
@@ -2143,9 +2134,7 @@ class NaturalNamingInterface(HasLogger):
         for idx, key in enumerate(split_name):
             translated_shortcut = self._translate_shortcut(key)
             if translated_shortcut:
-                key = translated_shortcut
-            if key == '$':
-                key = self._replace_wildcards(key)
+                key = self._replace_wildcard(translated_shortcut)
             split_name[idx] = key
 
         return self._backwards_search(node, split_name, max_depth, shortcuts)

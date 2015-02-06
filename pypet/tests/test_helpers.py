@@ -205,6 +205,7 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
     traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test')
     traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test')
+    traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test')
 
 
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
@@ -346,6 +347,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('$.here', 77, comment='huhu')
         traj.f_add_result('or.not.$', dollah=77, comment='duh!')
         traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
+        traj.f_add_result('or.not.rrr.crun.jjj', 777, comment='duh**2!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print('<<<<<<Finished Simple Calculations')

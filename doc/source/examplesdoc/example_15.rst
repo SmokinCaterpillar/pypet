@@ -1,9 +1,9 @@
 
 .. _example-15:
 
-===============================
-Ways to Add Data
-===============================
+=============================
+Adding Data to the Trajectory
+=============================
 
 Download: :download:`example_15_more_ways_to_add_data.py <../../../examples/example_15_more_ways_to_add_data.py>`
 
