@@ -2683,12 +2683,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         if not name in self._children:
             raise ValueError('Your group `%s` does not contain the child `%s`.' %
                              (self.v_full_name, name))
-
         else:
             child = self._children[name]
-            if name in self._links:
-                self.f_remove_link(name)
-            elif not child.v_is_leaf and child.f_has_children and not recursive:
+            if (name not in self._links and
+                    not child.v_is_leaf and
+                    child.f_has_children() and
+                    not recursive):
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with ``recursive = True``')
             else:

@@ -624,6 +624,10 @@ class TrajectoryTest(unittest.TestCase):
 
 
     def testremove(self):
+
+        with self.assertRaises(TypeError):
+            self.traj.peter.f_remove_child('markus')
+
         self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'))
 
         with self.assertRaises(AttributeError):

@@ -146,8 +146,6 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         self.assertTrue(traj.test.circle2 is traj.test)
 
-
-
     def test_link_removal(self):
         traj = Trajectory()
 
@@ -157,13 +155,19 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)
 
+        self.assertTrue('circle1' in traj)
         traj.circle1.circle2.f_remove_link('circle1')
+        self.assertTrue('circle1' not in traj.circle2)
 
         with self.assertRaises(AttributeError):
             traj.test.circle1
 
         with self.assertRaises(ValueError):
             traj.test.f_remove_link('circle1')
+
+        traj.test2.f_remove_child('circle2')
+
+        self.assertTrue('circle2' not in traj)
 
     def test_storage_and_loading(self):
         filename = make_temp_file('linktest.hdf5')
