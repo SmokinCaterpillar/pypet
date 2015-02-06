@@ -682,25 +682,26 @@ class NaturalNamingInterface(HasLogger):
             ``True`` or kept ``False``.
 
         """
+        def _delete_from_children(node, child_name):
+            del node._children[child_name]
+            if child_name in node._groups:
+                del node._groups[child_name]
+            elif child_name in node._leaves:
+                del node._leaves[child_name]
+            else:
+                raise RuntimeError('You shall not pass!')
 
         def _remove_subtree_inner(node, predicate):
 
             if not predicate(node):
                 return False
-
-            if node.v_is_group:
+            elif node.v_is_group:
                 for name_ in itools.chain(compat.listkeys(node._leaves),
                                           compat.listkeys(node._groups)):
                     child_ = node._children[name_]
                     child_deleted = _remove_subtree_inner(child_, predicate)
                     if child_deleted:
-                        del node._children[name_]
-                        if name_ in node._groups:
-                            del node._groups[name_]
-                        elif name_ in node._leaves:
-                            del node._leaves[name_]
-                        else:
-                            raise RuntimeError('You shall not pass!')
+                        _delete_from_children(node, name_)
                         del child_
 
                 for link_ in compat.listkeys(node._links):
@@ -715,15 +716,19 @@ class NaturalNamingInterface(HasLogger):
                 self._delete_node(node)
                 return True
 
-        child = start_node._children[name]
-        if predicate is None:
-            predicate = lambda x: True
-
-        if _remove_subtree_inner(child, predicate):
-            del start_node._children[name]
-            return True
+        if name in start_node._links:
+            start_node.f_remove_link(name)
         else:
-            return False
+            child = start_node._children[name]
+            if predicate is None:
+                predicate = lambda x: True
+
+            if _remove_subtree_inner(child, predicate):
+                _delete_from_children(start_node, name)
+                del child
+                return True
+            else:
+                return False
 
     def _delete_node(self, node):
         """Deletes a single node from the tree.
@@ -2624,6 +2629,24 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                                shortcuts=self.v_root.v_shortcuts,
                                max_depth=self.v_root.v_max_depth,
                                with_links=self.v_root.v_with_links)
+
+    def f_remove(self, recursive=True, predicate=None):
+        """Recursively removes the group and all it's children.
+
+        :param recursive:
+
+            If removal should be applied recursively. If not, node can only be removed
+            if it has no children.
+
+        :param predicate:
+
+            In case of recursive removal, you can selectively remove nodes in the tree.
+            Predicate which can evaluate for each node to ``True`` in order to remove the node or
+            ``False`` if the node should be kept. Leave ``None`` if you want to remove all nodes.
+
+        """
+        parent = self.f_get_root().f_get(self.v_location, shortcuts=False)
+        parent.f_remove_child(self.v_name, recursive=recursive, predicate=predicate)
 
     def f_remove_child(self, name, recursive=False, predicate=None):
         """Removes a child of the group.

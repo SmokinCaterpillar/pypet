@@ -24,8 +24,9 @@ Here are some links to important functions:
     ~naturalnaming.NNGroupNode.f_iter_nodes
     ~naturalnaming.NNGroupNode.f_get
     ~naturalnaming.NNGroupNode.f_store_child
+    ~naturalnaming.NNGroupNode.f_store
     ~naturalnaming.NNGroupNode.f_load_child
-    ~naturalnaming.NNGroupNode.f_load_child
+    ~naturalnaming.NNGroupNode.f_load
     ~trajectory.Trajectory.f_explore
     ~trajectory.Trajectory.f_store
     ~trajectory.Trajectory.f_load
@@ -52,7 +53,7 @@ Trajectory
 .. autoclass:: pypet.trajectory.Trajectory
     :members:
 
-.. py:function:: pypet.trajectory.load_trajectory
+.. autofunction:: pypet.trajectory.load_trajectory
 
 -------------------
 NNGroupNode

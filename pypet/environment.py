@@ -67,7 +67,7 @@ from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
 from pypet.utils.helpful_functions import is_debug, get_matching_kwargs
-from pypet.utils.storage_factory import storage_factory
+from pypet.utils.storagefactory import storage_factory
 from pypet.parameter import Parameter
 
 
@@ -211,7 +211,6 @@ def _single_run(args):
             for logger in loggers:
                 logger.removeHandler(handler)
             handler.close()
-
 
 def _set_log_levels(logger_names, log_levels):
     """Sets a given list of levels to a list of loggers"""

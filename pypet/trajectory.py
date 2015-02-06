@@ -46,7 +46,7 @@ from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArray
 import pypet.storageservice as storage
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
 from pypet.utils.helpful_functions import is_debug
-from pypet.utils.storage_factory import storage_factory
+from pypet.utils.storagefactory import storage_factory
 
 def load_trajectory(
                name=None,
@@ -2647,7 +2647,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         (ignores config)."""
         return (len(self._parameters) == 0 and
                 len(self._derived_parameters) == 0 and
-                len(self._results) == 0)
+                len(self._results) == 0 and
+                len(self._other_leaves) == 0)
 
     @not_in_run
     def f_restore_default(self):
@@ -3546,6 +3547,26 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if remove_from_trajectory:
             for group, link in group_link_pairs:
                 group.f_remove_link(link)
+
+    def f_remove(self, recursive=True, predicate=None):
+        """Recursively removes all children of the trajectory
+
+        :param recursive:
+
+            Only here for consistency with signature of parent method. Cannot be set
+            to `False` because the trajectory root node cannot be removed.
+
+        :param predicate:
+
+            Predicate which can evaluate for each node to ``True`` in order to remove the node or
+            ``False`` if the node should be kept. Leave ``None`` if you want to remove all nodes.
+
+        """
+        if not recursive:
+            raise ValueError('Nice try ;-)')
+
+        for child in compat.listkeys(self._children):
+            self.f_remove_child(child, recursive=True, predicate=predicate)
 
     @kwargs_api_change('remove_empty_groups')
     def f_delete_item(self, item, *args, **kwargs):

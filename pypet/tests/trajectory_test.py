@@ -640,6 +640,17 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue('IntParam' not in self.traj)
 
+        with self.assertRaises(ValueError):
+            self.traj.f_remove(recursive=False)
+
+        self.traj.Im.f_remove()
+
+        self.assertTrue('Im' not in self.traj)
+
+        self.traj.f_remove()
+
+        self.assertTrue(self.traj.f_is_empty())
+
         #self.assertTrue(len(self.traj)==1)
 
     def test_changing(self):

@@ -19,7 +19,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.utils.explore import cartesian_product, find_unique
+from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
@@ -125,7 +125,7 @@ class TestFindUnique(unittest.TestCase):
         paramA._explore([1, 2, 1, 2, 1, 2])
         paramB = Parameter('hhh', 'a')
         paramB._explore(['a', 'a', 'a', 'a', 'b', 'b'])
-        unique_elements = find_unique([paramA, paramB])
+        unique_elements = find_unique_points([paramA, paramB])
         self.assertTrue(len(unique_elements) == 4)
         self.assertTrue(len(unique_elements[1][1]) == 2)
         self.assertTrue(len(unique_elements[3][1]) == 1)
@@ -137,12 +137,12 @@ class TestFindUnique(unittest.TestCase):
                          np.ones((3,3)),
                          np.zeros((3,3,3)),
                          np.ones(1)])
-        unique_elements = find_unique([paramA, paramC])
+        unique_elements = find_unique_points([paramA, paramC])
         self.assertTrue(len(unique_elements) == 5)
         self.assertTrue(len(unique_elements[1][1]) == 2)
         self.assertTrue(len(unique_elements[0][1]) == 1)
 
-        unique_elements = find_unique([paramC, paramB])
+        unique_elements = find_unique_points([paramC, paramB])
         self.assertTrue((len(unique_elements))==4)
         self.assertTrue(len(unique_elements[0][1])==3)
         self.assertTrue(len(unique_elements[3][1])==1)

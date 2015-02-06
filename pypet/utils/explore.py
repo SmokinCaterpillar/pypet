@@ -42,10 +42,8 @@ def cartesian_product(parameter_dict, combined_parameters=()):
 
         For example:
 
-        >>> print cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'],\
-        'param3' : [1,2,3]}, ('param3',('param1', 'param2')))
-        {param3':[1,1,2,2,3,3],'param1' : [42.0,52.5,42.0,52.5,42.0,52.5],\
-        'param2':['a','b','a','b','a','b']}
+        >>> print cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'], 'param3' : [1,2,3]}, ('param3',('param1', 'param2')))
+        {param3':[1,1,2,2,3,3],'param1' : [42.0,52.5,42.0,52.5,42.0,52.5], 'param2':['a','b','a','b','a','b']}
 
     :returns: Dictionary with cartesian product lists.
 
@@ -79,7 +77,7 @@ def cartesian_product(parameter_dict, combined_parameters=()):
     return result_dict
 
 
-def find_unique(explored_parameters):
+def find_unique_points(explored_parameters):
     """Takes a list of explored parameters and finds unique parameter combinations.
 
     If parameter ranges are hashable operates in O(N), otherwise O(N**2).
