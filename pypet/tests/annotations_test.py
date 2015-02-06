@@ -54,7 +54,6 @@ class AnnotationsTest(unittest.TestCase):
         self.annotations['Numpy_Data'] = np.array(['fff','ddd'])
         self.annotations[0] = 7777
 
-
     def add_annotations(self, traj):
         funcs = 5
 
@@ -74,7 +73,6 @@ class AnnotationsTest(unittest.TestCase):
                     setattr(node.v_annotations,name, anno)
                 elif idx % funcs == 4:
                     node.v_annotations[name]=anno
-
 
     def test_annotations_insert(self):
 

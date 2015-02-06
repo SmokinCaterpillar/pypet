@@ -79,7 +79,7 @@ class Annotations(object):
         return len(self.__dict__) == 0
 
     def f_empty(self):
-        """REmoves all annotiations from RAM """
+        """Removes all annotations from RAM """
         self.__dict__ = {}
 
     def f_get(self, *args):
@@ -203,6 +203,4 @@ class WithAnnotations(HasLogger):
 
         """
         return self._annotations.f_ann_to_str()
-
-
 

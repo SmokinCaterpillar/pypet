@@ -964,7 +964,7 @@ Note that you cannot delete explored parameters.
 Merging and Backup
 ------------------
 
-You can backup a trajectory with the function :func:`pypet.trajectory.Trajectory.f_backup`.
+You can backup a trajectory with the function :func:`~pypet.trajectory.Trajectory.f_backup`.
 
 If you have two trajectories that live in the same space you can merge them into one
 via :func:`~pypet.trajectory.Trajectory.f_merge`.
@@ -993,33 +993,33 @@ via the :attr:`~pypet.trajectory.Trajectory.v_crun` property.
 
 During the execution of individual runs the functionality of your trajectory is reduced:
 
-    * You can no longer add *config* and *parameters*
+    * You can no longer add data to *config* and *parameters* branch
 
     * You can usually not access the full exploration range of parameters but only the current
-        value that corresponds to the index of the run.
+      value that corresponds to the index of the run.
 
-    * Some functions like :func:`~pypet.trajectory.Trajectory.f_explore` are not supported.
+    * Some functions like :func:`~pypet.trajectory.Trajectory.f_explore` are no longer supported.
 
 Conceptually one should regard all single runs to be *independent*. As a consequence,
-you should **NOT** load data during a particular run that was computed by a previous one.
-You should **NOT** make a run manipulate data in the trajectory that was not added during the
+you should **not** load data during a particular run that was computed by a previous one.
+You should **not** manipulate data in the trajectory that was not added during the
 particular single run. This is **very important**!
 When it comes to multiprocessing, manipulating data
-put into the trajectory before the single runs is even more useless. Because the trajectory is
+put into the trajectory before the single runs is useless. Because the trajectory is
 either pickled or the whole memory space of the trajectory is forked by the OS, changing stuff
 within the trajectory will not be noticed by any other process or even the main script!
 
 
-========================================================
+=================================================
 Interaction with Trajectories after an Experiment
-========================================================
+=================================================
 
--------------------------------------------
+------------------------------------------
 Iterating over Loaded Data in a Trajectory
--------------------------------------------
+------------------------------------------
 
 The trajectory offers a way to iteratively look into the data you have obtained from several runs.
-Assume you have computed the value `z` with `z=traj.x*traj.x` and added `z` to the trajectory/single run
+Assume you have computed the value `z` with `z=traj.x*traj.x` and added `z` to the trajectory
 in each run via ``traj.f_add_result('z', z)``. Accordingly, you can find a couple of
 ``traj.results.runs.run_XXXXXXXX.z`` in your trajectory (where `XXXXXXXX` is the index
 of a particular run like `00000003`). To access these one after the other it
@@ -1029,8 +1029,8 @@ There is a way to tell the trajectory
 to only consider the subbranches that are associated with a single run and blind out everything else.
 You can use the function :func:`~pypet.trajectory.Trajectory.f_set_crun` to make the
 trajectory only consider a particular run (it accepts run indices as well as names).
-Alternatively you can set the run idx via changing
-``v_idx`` of your trajectory object.
+Alternatively, you can set the run idx via changing
+:attr:`~pypet.trajectory.Trajectory.v_idx` of your trajectory object.
 
 In order to set everything back to normal call :func:`~pypet.trajectory.Trajectory.f_restore_default`
 or set ``v_idx`` to ``-1``.
@@ -1069,15 +1069,15 @@ To see this in action you might want to check out :ref:`example-03`.
 
 .. _more-on-find-idx:
 
------------------------------------------------------------
+----------------------------------------------------------
 Looking for Subsets of Parameter Combinations (f_find_idx)
------------------------------------------------------------
+----------------------------------------------------------
 
 Let's say you already explored the parameter space and gathered some results.
 The next step would be to post-process and analyse the results. Yet, you are not
 interested in all results at the moment but only for subsets where the parameters
 have certain values. You can find the corresponding run indices with the
-:func:`~pypet.Trajectory.f_find_idx` function.
+:func:`~pypet.trajectory.Trajectory.f_find_idx` function.
 
 In order to filter for particular settings you need a *lambda* filter function
 and a list specifying the names of the parameters that you want to filter.
@@ -1088,12 +1088,12 @@ For instance, let's assume we explored the parameters `'x'` and `'y'` and the ca
 of :math:`x \in \{1,2,3,4\}` and :math:`y \in \{6,7,8\}`. We want to know the run indices for
 ``x==2`` or ``y==8``. First we need to formulate a lambda filter function:
 
-    >>>my_filter_function = lambda x,y: x==2 or y==8
+    >>> my_filter_function = lambda x,y: x==2 or y==8
 
-Next we can ask the trajectory to return an iterator over all run indices that fulfil the
-above named condition:
+Next we can ask the trajectory to return an iterator (in fact it's a generator_) over all
+run indices that fulfil the above named condition:
 
-    >>> idx_iterator = traj.f_find_idx(['parameters.x', 'parameters.y'],my_filter_function)
+    >>> idx_iterator = traj.f_find_idx(['parameters.x', 'parameters.y'], my_filter_function)
 
 Note the list ``['parameters.x', 'parameters.y']`` to tell the trajectory which parameters are
 associated with the variables in the lambda function. Make sure they are in the same order as
@@ -1108,16 +1108,18 @@ To see this in action check out :ref:`example-08`.
 
 .. _Dive Into Python: http://www.diveintopython.net/power_of_introspection/lambda_functions.html
 
+.. _generator: https://wiki.python.org/moin/Generators
 
 .. _more-on-annotations:
 
-==============
+===========
 Annotations
-==============
+===========
 
 :class:`~pypet.annotations.Annotations` are a small extra feature. Every group node
-(including your trajectory, but not single runs) and every leaf has a property called
-``v_annotations``. These are other container objects (accessible via natural naming of course),
+(including your trajectory root node) and every leaf has a property called
+:attr:`~pypet.naturalnaming.NNTreeNode.v_annotations`.
+These are other container objects (accessible via natural naming of course),
 where you can put whatever you want! So you can mark your items in a specific way
 beyond simple comments:
 
@@ -1133,9 +1135,7 @@ of annotations from the HDF5 file is very slow.
 Hence, only use short and small annotations.
 Consider annotations as a neat additional feature, but I don't recommend using the
 annotations for large machine written stuff or storing large result like data (use the regular
-result objects to do that!).
+result objects to do that).
 
-For storage of annotations apply the same rule as for results and parameters,
-whatever is stored to disk is set in stone!
 
 .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
