@@ -48,21 +48,20 @@ from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, depre
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 
-def load_trajectory(
-               name=None,
-               index=None,
-               as_new=False,
-               load_parameters=pypetconstants.LOAD_DATA,
-               load_derived_parameters=pypetconstants.LOAD_SKELETON,
-               load_results=pypetconstants.LOAD_SKELETON,
-               load_other_data=pypetconstants.LOAD_SKELETON,
-               load_data=None,
-               force=False,
-               dynamic_imports=None,
-               new_name='my_trajectory',
-               add_time=True,
-               storage_service=storage.HDF5StorageService,
-               **kwargs):
+def load_trajectory(name=None,
+                    index=None,
+                    as_new=False,
+                    load_parameters=pypetconstants.LOAD_DATA,
+                    load_derived_parameters=pypetconstants.LOAD_SKELETON,
+                    load_results=pypetconstants.LOAD_SKELETON,
+                    load_other_data=pypetconstants.LOAD_SKELETON,
+                    load_data=None,
+                    force=False,
+                    dynamic_imports=None,
+                    new_name='my_trajectory',
+                    add_time=True,
+                    storage_service=storage.HDF5StorageService,
+                    **kwargs):
     """Helper function that creates a novel trajectory and loads it from disk.
 
     For the parameters see :func:`~pypet.trajectory.Trajectory.f_load`.
@@ -375,7 +374,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """The name and path of the hdf5 file in case you use the HDF4StorageService"""
         try:
             return self.v_storage_serivce.filename
-        except Exception:
+        except AttributeError:
             return None
 
     @property
@@ -453,8 +452,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         return self.v_crun
 
     @v_as_run.setter
-    @deprecated(msg='Please use `v_crun` instead')
     @not_in_run
+    @deprecated(msg='Please use `v_crun` instead')
     def v_as_run(self, run_name):
         """Changes the run name to make the trajectory behave as a single run"""
         self.v_crun = run_name
@@ -555,8 +554,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._dynamic_imports.extend(dynamic_imports)
 
-    @deprecated(msg='Please use `pypet.trajectory.Trajectory.f_set_crun` instead.')
     @not_in_run
+    @deprecated(msg='Please use `pypet.trajectory.Trajectory.f_set_crun` instead.')
     def f_as_run(self, name_or_idx):
         return self.f_set_crun(name_or_idx)
 
@@ -699,13 +698,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         if run_node.v_is_group:
                             for grp in run_node.f_iter_nodes(with_links=False):
                                 if (not grp.v_is_leaf and grp.f_has_links() and
-                                    not self.f_contains(grp.v_full_name, shortcuts=False,
-                                                                 with_links=False)):
+                                        not self.f_contains(grp.v_full_name,
+                                                            shortcuts=False,
+                                                            with_links=False)):
+
                                     link_tuples = zip(itools.repeat(grp),
                                                       compat.listkeys(grp._links))
                                     snapshot_traj.f_delete_links(link_tuples,
                                                         remove_from_trajectory=True)
-
 
                             for node in run_node.f_iter_nodes(with_links=False):
                                 if not self.f_contains(node.v_full_name, shortcuts=False,
@@ -926,15 +926,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 # Iterate over all runs
                 old_value = None
                 value = None
-                if len(self._run_parent_groups)>0:
+                if len(self._run_parent_groups) > 0:
                     for run_parent_group in compat.itervalues(self._run_parent_groups):
                         try:
-                            value = run_parent_group.f_get(name, fast_access=False,
-                                                    with_links=with_links,
-                                                    shortcuts=shortcuts,
-                                                    max_depth=max_depth,
-                                                  auto_load=auto_load)
-
+                            value = run_parent_group.f_get(name,
+                                                           fast_access=False,
+                                                           with_links=with_links,
+                                                           shortcuts=shortcuts,
+                                                           max_depth=max_depth,
+                                                           auto_load=auto_load)
                             if old_value is not None:
                                 raise pex.NotUniqueNodeError('`%s` has been found twice: '
                                                              '`%s` and `%s`' % (name,
@@ -953,7 +953,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                             old_value = value
 
-                        except (AttributeError, pex.DataNotInStorageError) as e:
+                        except (AttributeError, pex.DataNotInStorageError):
                             pass
 
                     if value is not None:
@@ -1072,7 +1072,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 if count == 0:
                     length = act_param.f_get_range_length()
                 elif not length == act_param.f_get_range_length():
-                        raise ValueError('The parameters to explore have not the same size!')
+                    raise ValueError('The parameters to explore have not the same size!')
                 count += 1
 
             original_length = len(self)
@@ -1269,7 +1269,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             group = self._run_parent_groups[group_name]
             for child_name in compat.listkeys(group.f_get_children(copy=False)):
                 if (child_name.startswith(pypetconstants.RUN_NAME) and
-                            child_name != pypetconstants.RUN_NAME_DUMMY and
+                        child_name != pypetconstants.RUN_NAME_DUMMY and
                             self.f_is_completed(child_name)):
                     group.f_remove_child(child_name, recursive=True,
                                          predicate=_keep_linked_lambda)
@@ -1308,9 +1308,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON)
 
+    @not_in_run
     @kwargs_api_change('load_all', 'load_data')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
-    @not_in_run
     def f_load(self, name=None, index=None, as_new=False, load_parameters=pypetconstants.LOAD_DATA,
                load_derived_parameters=pypetconstants.LOAD_SKELETON,
                load_results=pypetconstants.LOAD_SKELETON,
@@ -1440,7 +1440,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         unused_kwargs = set(kwargs.keys())
         if self.v_storage_service is None or storage_service is not None or len(kwargs) > 0:
             self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
-                                                               trajectory=self, **kwargs)
+                                                                   trajectory=self, **kwargs)
         if len(unused_kwargs) > 0:
             raise ValueError('The following keyword arguments were not used: `%s`' %
                              str(unused_kwargs))
@@ -1680,10 +1680,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         timestamp = time.time()
         formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         hexsha = hashlib.sha1(compat.tobytes(self.v_name +
-                                                str(self.v_timestamp) +
-                                                other_trajectory.v_name +
-                                                str(other_trajectory.v_timestamp) +
-                                                VERSION)).hexdigest()
+                                             str(self.v_timestamp) +
+                                             other_trajectory.v_name +
+                                             str(other_trajectory.v_timestamp) +
+                                             VERSION)).hexdigest()
 
         short_hexsha = hexsha[0:7]
 
@@ -1848,9 +1848,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._logger.info('Finished Merging!')
 
-    def _merge_derived_parameters_run_based(self, other_trajectory,
-                                                     run_name_dict,
-                                                     rename_dict):
+    def _merge_derived_parameters_run_based(self,
+                                            other_trajectory,
+                                            run_name_dict,
+                                            rename_dict):
         """ Merges derived parameters that have the `run_ALL` in a name.
 
         Creates a new parameter with the name of the first new run and links to this
@@ -1870,7 +1871,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 my_param = self.f_get(param_name, fast_access=False)
                 param = other_derived_parameters[param_name]
                 if (my_param._equal_values(my_param.f_get(), param.f_get()) and
-                    not (my_param.f_has_range() or param.f_has_range())):
+                        not (my_param.f_has_range() or param.f_has_range())):
                     continue
 
             first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
@@ -1880,13 +1881,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             comment = param.v_comment
             param_type = param.f_get_class_name()
             param_type = self._create_class(param_type)
-            first_param = self.f_add_leaf(param_type, first_new_param_name,
-                                                       comment=comment)
+            first_param = self.f_add_leaf(param_type,
+                                          first_new_param_name,
+                                          comment=comment)
             for run_name in run_name_dict.values():
                 if run_name == new_first_run_name:
                     continue
-                next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                      run_name)
+                next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY, run_name)
                 split_name = next_name.split('.')
                 link_name = split_name.pop()
                 location_name = '.'.join(split_name)
@@ -1906,7 +1907,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 if pypetconstants.RUN_NAME_DUMMY in old_linked_name:
                     self._logger.warning('Ignoring all links linking to `%s` because '
                                          'I don`t know how to resolve links under a `%s` node.' %
-                                        (old_linked_name, pypetconstants.RUN_NAME_DUMMY))
+                                         (old_linked_name, pypetconstants.RUN_NAME_DUMMY))
                     continue
                 old_link_dict = other_trajectory._linked_by[old_linked_name]
                 old_linked_item = other_trajectory.f_get(old_linked_name)
@@ -1925,10 +1926,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                     linking_full_name = linking_node.v_full_name
 
-                    if (pypetconstants.RUN_NAME_DUMMY in linking_full_name):
+                    if pypetconstants.RUN_NAME_DUMMY in linking_full_name:
                         self._logger.warning('Ignoring links under `%s` because '
-                                    'I don`t know how to resolve links under a `%s` node.' %
-                                        (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
+                                             'I don`t know how to resolve links '
+                                             'under a `%s` node.' %
+                                             (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
 
                     if linking_node.v_run_branch in run_name_dict:
                         pos_list = []
@@ -1942,12 +1944,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         new_linking_full_name = linking_full_name
 
                     for link in link_set:
-                        if (link == pypetconstants.RUN_NAME_DUMMY):
+                        if link == pypetconstants.RUN_NAME_DUMMY:
                             self._logger.warning('Ignoring link `%s` under `%s` because '
-                                        'I don`t know how to resolve links named as `%s`.' %
-                                            (link,
-                                             linking_full_name,
-                                             pypetconstants.RUN_NAME_DUMMY))
+                                                 'I don`t know how to resolve '
+                                                 'links named as `%s`.' %
+                                                 (link,
+                                                  linking_full_name,
+                                                  pypetconstants.RUN_NAME_DUMMY))
                             continue
 
                         try:
@@ -2276,7 +2279,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             group = traj[where]
             for leaf in group.f_iter_leaves(with_links=False):
                 if (leaf.v_run_branch == 'trajectory' or
-                            leaf.v_run_branch == pypetconstants.RUN_NAME_DUMMY):
+                        leaf.v_run_branch == pypetconstants.RUN_NAME_DUMMY):
                     result_dict[leaf.v_full_name] = leaf
 
         return result_dict
@@ -2373,8 +2376,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if othertrialset != set(range(othermaxtrial_T2 + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
                                 'contain integers from 0 to %d, but it infact it contains `%s` '
-                                'in the other trajectory.' % (
-                                othermaxtrial_T2, str(othertrialset)))
+                                'in the other trajectory.' %
+                                (othermaxtrial_T2, str(othertrialset)))
 
             # If the trial parameter's name was just given in parts we update it here
             # to the full name
@@ -2540,8 +2543,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         unused_kwargs = set(kwargs.keys())
         if new_storage_service is not None or len(kwargs) > 0:
             self._storage_service, unused_kwargs = storage_factory(
-                                                               storage_service=new_storage_service,
-                                                               trajectory=self, **kwargs)
+                                                    storage_service=new_storage_service,
+                                                    trajectory=self, **kwargs)
         if len(unused_kwargs) > 0:
             raise ValueError('The following keyword arguments were not used: `%s`' %
                              str(unused_kwargs))
@@ -2623,10 +2626,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_name,
-                                    store_final=False,
-                                    store_data=store_data,
-                                    store_full_in_run=store_full_in_run)
+                                        trajectory_name=self.v_name,
+                                        store_final=False,
+                                        store_data=store_data,
+                                        store_full_in_run=store_full_in_run)
         else:
 
             if self._stored and self._expansion_not_stored:
@@ -3499,7 +3502,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         fetched_items = self._nn_interface._fetch_items(REMOVE, iterator, (), {})
 
         if fetched_items:
-            for msg, item, dummy1, dummy2 in fetched_items:
+            for _, item, dummy1, dummy2 in fetched_items:
                 self._nn_interface._remove_node_or_leaf(item, recursive=recursive)
 
         else:
@@ -3651,7 +3654,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 raise
 
 
-            for msg, item, dummy1, dummy2 in fetched_items:
+            for _, item, dummy1, dummy2 in fetched_items:
                 if remove_from_trajectory:
                     self._nn_interface._remove_node_or_leaf(item, recursive=recursive)
                 else:
@@ -3661,23 +3664,24 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._logger.warning('Your removal was not successful, could not find a single '
                                  'item to remove.')
 
-    @copydoc(ConfigGroup.f_add_config)
     @not_in_run
+    @copydoc(ConfigGroup.f_add_config)
     def f_add_config(self, *args, **kwargs):
         return super(Trajectory, self).f_add_config(*args, **kwargs)
 
-    @copydoc(ConfigGroup.f_add_config_group)
+
     @not_in_run
+    @copydoc(ConfigGroup.f_add_config_group)
     def f_add_config_group(self, *args, **kwargs):
         return super(Trajectory, self).f_add_config_group(*args, **kwargs)
 
-    @copydoc(ParameterGroup.f_add_parameter)
     @not_in_run
+    @copydoc(ParameterGroup.f_add_parameter)
     def f_add_parameter(self, *args, **kwargs):
         return super(Trajectory, self).f_add_parameter(*args, **kwargs)
 
-    @copydoc(ParameterGroup.f_add_parameter_group)
     @not_in_run
+    @copydoc(ParameterGroup.f_add_parameter_group)
     def f_add_parameter_group(self, *args, **kwargs):
         return super(Trajectory, self).f_add_parameter_group(*args, **kwargs)
 

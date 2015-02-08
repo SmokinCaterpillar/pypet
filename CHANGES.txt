@@ -104,6 +104,8 @@ pypet 0.1b.9
 
 *   BUG FIX: ``crun`` is now also accepted for adding of data and not only for requests
 
+*    Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
+
 
 pypet 0.1b.8
 

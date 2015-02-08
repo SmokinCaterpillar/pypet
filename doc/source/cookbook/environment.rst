@@ -120,6 +120,8 @@ because most of the time the default settings are sufficient.
     If ``multiproc`` is ``True``, this specifies the number of processes that will be spawned
     to run your experiment. Note if you use ``'QUEUE'`` mode (see below) the queue process
     is not included in this number and will add another extra process for storing.
+    If you have psutil_ installed, you can set `ncores=0` to let psutil_ determine
+    the number of CPUs available.
 
 * ``use_pool``
 

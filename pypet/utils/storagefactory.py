@@ -1,5 +1,4 @@
-"""
-Module to create storage service from given settings.
+""" Module to create storage service from given settings.
 
 Currently only the HDF5StorageService is supported.
 But to be extended in the future.
@@ -52,7 +51,7 @@ def storage_factory(storage_service, trajectory=None, **kwargs):
 
     if 'filename' in kwargs and storage_service is None:
         filename = kwargs['filename']
-        name, ext = os.path.splitext(filename)
+        _, ext = os.path.splitext(filename)
         if ext in ('.hdf', '.h4', '.hdf4', '.he2', '.h5', '.hdf5', '.he5'):
             return _create_storage(HDF5StorageService, trajectory, **kwargs)
         else:

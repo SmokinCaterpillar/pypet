@@ -51,15 +51,6 @@ import inspect
 import itertools as itools
 import re
 from collections import deque
-try:
-    from future_builtins import zip, map, filter
-except ImportError:  # not 2.6+ or is 3.x
-    try:
-        from itertools import izip as zip  # < 2.5 or 3.x
-        from itertools import imap as map
-        from itertools import ifilter as filter
-    except ImportError:
-        pass
 
 from pypet.utils.decorators import deprecated, kwargs_api_change
 import pypet.pypetexceptions as pex
@@ -111,16 +102,20 @@ CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
-    def __init__(self, full_name, comment, leaf):
+    def __init__(self, full_name, comment, is_leaf):
         super(NNTreeNode, self).__init__()
-
-        self._rename(full_name)
-
-        self._leaf = leaf  # Whether or not a node is a leaf, aka terminal node.
-
+        self._is_leaf = is_leaf  # Whether or not a node is a leaf, aka terminal node.
         self._stored = False
         self._comment = ''
+        self._depht = None
+        self._full_name = None
+        self._name = None
+        self._run_branch = None
+        self._run_branch_pos = None
+        self._branch = None
+
         self.v_comment = comment
+        self._rename(full_name)
 
     @property
     def v_stored(self):
@@ -156,12 +151,12 @@ class NNTreeNode(WithAnnotations):
     @property
     def v_is_leaf(self):
         """Whether node is a leaf or not (i.e. it is a group node)"""
-        return self._leaf
+        return self._is_leaf
 
     @property
     def v_is_group(self):
         """Whether node is a group or not (i.e. it is a leaf node)"""
-        return not self._leaf
+        return not self._is_leaf
 
     @deprecated(msg='Please use property `v_is_root` instead.')
     def f_is_root(self):
@@ -274,7 +269,7 @@ class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
 
     def __init__(self, full_name, comment, parameter):
-        super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, leaf=True)
+        super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, is_leaf=True)
         self._parameter = parameter
 
     def f_supports_fast_access(self):
@@ -1842,7 +1837,7 @@ class NaturalNamingInterface(HasLogger):
                         if full_name in linked_by:
                             visited_linked_nodes.add(full_name)
 
-                        if not item._leaf and depth < max_depth:
+                        if not item._is_leaf and depth < max_depth:
                             child_iterator = NaturalNamingInterface._make_child_iterator(item,
                                                                         run_name,
                                                                         with_links,
@@ -2405,7 +2400,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
     """
 
     def __init__(self, full_name='', trajectory=None, comment=''):
-        super(NNGroupNode, self).__init__(full_name, comment=comment, leaf=False)
+        super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
         self._children = {}
         self._links = {}
         self._groups = {}

@@ -165,9 +165,9 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 class QueueStorageServiceWriter(HasLogger):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
 
-    def __init__(self, storage_service, queue):
+    def __init__(self, storage_service, storage_queue):
         self._storage_service = storage_service
-        self._queue = queue
+        self._queue = storage_queue
         self._trajectory_name = None
         self._set_logger()
 
@@ -1895,7 +1895,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         self._logger.info('Storing backup of %s.' % traj.v_name)
 
-        mypath, filename = os.path.split(self._filename)
+        mypath, _ = os.path.split(self._filename)
 
         if backup_filename is None:
             backup_filename = os.path.join('%s' % mypath, 'backup_%s.hdf5' % traj.v_name)
@@ -2453,7 +2453,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 name = compat.tostr(row['name'])
                 idx = int(row['idx'])
                 timestamp = float(row['timestamp'])
-                time = compat.tostr(row['time'])
+                time_ = compat.tostr(row['time'])
                 completed = int(row['completed'])
                 summary = compat.tostr(row['parameter_summary'])
                 hexsha = compat.tostr(row['short_environment_hexsha'])
@@ -2471,7 +2471,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 info_dict = {}
                 info_dict['idx'] = idx
                 info_dict['timestamp'] = timestamp
-                info_dict['time'] = time
+                info_dict['time'] = time_
                 info_dict['completed'] = completed
                 info_dict['name'] = name
                 info_dict['parameter_summary'] = summary
@@ -4976,7 +4976,7 @@ class HDF5StorageService(StorageService, HasLogger):
             try:
                 other_array = factory(self._hdf5file, where=group, name=key, obj=data,
                                                 filters=filters, **kwargs)
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 conv_data = data[:]
                 conv_data = np.core.defchararray.encode(conv_data, self.encoding)
                 other_array = factory(self._hdf5file, where=group, name=key,
@@ -5028,7 +5028,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=data, **kwargs)
-            except (TypeError, ValueError) as e:
+            except (TypeError, ValueError):
                 if isinstance(data, compat.unicode_type):
                     conv_data = data.encode(self._encoding)
                 else:
@@ -5053,7 +5053,6 @@ class HDF5StorageService(StorageService, HasLogger):
         """Removes a link from disk"""
         translated_name = '/' + self._trajectory_name + '/' + link_name.replace('.','/')
         link = ptcompat.get_node(self._hdf5file, where=translated_name)
-        parent_node = link._v_parent
         link._f_remove()
 
     def _all_delete_parameter_or_result_or_group(self, instance,

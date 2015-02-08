@@ -9,7 +9,7 @@ class MultiprocLinkQueueTest(LinkEnvironmentTest):
         LinkEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
-        self.ncores = 4
+        self.ncores = 0
         self.use_pool=True
 
 

@@ -156,19 +156,3 @@ def with_open_store(func):
         return func(self, *args, **kwargs)
 
     return new_func
-
-def needs_trajectory(func):
-    """This is a decorator for HDF5Data items to check if they do contain the trajectory.
-
-    """
-    doc = func.__doc__
-
-    @functools.wraps(func)
-    def new_func(self, *args, **kwargs):
-
-        if self._traj is None:
-            raise ValueError('Please provide a link to the trajectory via `f_set_trajectory`')
-
-        return func(self, *args, **kwargs)
-
-    return new_func

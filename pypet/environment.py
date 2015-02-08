@@ -394,6 +394,8 @@ class Environment(HasLogger):
         If multiproc is ``True``, this specifies the number of processes that will be spawned
         to run your experiment. Note if you use QUEUE mode (see below) the queue process
         is not included in this number and will add another extra process for storing.
+        If you have *psutil* installed, you can set `ncores=0` to let *psutil* determine
+        the number of CPUs available.
 
     :param use_pool:
 
@@ -858,6 +860,11 @@ class Environment(HasLogger):
                              'installed psutil. Please install psutil or set '
                              'cpu_cap, memory_cap, and swap_cap to 1.0')
 
+        if ncores == 0 and psutil is None:
+            raise ValueError('You cannot set `ncores=0` for auto detection of CPUs if you did not '
+                             'installed psutil. Please install psutil or '
+                             'set `ncores` manually.')
+
         unused_kwargs = set(kwargs.keys())
 
         self._set_logger()
@@ -941,9 +948,9 @@ class Environment(HasLogger):
         if not new_commit:
             # Otherwise we need to create a novel hexsha
             self._hexsha = hashlib.sha1(compat.tobytes(self.v_trajectory.v_name +
-                                                          str(self.v_trajectory.v_timestamp) +
-                                                          str(self.v_timestamp) +
-                                                          VERSION)).hexdigest()
+                                                       str(self.v_trajectory.v_timestamp) +
+                                                       str(self.v_timestamp) +
+                                                           VERSION)).hexdigest()
 
         # Create the name of the environment
         short_hexsha = self._hexsha[0:7]
@@ -1000,6 +1007,10 @@ class Environment(HasLogger):
         self._delete_continue = delete_continue
 
         self._multiproc = multiproc
+        if ncores == 0:
+            # Let *pypet* detect CPU count via psutil
+            ncores = psutil.cpu_count()
+            self._logger.info('Determined CPUs automatically, found `%d` cores.' % ncores)
         self._ncores = ncores
         if wrap_mode is None:
             # None cannot be used in HDF5 files, accordingly we need a string representation
@@ -2420,9 +2431,6 @@ class MultiprocContext(HasLogger):
 
         self._set_logger()
 
-        if full_copy is not None:
-            self._traj.v_full_copy=full_copy
-
         self._manager = manager
         self._traj = trajectory
         self._storage_service = self._traj.v_storage_service
@@ -2432,13 +2440,15 @@ class MultiprocContext(HasLogger):
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._lock = lock
-
         self._log_path = log_path
         self._log_levels = log_levels
         self._logger_names = logger_names
         self._log_stdout = log_stdout
         self._lock_with_manager = lock_with_manager
         self._start_queue_process = start_queue_process
+
+        if full_copy is not None:
+            self._traj.v_full_copy=full_copy
 
         self._do_wrap()
 

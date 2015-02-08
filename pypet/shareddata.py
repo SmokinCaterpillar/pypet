@@ -66,8 +66,8 @@ def make_ordinary_result(shared_result, new_data_name=None):
     """ Irreversible!"""
     if new_data_name is None:
         new_data_name = shared_result.v_name
-    shared_result._request_data('make_ordinary', kwargs=dict(new_class_name=Result.__name__,
-                                                      new_data_name=new_data_name))
+    kwargs = dict(new_class_name=Result.__name__, new_data_name=new_data_name)
+    shared_result._request_data('make_ordinary', kwargs=kwargs)
     del shared_result._traj
     del shared_result._data_name
     shared_result.__class__ = Result
@@ -98,8 +98,8 @@ def make_shared_result(ordinary_result, trajectory, new_class=None, old_data_nam
         ordinary_result.__init__(ordinary_result.v_full_name, trajectory=trajectory,
                                  comment=ordinary_result.v_comment)
         ordinary_result._data_name = old_data_name
-        ordinary_result._request_data('make_shared', kwargs=dict(new_class_name=new_class.__name__,
-                                                              new_data_name=ordinary_result.v_name))
+        kwargs = dict(new_class_name=new_class.__name__, new_data_name=ordinary_result.v_name)
+        ordinary_result._request_data('make_shared', kwargs=kwargs)
         ordinary_result._data_name = ordinary_result.v_name
         return ordinary_result
     except Exception:
@@ -124,6 +124,9 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
 
     def _store(self):
         return {}
+
+    def _load(self, load_dict):
+        pass
 
     def f_is_empty(self):
         return True # The shared data result is always empty because the data stays on disk
@@ -297,7 +300,10 @@ class SharedTableResult(SharedDataResult):
         return self._request_data('read_sorted', args=(sortby,), kwargs=kwargs)
 
     def __iter__(self):
-        return iter(self.f_read())
+        if self._storage_service.is_open:
+            return self._request_data('__iter__', args=())
+        else:
+            return iter(self.f_read())
 
     def __getitem__(self, key):
         return self._request_data('__getitem__', args=(key,))
@@ -348,10 +354,7 @@ class SharedTableResult(SharedDataResult):
 
     def f_will_query_use_indexing(self, condition, condvars=None):
         return self._request_data('will_query_use_indexing', args=(condition,),
-                           kwargs=dict(condvars=condvars))
-
-    def flush_rows_to_index(self, _lastrow=True):
-        return self._request_data('flush_rows_to_index', kwargs=dict(_lastrow=_lastrow))
+                                  kwargs=dict(condvars=condvars))
 
     def f_get_enum(self, colname):
         return self._request_data('get_enum', args=(colname,))
@@ -414,10 +417,6 @@ class SharedTableResult(SharedDataResult):
         return self._request_data('itersorted', args=(sortby,), kwargs=kwargs)
 
     @with_open_store
-    def __iter__(self):
-        return self._request_data('__iter__', args=())
-
-    @with_open_store
     def f_where(self, condition, condvars=None, start=None, stop=None, step=None):
         kwargs = dict(condvars=condvars, start=start, stop=stop, step=step)
         return self._request_data('where', args=(condition,), kwargs=kwargs)
@@ -466,11 +465,11 @@ class SharedPandasDataResult(SharedDataResult):
 
     def f_select(self, where=None, start = None, stop=None, columns=None,
                chunksize=None, **kwargs):
-        kwargs['where']=where,
-        kwargs['start']=start
-        kwargs['stop']=stop
-        kwargs['columns']=columns
-        kwargs['chunksize']=chunksize
+        kwargs['where'] = where,
+        kwargs['start'] = start
+        kwargs['stop'] = stop
+        kwargs['columns'] = columns
+        kwargs['chunksize'] = chunksize
         if not self._storage_service.is_open:
             kwargs['iterator'] = False
         return self._request_data('pandas_select', kwargs=kwargs)
