@@ -1,6 +1,6 @@
-========================
-What is pypet all about?
-========================
+==========================
+What is *pypet* all about?
+==========================
 
 Whenever you do numerical simulations in science you come across two major problems:
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.

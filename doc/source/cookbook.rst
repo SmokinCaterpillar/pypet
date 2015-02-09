@@ -5,7 +5,7 @@
 Cookbook
 ========
 
-Here you can find some more explanations on various concepts of *pypet*.
+Here you can find some more detailed explanations of various concepts of *pypet*.
 
 
 .. toctree::

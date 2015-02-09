@@ -30,7 +30,7 @@ However, unless it is really, really, really necessary I do not plan to introduc
 API changes anymore.
 So feel free to use this beta version and even more so feel free to give feedback,
 suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
-write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet) :-)
+write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet).
 
 Thanks!
 
