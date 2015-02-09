@@ -333,13 +333,13 @@ So have fun using this tool!
 Cheers,
     Robert
 
-================================
+=============
 Miscellaneous
-================================
+=============
 
----------------------------
+----------------
 Acknowledgements
----------------------------
+----------------
 
 *   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
@@ -353,9 +353,9 @@ Acknowledgements
     the Research Training Group GRK 1589/1, and the
     Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
 
---------------------------------
+-----
 Tests
---------------------------------
+-----
 
 Tests can be found in `pypet/tests`.
 Note that they involve heavy file I/O and you need privileges
@@ -378,22 +378,22 @@ Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **L
 Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
 The source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
-------------------------------------
+-------
 License
-------------------------------------
+-------
 
 BSD, please read LICENSE file.
 
-------------------------------------
+------------
 Legal Notice
-------------------------------------
+------------
 
 *pypet* was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
 
-------------------------------------
+-------
 Contact
-------------------------------------
+-------
 
 **robert.meyer (at) ni.tu-berlin.de**
 
