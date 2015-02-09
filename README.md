@@ -15,6 +15,7 @@ lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
+
 ====================
 IMPORTANT DISCLAIMER
 ====================
@@ -32,6 +33,7 @@ suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpill
 write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet) :-)
 
 Thanks!
+
 
 ------------
 Requirements
@@ -69,6 +71,7 @@ Automatic Sumatra records are supported for
 
 * Sumatra >= 0.6.0
 
+
 ========================
 What is pypet all about?
 ========================
@@ -97,6 +100,7 @@ that you need to run your simulations. You can actively explore these by followi
 And finally, you can get your *results* together and store everything appropriately to disk.
 The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
 (http://www.pytables.org/).
+
 
 --------------------
 Package Organization
@@ -333,6 +337,7 @@ So have fun using this tool!
 Cheers,
     Robert
 
+
 =============
 Miscellaneous
 =============
@@ -352,6 +357,7 @@ Acknowledgements
 *   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
     the Research Training Group GRK 1589/1, and the
     Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
+
 
 -----
 Tests
@@ -378,11 +384,13 @@ Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **L
 Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
 The source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
+
 -------
 License
 -------
 
 BSD, please read LICENSE file.
+
 
 ------------
 Legal Notice
@@ -390,6 +398,7 @@ Legal Notice
 
 *pypet* was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
+
 
 -------
 Contact
