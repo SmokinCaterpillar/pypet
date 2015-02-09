@@ -1,13 +1,12 @@
 
 .. _example-11:
 
-=================================
+============================
 Large scale BRIAN simulation
-=================================
+============================
 
 This example involves a large scale simulation of a BRIAN_ network :ref:`brian-framework`.
 The example is taken from the `Litwin-Kumar and Doiron paper`_ from Nature neuroscience 2012.
-
 
 It is split into three different modules: The `clusternet.py` file containing
 the network specification, the `runscript.py` file to start a simulation

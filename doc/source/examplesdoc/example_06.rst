@@ -1,9 +1,9 @@
 
 .. _example-06:
 
-===================================
+====================
 Parameter Presetting
-===================================
+====================
 
 Download: :download:`example_06_parameter_presetting.py <../../../examples/example_06_parameter_presetting.py>`
 

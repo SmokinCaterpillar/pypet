@@ -174,7 +174,8 @@ def progressbar(index, total, percentage_step=10, logger='print',
 
     To be used inside a for-loop at the end of the loop:
 
-    ::
+    .. code-block:: python
+
         for irun in range(42):
             my_costly_job() # Your expensive function
             progressbar(index=irun, total=42, reprint=True) # shows a growing progressbar
@@ -189,7 +190,7 @@ def progressbar(index, total, percentage_step=10, logger='print',
     :param logger:
 
         Logger to write to - with level INFO. If string 'print' is given, the print statement is
-        used. Use None if you don't want to print or log the progressbar statement.
+        used. Use ``None`` if you don't want to print or log the progressbar statement.
 
     :param reprint:
 
@@ -209,6 +210,7 @@ def progressbar(index, total, percentage_step=10, logger='print',
     return _progressbar(index=index, total=total, percentage_step=percentage_step,
                         logger=logger, reprint=reprint, time=time, reset=reset)
 
+
 @deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
 def nested_equal(a, b):
     """
@@ -220,8 +222,9 @@ def nested_equal(a, b):
     """
     return nested_equal_new(a, b)
 
+
 def get_matching_kwargs(func, kwargs):
-    """Takes a function and keyword arguments and retrnns the ones that can be passed."""
+    """Takes a function and keyword arguments and returns the ones that can be passed."""
     if inspect.isclass(func):
         func = func.__init__
     argspec = inspect.getargspec(func)

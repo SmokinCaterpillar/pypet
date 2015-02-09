@@ -1,9 +1,9 @@
 
 .. _example-12:
 
-=======================================
+===================================
 Sharing Data during Multiprocessing
-=======================================
+===================================
 
 Here we show how data can be shared among multiple processes.
 Mind however, that this is conceptually a rather bad design

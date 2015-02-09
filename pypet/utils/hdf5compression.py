@@ -14,11 +14,10 @@ def compact_hdf5_file(filename, name=None, index=None,  keep_backup=True):
 
     The properties on how to compress the new file are taken from a given
     trajectory in the file.
-
     Simply calls ``ptrepack`` from the command line.
     (Se also https://pytables.github.io/usersguide/utilities.html#ptrepackdescr)
 
-    Currently only supported under LINUX, NO guarantee for WINDOWS usage.
+    Currently only supported under Linux, no guarantee for Windows usage.
 
     :param filename:
 

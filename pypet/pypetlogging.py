@@ -6,12 +6,12 @@ import logging
 class HasLogger(object):
     """Abstract super class that automatically adds a logger to a class.
 
-    Potentially there can be one logger per instance.
+    To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
+    If ``name=None`` the logger name is picked as follows:
 
-    If no logging name is specified, there will be one logger per class.
-    The logger will be derived from the class name via:
+        ``self._logger = logging.getLogger(type(self).__name__)``
 
-    `self._logger = logging.getLogger(type(self).__name__)`
+    The logger can be accessed via ``myobj._logger``.
 
     """
 

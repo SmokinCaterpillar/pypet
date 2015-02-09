@@ -5,7 +5,7 @@
 Wrapping an Existing Project (Cellular Automata Inside!)
 ========================================================
 
-Here you can find how to wrap pypet around an already existing simulation.
+Here you can find out how to wrap *pypet* around an already existing simulation.
 The original project (``original.py``) simulates `elementary cellular automata`_.
 
 The code explores different starting conditions and automata rules.

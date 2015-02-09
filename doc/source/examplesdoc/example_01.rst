@@ -1,9 +1,9 @@
 
 .. _example-01:
 
-===============================
+===========
 First Steps
-===============================
+===========
 
 Download: :download:`example_01_first_steps.py <../../../examples/example_01_first_steps.py>`
 

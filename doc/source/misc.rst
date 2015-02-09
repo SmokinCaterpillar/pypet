@@ -8,9 +8,9 @@ Citation Policy
 
 If you use *pypet* in your research,
 it would be very kind of you to cite this in your amazing work.
-Currently, a research article about *pypet* is in preparation which will be the basis
+A research article about *pypet* is currently in preparation which will be the basis
 for citations in the future.
-Until its publication you can cite the software as given below. For *bibtex* you can use:
+In the meantime you can cite the software as given below. For *bibtex* you can use:
 
 ::
 
@@ -97,16 +97,16 @@ If the folder cannot be created the program defaults to ``tempfile.gettempdir()`
 If you do not want to browse to your installation folder, you can also download the
 :download:`all_tests.py <../../pypet/tests/all_tests.py>` script.
 
-Running all tests can take up to 15 minutes and might temporarily take up to
-8 GB of disk space. The test suite encompasses more than **500** tests
-(including the BRIAN based tests) and has a code coverage of about **90%**!
+Running all tests can take up to 20 minutes and might temporarily take up to
+1 GB of disk space. The test suite encompasses more than **500** tests
+and has a code coverage of about **90%**!
 
 Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
 Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
-By the way, the source code is available at `github.com/SmokinCaterpillar/pypet`_.
+The source code is available at `github.com/SmokinCaterpillar/pypet`_.
 
-.. _Travis-CI: https://www.travis-ci.org/
+.. _Travis-CI: https://travis-ci.org/SmokinCaterpillar/pypet
 
-.. _Appveyor: http://www.appveyor.com/
+.. _Appveyor: https://ci.appveyor.com/project/SmokinCaterpillar/pypet
 
 .. _`github.com/SmokinCaterpillar/pypet`: https://github.com/SmokinCaterpillar/pypet

@@ -2327,7 +2327,7 @@ class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
 
     Can be used if you don't want a full-blown :class:`~pypet.environment.Environment` to
-    enable multiprocessing or you want to implement your own custom multiprocessing.
+    enable multiprocessing or if you want to implement your own custom multiprocessing.
 
     This Wrapper tool will take a trajectory container and take care that the storage
     service is multiprocessing safe. Supports the ``'LOCK'`` as well as the ``'QUEUE'`` mode.

@@ -955,7 +955,11 @@ class HDF5StorageService(StorageService, HasLogger):
     @property
     @deprecated('No longer supported, please use shared data instead')
     def pandas_append(self):
-        """ If pandas should create storage in append mode"""
+        """ If pandas should create storage in append mode.
+
+        DEPRECATED. No longer used, please use shared data instead!
+
+        """
         return False
 
     @pandas_append.setter
@@ -1538,19 +1542,19 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     Keyword arguments passed to the request
 
-            * :const:`pypet.constants.OPEN_FILE`
+            * :const:`pypet.pypetconstants.OPEN_FILE`
 
                 Opens the HDF5 file and keeps it open
 
                 :param stuff_to_store: ``None``
 
-            * :const:`pypet.constants.CLOSE_FILE`
+            * :const:`pypet.pypetconstants.CLOSE_FILE`
 
                 Closes an HDF5 file that was kept open, must be open before.
 
                 :param stuff_to_store: ``None``
 
-            * :const:`pypet.constants.FLUSH`
+            * :const:`pypet.pypetconstants.FLUSH`
 
                 Flushes an open file, must be open before.
 
