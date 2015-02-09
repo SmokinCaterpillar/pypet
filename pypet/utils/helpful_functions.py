@@ -75,8 +75,10 @@ class _Progressbar(object):
         self._current_index = np.inf
         self._percentage_step = None
         self._total_float = None
+        self._total_minus_one = None
 
     def _reset(self, index, total, percentage_step):
+        """Resets to the progressbar to start a new one"""
         self._start_time = datetime.datetime.now()
         self._current_index = index
         self._total_minus_one = total - 1
@@ -133,13 +135,8 @@ class _Progressbar(object):
                             (self._total_float - indexp1)*(indexp1 + 1.0)/(indexp1 * indexp1) *
                              time_delta.total_seconds()))
                 remaining_delta = datetime.timedelta(seconds=remaining_seconds)
-                # time_delta = datetime.timedelta(seconds =
-                #                                 int(np.round(time_delta.total_seconds())))
-
-                # runtime_str = ' runtime: ' + str(time_delta)
                 remaining_str = ', remaining: ' + str(remaining_delta)
             else:
-                runtime_str = ''
                 remaining_str = ''
 
             ending = False

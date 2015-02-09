@@ -10,7 +10,6 @@ __author__ = 'Robert Meyer'
 import datetime
 import time
 import hashlib
-import os
 import importlib
 import itertools as itools
 import inspect
@@ -1860,7 +1859,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         other_derived_parameters = \
             other_trajectory._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
-        first_run_name, new_first_run_name = next(iter(compat.iteritems(run_name_dict)))
+        _, new_first_run_name = next(iter(compat.iteritems(run_name_dict)))
         # get first runname
 
         for param_name in other_derived_parameters:
@@ -2183,7 +2182,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 # Update the run information dict of the current trajectory
                 other_info_dict = other_trajectory.f_get_run_information(run_name)
-                time = other_info_dict['time']
+                time_ = other_info_dict['time']
                 timestamp = other_info_dict['timestamp']
                 completed = other_info_dict['completed']
                 short_environment_hexsha = other_info_dict['short_environment_hexsha']
@@ -2196,7 +2195,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 info_dict = dict(
                     idx=count,
-                    time=time,
+                    time=time_,
                     timestamp=timestamp,
                     completed=completed,
                     short_environment_hexsha=short_environment_hexsha,

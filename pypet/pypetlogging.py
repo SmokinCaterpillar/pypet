@@ -53,13 +53,13 @@ class HasLogger(object):
         self._logger = logging.getLogger(name)
 
 
-class DisableLogger():
+class DisableLogger(object):
     """Context Manager that disables logging"""
 
     def __enter__(self):
         logging.disable(logging.CRITICAL)
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         logging.disable(logging.NOTSET)
 
 
@@ -74,8 +74,10 @@ class StreamToLogger(object):
         self._linebuf = ''
 
     def write(self, buf):
+        """Writes data from bugger to logger"""
         for line in buf.rstrip().splitlines():
             self._logger.log(self._log_level, line.rstrip())
 
     def flush(self):
+        """No-op to fulfil API"""
         pass

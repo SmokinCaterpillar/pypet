@@ -1,3 +1,5 @@
+"""Module to allow hdf5 compression via ptrepack directly within python scripts"""
+
 __author__ = 'Robert Meyer'
 
 import os

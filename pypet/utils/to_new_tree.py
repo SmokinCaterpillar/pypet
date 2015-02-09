@@ -123,7 +123,7 @@ class FileUpdater(object):
 if __name__ == '__main__':
 
     opt_list, _ = getopt.getopt(sys.argv[1:], 'b', ['filename='])
-    filename = None
+    filename_ = None
     backup = False
     for opt, arg in opt_list:
         if opt == '-b':
@@ -131,7 +131,7 @@ if __name__ == '__main__':
             print('I will make a backup.')
 
         if opt == '--filename':
-            filename = arg
-            print('I will rework `%s`.' % filename)
+            filename_ = arg
+            print('I will rework `%s`.' % filename_)
 
-    FileUpdater(filename, backup).update_file()
+    FileUpdater(filename_, backup).update_file()

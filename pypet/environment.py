@@ -29,7 +29,6 @@ import traceback
 import hashlib
 import time
 import datetime
-import pickle
 import copy
 
 
@@ -66,7 +65,7 @@ from pypet.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger
-from pypet.utils.helpful_functions import is_debug, get_matching_kwargs
+from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 from pypet.parameter import Parameter
 
@@ -319,7 +318,7 @@ class Environment(HasLogger):
 
           For example:
           `dynamic_imports =
-          ['pypet.parameter.PickleParameter',MyCustomParameter]`
+          ['pypet.parameter.PickleParameter', MyCustomParameter]`
 
           If you only have a single class to import, you do not need
           the list brackets:
@@ -425,8 +424,8 @@ class Environment(HasLogger):
 
         To disable the cap limits simply set all three values to 1.0.
 
-        You need the psutil_ package to use this cap feature. If not installed, the cap
-        values are simply ignored.
+        You need the psutil_ package to use this cap feature. If not installed and you
+        choose cap values different from 1.0 a ValueError is thrown.
 
         .. _psutil: http://psutil.readthedocs.org/
 
@@ -441,7 +440,7 @@ class Environment(HasLogger):
 
     :param wrap_mode:
 
-         If multiproc is ``1`` (``True``), specifies how storage to disk is handled via
+         If multiproc is ``True``, specifies how storage to disk is handled via
          the storage service.
 
          There are two options:
@@ -682,7 +681,7 @@ class Environment(HasLogger):
 
     :param complevel:
 
-        If you use HDF5, you can specify your compression level. 0 means no compression
+        You can specify your compression level. 0 means no compression
         and 9 is the highest compression level. See `PyTables Compression`_ for a detailed
         description.
 
@@ -763,7 +762,7 @@ class Environment(HasLogger):
         Whether the small overview tables should be created.
         Small tables are giving overview about 'config','parameters',
         'derived_parameters_trajectory', ,
-        'results_trajectory','results_runs_summary'.
+        'results_trajectory', 'results_runs_summary'.
 
         Note that these tables create some overhead. If you want very small hdf5 files set
         `small_overview_tables` to False.
@@ -772,7 +771,7 @@ class Environment(HasLogger):
 
         Whether to add large overview tables. This encompasses information about every derived
         parameter, result, and the explored parameter in every single run.
-        If you want small hdf5 files, this is the first option to set to false.
+        If you want small hdf5 files set to ``False`` (default).
 
     :param results_per_run:
 
@@ -869,6 +868,11 @@ class Environment(HasLogger):
 
         self._set_logger()
 
+        # Helper attributes defined later on
+        self._start_timestamp = None
+        self._finish_timestamp = None
+        self._runtime = None
+
         self._cpu_cap = cpu_cap
         self._memory_cap = memory_cap
         self._swap_cap = swap_cap
@@ -877,6 +881,8 @@ class Environment(HasLogger):
         self._sumatra_project = sumatra_project
         self._sumatra_reason = sumatra_reason
         self._sumatra_label = sumatra_label
+        self._loaded_sumatatra_project = None
+        self._sumatra_record = None
 
         self._runfunc = None
         self._args = ()
@@ -988,7 +994,9 @@ class Environment(HasLogger):
         self._logger_names = logger_names
 
         # Create the loggers
-        self._main_log_handler, self._error_log_handler = self._make_logging_handlers()
+        main_log_handler, error_log_handler = self._make_logging_handlers()
+        self._error_log_handler = error_log_handler
+        self._main_log_handler = main_log_handler
 
         self._continuable = continuable
 
@@ -1135,6 +1143,7 @@ class Environment(HasLogger):
             raise ValueError('You passed keyword arguments to the environment that you '
                                  'did not use. The following keyword arguments were ignored: '
                                  '`%s`' % str(unused_kwargs))
+
         self._logger.info('Environment initialized.')
 
     def __repr__(self):
@@ -1146,7 +1155,7 @@ class Environment(HasLogger):
     def __enter__(self):
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.f_disable_logging()
 
     def f_disable_logging(self):
@@ -1171,8 +1180,6 @@ class Environment(HasLogger):
                     logger.removeHandler(self._main_log_handler)
                 self._main_log_handler.close()
                 self._main_log_handler = None
-        # #logging.shutdown()
-        pass
 
     def _make_logging_handlers(self):
         """Creates logging handlers and redirects stdout.
@@ -1607,7 +1614,7 @@ class Environment(HasLogger):
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
         self._sumatra_reason = reason
-        self._project = load_project(self._sumatra_project)
+        self._loaded_sumatatra_project = load_project(self._sumatra_project)
 
         if self._traj.f_contains('parameters', shortcuts=False):
             param_dict = self._traj.parameters.f_to_dict(fast_access=False)
@@ -1625,7 +1632,7 @@ class Environment(HasLogger):
 
         executable = PythonExecutable(path=sys.executable)
 
-        self._record = self._project.new_record(
+        self._sumatra_record = self._loaded_sumatatra_project.new_record(
             parameters=param_dict,
             main_file=relpath,
             executable=executable,
@@ -1636,11 +1643,11 @@ class Environment(HasLogger):
         """ Saves a sumatra record """
 
         finish_time = self._start_timestamp - self._finish_timestamp
-        self._record.duration = finish_time
-        self._record.output_data = self._record.datastore.find_new_data(self._record.timestamp)
-        self._project.add_record(self._record)
-        self._project.save()
-        sumatra_label = self._record.label
+        self._sumatra_record.duration = finish_time
+        self._sumatra_record.output_data = self._sumatra_record.datastore.find_new_data(self._sumatra_record.timestamp)
+        self._loaded_sumatatra_project.add_record(self._sumatra_record)
+        self._loaded_sumatatra_project.save()
+        sumatra_label = self._sumatra_record.label
 
         config_name = 'sumatra.record_%s.label' % str(sumatra_label)
         if not self._traj.f_contains('config.' + config_name):

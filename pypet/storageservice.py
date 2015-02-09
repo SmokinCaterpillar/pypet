@@ -69,8 +69,8 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     """
 
-    def __init__(self, queue):
-        self._queue = queue
+    def __init__(self, storage_queue):
+        self._queue = storage_queue
         self._set_logger()
         self._pickle_queue = True
         self._max_tries = 99
@@ -1687,7 +1687,7 @@ class HDF5StorageService(StorageService, HasLogger):
         if ((not self._overview_results_runs_summary or
                     not self._overview_derived_parameters_runs_summary) and
                     self._purge_duplicate_comments):
-                raise RuntimeError('You chose to purge duplicate comments but disabled a summary '
+            raise RuntimeError('You chose to purge duplicate comments but disabled a summary '
                                    'table. You can only use the purging if you enable '
                                    'the summary tables.')
 
@@ -3970,8 +3970,8 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['idx'] = item.v_idx
 
         if 'time' in colnames:
-            time = item._time if not item._is_run else item._time_run
-            insert_dict['time'] = time
+            time_ = item._time if not item._is_run else item._time_run
+            insert_dict['time'] = time_
 
         if 'timestamp' in colnames:
             timestamp = item._timestamp if not item._is_run else item._timestamp_run

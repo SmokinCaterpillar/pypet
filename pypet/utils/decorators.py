@@ -4,9 +4,7 @@ __author__ = 'Robert Meyer'
 
 import functools
 import warnings
-import inspect
 
-import pypet.compat as compat
 
 def deprecated(msg=''):
     """This is a decorator which can be used to mark functions

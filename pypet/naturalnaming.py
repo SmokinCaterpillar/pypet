@@ -2770,9 +2770,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             else:
                 python_property.fset(self, value)
         elif (isinstance(value, tuple) and
-                len(value) == 2 and isinstance(value[1], compat.base_type)):
-                value, comment = value
-                self.f_add_leaf(key, value, comment=comment)
+            len(value) == 2 and isinstance(value[1], compat.base_type)):
+            value, comment = value
+            self.f_add_leaf(key, value, comment=comment)
         elif isinstance(value, (NNGroupNode, NNLeafNode)):
             old_name = value.v_full_name
             try:

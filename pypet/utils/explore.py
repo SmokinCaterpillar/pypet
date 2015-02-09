@@ -8,8 +8,6 @@ if sys.version_info < (2, 7, 0):
 else:
     from collections import OrderedDict
 
-import pypet.compat as compat
-
 try:
     from future_builtins import zip
 except ImportError:  # not 2.6+ or is 3.x

@@ -30,12 +30,12 @@ class StorageContextManager(HasLogger):
         self.f_open_store()
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             self.f_close_store()
         except Exception as e:
             self._logger.error('Could not close file because of `%s`' % str(e))
-            if exception_type is None:
+            if exc_type is None:
                 raise
             else:
                 return False
