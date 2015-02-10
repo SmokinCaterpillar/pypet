@@ -4,7 +4,7 @@ pypet 0.1b.9
 
 *   BUG FIX: Metadata is loaded only once
 
-*   Results no longer support the `v_no_data_string' property
+*   Results no longer support the ``v_no_data_string`` property
 
 *   Data of Results is no longer sorted in case of calling `f_val_to_string`
 

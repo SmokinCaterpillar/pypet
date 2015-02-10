@@ -27,9 +27,9 @@ And finally, you can get your *results* together and store everything appropriat
 The storage format of choice is HDF5_ via PyTables_.
 
 
-------------------------------
+-------------
 Main Features
-------------------------------
+-------------
 
 * **Novel tree container** `Trajectory`, for handling and managing of
   parameters and results of numerical simulations
@@ -77,13 +77,13 @@ Main Features
   Sumatra_
 
 
-=============================
-Getting Started!
-=============================
+===============
+Getting Started
+===============
 
------------------------------
+------------
 Requirements
------------------------------
+------------
 
 Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_ and
 
@@ -121,7 +121,7 @@ Automatic sumatra records are supported for
 
 .. [#pythonversion]
 
-    *pypet* might also work under python 3.0-3.2 but has not been tested.
+    *pypet* might also work under Python 3.0-3.2 but has not been tested.
 
 .. [#pandasversion]
 
@@ -245,9 +245,9 @@ stored into an HDF5 file by the :class:`~pypet.storageservice.HDF5StorageService
     :width: 850
 
 
---------------------------------
+---------------------
 Quick Working Example
---------------------------------
+---------------------
 
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet (it can also be found here: :ref:`example-01`).
@@ -423,9 +423,9 @@ Here you can see the summarizing overview table discussed above.
 .. image:: /figures/example_01.png
 
 
-^^^^^^^^^^^^^^^^
-Loading the data
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+Loading Data
+^^^^^^^^^^^^
 
 We end this example by showing how we can reload the data that we have computed before.
 Here we want to load all data at once, but as an example just print the result of `run_00000001`
