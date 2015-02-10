@@ -2,6 +2,10 @@ __author__ = 'robert'
 
 import pypet.pypetconstants as pypetconstants
 from pypet.tests.link_test import LinkEnvironmentTest
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 class MultiprocLinkQueueTest(LinkEnvironmentTest):
 
@@ -9,7 +13,10 @@ class MultiprocLinkQueueTest(LinkEnvironmentTest):
         LinkEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
-        self.ncores = 0
+        if psutil is not None:
+            self.ncores = 0
+        else:
+            self.ncores = 3
         self.use_pool=True
 
 
