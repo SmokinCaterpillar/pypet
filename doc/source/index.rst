@@ -55,6 +55,11 @@ Documentation
    code_toc
 
 
+The documentation is also available for `download in PDF format`_.
+
+.. _download in PDF format: https://media.readthedocs.org/pdf/pypet/latest/pypet.pdf
+
+
 .. include:: contact_license.rst
 
 
