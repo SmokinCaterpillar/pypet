@@ -54,26 +54,8 @@ Documentation
    misc_toc
    code_toc
 
--------
-Contact
--------
 
-Robert Meyer
-
-robert.meyer (at) ni.tu-berlin.de
-
-Marchstr. 23
-
-MAR 5.046
-
-D-10587 Berlin
-
-
--------
-License
--------
-
-.. literalinclude:: ../../LICENSE
+.. include:: contact_license.rst
 
 
 -----
