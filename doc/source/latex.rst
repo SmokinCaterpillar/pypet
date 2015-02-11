@@ -3,3 +3,4 @@
 
    manual_toc
    misc_toc
+   code_toc
