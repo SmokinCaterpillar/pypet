@@ -43,22 +43,16 @@ Thanks!
 .. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
 
--------------------
-*pypet* User Manual
--------------------
+-------------
+Documentation
+-------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   introduction
-   tutorial
-   cookbook
-   examples
-   faqs
-   code
-   misc
-   changelog
-
+   manual_toc
+   misc_toc
+   code_toc
 
 -------
 Contact
