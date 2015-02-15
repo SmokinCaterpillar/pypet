@@ -1828,7 +1828,7 @@ class ResultSortTest(TrajectoryComparator):
                                                   (str(newtraj.z),str(traj.x),str(traj.y)))
 
         self.assertTrue(traj.v_idx == -1)
-        self.assertTrue(traj.v_as_run == None)
+        self.assertTrue(traj.v_as_run == pypetconstants.RUN_NAME_DUMMY)
         self.assertTrue(newtraj.v_idx == idx)
 
 

@@ -2260,7 +2260,7 @@ class NaturalNamingInterface(HasLogger):
 
             crun = self._root_instance._crun
 
-            if crun is not None and run_pos == -1:
+            if crun != pypetconstants.RUN_NAME_DUMMY and run_pos == -1:
                 # If we count the wildcard we have to perform the search twice,
                 # one with a run name and one with the dummy:
                 with self._disable_logger:

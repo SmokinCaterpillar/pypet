@@ -469,6 +469,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :func:`~pypet.trajectory.Trajectory.f_set_crun:`.
 
         Set to `None` to make the trajectory to turn everything back to default.
+        Note that if setting to `None`, the property will actually be reset
+        to ``'run_ALL'``.
 
         """
         return self._crun
