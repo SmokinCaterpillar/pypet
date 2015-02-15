@@ -1,6 +1,6 @@
 pypet 0.1b.10
 
-*   v_crun is no longer ``None`` but set to ``'run_ALL'`` for smotther interaction
+*   v_crun is no longer ``None`` but set to ``'run_ALL'`` for smoother interaction
 
 pypet 0.1b.9
 
