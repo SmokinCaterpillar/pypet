@@ -69,7 +69,9 @@ release = '0.1.0'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['cookbook/concept.rst',
+                    'other/to_new_tree.rst',
+                    'contact_license.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -174,22 +176,25 @@ htmlhelp_basename = 'pypetdoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
+fh = open('latex_preamble.tex', 'r+')
+PREAMBLE = fh.read()
+fh.close()
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+'papersize': 'a4paper',
 
 # The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '',
+'preamble': PREAMBLE,
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'pypet.tex', u'pypet Documentation',
-   u'Robert Meyer', 'manual'),
+  ('latex', 'pypet.tex', u'pypet Documentation',
+   u'Robert Meyer', 'manual', True),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -198,7 +203,7 @@ latex_documents = [
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
-#latex_use_parts = False
+latex_use_parts = False
 
 # If true, show page references after internal links.
 #latex_show_pagerefs = False

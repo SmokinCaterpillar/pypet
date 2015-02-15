@@ -1,9 +1,11 @@
-============================
+-----------------
 Library Reference
-============================
+-----------------
 
 
 .. toctree::
+    :maxdepth: 2
+
     pypetdoc/environmentdoc
     pypetdoc/trajectorydoc
     pypetdoc/parameterdoc

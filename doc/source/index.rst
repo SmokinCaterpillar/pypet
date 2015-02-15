@@ -43,43 +43,24 @@ Thanks!
 .. _`pypet Google Group`: https://groups.google.com/forum/?hl=de#!forum/pypet
 
 
--------------------
-*pypet* User Manual
--------------------
+-------------
+Documentation
+-------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   introduction
-   tutorial
-   cookbook
-   examples
-   faqs
-   code
-   misc
-   changelog
+   manual_toc
+   misc_toc
+   code_toc
 
 
--------
-Contact
--------
+The documentation is also available for `download in PDF format`_.
 
-Robert Meyer
-
-robert.meyer (at) ni.tu-berlin.de
-
-Marchstr. 23
-
-MAR 5.046
-
-D-10587 Berlin
+.. _download in PDF format: https://media.readthedocs.org/pdf/pypet/latest/pypet.pdf
 
 
--------
-License
--------
-
-.. literalinclude:: ../../LICENSE
+.. include:: contact_license.rst
 
 
 -----
