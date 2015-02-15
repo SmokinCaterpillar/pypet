@@ -1,3 +1,7 @@
+pypet 0.1b.10
+
+*   v_crun is no longer ``None`` but set to ``'run_ALL'`` for smotther interaction
+
 pypet 0.1b.9
 
 *   BUG FIX: Fixed backwards compatibility
