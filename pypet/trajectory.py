@@ -299,7 +299,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Index of a trajectory is -1, if the trajectory should behave like a single run
         # and blind out other single run results, this can be changed via 'v_crun'.
         self._idx = -1
-        self._crun = pypetconstants.RUN_NAME_DUMMY
+        self._crun = None
 
         self._standard_parameter = Parameter
         self._standard_result = Result
@@ -339,7 +339,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Do not copy run information in case `v_full_copy` is `False`.
         # Accordingly, we need to store the length in the helper variable
         # `_length_during_nfc`.
-        if not self.v_full_copy and self.v_crun != pypetconstants.RUN_NAME_DUMMY:
+        if not self.v_full_copy and self.v_crun is not None:
             runname = self._single_run_ids[self.v_idx]
             result['_run_information'] = {runname: self._run_information[runname]}
             result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
@@ -2659,7 +2659,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """ Restores the default value in all explored parameters and sets the
         v_idx property back to -1 and v_crun to None."""
         self._idx = -1
-        self._crun = pypetconstants.RUN_NAME_DUMMY
+        self._crun = None
         for param in compat.itervalues(self._explored_parameters):
             param._restore_default()
 

@@ -1,7 +1,3 @@
-pypet 0.1b.10
-
-*   v_crun is no longer ``None`` but set to ``'run_ALL'`` for smoother interaction
-
 pypet 0.1b.9
 
 *   BUG FIX: Fixed backwards compatibility
@@ -108,7 +104,7 @@ pypet 0.1b.9
 
 *   BUG FIX: ``crun`` is now also accepted for adding of data and not only for requests
 
-*   Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
+*    Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
 
 
 pypet 0.1b.8
