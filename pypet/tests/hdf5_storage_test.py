@@ -1823,12 +1823,13 @@ class ResultSortTest(TrajectoryComparator):
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
             self.assertTrue('run_%08d' % (idx+1) not in nameset)
             self.assertTrue('run_%08d' % idx in nameset)
-
+            self.assertTrue(traj.v_crun == run_name)
             self.assertTrue(newtraj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
                                                   (str(newtraj.z),str(traj.x),str(traj.y)))
 
         self.assertTrue(traj.v_idx == -1)
-        self.assertTrue(traj.v_as_run == pypetconstants.RUN_NAME_DUMMY)
+        self.assertTrue(traj.v_crun is None)
+        self.assertTrue(traj.v_crun_ == pypetconstants.RUN_NAME_DUMMY)
         self.assertTrue(newtraj.v_idx == idx)
 
 

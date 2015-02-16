@@ -458,6 +458,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self.v_crun = run_name
 
     @property
+    def v_crun_(self):
+        """"
+        Similar to ``v_crun`` but returns ``'run_ALL'`` if ``v_crun`` is ``None``.
+        """
+        return self.v_crun if self.v_crun is not None else pypetconstants.RUN_NAME_DUMMY
+
+    @property
     def v_crun(self):
         """Run name if you want to access the trajectory as a single run.
 
@@ -469,8 +476,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :func:`~pypet.trajectory.Trajectory.f_set_crun:`.
 
         Set to `None` to make the trajectory to turn everything back to default.
-        Note that if setting to `None`, the property will actually be reset
-        to ``'run_ALL'``.
 
         """
         return self._crun
