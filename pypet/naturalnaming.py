@@ -1811,7 +1811,8 @@ class NaturalNamingInterface(HasLogger):
         if predicate is None:
             predicate = lambda x: True
 
-        iterator_queue = IteratorChain(iter([(0, node.v_name, node)]))
+        iterator_queue = IteratorChain([(0, node.v_name, node)])
+        #iterator_queue = iter([(0, node.v_name, node)])
         start = True
         visited_linked_nodes = set([])
 
@@ -1843,6 +1844,7 @@ class NaturalNamingInterface(HasLogger):
                                                                         with_links,
                                                                         current_depth=depth)
                             iterator_queue.add(child_iterator)
+                            #iterator_queue = itools.chain(iterator_queue, child_iterator)
             except StopIteration:
                 break
 

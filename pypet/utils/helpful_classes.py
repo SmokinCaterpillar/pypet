@@ -32,15 +32,19 @@ class IteratorChain(object):
         Raises StopIteration if there are no elements left.
 
         """
-        try:
-            return next(self._current)
-        except StopIteration:
+        while True:
+            # We need this loop because some iterators may already be empty.
+            # We keep on popping from the left until next succeeds and as long
+            # as there are iterators available
             try:
-                self._current = iter(self._chain.popleft())
                 return next(self._current)
-            except IndexError:
-                # Chain is empty we have no more elements
-                raise StopIteration('Reached end of iterator chain')
+            except StopIteration:
+                try:
+                    self._current = iter(self._chain.popleft())
+                except IndexError:
+                    # If we run out of iterators we are sure that
+                    # there can be no more element
+                    raise StopIteration('Reached end of iterator chain')
 
     def __next__(self):
         """For python 3 compatibility"""
