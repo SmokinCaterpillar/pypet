@@ -4,6 +4,47 @@ import numpy as np
 import itertools as itools
 import hashlib
 import pypet.compat as compat
+from collections import deque
+
+class IteratorChain(object):
+    """Helper class that chains arbitrary generators and iterators.
+
+    Preferably used over itertools.chain to avoid recursive calls.
+
+    You can already pass some `iterators` on creation.
+
+    """
+    def __init__(self, *iterators):
+        # Deque containing the iterators to come
+        self._chain = deque()
+        # The current iterator providing the next elements
+        self._current = iter([])
+
+        self.add(*iterators)
+
+    def add(self, *iterators):
+        """Adds `iterators` to the chain"""
+        self._chain.extend(iterators)
+
+    def next(self):
+        """Returns next element from chain.
+
+        Raises StopIteration if there are no elements left.
+
+        """
+        try:
+            return self._current.next()
+        except StopIteration:
+            try:
+                self._current = self._chain.popleft()
+                return self._current.next()
+            except IndexError:
+                # Chain is empty we have no more elements
+                raise StopIteration
+
+    def __iter__(self):
+        while True:
+            yield self.next()
 
 
 class ChainMap(object):

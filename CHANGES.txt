@@ -2,6 +2,9 @@ pypet 0.1b.10
 
 *   New `v_crun_` property simply returning ``'run_ALL'`` if ``v_crun`` is ``None``.
 
+*   BUG FIX: Removed recursive evaluation due to usage of `itertools.chain` during
+    recursive node traversal
+
 pypet 0.1b.9
 
 *   BUG FIX: Fixed backwards compatibility

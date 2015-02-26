@@ -57,7 +57,7 @@ import pypet.pypetexceptions as pex
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
-from pypet.utils.helpful_classes import ChainMap
+from pypet.utils.helpful_classes import ChainMap, IteratorChain
 from pypet.utils.helpful_functions import is_debug
 from pypet.pypetlogging import HasLogger, DisableLogger
 
@@ -1811,13 +1811,13 @@ class NaturalNamingInterface(HasLogger):
         if predicate is None:
             predicate = lambda x: True
 
-        queue = iter([(0, node.v_name, node)])
+        iterator_queue = IteratorChain(iter([(0, node.v_name, node)]))
         start = True
         visited_linked_nodes = set([])
 
         while True:
             try:
-                depth, name, item = next(queue)
+                depth, name, item = next(iterator_queue)
                 full_name = item._full_name
                 if start or predicate(item):
                     if full_name in visited_linked_nodes:
@@ -1842,7 +1842,7 @@ class NaturalNamingInterface(HasLogger):
                                                                         run_name,
                                                                         with_links,
                                                                         current_depth=depth)
-                            queue = itools.chain(queue, child_iterator)
+                            iterator_queue.add(child_iterator)
             except StopIteration:
                 break
 

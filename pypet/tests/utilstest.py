@@ -23,6 +23,7 @@ from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
+from pypet.utils.helpful_classes import IteratorChain
 import pypet.compat as compat
 
 
@@ -243,6 +244,40 @@ class TestEqualityOperations(unittest.TestCase):
         b.h = [1, 2, 43]
 
         self.assertFalse(nested_equal(a, b))
+
+
+class TestIteratorChain(unittest.TestCase):
+
+    def test_next(self):
+        l1 = (x for x in compat.xrange(3))
+        l2 = iter([3,4,5])
+        l3 = iter([6])
+        l4 = iter([7,8])
+
+        chain = IteratorChain(l1, l2, l3)
+        for irun in range(9):
+            element = next(chain)
+            self.assertEqual(irun, element)
+            if irun == 4:
+                chain.add(l4)
+
+    def test_iter(self):
+        l1 = (x for x in xrange(3))
+        l2 = iter([3,4,5])
+        l3 = iter([6])
+        l4 = iter([7,8])
+
+        chain = IteratorChain(l1, l2, l3)
+        count = 0
+        elem_list = []
+        for elem in chain:
+            self.assertEqual(elem, count)
+            count += 1
+            elem_list.append(elem)
+            if count == 3:
+                chain.add(l4)
+
+        self.assertEqual(len(elem_list), 9)
 
 
 if __name__ == '__main__':
