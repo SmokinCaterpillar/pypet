@@ -33,14 +33,18 @@ class IteratorChain(object):
 
         """
         try:
-            return self._current.next()
+            return next(self._current)
         except StopIteration:
             try:
                 self._current = iter(self._chain.popleft())
-                return self._current.next()
+                return next(self._current)
             except IndexError:
                 # Chain is empty we have no more elements
                 raise StopIteration('Reached end of iterator chain')
+
+    def __next__(self):
+        """For python 3 compatibility"""
+        return self.next()
 
     def __iter__(self):
         while True:

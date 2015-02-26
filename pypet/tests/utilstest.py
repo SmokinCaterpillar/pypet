@@ -262,7 +262,7 @@ class TestIteratorChain(unittest.TestCase):
                 chain.add(l4)
 
     def test_iter(self):
-        l1 = (x for x in xrange(3))
+        l1 = (x for x in compat.xrange(3))
         l2 = iter([3,4,5])
         l3 = iter([6])
         l4 = iter([7,8])
