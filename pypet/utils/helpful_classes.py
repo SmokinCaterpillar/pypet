@@ -7,24 +7,24 @@ import pypet.compat as compat
 from collections import deque
 
 class IteratorChain(object):
-    """Helper class that chains arbitrary generators and iterators.
+    """Helper class that chains arbitrary generators and iterators and iterables.
 
     Preferably used over itertools.chain to avoid recursive calls.
 
     You can already pass some `iterators` on creation.
 
     """
-    def __init__(self, *iterators):
+    def __init__(self, *iterables):
         # Deque containing the iterators to come
         self._chain = deque()
         # The current iterator providing the next elements
         self._current = iter([])
 
-        self.add(*iterators)
+        self.add(*iterables)
 
-    def add(self, *iterators):
-        """Adds `iterators` to the chain"""
-        self._chain.extend(iterators)
+    def add(self, *iterables):
+        """Adds `iterables` to the chain"""
+        self._chain.extend(iterables)
 
     def next(self):
         """Returns next element from chain.
@@ -36,7 +36,7 @@ class IteratorChain(object):
             return self._current.next()
         except StopIteration:
             try:
-                self._current = self._chain.popleft()
+                self._current = iter(self._chain.popleft())
                 return self._current.next()
             except IndexError:
                 # Chain is empty we have no more elements
