@@ -40,7 +40,7 @@ class IteratorChain(object):
                 return self._current.next()
             except IndexError:
                 # Chain is empty we have no more elements
-                raise StopIteration
+                raise StopIteration('Reached end of iterator chain')
 
     def __iter__(self):
         while True:
