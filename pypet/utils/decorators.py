@@ -65,6 +65,29 @@ def copydoc(fromfunc, sep="\n"):
     return _decorator
 
 
+def kwargs_mutual_exclusive(param1_name, param2_name, map2to1=None):
+    """ If there exist mutually exclusive parameters checks for them and maps param2 to 1."""
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            if param2_name in kwargs:
+                if param1_name in kwargs:
+                    raise ValueError('You cannot specify `%s` and `%s` at the same time, '
+                                     'they are mutually exclusive.' % (param1_name, param2_name))
+                param2 = kwargs.pop(param2_name)
+                if map2to1 is not None:
+                    param1 = map2to1(param2)
+                else:
+                    param1 = param2
+                kwargs[param1_name] = param1
+
+            return func(*args, **kwargs)
+
+        return new_func
+
+    return wrapper
+
+
 def kwargs_api_change(old_name, new_name=None):
     """This is a decorator which can be used if a kwarg has changed
     its name over versions to also support the old argument name.

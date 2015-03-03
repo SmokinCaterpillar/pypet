@@ -1004,8 +1004,9 @@ class NaturalNamingInterface(HasLogger):
                 pass
             elif any([name.startswith(pypetconstants.RUN_NAME) for name in split_names]):
                 pass
-            elif split_names and (root._is_run and (group_type_name == RESULT_GROUP or
-                                                     group_type_name == DERIVED_PARAMETER_GROUP)):
+            elif split_names and (root._is_run and root._auto_run_prepend and
+                                      (group_type_name == RESULT_GROUP or
+                                       group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
                     prepend += ['runs', root.v_crun]
@@ -2505,6 +2506,19 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         return debug_tree
 
+    def f_get_parent(self):
+        """Returns the parent of the node.
+
+        Raises a TypeError if current node is root.
+
+        """
+        if self.v_is_root:
+            raise TypeError('Root does not have a parent')
+        elif self.v_location == '':
+            return self.v_root
+        else:
+            return self.v_root.f_get(self.v_location, fast_access=False, shortcuts=False)
+
     def f_add_group(self, *args, **kwargs):
         """Adds an empty generic group under the current node.
 
@@ -2642,7 +2656,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             ``False`` if the node should be kept. Leave ``None`` if you want to remove all nodes.
 
         """
-        parent = self.f_get_root().f_get(self.v_location, shortcuts=False)
+        parent = self.f_get_parent()
         parent.f_remove_child(self.v_name, recursive=recursive, predicate=predicate)
 
     def f_remove_child(self, name, recursive=False, predicate=None):
@@ -3094,7 +3108,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
                                            with_links=with_links)
 
-    def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA):
+    def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA,
+                      max_depth=None):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -3110,6 +3125,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
             For how to choose 'store_data' see :ref:`more-on-storing`.
 
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to store
+            data relative from current node. Leave `None` if you don't want to limit
+            the depth.
+
         :raises: ValueError if the child does not exist.
 
         """
@@ -3124,9 +3145,11 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         storage_service.store(pypetconstants.TREE, self, name,
                               trajectory_name=traj.v_name,
                               recursive=recursive,
-                              store_data=store_data)
+                              store_data=store_data,
+                              max_depth=max_depth)
 
-    def f_store(self, recursive=True, store_data=pypetconstants.STORE_DATA):
+    def f_store(self, recursive=True, store_data=pypetconstants.STORE_DATA,
+                max_depth=None):
         """Stores a group node to disk
 
         :param recursive:
@@ -3137,6 +3160,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
             For how to choose 'store_data' see :ref:`more-on-storing`.
 
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to store
+            data relative from current node. Leave `None` if you don't want to limit
+            the depth.
+
         """
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
@@ -3144,9 +3173,11 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         storage_service.store(pypetconstants.GROUP, self,
                               trajectory_name=traj.v_name,
                               recursive=recursive,
-                              store_data=store_data)
+                              store_data=store_data,
+                              max_depth=max_depth)
 
-    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
+    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA,
+                     max_depth=None):
         """Loads a child or recursively a subtree from disk.
 
         :param name:
@@ -3166,6 +3197,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
 
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to load
+            load data relative from current node. Leave `None` if you don't want to limit
+            the depth.
+
         :returns:
 
             The loaded child, in case of grouping ('groupA.groupB.childC') the last
@@ -3176,14 +3213,16 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.load(pypetconstants.TREE, self, child_name=name,
+        storage_service.load(pypetconstants.TREE, self, name,
                              trajectory_name=traj.v_name,
                              load_data=load_data,
-                             recursive=recursive)
+                             recursive=recursive,
+                             max_depth=max_depth)
 
         return self.f_get(name, shortcuts=False)
 
-    def f_load(self, recursive=True, load_data=pypetconstants.LOAD_DATA):
+    def f_load(self, recursive=True, load_data=pypetconstants.LOAD_DATA,
+               max_depth=None):
         """Loads a group from disk.
 
         :param recursive:
@@ -3199,6 +3238,11 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
 
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to load
+            load data relative from current node.
+
         :returns:
 
             The node itself.
@@ -3211,7 +3255,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         storage_service.load(pypetconstants.GROUP, self,
                              trajectory_name=traj.v_name,
                              load_data=load_data,
-                             recursive=recursive)
+                             recursive=recursive,
+                             max_depth=max_depth)
         return self
 
 

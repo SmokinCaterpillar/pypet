@@ -5,6 +5,14 @@ pypet 0.1b.10
 *   BUG FIX: Removed recursive evaluation due to usage of `itertools.chain` during
     recursive node traversal
 
+*   max_depth is now also supported by `f_store`, `f_store_child`, `f_load`, `f_load_child`
+
+*   Loading and Storing internally are no longer truly recursive but iteratively handled.
+
+*   New `v_auto_run_prepend` property of the trajectory to switch off auto run name prepending if
+    desired.
+
+
 pypet 0.1b.9
 
 *   BUG FIX: Fixed backwards compatibility

@@ -43,7 +43,8 @@ from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayP
 from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
     SharedVLArrayResult, SharedPandasDataResult, SharedTableResult
 import pypet.storageservice as storage
-from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated
+from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
+    kwargs_mutual_exclusive
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 
@@ -54,7 +55,9 @@ def load_trajectory(name=None,
                     load_derived_parameters=pypetconstants.LOAD_SKELETON,
                     load_results=pypetconstants.LOAD_SKELETON,
                     load_other_data=pypetconstants.LOAD_SKELETON,
+                    recursive=True,
                     load_data=None,
+                    max_depth=None,
                     force=False,
                     dynamic_imports=None,
                     new_name='my_trajectory',
@@ -77,7 +80,8 @@ def load_trajectory(name=None,
     traj = Trajectory(name=new_name, add_time=add_time, dynamic_imports=dynamic_imports)
     traj.f_load(name=name, index=index, as_new=as_new, load_parameters=load_parameters,
                 load_derived_parameters=load_derived_parameters, load_results=load_results,
-                load_other_data=load_other_data, load_data=load_data, force=force,
+                load_other_data=load_other_data, recursive=recursive, load_data=load_data,
+                max_depth=max_depth, force=force,
                 storage_service=storage_service, **kwargs)
     return traj
 
@@ -304,6 +308,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._standard_parameter = Parameter
         self._standard_result = Result
         self._standard_leaf = Result
+
+        self._auto_run_prepend = True
 
         self._full_copy = False
 
@@ -1320,8 +1326,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def f_load(self, name=None, index=None, as_new=False, load_parameters=pypetconstants.LOAD_DATA,
                load_derived_parameters=pypetconstants.LOAD_SKELETON,
                load_results=pypetconstants.LOAD_SKELETON,
-               load_other_data=pypetconstants.LOAD_SKELETON, load_data=None, force=False,
-               dynamic_imports=None, storage_service=None, **kwargs):
+               load_other_data=pypetconstants.LOAD_SKELETON,
+               recursive=True,
+               load_data=None,
+               max_depth=None,
+               force=False,
+               dynamic_imports=None,
+               storage_service=None, **kwargs):
         """Loads a trajectory via the storage service.
 
 
@@ -1389,12 +1400,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 annotations will be reloaded if the corresponding instance
                 is created or the annotations of an existing instance were emptied before.
 
+        :param recursive:
+
+            If data should be loaded recursively. If set to `None`, this is equivalent to
+            set all data loading to `:const:`pypet.pypetconstants.LOAD_NOTHING`.
+
         :param load_data:
 
             As the above, per default set to `None`. If not `None` the setting of `load_data`
             will overwrite the settings of `load_parameters`, `load_derived_parameters`,
             `load_results`, and `load_other_data`. This is more or less or shortcut if all
             types should be loaded the same.
+
+        :param max_depth:
+
+            Maximum depth to load nodes (inclusive).
 
         :param force:
 
@@ -1466,6 +1486,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                    load_derived_parameters=load_derived_parameters,
                                    load_results=load_results,
                                    load_other_data=load_other_data,
+                                   recursive=recursive,
+                                   max_depth=max_depth,
                                    force=force)
 
         # If a trajectory is newly loaded, all parameters are unlocked.
@@ -2559,14 +2581,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @kwargs_api_change('new_filename')
     @kwargs_api_change('new_name')
+    @kwargs_mutual_exclusive('only_init', 'recursive', lambda x: not x)
     def f_store(self, only_init=False, store_data=pypetconstants.STORE_DATA,
-                store_full_in_run=False):
+                max_depth=None, store_full_in_run=False):
         """ Stores the trajectory to disk and recursively all data in the tree.
 
-        :param only_init
+        :param only_init:
 
             If you just want to initialise the store. If yes, only meta information about
             the trajectory is stored and none of the groups/leaves within the trajectory.
+            Alternatively, you can pass `recursive=False`.
 
         :param store_data:
 
@@ -2623,18 +2647,26 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         and stores it where `XXXXXXXXX` is the index of this run. The `only_init` parameter is
         ignored in this case. You can avoid this behavior by using the argument from below.
 
+        :param max_depth:
+
+            Maximum depth to store tree (inclusive). During single runs `max_depth` is also counted
+            from root.
+
         :param store_full_in_run:
 
             Only useful during single runs. If ``store_full_in_run=True`` the full tree
             is traversed instead of just items below groups called `run_XXXXXXXXXX`.
             Accordingly, storing is analogous to storing a trajectory not during a single run.
 
+
         """
         if self._is_run:
             self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                         trajectory_name=self.v_name,
                                         store_final=False,
+                                        recursive=not only_init,
                                         store_data=store_data,
+                                        max_depth=max_depth,
                                         store_full_in_run=store_full_in_run)
         else:
 
@@ -2645,7 +2677,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service.store(pypetconstants.TRAJECTORY, self,
                                         trajectory_name=self.v_name,
                                         only_init=only_init,
-                                        store_data=store_data)
+                                        store_data=store_data,
+                                        max_depth=max_depth)
 
             self._stored = True # We do this in case the storage service forgot to tell the
             # Trajectory that it was actually stored
@@ -3014,6 +3047,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_standard_leaf(self, leaf):
         """Sets standard result"""
         self._standard_leaf = leaf
+
+    @property
+    def v_auto_run_prepend(self):
+        """If during run the `runs.run_XXXXXXXX` should be prepended if it is missing.
+
+        Is not considered for `f_add_leaf` and `f_add_group` which never prepend.
+
+        """
+        return self._auto_run_prepend
+
+    @v_auto_run_prepend.setter
+    def v_auto_run_prepend(self, value):
+        """Sets fast access"""
+        self._auto_run_prepend = bool(value)
 
     @property
     def v_fast_access(self):

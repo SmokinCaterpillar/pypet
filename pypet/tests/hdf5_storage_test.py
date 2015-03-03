@@ -107,6 +107,58 @@ class FullStorageTest(TrajectoryComparator):
 
 class StorageTest(TrajectoryComparator):
 
+    def test_max_depth_loading_and_storing(self):
+        filename = make_temp_file('newassignment.hdf5')
+        traj = Trajectory(filename=filename, overwrite_file=True)
+
+        traj.par = Parameter('d1.d2.d3.d4.d5', 55)
+        traj.f_store(max_depth=4)
+
+        traj = load_trajectory(index=-1, filename=filename)
+        traj.f_load(load_data=2)
+        self.assertTrue('d3' in traj)
+        self.assertFalse('d4' in traj)
+
+        traj = load_trajectory(index=-1, filename=filename, max_depth=3)
+        self.assertTrue('d2' in traj)
+        self.assertFalse('d3' in traj)
+
+        traj.par.f_remove(recursive=True)
+        traj.dpar = Parameter('d1.d2.d3.d4.d5', 123)
+
+        traj.dpar.f_store_child('d1', recursive=True, max_depth=3)
+        traj.dpar.f_remove_child('d1', recursive=True)
+
+        self.assertTrue('d1' not in traj)
+        traj.dpar.f_load_child('d1', recursive=True)
+
+        self.assertTrue('d3' in traj)
+        self.assertTrue('d4' not in traj)
+
+        traj.dpar.f_remove_child('d1', recursive=True)
+        self.assertTrue('d1' not in traj)
+        traj.dpar.f_load_child('d1', recursive=True, max_depth=2)
+
+        self.assertTrue('d2' in traj)
+        self.assertTrue('d3' not in traj)
+
+        traj.dpar = Parameter('l1.l2.l3.l4.l5', 123)
+        traj.dpar.f_store(recursive=True, max_depth=0)
+        self.assertFalse(traj.dpar.l1._stored)
+
+        traj.dpar.f_store(recursive=True, max_depth=4)
+        traj.dpar.f_remove()
+        self.assertTrue('l1' not in traj)
+        traj.dpar.f_load(recursive=True)
+        self.assertTrue('l4' in traj)
+        self.assertTrue('l5' not in traj)
+
+        traj.dpar.f_remove()
+        self.assertTrue('l1' not in traj)
+        traj.dpar.f_load(recursive=True, max_depth=3)
+        self.assertTrue('l3' in traj)
+        self.assertTrue('l4' not in traj)
+
     def test_new_assignment_method(self):
         filename = make_temp_file('newassignment.hdf5')
         traj = Trajectory(filename=filename)

@@ -107,9 +107,10 @@ def neuron_postproc(traj, result_list):
     traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
                       comment='Contains a pandas data frame with all firing rates.')
 
+
 def add_parameters(traj):
     """Adds all parameters to `traj`"""
-    print('Adding Results')
+    print('Adding Parameters')
 
     traj.f_add_parameter('neuron.V_init', 0.0,
                          comment='The initial condition for the '
@@ -129,6 +130,7 @@ def add_parameters(traj):
     traj.f_add_parameter('simulation.dt', 0.1,
                          comment='The step size of an Euler integration step.')
 
+
 def add_exploration(traj):
     """Explores different values of `I` and `tau_ref`."""
 
@@ -143,6 +145,7 @@ def add_exploration(traj):
     # 'inner for-loop' of the cartesian product
 
     traj.f_explore(explore_dict)
+
 
 def main():
 

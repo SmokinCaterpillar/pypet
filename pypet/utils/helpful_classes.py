@@ -29,6 +29,10 @@ class IteratorChain(object):
     def next(self):
         """Returns next element from chain.
 
+        More precisely, it returns the next element of the
+        foremost iterator. If this iterator is empty it moves iteratively
+        along the chain of available iterators to pick the new foremost one.
+
         Raises StopIteration if there are no elements left.
 
         """

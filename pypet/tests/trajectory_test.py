@@ -623,7 +623,7 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('test')
 
 
-    def testremove(self):
+    def test_remove(self):
 
         with self.assertRaises(TypeError):
             self.traj.peter.f_remove_child('markus')
@@ -700,6 +700,11 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(len(runinfo) == 4)
         self.assertTrue(runinfo == traj._run_information)
         self.assertTrue(runinfo is traj._run_information)
+
+    def test_mutual_exclusive_kwargs(self):
+        traj = Trajectory()
+        with self.assertRaises(ValueError):
+            traj.f_store(only_init=True, recursive=False)
 
     def test_f_is_completed(self):
         traj = Trajectory()
@@ -1174,6 +1179,16 @@ class SingleRunTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_result(comment='55')
 
+    def test_auto_prepend(self):
+        self.single_run.f_adpar('hi.test', 44)
+
+        self.assertEqual(self.single_run.dpar.runs.crun.hi.test, 44)
+
+        self.single_run.v_auto_run_prepend = False
+        self.single_run.f_adpar('huhu.test', 990)
+
+        self.assertEqual(self.single_run.f_get('dpar.huhu.test', shortcuts=False,
+                                               fast_access=True), 990)
 
     def test_standard_change_param_change(self):
         self.single_run.v_standard_parameter=ImAParameterInDisguise
