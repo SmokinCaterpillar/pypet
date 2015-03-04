@@ -10,7 +10,6 @@ __author__ = 'Robert Meyer'
 import datetime
 import time
 import hashlib
-import importlib
 import itertools as itools
 import inspect
 import copy as cp
@@ -36,13 +35,11 @@ import pypet.pypetexceptions as pex
 import pypet.compat as compat
 from pypet._version import __version__ as VERSION
 import pypet.pypetconstants as pypetconstants
-from pypet.naturalnaming import NNGroupNode, NaturalNamingInterface, ResultGroup, ParameterGroup, \
+from pypet.naturalnaming import NaturalNamingInterface, ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, STORE, LOAD, REMOVE
-from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
-    PickleResult, SparseParameter, SparseResult
-from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
-    SharedVLArrayResult, SharedPandasDataResult, SharedTableResult
+from pypet.parameter import BaseParameter, Parameter, Result
 import pypet.storageservice as storage
+import pypet.dynamicimports as dynamicimports
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
     kwargs_mutual_exclusive
 from pypet.utils.helpful_functions import is_debug
@@ -2911,48 +2908,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         If not the list of the dynamically loaded classes is used.
 
         """
-        try:
-            new_class = globals()[class_name]
-
-            if not inspect.isclass(new_class):
-                raise TypeError('Not a class!')
-
-            return new_class
-        except (KeyError, TypeError):
-            for dynamic_class in self._dynamic_imports:
-                # Dynamic classes can be provided directly as a Class instance,
-                # for example as `MyCustomParameter`,
-                # or as a string describing where to import the class from,
-                # for instance as `'mypackage.mymodule.MyCustomParameter'`.
-                if inspect.isclass(dynamic_class):
-                    if class_name == dynamic_class.__name__:
-                        return dynamic_class
-                else:
-                    # The class name is always the last in an import string,
-                    # e.g. `'mypackage.mymodule.MyCustomParameter'`
-                    class_name_to_test = dynamic_class.split('.')[-1]
-                    if class_name == class_name_to_test:
-                        new_class = self._load_class(dynamic_class)
-                        return new_class
-            raise ImportError('Could not create the class named `%s`.' % class_name)
-
-    @staticmethod
-    def _load_class(full_class_string):
-        """Loads a class from a string naming the module and class name.
-
-        For example:
-        >>> Trajectory._load_class(full_class_string = 'pypet.brian.parameter.BrianParameter')
-        <BrianParameter>
-
-        """
-
-        class_data = full_class_string.split(".")
-        module_path = ".".join(class_data[:-1])
-        class_str = class_data[-1]
-        module = importlib.import_module(module_path)
-
-        # We retrieve the Class from the module
-        return getattr(module, class_str)
+        return dynamicimports.create_class(class_name, self._dynamic_imports)
 
     @property
     def v_shortcuts(self):
@@ -2963,7 +2919,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @v_shortcuts.setter
     def v_shortcuts(self, shortcuts):
         self._shortcuts = bool(shortcuts)
-
 
     @property
     @deprecated('No longer supported, please don`t use it anymore.')
