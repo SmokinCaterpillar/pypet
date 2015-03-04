@@ -2912,13 +2912,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         try:
-            new_class = eval(class_name)
+            new_class = globals()[class_name]
 
             if not inspect.isclass(new_class):
                 raise TypeError('Not a class!')
 
             return new_class
-        except (NameError, TypeError):
+        except (KeyError, TypeError):
             for dynamic_class in self._dynamic_imports:
                 # Dynamic classes can be provided directly as a Class instance,
                 # for example as `MyCustomParameter`,

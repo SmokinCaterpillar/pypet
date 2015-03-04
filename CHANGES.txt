@@ -12,6 +12,9 @@ pypet 0.1b.10
 *   New `v_auto_run_prepend` property of the trajectory to switch off auto run name prepending if
     desired.
 
+*   The trajectory no longer relies on evil `eval` to construct a class. Instead
+    it relies on the global scope.
+
 
 pypet 0.1b.9
 
