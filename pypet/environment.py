@@ -61,7 +61,7 @@ from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
 import pypet.pypetconstants as pypetconstants
-from pypet.gitintegration import make_git_commit
+from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.pypetlogging import HasLogger, StreamToLogger

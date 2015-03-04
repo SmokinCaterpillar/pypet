@@ -13,9 +13,11 @@ import hashlib
 import itertools as itools
 import inspect
 import copy as cp
-import numpy as np
 import sys
 from copy import deepcopy
+
+import numpy as np
+
 
 if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
@@ -39,7 +41,7 @@ from pypet.naturalnaming import NaturalNamingInterface, ResultGroup, ParameterGr
     DerivedParameterGroup, ConfigGroup, STORE, LOAD, REMOVE
 from pypet.parameter import BaseParameter, Parameter, Result
 import pypet.storageservice as storage
-import pypet.dynamicimports as dynamicimports
+import pypet.utils.dynamicimports as dynamicimports
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
     kwargs_mutual_exclusive
 from pypet.utils.helpful_functions import is_debug
