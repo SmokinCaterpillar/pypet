@@ -161,6 +161,7 @@ class _Progressbar(object):
                 logger.info(statement)
 
         self._current = next
+        self._current_index = index
 
         return statement
 

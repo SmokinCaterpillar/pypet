@@ -3161,8 +3161,6 @@ class HDF5StorageService(StorageService, HasLogger):
                 if as_new:
                     instance._stored = False
 
-                # Signal completed node loading
-                self._node_processing_timer.signal_update()
             else:
                 if in_trajectory:
                     traj_group = parent_traj_node._children[name]
@@ -3193,9 +3191,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                      recursive=False, max_depth=max_depth,
                                      _traj=trajectory, _as_new=as_new,
                                      _hdf5_group=hdf5_group)
-
-                # Signal completed node loading
-                self._node_processing_timer.signal_update()
 
                 if recursive and current_depth < max_depth:
                     for children in (hdf5_group._v_groups, hdf5_group._v_links):
@@ -3292,17 +3287,11 @@ class HDF5StorageService(StorageService, HasLogger):
                                                      _hdf5_group=new_hdf5_group,
                                                     _newly_created=newly_created)
 
-                # Signal completed node loading
-                self._node_processing_timer.signal_update()
-
             else:
                 self._grp_store_group(traj_node, store_data=store_data, with_links=with_links,
                                       recursive=False, max_depth=max_depth,
                                       _hdf5_group=new_hdf5_group,
                                       _newly_created=newly_created)
-
-                # Signal completed node loading
-                self._node_processing_timer.signal_update()
 
                 if recursive and current_depth < max_depth:
                     for child in compat.iterkeys(traj_node._children):
@@ -4217,6 +4206,9 @@ class HDF5StorageService(StorageService, HasLogger):
             self._hdf5file.flush()
             traj_group._stored = True
 
+            # Signal completed node loading
+            self._node_processing_timer.signal_update()
+
         if recursive:
             parent_traj_group = traj_group.f_get_parent()
             parent_hdf5_group = self._all_create_or_get_groups(parent_traj_group.v_full_name)[0]
@@ -4251,6 +4243,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
             self._all_load_skeleton(traj_group, _hdf5_group)
             traj_group._stored = not _as_new
+
+            # Signal completed node loading
+            self._node_processing_timer.signal_update()
 
     def _all_load_skeleton(self, traj_node, hdf5_group):
         """Reloads skeleton data of a tree node"""
@@ -4732,6 +4727,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._prm_add_meta_info(instance, _hdf5_group, overwrite=overwrite is True)
 
             instance._stored = True
+
+            # Signal completed node loading
+            self._node_processing_timer.signal_update()
 
         except:
             # I anything fails, we want to remove the data of the parameter again
@@ -5503,7 +5501,9 @@ class HDF5StorageService(StorageService, HasLogger):
             load_except = [load_except]
 
         if load_data == pypetconstants.LOAD_SKELETON:
-            #We only load skeletong if asked for it
+            # We only load skeleton if asked for it and thus only
+            # signal completed node loading
+            self._node_processing_timer.signal_update()
             return
         elif load_only is not None:
             if load_except is not None:
@@ -5527,7 +5527,9 @@ class HDF5StorageService(StorageService, HasLogger):
             load_except = set(load_except)
         elif not instance.f_is_empty():
             # We only load data if the instance is empty or we specified load_only or
-            # load_except
+            # load_except and thus only
+            # signal completed node loading
+            self._node_processing_timer.signal_update()
             return
 
         full_name = instance.v_full_name
@@ -5609,6 +5611,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._logger.error(
                     'Error while reconstructing data of leaf `%s`.' % full_name)
                 raise
+
+        # Signal completed node loading
+        self._node_processing_timer.signal_update()
 
     def _prm_read_dictionary(self, leaf, load_dict, full_name):
         """Loads data that was originally a dictionary when stored

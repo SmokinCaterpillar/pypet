@@ -15,6 +15,10 @@ pypet 0.1b.10
 *   The trajectory no longer relies on evil `eval` to construct a class. Instead
     it relies on the global scope.
 
+*   Better counting of loading and storing nodes to display rate in nodes/s
+
+*   BUG FIX: Minor bug in the progressbar has been fixed to detect automatic resets.
+
 
 pypet 0.1b.9
 
