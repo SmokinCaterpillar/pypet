@@ -18,6 +18,7 @@ from pypet.utils.comparisons import results_equal
 import logging
 logging.basicConfig(level=logging.INFO)
 import pypet.pypetexceptions as pex
+import pypet.utils.ptcompat as ptcompat
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -1801,6 +1802,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = False
         self.encoding='latin1'
+
 
 class TestOtherHDF5Settings2(EnvironmentTest):
     def set_mode(self):

@@ -2,9 +2,16 @@
 
 __author__ = 'Robert Meyer'
 
-import tables as pt
 
+import tables as pt
+import numpy as np
+
+
+EMPTY_ARRAY_FIX_PT_2 = 'PTCOMPAT__empty__dtype'
+empty_array_val = '__empty__'
+none_type = '__none__'
 tables_version = int(pt.__version__[0])
+
 
 def _make_pt2_carray(hdf5_file, *args, **kwargs):
     read_data = False
@@ -21,6 +28,7 @@ def _make_pt2_carray(hdf5_file, *args, **kwargs):
     if read_data:
         carray[:] = data[:]
     return carray
+
 
 def _make_pt2_earray(hdf5_file, *args, **kwargs):
     read_data = False
@@ -41,6 +49,7 @@ def _make_pt2_earray(hdf5_file, *args, **kwargs):
         earray.append(data)
     return earray
 
+
 def _make_pt2_vlarray(hdf5_file, *args, **kwargs):
     if 'expectedrows' in kwargs:
         expectedrows=kwargs.pop('expectedrows') # this is termed expetedsizeinMB in python2.7
@@ -58,11 +67,47 @@ def _make_pt2_vlarray(hdf5_file, *args, **kwargs):
         vlarray.append(data)
     return vlarray
 
+
 def _make_pt2_array(hdf5_file, *args, **kwargs):
     if 'obj' in kwargs:
         data = kwargs.pop('obj')
         kwargs['object'] = data
-    return hdf5_file.createArray(*args, **kwargs)
+    is_empty = False
+    if 'object' in kwargs:
+        data = kwargs['object']
+        try:
+            if len(data) == 0:
+                # We need the empty array fix for pytables 2
+                kwargs['object'] = np.array([empty_array_val])
+                is_empty = True
+        except TypeError:
+            pass # Does not support len operation, we're good
+    array = hdf5_file.createArray(*args, **kwargs)
+    if is_empty:
+        # Remember dtype for pytables 2
+        if type(data) is np.ndarray:
+            setattr(array._v_attrs, EMPTY_ARRAY_FIX_PT_2, str(data.dtype))
+        else:
+            setattr(array._v_attrs, EMPTY_ARRAY_FIX_PT_2, none_type)
+    return array
+
+
+def _read_array(array):
+    res = array.read()
+    try:
+        if (len(res) == 1 and
+                res[0] == empty_array_val and
+                    EMPTY_ARRAY_FIX_PT_2 in array._v_attrs):
+            # If the array was stored with pytables 2 we end up here
+            dtype = array._v_attrs[EMPTY_ARRAY_FIX_PT_2]
+            if dtype == none_type:
+                res = np.array([])
+            else:
+                res = np.array([], dtype=np.dtype(dtype))
+    except TypeError:
+        pass  # len not supported, we don't need to worry
+    return res
+
 
 if tables_version == 2:
     open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
@@ -81,6 +126,9 @@ if tables_version == 2:
                                                                         **kwargs)
     create_vlarray = lambda hdf5_file, *args, **kwargs: _make_pt2_vlarray(hdf5_file, *args,
                                                                         **kwargs)
+
+    read_array = lambda array: _read_array(array)
+
     create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.createSoftLink(*args, **kwargs)
 
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
@@ -113,9 +161,11 @@ elif tables_version == 3:
     create_carray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_carray(*args, **kwargs)
     create_earray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_earray(*args, **kwargs)
     create_vlarray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_vlarray(*args, **kwargs)
+
+    read_array = lambda array: _read_array(array)
+
     create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.create_soft_link(*args,
                                                                                      **kwargs)
-
     get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_get_child(*args, **kwargs)
 
     remove_rows = lambda table, *args, **kwargs: table.remove_rows(*args, **kwargs)

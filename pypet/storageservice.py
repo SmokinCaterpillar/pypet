@@ -5783,7 +5783,7 @@ class HDF5StorageService(StorageService, HasLogger):
             Full name of the parameter or result whose data is to be loaded
         """
         try:
-            result = array.read()
+            result = ptcompat.read_array(array)
             # Recall original data types
             result, dummy = self._all_recall_native_type(result, array,
                                                          HDF5StorageService.DATA_PREFIX)
