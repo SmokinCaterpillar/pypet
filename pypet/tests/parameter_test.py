@@ -657,11 +657,40 @@ class ResultTest(unittest.TestCase):
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
 
-        self.results['test.res.args'].f_set(compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
         for key, value in self.data.items():
             self.results['test.res.setitem'][key]=value
+
+    def test_set_item_via_number(self):
+        res = self.results['test.res.args']
+
+        res[0] = 'Hi'
+        res[777] = 777
+
+        self.assertTrue(getattr(res, res.v_name) == 'Hi')
+        self.assertTrue(res.f_get(0) == 'Hi')
+        self.assertTrue(getattr(res, res.v_name + '_777') == 777)
+        self.assertTrue(res[777] == 777)
+        self.assertTrue(res.f_get(777) == 777)
+
+        self.assertTrue(0 in res)
+        self.assertTrue(777 in res)
+        self.assertTrue(99999999 not in res)
+
+        del res[0]
+        self.assertTrue(0 not in res)
+
+        del res[777]
+        self.assertTrue(777 not in res)
+
+    def test_iter(self):
+        for res in self.results.values():
+            keyset1 = set([x for x in res])
+            keyset2 = set(res.f_to_dict().keys())
+            self.assertTrue(keyset1 == keyset2)
+
 
     def make_constructor(self):
         self.Constructor=Result
@@ -734,20 +763,29 @@ class ResultTest(unittest.TestCase):
 
             self.assertTrue(res.f_is_empty())
 
-    def f_set_numbering(self):
+    def test_set_numbering(self):
         int_list = list(range(10))
         for res in self.results.values():
             res.f_set(*int_list)
 
-            self.assertEqual(res.f_get(*int_list), tuple(int_list))
+            self.assertEqual(res.f_get(*int_list), int_list)
 
-            for integer in int_list:
-                if integer == 0:
-                    name = res.v_name
-                else:
-                    name = res.v_name+'%d' % integer
+    def test_dir(self):
+        res = self.results['test.res.on_constructor']
 
-                self.assertTrue(name in node.v_annotations)
+        dirlist = dir(res)
+
+        self.assertTrue('integer' in dirlist)
+        self.assertTrue('dict' in dirlist)
+        self.assertTrue('float' in dirlist)
+        self.assertTrue('tuple' in dirlist)
+
+        res = self.results['test.res.args']
+
+        dirlist = dir(res)
+
+        self.assertTrue(res.v_name in dirlist)
+        self.assertTrue('%s_1' % res.v_name in dirlist)
 
     def setUp(self):
 
@@ -942,7 +980,7 @@ class PickleResultTest(ResultTest):
                         'test.res.args':1,
                         'test.res.kwargs':2}
 
-        self.results['test.res.args'].f_set(compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
@@ -986,7 +1024,7 @@ class SparseResultTest(ResultTest):
 
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs', protocol=2)
 
-        self.results['test.res.args'].f_set(compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 if __name__ == '__main__':

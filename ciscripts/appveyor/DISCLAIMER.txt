@@ -1,0 +1,5 @@
+The *appveyor* script is taken from:
+
+https://github.com/rmcgibbo/python-appveyor-conda-example.
+
+Thanks to **rmcgibbo** for the great work!

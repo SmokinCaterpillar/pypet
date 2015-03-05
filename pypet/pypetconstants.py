@@ -14,12 +14,20 @@ import pypet.compat as compat
 from pypet._version import __version__ as VERSION
 import tables
 tablesversion = tables.__version__
+import pypet.utils.ptcompat as ptcompat
+hdf5version = ptcompat.hdf5_version
 import pandas
 pandasversion = pandas.__version__
 import numpy
 numpyversion = numpy.__version__
 import scipy
 scipyversion = scipy.__version__
+
+try:
+    import platform
+    platformversion = ', '.join(platform.uname())
+except Exception:
+    platformversion = 'N/A'
 
 try:
     import sumatra
@@ -49,7 +57,8 @@ VERSIONS_TO_STORE = {'pypet': VERSION, 'python': compat.python_version_string,
                      'scipy': scipyversion, 'numpy': numpyversion, 'PyTables': tablesversion,
                      'pandas': pandasversion, 'Sumatra': sumatraversion,
                      'dill': dillversion, 'GitPython': gitversion,
-                     'psutil': psutilversion}
+                     'psutil': psutilversion, 'platform': platformversion,
+                     'HDF5': hdf5version}
 
 
 ###################### Supported Data ########################
@@ -119,8 +128,6 @@ PARAMETER_SUPPORTED_DATA = (numpy.int8,
 
 
 ################### HDF5 Naming and Comments ##########################
-
-
 HDF5_STRCOL_MAX_NAME_LENGTH = 128
 """Maximum length of a (short) name"""
 HDF5_STRCOL_MAX_LOCATION_LENGTH = 256
@@ -133,13 +140,9 @@ HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
 """Maximum length of a parameter array summary """
 HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 """Maximum length of human readable runtime, 18 characters allows to display up to 999 days
-excluding the microseconds
-
-"""
+excluding the microseconds"""
 HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
-"""
-Maximum number of attributes before a distinct table is created
-"""
+"""Maximum number of attributes before a distinct table is created"""
 
 ######## Multiprocessing Modes #############
 
@@ -169,6 +172,18 @@ UPDATE_DATA = 2
 adds only items that are not part of your current trajectory."""
 
 
+######### Storing Constants #####
+
+STORE_NOTHING = 0
+"""Stores nothing to disk"""
+STORE_DATA_SKIPPING = 1
+"""Stores only data of instances that have not been stored before"""
+STORE_DATA = 2
+"""Stored all data to disk adds to existing data"""
+OVERWRITE_DATA = OVERWRITE_DATA
+"""Overwrites data on disk"""
+
+
 ##################### STORING Message Constants ################################
 
 LEAF = 'LEAF'
@@ -193,10 +208,18 @@ DELETE_LINK = 'DELETE_LINK'
 """ Removes a soft link from hdf5 file"""
 TREE = 'TREE'
 """ Stores a subtree of the trajectory"""
-
+ACCESS_DATA = 'ACCESS_DATA'
+""" Access and manipulate data directly in the hdf5 file """
+CLOSE_FILE = 'CLOSE_FILE'
+""" Close a still opened HDF5 file """
+OPEN_FILE = 'OPEN_FILE'
+""" Opens an HDF5 file and keeps it open until `CLOSE_FILE` is passed. """
+FLUSH = 'FLUSH'
+""" Tells the storage to flush the file """
 
 
 ########## Names of Runs ####################
+
 FORMAT_ZEROS = 8
 """ Number of leading zeros"""
 RUN_NAME = 'run_'
@@ -206,3 +229,66 @@ RUN_NAME_DUMMY = 'run_ALL'
 FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
 
+
+### Constants how to store individual leaf data into HDF5 ######
+
+ARRAY = 'ARRAY'
+"""Stored as array_
+
+.. _array: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-array-class
+
+"""
+CARRAY = 'CARRAY'
+"""Stored as carray_
+
+.. _carray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-carray-class
+
+"""
+EARRAY = 'EARRAY'
+""" Stored as earray_e.
+
+.. _earray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-earray-class
+
+"""
+
+VLARRAY = 'VLARRAY'
+"""Stored as vlarray_
+
+.. _vlarray: http://pytables.github.io/usersguide/libref/homogenous_storage.html#the-vlarray-class
+
+"""
+
+TABLE = 'TABLE'
+"""Stored as pytable_
+
+.. _pytable: http://pytables.github.io/usersguide/libref/structured_storage.html#the-table-class
+
+"""
+
+DICT = 'DICT'
+""" Stored as dict.
+
+In fact, stored as pytable, but the dictionary wil be reconstructed.
+"""
+
+FRAME = 'FRAME'
+""" Stored as pandas DataFrame_
+
+.. _DataFrame: http://pandas.pydata.org/pandas-docs/dev/io.html#hdf5-pytables
+
+"""
+
+SERIES = 'SERIES'
+""" Store data as pandas Series """
+
+PANEL = 'PANEL'
+""" Store data as pandas Panel(4D) """
+
+SPLIT_TABLE = 'SPLIT_TABLE'
+""" If a table was split due to too many columns"""
+
+DATATYPE_TABLE = 'DATATYPE_TABLE'
+"""If a table contains the data types instead of the attrs"""
+
+SHARED_DATA = 'SHARED_DATA_'
+""" An HDF5 data object for direct interaction """

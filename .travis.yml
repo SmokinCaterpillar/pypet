@@ -6,21 +6,22 @@ python:
 
 env:
   matrix:
-    - NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
-    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+    - NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
 
 
 matrix:
   include:
     - python: 3.3
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
     - python: 3.4
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=OFF EXAMPLES=OFF
+      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON
-
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
+    - python: 3.4
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=ON TEST_SUITE=OFF
 
 
 # Install dependencies for PyTables
@@ -28,9 +29,9 @@ matrix:
 before_install:
   - sudo apt-get update
   - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
-  - sudo apt-get install gfortran libopenblas-dev liblapack-dev
+  - travis_retry sudo apt-get install gfortran libopenblas-dev liblapack-dev
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
-  - sudo apt-get install libhdf5-serial-dev
+  - travis_retry sudo apt-get install libhdf5-serial-dev
   - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-3.7.3-Linux-x86_64.sh -O miniconda.sh;
@@ -48,39 +49,43 @@ before_install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy
   - source activate test-environment
   - pip freeze
+
+
 install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
-  - if [[ $COVERAGE == ON ]]; then  pip install coveralls; fi
+  - if [[ $COVERAGE == ON ]]; then travis_retry pip install coveralls; fi
   - echo "+++++++++++  Installing Ordered Dict if Python 2.6 +++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then pip install ordereddict; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]; then travis_retry pip install ordereddict; fi
   - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then conda install numexpr; else pip install numexpr==$NUMEXPR_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install numexpr; else travis_retry pip install numexpr==$NUMEXPR_VERSION; fi
   - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then conda install cython; else pip install cython==$CYTHON_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install cython; else travis_retry pip install cython==$CYTHON_VERSION; fi
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then conda install pytables; else pip install tables==$TABLES_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry pip install tables==$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then conda install pandas; else pip install pandas==$PANDAS_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then pip install brian; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then travis_retry pip install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
-  - pip install psutil
+  - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
-  - pip install dill
+  - travis_retry pip install dill
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-  - echo "+++++++++++ Installing PYPET +++++++++++"
-  - python setup.py install
+  - echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
+  - if [[ $COVERAGE == OFF ]]; then python setup.py install; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
+
+
 # Script command for all tests
-script: chmod +x runtests.sh; ./runtests.sh
-after_success: if [[ $COVERAGE == ON ]]; then coveralls --verbose; fi
+script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
+
+
 branches:
   only:
     - develop
     - master
     - python6
     - link_feature
-

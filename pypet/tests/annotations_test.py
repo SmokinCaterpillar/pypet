@@ -2,10 +2,11 @@ __author__ = 'Robert Meyer'
 
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService
-from pypet.tests.test_helpers import make_temp_file
+from pypet.tests.test_helpers import make_temp_file, remove_data
 from pypet.utils import comparisons as comp
 import numpy as np
 import sys
+import os
 
 try:
     import cPickle as pickle # will fail under python 3
@@ -21,7 +22,7 @@ class AnnotationsTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.filename = make_temp_file('experiments/tests/HDF5/annotations.hdf5')
+        self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','annotations.hdf5'))
 
         self.traj = Trajectory(name='Annotations', filename = self.filename)
 
@@ -33,8 +34,13 @@ class AnnotationsTest(unittest.TestCase):
 
         self.add_annotations(self.traj)
 
-        self.assertTrue(len([node for node in self.traj.f_iter_nodes(recursive=True)]) == 5)
+        pred = lambda x: 'config' not in x.v_full_name
 
+        x = len([node for node in self.traj.f_iter_nodes(recursive=True, predicate=pred)])
+        self.assertTrue(x == 5, '%s != %s' % (str(x), str(5)))
+
+    def tearDown(self):
+        remove_data()
 
     def make_annotations(self):
 
@@ -48,11 +54,10 @@ class AnnotationsTest(unittest.TestCase):
         self.annotations['Numpy_Data'] = np.array(['fff','ddd'])
         self.annotations[0] = 7777
 
-
     def add_annotations(self, traj):
         funcs = 5
 
-        for idx,node in enumerate(traj.f_iter_nodes(recursive=True)):
+        for idx,node in enumerate([traj] + [node for node in traj.f_iter_nodes(recursive=True)]):
             for name in self.annotations:
                 anno = self.annotations[name]
                 if name == 0:
@@ -69,10 +74,10 @@ class AnnotationsTest(unittest.TestCase):
                 elif idx % funcs == 4:
                     node.v_annotations[name]=anno
 
-
     def test_annotations_insert(self):
 
-        for node in self.traj.f_iter_nodes(recursive=True):
+        for idx,node in \
+                enumerate([self.traj] + [node for node in self.traj.f_iter_nodes(recursive=True)]):
             for name in self.annotations:
                 anno = self.annotations[name]
                 node_anno = node.v_annotations[name]
@@ -98,8 +103,8 @@ class AnnotationsTest(unittest.TestCase):
 
         self.traj = Trajectory(filename=self.filename)
 
-        self.traj.f_load(name=traj_name, load_results=2, load_parameters=2, load_derived_parameters=2,
-                         load_other_data=2)
+        self.traj.f_load(name=traj_name, load_parameters=2, load_derived_parameters=2,
+                         load_results=2, load_other_data=2)
 
         self.test_annotations_insert()
 

@@ -15,7 +15,7 @@ from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurat
 
 def main():
 
-    folder = 'experiments/example_11/HDF5/'
+    folder = os.path.join('experiments', 'example_11', 'HDF5')
     filename = 'Clustered_Network.hdf5'
 
     filename = os.path.join(folder, filename)
@@ -27,14 +27,11 @@ def main():
                                                   BrianParameter])
 
     # Let's create and fake environment to enable logging:
-    Environment(traj, do_single_runs=False)
+    env = Environment(traj, do_single_runs=False)
 
 
     # Load the trajectory, but onyl laod the skeleton of the results
-    traj.f_load(index=-1, # Change if you do not want to load the very last trajectory
-                load_parameters=2,
-                load_derived_parameters=2,
-                load_results=1)
+    traj.f_load(index=-1, load_parameters=2, load_derived_parameters=2, load_results=1)
 
     # Find the result instances related to the fano factor
     fano_dict = traj.f_get_from_runs('mean_fano_factor', fast_access=False)
@@ -52,6 +49,9 @@ def main():
     plt.xlabel('R_ee')
     plt.ylabel('Avg. Fano Factor')
     plt.show()
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 
 if __name__ == '__main__':

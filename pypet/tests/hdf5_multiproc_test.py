@@ -11,8 +11,10 @@ from pypet.tests.test_helpers import add_params, create_param_dict, simple_calcu
 from pypet.utils.explore import cartesian_product
 
 import random
+import os
 import numpy as np
 import scipy.sparse as spsp
+
 
 class MultiprocQueueTest(EnvironmentTest):
 
@@ -66,13 +68,13 @@ class MultiprocNoPoolQueueTest(EnvironmentTest):
 
 class MultiprocNoPoolLockTest(EnvironmentTest):
 
-
      def set_mode(self):
         EnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 2
         self.use_pool=False
+
 
 class MultiprocNoPoolSortQueueTest(ResultSortTest):
 
@@ -91,17 +93,26 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
         self.ncores = 3
         self.use_pool=False
 
+
 class CapTest(EnvironmentTest):
 
     def setUp(self):
 
+        self.multiproc = True
+        self.mode = 'LOCK'
+
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.trajname = make_trajectory_name(self)
+
+        self.filename = make_temp_file(os.path.join('experiments',
+                                                    'tests',
+                                                    'HDF5',
+                                                    '%s.hdf5' % self.trajname))
+        self.logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
 
         random.seed()
-        self.trajname = make_trajectory_name(self)
+
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
@@ -109,9 +120,9 @@ class CapTest(EnvironmentTest):
                           derived_parameters_per_run=5,
                           multiproc=True,
                           ncores=3,
-                          cpu_cap=0.5,
-                          memory_cap=0.7,
-                          swap_cap=0.5,
+                          cpu_cap=0.001, # Ensure that these are triggered
+                          memory_cap=0.001,
+                          swap_cap=0.001,
                           use_pool=False)
 
         traj = env.v_trajectory

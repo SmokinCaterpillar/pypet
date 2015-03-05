@@ -27,8 +27,6 @@ requires parallel processing (see :class:`~pypet.brian.network.NetworkManager`).
 
 __author__ = 'Robert Meyer'
 
-import logging
-
 from brian import Network, clear, reinit
 from brian.units import second
 

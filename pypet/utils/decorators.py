@@ -5,9 +5,6 @@ __author__ = 'Robert Meyer'
 import functools
 import warnings
 
-import pypet.compat as compat
-
-
 
 def deprecated(msg=''):
     """This is a decorator which can be used to mark functions
@@ -68,6 +65,29 @@ def copydoc(fromfunc, sep="\n"):
     return _decorator
 
 
+def kwargs_mutual_exclusive(param1_name, param2_name, map2to1=None):
+    """ If there exist mutually exclusive parameters checks for them and maps param2 to 1."""
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            if param2_name in kwargs:
+                if param1_name in kwargs:
+                    raise ValueError('You cannot specify `%s` and `%s` at the same time, '
+                                     'they are mutually exclusive.' % (param1_name, param2_name))
+                param2 = kwargs.pop(param2_name)
+                if map2to1 is not None:
+                    param1 = map2to1(param2)
+                else:
+                    param1 = param2
+                kwargs[param1_name] = param1
+
+            return func(*args, **kwargs)
+
+        return new_func
+
+    return wrapper
+
+
 def kwargs_api_change(old_name, new_name=None):
     """This is a decorator which can be used if a kwarg has changed
     its name over versions to also support the old argument name.
@@ -126,13 +146,34 @@ def not_in_run(func):
     func._not_in_run = True
 
     @functools.wraps(func)
-    def new_func(*args, **kwargs):
+    def new_func(self, *args, **kwargs):
 
-        if len(args)>0 and hasattr(args[0], '_is_run') and args[0]._is_run:
+        if self._is_run:
             raise TypeError('Function `%s` is not available during a single run.' %
                             func.__name__)
 
-        return func( *args, **kwargs)
+        return func(self, *args, **kwargs)
 
     return new_func
 
+def with_open_store(func):
+    """This is a decorator that signaling that a function is only available if the storage is open.
+
+    """
+    doc = func.__doc__
+    na_string = '''\nATTENTION: This function can only be used if the store is open!\n'''
+
+    if doc is not None:
+        func.__doc__ = '\n'.join([doc, na_string])
+    func._with_open_store = True
+
+    @functools.wraps(func)
+    def new_func(self, *args, **kwargs):
+
+        if not self._traj.v_storage_service.is_open:
+            raise RuntimeError('Function `%s` is only available if the storage is open.' %
+                            func.__name__)
+
+        return func(self, *args, **kwargs)
+
+    return new_func

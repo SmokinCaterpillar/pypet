@@ -258,17 +258,21 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError("Should have implemented this.")
 
-    def __len__(self):
-        """Returns the length of the parameter
+    def f_get_range_length(self):
+        """Returns the length of the parameter range.
 
-        Only parameters that have a defined range can have a length larger than 1.
-        If the parameter only contains a default value its length is 1.
-        If the parameter is empty its length is 0.
+        Raises TypeError if the parameter has no range.
 
-        ABSTRACT: Needs to be defined in subclass
+        Does not need to be implemented if the parameter supports
+        ``__len__`` appropriately.
 
         """
-        raise NotImplementedError("Should have implemented this.")
+        if not self.f_has_range():
+            raise TypeError('Not applicable, parameter does not have a range')
+        elif hasattr(self, '__len__'):
+            return len(self)
+        else:
+            raise NotImplementedError("Should have implemented this.")
 
     def f_val_to_str(self):
         """String summary of the value handled by the parameter.
@@ -383,7 +387,7 @@ class BaseParameter(NNLeafNode):
 
         """
         if self.f_has_range():
-            lenstr = 'len:%d' % len(self)
+            lenstr = 'len:%d' % self.f_get_range_length()
         else:
             lenstr = ''
 
@@ -627,7 +631,8 @@ class BaseParameter(NNLeafNode):
         False
 
         """
-        return len(self) == 0
+        raise NotImplementedError('Implement this!')
+
 
     def _shrink(self):
         """If a parameter is explored, i.e. it has a range, the whole exploration range is deleted.
@@ -780,8 +785,34 @@ class Parameter(BaseParameter):
         """
         self._data = self._default
 
-    @copydoc(BaseParameter.__len__)
+    @copydoc(BaseParameter.f_is_empty)
+    def f_is_empty(self):
+        """True if no data has been assigned to the parameter.
+
+        Example usage:
+
+        >>> param = Parameter('myname.is.example', comment='I am _empty!')
+        >>> param.f_is_empty()
+        True
+        >>> param.f_set(444)
+        >>> param.f_is_empty()
+        False
+
+        """
+        return self._data is None
+
     def __len__(self):
+        """Returns length of parameter.
+
+        :return:
+
+            0 if empty
+
+            1 if not explored
+
+            length of range if explored and has range
+
+        """
         if self._data is None:
             return 0
         elif len(self._explored_range) > 0:
@@ -844,7 +875,7 @@ class Parameter(BaseParameter):
         if idx >= len(self) and self.f_has_range():
             raise ValueError('You try to access data item No. %d in the parameter range, '
                              'yet there are only %d potential items.' % (idx, len(self)))
-        elif self.f_has_range:
+        elif self.f_has_range():
             self._data = self._explored_range[idx]
         else:
             self._logger.warning('You try to change the access to a parameter range of parameter'
@@ -853,7 +884,8 @@ class Parameter(BaseParameter):
 
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
-        if type(data) is tuple:
+        dtype = type(data)
+        if dtype is tuple:
 
             # Parameters cannot handle empty tuples
             if len(data) == 0:
@@ -870,21 +902,18 @@ class Parameter(BaseParameter):
                 old_type = type(item)
             return True
 
-        if type(data) in [np.ndarray, np.matrix]:
+        elif dtype is np.ndarray or dtype is np.matrix:
 
-            if len(data) == 0:
-                return False
+            if data.size == 0:
+                return False # Parameters cannot handle empty arrays and matrices
 
             # Numpy has many string types that depend on the length of the string,
             # We allow all of them
             dtype = data.dtype
             if np.issubdtype(dtype, np.str):
                 dtype = np.str
-        else:
-            dtype = type(data)
 
         return dtype in pypetconstants.PARAMETER_SUPPORTED_DATA
-
 
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
@@ -941,14 +970,14 @@ class Parameter(BaseParameter):
                 'Your Parameter is an explored array can no longer change values!')
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored parameter. If '
+            self._logger.debug('You are changing an already stored parameter. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
         val = self._convert_data(data)
 
         if not self.f_supports(val):
-            raise TypeError('Unsupported data `%s`' % str(val))
+            raise TypeError('Unsupported data `%s` of tpye `%s`' % (str(val), str(type(val))))
 
         self._data = val
         self._default = self._data
@@ -1129,6 +1158,9 @@ class Parameter(BaseParameter):
         :func:`~pypet.parameter.Parameter._store` method.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         self._data = self._convert_data(load_dict['data']['data'][0])
         self._default = self._data
 
@@ -1155,7 +1187,7 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter %s is locked!' % self.v_full_name)
 
         if not self.f_has_range():
-            raise TypeError('Cannot shrink non-array Parameter.')
+            raise TypeError('Cannot shrink Parameter without a range.')
 
         if self.f_is_empty():
             raise TypeError('Cannot shrink empty Parameter.')
@@ -1233,12 +1265,12 @@ class ArrayParameter(Parameter):
 
                     # First we need to distinguish between tuples and array and extract a
                     # hashable part of the array
-                    if isinstance(elem, tuple):
-                        hash_elem = elem
-                    else:
+                    if isinstance(elem, np.ndarray):
                         # You cannot hash numpy arrays themselves, but if they are read only
                         # you can hash array.data
                         hash_elem = HashArray(elem)
+                    else:
+                        hash_elem = elem
 
                     # Check if we have used the array before,
                     # i.e. element can be found in the dictionary
@@ -1287,6 +1319,9 @@ class ArrayParameter(Parameter):
         as it was stored in :func:`~pypet.parameter.ArrayParameter._store`.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         try:
             self._data = load_dict['data' + ArrayParameter.IDENTIFIER]
 
@@ -1311,7 +1346,6 @@ class ArrayParameter(Parameter):
         self._default = self._data
         self._locked = True
 
-
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
 
@@ -1320,10 +1354,20 @@ class ArrayParameter(Parameter):
         regardless of their size and values they contain.
 
         """
-        if (type(val1) in [np.ndarray, tuple, np.matrix]) and (type(val2) is type(val1)):
+        if (type(val1) in (np.ndarray, tuple, np.matrix)) and (type(val2) is type(val1)):
             return True
         else:
             return super(ArrayParameter, self)._values_of_same_type(val1, val2)
+
+    def f_supports(self, data):
+        """Checks if input data is supported by the parameter."""
+        dtype = type(data)
+        if dtype is tuple and len(data) == 0:
+            return True  #  ArrayParameter does support empty tuples
+        elif dtype is np.ndarray and data.size == 0 and data.ndim == 1:
+                return True  #  ArrayParameter supports empty numpy arrays
+        else:
+            return super(ArrayParameter, self).f_supports(data)
 
 
 class SparseParameter(ArrayParameter):
@@ -1428,7 +1472,11 @@ class SparseParameter(ArrayParameter):
         if (spsp.isspmatrix_csc(matrix) or
                 spsp.isspmatrix_csr(matrix) or
                 spsp.isspmatrix_bsr(matrix)):
-            return_list = [matrix.data, matrix.indices, matrix.indptr, matrix.shape]
+            if matrix.size > 0:
+                return_list = [matrix.data, matrix.indices, matrix.indptr, matrix.shape]
+            else:
+                # For empty matrices we only need the shape
+                return_list = ['__empty__', (), (), matrix.shape]
 
             return_names = SparseParameter.OTHER_NAME_LIST
 
@@ -1442,7 +1490,11 @@ class SparseParameter(ArrayParameter):
                 raise RuntimeError('You shall not pass!')
 
         elif spsp.isspmatrix_dia(matrix):
-            return_list = ['dia', matrix.data, matrix.offsets, matrix.shape]
+            if matrix.size > 0:
+                return_list = ['dia', matrix.data, matrix.offsets, matrix.shape]
+            else:
+                # For empty matrices we only need the shape
+                return_list = ['dia', '__empty__', (), matrix.shape]
 
             return_names = SparseParameter.DIA_NAME_LIST
         else:
@@ -1460,7 +1512,6 @@ class SparseParameter(ArrayParameter):
                 hash_list.append(item)
 
         return return_list, return_names, tuple(hash_list)
-
 
     @staticmethod
     def _get_name_list(is_dia):
@@ -1574,13 +1625,27 @@ class SparseParameter(ArrayParameter):
         matrix_format = data_list[0]
 
         if matrix_format == 'csc':
-            return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                 return spsp.csc_matrix(data_list[4])
+            else:
+                return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'csr':
-            return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                 return spsp.csr_matrix(data_list[4])
+            else:
+                return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'bsr':
-            return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                # We have an empty matrix, that cannot be build as in esle case
+                return spsp.bsr_matrix(data_list[4])
+            else:
+                return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'dia':
-            return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
+            if data_list[1] == '__empty__':
+                # We have an empty matrix, that cannot be build as in esle case
+                return spsp.dia_matrix(data_list[3])
+            else:
+                return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -1594,6 +1659,9 @@ class SparseParameter(ArrayParameter):
         as it was stored in :func:`~pypet.parameter.SparseParameter._store`.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         try:
             is_dia = load_dict['data%sis_dia' % SparseParameter.IDENTIFIER]
 
@@ -1759,6 +1827,9 @@ class PickleParameter(Parameter):
         Sets the `v_protocol` property to the protocol used to store 'data'.
 
         """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
         dump = load_dict['data']
 
         self._data = pickle.loads(dump)
@@ -1919,6 +1990,7 @@ class Result(BaseResult):
         return result
 
     @property
+    @deprecated('No longer supported')
     def v_no_data_string(self):
         """Whether or not to give a short summarizing string when calling
          :func:`~pypet.parameter.Result.f_val_to_str` or `__str__`.
@@ -1942,8 +2014,13 @@ class Result(BaseResult):
         self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
                              'longer have an effect. Data will always be printed.')
 
-    def __contains__(self, item):
-        return item in self._data
+    def __contains__(self, key):
+        if isinstance(key, int):
+            if key == 0:
+                key = self.v_name
+            else:
+                key = self.v_name + '_%d' % key
+        return key in self._data
 
 
     def f_val_to_str(self):
@@ -2015,7 +2092,6 @@ class Result(BaseResult):
             return self._data.copy()
         else:
             return self._data
-
 
     def f_is_empty(self):
         """True if no data has been put into the result.
@@ -2122,7 +2198,7 @@ class Result(BaseResult):
 
         if len(args) == 0:
             if len(self._data) == 1:
-                return self._data[compat.listkeys(self._data)[0]]
+                return compat.listvalues(self._data)[0]
             elif len(self._data) > 1:
                 raise ValueError('Your result `%s` contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
@@ -2175,13 +2251,13 @@ class Result(BaseResult):
         """
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored result. If '
+            self._logger.debug('You are changing an already stored result. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
         if self._supports(item):
 
-            self._check_if_empty(item, name)
+            # self._check_if_empty(item, name) # No longer needed
 
             if name in self._data:
                 self._logger.debug('Replacing `%s` in result `%s`.' % (name, self.v_full_name))
@@ -2191,20 +2267,20 @@ class Result(BaseResult):
             raise TypeError('Your result `%s` of type `%s` is not supported.' %
                             (name, str(type(item))))
 
-    def _check_if_empty(self, item, name):
-        """Checks if the result is requested to handle an empty item, like an empty list or
-        dictionary.
-
-        Empty items are problematic because they cannot be stored by the storage service.
-        Emits a waring in case of an empty item.
-
-        """
-        try:
-            if len(item) == 0:
-                self._logger.warning('The Item `%s` is empty.' % name)
-        except TypeError:
-            # If the item does not support `len` operation we can ignore that
-            pass
+    # def _check_if_empty(self, item, name):
+    #     """Checks if the result is requested to handle an empty item, like an empty list or
+    #     dictionary.
+    #
+    #     Empty items are problematic because they cannot be stored by the storage service.
+    #     Emits a waring in case of an empty item.
+    #
+    #     """
+    #     try:
+    #         if len(item) == 0:
+    #             self._logger.warning('The Item `%s` is empty.' % name)
+    #     except (TypeError, AttributeError) as e:
+    #         # If the item does not support `len` operation we can ignore that
+    #         pass
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
@@ -2275,8 +2351,8 @@ class Result(BaseResult):
 
     def __setattr__(self, key, value):
         if key[0] == '_':
-            # Change a private attribute
-            self.__dict__[key] = value
+            # We set a private attribute
+            super(Result, self).__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # Work around for python properties
             python_property = getattr(self.__class__, key)
@@ -2324,13 +2400,13 @@ class SparseResult(Result):
         else:
             return super(SparseResult, self)._supports(item)
 
-    @copydoc(Result._check_if_empty)
-    def _check_if_empty(self, item, name):
-        if SparseParameter._is_supported_matrix(item):
-            if item.getnnz() == 0:
-                self._logger.warning('The Item `%s` is empty.' % name)
-        else:
-            super(SparseResult, self)._check_if_empty(item, name)
+    # @copydoc(Result._check_if_empty)
+    # def _check_if_empty(self, item, name):
+    #     if SparseParameter._is_supported_matrix(item):
+    #         if item.getnnz() == 0:
+    #             self._logger.warning('The Item `%s` is empty.' % name)
+    #     else:
+    #         super(SparseResult, self)._check_if_empty(item, name)
 
     def _store(self):
         """Returns a storage dictionary understood by the storage service.
@@ -2434,7 +2510,7 @@ class PickleResult(Result):
         """
 
         if self.v_stored:
-            self._logger.warning('You are changing an already stored result. If '
+            self._logger.debug('You are changing an already stored result. If '
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
@@ -2467,121 +2543,3 @@ class PickleResult(Result):
         for key in load_dict:
             val = load_dict[key]
             self._data[key] = pickle.loads(val)
-
-
-# class LinkLeaf(NNLeafNode):
-#     """Class to link to expensive results that are supposed to be only once in the
-#             trajectory
-#
-#     """
-#
-#     def __init__(self, full_name, leaf_node, comment):
-#         super(BaseResult, self).__init__(full_name, comment, parameter=leaf_node.v_is_parameter)
-#         self._linked_node = leaf_node
-#
-#     @property
-#     def v_comment(self):
-#         if self._comment == '':
-#             return self._linked_node.v_comment
-#
-#     def f_supports_fast_access(self):
-#         """Whether or not fast access can be supported by the parameter or result.
-#         """
-#         return self._linked_node.f_supports_fast_access
-#
-#     def f_val_to_str(self):
-#         return self._linked_node.f_val_to_str()
-#
-#     def __str__(self):
-#         """ String representation of the parameter or result.
-#
-#         If not specified in subclass this is simply the full name.
-#
-#         """
-#         return '%s %s --> %s' % (self.f_get_class_name(), self.v_full_name,
-#                                  repr(self._linked_node))
-#
-#     def _store_flags(self):
-#         """ Currently not used because I let the storage service infer how to store
-#         stuff from the data itself.
-#
-#         If you write your own parameter or result you can implement this function
-#         to make specifications on how to store data,
-#         see also :func:`pypet.storageservice.HDF5StorageService.store`.
-#
-#         :returns: {} (Empty dictionary)
-#
-#         """
-#         return {}
-#
-#     def _store(self):
-#         """Method called by the storage service for serialization.
-#
-#         The method converts the parameter's or result's value(s) into  simple
-#         data structures that can be stored to disk.
-#         Returns a dictionary containing these simple structures.
-#
-#         Understood basic structures are
-#
-#         * python natives (int, long, str,bool,float,complex)
-#
-#         * python lists and tuples
-#
-#         * numpy natives arrays, and matrices of type
-#           np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
-#
-#         * python dictionaries of the previous types (flat not nested!)
-#
-#         * pandas data frames
-#
-#         * object tables (see :class:`~pypet.parameter.ObjectTable`)
-#
-#         :return: A dictionary containing basic data structures.
-#
-#         ABSTRACT: Needs to be implemented by subclass
-#
-#         """
-#         raise NotImplementedError('Implement this!')
-#
-#     def _load(self, load_dict):
-#         """Method called by the storage service to reconstruct the original result.
-#
-#         Data contained in the load_dict is equal to the data provided by the result or parameter
-#         when previously called with _store().
-#
-#         :param load_dict:
-#
-#             The dictionary containing basic data structures, see also
-#             :func:`~pypet.naturalnaming.NNLeafNode._store`.
-#
-#
-#         ABSTRACT: Needs to be implemented by subclass
-#
-#         """
-#         raise NotImplementedError('Implement this!')
-#
-#     def f_is_empty(self):
-#         """Returns true if no data is handled by a result or parameter.
-#
-#         ABSTRACT: Needs to be implemented by subclass
-#
-#         """
-#         raise NotImplementedError('You should implement this!')
-#
-#     def f_empty(self):
-#         """Removes all data from the result or parameter.
-#
-#         If the result has already been stored to disk via a trajectory and a storage service,
-#         the data on disk is not affected by `f_empty`.
-#
-#         Yet, this function is particularly useful if you have stored very large data to disk
-#         and you want to free some memory on RAM but still keep the skeleton of your result or
-#         parameter.
-#
-#         Note that freeing RAM requires that all references to the data are deleted. If you
-#         reference the data somewhere else in your code, the data is not erased from RAM.
-#
-#         ABSTRACT: Needs to be implemented by subclass
-#
-#         """
-#         raise NotImplementedError('You should implement this!')

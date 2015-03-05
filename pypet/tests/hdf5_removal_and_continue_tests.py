@@ -45,6 +45,8 @@ class ContinueTest(TrajectoryComparator):
             for env in self.envs:
                 env.f_disable_logging()
 
+        super(ContinueTest, self).tearDown()
+
     def make_run(self,env):
 
         ### Make a test run
@@ -57,8 +59,10 @@ class ContinueTest(TrajectoryComparator):
 
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                     'tests',
+                                                     'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments','tests','cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
@@ -156,7 +160,7 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -198,7 +202,7 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -208,9 +212,10 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_removal(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
-
-
+        self.filenames = [make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'HDF5',
+                                                      'removal.hdf5')), 0]
 
         self.envs=[]
         self.trajs = []
@@ -238,23 +243,21 @@ class ContinueTest(TrajectoryComparator):
         self.trajs[0].f_add_parameter('Delete.Me', 'I will be deleted!')
         self.trajs[0].f_store_item('Delete.Me')
 
-        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'),
-                                        remove_empty_groups=True)
+        self.trajs[0].f_remove_item(self.trajs[0].f_get('Delete.Me'))
 
         self.assertTrue('Delete.Me' not in self.trajs[0],'Delete.Me is still in traj')
 
-        self.trajs[0].f_update_skeleton()
+        self.trajs[0].f_load_skeleton()
         self.trajs[0].f_load_item('Delete.Me')
         self.trajs[0].f_delete_item(self.trajs[0].f_get('Delete.Me'),
-                                        remove_empty_groups=True,
                                         remove_from_trajectory=True)
 
-        self.trajs[0].f_update_skeleton()
+        self.trajs[0].f_load_skeleton()
         self.assertTrue(not 'Delete.Me' in self.trajs[0],'Delete.Me is still in traj')
 
 
         for irun in range(len(self.filenames)):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load_child('results',recursive=True,load_data=pypetconstants.UPDATE_DATA)
             self.trajs[irun].f_load_child('derived_parameters',recursive=True,load_data=pypetconstants.UPDATE_DATA)
 
@@ -262,7 +265,10 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_multiple_storage_and_loading(self):
-        self.filenames = [make_temp_file('experiments/tests/HDF5/merge1.hdf5'), 0]
+        self.filenames = [make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'HDF5',
+                                                      'merge1.hdf5')), 0]
 
 
 
@@ -299,11 +305,11 @@ class ContinueTest(TrajectoryComparator):
 
         self.trajs[0] = Trajectory()
         self.trajs[0].v_storage_service=temp_sservice
-        self.trajs[0].f_load(name=temp_name,as_new=False, load_parameters=2, load_derived_parameters=2, load_results=2,
-                             load_other_data=2)
+        self.trajs[0].f_load(name=temp_name, as_new=False, load_parameters=2,
+                             load_derived_parameters=2, load_results=2, load_other_data=2)
         #self.trajs[0].f_load(trajectory_name=temp_name,as_new=False, load_params=2, load_derived_params=2, load_results=2)
 
-        self.trajs[1].f_update_skeleton()
+        self.trajs[1].f_load_skeleton()
         self.trajs[1].f_load_items(self.trajs[1].f_to_dict().values(),only_empties=True)
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
@@ -316,8 +322,12 @@ class ContinueMPTest(ContinueTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                     'tests',
+                                                     'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
@@ -385,7 +395,7 @@ class ContinueMPTest(ContinueTest):
 
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -411,7 +421,7 @@ class ContinueMPTest(ContinueTest):
             if isinstance(filename,int):
                 filename = self.filenames[filename]
 
-            self.make_environment_mp( irun, filename)
+            self.make_environment_mp(irun, filename)
 
         self.param_dict={'x':1.0, 'y':2.0}
 
@@ -440,7 +450,7 @@ class ContinueMPTest(ContinueTest):
         self.trajs[-1]=self.envs[-1].v_trajectory
 
         for irun in range(len(self.filenames)+1):
-            self.trajs[irun].f_update_skeleton()
+            self.trajs[irun].f_load_skeleton()
             self.trajs[irun].f_load(load_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_derived_parameters=pypetconstants.OVERWRITE_DATA,
                                     load_results=pypetconstants.OVERWRITE_DATA,
@@ -455,8 +465,12 @@ class ContinueMPPoolTest(ContinueMPTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file('experiments/tests/Log')
-        self.cnt_folder = make_temp_file('experiments/tests/cnt/')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
+        self.cnt_folder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,

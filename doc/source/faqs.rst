@@ -30,7 +30,14 @@ or some similar function!?
     **A:** Numpy uses openBLAS (http://www.openblas.net/) to
     solve linear algebra operations. Yet, there are many
     issues with openBLAS and multiprocessing. To resolve this set the
-    environment variable ``OPENBLAS_NUM_THREADS=1``.
+    environment variables ``OPENBLAS_NUM_THREADS=1`` and ``OMP_NUM_THREADS=1``.
+
+
+**Q:** *pypet* produces enormously large files of several Gigabytes despite them containing
+almost no data!?
+
+    **A:** Your HDF5 version is too old (most likely you are using 1.8.5). Please update
+    to 1.8.9 or newer.
 
 
 **Q:**  GitPython does not work. If I specify my repository ``git_repository='./myrepo'``,
@@ -39,14 +46,14 @@ What should I do?
 
     **A:** You probably have an older version of GitPython (likely 0.1.7), install a newer one.
     If ``pip install GitPython`` still downloads the old version, try ``pip install --pre GitPython``
-    or if you simply want to upgrade use ``pip install --upgrade --pre GitPython``.
+    or if you simply want to upgrade, use ``pip install --upgrade --pre GitPython``.
 
 
 **Q:**  If I create and environment in an *IPython* console everything becomes gibberish!?
 
-    **A:** Pypet will redirect ``STDOUT`` and ``STDERROR`` to files. Unfortunately, this messes with
+    **A:** Pypet will redirect ``stdout`` and ``stderr`` to files. Unfortunately, this messes with
     the *IPython* console. To avoid this simply disable logging of these two streams setting the
-    ``log_stdout`` to ``False``: ``env = Environment( ..., log_stdout=False, ...)``.
+    ``log_stdout`` option to ``False``: ``env = Environment( ..., log_stdout=False, ...)``.
 
 
 **Q:** I have large data sets that are not stored if I use multiprocessing and the lock wrapping!?
@@ -64,22 +71,11 @@ What should I do?
     cannot be handled by *pypet* (see https://github.com/pydata/pandas/issues/6526/).
     This unwanted upcasting did not happen in previous pandas versions and will be, or more
     precisely, has already been removed in the next pandas version.
-    So either downgrade pandas to version ``0.12.0`` or upgrade to ``0.14.1``.
+    So either downgrade pandas to version ``0.12.0`` or upgrade to ``0.14.1`` or newer.
+
 
 **Q:** My program crashes if I try to store a Trajectory containing an ArrayParameter!?
 
     **A:** Look at the previous answer,
     you are using pandas ``0.13.x``, please up or downgrade your
     pandas package.
-
-
-**Q:** Why can I no longer decide on the search strategy and what happened to ``v_check_uniqueness``?
-
-    **A:** Both of them have been removed because they lead to inconsistencies.
-    The child nodes of a particular group are not ordered, so tree traversal happens
-    arbitrarily. Thus, if you search for two nodes with the same name and same depth in the tree,
-    the search result also becomes arbitrary. Thus, *pypet* will now always check if
-    your search yields a unique result up to a particular depth. Accordingly, ``v_check_uniqueness``
-    is rendered obsolete. Likewise is depth first search because this automatic checking
-    only works with breadth first tree traversal.
-    Sorry for any inconvenience caused by this API change.

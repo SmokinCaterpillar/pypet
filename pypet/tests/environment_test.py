@@ -13,13 +13,15 @@ else:
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
 import logging
-from pypet.tests.test_helpers import make_run,make_temp_file
+from pypet.tests.test_helpers import make_run,make_temp_file, remove_data
+import os
 
 
 def just_printing_bro(traj):
         key = traj.f_get('Test').v_full_name
         value = traj.f_get('par.Test', fast_access=True)
         print('Current value of %s is %d' %(key, value))
+
 
 class EnvironmentTest(unittest.TestCase):
 
@@ -28,8 +30,8 @@ class EnvironmentTest(unittest.TestCase):
 
         logging.basicConfig(level = logging.INFO)
 
-        self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.filename = make_temp_file(os.path.join('experiments','tests', 'HDF5', 'test.hdf5'))
+        self.logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
         self.trajname = 'Test'
 
         env = Environment(trajectory=self.trajname,
@@ -59,10 +61,12 @@ class EnvironmentTest(unittest.TestCase):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        remove_data()
 
     def test_multiprocessing(self):
 
         self.env.f_run(just_printing_bro)
+
 
 
 

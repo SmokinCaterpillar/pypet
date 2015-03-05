@@ -3,7 +3,10 @@ __author__ = 'robert'
 import numpy as np
 import pandas as pd
 import logging
+import os # For path names working under Linux and Windows
+
 from pypet import Environment, cartesian_product
+
 
 def run_neuron(traj):
     """Runs a simulation of a model neuron.
@@ -30,10 +33,10 @@ def run_neuron(traj):
     # Create some containers for the Euler integration
     V_array = np.zeros(steps)
     V_array[0] = V_init
-    spiketimes = []
+    spiketimes = []  # List to collect all times of action potentials
 
     # Do the Euler integration:
-    print 'Starting Euler Integration'
+    print('Starting Euler Integration')
     for step in range(1, steps):
         if V_array[step-1] >= 1:
             # The membrane potential crossed the threshold and we mark this as
@@ -49,7 +52,7 @@ def run_neuron(traj):
             dV = -1/tau_V * V_array[step-1] + I
             V_array[step] = V_array[step-1] + dV*dt
 
-    print 'Finished Euler Integration'
+    print('Finished Euler Integration')
 
     # Add the voltage trace and spike times
     traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
@@ -104,9 +107,10 @@ def neuron_postproc(traj, result_list):
     traj.f_add_result('summary.firing_rates', rates_frame=rates_frame,
                       comment='Contains a pandas data frame with all firing rates.')
 
+
 def add_parameters(traj):
     """Adds all parameters to `traj`"""
-    print 'Adding Results'
+    print('Adding Parameters')
 
     traj.f_add_parameter('neuron.V_init', 0.0,
                          comment='The initial condition for the '
@@ -126,12 +130,13 @@ def add_parameters(traj):
     traj.f_add_parameter('simulation.dt', 0.1,
                          comment='The step size of an Euler integration step.')
 
+
 def add_exploration(traj):
     """Explores different values of `I` and `tau_ref`."""
 
-    print 'Adding exploration of I and tau_ref'
+    print('Adding exploration of I and tau_ref')
 
-    explore_dict = {'neuron.I': np.arange(0, 1.5, 0.02).tolist(),
+    explore_dict = {'neuron.I': np.arange(0, 1.01, 0.01).tolist(),
                     'neuron.tau_ref': [5.0, 7.5, 10.0]}
 
     explore_dict = cartesian_product(explore_dict, ('neuron.tau_ref', 'neuron.I'))
@@ -141,23 +146,24 @@ def add_exploration(traj):
 
     traj.f_explore(explore_dict)
 
+
 def main():
 
+    filename = os.path.join('hdf5', 'FiringRate.hdf5')
     env = Environment(trajectory='FiringRate',
                       comment='Experiment to measure the firing rate '
                             'of a leaky integrate and fire neuron. '
                             'Exploring different input currents, '
                             'as well as refractory periods',
                       add_time=False, # We don't want to add the current time to the name,
-                      log_folder='./logs/',
+                      log_folder='logs',
                       log_level=logging.INFO,
                       log_stdout=True,
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       wrap_mode='QUEUE',
-                      filename='./hdf5/', # We only pass a folder here, so the name is chosen
-                      # automatically to be the same as the Trajectory
-                      )
+                      filename=filename,
+                      overwrite_file=True)
 
     traj = env.v_trajectory
 
@@ -172,6 +178,9 @@ def main():
 
     # Run the experiment
     env.f_run(run_neuron)
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 if __name__ == '__main__':
     main()

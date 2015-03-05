@@ -4,6 +4,59 @@ import numpy as np
 import itertools as itools
 import hashlib
 import pypet.compat as compat
+from collections import deque
+
+class IteratorChain(object):
+    """Helper class that chains arbitrary generators and iterators and iterables.
+
+    Preferably used over itertools.chain to avoid recursive calls.
+
+    You can already pass some `iterators` on creation.
+
+    """
+    def __init__(self, *iterables):
+        # Deque containing the iterators to come
+        self._chain = deque()
+        # The current iterator providing the next elements
+        self._current = iter([])
+
+        self.add(*iterables)
+
+    def add(self, *iterables):
+        """Adds `iterables` to the chain"""
+        self._chain.extend(iterables)
+
+    def next(self):
+        """Returns next element from chain.
+
+        More precisely, it returns the next element of the
+        foremost iterator. If this iterator is empty it moves iteratively
+        along the chain of available iterators to pick the new foremost one.
+
+        Raises StopIteration if there are no elements left.
+
+        """
+        while True:
+            # We need this loop because some iterators may already be empty.
+            # We keep on popping from the left until next succeeds and as long
+            # as there are iterators available
+            try:
+                return next(self._current)
+            except StopIteration:
+                try:
+                    self._current = iter(self._chain.popleft())
+                except IndexError:
+                    # If we run out of iterators we are sure that
+                    # there can be no more element
+                    raise StopIteration('Reached end of iterator chain')
+
+    def __next__(self):
+        """For python 3 compatibility"""
+        return self.next()
+
+    def __iter__(self):
+        while True:
+            yield self.next()
 
 
 class ChainMap(object):

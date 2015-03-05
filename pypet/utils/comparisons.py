@@ -29,7 +29,6 @@ def results_equal(a, b):
     :raises: ValueError if both inputs are no result instances
 
     """
-
     if a.v_is_parameter or b.v_is_parameter:
         raise ValueError('Both inputs are not results.')
 
@@ -45,18 +44,22 @@ def results_equal(a, b):
     if not a.v_full_name == b.v_full_name:
         return False
 
-    akeyset = set(a._data.keys())
-    bkeyset = set(b._data.keys())
-
-    if akeyset != bkeyset:
+    if hasattr(a, '_data') and not hasattr(b, '_data'):
         return False
 
-    for key in a._data:
-        val = a._data[key]
-        bval = b._data[key]
+    if hasattr(a, '_data'):
+        akeyset = set(a._data.keys())
+        bkeyset = set(b._data.keys())
 
-        if not nested_equal(val, bval):
+        if akeyset != bkeyset:
             return False
+
+        for key in a._data:
+            val = a._data[key]
+            bval = b._data[key]
+
+            if not nested_equal(val, bval):
+                return False
 
     return True
 
@@ -88,9 +91,11 @@ def parameters_equal(a, b):
     if not a.v_full_name == b.v_full_name:
         return False
 
-    # I allow different comments for now
-    # if not a.get_comment() == b.get_comment():
-    # return False
+    if a.f_is_empty() and b.f_is_empty():
+        return True
+
+    if a.f_is_empty() != b.f_is_empty():
+        return False
 
     if not a._values_of_same_type(a.f_get(), b.f_get()):
         return False
@@ -98,14 +103,16 @@ def parameters_equal(a, b):
     if not a._equal_values(a.f_get(), b.f_get()):
         return False
 
-    if not len(a) == len(b):
+    if a.f_has_range() != b.f_has_range():
         return False
 
     if a.f_has_range():
+        if a.f_get_range_length() != b.f_get_range_length():
+            return False
+
         for myitem, bitem in zip(a.f_get_range(), b.f_get_range()):
             if not a._values_of_same_type(myitem, bitem):
                 return False
-
             if not a._equal_values(myitem, bitem):
                 return False
 
@@ -121,85 +128,95 @@ def nested_equal(a, b):
     .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
 
     """
-    if a is b:
-        return True
-
-    # for types that support __eq__
-    if hasattr(a, '__eq__'):
+    try:
+        if a is b:
+            return True
+        # for types that support __eq__
         try:
-            custom_eq = a == b
-            if isinstance(custom_eq, bool):
+            custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
+            # if equality is implemented
+            if isinstance(custom_eq, (bool, np.bool_)):
                 return custom_eq
-        except ValueError:
+        except (AttributeError, NotImplementedError, TypeError, ValueError):
             pass
 
-    # Check equality according to type type [sic].
-    if a is None:
-        return b is None
-    if isinstance(a, (compat.unicode_type, compat.bytes_type)):
-        return a == b
-    if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
-        return a == b
-    if isinstance(a, np.ndarray):
-        return np.all(a == b)
-    if isinstance(a, (pd.Panel, pd.Panel4D)):
-        return nested_equal(a.to_frame(), b.to_frame())
-    if spsp.isspmatrix(a):
-        if a.nnz == 0:
-            return b.nnz == 0
-        else:
-            return np.all((a == b).data)
-    if isinstance(a, (pd.DataFrame, pd.Series)):
-        try:
-            new_frame = a == b
-            new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
-            return np.all(new_frame.as_matrix())
-        except ValueError:
-            # The Value Error can happen if the data frame is of dtype=object and contains
-            # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
-            if isinstance(a, pd.DataFrame):
-                for name in a:
-                    cola = a[name]
-
-                    if not name in b:
+        # Check equality according to type type [sic].
+        if a is None:
+            return b is None
+        if isinstance(a, (compat.unicode_type, compat.bytes_type)):
+            return a == b
+        if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
+            return a == b
+        if isinstance(a, (pd.Panel, pd.Panel4D)):
+            return nested_equal(a.to_frame(), b.to_frame())
+        if spsp.isspmatrix(a):
+            if a.nnz == 0:
+                return b.nnz == 0
+            else:
+                return np.all((a == b).data)
+        if isinstance(a, (pd.DataFrame, pd.Series)):
+            try:
+                if type(a) is not type(b):
+                    return False
+                if isinstance(a, pd.DataFrame) and a.empty and b.empty:
+                    return True
+                new_frame = a == b
+                new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
+                if isinstance(new_frame, pd.DataFrame):
+                    return np.all(new_frame.as_matrix())
+                else:
+                    eq = new_frame.all() # In older pandas versions,
+                    # series do not support as_matrix
+                    if isinstance(eq, (bool, np.bool_)):
+                        return eq
+                    else:
+                        raise ValueError('')
+            except (ValueError, TypeError):
+                # The Value Error can happen if the data frame is of dtype=object and contains
+                # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
+                if isinstance(a, pd.DataFrame):
+                    for name in a:
+                        cola = a[name]
+                        if not name in b:
+                            return False
+                        colb = b[name]
+                        if not len(cola) == len(colb):
+                            return False
+                        for idx, itema in enumerate(cola):
+                            itemb = colb[idx]
+                            if not nested_equal(itema, itemb):
+                                return False
+                else:
+                    if not len(a) == len(b):
                         return False
-
-                    colb = b[name]
-
-                    if not len(cola) == len(colb):
-                        return False
-
-                    for idx, itema in enumerate(cola):
-                        itemb = colb[idx]
+                    for idx, itema in enumerate(a):
+                        itemb = b[idx]
                         if not nested_equal(itema, itemb):
                             return False
-            else:
-                if not len(a) == len(b):
-                    return False
+                return True
+        if isinstance(a, np.ndarray):
+            if a.shape != b.shape:
+                return False
+            return np.all(a == b)
+        if isinstance(a, Sequence):
+            return all(nested_equal(x, y) for x, y in zip(a, b))
+        if isinstance(a, Mapping):
+            if set(a.keys()) != set(b.keys()):
+                return False
+            return all(nested_equal(a[k], b[k]) for k in a.keys())
+        if isinstance(a, Set):
+            return a == b
 
-                for idx, itema in enumerate(a):
-                    itemb = b[idx]
-                    if not nested_equal(itema, itemb):
-                        return False
+        if hasattr(a, '__dict__'):
+            if not hasattr(b, '__dict__'):
+                return False
 
-            return True
+            if set(a.__dict__.keys()) != set(b.__dict__.keys()):
+                return False
 
-    if isinstance(a, Sequence):
-        return all(nested_equal(x, y) for x, y in zip(a, b))
-    if isinstance(a, Mapping):
-        if set(a.keys()) != set(b.keys()):
-            return False
-        return all(nested_equal(a[k], b[k]) for k in a.keys())
-    if isinstance(a, Set):
-        return a == b
+            return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__.keys())
 
-    if hasattr(a, '__dict__'):
-        if not hasattr(b, '__dict__'):
-            return False
+        return False
 
-        if set(a.__dict__.keys()) != set(b.__dict__.keys()):
-            return False
-
-        return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__.keys())
-
-    return id(a) == id(b)
+    except Exception as exc:
+        return False

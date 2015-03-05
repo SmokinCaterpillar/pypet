@@ -1,10 +1,37 @@
+pypet 0.1b.10
+
+*   New `v_crun_` property simply returning ``'run_ALL'`` if ``v_crun`` is ``None``.
+
+*   BUG FIX: Removed recursive evaluation due to usage of `itertools.chain` during
+    recursive node traversal
+
+*   max_depth is now also supported by `f_store`, `f_store_child`, `f_load`, `f_load_child`
+
+*   Loading and Storing internally are no longer truly recursive but iteratively handled.
+
+*   New `v_auto_run_prepend` property of the trajectory to switch off auto run name prepending if
+    desired.
+
+*   The trajectory no longer relies on evil `eval` to construct a class. Instead
+    it relies on the global scope.
+
+*   Better counting of loading and storing nodes to display rate in nodes/s
+
+*   BUG FIX: Minor bug in the progressbar has been fixed to detect automatic resets.
+
+*   Now support for non-nested empty containers: Empty dictionary, empty list, empty tuple and
+    empty numpy array. All of them supported by the ArrayParameter and normal Results.
+
+*   Support for Sparse matrices containing *NO* data (i.e. only zeros).
+
+
 pypet 0.1b.9
 
 *   BUG FIX: Fixed backwards compatibility
 
 *   BUG FIX: Metadata is loaded only once
 
-*   Results no longer support the `v_no_data_string' property
+*   Results no longer support the ``v_no_data_string`` property
 
 *   Data of Results is no longer sorted in case of calling `f_val_to_string`
 
@@ -24,7 +51,8 @@ pypet 0.1b.9
 
 *   New LINK features allowing group nodes to refer to other parts of the tree
 
-*   The SingleRun has been removed and all interactions are with real Trajectory objects
+*   The SingleRun has been removed and all interactions are with real Trajectory objects,
+    but the API remained the same.
 
 *   All *pypet* relevant imported packages will be stored by the trajectory
 
@@ -35,7 +63,7 @@ pypet 0.1b.9
     custom multiprocessing
 
 *   StorageServices provide an ``multiproc_safe`` attribute to enable the user to check
-    if they work in a multi-process environment
+    if they work in a multi-process safe environment
 
 *   Environments can be used as context managers to disable the logging to files after the
     experiment.
@@ -55,12 +83,56 @@ pypet 0.1b.9
 *   If the current run is not set, ``traj.v_crun`` is set to ``None``
 
 *   Moreover, ``f_iter_nodes`` and ``f_iter_leaves`` is no longer affected by the setting
-    of a current run and always returns all nodes and leaves
+    of a current run and always return all nodes and leaves
 
-*   The iteration function now allow for a predicate function to filter potential nodes
+*   The iteration functions from above now allow for a predicate function to filter potential nodes
 
 *   Storing a leaf or a group via ``traj.f_store_item(item, overwrite=True)`` now also
     replaces all annotations and comments
+
+*   Passing `overwrite_file=True` to an environment will overwrite the hdf5 file.
+
+*   `remove_empty_groups` is no longer supported
+
+*   All messages logged by *pypet* are now no longer using the root logger but one called 'pypet'.
+
+*   Better customization of logging. The user can now pass a list of ``logger_names`` and
+    corresponding ``log_levels`` which are logged to files in the ``log_path``.
+
+*   The environment no longer adds config information about hdf5 to the trajectory directly.
+    This is now done by the service itself.
+
+*   The keyword arguments passed to the environment regarding the storage service are
+    no longer handled by the environment but are directly passed to the service.
+
+*   BUG FIX: Fixed merging of result summaries that are only found in one trajectory
+
+*   BUG FIX: Log files are now closed when the handlers are removed
+
+*   BUG FIX: ``max_depth`` is now really alway in relation to the start node and not
+    in relation to intermediate results
+
+*   API change for `f_migrate` to match new concept of storage service
+
+*   Short function names for item additions like `f_apar` besides `f_add_parameter`.
+
+*   One can now set ``store_full_in_run=True`` to store the entire trajectory during a
+    single run
+
+*   Abbreviations like `par` and `dpar` can now also be used for item creation and
+    are always translated
+
+*   To streamline the API you can now no longer specify the name of backup files for merging
+
+*   Locked parameters can no longer be loaded and must be unlocked before.
+
+*   Parameters are no longer required to implement ``__len__`` because it can be
+    ambiguous, instead they must implement ``f_get_range_length`` function.
+
+*   BUG FIX: ``crun`` is now also accepted for adding of data and not only for requests
+
+*    Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
+
 
 pypet 0.1b.8
 
@@ -397,6 +469,21 @@ pypet 0.1b.0
 
 *   New trajectory function `f_as_run` that makes the trajectory belief it is a particular
     single run and results and derived parameters of other runs are blinded out.
+
+*   Every group node now knows how to store and load itself via `f_load` and `f_store`.
+
+*   Storage of data is now analogous to loading with constants in (1,2,3).
+    1 Storing data only of items not been stored before, 2 for storing data as
+    previously known. 3 For overwriting data. For instance, ``traj.f_load(store_data=3)``
+    overwrites all data on disk.
+
+*   f_update_skeleton is now f_load_skeleton to be more in line with naming scheme.
+
+*   setattr no longer supports shortcuts, i.e. ``traj.x = 4`` only works if ``x`` is directly
+    below the trajectory root.
+
+*   Using setattr with a tuple of exactly length 2 whereas the second element is a string,
+    sets the value as well as a comment
 
 
 pypet 0.1a.6

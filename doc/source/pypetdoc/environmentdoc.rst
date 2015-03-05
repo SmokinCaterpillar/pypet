@@ -28,3 +28,11 @@ Environment
 
 .. autoclass:: pypet.environment.Environment
     :members:
+
+
+------------------
+MultiprocContext
+------------------
+
+.. autoclass:: pypet.environment.MultiprocContext
+    :members:

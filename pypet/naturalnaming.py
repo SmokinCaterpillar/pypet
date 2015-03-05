@@ -38,6 +38,11 @@ Contains the following classes:
 
         Analogous to the above
 
+    * :class:`~pypet.naturalnaming.KnowsTrajectory`
+
+        A dummy class which adds the constant ``KNOWS_TRAJECTORY=True`` to a given class.
+        This signals the trajectory to pass itself onto the class constructor.
+
 """
 
 __author__ = 'Robert Meyer'
@@ -46,22 +51,13 @@ import inspect
 import itertools as itools
 import re
 from collections import deque
-try:
-    from future_builtins import zip, map, filter
-except ImportError:  # not 2.6+ or is 3.x
-    try:
-        from itertools import izip as zip  # < 2.5 or 3.x
-        from itertools import imap as map
-        from itertools import ifilter as filter
-    except ImportError:
-        pass
 
 from pypet.utils.decorators import deprecated, kwargs_api_change
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
-from pypet.utils.helpful_classes import ChainMap
+from pypet.utils.helpful_classes import ChainMap, IteratorChain
 from pypet.utils.helpful_functions import is_debug
 from pypet.pypetlogging import HasLogger, DisableLogger
 
@@ -73,7 +69,7 @@ REMOVE = 'REMOVE'  # We want to remove stuff, potentially from disk
 
 # Group Constants
 RESULT = 'RESULT'
-RESULT_GROUP = 'RESULTGROUP'
+RESULT_GROUP = 'RESULT_GROUP'
 PARAMETER = 'PARAMETER'
 PARAMETER_GROUP = 'PARAMETER_GROUP'
 DERIVED_PARAMETER = 'DERIVED_PARAMETER'
@@ -87,8 +83,6 @@ LINK = 'LINK'
 # Types are not allowed to be added during single runs
 SENSITIVE_TYPES = set([PARAMETER, PARAMETER_GROUP, CONFIG, CONFIG_GROUP])
 
-LENGTH_WARNING_THRESHOLD = 100
-
 # SUBTREE Mapping
 SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
                    'parameters': (PARAMETER_GROUP, PARAMETER),
@@ -101,24 +95,27 @@ SUBTREE_MAPPING = {'config': (CONFIG_GROUP, CONFIG),
 # a slow search with a full tree traversal is initiated.
 FAST_UPPER_BOUND = 3
 
-SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res'])
+SHORTCUT_SET = set(['crun', 'dpar', 'par', 'conf', 'res', '$'])
 
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
-
 
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
-    def __init__(self, full_name, comment, leaf):
+    def __init__(self, full_name, comment, is_leaf):
         super(NNTreeNode, self).__init__()
-
-        self._rename(full_name)
-
-        self._leaf = leaf  # Whether or not a node is a leaf, aka terminal node.
-
+        self._is_leaf = is_leaf  # Whether or not a node is a leaf, aka terminal node.
         self._stored = False
         self._comment = ''
+        self._depht = None
+        self._full_name = None
+        self._name = None
+        self._run_branch = None
+        self._run_branch_pos = None
+        self._branch = None
+
         self.v_comment = comment
+        self._rename(full_name)
 
     @property
     def v_stored(self):
@@ -154,12 +151,12 @@ class NNTreeNode(WithAnnotations):
     @property
     def v_is_leaf(self):
         """Whether node is a leaf or not (i.e. it is a group node)"""
-        return self._leaf
+        return self._is_leaf
 
     @property
     def v_is_group(self):
         """Whether node is a group or not (i.e. it is a leaf node)"""
-        return not self._leaf
+        return not self._is_leaf
 
     @deprecated(msg='Please use property `v_is_root` instead.')
     def f_is_root(self):
@@ -242,7 +239,7 @@ class NNTreeNode(WithAnnotations):
         # -1 if there is no branching
         if pypetconstants.RUN_NAME in full_name:
             head, tail = full_name.split(pypetconstants.RUN_NAME)
-            self._run_branch_pos = head.count('.')
+            self._run_branch_pos = head.count('.') + 1 # + 1 to be in accordance with depth
             branch = pypetconstants.RUN_NAME + tail.split('.')[0]
             self._run_branch = branch
 
@@ -255,11 +252,24 @@ class NNTreeNode(WithAnnotations):
         return self.__class__.__name__
 
 
+class KnowsTrajectory(object):
+    """ A dummy class which adds the constant ``KNOWS_TRAJECTORY=True`` to a given class.
+
+    This signals the trajectory to pass itself onto the class constructor.
+
+    Group nodes *know* the trajectory whereas leaf nodes don't.
+    This has the advantage in case leaf nodes are pickled (because they are sent over a
+    queue, for instance) only the item itself serialized and not the full tree.
+
+    """
+    KNOWS_TRAJECTORY = True
+
+
 class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
 
     def __init__(self, full_name, comment, parameter):
-        super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, leaf=True)
+        super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, is_leaf=True)
         self._parameter = parameter
 
     def f_supports_fast_access(self):
@@ -268,7 +278,7 @@ class NNLeafNode(NNTreeNode):
         ABSTRACT: Needs to be implemented by subclass.
 
         """
-        raise NotImplementedError('You should implement this!')
+        return False
 
     @property
     @deprecated(msg='Please use function `f_supports_fast_access()` instead.')
@@ -317,6 +327,19 @@ class NNLeafNode(NNTreeNode):
 
         If you write your own parameter or result you can implement this function
         to make specifications on how to store data,
+        see also :func:`pypet.storageservice.HDF5StorageService.store`.
+
+        :returns: {} (Empty dictionary)
+
+        """
+        return {}
+
+    def _load_flags(self):
+        """ Currently not used because I let the storage service infer how to load
+        stuff from the data itself.
+
+        If you write your own parameter or result you can implement this function
+        to make specifications on how to load data,
         see also :func:`pypet.storageservice.HDF5StorageService.store`.
 
         :returns: {} (Empty dictionary)
@@ -428,15 +451,15 @@ class NaturalNamingInterface(HasLogger):
         # a particular run (by setting the v_crun property).
         self._nodes_and_leaves_runs_sorted = {}
 
-        # List of names that are taboo. The user cannot create parameters or results that
-        # contain these names.
-        self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
-
         # Context Manager to disable logging for auto-loading
         self._disable_logger = DisableLogger()
 
         # Filter for blinding out runs
         self._run_filter = None
+
+        # List of names that are taboo. The user cannot create parameters or results that
+        # contain these names.
+        self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
 
 
     def _map_type_to_dict(self, type_name):
@@ -458,24 +481,6 @@ class NaturalNamingInterface(HasLogger):
             return root._other_leaves
         else:
             raise RuntimeError('You shall not pass!')
-
-    def _get_fast_access(self):
-        return self._root_instance.v_fast_access
-
-    def _get_shortcuts(self):
-        return self._root_instance.v_shortcuts
-
-    def _get_max_depth(self):
-        return self._root_instance.v_max_depth
-
-    def _get_iter_recursive(self):
-        return self._root_instance.v_iter_recursive
-
-    def _get_auto_load(self):
-        return self._root_instance.v_auto_load
-
-    def _get_with_links(self):
-        return self._root_instance.v_with_links
 
     def _fetch_from_string(self, store_load, name, args, kwargs):
         """Method used by f_store/load/remove_items to find a corresponding item in the tree.
@@ -659,38 +664,39 @@ class NaturalNamingInterface(HasLogger):
 
         return item_list
 
-
-    def _remove_subtree(self, start_node, name, keep_predicate=None):
+    def _remove_subtree(self, start_node, name, predicate=None):
         """Removes a subtree from the trajectory tree.
 
         Does not delete stuff from disk only from RAM.
 
         :param start_node: The parent node from where to start
         :param name: Name of child which will be deleted and recursively all nodes below the child
-        :param keep_predicate:
+        :param predicate:
 
-            Predicate that can be used to compute for individual nodes if they should be kept
+            Predicate that can be used to compute for individual nodes if they should be removed
+            ``True`` or kept ``False``.
 
         """
+        def _delete_from_children(node, child_name):
+            del node._children[child_name]
+            if child_name in node._groups:
+                del node._groups[child_name]
+            elif child_name in node._leaves:
+                del node._leaves[child_name]
+            else:
+                raise RuntimeError('You shall not pass!')
 
-        def _remove_subtree_inner(node, keep_predicate):
+        def _remove_subtree_inner(node, predicate):
 
-            if keep_predicate(node):
+            if not predicate(node):
                 return False
-
-            if node.v_is_group:
+            elif node.v_is_group:
                 for name_ in itools.chain(compat.listkeys(node._leaves),
                                           compat.listkeys(node._groups)):
                     child_ = node._children[name_]
-                    child_deleted = _remove_subtree_inner(child_, keep_predicate)
+                    child_deleted = _remove_subtree_inner(child_, predicate)
                     if child_deleted:
-                        del node._children[name_]
-                        if name_ in node._groups:
-                            del node._groups[name_]
-                        elif name_ in node._leaves:
-                            del node._leaves[name_]
-                        else:
-                            raise RuntimeError('You shall not pass!')
+                        _delete_from_children(node, name_)
                         del child_
 
                 for link_ in compat.listkeys(node._links):
@@ -705,15 +711,19 @@ class NaturalNamingInterface(HasLogger):
                 self._delete_node(node)
                 return True
 
-        child = start_node._children[name]
-        if keep_predicate is None:
-            keep_predicate = lambda x: False
-
-        if _remove_subtree_inner(child, keep_predicate):
-            del start_node._children[name]
-            return True
+        if name in start_node._links:
+            start_node.f_remove_link(name)
         else:
-            return False
+            child = start_node._children[name]
+            if predicate is None:
+                predicate = lambda x: True
+
+            if _remove_subtree_inner(child, predicate):
+                _delete_from_children(start_node, name)
+                del child
+                return True
+            else:
+                return False
 
     def _delete_node(self, node):
         """Deletes a single node from the tree.
@@ -802,23 +812,21 @@ class NaturalNamingInterface(HasLogger):
             if len(self._nodes_and_leaves_runs_sorted[name]) == 0:
                 del self._nodes_and_leaves_runs_sorted[name]
 
-    def _remove_node_or_leaf(self, instance, remove_empty_groups):
+    def _remove_node_or_leaf(self, instance, recursive=False):
         """Removes a single node from the tree.
 
         Only from RAM not from hdf5 file!
 
         :param instance: The node to be deleted
 
-        :param remove_empty_groups:
-
-            Whether groups that become empty due to deletion of the node should be erased as well.
+        :param recursive: If group nodes with children should be deleted
 
         """
         full_name = instance.v_full_name
         split_name = deque(full_name.split('.'))
-        self._remove_recursive(self._root_instance, split_name, remove_empty_groups)
+        self._remove_along_branch(self._root_instance, split_name, recursive)
 
-    def _remove_recursive(self, actual_node, split_name, remove_empty_groups):
+    def _remove_along_branch(self, actual_node, split_name, recursive=False):
         """Removes a given node from the tree.
 
         Starts from a given node and walks recursively down the tree to the location of the node
@@ -831,11 +839,9 @@ class NaturalNamingInterface(HasLogger):
 
         :param split_name: DEQUE of names to get the next nodes.
 
-        :param remove_empty_groups:
+        :param recursive:
 
-             Whether groups that become empty due to deletion of the node should be erased as well.
-             Note that groups that were linking to the node that became empty than themselves
-             are also removed.
+            To also delete all children of a group node
 
         :return: True if node was deleted, otherwise False
 
@@ -843,25 +849,15 @@ class NaturalNamingInterface(HasLogger):
 
         # If the names list is empty, we have reached the node we want to delete.
 
-        def _delete_node_and_linked(node, remove_empty_groups):
-            if remove_empty_groups:
-                full_name = node.v_full_name
-                linking_nodes = []
-                if full_name in self._root_instance._linked_by:
-                    linking = self._root_instance.linked_by[full_name]
-                    for linking_node, link_set in compat.itervalues(linking):
-                        linking_nodes.append(linking_node)
-                self._delete_node(actual_node)
-                for linking_node in linking_nodes:
-                    if len(linking_node._children) == 0:
-                        self._remove_recursive(self._root_instance,
-                                               deque(linking_node.v_full_name.split('.')),
-                                               remove_empty_groups=remove_empty_groups)
-            else:
-                self._delete_node(node)
-
         if len(split_name) == 0:
-            _delete_node_and_linked(actual_node, remove_empty_groups)
+            if actual_node.v_is_group and actual_node.f_has_children():
+                if recursive:
+                    for child in compat.listkeys(actual_node._children):
+                        actual_node.f_remove_child(child, recursive=True)
+                else:
+                    raise TypeError('Cannot remove group `%s` it contains children. Please '
+                                    'remove with `recursive=True`.' % actual_node.v_full_name)
+            self._delete_node(actual_node)
             return True
 
         # Otherwise get the next node by using the first name in the list
@@ -871,12 +867,11 @@ class NaturalNamingInterface(HasLogger):
             if len(split_name)>0:
                 raise RuntimeError('You cannot remove nodes while hopping over links!')
             actual_node.f_remove_link(name)
-            return True
         else:
             child = actual_node._children[name]
 
-            # Recursively walk down the tree
-            if self._remove_recursive(child, split_name, remove_empty_groups):
+            if self._remove_along_branch(child, split_name, recursive=recursive):
+
                 del actual_node._children[name]
                 if name in actual_node._groups:
                     del actual_node._groups[name]
@@ -885,15 +880,7 @@ class NaturalNamingInterface(HasLogger):
                 else:
                     raise RuntimeError('You shall not pass!')
                 del child
-
-                # Remove empty groups on the way back if desired
-                if (remove_empty_groups and
-                    len(actual_node._children) == 0):
-
-                    _delete_node_and_linked(actual_node, remove_empty_groups)
-                    return True
-
-            return False
+                return False
 
     def _translate_shortcut(self, name):
         """Maps a given shortcut to corresponding name
@@ -915,49 +902,41 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if name == -1:
-            return pypetconstants.RUN_NAME_DUMMY
-        elif name == -2:
-            if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
+        if isinstance(name, int):
+            if name == -1:
+                return pypetconstants.RUN_NAME_DUMMY
+            elif name == -2:
                 return '$'
             else:
-                return pypetconstants.RUN_NAME_DUMMY
-        elif isinstance(name, int):
-            return pypetconstants.FORMATTED_RUN_NAME % name
+                return pypetconstants.FORMATTED_RUN_NAME % name
 
-        if name.startswith('r'):
-            if name.startswith('run_') or name.startswith('r_'):
-                split_name = name.split('_')
-                if len(split_name) == 2:
-                    index = split_name[1]
-                    if index.isdigit():
-                        if len(index) < pypetconstants.FORMAT_ZEROS:
-                            return pypetconstants.FORMATTED_RUN_NAME % int(index)
-                    elif index == 'A':
-                        return pypetconstants.RUN_NAME_DUMMY
-
-        if name in SHORTCUT_SET:
-            if name == 'crun':
-                if self._root_instance._crun != pypetconstants.RUN_NAME_DUMMY:
-                    return '$'
-                else:
+        if name.startswith('r') and (name.startswith('run_') or name.startswith('r_')):
+            split_name = name.split('_')
+            if len(split_name) == 2:
+                index = split_name[1]
+                if index.isdigit():
+                    if len(index) < pypetconstants.FORMAT_ZEROS:
+                        return pypetconstants.FORMATTED_RUN_NAME % int(index)
+                elif index == 'A':
                     return pypetconstants.RUN_NAME_DUMMY
 
-            if name == 'par':
+        if name in SHORTCUT_SET:
+            if name == '$' or name == 'crun':
+                return '$'
+            elif name == 'par':
                 return 'parameters'
-
-            if name == 'dpar':
+            elif name == 'dpar':
                 return 'derived_parameters'
-
-            if name == 'res':
+            elif name == 'res':
                 return 'results'
-
-            if name == 'conf':
+            elif name == 'conf':
                 return 'config'
+            else:
+                raise RuntimeError('You shall not pass!')
 
         return None
 
-    def _add_prefix(self, name, start_node, group_type_name):
+    def _add_prefix(self, split_names, start_node, group_type_name):
         """Adds the correct sub branch prefix to a given name.
 
         Usually the prefix is the full name of the parent node. In case items are added
@@ -966,10 +945,9 @@ class NaturalNamingInterface(HasLogger):
         For example, this could be 'parameters' for parameters or 'results.run_00000004' for
         results added to the fifth single run.
 
-        :param name:
+        :param split_names:
 
-            Name of new node. Colon notation is possible to generate group nodes on the
-            fly (e.g. 'mynewgroupA.mynewgroupB.myresult').
+            List of names of the new node (e.g. ``['mynewgroupA', 'mynewgroupB', 'myresult']``).
 
         :param start_node:
 
@@ -991,69 +969,68 @@ class NaturalNamingInterface(HasLogger):
         # In case of derived parameters and results we also need to add prefixes containing the
         # subbranch and the current run in case of a single run.
         # For instance, a prefix could be 'results.runs.run_00000007'.
-
-        add = ''
-
+        prepend = []
         if start_node.v_depth < 3 and not group_type_name == GROUP:
             if start_node.v_depth == 0:
 
                 if group_type_name == DERIVED_PARAMETER_GROUP:
-                    if name == 'derived_parameters' or name.startswith('derived_parameters.'):
-                        return name
+                    if split_names[0] == 'derived_parameters':
+                        return split_names
                     else:
-                        add += 'derived_parameters.'
+                        prepend += ['derived_parameters']
 
                 elif group_type_name == RESULT_GROUP:
-                    if name == 'results' or name.startswith('results.'):
-                        return name
+                    if split_names[0] == 'results':
+                        return split_names
                     else:
-                        add += 'results.'
+                        prepend += ['results']
 
                 elif group_type_name == CONFIG_GROUP:
-                    if name == 'config' or name.startswith('config.'):
-                        return name
+                    if split_names[0] == 'config':
+                        return split_names
                     else:
-                        add += 'config.'
+                        prepend += ['config']
 
                 elif group_type_name == PARAMETER_GROUP:
-                    if name == 'parameters' or name.startswith('parameters.'):
-                        return name
+                    if split_names[0] == 'parameters':
+                        return split_names[0]
                     else:
-                        add += 'parameters.'
+                        prepend += ['parameters']
                 else:
                     raise RuntimeError('Why are you here?')
 
-            # Check if we have to add
-            if ('.$.' in name or name.startswith('$.') or name.endswith('.$') or name == '$' or
-                            '.' + pypetconstants.RUN_NAME in name or
-                    name.startswith(pypetconstants.RUN_NAME)):
+            # Check if we have to add a prefix containing the current run
+            if '$' in split_names:
                 pass
-
-            elif name and (root._is_run and (group_type_name == RESULT_GROUP or
-                                                     group_type_name == DERIVED_PARAMETER_GROUP)):
+            elif any([name.startswith(pypetconstants.RUN_NAME) for name in split_names]):
+                pass
+            elif split_names and (root._is_run and root._auto_run_prepend and
+                                      (group_type_name == RESULT_GROUP or
+                                       group_type_name == DERIVED_PARAMETER_GROUP)):
 
                 if start_node.v_depth == 0:
-                    add = add + 'runs.' + root.v_crun + '.'
+                    prepend += ['runs', root.v_crun]
 
                 elif start_node.v_depth == 1:
 
-                    if name == 'runs':
-                        return name
+                    if len(split_names) == 1 and split_names[0] == 'runs':
+                        return split_names
                     else:
-                        add = add + 'runs.' + root.v_crun + '.'
+                        prepend += ['runs', root.v_crun]
 
-                elif start_node.v_depth == 2 and start_node.v_crun == 'runs':
-                    add += root.v_crun + '.'
+                elif start_node.v_depth == 2 and start_node.v_name == 'runs':
+                    prepend += [root.v_crun]
 
-        name = add + name
+        if prepend:
+            split_names = prepend + split_names
 
-        return name
+        return split_names
 
     @staticmethod
-    def _determine_types(start_node, name, add_leaf):
+    def _determine_types(start_node, first_name, add_leaf):
         """Determines types for generic additions"""
         if start_node.v_is_root:
-            where = name.split('.')[0]
+            where = first_name
         else:
             where = start_node._branch
 
@@ -1067,7 +1044,8 @@ class NaturalNamingInterface(HasLogger):
         else:
             return type_tuple[0], type_tuple[0]
 
-    def _add_generic(self, start_node, type_name, group_type_name, args, kwargs, add_prefix=True):
+    def _add_generic(self, start_node, type_name, group_type_name, args, kwargs,
+                     add_prefix=True, check_naming=True):
         """Adds a given item to the tree irrespective of the subtree.
 
         Infers the subtree from the arguments.
@@ -1107,77 +1085,97 @@ class NaturalNamingInterface(HasLogger):
 
             Additional keyword arguments that might be handed over to the instance constructor.
 
+        :param add_prefix:
+
+            If a prefix group, i.e. `results`, `config`, etc. should be added
+
+        :param check_naming:
+
+            If it should be checked for correct namings, can be set to ``False`` if data is loaded
+            and we know that all names are correct.
+
         :return: The new added instance
 
         """
-        if type_name == group_type_name:
-            # Wee add a group node, this can be only done by name:
-            args = list(args)
-            name = args.pop(0)
-            instance = None
-            constructor = None
+        args = list(args)
+        create_new = True
+        name = ''
+        instance = None
+        constructor = None
 
-            if group_type_name == GROUP:
-                group_type_name, type_name = self._determine_types(start_node, name, False)
-        else:
-            # # We add a leaf node in the end:
-            args = list(args)
+        # First check if the item is already a given instance
+        if len(args) == 1 and len(kwargs) == 0:
+            item = args[0]
+            try:
+                name = item.v_full_name
+                instance = item
 
-            create_new = True
-            name = ''
-            instance = None
-            constructor = None
+                create_new = False
+            except AttributeError:
+                pass
 
-            # First check if the item is already a given instance
-            if len(args) == 1 and len(kwargs) == 0:
-                item = args[0]
-                try:
-                    name = item.v_full_name
-                    instance = item
-                    # constructor = None
-
-                    create_new = False
-                except AttributeError:
-                    pass
-
-            # If the item is not an instance yet, check if args[0] is a class and args[1] is
-            # a string describing the new name of the instance.
-            # If args[0] is not a class it is assumed to be the name of the new instance.
-            if create_new:
-                if inspect.isclass(args[0]):
-                    constructor = args.pop(0)
-                    # else:
-                # constructor = None
-
-                # instance = None
-
+        # If the item is not an instance yet, check if args[0] is a class and args[1] is
+        # a string describing the new name of the instance.
+        # If args[0] is not a class it is assumed to be the name of the new instance.
+        if create_new:
+            if len(args) > 0 and inspect.isclass(args[0]):
+                constructor = args.pop(0)
+            if len(args) > 0 and isinstance(args[0], compat.base_type):
                 name = args.pop(0)
+            elif 'name' in kwargs:
+                name = kwargs.pop('name')
+            elif 'full_name' in kwargs:
+                name = kwargs.pop('full_name')
+            else:
+                raise ValueError('Could not determine a name of the new item you want to add. '
+                                 'Either pass the name as positional argument or as a keyword '
+                                 'argument `name`.')
 
-            if group_type_name == GROUP:
-                group_type_name, type_name = self._determine_types(start_node, name, True)
+        if check_naming:
+            split_names = name.split('.')
+            for idx, name in enumerate(split_names):
+                translated_shortcut = self._translate_shortcut(name)
+                if translated_shortcut:
+                    translated_shortcut = self._replace_wildcard(translated_shortcut)
+                    split_names[idx] = translated_shortcut
+
+            # First check if the naming of the new item is appropriate
+            faulty_names = self._check_names(split_names, start_node)
+
+            if faulty_names:
+                full_name = '.'.join(split_names)
+                raise ValueError(
+                    'Your Parameter/Result/Node `%s` contains the following not admissible names: '
+                    '%s please choose other names.' % (full_name, faulty_names))
+        else:
+            split_names = name.split('.')
+
+        # Check if the name fulfils the prefix conditions, if not change the name accordingly.
+        if add_prefix:
+            split_names = self._add_prefix(split_names, start_node, group_type_name)
+
+        if group_type_name == GROUP:
+            add_leaf = type_name != group_type_name # If this is equal we add a group node
+            group_type_name, type_name = self._determine_types(start_node, split_names[0],
+                                                               add_leaf)
 
         # Check if we are allowed to add the data
         if self._root_instance._is_run and type_name in SENSITIVE_TYPES:
             raise TypeError('You are not allowed to add config or parameter data or groups '
                             'during a single run.')
 
-        # Check if the name fulfils the prefix conditions, if not change the name accordingly.
-        if add_prefix:
-            name = self._add_prefix(name, start_node, group_type_name)
-
-        name = self._replace_wildcards(name)
-
-        return self._add_to_tree(start_node, name, type_name, group_type_name, instance,
+        return self._add_to_tree(start_node, split_names, type_name, group_type_name, instance,
                                  constructor, args, kwargs)
 
-    def _replace_wildcards(self, name,):
+    def _replace_wildcard(self, name,):
         """Replaces the $ wildcards"""
-        if self._root_instance._idx != -1:
-            name = name.replace('$', self._root_instance.v_crun)
+        if name == '$':
+            if self._root_instance._idx != -1:
+                return self._root_instance.v_crun
+            else:
+                return pypetconstants.RUN_NAME_DUMMY
         else:
-            name = name.replace('$', pypetconstants.RUN_NAME_DUMMY)
-
-        return name
+            return name
 
     def _add_to_nodes_and_leaves(self, new_node, name, full_name=None, run_name=None):
         if full_name is None:
@@ -1201,7 +1199,7 @@ class NaturalNamingInterface(HasLogger):
                 self._nodes_and_leaves_runs_sorted[name][run_name]\
                     [full_name] = new_node
 
-    def _add_to_tree(self, start_node, name, type_name, group_type_name,
+    def _add_to_tree(self, start_node, split_names, type_name, group_type_name,
                      instance, constructor, args, kwargs):
         """Adds a new item to the tree.
 
@@ -1211,9 +1209,9 @@ class NaturalNamingInterface(HasLogger):
 
             Parental node the adding of the item was initiated from.
 
-        :param name:
+        :param split_names:
 
-            Name of the new item
+            List of names of the new item
 
         :param type_name:
 
@@ -1249,24 +1247,13 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        # First check if the naming of the new item is appropriate
-        split_name = name.split('.')
-
-        faulty_names = self._check_names(split_name, start_node)
-
-        if faulty_names:
-            raise ValueError(
-                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
-                '%s please choose other names.'
-                % (name, faulty_names))
-
         # Then walk iteratively from the start node as specified by the new name and create
         # new empty groups on the fly
         try:
             act_node = start_node
-            last_idx = len(split_name) - 1
+            last_idx = len(split_names) - 1
             # last_name = start_node.v_crun
-            for idx, name in enumerate(split_name):
+            for idx, name in enumerate(split_names):
 
                 if name not in act_node._children:
 
@@ -1286,7 +1273,8 @@ class NaturalNamingInterface(HasLogger):
                         if idx == last_idx:
                             # We add a group as desired
                             new_node = self._create_any_group(act_node.v_full_name, name,
-                                                              group_type_name, args, kwargs)
+                                                              group_type_name, instance,
+                                                              constructor, args, kwargs)
                         else:
                             # We add a group on the fly
                             new_node = self._create_any_group(act_node.v_full_name, name,
@@ -1343,9 +1331,38 @@ class NaturalNamingInterface(HasLogger):
                                            full_name=act_node.v_full_name + '.' + name,
                                            run_name=run_name)
 
-    def _create_link_inner(self, act_node, name, instance):
-        """ Creates a link without costly name checking
+    def _create_link(self, act_node, name, instance, check_naming=True):
+        """Creates a link and checks if names are appropriate
         """
+        if check_naming:
+            if '.' in name:
+                raise ValueError('`.` is not allowed in the name of a link!')
+
+            translated_shortcut = self._translate_shortcut(name)
+            if translated_shortcut:
+                name = self._replace_wildcard(translated_shortcut)
+
+            faulty_names = self._check_names([name], act_node)
+
+            if faulty_names:
+                raise ValueError(
+                    'Your Parameter/Result/Node `%s` contains the following not admissible names: '
+                    '%s please choose other names.'
+                    % (name, faulty_names))
+
+            if instance.v_is_root:
+                raise ValueError('You cannot create a link to the root node')
+
+            if act_node.v_is_root and name in SUBTREE_MAPPING:
+                raise ValueError('`%s` is a reserved name for a group under root.' % name)
+
+            if name in act_node._children:
+                raise ValueError('`%s` has already a child or link called `%s`, '
+                                 'cannot add a link with this name.' % (act_node.v_full_name, name))
+
+            if not self._root_instance.f_contains(instance):
+                raise ValueError('You can only link to items within the trajectory tree!')
+
         run_name = act_node._run_branch
         if name.startswith(pypetconstants.RUN_NAME):
             self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
@@ -1368,34 +1385,6 @@ class NaturalNamingInterface(HasLogger):
 
         return instance
 
-    def _create_link(self, act_node, name, instance):
-        """Creates a link and checks if names are appropriate
-        """
-        if '.' in name:
-            raise ValueError('`.` is not allowed in the name of a link!')
-
-        name = self._replace_wildcards(name)
-
-        faulty_names = self._check_names([name], act_node)
-
-        if faulty_names:
-            raise ValueError(
-                'Your Parameter/Result/Node `%s` contains the following not admissible names: '
-                '%s please choose other names.'
-                % (name, faulty_names))
-
-        if instance.v_is_root:
-            raise ValueError('You cannot create a link to the root node')
-
-        if name in act_node._children:
-            raise ValueError('`%s` has already a child or link called `%s`, '
-                             'cannot add a link with this name.' % (act_node.v_full_name, name))
-
-        if not self._root_instance.f_contains(instance):
-            raise ValueError('You can only link to items within the trajectory tree!')
-
-        return self._create_link_inner(act_node, name, instance)
-
     def _check_names(self, split_names, parent_node=None):
         """Checks if a list contains strings with invalid names.
 
@@ -1415,7 +1404,7 @@ class NaturalNamingInterface(HasLogger):
             parent_run_count = 0
         else:
             parent_length = len(parent_node.v_full_name)
-            parent_run_count = int(parent_node._run_branch_pos >= 0)
+            parent_run_count = int(parent_node._run_branch_pos > 0)
 
         faulty_names = ''
 
@@ -1442,9 +1431,9 @@ class NaturalNamingInterface(HasLogger):
             # if ' ' in split_name:
             # faulty_names = '%s `%s` contains white space(s),' % (faulty_names, split_name)
 
-            if not self._translate_shortcut(split_name) is None:
-                faulty_names = '%s `%s` is already an important shortcut,' % (
-                    faulty_names, split_name)
+            # if not self._translate_shortcut(split_name) is None:
+            #     faulty_names = '%s `%s` is already an important shortcut,' % (
+            #         faulty_names, split_name)
 
         name = split_names[-1]
         location = '.'.join(split_names[:-1])
@@ -1470,7 +1459,8 @@ class NaturalNamingInterface(HasLogger):
                                       pypetconstants.RUN_NAME)
         return faulty_names
 
-    def _create_any_group(self, location, name, type_name, args=None, kwargs=None):
+    def _create_any_group(self, location, name, type_name, instance=None, constructor=None,
+                          args=None, kwargs=None):
         """Generically creates a new group inferring from the `type_name`."""
         if location:
             full_name = '%s.%s' % (location, name)
@@ -1483,21 +1473,64 @@ class NaturalNamingInterface(HasLogger):
         if kwargs is None:
             kwargs = {}
 
-        if type_name == RESULT_GROUP:
-            instance = ResultGroup(self, full_name, *args, **kwargs)
-
-        elif type_name == PARAMETER_GROUP:
-            instance = ParameterGroup(self, full_name, *args, **kwargs)
-
-        elif type_name == CONFIG_GROUP:
-            instance = ConfigGroup(self, full_name, *args, **kwargs)
-
-        elif type_name == DERIVED_PARAMETER_GROUP:
-            instance = DerivedParameterGroup(self, full_name, *args, **kwargs)
-        elif type_name == GROUP:
-            instance = NNGroupNode(self, full_name, *args, **kwargs)
+        if instance is None:
+            if constructor is None:
+                if type_name == RESULT_GROUP:
+                    constructor = ResultGroup
+                elif type_name == PARAMETER_GROUP:
+                    constructor = ParameterGroup
+                elif type_name == CONFIG_GROUP:
+                    constructor = ConfigGroup
+                elif type_name == DERIVED_PARAMETER_GROUP:
+                    constructor = DerivedParameterGroup
+                elif type_name == GROUP:
+                    constructor = NNGroupNode
+                else:
+                    raise RuntimeError('You shall not pass!')
+            instance = self._root_instance._construct_instance(constructor, full_name,
+                                                               *args, **kwargs)
         else:
-            raise RuntimeError('You shall not pass!')
+            # Check if someone tries to add a particular standard group to a branch where
+            # it does not belong:
+            if type_name == RESULT_GROUP:
+                if type(instance) in (NNGroupNode,
+                                   ParameterGroup,
+                                   ConfigGroup,
+                                   DerivedParameterGroup):
+                    raise TypeError('You cannot add a `%s` type of group under results' %
+                                    str(type(instance)))
+            elif type_name == PARAMETER_GROUP:
+                if type(instance) in (NNGroupNode,
+                                   ResultGroup,
+                                   ConfigGroup,
+                                   DerivedParameterGroup):
+                    raise TypeError('You cannot add a `%s` type of group under parameters' %
+                                    str(type(instance)))
+            elif type_name == CONFIG_GROUP:
+                if type(instance) in (NNGroupNode,
+                                   ParameterGroup,
+                                   ResultGroup,
+                                   DerivedParameterGroup):
+                    raise TypeError('You cannot add a `%s` type of group under config' %
+                                    str(type(instance)))
+            elif type_name == DERIVED_PARAMETER_GROUP:
+                if type(instance) in (NNGroupNode,
+                                   ParameterGroup,
+                                   ConfigGroup,
+                                   ResultGroup):
+                    raise TypeError('You cannot add a `%s` type of group under derived '
+                                    'parameters' % str(type(instance)))
+            elif type_name == GROUP:
+                if type(instance) in (ResultGroup,
+                                   ParameterGroup,
+                                   ConfigGroup,
+                                   DerivedParameterGroup):
+                    raise TypeError('You cannot add a `%s` type of group under other data' %
+                                    str(type(instance)))
+            else:
+                raise RuntimeError('You shall not pass!')
+            instance._rename(full_name)
+            instance._nn_interface = self
 
         self._root_instance._all_groups[instance.v_full_name] = instance
 
@@ -1558,8 +1591,7 @@ class NaturalNamingInterface(HasLogger):
                     constructor = root._standard_parameter
                 else:
                     constructor = root._standard_leaf
-
-            instance = constructor(full_name, *args, **kwargs)
+            instance = root._construct_instance(constructor, full_name, *args, **kwargs)
         else:
             instance._rename(full_name)
 
@@ -1568,14 +1600,13 @@ class NaturalNamingInterface(HasLogger):
         if full_name in where_dict:
             raise AttributeError(full_name + ' is already part of trajectory,')
 
-        if type_name != RESULT:
-            if full_name in root._changed_default_parameters:
-                self._logger.info(
-                    'You have marked parameter %s for change before, so here you go!' %
-                    full_name)
+        if type_name != RESULT and full_name in root._changed_default_parameters:
+            self._logger.info(
+                'You have marked parameter %s for change before, so here you go!' %
+                full_name)
 
-                change_args, change_kwargs = root._changed_default_parameters.pop(full_name)
-                instance.f_set(*change_args, **change_kwargs)
+            change_args, change_kwargs = root._changed_default_parameters.pop(full_name)
+            instance.f_set(*change_args, **change_kwargs)
 
         where_dict[full_name] = instance
 
@@ -1590,7 +1621,6 @@ class NaturalNamingInterface(HasLogger):
             return data.f_get()
         else:
             return data
-
 
     def _iter_nodes(self, node, recursive=False, max_depth=float('inf'),
                     with_links=True, in_search=False, predicate=None):
@@ -1627,6 +1657,9 @@ class NaturalNamingInterface(HasLogger):
             branch = x.v_run_branch
             return branch == 'trajectory' or branch in run_name_set
 
+        if max_depth is None:
+            max_depth = float('inf')
+
         crun = self._run_filter
 
         if predicate is None:
@@ -1652,23 +1685,12 @@ class NaturalNamingInterface(HasLogger):
                                             crun, max_depth, with_links,
                                             in_search, predicate)
         else:
+            iterator = (x for x in self._make_child_iterator(node, crun, with_links) if
+                        predicate(x[2]))
             if in_search:
-                return (x for x in self._make_child_iterator(node, crun, with_links) if
-                        predicate(x[1][1]))
+                return iterator # Here we return tuples: (depth, name, object)
             else:
-                return (x[1][1] for x in self._make_child_iterator(node, crun, with_links) if
-                predicate(x[1][1]))
-
-
-
-    @staticmethod
-    def _iter_leaves(node, with_links=True):
-        """ Iterates over all leaves hanging below `node`."""
-        for node in node.f_iter_nodes(recursive=True, with_links=with_links):
-            if node.v_is_leaf:
-                yield node
-            else:
-                continue
+                return (x[2] for x in iterator) # Here we only want the objects themselves
 
     def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
                  with_links=True):
@@ -1712,7 +1734,7 @@ class NaturalNamingInterface(HasLogger):
             else:
                 iterator = compat.itervalues(temp_dict)
         else:
-            iterator = self._iter_leaves(node, with_links=with_links)
+            iterator = node.f_iter_leaves(with_links=with_links)
 
         # If not we need to build the dict by iterating recursively over all leaves:
         result_dict = {}
@@ -1790,13 +1812,14 @@ class NaturalNamingInterface(HasLogger):
         if predicate is None:
             predicate = lambda x: True
 
-        queue = iter([(0, node.v_name, node)])
+        iterator_queue = IteratorChain([(0, node.v_name, node)])
+        #iterator_queue = iter([(0, node.v_name, node)])
         start = True
         visited_linked_nodes = set([])
 
         while True:
             try:
-                depth, name, item = next(queue)
+                depth, name, item = next(iterator_queue)
                 full_name = item._full_name
                 if start or predicate(item):
                     if full_name in visited_linked_nodes:
@@ -1816,12 +1839,13 @@ class NaturalNamingInterface(HasLogger):
                         if full_name in linked_by:
                             visited_linked_nodes.add(full_name)
 
-                        if not item._leaf and depth < max_depth:
+                        if not item._is_leaf and depth < max_depth:
                             child_iterator = NaturalNamingInterface._make_child_iterator(item,
                                                                         run_name,
                                                                         with_links,
                                                                         current_depth=depth)
-                            queue = itools.chain(queue, child_iterator)
+                            iterator_queue.add(child_iterator)
+                            #iterator_queue = itools.chain(iterator_queue, child_iterator)
             except StopIteration:
                 break
 
@@ -1940,13 +1964,13 @@ class NaturalNamingInterface(HasLogger):
 
             If links should be considered
 
-        :return: The found node
+        :return: The found node and the depth it was found for
 
         """
 
         # If we find it directly there is no need for an exhaustive search
         if key in node._children and (with_links or key not in node._links):
-            return node._children[key]
+            return node._children[key], 1
 
         crun = self._run_filter
 
@@ -1955,7 +1979,7 @@ class NaturalNamingInterface(HasLogger):
             try:
                 result_node = self._very_fast_search(node, key, crun, with_links)
                 if result_node is not None:
-                    return result_node
+                    return result_node, 0
             except pex.TooManyGroupsError:
                 pass
             except pex.NotUniqueNodeError:
@@ -1989,7 +2013,7 @@ class NaturalNamingInterface(HasLogger):
                 result_node = child
                 result_depth = depth
 
-        return result_node
+        return result_node, result_depth
 
     def _backwards_search(self, start_node, split_name, max_depth=float('inf'), shortcuts=True):
         """ Performs a backwards search from the terminal node back to the start node
@@ -2023,13 +2047,6 @@ class NaturalNamingInterface(HasLogger):
         parent_full_name = start_node.v_full_name
 
         split_length = len(split_name)
-
-        if len(candidate_dict) > LENGTH_WARNING_THRESHOLD:
-            self._logger.warning('Backwards search found more than %d possible candidates'
-                                 '(it found %d potential terminal nodes for `%s`). '
-                                 'Better use forward search and try to avoid '
-                                 'shortcuts for faster performance.' %
-                                 (LENGTH_WARNING_THRESHOLD, len(candidate_dict), key))
 
         for candidate_name in candidate_dict:
             # Check if candidate startswith the parent's name
@@ -2120,9 +2137,7 @@ class NaturalNamingInterface(HasLogger):
         for idx, key in enumerate(split_name):
             translated_shortcut = self._translate_shortcut(key)
             if translated_shortcut:
-                key = translated_shortcut
-            if key == '$':
-                key = self._replace_wildcards(key)
+                key = self._replace_wildcard(translated_shortcut)
             split_name[idx] = key
 
         return self._backwards_search(node, split_name, max_depth, shortcuts)
@@ -2193,6 +2208,16 @@ class NaturalNamingInterface(HasLogger):
                 split_name = [name]
             else:
                 split_name = name.split('.')
+
+            if node.v_is_root:
+                # We want to add `parameters`, `config`, `derived_parameters` and `results`
+                # on the fly if they don't exist
+                key = split_name[0]
+                translated_shortcut = self._translate_shortcut(key)
+                if translated_shortcut:
+                    key = translated_shortcut
+                if key in SUBTREE_MAPPING and key not in node._children:
+                    node.f_add_group(key)
 
             if max_depth is None:
                 max_depth = float('inf')
@@ -2306,6 +2331,12 @@ class NaturalNamingInterface(HasLogger):
         result = None
         name = '.'.join(split_name)
 
+        if len(split_name) > max_depth:
+            raise AttributeError('The node or param/result `%s`, cannot be found under `%s`'
+                                 'The name you are looking for is larger than the maximum '
+                                 'search depth.' %
+                                 (name, node.v_full_name))
+
         if shortcuts and not try_auto_load_directly:
             first = split_name[0]
 
@@ -2322,7 +2353,8 @@ class NaturalNamingInterface(HasLogger):
                     # since looking into a single dict costs O(1)].
                     result = node
                     for key in split_name:
-                        result = self._search(result, key, max_depth, with_links)
+                        result, depth = self._search(result, key, max_depth, with_links)
+                        max_depth -= depth
                         if result is None:
                             break
         elif not try_auto_load_directly:
@@ -2363,20 +2395,23 @@ class NaturalNamingInterface(HasLogger):
             return result
 
 
-class NNGroupNode(NNTreeNode):
+class NNGroupNode(NNTreeNode, KnowsTrajectory):
     """A group node hanging somewhere under the trajectory or single run root node.
 
     You can add other groups or parameters/results to it.
 
     """
 
-    def __init__(self, nn_interface=None, full_name='', comment=''):
-        super(NNGroupNode, self).__init__(full_name, comment=comment, leaf=False)
+    def __init__(self, full_name='', trajectory=None, comment=''):
+        super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
         self._children = {}
-        self._nn_interface = nn_interface
         self._links = {}
         self._groups = {}
         self._leaves = {}
+        if trajectory is not None:
+            self._nn_interface = trajectory._nn_interface
+        else:
+            self._nn_interface = None
 
     def __repr__(self):
         return '<%s>' % self.__str__()
@@ -2419,7 +2454,7 @@ class NNGroupNode(NNTreeNode):
         Whether to iterate recursively is determined by `v_iter_recursive`.
 
         """
-        return self.f_iter_nodes(recursive=self._nn_interface._get_iter_recursive())
+        return self.f_iter_nodes(recursive=self.v_root.v_iter_recursive)
 
     def f_debug(self):
         """Creates a dummy object containing the whole tree to make unfolding easier.
@@ -2471,7 +2506,20 @@ class NNGroupNode(NNTreeNode):
 
         return debug_tree
 
-    def f_add_group(self, name, comment=''):
+    def f_get_parent(self):
+        """Returns the parent of the node.
+
+        Raises a TypeError if current node is root.
+
+        """
+        if self.v_is_root:
+            raise TypeError('Root does not have a parent')
+        elif self.v_location == '':
+            return self.v_root
+        else:
+            return self.v_root.f_get(self.v_location, fast_access=False, shortcuts=False)
+
+    def f_add_group(self, *args, **kwargs):
         """Adds an empty generic group under the current node.
 
         You can add to a generic group anywhere you want. So you are free to build
@@ -2489,7 +2537,7 @@ class NNGroupNode(NNTreeNode):
 
         return self._nn_interface._add_generic(self, type_name=GROUP,
                                                group_type_name=GROUP,
-                                               args=(name, comment), kwargs={}, add_prefix=False)
+                                               args=args, kwargs=kwargs, add_prefix=False)
 
     def f_add_link(self, name_or_item, full_name_or_item=None):
         """Adds a link to an existing node.
@@ -2500,12 +2548,14 @@ class NNGroupNode(NNTreeNode):
         Or can be called as ``node.f_add_link(name, other_node)`` to add a link to the
         `other_node` and the given `name` of the link.
 
-
+        In contrast to addition of groups and leaves,  colon separated names
+        are **not** allowed, i.e. ``node.f_add_link('mygroup.mylink', other_node)``
+        does not work.
 
         """
         if isinstance(name_or_item, compat.base_type):
             name = name_or_item
-            if isinstance( full_name_or_item, compat.base_type):
+            if isinstance(full_name_or_item, compat.base_type):
                 instance = self.f_get_root().f_get(full_name_or_item)
             else:
                 instance =  full_name_or_item
@@ -2519,7 +2569,7 @@ class NNGroupNode(NNTreeNode):
         """ Removes a link from from the current group node with a given name.
 
         Does not delete the link from the hard drive. If you want to do this,
-        checkout :func:`~pypet.trajectory.SingleRun.f_delete_links`
+        checkout :func:`~pypet.trajectory.Trajectory.f_delete_links`
 
         """
         if name not in self._links:
@@ -2587,9 +2637,27 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self.f_contains(item,
-                               shortcuts=self._nn_interface._get_shortcuts(),
-                               max_depth=self._nn_interface._get_max_depth(),
-                               with_links=self._nn_interface._get_with_links())
+                               shortcuts=self.v_root.v_shortcuts,
+                               max_depth=self.v_root.v_max_depth,
+                               with_links=self.v_root.v_with_links)
+
+    def f_remove(self, recursive=True, predicate=None):
+        """Recursively removes the group and all it's children.
+
+        :param recursive:
+
+            If removal should be applied recursively. If not, node can only be removed
+            if it has no children.
+
+        :param predicate:
+
+            In case of recursive removal, you can selectively remove nodes in the tree.
+            Predicate which can evaluate for each node to ``True`` in order to remove the node or
+            ``False`` if the node should be kept. Leave ``None`` if you want to remove all nodes.
+
+        """
+        parent = self.f_get_parent()
+        parent.f_remove_child(self.v_name, recursive=recursive, predicate=predicate)
 
     def f_remove_child(self, name, recursive=False, predicate=None):
         """Removes a child of the group.
@@ -2626,17 +2694,14 @@ class NNGroupNode(NNTreeNode):
         if not name in self._children:
             raise ValueError('Your group `%s` does not contain the child `%s`.' %
                              (self.v_full_name, name))
-
         else:
             child = self._children[name]
-            if name in self._links:
-                self.f_remove_link(name)
-            elif not child.v_is_leaf and child.f_has_children and not recursive:
+            if (name not in self._links and
+                    not child.v_is_leaf and
+                    child.f_has_children() and
+                    not recursive):
                 raise TypeError('Cannot remove child. It is a group with children. Use'
                                 ' f_remove with ``recursive = True``')
-            elif not child.v_is_leaf and child.f_has_links and not recursive:
-                raise TypeError('Cannot remove child. It is a group with links. Use '
-                                'r_remove with ``recursive = True`` or remove links manually.')
             else:
                 self._nn_interface._remove_subtree(self, name, predicate)
 
@@ -2694,6 +2759,10 @@ class NNGroupNode(NNTreeNode):
             search_string = item
             item = None
 
+        if search_string == '':
+            return False # To allow to search for nodes wit name = '', which are never part
+            # of the trajectory
+
         try:
             result = self.f_get(search_string,
                                 shortcuts=shortcuts, max_depth=max_depth, with_links=with_links)
@@ -2707,8 +2776,8 @@ class NNGroupNode(NNTreeNode):
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
-            # We set a private item
-            self.__dict__[key] = value
+            # We set a private attribute
+            super(NNGroupNode, self).__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # If we set a property we need this work around here:
             python_property = getattr(self.__class__, key)
@@ -2716,15 +2785,30 @@ class NNGroupNode(NNTreeNode):
                 raise AttributeError('%s is read only!' % key)
             else:
                 python_property.fset(self, value)
+        elif (isinstance(value, tuple) and
+            len(value) == 2 and isinstance(value[1], compat.base_type)):
+            value, comment = value
+            self.f_add_leaf(key, value, comment=comment)
+        elif isinstance(value, (NNGroupNode, NNLeafNode)):
+            old_name = value.v_full_name
+            try:
+                if self.v_root.f_contains(value, shortcuts=False, with_links=False):
+                    self.f_add_link(key, value)
+                else:
+                    name = value.v_full_name
+                    if name == '':
+                        value._rename(key)
+                    elif name != key:
+                        value._rename(key + '.' + name)
+                    if isinstance(value, NNGroupNode):
+                        self.f_add_group(value)
+                    else:
+                        self.f_add_leaf(value)
+            except:
+                value._rename(old_name)
+                raise
         else:
-            # Otherwise we will set a value to an existing parameter.
-            # Only works if the parameter exists. There is no new parameter created!
             instance = self.f_get(key)
-
-            if not instance.v_is_parameter:
-                raise AttributeError('You cannot assign values to a tree node or a list of nodes '
-                                     'and results, it only works for parameters ')
-
             instance.f_set(value)
 
     def __getitem__(self, item):
@@ -2743,12 +2827,18 @@ class NNGroupNode(NNTreeNode):
             raise AttributeError('This is to avoid pickling issues')
 
         return self._nn_interface._get(self, name,
-                                       fast_access=self._nn_interface._get_fast_access(),
-                                       shortcuts=self._nn_interface._get_shortcuts(),
-                                       max_depth=self._nn_interface._get_max_depth(),
-                                       auto_load=self._nn_interface._get_auto_load(),
-                                       with_links=self._nn_interface._get_with_links())
+                                       fast_access=self.v_root.v_fast_access,
+                                       shortcuts=self.v_root.v_shortcuts,
+                                       max_depth=self.v_root.v_max_depth,
+                                       auto_load=self.v_root.v_auto_load,
+                                       with_links=self.v_root.v_with_links)
 
+    @property
+    def v_root(self):
+        """Link to the root of the tree, i.e. the trajectory"""
+        return self._nn_interface._root_instance
+
+    @deprecated('Please use `v_root` instead`')
     def f_get_root(self):
         """Returns the root node of the tree.
 
@@ -2757,12 +2847,14 @@ class NNGroupNode(NNTreeNode):
         """
         return self._nn_interface._root_instance
 
-    def f_iter_nodes(self, recursive=True, with_links=True, predicate=None):
+    def f_iter_nodes(self, recursive=True, with_links=True, max_depth=None, predicate=None):
         """Iterates recursively (default) over nodes hanging below this group.
 
         :param recursive: Whether to iterate the whole sub tree or only immediate children.
 
         :param with_links: If links should be considered
+
+        :param max_depth: Maximum depth in search tree relative to start node (inclusive)
 
         :param predicate:
 
@@ -2792,6 +2884,7 @@ class NNGroupNode(NNTreeNode):
 
         """
         return self._nn_interface._iter_nodes(self, recursive=recursive, with_links=with_links,
+                                              max_depth=max_depth,
                                               predicate=predicate)
 
     def f_iter_leaves(self, with_links=True):
@@ -2806,7 +2899,9 @@ class NNGroupNode(NNTreeNode):
             Iterator over all leaf nodes
 
         """
-        return self._nn_interface._iter_leaves(self, with_links=with_links)
+        for node in self.f_iter_nodes(with_links=with_links):
+            if node.v_is_leaf:
+                yield node
 
     def f_get_all(self, name, max_depth=None, shortcuts=True):
         """ Searches for all occurrences of `name` under `node`.
@@ -2853,7 +2948,6 @@ class NNGroupNode(NNTreeNode):
 
         In contrast to `f_get`, fast access is True by default.
 
-
         """
         try:
             return self.f_get(name, fast_access=fast_access,
@@ -2878,7 +2972,6 @@ class NNGroupNode(NNTreeNode):
 
             If links are considered. Cannot be set to ``False`` if ``auto_load`` is ``True``.
 
-
         :param shortcuts:
 
             If shortcuts are allowed and the trajectory can *hop* over nodes in the
@@ -2886,8 +2979,8 @@ class NNGroupNode(NNTreeNode):
 
         :param max_depth:
 
-            Maximum depth (relative to start node) how search should progress in tree.
-            `None` means no depth limit.  Only relevant if `shortcuts` are allowed.
+            Maximum depth relative to starting node (inclusive).
+            `None` means no depth limit.
 
         :param auto_load:
 
@@ -2911,10 +3004,11 @@ class NNGroupNode(NNTreeNode):
                 particular depth of the tree. In case of backwards search if more than
                 one candidate is found regardless of the depth.
 
+            DataNotInStorageError:
+
+                In case auto-loading fails
+
             Any exception raised by the StorageService in case auto-loading is enabled
-
-
-
 
         """
         return self._nn_interface._get(self, name, fast_access=fast_access,
@@ -3014,7 +3108,8 @@ class NNGroupNode(NNTreeNode):
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
                                            with_links=with_links)
 
-    def f_store_child(self, name, recursive=False, skip_stored=False):
+    def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA,
+                      max_depth=None):
         """Stores a child or recursively a subtree to disk.
 
         :param name:
@@ -3026,17 +3121,15 @@ class NNGroupNode(NNTreeNode):
 
             Whether recursively all children's children should be stored too.
 
-        :param skip_stored:
+        :param store_data:
 
-            Set this to ``True`` if you want faster storage. *pypet* will automatically skip
-            all checks if new data can be added to a node that has already been stored.
-            For example, this will skip checking of new entries to annotations in group nodes or
-            data items within results.
+            For how to choose 'store_data' see :ref:`more-on-storing`.
 
-            Be aware that data is not overwritten or deleted even in case ``skip_stored=False``.
-            Only new data is added to dist. If you want to overwrite existing data,
-            check :func:`~pypet.trajectory.Trajectory.f_store_item` and
-            :func:`~pypet.trajectory.Trajectory.f_delete_item`.
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to store
+            data relative from current node. Leave `None` if you don't want to limit
+            the depth.
 
         :raises: ValueError if the child does not exist.
 
@@ -3050,11 +3143,41 @@ class NNGroupNode(NNTreeNode):
         storage_service = traj.v_storage_service
 
         storage_service.store(pypetconstants.TREE, self, name,
-                              trajectory_name=traj.v_trajectory_name,
+                              trajectory_name=traj.v_name,
                               recursive=recursive,
-                              skip_stored=skip_stored)
+                              store_data=store_data,
+                              max_depth=max_depth)
 
-    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA):
+    def f_store(self, recursive=True, store_data=pypetconstants.STORE_DATA,
+                max_depth=None):
+        """Stores a group node to disk
+
+        :param recursive:
+
+            Whether recursively all children should be stored too. Default is ``True``.
+
+        :param store_data:
+
+            For how to choose 'store_data' see :ref:`more-on-storing`.
+
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to store
+            data relative from current node. Leave `None` if you don't want to limit
+            the depth.
+
+        """
+        traj = self._nn_interface._root_instance
+        storage_service = traj.v_storage_service
+
+        storage_service.store(pypetconstants.GROUP, self,
+                              trajectory_name=traj.v_name,
+                              recursive=recursive,
+                              store_data=store_data,
+                              max_depth=max_depth)
+
+    def f_load_child(self, name, recursive=False, load_data=pypetconstants.LOAD_DATA,
+                     max_depth=None):
         """Loads a child or recursively a subtree from disk.
 
         :param name:
@@ -3074,6 +3197,12 @@ class NNGroupNode(NNTreeNode):
             Flag how to load the data.
             For how to choose 'load_data' see :ref:`more-on-loading`.
 
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to load
+            load data relative from current node. Leave `None` if you don't want to limit
+            the depth.
+
         :returns:
 
             The loaded child, in case of grouping ('groupA.groupB.childC') the last
@@ -3084,11 +3213,51 @@ class NNGroupNode(NNTreeNode):
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service
 
-        storage_service.load(pypetconstants.TREE, self, child_name=name,
-                             trajectory_name=traj.v_trajectory_name,
-                             recursive=recursive, load_data=load_data, trajectory=traj)
+        storage_service.load(pypetconstants.TREE, self, name,
+                             trajectory_name=traj.v_name,
+                             load_data=load_data,
+                             recursive=recursive,
+                             max_depth=max_depth)
 
         return self.f_get(name, shortcuts=False)
+
+    def f_load(self, recursive=True, load_data=pypetconstants.LOAD_DATA,
+               max_depth=None):
+        """Loads a group from disk.
+
+        :param recursive:
+
+            Default is ``True``.
+            Whether recursively all nodes below the current node should be loaded, too.
+            Note that links are never evaluated recursively. Only the linked node
+            will be loaded if it does not exist in the tree, yet. Any nodes or links
+            of this linked node are not loaded.
+
+        :param load_data:
+
+            Flag how to load the data.
+            For how to choose 'load_data' see :ref:`more-on-loading`.
+
+        :param max_depth:
+
+            In case `recursive` is `True`, you can specify the maximum depth to load
+            load data relative from current node.
+
+        :returns:
+
+            The node itself.
+
+        """
+
+        traj = self._nn_interface._root_instance
+        storage_service = traj.v_storage_service
+
+        storage_service.load(pypetconstants.GROUP, self,
+                             trajectory_name=traj.v_name,
+                             load_data=load_data,
+                             recursive=recursive,
+                             max_depth=max_depth)
+        return self
 
 
 class ParameterGroup(NNGroupNode):
@@ -3098,8 +3267,13 @@ class ParameterGroup(NNGroupNode):
 
     """
 
-    def f_add_parameter_group(self, name, comment=''):
+    def f_add_parameter_group(self, *args, **kwargs):
         """Adds an empty parameter group under the current node.
+
+        Can be called with ``f_add_parameter_group('MyName', 'this is an informative comment')``
+        or ``f_add_parameter_group(name='MyName', comment='This is an informative comment')``
+        or with a given new group instance:
+        ``f_add_parameter_group(ParameterGroup('MyName', comment='This is a comment'))``.
 
         Adds the full name of the current node as prefix to the name of the group.
         If current node is the trajectory (root), the prefix `'parameters'`
@@ -3112,7 +3286,7 @@ class ParameterGroup(NNGroupNode):
         """
         return self._nn_interface._add_generic(self, type_name=PARAMETER_GROUP,
                                                group_type_name=PARAMETER_GROUP,
-                                               args=(name, comment), kwargs={})
+                                               args=args, kwargs=kwargs)
 
     def f_add_parameter(self, *args, **kwargs):
         """ Adds a parameter under the current node.
@@ -3141,6 +3315,8 @@ class ParameterGroup(NNGroupNode):
                                                group_type_name=PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_apar = f_add_parameter  # Abbreviation of the function
+
 
 class ResultGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.results`.
@@ -3149,7 +3325,7 @@ class ResultGroup(NNGroupNode):
 
     """
 
-    def f_add_result_group(self, name, comment=''):
+    def f_add_result_group(self, *args, **kwargs):
         """Adds an empty result group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -3164,7 +3340,7 @@ class ResultGroup(NNGroupNode):
 
         return self._nn_interface._add_generic(self, type_name=RESULT_GROUP,
                                                group_type_name=RESULT_GROUP,
-                                               args=(name, comment), kwargs={})
+                                               args=args, kwargs=kwargs)
 
     def f_add_result(self, *args, **kwargs):
         """Adds a result under the current node.
@@ -3199,6 +3375,8 @@ class ResultGroup(NNGroupNode):
                                                group_type_name=RESULT_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_ares = f_add_result  # Abbreviation of the function
+
 
 class DerivedParameterGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.derived_parameters`.
@@ -3207,7 +3385,7 @@ class DerivedParameterGroup(NNGroupNode):
 
     """
 
-    def f_add_derived_parameter_group(self, name, comment=''):
+    def f_add_derived_parameter_group(self, *args, **kwargs):
         """Adds an empty derived parameter group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -3222,7 +3400,7 @@ class DerivedParameterGroup(NNGroupNode):
 
         return self._nn_interface._add_generic(self, type_name=DERIVED_PARAMETER_GROUP,
                                                group_type_name=DERIVED_PARAMETER_GROUP,
-                                               args=(name, comment), kwargs={})
+                                               args=args, kwargs=kwargs)
 
     def f_add_derived_parameter(self, *args, **kwargs):
         """Adds a derived parameter under the current group.
@@ -3238,6 +3416,8 @@ class DerivedParameterGroup(NNGroupNode):
                                                group_type_name=DERIVED_PARAMETER_GROUP,
                                                args=args, kwargs=kwargs)
 
+    f_adpar = f_add_derived_parameter  # Abbreviation of the function
+
 
 class ConfigGroup(NNGroupNode):
     """Group node in your trajectory, hanging below `traj.config`.
@@ -3246,7 +3426,7 @@ class ConfigGroup(NNGroupNode):
 
     """
 
-    def f_add_config_group(self, name, comment=''):
+    def f_add_config_group(self, *args, **kwargs):
         """Adds an empty config group under the current node.
 
         Adds the full name of the current node as prefix to the name of the group.
@@ -3259,7 +3439,7 @@ class ConfigGroup(NNGroupNode):
         """
         return self._nn_interface._add_generic(self, type_name=CONFIG_GROUP,
                                                group_type_name=CONFIG_GROUP,
-                                               args=(name, comment), kwargs={})
+                                               args=args, kwargs=kwargs)
 
     def f_add_config(self, *args, **kwargs):
         """Adds a config parameter under the current group.
@@ -3274,6 +3454,4 @@ class ConfigGroup(NNGroupNode):
                                                group_type_name=CONFIG_GROUP,
                                                args=args, kwargs=kwargs)
 
-
-
-
+    f_aconf=f_add_config  # Abbreviation of the function

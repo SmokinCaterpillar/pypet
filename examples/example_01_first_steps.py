@@ -1,5 +1,6 @@
 __author__ = 'Robert Meyer'
 
+import os # To allow file paths working under Windows and Linux
 
 from pypet import Environment
 from pypet.utils.explore import cartesian_product
@@ -9,22 +10,27 @@ def multiply(traj):
 
     :param traj:
 
-        Trajectory - or more precisely a SingleRun - containing
+        Trajectory containing
         the parameters in a particular combination,
         it also serves as a container for results.
 
     """
-    z=traj.x*traj.y
+    z = traj.x * traj.y
     traj.f_add_result('z', z, comment='Result of our simulation!')
 
 
-
 # Create an environment that handles running
+filename = os.path.join('experiments', 'example_01', 'HDF5','example_01.hdf5')
+log_folder = os.path.join('experiments','example_01', 'LOGS')
 env = Environment(trajectory='Multiplication',
-                  filename='experiments/example_01/HDF5/example_01.hdf5',
+                  filename=filename,
                   file_title='Example_01_First_Steps',
-                  log_folder='experiments/example_01/LOGS/',
-                  comment='The first example!')
+                  log_folder=log_folder,
+                  comment='The first example!',
+                  large_overview_tables=True,  # To see a nice overview of all
+                  # computed `z` values in the resulting HDF5 file.
+                  # Per default disabled for more compact HDF5 files.
+                  )
 
 # The environment has created a trajectory container for us
 traj = env.v_trajectory
@@ -48,8 +54,11 @@ from pypet.trajectory import Trajectory
 # So, first let's create a new trajectory and pass it the path and name of the HDF5 file.
 # Yet, to be very clear let's delete all the old stuff.
 del traj
+# Before deleting the environment let's disable logging and close all log-files
+env.f_disable_logging()
 del env
-traj = Trajectory(filename='experiments/example_01/HDF5/example_01.hdf5')
+
+traj = Trajectory(filename=filename)
 
 # Now we want to load all stored data.
 traj.f_load(index=-1, load_parameters=2, load_results=2)
@@ -69,5 +78,6 @@ traj.f_load(index=-1, load_parameters=2, load_results=2)
 
 # Finally we want to print a result of a particular run.
 # Let's take the second run named `run_00000001` (Note that counting starts at 0!).
-print 'The result of `run_00000001` is: '
-print traj.run_00000001.z
+print('The result of `run_00000001` is: ')
+print(traj.run_00000001.z)
+

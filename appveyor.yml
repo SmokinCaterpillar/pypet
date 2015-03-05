@@ -1,0 +1,66 @@
+environment:
+
+    matrix:
+        - PYTHON: "C:\\Python27_64"
+          PYTHON_VERSION: "2.7"
+          PYTHON_ARCH: "64"
+          MULTIPROC: "OFF"
+          SINGLECORE: "ON"
+          EXAMPLES: "ON"
+
+        - PYTHON: "C:\\Python27_32"
+          PYTHON_VERSION: "2.7"
+          PYTHON_ARCH: "32"
+          MULTIPROC: "1"
+          SINGLECORE: "OFF"
+          EXAMPLES: "OFF"
+
+        - PYTHON: "C:\\Python27_64"
+          PYTHON_VERSION: "2.7"
+          PYTHON_ARCH: "64"
+          MULTIPROC: "3"
+          SINGLECORE: "OFF"
+          EXAMPLES: "OFF"
+
+        - PYTHON: "C:\\Python34_32"
+          PYTHON_VERSION: "3.4"
+          PYTHON_ARCH: "32"
+          MULTIPROC: "2"
+          SINGLECORE: "OFF"
+          EXAMPLES: "OFF"
+
+        - PYTHON: "C:\\Python34_64"
+          PYTHON_VERSION: "3.4"
+          PYTHON_ARCH: "64"
+          MULTIPROC: "4"
+          SINGLECORE: "OFF"
+          EXAMPLES: "OFF"
+
+        - PYTHON: "C:\\Python34_32"
+          PYTHON_VERSION: "3.4"
+          PYTHON_ARCH: "32"
+          MULTIPROC: "OFF"
+          SINGLECORE: "ON"
+          EXAMPLES: "ON"
+
+
+install:
+    # this installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
+    # and all required packages
+    - powershell .\\ciscripts\\appveyor\\install.ps1
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+    # Install non-conda packages
+    - pip install psutil
+    - pip install dill
+    # Finally install pypet
+    - pip freeze # check installed packages
+    - python setup.py install
+
+
+build: false
+
+
+test_script:
+    - cd ciscripts\\appveyor
+    # Full test suite
+    - runtests.cmd

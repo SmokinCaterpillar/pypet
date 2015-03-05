@@ -4,7 +4,7 @@ __author__ = 'Robert Meyer'
 from pypet.trajectory import Trajectory
 from pypet.storageservice import LazyStorageService
 from pypet.environment import Environment
-from pypet.tests.test_helpers import TEMPDIR
+from pypet.tests.test_helpers import tempdir
 
 import logging
 import cProfile
@@ -22,8 +22,8 @@ def add_data(traj):
 def run_experiments():
     logging.basicConfig(level = logging.INFO)
 
-    logfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'logs')
-    pathfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'hdf5')
+    logfolder = os.path.join(tempfile.gettempdir(), tempdir, 'logs')
+    pathfolder = os.path.join(tempfile.gettempdir(), tempdir, 'hdf5')
 
 
     exponents = np.arange(0, 8, 1)
@@ -65,7 +65,7 @@ def test_loading(filenames, traj_names):
         filename = filenames[idx]
         traj = Trajectory(name=traj_name, filename=filename, add_time=False)
         start = time.time()
-        traj.f_load(load_parameters=2, load_results=1, load_derived_parameters=1)
+        traj.f_load(load_parameters=2, load_derived_parameters=1, load_results=1)
         elapsed = (time.time() - start)
         loading_times[idx]=elapsed
 
@@ -74,7 +74,7 @@ def test_loading(filenames, traj_names):
 
         traj = Trajectory(name=traj_name, filename=filename, add_time=False)
         start = time.time()
-        traj.f_load(load_all=2)
+        traj.f_load(load_data=2)
         elapsed = (time.time() - start)
         loading_times_wd[idx]=elapsed
 
@@ -89,8 +89,8 @@ def profile_single_storing(profile_stroing=False, profile_loading=True):
 
     logging.basicConfig(level = logging.INFO)
 
-    logfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'logs')
-    pathfolder = os.path.join(tempfile.gettempdir(), TEMPDIR, 'hdf5')
+    logfolder = os.path.join(tempfile.gettempdir(), tempdir, 'logs')
+    pathfolder = os.path.join(tempfile.gettempdir(), tempdir, 'hdf5')
 
     res_per_run = 100
 
@@ -135,7 +135,7 @@ def main():
         filenames, traj_names, path_folder = run_experiments()
         test_loading(filenames, traj_names)
     finally:
-        shutil.rmtree(os.path.join(tempfile.gettempdir(), TEMPDIR),True)
+        shutil.rmtree(os.path.join(tempfile.gettempdir(), tempdir),True)
 
 
 if __name__ == '__main__':

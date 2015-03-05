@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import numpy as np
+import os # For path names being viable under Windows and Linux
 
 # Let's reuse the stuff from the previous example
 from example_05_custom_parameter import euler_scheme, FunctionParameter, diff_lorenz
@@ -74,11 +75,12 @@ def diff_roessler(value_array, a, c):
 # And here goes our main function
 def main():
 
-
+    filename = os.path.join('experiments', 'example_06', 'HDF5', 'example_06.hdf5')
+    log_folder = os.path.join('experiments', 'example_06', 'LOGS')
     env = Environment(trajectory='Example_06_Euler_Integration',
-                      filename='experiments/example_06/HDF5/example_06.hdf5',
+                      filename=filename,
                       file_title='Example_06_Euler_Integration',
-                      log_folder='experiments/example_06/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Go for Euler!')
 
 
@@ -125,10 +127,10 @@ def main():
     # I would recommend to do the analysis completely independent from the simulation
     # but for simplicity let's do it here.
     # We won't reload the trajectory this time but simply update the skeleton
-    traj.f_update_skeleton()
+    traj.f_load_skeleton()
 
     #For the fun of it, let's print the source code
-    print '\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq
+    print('\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq)
 
     # Let's get the exploration array:
     initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_range()
@@ -156,6 +158,9 @@ def main():
         # Now we free the data again (because we assume its huuuuuuge):
         del euler_data
         euler_result.f_empty()
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 
 if __name__ == '__main__':

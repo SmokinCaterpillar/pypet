@@ -63,10 +63,16 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
 
-        self.traj.FloatParam=4.0
+        self.traj.par.FloatParam=4.0
+
+        self.traj.par.expexp = 42, 'another param to explore'
 
 
-        self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
+        self.explore_dict = {'FloatParam':[1.0, 1.1, 1.2, 1.3]}
+
+        self.traj.f_explore(self.explore_dict)
+
+        self.explore_dict = {'expexp': [42, 42, 42, 43]}
 
         self.traj.f_explore(self.explore_dict)
 
@@ -104,6 +110,7 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.non_suiting_subgroups.f_add_group('test%d' % irun)
 
         self.assertTrue(str(self.traj.non_suiting_subgroups).endswith('...'))
+
 
     def test_shrink(self):
 
@@ -303,15 +310,9 @@ class TrajectoryTest(unittest.TestCase):
             self.assertTrue(comp.nested_equal(self.traj.f_get(key,fast_access=True),
                                               explore_dict_directly[self.traj.f_get(key).v_full_name]))
 
-    def test_increase_exploration(self):
-
-        self.explore_dict = {'IntParam':[2,1,1,3]}
-
-        self.traj.f_explore(self.explore_dict)
+    def test_not_increase_exploration(self):
 
         self.assertTrue(len(self.traj._explored_parameters)==2)
-
-        self.traj._stored=True
 
         with self.assertRaises(TypeError):
             self.traj.f_explore(self.explore_dict)
@@ -319,6 +320,8 @@ class TrajectoryTest(unittest.TestCase):
     def test_f_get(self):
         self.traj.v_fast_access=True
         self.traj.f_get('FloatParam', fast_access=True) == self.traj.FloatParam
+
+        self.assertTrue(self.traj.f_get('FloatParam').v_branch == 'parameters')
 
         self.traj.v_fast_access=False
 
@@ -498,11 +501,54 @@ class TrajectoryTest(unittest.TestCase):
 
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('crun',22)
+            self.traj.f_add_parameter('_crun',22)
 
+    def test_f_getting_of_children(self):
+        my_groups = self.traj.par.f_get_groups()
+        self.assertTrue(my_groups == self.traj.par._groups)
+        self.assertTrue(my_groups is not self.traj.par._groups)
+
+        my_groups = self.traj.par.f_get_groups(copy=False)
+        self.assertTrue(my_groups == self.traj.par._groups)
+        self.assertTrue(my_groups is self.traj.par._groups)
+
+        my_leaves = self.traj.par.f_get_leaves()
+        self.assertTrue(my_leaves == self.traj.par._leaves)
+        self.assertTrue(my_leaves is not self.traj.par._leaves)
+
+        my_leaves = self.traj.par.f_get_leaves(copy=False)
+        self.assertTrue(my_leaves == self.traj.par._leaves)
+        self.assertTrue(my_leaves is self.traj.par._leaves)
+
+        self.traj.par.k = self.traj.par
+        my_links = self.traj.par.f_get_links()
+        self.assertTrue(my_links == self.traj.par._links)
+        self.assertTrue(my_links is not self.traj.par._links)
+
+        my_links = self.traj.par.f_get_links(copy=False)
+        self.assertTrue(my_links == self.traj.par._links)
+        self.assertTrue(my_links is self.traj.par._links)
 
     def test_max_depth(self):
         self.traj.f_add_parameter('halo.this.is.a.depth.testrr')
+
+        contains = self.traj.par.f_contains(self.traj['is'], shortcuts=True, max_depth=3)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains(self.traj['is'], shortcuts=True, max_depth=2)
+
+        self.assertFalse(contains)
+
+        self.traj.par.mylink = self.traj.this
+
+        contains = self.traj.par.f_contains('is', shortcuts=True, max_depth=2)
+
+        self.assertTrue(contains)
+
+        contains = self.traj.par.f_contains('halo.this', max_depth=1)
+
+        self.assertFalse(contains)
 
         contains = self.traj.f_contains('a.depth.testrr', max_depth=3)
 
@@ -533,6 +579,9 @@ class TrajectoryTest(unittest.TestCase):
         contains = 'testrr' in self.traj
 
         self.assertFalse(contains)
+
+        l = [x for x in self.traj.f_iter_nodes(max_depth=1)]
+        self.assertTrue(len(l) == 4)
 
     def test_root_getting(self):
 
@@ -574,8 +623,12 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('test')
 
 
-    def testremove(self):
-        self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'),remove_empty_groups=True)
+    def test_remove(self):
+
+        with self.assertRaises(TypeError):
+            self.traj.peter.f_remove_child('markus')
+
+        self.traj.f_remove_item(self.traj.f_get('peter.markus.yve'))
 
         with self.assertRaises(AttributeError):
             self.traj.peter.markus.yve
@@ -584,10 +637,23 @@ class TrajectoryTest(unittest.TestCase):
 
         #self.assertTrue(len(self.traj)==1)
 
-        self.traj.f_remove_item('FortyTwo',remove_empty_groups=True)
+        self.traj.f_remove_item('FortyTwo')
 
         self.traj.f_remove_item('SparseParam')
         self.traj.f_remove_item('IntParam')
+
+        self.assertTrue('IntParam' not in self.traj)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_remove(recursive=False)
+
+        self.traj.Im.f_remove()
+
+        self.assertTrue('Im' not in self.traj)
+
+        self.traj.f_remove()
+
+        self.assertTrue(self.traj.f_is_empty())
 
         #self.assertTrue(len(self.traj)==1)
 
@@ -600,6 +666,11 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_parameter('testparam', 0)
         self.traj.f_add_config('testconf', 0)
 
+        self.traj.f_add_config('testconf2', 0)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_preset_config('testconf2', 33)
+
         self.traj.v_fast_access=True
 
         self.assertTrue(self.traj.testparam == 1)
@@ -607,7 +678,33 @@ class TrajectoryTest(unittest.TestCase):
 
         ### should raise an error because 'I_do_not_exist', does not exist:
         with self.assertRaises(pex.PresettingError):
-            self.traj._prepare_experiment()
+            self.traj._prepare_experiment(True)
+
+    def test_f_get_run_information(self):
+        traj = Trajectory()
+
+        traj.f_add_parameter('test', 42)
+
+        traj.f_explore({'test':[1,2,3,4]})
+
+        self.assertFalse(traj.f_is_completed())
+
+        runinfo = traj.f_get_run_information()
+
+        self.assertTrue(len(runinfo) == 4)
+        self.assertTrue(runinfo == traj._run_information)
+        self.assertTrue(runinfo is not traj._run_information)
+
+        runinfo = traj.f_get_run_information(copy=False)
+
+        self.assertTrue(len(runinfo) == 4)
+        self.assertTrue(runinfo == traj._run_information)
+        self.assertTrue(runinfo is traj._run_information)
+
+    def test_mutual_exclusive_kwargs(self):
+        traj = Trajectory()
+        with self.assertRaises(ValueError):
+            traj.f_store(only_init=True, recursive=False)
 
     def test_f_is_completed(self):
         traj = Trajectory()
@@ -664,6 +761,9 @@ class TrajectoryTest(unittest.TestCase):
                 self.assertTrue(str(val)==str(nval), '%s != %s' %(str(val),str(nval)))
 
     def test_dynamic_class_loading(self):
+
+        with self.assertRaises(TypeError):
+            self.traj.f_add_to_dynamic_imports(44)
         self.traj.f_add_parameter(ImAParameterInDisguise,'Rolf', 1.8)
 
     def test_standard_change_param_change(self):
@@ -678,6 +778,64 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_result('Peter.Parker')
 
         self.assertIsInstance(self.traj.Parker, ImAResultInDisguise)
+
+    def test_remove_of_all_type(self):
+        traj = Trajectory()
+
+        traj.par.x = 42, 'param'
+
+        traj.dpar.y = 43, 'dpar'
+
+        traj.conf.z = 44, 'conf'
+
+        traj.res.k = 44, 'jj'
+
+        traj.l = 111, 'kkkk'
+
+        self.assertTrue(len(traj._parameters) == 1)
+        self.assertTrue(len(traj._derived_parameters) == 1)
+        self.assertTrue(len(traj._results) == 1)
+        self.assertTrue(len(traj._config) == 1)
+        self.assertTrue(len(traj._other_leaves) == 1)
+
+        traj.zzz = traj.f_get('x')
+
+        self.assertTrue(len(traj._linked_by) == 1)
+        self.assertTrue(traj.zzz == traj.x)
+        self.assertTrue(traj.x == 42)
+
+        traj.par.f_remove_child('x')
+        self.assertTrue('zzz' not in traj)
+
+        self.assertTrue('x' not in traj)
+
+        self.assertTrue(traj.y == 43)
+        traj.f_remove_child('derived_parameters', recursive=True)
+        self.assertTrue('y' not in traj)
+
+        self.assertTrue(traj.k == 44)
+        traj.f_remove_child('results', recursive = True)
+        self.assertTrue('k' not in traj)
+
+        self.assertTrue(traj.z == 44)
+        traj.f_remove_child('config', recursive = True)
+        self.assertTrue('z' not in traj)
+
+        self.assertTrue(traj.l == 111)
+        traj.f_remove_child('l')
+        self.assertTrue('l' not in traj)
+
+
+        self.assertTrue(len(traj._parameters) == 0)
+        self.assertTrue(len(traj._derived_parameters) == 0)
+        self.assertTrue(len(traj._results) == 0)
+        self.assertTrue(len(traj._config) == 0)
+        self.assertTrue(len(traj._other_leaves) == 0)
+
+        self.assertTrue(len(traj._linked_by) == 0)
+
+
+
 
 
     def test_remove_of_explored_stuff_if_saved(self):
@@ -694,7 +852,7 @@ class TrajectoryTest(unittest.TestCase):
 
         len(self.traj) == 4
 
-    def test_remov_of_explored_stuff_if_not_saved(self):
+    def test_remove_of_explored_stuff_if_not_saved(self):
 
         self.traj = Trajectory()
 
@@ -745,6 +903,52 @@ class TrajectoryTest(unittest.TestCase):
 
                 self.assertEqual(sorted(node.f_get_children(copy=True).keys()),
                                  sorted(node._children.keys()))
+
+        l = [x for x in self.traj.f_iter_nodes(recursive=False)]
+        self.assertTrue(len(l) == 4)
+        self.assertTrue(self.traj.conf in l)
+
+    def test_dir(self):
+
+        self.traj.par.ggg = 444, 'Hey'
+        self.assertTrue('(' in str(self.traj.f_get('ggg')))
+
+
+        dirlist = dir(self.traj)
+
+        self.assertTrue('config' in dirlist)
+        self.assertTrue('parameters' in dirlist)
+
+    def test_debug(self):
+
+        self.traj.f_add_link('me', 'parameters')
+        self.assertTrue(self.traj.f_links() == 1)
+        self.assertTrue(self.traj.me is self.traj.par)
+        debug_tree = self.traj.f_debug()
+        self.assertTrue(hasattr(debug_tree, 'parameters'))
+        self.assertTrue(hasattr(debug_tree, 'results'))
+        self.assertTrue(hasattr(debug_tree, 'me'))
+
+
+    def test_short_names_to_dict_failure(self):
+
+        self.traj.f_add_parameter('lll.ggg' , 44)
+        self.traj.par.ggg = 444, 'Hey'
+
+        with self.assertRaises(ValueError):
+            self.traj.f_to_dict(short_names=True)
+
+    def test_iter_leaves(self):
+
+        count = 0
+        for node in self.traj.f_iter_leaves():
+            self.assertTrue(node.v_is_leaf)
+            count +=1
+
+        all_leaves = len(self.traj._config) + len(self.traj._parameters) +\
+            len(self.traj._results) + len(self.traj._derived_parameters) +\
+            len(self.traj._other_leaves)
+        self.assertTrue(count == all_leaves)
 
     def test_short_cuts(self):
 
@@ -863,7 +1067,7 @@ class TrajectoryMergeTest(unittest.TestCase):
 
         self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
 
-        self.traj.FloatParam=4.0
+        self.traj.par.FloatParam=4.0
         self.traj.v_storage_service = LazyStorageService()
 
 
@@ -894,7 +1098,7 @@ class TrajectoryMergeTest(unittest.TestCase):
 
         self.traj2.f_add_result(Result,'Im.A.Simple.Result',44444)
 
-        self.traj2.FloatParam=4.0
+        self.traj2.par.FloatParam=4.0
 
         self.traj2.f_explore({'FloatParam':[42.0,43.0,1.2,1.3],'Trials':[0,1,2,3]})
         self.traj2.v_storage_service = LazyStorageService()
@@ -972,6 +1176,19 @@ class SingleRunTest(unittest.TestCase):
         resval= self.single_run.res.crun.f_get('Hacks').f_get('val')
         self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
 
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result(comment='55')
+
+    def test_auto_prepend(self):
+        self.single_run.f_adpar('hi.test', 44)
+
+        self.assertEqual(self.single_run.dpar.runs.crun.hi.test, 44)
+
+        self.single_run.v_auto_run_prepend = False
+        self.single_run.f_adpar('huhu.test', 990)
+
+        self.assertEqual(self.single_run.f_get('dpar.huhu.test', shortcuts=False,
+                                               fast_access=True), 990)
 
     def test_standard_change_param_change(self):
         self.single_run.v_standard_parameter=ImAParameterInDisguise

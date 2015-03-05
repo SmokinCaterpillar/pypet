@@ -1,5 +1,7 @@
 __author__ = 'Robert Meyer'
 
+import os # For path names being viable under Windows and Linux
+
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
 
@@ -12,8 +14,10 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-env = Environment(trajectory='Example08',filename='experiments/example_08/HDF5/example_08.hdf5',
-                  file_title='Example08', log_folder='experiments/example_08/LOGS/',
+filename = os.path.join('experiments', 'example_08', 'HDF5', 'example_08.hdf5')
+log_folder = os.path.join('experiments', 'example_08', 'LOGS')
+env = Environment(trajectory='Example08',filename=filename,
+                  file_title='Example08', log_folder=log_folder,
                   comment='Another example!')
 
 # Get the trajectory from the environment
@@ -42,13 +46,16 @@ my_filter_predicate= lambda x,y: x==2 or y==8
 idx_iterator = traj.f_find_idx(['x','y'], my_filter_predicate)
 
 # Now we can print the corresponding results:
-print 'The run names and results for parameter combinations with x==2 or y==8:'
+print('The run names and results for parameter combinations with x==2 or y==8:')
 for idx in idx_iterator:
     # We focus on one particular run. This is equivalent to calling `traj.f_as_run(idx)`.
     traj.v_idx=idx
     run_name = traj.v_as_run
     # and print everything nicely
-    print '%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.z)
+    print('%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.z))
 
 # And we do not forget to set everything back to normal
 traj.f_restore_default()
+
+# Finally disable logging and close all log-files
+env.f_disable_logging()

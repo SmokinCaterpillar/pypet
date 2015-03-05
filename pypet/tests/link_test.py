@@ -13,9 +13,11 @@ from pypet.storageservice import HDF5StorageService
 from pypet import pypetconstants, BaseParameter, BaseResult
 import logging
 import time
+import os
+import getopt
 import pypet.pypetexceptions as pex
 
-from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name
+from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_trajectory_name, make_run
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -37,6 +39,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
             traj.test3
 
     def test_link_creation(self):
+
         traj = Trajectory()
 
         traj.f_add_parameter_group('test.test3')
@@ -44,6 +47,15 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         with self.assertRaises(ValueError):
             traj.par.f_add_link('test', traj.test2)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('parameters', traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('ps.ss', traj.test)
+
+        with self.assertRaises(ValueError):
+            traj.f_add_link('kkkk', PickleResult('fff', 555))
 
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)
@@ -134,8 +146,6 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         self.assertTrue(traj.test.circle2 is traj.test)
 
-
-
     def test_link_removal(self):
         traj = Trajectory()
 
@@ -145,13 +155,19 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.test.f_add_link('circle1' , traj.test2)
         traj.test2.f_add_link('circle2' , traj.test)
 
+        self.assertTrue('circle1' in traj)
         traj.circle1.circle2.f_remove_link('circle1')
+        self.assertTrue('circle1' not in traj.circle2)
 
         with self.assertRaises(AttributeError):
             traj.test.circle1
 
         with self.assertRaises(ValueError):
             traj.test.f_remove_link('circle1')
+
+        traj.test2.f_remove_child('circle2')
+
+        self.assertTrue('circle2' not in traj)
 
     def test_storage_and_loading(self):
         filename = make_temp_file('linktest.hdf5')
@@ -178,7 +194,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.f_store()
 
         traj2 = Trajectory(filename=filename)
-        traj2.f_load(name=traj.v_name, load_all=2)
+        traj2.f_load(name=traj.v_name, load_data=2)
 
         self.assertTrue(traj.kk == traj2.gg, '%s != %s' % (traj.kk, traj2.gg))
         self.assertTrue(traj.cd.test is traj.test)
@@ -215,7 +231,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj2.v_auto_load = False
         traj2.f_load_child('jj')
         self.assertTrue(traj2.jj is traj2.par)
-        traj2.f_load(load_all=2)
+        traj2.f_load(load_data=2)
         self.assertTrue(traj2.ii == traj2.res.kk)
 
 
@@ -224,7 +240,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj = Trajectory()
 
         traj.f_add_parameter('FloatParam')
-        traj.FloatParam=4.0
+        traj.par.FloatParam=4.0
         self.explore_dict = {'FloatParam':[1.0,1.1,1.2,1.3]}
         traj.f_explore(self.explore_dict)
 
@@ -338,7 +354,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.f_delete_link('par.gg')
 
         traj2 = Trajectory(filename=filename)
-        traj2.f_load(name=traj.v_name, load_all=2)
+        traj2.f_load(name=traj.v_name, load_data=2)
 
         with self.assertRaises(AttributeError):
             traj2.gg
@@ -384,6 +400,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
 
     def tearDown(self):
         self.env.f_disable_logging()
+        super(LinkEnvironmentTest, self).tearDown()
 
     def setUp(self):
         self.set_mode()
@@ -391,11 +408,16 @@ class LinkEnvironmentTest(TrajectoryComparator):
         logging.basicConfig(level = logging.INFO)
 
 
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)
-        self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname)
+        self.filename = make_temp_file(os.path.join('experiments',
+                                                    'tests',
+                                                    'HDF5',
+                                                    'test%s.hdf5' % self.trajname))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
@@ -432,13 +454,13 @@ class LinkEnvironmentTest(TrajectoryComparator):
     def test_run(self):
         self.env.f_run(dostuff_and_add_links)
 
-        self.traj.f_load(load_all=2)
+        self.traj.f_load(load_data=2)
 
         traj2 = Trajectory()
 
         traj2.f_load(name=self.traj.v_name, filename=self.filename)
 
-        traj2.f_load(load_all=2)
+        traj2.f_load(load_data=2)
 
         for run in self.traj.f_get_run_names():
             self.assertTrue(self.traj.res.runs[run].paraBL is self.traj.paramB)
@@ -452,12 +474,17 @@ class LinkMergeTest(TrajectoryComparator):
         logging.basicConfig(level = logging.INFO)
 
 
-        self.logfolder = make_temp_file('experiments/tests/Log')
+        self.logfolder = make_temp_file(os.path.join('experiments',
+                                                      'tests',
+                                                      'Log'))
 
         random.seed()
         self.trajname1 = 'T1'+ make_trajectory_name(self)
         self.trajname2 = 'T2'+make_trajectory_name(self)
-        self.filename = make_temp_file('experiments/tests/HDF5/test%s.hdf5' % self.trajname1)
+        self.filename = make_temp_file(os.path.join('experiments',
+                                                    'tests',
+                                                    'HDF5',
+                                                    'test%s.hdf5' % self.trajname1))
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1, log_folder=self.logfolder,
@@ -488,7 +515,7 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.traj1.f_merge(self.traj2, remove_duplicates=True)
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
         for run in self.traj1.f_get_run_names():
             self.traj1.f_as_run(run)
@@ -522,22 +549,24 @@ class LinkMergeTest(TrajectoryComparator):
 
         name = self.traj1
 
-        self.bfilename = make_temp_file('experiments/tests/HDF5/backup_test%s.hdf5' %
-                                        self.trajname1)
+        self.bfilename = make_temp_file(os.path.join('experiments',
+                                                     'tests',
+                                                     'HDF5',
+                                                     'backup_test%s.hdf5' % self.trajname1))
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
-        self.traj1.f_backup(self.bfilename)
+        self.traj1.f_backup(backup_filename=self.bfilename)
 
         self.traj3 = load_trajectory(index=-1, filename=self.bfilename, load_all=2)
 
         old_length = len(self.traj1)
 
-        self.traj1.f_merge(self.traj3, remove_duplicates=False)
+        self.traj1.f_merge(self.traj3, backup=False, remove_duplicates=False)
 
         self.assertTrue(len(self.traj1) > old_length)
 
-        self.traj1.f_load(load_all=2)
+        self.traj1.f_load(load_data=2)
 
         for run in self.traj1.f_get_run_names():
             self.traj1.f_as_run(run)
@@ -562,3 +591,20 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
+
+
+if __name__ == '__main__':
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
+    remove = None
+    folder = None
+    for opt, arg in opt_list:
+        if opt == '-k':
+            remove = False
+            print('I will keep all files.')
+
+        if opt == '--folder':
+            folder = arg
+            print('I will put all data into folder `%s`.' % folder)
+
+    sys.argv=[sys.argv[0]]
+    make_run(remove, folder)

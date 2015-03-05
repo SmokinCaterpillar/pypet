@@ -30,56 +30,78 @@ import pandas as pd
 
 import tempfile
 
-
-TEMPDIR = 'temp_folder_for_pypet_tests/'
-''' Temporary directory for the hdf5 files'''
-
-REMOVE=True
-''' Whether or not to remove the temporary directory after the tests'''
-
-actual_tempdir=''
-''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
-
-user_tempdir=''
-'''If the user specifies in run all test a folder, this variable will be used'''
+testParams=dict(
+    tempdir = 'tmp_pypet_tests',
+    #''' Temporary directory for the hdf5 files'''
+    remove=True,
+    #''' Whether or not to remove the temporary directory after the tests'''
+    actual_tempdir='',
+    #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
+    user_tempdir='',
+    #'''If the user specifies in run all test a folder, this variable will be used'''
+)
 
 def make_temp_file(filename):
-    global actual_tempdir
-    global user_tempdir
-    global TEMPDIR
+    global testParams
     try:
 
-        if not (user_tempdir == '' or user_tempdir is None) and actual_tempdir=='':
-            actual_tempdir=user_tempdir
+        if ((testParams['user_tempdir'] is not None and testParams['user_tempdir'] != '') and
+                        testParams['actual_tempdir'] == ''):
+            testParams['actual_tempdir'] = testParams['user_tempdir']
 
-        if not os.path.isdir(actual_tempdir):
-            os.makedirs(actual_tempdir)
+        if not os.path.isdir(testParams['actual_tempdir']):
+            os.makedirs(testParams['actual_tempdir'])
 
-        return os.path.join(actual_tempdir,filename)
+        return os.path.join(testParams['actual_tempdir'], filename)
     except OSError:
         logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
-                                    actual_tempdir +
+                                    testParams['actual_tempdir'] +
                                     ' I will use pythons gettempdir method instead.')
-        actual_tempdir = os.path.join(tempfile.gettempdir(),TEMPDIR)
+        actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
+        testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir,filename)
     except:
         logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
         raise
 
-def make_run(remove=None, folder=None):
+def make_run(remove=None, folder=None, suite=None):
 
-    if remove is None:
-        remove = REMOVE
+    global testParams
 
-    global user_tempdir
-    user_tempdir=folder
+    if remove is not None:
+        testParams['remove'] = remove
 
-    global actual_tempdir
+    testParams['user_tempdir'] = folder
+
     try:
-        unittest.main()
+        if suite is None:
+            unittest.main()
+        else:
+            runner = unittest.TextTestRunner(verbosity=2)
+            runner.run(suite)
     finally:
-        if remove:
-            shutil.rmtree(actual_tempdir,True)
+        remove_data()
+
+def combined_suites(*test_suites):
+    """Combines several suites into one"""
+    combined_suite = unittest.TestSuite(test_suites)
+    return combined_suite
+
+def combine_test_classes(*test_classes):
+    """ Puts given test classes into a combined suite"""
+    loader = unittest.TestLoader()
+    suites_list = []
+    for test_class in test_classes:
+        if test_class is not None:
+            suite = loader.loadTestsFromTestCase(test_class)
+            suites_list.append(suite)
+    return combined_suites(*suites_list)
+
+def remove_data():
+    global testParams
+    if testParams['remove']:
+        print('REMOVING ALL TEMPORARY DATA')
+        shutil.rmtree(testParams['actual_tempdir'], True)
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name best on the current `testcase`"""
@@ -183,6 +205,7 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
     traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test')
     traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test')
+    traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test')
 
 
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
@@ -209,6 +232,9 @@ def multiply(traj):
     return z
 
 def simple_calculations(traj, arg1, simple_kwarg):
+
+        if not 'runs' in traj.res:
+            traj.res.f_add_result_group('runs')
 
         print('>>>>>Starting Simple Calculations')
         my_dict = {}
@@ -253,10 +279,31 @@ def simple_calculations(traj, arg1, simple_kwarg):
         if not traj.Iwiiremainempty.kkk.v_full_name == traj.List.hhh.kkk.v_full_name:
             raise RuntimeError()
 
+        traj.f_add_result('runs.' + traj.v_crun + '.ggg', 5555, comment='ladida')
+        traj.res.runs.f_add_result(traj.v_crun + '.ggjg', 5555, comment='didili')
+        traj.res.runs.f_add_result('hhg', 5555, comment='jjjj')
+
+        traj.res.f_add_result(name='lll', comment='duh', data=444)
+
+        try:
+            traj.f_add_config('teeeeest', 12)
+            raise RuntimeError()
+        except TypeError:
+            pass
+
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
+            raise RuntimeError()
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
+            raise RuntimeError()
+        if not traj.f_contains('results.runs.' + traj.v_crun + '.hhg', shortcuts=False):
+            raise RuntimeError()
+
         traj.f_add_result('List.Of.Keys', dict1=my_dict, dict2=my_dict2, comment='Test')
         traj.List.f_store_child('Of', recursive=True)
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
         traj.f_add_result('ResMatrix',np.array([1.2,2.3]), comment='ResMatrix')
+
+        traj.f_add_result('empty.stuff', (), [], {}, np.array([]), comment='empty stuff')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
@@ -302,6 +349,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('$.here', 77, comment='huhu')
         traj.f_add_result('or.not.$', dollah=77, comment='duh!')
         traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
+        traj.f_add_result('or.not.rrr.crun.jjj', 777, comment='duh**2!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         print('<<<<<<Finished Simple Calculations')
@@ -333,6 +381,9 @@ class TrajectoryComparator(unittest.TestCase):
         root = logging.getLogger()
         root.handlers = [] # delete all handlers
 
+    def tearDown(self):
+        remove_data()
+
     def compare_trajectories(self,traj1,traj2):
 
         trajlength = len(traj1)
@@ -355,10 +406,10 @@ class TrajectoryComparator(unittest.TestCase):
 
             if isinstance(item, BaseParameter):
                 self.assertTrue(parameters_equal(item,old_item),
-                                'For key %s: %s not equal to %s' %(key,str(old_item),str(item)))
+                                'For key %s: %s not equal to %s' % (key,str(old_item),str(item)))
             elif isinstance(item,BaseResult):
                 self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' %(key, str(old_item),str(item)))
+                                'For key %s: %s not equal to %s' % (key, str(old_item),str(item)))
             else:
                 raise RuntimeError('You shall not pass')
 

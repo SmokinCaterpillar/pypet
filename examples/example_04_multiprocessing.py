@@ -1,5 +1,6 @@
 __author__ = 'Robert Meyer'
 
+import os # For path names being viable under Windows and Linux
 
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
@@ -13,28 +14,49 @@ def multiply(traj):
 
 
 
-# Create an environment that handles running.
-# Let's enable multiprocessing with 2 workers.
-env = Environment(trajectory='Example_04_MP',
-                  filename='experiments/example_04/HDF5/example_04.hdf5',
-                  file_title='Example_04_MP',
-                  log_folder='experiments/example_04/LOGS/',
-                  comment = 'Multiprocessing example!',
-                  multiproc=True,
-                  ncores=2,
-                  use_pool=True,
-                  wrap_mode=pypetconstants.WRAP_MODE_LOCK)
+def main():
+    """Main function to protect the *entry point* of the program.
 
-# Get the trajectory from the environment
-traj = env.v_trajectory
+    If you want to use multiprocessing under Windows you need to wrap your
+    main code creating an environment into a function. Otherwise
+    the newly started child processes will re-execute the code and throw
+    errors (also see https://docs.python.org/2/library/multiprocessing.html#windows).
 
-# Add both parameters
-traj.f_add_parameter('x', 1.0, comment='I am the first dimension!')
-traj.f_add_parameter('y', 1.0, comment='I am the second dimension!')
+    """
 
-# Explore the parameters with a cartesian product, but we want to explore a bit more
-traj.f_explore(cartesian_product({'x':[float(x) for x in range(15)],
-                                  'y':[float(y) for y in range(15)]}))
+    # Create an environment that handles running.
+    # Let's enable multiprocessing with 2 workers.
+    filename = os.path.join('experiments', 'example_04', 'HDF5', 'example_04.hdf5')
+    log_folder = os.path.join('experiments', 'example_04', 'LOGS')
+    env = Environment(trajectory='Example_04_MP',
+                      filename=filename,
+                      file_title='Example_04_MP',
+                      log_folder=log_folder,
+                      comment = 'Multiprocessing example!',
+                      multiproc=True,
+                      ncores=2,
+                      use_pool=True,
+                      wrap_mode=pypetconstants.WRAP_MODE_LOCK)
 
-# Run the simulation
-env.f_run(multiply)
+    # Get the trajectory from the environment
+    traj = env.v_trajectory
+
+    # Add both parameters
+    traj.f_add_parameter('x', 1.0, comment='I am the first dimension!')
+    traj.f_add_parameter('y', 1.0, comment='I am the second dimension!')
+
+    # Explore the parameters with a cartesian product, but we want to explore a bit more
+    traj.f_explore(cartesian_product({'x':[float(x) for x in range(12)],
+                                      'y':[float(y) for y in range(12)]}))
+
+    # Run the simulation
+    env.f_run(multiply)
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
+
+if __name__ == '__main__':
+    # This will execute the main function in case the script is called from the one true
+    # main process and not from a child processes spawned by your environment.
+    # Necessary for multiprocessing under Windows.
+    main()

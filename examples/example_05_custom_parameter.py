@@ -2,6 +2,8 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import inspect
+import os # For path names being viable under Windows and Linux
+
 from pypet import Environment, Parameter, ArrayParameter, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -148,10 +150,12 @@ def diff_lorenz(value_array, sigma, beta, rho):
 # And here goes our main function
 def main():
 
+    filename = os.path.join('experiments', 'example_05', 'HDF5', 'example_05.hdf5')
+    log_folder = os.path.join('experiments', 'example_05', 'LOGS')
     env = Environment(trajectory='Example_05_Euler_Integration',
-                      filename='experiments/example_05/HDF5/example_05.hdf5',
+                      filename=filename,
                       file_title='Example_05_Euler_Integration',
-                      log_folder='experiments/example_05/LOGS/',
+                      log_folder=log_folder,
                       comment = 'Go for Euler!')
 
 
@@ -188,30 +192,30 @@ def main():
     # Let's assume that we start all over again and load the entire trajectory new.
     # Yet, there is an error within this approach, do you spot it?
     del traj
-    traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5')
+    traj = Trajectory(filename=filename)
 
     # We will only fully load parameters and derived parameters.
     # Results will be loaded manually later on.
     try:
         # However, this will fail because our trajectory does not know how to
         # build the FunctionParameter. You have seen this coming, right?
-        traj.f_load(name=trajectory_name,load_parameters=2,
-                    load_derived_parameters=2,load_results=1)
+        traj.f_load(name=trajectory_name, load_parameters=2, load_derived_parameters=2,
+                    load_results=1)
     except ImportError as e:
 
-        print 'That did\'nt work, I am sorry. %s ' % e.message
+        print('That did\'nt work, I am sorry: %s ' % str(e))
 
         # Ok, let's try again but this time with adding our parameter to the imports
-        traj = Trajectory(filename='experiments/example_05/HDF5/example_05.hdf5',
+        traj = Trajectory(filename=filename,
                            dynamically_imported_classes=FunctionParameter)
 
         # Now it works:
-        traj.f_load(name=trajectory_name,load_parameters=2,
-                    load_derived_parameters=2,load_results=1)
+        traj.f_load(name=trajectory_name, load_parameters=2, load_derived_parameters=2,
+                    load_results=1)
 
 
     #For the fun of it, let's print the source code
-    print '\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq
+    print('\n ---------- The source code of your function ---------- \n %s' % traj.diff_eq)
 
     # Let's get the exploration array:
     initial_conditions_exploration_array = traj.f_get('initial_conditions').f_get_range()
@@ -241,6 +245,9 @@ def main():
         euler_result.f_empty()
 
     # You have to click through the images to stop the example_05 module!
+
+    # Finally disable logging and close all log-files
+    env.f_disable_logging()
 
 
 if __name__ == '__main__':

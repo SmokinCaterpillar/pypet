@@ -1,9 +1,9 @@
 
 .. _example-03:
 
-===================================
-03 Merging of Trajectories
-===================================
+=======================
+Merging of Trajectories
+=======================
 
 Download: :download:`example_03_trajectory_merging.py <../../../examples/example_03_trajectory_merging.py>`
 

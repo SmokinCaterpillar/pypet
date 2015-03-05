@@ -1,7 +1,10 @@
 __author__ = 'robert'
 
+import os
+
 from pypet import Trajectory
 import matplotlib.pyplot as plt
+
 
 def main():
 
@@ -11,8 +14,9 @@ def main():
 
     # Let's load the trajectory from the file
     # Only load the parameters, we will load the results on the fly as we need them
-    traj.f_load(filename='./hdf5/FiringRate.hdf5', load_parameters=2,
-                load_results=0, load_derived_parameters=0)
+    filename = os.path.join('hdf5', 'FiringRate.hdf5')
+    traj.f_load(load_parameters=2, load_derived_parameters=0, load_results=0,
+                load_other_data=0, filename=filename)
 
     # We'll simply use auto loading so all data will be loaded when needed.
     traj.v_auto_load = True
@@ -30,7 +34,7 @@ def main():
     plt.xlabel('I')
     plt.ylabel('f[Hz]')
     plt.title('Firing as a function of input current `I`')
-    plt.legend()
+    plt.legend(loc='best')
 
     # Also let's plot an example run, how about run 13 ?
     example_run = 13

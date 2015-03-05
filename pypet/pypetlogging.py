@@ -6,12 +6,12 @@ import logging
 class HasLogger(object):
     """Abstract super class that automatically adds a logger to a class.
 
-    Potentially there can be one logger per instance.
+    To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
+    If ``name=None`` the logger name is picked as follows:
 
-    If no logging name is specified, there will be one logger per class.
-    The logger will be derived from the class name via:
+        ``self._logger = logging.getLogger(type(self).__name__)``
 
-    `self._logger = logging.getLogger(type(self).__name__)`
+    The logger can be accessed via ``myobj._logger``.
 
     """
 
@@ -47,17 +47,19 @@ class HasLogger(object):
 
         """
         if name is None:
-            name = type(self).__name__
+            name = 'pypet.%s' % type(self).__name__
+        else:
+            name = 'pypet.%s' % name
         self._logger = logging.getLogger(name)
 
 
-class DisableLogger():
+class DisableLogger(object):
     """Context Manager that disables logging"""
 
     def __enter__(self):
         logging.disable(logging.CRITICAL)
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         logging.disable(logging.NOTSET)
 
 
@@ -72,8 +74,10 @@ class StreamToLogger(object):
         self._linebuf = ''
 
     def write(self, buf):
+        """Writes data from bugger to logger"""
         for line in buf.rstrip().splitlines():
             self._logger.log(self._log_level, line.rstrip())
 
     def flush(self):
+        """No-op to fulfil API"""
         pass
