@@ -7,12 +7,13 @@ import pandas as pd
 import os
 import warnings
 import platform
-from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
+from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult,\
+    SparseParameter, ObjectTable
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import pypetconstants, BaseParameter, BaseResult
+from pypet import pypetconstants, BaseParameter, BaseResult, SparseResult
 from pypet.utils.comparisons import results_equal
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -158,6 +159,59 @@ class StorageTest(TrajectoryComparator):
         traj.dpar.f_load(recursive=True, max_depth=3)
         self.assertTrue('l3' in traj)
         self.assertTrue('l4' not in traj)
+
+    def test_loading_and_storing_empty_containers(self):
+        filename = make_temp_file('empty_containers.hdf5')
+        traj = Trajectory(filename=filename)
+
+        # traj.f_add_parameter('empty.dict', {})
+        # traj.f_add_parameter('empty.list', [])
+        traj.f_add_parameter(ArrayParameter, 'empty.tuple', ())
+        traj.f_add_parameter(ArrayParameter, 'empty.array', np.array([], dtype=float))
+
+        spsparse_csc = spsp.csc_matrix((2,10))
+        spsparse_csr = spsp.csr_matrix((6660,660))
+        spsparse_bsr = spsp.bsr_matrix((3330,2220))
+        spsparse_dia = spsp.dia_matrix((1230,1230))
+
+        traj.f_add_parameter(SparseParameter, 'empty.csc', spsparse_csc)
+        traj.f_add_parameter(SparseParameter, 'empty.csr', spsparse_csr)
+        traj.f_add_parameter(SparseParameter, 'empty.bsr', spsparse_bsr)
+        traj.f_add_parameter(SparseParameter, 'empty.dia', spsparse_dia)
+
+        traj.f_add_result(SparseResult, 'empty.all', dict={}, list=[],
+                          series = pd.Series(),
+                          frame = pd.DataFrame(),
+                          panel = pd.Panel(),
+                          **traj.par.f_to_dict(short_names=True, fast_access=True))
+
+        traj.f_store()
+
+        newtraj = load_trajectory(index=-1, filename=filename)
+
+        newtraj.f_load(load_data=2)
+
+        epg = newtraj.par.empty
+        self.assertTrue(type(epg.tuple) is tuple)
+        self.assertTrue(len(epg.tuple) == 0)
+
+        self.assertTrue(type(epg.array) is np.ndarray)
+        self.assertTrue(epg.array.size == 0)
+
+        self.assertTrue(spsp.isspmatrix_csr(epg.csr))
+        self.assertTrue(epg.csr.size == 0)
+
+        self.assertTrue(spsp.isspmatrix_csc(epg.csc))
+        self.assertTrue(epg.csc.size == 0)
+
+        self.assertTrue(spsp.isspmatrix_bsr(epg.bsr))
+        self.assertTrue(epg.bsr.size == 0)
+
+        self.assertTrue(spsp.isspmatrix_dia(epg.dia))
+        self.assertTrue(epg.dia.size == 0)
+
+        self.compare_trajectories(traj, newtraj)
+
 
     def test_new_assignment_method(self):
         filename = make_temp_file('newassignment.hdf5')

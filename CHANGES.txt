@@ -19,6 +19,11 @@ pypet 0.1b.10
 
 *   BUG FIX: Minor bug in the progressbar has been fixed to detect automatic resets.
 
+*   Now support for non-nested empty containers: Empty dictionary, empty list, empty tuple and
+    empty numpy array. All of them supported by the ArrayParameter and normal Results.
+
+*   Support for Sparse matrices containing *NO* data (i.e. only zeros).
+
 
 pypet 0.1b.9
 

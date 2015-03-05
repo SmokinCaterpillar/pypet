@@ -884,7 +884,8 @@ class Parameter(BaseParameter):
 
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
-        if type(data) is tuple:
+        dtype = type(data)
+        if dtype is tuple:
 
             # Parameters cannot handle empty tuples
             if len(data) == 0:
@@ -901,21 +902,18 @@ class Parameter(BaseParameter):
                 old_type = type(item)
             return True
 
-        if type(data) in [np.ndarray, np.matrix]:
+        elif dtype is np.ndarray or dtype is np.matrix:
 
-            if len(data) == 0:
-                return False
+            if data.size == 0:
+                return False # Parameters cannot handle empty arrays and matrices
 
             # Numpy has many string types that depend on the length of the string,
             # We allow all of them
             dtype = data.dtype
             if np.issubdtype(dtype, np.str):
                 dtype = np.str
-        else:
-            dtype = type(data)
 
         return dtype in pypetconstants.PARAMETER_SUPPORTED_DATA
-
 
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
@@ -1267,12 +1265,12 @@ class ArrayParameter(Parameter):
 
                     # First we need to distinguish between tuples and array and extract a
                     # hashable part of the array
-                    if isinstance(elem, tuple):
-                        hash_elem = elem
-                    else:
+                    if isinstance(elem, np.ndarray):
                         # You cannot hash numpy arrays themselves, but if they are read only
                         # you can hash array.data
                         hash_elem = HashArray(elem)
+                    else:
+                        hash_elem = elem
 
                     # Check if we have used the array before,
                     # i.e. element can be found in the dictionary
@@ -1348,7 +1346,6 @@ class ArrayParameter(Parameter):
         self._default = self._data
         self._locked = True
 
-
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
 
@@ -1357,10 +1354,20 @@ class ArrayParameter(Parameter):
         regardless of their size and values they contain.
 
         """
-        if (type(val1) in [np.ndarray, tuple, np.matrix]) and (type(val2) is type(val1)):
+        if (type(val1) in (np.ndarray, tuple, np.matrix)) and (type(val2) is type(val1)):
             return True
         else:
             return super(ArrayParameter, self)._values_of_same_type(val1, val2)
+
+    def f_supports(self, data):
+        """Checks if input data is supported by the parameter."""
+        dtype = type(data)
+        if dtype is tuple and len(data) == 0:
+            return True  #  ArrayParameter does support empty tuples
+        elif dtype is np.ndarray and data.size == 0 and data.ndim == 1:
+                return True  #  ArrayParameter supports empty numpy arrays
+        else:
+            return super(ArrayParameter, self).f_supports(data)
 
 
 class SparseParameter(ArrayParameter):
@@ -1465,7 +1472,11 @@ class SparseParameter(ArrayParameter):
         if (spsp.isspmatrix_csc(matrix) or
                 spsp.isspmatrix_csr(matrix) or
                 spsp.isspmatrix_bsr(matrix)):
-            return_list = [matrix.data, matrix.indices, matrix.indptr, matrix.shape]
+            if matrix.size > 0:
+                return_list = [matrix.data, matrix.indices, matrix.indptr, matrix.shape]
+            else:
+                # For empty matrices we only need the shape
+                return_list = ['__empty__', (), (), matrix.shape]
 
             return_names = SparseParameter.OTHER_NAME_LIST
 
@@ -1479,7 +1490,11 @@ class SparseParameter(ArrayParameter):
                 raise RuntimeError('You shall not pass!')
 
         elif spsp.isspmatrix_dia(matrix):
-            return_list = ['dia', matrix.data, matrix.offsets, matrix.shape]
+            if matrix.size > 0:
+                return_list = ['dia', matrix.data, matrix.offsets, matrix.shape]
+            else:
+                # For empty matrices we only need the shape
+                return_list = ['dia', '__empty__', (), matrix.shape]
 
             return_names = SparseParameter.DIA_NAME_LIST
         else:
@@ -1497,7 +1512,6 @@ class SparseParameter(ArrayParameter):
                 hash_list.append(item)
 
         return return_list, return_names, tuple(hash_list)
-
 
     @staticmethod
     def _get_name_list(is_dia):
@@ -1611,13 +1625,27 @@ class SparseParameter(ArrayParameter):
         matrix_format = data_list[0]
 
         if matrix_format == 'csc':
-            return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                 return spsp.csc_matrix(data_list[4])
+            else:
+                return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'csr':
-            return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                 return spsp.csr_matrix(data_list[4])
+            else:
+                return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'bsr':
-            return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
+            if data_list[1] == '__empty__':
+                # We have an empty matrix, that cannot be build as in esle case
+                return spsp.bsr_matrix(data_list[4])
+            else:
+                return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'dia':
-            return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
+            if data_list[1] == '__empty__':
+                # We have an empty matrix, that cannot be build as in esle case
+                return spsp.dia_matrix(data_list[3])
+            else:
+                return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
         else:
             raise RuntimeError('You shall not pass!')
 
@@ -2065,7 +2093,6 @@ class Result(BaseResult):
         else:
             return self._data
 
-
     def f_is_empty(self):
         """True if no data has been put into the result.
 
@@ -2230,7 +2257,7 @@ class Result(BaseResult):
 
         if self._supports(item):
 
-            self._check_if_empty(item, name)
+            # self._check_if_empty(item, name) # No longer needed
 
             if name in self._data:
                 self._logger.debug('Replacing `%s` in result `%s`.' % (name, self.v_full_name))
@@ -2240,20 +2267,20 @@ class Result(BaseResult):
             raise TypeError('Your result `%s` of type `%s` is not supported.' %
                             (name, str(type(item))))
 
-    def _check_if_empty(self, item, name):
-        """Checks if the result is requested to handle an empty item, like an empty list or
-        dictionary.
-
-        Empty items are problematic because they cannot be stored by the storage service.
-        Emits a waring in case of an empty item.
-
-        """
-        try:
-            if len(item) == 0:
-                self._logger.warning('The Item `%s` is empty.' % name)
-        except (TypeError, AttributeError) as e:
-            # If the item does not support `len` operation we can ignore that
-            pass
+    # def _check_if_empty(self, item, name):
+    #     """Checks if the result is requested to handle an empty item, like an empty list or
+    #     dictionary.
+    #
+    #     Empty items are problematic because they cannot be stored by the storage service.
+    #     Emits a waring in case of an empty item.
+    #
+    #     """
+    #     try:
+    #         if len(item) == 0:
+    #             self._logger.warning('The Item `%s` is empty.' % name)
+    #     except (TypeError, AttributeError) as e:
+    #         # If the item does not support `len` operation we can ignore that
+    #         pass
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
@@ -2373,13 +2400,13 @@ class SparseResult(Result):
         else:
             return super(SparseResult, self)._supports(item)
 
-    @copydoc(Result._check_if_empty)
-    def _check_if_empty(self, item, name):
-        if SparseParameter._is_supported_matrix(item):
-            if item.getnnz() == 0:
-                self._logger.warning('The Item `%s` is empty.' % name)
-        else:
-            super(SparseResult, self)._check_if_empty(item, name)
+    # @copydoc(Result._check_if_empty)
+    # def _check_if_empty(self, item, name):
+    #     if SparseParameter._is_supported_matrix(item):
+    #         if item.getnnz() == 0:
+    #             self._logger.warning('The Item `%s` is empty.' % name)
+    #     else:
+    #         super(SparseResult, self)._check_if_empty(item, name)
 
     def _store(self):
         """Returns a storage dictionary understood by the storage service.

@@ -302,6 +302,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.List.f_store_child('Of', recursive=True)
         traj.f_add_result('DictsNFrame', keys=keys, comment='A dict!')
         traj.f_add_result('ResMatrix',np.array([1.2,2.3]), comment='ResMatrix')
+
+        traj.f_add_result('empty.stuff', (), [], {}, np.array([]), comment='empty stuff')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})

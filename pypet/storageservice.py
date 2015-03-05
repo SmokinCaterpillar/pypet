@@ -609,12 +609,13 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' Container was a numpy matrix'''
     COLL_DICT = 'COLL_DICT'
     ''' Container was a dictionary'''
+    COLL_EMPTY_DICT = 'COLL_EMPTY_DICT'
+    ''' Container was an empty dictionary'''
     COLL_SCALAR = 'COLL_SCALAR'
     ''' No container, but the thing to store was a scalar'''
 
     SCALAR_TYPE = 'SCALAR_TYPE'
     ''' Type of scalars stored into a container'''
-
 
     ### Overview Table constants
     CONFIG = 'config'
@@ -3650,8 +3651,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
 
-
-
         # If `data` is a container, remember the container type
         if type(data) is tuple:
             ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
@@ -3682,9 +3681,12 @@ class HDF5StorageService(StorageService, HasLogger):
             ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.SCALAR_TYPE, strtype)
 
         elif type(data) is dict:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            if len(data) > 0:
+                ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_DICT)
-
+            else:
+                ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+                                   HDF5StorageService.COLL_EMPTY_DICT)
         else:
             raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                             (str(data), repr(type(data))))
@@ -3706,8 +3708,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                        HDF5StorageService.SCALAR_TYPE, strtype)
         elif (type(data) in (np.ndarray, np.matrix) and
                   np.issubdtype(data.dtype, compat.unicode_type)):
-            ptcompat.set_attribute(ptitem, prefix +
-                                   HDF5StorageService.SCALAR_TYPE, compat.unicode_type.__name__)
+            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.SCALAR_TYPE,
+                                   compat.unicode_type.__name__)
 
     def _all_recall_native_type(self, data, ptitem, prefix):
         """Checks if loaded data has the type it was stored in. If not converts it.
@@ -3723,11 +3725,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         typestr = self._all_get_from_attrs(ptitem, prefix + HDF5StorageService.SCALAR_TYPE)
+        colltype = self._all_get_from_attrs(ptitem, prefix + HDF5StorageService.COLL_TYPE)
         type_changed = False
 
         # Check what the original data type was from the hdf5 node attributes
-        if self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,
-                                 HDF5StorageService.COLL_SCALAR):
+        if colltype == HDF5StorageService.COLL_SCALAR:
             # Here data item was a scalar
 
             if isinstance(data, np.ndarray):
@@ -3752,24 +3754,17 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     type_changed = True
 
-
-        elif (self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,
-                                    HDF5StorageService.COLL_TUPLE) or
-                  self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,
-                                        HDF5StorageService.COLL_LIST)):
+        elif (colltype == HDF5StorageService.COLL_TUPLE or
+                        colltype == HDF5StorageService.COLL_LIST):
             # Here data item was originally a tuple or a list
 
-            if not isinstance(data, (list, tuple)):
+            if type(data) is not list and type is not tuple:
                 # If the original type cannot be recalled, first convert it to a list
                 type_changed = True
                 data = list(data)
 
             if len(data) > 0:
                 first_item = data[0]
-            else:
-                first_item = None
-
-            if not first_item is None:
                 # Check if the type of the first item was conserved
                 if not typestr == type(first_item).__name__:
 
@@ -3789,21 +3784,21 @@ class HDF5StorageService(StorageService, HasLogger):
                                 data[idx] = pypetconstants.COMPATPARAMETERTYPEDICT[typestr](item)
                         type_changed = True
 
-            if self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,
-                                     HDF5StorageService.COLL_TUPLE):
+            if colltype == HDF5StorageService.COLL_TUPLE:
                 # If it was originally a tuple we need to convert it back to tuple
-                if not isinstance(data, tuple):
+                if type(data) is not tuple:
                     data = tuple(data)
                     type_changed = True
-
+        elif colltype == HDF5StorageService.COLL_EMPTY_DICT:
+            data = {}
+            type_changed = True
         elif isinstance(data, np.ndarray):
 
             if typestr == compat.unicode_type.__name__:
                 data = np.core.defchararray.decode(data, self._encoding)
                 type_changed = True
 
-            if (self._all_attr_equals(ptitem, prefix + HDF5StorageService.COLL_TYPE,
-                                      HDF5StorageService.COLL_MATRIX)):
+            if colltype == HDF5StorageService.COLL_MATRIX:
                 # Here data item was originally a matrix
                 data = np.matrix(data)
                 type_changed = True
@@ -3960,7 +3955,6 @@ class HDF5StorageService(StorageService, HasLogger):
                 row[key] = val
             except KeyError as ke:
                 self._logger.warning('Could not write `%s` into a table, ' % key + repr(ke))
-
 
     def _all_extract_insert_dict(self, item, colnames, additional_info=None):
         """Extracts information from a given item to be stored into a pytable row.
@@ -4271,11 +4265,18 @@ class HDF5StorageService(StorageService, HasLogger):
         for key, data in compat.iteritems(data_dict):
             if not key in flags_dict:
                 dtype = type(data)
-                if dtype in HDF5StorageService.TYPE_FLAG_MAPPING:
-                    flags_dict[key] = HDF5StorageService.TYPE_FLAG_MAPPING[dtype]
+                if (dtype is np.ndarray or dtype is dict) and len(data) == 0:
+                        # Empty containers are stored as an Array
+                        # No need to ask for tuple or list, because they are always
+                        # stored as arrays.
+                        flags_dict[key] = HDF5StorageService.ARRAY
+                        continue
                 else:
-                    raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
-                                                 'type `%s`.' % (key, str(dtype)))
+                    try:
+                        flags_dict[key] = HDF5StorageService.TYPE_FLAG_MAPPING[dtype]
+                    except KeyError:
+                        raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
+                                                     'type `%s`.' % (key, str(dtype)))
 
     def _prm_meta_remove_summary(self, instance):
         """Changes a summary table entry if the current `instance` is removed from the trajectory
@@ -5027,9 +5028,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 conv_data = data[:]
                 conv_data = np.core.defchararray.encode(conv_data, self.encoding)
                 other_array = factory(self._hdf5file, where=group, name=key,
-                                                obj=conv_data,
-                                                filters=filters, **kwargs)
-
+                                            obj=conv_data,
+                                            filters=filters, **kwargs)
 
             if data is not None:
                 # Remember the types of the original data to recall them on loading
@@ -5076,7 +5076,11 @@ class HDF5StorageService(StorageService, HasLogger):
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=data, **kwargs)
             except (TypeError, ValueError):
-                if isinstance(data, compat.unicode_type):
+                if type(data) is dict and len(data) == 0:
+                    # We cannot store an empty dictionary,
+                    # but we can use an empty tuple as a dummy.
+                    conv_data = ()
+                elif isinstance(data, compat.unicode_type):
                     conv_data = data.encode(self._encoding)
                 else:
                     conv_data = []
@@ -5355,7 +5359,6 @@ class HDF5StorageService(StorageService, HasLogger):
                 for idx, item in enumerate(series_of_data):
                     series_of_data[idx] = np.array(item)
 
-
         descriptiondict = {}  # dictionary containing the description to build a pytables table
         original_data_type_dict = {}  # dictionary containing the original data types
 
@@ -5632,18 +5635,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         try:
-            # if self._all_get_from_attrs(leaf, HDF5StorageService.DICT_SPLIT):
-            # temp_dict = {}
-            # children = leaf._v_children
-            # for tablename in children:
-            # table = children[tablename]
-            # self._prm_read_dictionary(table, temp_dict, full_name)
-            # key =leaf._v_name
-            # load_dict[key]={}
-            # for dictname in temp_dict:
-            # dictionary = temp_dict[dictname]
-            # load_dict[key].update(dictionary)
-            # else:
             temp_dict = {}
             # Load as Pbject Table
             self._prm_read_table(leaf, temp_dict, full_name)
@@ -5661,7 +5652,6 @@ class HDF5StorageService(StorageService, HasLogger):
         except:
             self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name, full_name))
             raise
-
 
     def _prm_read_pandas(self, pd_node, load_dict, full_name):
         """Reads a DataFrame from dis.
