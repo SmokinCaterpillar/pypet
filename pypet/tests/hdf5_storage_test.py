@@ -58,18 +58,22 @@ class FakeResult2(Result):
         self._store_call += 1
         return res
 
+
 class SlowResult(Result):
     def _load(self, load_dict):
         time.sleep(3)
         super(SlowResult, self)._load(load_dict)
 
+
 class MyParamGroup(ParameterGroup):
     pass
+
 
 def add_one_particular_item(traj, store_full):
     traj.hi = 42, 'hi!'
     traj.f_store(store_full_in_run=store_full)
     traj.f_remove_child('hi')
+
 
 class FullStorageTest(TrajectoryComparator):
 

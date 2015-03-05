@@ -8,7 +8,7 @@ import numpy as np
 
 
 EMPTY_ARRAY_FIX_PT_2 = 'PTCOMPAT__empty__dtype'
-empty_array_val = '__empty__'
+empty_array_val = '__'
 none_type = '__none__'
 tables_version = int(pt.__version__[0])
 
@@ -95,17 +95,15 @@ def _make_pt2_array(hdf5_file, *args, **kwargs):
 def _read_array(array):
     res = array.read()
     try:
-        if (len(res) == 1 and
-                res[0] == empty_array_val and
-                    EMPTY_ARRAY_FIX_PT_2 in array._v_attrs):
+        if res.size == 1 and res.ndim == 1 and EMPTY_ARRAY_FIX_PT_2 in array._v_attrs:
             # If the array was stored with pytables 2 we end up here
             dtype = array._v_attrs[EMPTY_ARRAY_FIX_PT_2]
             if dtype == none_type:
                 res = np.array([])
             else:
                 res = np.array([], dtype=np.dtype(dtype))
-    except TypeError:
-        pass  # len not supported, we don't need to worry
+    except AttributeError:
+        pass  # has no size, we don't need to worry
     return res
 
 
