@@ -8,7 +8,7 @@ import numpy as np
 
 
 EMPTY_ARRAY_FIX_PT_2 = 'PTCOMPAT__empty__dtype'
-empty_array_val = '__'
+empty_array_val = 0
 none_type = '__none__'
 tables_version = int(pt.__version__[0])
 
