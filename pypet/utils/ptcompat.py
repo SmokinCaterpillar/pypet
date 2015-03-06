@@ -1,5 +1,7 @@
 """Module to allow support for PyTables 2 and 3"""
 
+#pylint: skip-file
+
 __author__ = 'Robert Meyer'
 
 
@@ -110,75 +112,74 @@ def _read_array(array):
 
 
 if tables_version == 2:
-    open_file = lambda *args, **kwargs: pt.openFile(*args, **kwargs)
+    def open_file(*args, **kwargs): return pt.openFile(*args, **kwargs)
 
-    create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.createGroup(*args, **kwargs)
-    get_node = lambda hdf5_file, *args, **kwargs: hdf5_file.getNode(*args, **kwargs)
-    list_nodes = lambda hdf5_file, *args, **kwargs: hdf5_file.listNodes(*args, **kwargs)
-    move_node = lambda hdf5_file, *args, **kwargs: hdf5_file.moveNode(*args, **kwargs)
-    remove_node = lambda hdf5_file, *args, **kwargs: hdf5_file.removeNode(*args, **kwargs)
-    copy_node = lambda hdf5_file, *args, **kwargs: hdf5_file.copyNode(*args, **kwargs)
-    create_table = lambda hdf5_file, *args, **kwars: hdf5_file.createTable(*args, **kwars)
-    create_array = lambda hdf5_file, *args, **kwargs: _make_pt2_array(hdf5_file, *args, **kwargs)
-    create_carray = lambda hdf5_file, *args, **kwargs: _make_pt2_carray(hdf5_file, *args,
+    def create_group(hdf5_file, *args, **kwargs): return hdf5_file.createGroup(*args, **kwargs)
+    def get_node(hdf5_file, *args, **kwargs): return hdf5_file.getNode(*args, **kwargs)
+    def list_nodes(hdf5_file, *args, **kwargs): return hdf5_file.listNodes(*args, **kwargs)
+    def move_node(hdf5_file, *args, **kwargs): return hdf5_file.moveNode(*args, **kwargs)
+    def remove_node(hdf5_file, *args, **kwargs): return hdf5_file.removeNode(*args, **kwargs)
+    def copy_node(hdf5_file, *args, **kwargs): return hdf5_file.copyNode(*args, **kwargs)
+    def create_table(hdf5_file, *args, **kwars): return hdf5_file.createTable(*args, **kwars)
+    def create_array(hdf5_file, *args, **kwargs): return _make_pt2_array(hdf5_file, *args,
+                                                                         **kwargs)
+    def create_carray(hdf5_file, *args, **kwargs): return _make_pt2_carray(hdf5_file, *args,
                                                                         **kwargs)
-    create_earray = lambda hdf5_file, *args, **kwargs: _make_pt2_earray(hdf5_file, *args,
+    def create_earray(hdf5_file, *args, **kwargs): return _make_pt2_earray(hdf5_file, *args,
                                                                         **kwargs)
-    create_vlarray = lambda hdf5_file, *args, **kwargs: _make_pt2_vlarray(hdf5_file, *args,
+    def create_vlarray(hdf5_file, *args, **kwargs): return _make_pt2_vlarray(hdf5_file, *args,
                                                                         **kwargs)
 
-    read_array = lambda array: _read_array(array)
+    def read_array(array): return _read_array(array)
 
-    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.createSoftLink(*args, **kwargs)
+    def create_soft_link(hdf5_file, *args, **kwargs): return hdf5_file.createSoftLink(*args,
+                                                                                      **kwargs)
 
-    get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_getChild(*args, **kwargs)
+    def get_child(hdf5_node, *args, **kwargs): return hdf5_node._f_getChild(*args, **kwargs)
 
-    remove_rows = lambda table, *args, **kwargs: table.removeRows(*args, **kwargs)
+    def remove_rows(table, *args, **kwargs): return table.removeRows(*args, **kwargs)
 
-    set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setAttr(*args, **kwargs)
+    def get_objectid(ptitem): return ptitem._v_objectID
 
-    get_objectid = lambda ptitem: ptitem._v_objectID
+    def iter_nodes( ptitem, *args, **kwargs): return ptitem._f_iterNodes(*args, **kwargs)
 
-    iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iterNodes(*args, **kwargs)
+    def deleteattr(ptitem, attr): return ptitem._f_delAttr(attr)
 
-    deleteattr = lambda ptitem, attr: ptitem._f_delAttr(attr)
-
-    walk_groups = lambda ptitem: ptitem._f_walkGroups()
+    def walk_groups(ptitem): return ptitem._f_walkGroups()
 
     hdf5_version = pt.hdf5Version
 
 elif tables_version == 3:
-    open_file = lambda *args, **kwargs: pt.open_file(*args, **kwargs)
+    def open_file(*args, **kwargs): return pt.open_file(*args, **kwargs)
 
-    create_group = lambda hdf5_file, *args, **kwargs: hdf5_file.create_group(*args, **kwargs)
-    get_node = lambda hdf5_file, *args, **kwargs: hdf5_file.get_node(*args, **kwargs)
-    list_nodes = lambda hdf5_file, *args, **kwargs: hdf5_file.list_nodes(*args, **kwargs)
-    move_node = lambda hdf5_file, *args, **kwargs: hdf5_file.move_node(*args, **kwargs)
-    remove_node = lambda hdf5_file, *args, **kwargs: hdf5_file.remove_node(*args, **kwargs)
-    copy_node = lambda hdf5_file, *args, **kwargs: hdf5_file.copy_node(*args, **kwargs)
-    create_table = lambda hdf5_file, *args, **kwars: hdf5_file.create_table(*args, **kwars)
-    create_array = lambda hdf5_file, *args, **kwargs: hdf5_file.create_array(*args, **kwargs)
-    create_carray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_carray(*args, **kwargs)
-    create_earray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_earray(*args, **kwargs)
-    create_vlarray = lambda hdf5_file, *args, **kwargs: hdf5_file.create_vlarray(*args, **kwargs)
+    def create_group(hdf5_file, *args, **kwargs): return hdf5_file.create_group(*args, **kwargs)
+    def get_node(hdf5_file, *args, **kwargs): return hdf5_file.get_node(*args, **kwargs)
+    def list_nodes(hdf5_file, *args, **kwargs): return hdf5_file.list_nodes(*args, **kwargs)
+    def move_node(hdf5_file, *args, **kwargs): return hdf5_file.move_node(*args, **kwargs)
+    def remove_node(hdf5_file, *args, **kwargs): return hdf5_file.remove_node(*args, **kwargs)
+    def copy_node(hdf5_file, *args, **kwargs): return hdf5_file.copy_node(*args, **kwargs)
+    def create_table(hdf5_file, *args, **kwars): return hdf5_file.create_table(*args, **kwars)
+    def create_array(hdf5_file, *args, **kwargs): return hdf5_file.create_array(*args, **kwargs)
+    def create_carray(hdf5_file, *args, **kwargs): return hdf5_file.create_carray(*args, **kwargs)
+    def create_earray(hdf5_file, *args, **kwargs): return hdf5_file.create_earray(*args, **kwargs)
+    def create_vlarray(hdf5_file, *args, **kwargs): return hdf5_file.create_vlarray(*args,
+                                                                                    **kwargs)
 
-    read_array = lambda array: _read_array(array)
+    def read_array(array): return _read_array(array)
 
-    create_soft_link = lambda hdf5_file, *args, **kwargs: hdf5_file.create_soft_link(*args,
+    def create_soft_link(hdf5_file, *args, **kwargs): return hdf5_file.create_soft_link(*args,
                                                                                      **kwargs)
-    get_child = lambda hdf5_node, *args, **kwargs: hdf5_node._f_get_child(*args, **kwargs)
+    def get_child(hdf5_node, *args, **kwargs): return hdf5_node._f_get_child(*args, **kwargs)
 
-    remove_rows = lambda table, *args, **kwargs: table.remove_rows(*args, **kwargs)
+    def remove_rows(table, *args, **kwargs): return table.remove_rows(*args, **kwargs)
 
-    set_attribute = lambda ptitem, *args, **kwargs: ptitem._f_setattr(*args, **kwargs)
+    def get_objectid(ptitem): return ptitem._v_objectid
 
-    get_objectid = lambda ptitem: ptitem._v_objectid
+    def iter_nodes( ptitem, *args, **kwargs): return ptitem._f_iter_nodes(*args, **kwargs)
 
-    iter_nodes = lambda  ptitem, *args, **kwargs: ptitem._f_iter_nodes(*args, **kwargs)
+    def deleteattr(ptitem, attr): return ptitem._f_delattr(attr)
 
-    deleteattr = lambda ptitem, attr: ptitem._f_delattr(attr)
-
-    walk_groups = lambda ptitem: ptitem._f_walk_groups()
+    def walk_groups(ptitem): return ptitem._f_walk_groups()
 
     hdf5_version = pt.hdf5_version
 

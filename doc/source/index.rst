@@ -7,6 +7,13 @@
 Welcome to *pypet*'s documentation
 ==================================
 
+.. image:: https://travis-ci.org/SmokinCaterpillar/pypet.svg?branch=master
+   :target: https://travis-ci.org/SmokinCaterpillar/pypet
+.. image:: https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true
+   :target: https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master
+.. image:: https://coveralls.io/repos/SmokinCaterpillar/pypet/badge.png?branch=master
+   :target: https://coveralls.io/r/SmokinCaterpillar/pypet?branch=master
+
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
 of any numerical simulation in python,

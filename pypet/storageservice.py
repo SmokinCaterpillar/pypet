@@ -411,17 +411,16 @@ class NodeProcessingTimer(HasLogger):
             self._last_time = current_time
 
 
+class DictWrap(object):
+    """Wraps dictionary to allow get and setattr access"""
+    def __init__(self, dictionary):
+        self.__dict__ = dictionary
+
+
 class PTItemMock(object):
     """Class that mocks a PyTables item and wraps around a dictionary"""
-
     def __init__(self, dictionary):
-        self._v_attrs = dictionary
-
-    def _f_setattr(self, name, val):
-        self._v_attrs[name] = val
-
-    def _f_setAttr(self, name, val):
-        self._v_attrs[name] = val
+        self._v_attrs = DictWrap(dictionary)
 
 
 class HDF5StorageService(StorageService, HasLogger):
@@ -861,6 +860,8 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_results_runs = large_overview_tables
         self._overview_results_runs_summary = summary_tables
 
+        self._overview_group_ = None  # to cache link to overview
+
         self._disable_logger = DisableLogger()
 
 
@@ -993,7 +994,9 @@ class HDF5StorageService(StorageService, HasLogger):
     @property
     def _overview_group(self):
         """Direct link to the overview group"""
-        return self._all_create_or_get_groups('overview')[0]
+        if self._overview_group_ is None:
+            self._overview_group_ = self._all_create_or_get_groups('overview')[0]
+        return self._overview_group_
 
     def _all_get_filters(self, kwargs=None):
         """Makes filters
@@ -1835,6 +1838,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             self._node_processing_timer = NodeProcessingTimer(display_time=self._display_time,
                                                               logger_name=self._logger.name)
+            self._overview_group_ = None
 
             return True
         else:
@@ -1878,6 +1882,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._trajectory_group = None
             self._trajectory_name = None
             self._trajectory_index = None
+            self._overview_group_ = None
             return True
         else:
             return False
@@ -3614,24 +3619,17 @@ class HDF5StorageService(StorageService, HasLogger):
         return ptcompat.get_node(self._hdf5file, where=where)
 
     @staticmethod
-    def _all_attr_equals(ptitem, name, value):
-        """Checks if a given hdf5 node attribute exists and if so if it matches the `value`."""
-        try:
-            return ptitem._v_attrs[name] == value
-        except KeyError:
-            return False
-
-    @staticmethod
     def _all_get_from_attrs(ptitem, name):
         """Gets an attribute `name` from `ptitem`, returns None if attribute does not exist."""
-        # if name in ptitem._v_attrs:
-        # return ptitem._v_attrs[name]
-        # else:
-        # return None
         try:
-            return ptitem._v_attrs[name]
-        except KeyError:
+            return getattr(ptitem._v_attrs, name)
+        except AttributeError:
             return None
+
+    @staticmethod
+    def _all_set_attr(ptitem, name, value):
+        """Sets an attribute `name` from `ptitem`"""
+        return setattr(ptitem._v_attrs, name, value)
 
     @staticmethod
     def _all_set_attributes_to_recall_natives(data, ptitem, prefix):
@@ -3653,23 +3651,23 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # If `data` is a container, remember the container type
         if type(data) is tuple:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_TUPLE)
 
         elif type(data) is list:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_LIST)
 
         elif type(data) is np.ndarray:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_NDARRAY)
 
         elif type(data) is np.matrix:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_MATRIX)
 
         elif type(data) in pypetconstants.PARAMETER_SUPPORTED_DATA:
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_SCALAR)
 
             strtype = type(data).__name__
@@ -3678,14 +3676,14 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
                                 (str(data), repr(type(data))))
 
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.SCALAR_TYPE, strtype)
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.SCALAR_TYPE, strtype)
 
         elif type(data) is dict:
             if len(data) > 0:
-                ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+                HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_DICT)
             else:
-                ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.COLL_TYPE,
+                HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_EMPTY_DICT)
         else:
             raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
@@ -3704,11 +3702,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     raise TypeError('I do not know how to handle `%s` its type is '
                                     '`%s`.' % (str(data), strtype))
 
-                ptcompat.set_attribute(ptitem, prefix +
+                HDF5StorageService._all_set_attr(ptitem, prefix +
                                        HDF5StorageService.SCALAR_TYPE, strtype)
         elif (type(data) in (np.ndarray, np.matrix) and
                   np.issubdtype(data.dtype, compat.unicode_type)):
-            ptcompat.set_attribute(ptitem, prefix + HDF5StorageService.SCALAR_TYPE,
+            HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.SCALAR_TYPE,
                                    compat.unicode_type.__name__)
 
     def _all_recall_native_type(self, data, ptitem, prefix):
@@ -5305,7 +5303,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     # we can store the original data types as attributes
                     for field_name in data_type_dict:
                         type_description = data_type_dict[field_name]
-                        ptcompat.set_attribute(table, field_name, type_description)
+                        self._all_set_attr(table, field_name, type_description)
 
                     setattr(table._v_attrs, HDF5StorageService.STORAGE_TYPE,
                             HDF5StorageService.TABLE)

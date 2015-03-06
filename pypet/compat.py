@@ -2,6 +2,8 @@
 Module to allow the same code to work with both Python 2 and 3.
 """
 
+#pylint: skip-file
+
 import sys
 
 python = sys.version_info[0]
@@ -18,25 +20,25 @@ if python == 2:
     bytes_type = str
     base_type = basestring
 
-    func_code = lambda func: func.func_code
+    def func_code(func): return func.func_code
     # Returns the source code of a given python function
 
-    tostr = lambda string: str(string)
+    def tostr(string): return str(string)
     # Converts to the string type, str in python 2 and unicode in 3
-    tobytes = lambda string: str(string)
+    def tobytes(string): return str(string)
     # Converts a string to byte type (in python 2 str and 3 bytestr)
 
-    itervalues = lambda dictionary: dictionary.itervalues()
+    def itervalues(dictionary): return dictionary.itervalues()
     # Returns an iterator over values
-    iterkeys = lambda dictionary: dictionary.iterkeys()
+    def iterkeys(dictionary): return dictionary.iterkeys()
     # Returns an iterator over keys
-    iteritems = lambda dictionary: dictionary.iteritems()
+    def iteritems(dictionary): return dictionary.iteritems()
     # Returns iterator over items
-    listkeys = lambda dictionary: dictionary.keys()
+    def listkeys(dictionary): return dictionary.keys()
     # Returns a list of keys
-    listvalues = lambda dictionary: dictionary.values()
+    def listvalues(dictionary): return dictionary.values()
     # Returns a list of values
-    listitems = lambda dictionary: dictionary.items()
+    def listitems(dictionary): return dictionary.items()
     # Returns list items
 
     xrange = xrange
@@ -51,17 +53,17 @@ elif python == 3:
     bytes_type = bytes
     base_type = str
 
-    func_code = lambda func: func.__code__
+    def func_code(func): return func.__code__
 
-    tostr = lambda string: str(string.decode('utf-8'))
-    tobytes = lambda string: string.encode('utf-8')
+    def tostr(string): return str(string.decode('utf-8'))
+    def tobytes(string): return string.encode('utf-8')
 
-    itervalues = lambda dictionary: dictionary.values()
-    iterkeys = lambda dictionary: dictionary.keys()
-    iteritems = lambda dictionary: dictionary.items()
-    listkeys = lambda dictionary: list(dictionary.keys())
-    listvalues = lambda dictionary: list(dictionary.values())
-    listitems = lambda dictionary: list(dictionary.items())
+    def itervalues(dictionary): return dictionary.values()
+    def iterkeys(dictionary): return dictionary.keys()
+    def iteritems(dictionary): return dictionary.items()
+    def listkeys(dictionary): return list(dictionary.keys())
+    def listvalues(dictionary): return list(dictionary.values())
+    def listitems(dictionary): return list(dictionary.items())
 
     xrange = range
 

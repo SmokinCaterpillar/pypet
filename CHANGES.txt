@@ -24,6 +24,8 @@ pypet 0.1b.10
 
 *   Support for Sparse matrices containing *NO* data (i.e. only zeros).
 
+*   Performance optimization for storage and loading
+
 
 pypet 0.1b.9
 
