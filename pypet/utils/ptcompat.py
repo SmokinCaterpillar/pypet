@@ -95,15 +95,16 @@ def _make_pt2_array(hdf5_file, *args, **kwargs):
 def _read_array(array):
     res = array.read()
     try:
-        if res.size == 1 and res.ndim == 1 and EMPTY_ARRAY_FIX_PT_2 in array._v_attrs:
+        if (res.shape == (1,) and res[0] == empty_array_val and
+                    EMPTY_ARRAY_FIX_PT_2 in array._v_attrs):
             # If the array was stored with pytables 2 we end up here
             dtype = array._v_attrs[EMPTY_ARRAY_FIX_PT_2]
             if dtype == none_type:
                 res = np.array([])
             else:
                 res = np.array([], dtype=np.dtype(dtype))
-    except AttributeError:
-        pass  # has no size, we don't need to worry
+    except (AttributeError, TypeError):
+        pass  # has no size or getitem, we don't need to worry
     return res
 
 
