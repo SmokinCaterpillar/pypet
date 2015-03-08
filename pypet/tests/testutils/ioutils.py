@@ -160,7 +160,7 @@ class TagTestDiscoverer(unittest.TestLoader, HasLogger):
         if isinstance(element, UniversalSet):
             return element
         elif isinstance(element, compat.base_type):
-            return {element}
+            return set([element])
         elif element is None:
             return set()
         else:
