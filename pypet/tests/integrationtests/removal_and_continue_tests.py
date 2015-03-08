@@ -1,24 +1,20 @@
 __author__ = 'Robert Meyer'
 
-import numpy as np
+import os
 
+import numpy as np
+import tables
+import dill
 
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
-import logging
-import multiprocessing as mp
-import pickle
-import tables
+from pypet.tests.testutils.ioutils import make_run, make_temp_file, make_trajectory_name
+from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
+    simple_calculations, TrajectoryComparator
 
-import os
-import dill
-
-import tables as pt
-from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
-    TrajectoryComparator, make_temp_file, multiply, make_trajectory_name
 
 class CustomParameter(Parameter):
 
@@ -37,8 +33,9 @@ class Multiply(object):
         return z
 
 
-
 class ContinueTest(TrajectoryComparator):
+
+    tags = 'integration', 'hdf5', 'environment', 'continue', 'dill'
 
     def tearDown(self):
         if hasattr(self, 'envs'):
@@ -316,6 +313,8 @@ class ContinueTest(TrajectoryComparator):
 
 class ContinueMPTest(ContinueTest):
 
+    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'nopool', 'dill'
+
     def make_run_mp(self,env):
         env.f_run(multiply)
 
@@ -461,7 +460,10 @@ class ContinueMPTest(ContinueTest):
         for run_name in self.trajs[0].f_iter_runs():
             self.assertTrue(self.trajs[0].z in results)
 
+
 class ContinueMPPoolTest(ContinueMPTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'pool', 'dill'
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'

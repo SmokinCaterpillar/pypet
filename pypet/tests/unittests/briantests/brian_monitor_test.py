@@ -1,24 +1,21 @@
-from brian import SpikeCounter
-from pypet.brian.parameter import BrianMonitorResult
-from pypet.tests.parameter_test import ResultTest
-
 __author__ = 'Robert Meyer'
 
-from pypet.tests.briantests.run_a_brian_network import run_network
-import pypet.utils.comparisons as comp
 import brian
-
 from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
     PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
-        MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric, Monitor
-
-from brian.fundamentalunits import Unit, Quantity, get_unit, get_unit_fast
-
+        MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric
+from brian.fundamentalunits import get_unit_fast
 from brian import clear
 
+from pypet.brian.parameter import BrianMonitorResult
+from pypet.tests.unittests.parameter_test import ResultTest
+from pypet.tests.unittests.briantests.run_a_brian_network import run_network
+import pypet.utils.comparisons as comp
 
 
 class BrianMonitorTest(ResultTest):
+
+    tags = 'unittest', 'brian', 'result', 'monitor'
 
     @classmethod
     def setUpClass(cls):

@@ -1,11 +1,6 @@
-from pypet import BaseParameter
-
 __author__ = 'Robert Meyer'
 
-
 import numpy as np
-import warnings
-
 import sys
 if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
@@ -13,8 +8,7 @@ else:
     import unittest
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
-    SparseParameter, ObjectTable, Result, SparseResult, PickleResult
-from pypet.naturalnaming import NNGroupNode
+    SparseParameter, ObjectTable, Result, SparseResult, PickleResult, BaseParameter
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
@@ -27,6 +21,8 @@ import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 
 class ParameterTest(unittest.TestCase):
+
+    tags = 'unittest', 'parameter'
 
     def test_throw_warning_if_stored_and_changed(self):
         for param in self.param.values():
@@ -448,6 +444,8 @@ class ParameterTest(unittest.TestCase):
 
 class ArrayParameterTest(ParameterTest):
 
+    tags = 'unittest', 'parameter', 'array'
+
     def setUp(self):
 
 
@@ -497,6 +495,8 @@ class ArrayParameterTest(ParameterTest):
 
 
 class PickleParameterTest(ParameterTest):
+
+    tags = 'unittest', 'parameter', 'pickle'
 
     def setUp(self):
 
@@ -564,8 +564,10 @@ class PickleParameterTest(ParameterTest):
 
 
 class SparseParameterTest(ParameterTest):
-    def setUp(self):
 
+    tags = 'unittest', 'parameter', 'sparse'
+
+    def setUp(self):
 
         if not hasattr(self,'data'):
             self.data={}
@@ -649,6 +651,8 @@ class SparseParameterTest(ParameterTest):
 
 
 class ResultTest(unittest.TestCase):
+
+    tags = 'unittest', 'result'
 
     def make_results(self):
         self.results= {}
@@ -956,6 +960,9 @@ class ResultTest(unittest.TestCase):
         self.test_meta_settings()
 
 class PickleResultTest(ResultTest):
+
+    tags = 'unittest', 'result', 'pickle'
+
     def make_constructor(self):
         self.Constructor=PickleResult
 
@@ -984,6 +991,8 @@ class PickleResultTest(ResultTest):
         self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
+
+    tags = 'unittest', 'result', 'sparse'
 
     def make_constructor(self):
         self.Constructor=SparseResult

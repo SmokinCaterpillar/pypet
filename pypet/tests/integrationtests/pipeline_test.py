@@ -1,20 +1,13 @@
 __author__ = 'Robert Meyer'
 
-
-from pypet.trajectory import Trajectory
-from pypet.utils.explore import cartesian_product
-from pypet.environment import Environment
-from pypet import pypetconstants
-from pypet.parameter import Parameter
-import logging
-import multiprocessing as mp
-import pickle
-
 import os
 
-import tables as pt
-from pypet.tests.test_helpers import add_params, simple_calculations, create_param_dict, make_run, \
-    TrajectoryComparator, make_temp_file, multiply
+from pypet.environment import Environment
+from pypet.parameter import Parameter
+from pypet.tests.testutils.ioutils import make_run, \
+    make_temp_file
+from pypet.tests.testutils.data import TrajectoryComparator
+
 
 class Multiply(object):
 
@@ -32,6 +25,7 @@ class Multiply(object):
             h = traj.jjj.kkk
         h.f_add_link('$', zres)
         return z
+
 
 class CustomParameter(Parameter):
 
@@ -62,6 +56,8 @@ def mypipeline(traj):
 
 
 class TestPostProc(TrajectoryComparator):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc'
 
     def setUp(self):
 
@@ -168,12 +164,16 @@ class TestPostProc(TrajectoryComparator):
 
 class TestMPPostProc(TestPostProc):
 
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 3}
 
 
 
 class TestMPImmediatePostProc(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}

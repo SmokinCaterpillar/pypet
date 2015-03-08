@@ -35,16 +35,12 @@ if ProcessCoverage:
 
 import sys
 import os
+import getopt
 pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)
 
-from pypet.tests.all_single_core_tests import *
-
-from pypet.tests.all_multi_core_tests import TestMPImmediatePostProc,\
-    MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest,\
-    MultiprocLinkQueueTest, CapTest
-
+from pypet.tests.testutils.ioutils import make_run, do_tag_discover, TEST_IMPORT_ERRORS
 
 if __name__ == '__main__':
     opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
@@ -60,4 +56,8 @@ if __name__ == '__main__':
             print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
-    make_run(remove, folder)
+    suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS, tags_exclude='multiproc',
+                    tests_include=('TestMPImmediatePostProc',
+                    'MultiprocLinkNoPoolLockTest', 'MultiprocLinkNoPoolQueueTest',
+                    'MultiprocLinkQueueTest', 'CapTest'))
+    make_run(remove, folder, suite)

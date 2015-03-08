@@ -1,10 +1,10 @@
 __author__ = 'Robert Meyer'
 
 import logging
-import numpy as np
-import scipy.sparse as spsp
 import os
 
+import numpy as np
+import scipy.sparse as spsp
 from pycallgraph import PyCallGraph, Config, GlobbingFilter
 from pycallgraph.output import GraphvizOutput
 from pycallgraph.color import Color
@@ -20,10 +20,10 @@ class CustomOutput(GraphvizOutput):
         return Color.hsv(value / 2 + .5, value, 0.7)
 
 
-from pypet import Environment, Trajectory, Parameter, load_trajectory, cartesian_product
+from pypet import Environment, Parameter, load_trajectory, cartesian_product
 
-from pypet.tests.test_helpers import make_temp_file, add_params, simple_calculations, \
-    create_param_dict
+from pypet.tests.testutils.ioutils import make_temp_file
+from pypet.tests.testutils.data import create_param_dict, add_params, simple_calculations
 
 filename = None
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         test_run()
     print('DONE RUN PROFILE')
 
-    graphviz = GraphvizOutput()
+    graphviz = CustomOutput()
     graphviz.output_file = './tmp/load_profile.png'
 
     print('LOAD PROFILE')

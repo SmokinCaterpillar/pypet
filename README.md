@@ -377,7 +377,7 @@ they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 20 minutes. The test suite encompasses more than **500** tests
+Running all tests can take up to 20 minutes. The test suite encompasses more than **600** tests
 and has a code coverage of about **90%**!
 
 Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using

@@ -19,7 +19,7 @@ if [[ $GIT_TEST == ON ]]
         pip install django==1.5
         pip install Sumatra
         mkdir git_sumatra_test
-        cp ../../pypet/tests/test_git.py git_sumatra_test
+        cp ../../pypet/tests/integrationtests/git_check.py git_sumatra_test
         cd git_sumatra_test
         git init
         smt init GitTest
@@ -34,7 +34,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py test_git.py
+                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
             else
                 python test_git.py
             fi

@@ -26,6 +26,8 @@ pypet 0.1b.10
 
 *   Performance optimization for storage and loading
 
+*   Improved test handling and parsing in `pypet.tests`
+
 
 pypet 0.1b.9
 

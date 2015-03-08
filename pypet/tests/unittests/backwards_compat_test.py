@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 import sys
@@ -13,6 +13,9 @@ import pypet
 import platform
 
 class LoadOldTrajectoryTest(unittest.TestCase):
+
+    tags = 'unittest', 'legacy'
+
     @unittest.skipIf(not sys.version_info < (3, 0, 0), 'Can only be run in python 2.7')
     def test_backwards_compatibility(self):
         # Test only makes sense with python 2.7 or lower

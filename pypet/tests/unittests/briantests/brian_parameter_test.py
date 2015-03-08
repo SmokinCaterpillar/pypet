@@ -9,7 +9,7 @@ else:
     import unittest
 
 from pypet.brian.parameter import BrianParameter, BrianResult
-from pypet.tests.parameter_test import ParameterTest, ResultTest
+from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest
 from brian.stdunits import mV, mA, kHz,ms
 from pypet.utils.explore import cartesian_product
 
@@ -17,6 +17,8 @@ from pypet.utils.explore import cartesian_product
 
 
 class BrianParameterTest(ParameterTest):
+
+    tags = 'unittest', 'brian', 'parameter'
 
     def setUp(self):
 
@@ -56,6 +58,8 @@ class BrianParameterTest(ParameterTest):
 
 class BrianParameterStringModeTest(BrianParameterTest):
 
+    tags = 'unittest', 'brian', 'parameter', 'string_mode'
+
     def make_params(self):
         self.param = {}
         for key, val in self.data.items():
@@ -64,6 +68,8 @@ class BrianParameterStringModeTest(BrianParameterTest):
 
 
 class BrianResultTest(ResultTest):
+
+    tags = 'unittest', 'brian', 'result'
 
     def make_constructor(self):
         self.Constructor=BrianResult
@@ -89,6 +95,8 @@ class BrianResultTest(ResultTest):
 
 
 class BrianResultStringModeTest(BrianResultTest):
+
+    tags = 'unittest', 'brian', 'result', 'string_mode'
 
     def setUp(self):
         super(BrianResultStringModeTest, self).setUp()

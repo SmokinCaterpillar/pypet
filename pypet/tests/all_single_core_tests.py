@@ -2,59 +2,28 @@ __author__ = 'Robert Meyer'
 
 import getopt
 import sys
-import os
 
-from pypet.tests.test_helpers import make_run
+from pypet.tests.testutils.ioutils import make_run, TEST_IMPORT_ERRORS, do_tag_discover, \
+    combined_suites
 
-from pypet.tests.parameter_test import ArrayParameterTest,PickleParameterTest,SparseParameterTest,ParameterTest, \
-    ResultTest,SparseResultTest,PickleResultTest
-from pypet.tests.trajectory_test import SingleRunQueueTest, SingleRunTest, TrajectoryFindTest, TrajectoryMergeTest, TrajectoryTest
-from pypet.tests.hdf5_storage_test import ResultSortTest, EnvironmentTest, StorageTest,\
-    TestOtherHDF5Settings, TestOtherHDF5Settings2, FullStorageTest
-from pypet.tests.hdf5_merge_test import TestMergeResultsSort, MergeTest
-from pypet.tests.pipeline_test import TestPostProc
-from pypet.tests.backwards_compat_test import LoadOldTrajectoryTest
-try:
-    from pypet.tests.hdf5_removal_and_continue_tests import ContinueTest
-except ImportError as e:
-    print('NO DILL TESTS!!!')
-    print(repr(e)) # We end up here if `dill` is not installed
-    pass
-from pypet.tests.utilstest import CartesianTest, ProgressBarTest, TestNewTreeTranslation, \
-    TestDictionaryMethods, TestEqualityOperations, TestFindUnique, TestIteratorChain
-from pypet.tests.environment_test import EnvironmentTest
-from pypet.tests.annotations_test import AnnotationsTest
-from pypet.tests.module_test import TestAllImport
+unit_suite = do_tag_discover(tags_include='unittest',
+                             tags_exclude='multiproc',
+                               tests_exclude=TEST_IMPORT_ERRORS)
+integration_suite = do_tag_discover(tags_include='integration',
+                                      tags_exclude=('hdf5_settings', 'multiproc'),
+                                      tests_exclude=TEST_IMPORT_ERRORS)
+other_suite = do_tag_discover(tags_include='hdf5_settings')
 
-from pypet.tests.link_test import LinkTrajectoryTests, LinkMergeTest, LinkEnvironmentTest
+suite_dict = {'1': unit_suite, '2': integration_suite, '3': other_suite}
 
-import pypet.utils.ptcompat as ptcompat
 
-if ptcompat.tables_version == 3:
-    from pypet.tests.shared_data_test import StorageDataTrajectoryTests, StorageDataEnvironmentTest
-
-# Works only if someone has installed Brian
-try:
-    from pypet.tests.briantests.brian_parameter_test import BrianParameterTest, BrianParameterStringModeTest, \
-        BrianResult, BrianResultStringModeTest
-    from pypet.tests.briantests.brian_monitor_test import BrianMonitorTest
-    from pypet.tests.briantests.brian_full_network_test import BrianFullNetworkTest
-    from pypet.tests.briantests.module_test import TestAllBrianImport
-except ImportError as e:
-    print('NO BRIAN TESTS!!!')
-    print(repr(e)) # We end up here if `brian` is not installed
-    pass
-
-if os.getenv('APPVEYOR', False):
-    print('Running on APPVEYOR, will skip some tests for a faster build')
-    # Skipping for speed, otherwise the built may run too long on the slow appveyor platform
-    del TestOtherHDF5Settings2
-    del TestOtherHDF5Settings
 
 if __name__ == '__main__':
-    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite='])
     remove = None
     folder = None
+    suite = None
+
     for opt, arg in opt_list:
         if opt == '-k':
             remove = False
@@ -64,5 +33,14 @@ if __name__ == '__main__':
             folder = arg
             print('I will put all data into folder `%s`.' % folder)
 
+        if opt == '--suite':
+            suite_no = arg
+            print('I will run suite `%s`.' % suite_no)
+            suite = suite_dict[suite_no]
+
+    if suite is None:
+        suite = combined_suites(unit_suite, integration_suite, other_suite)
+
+
     sys.argv=[sys.argv[0]]
-    make_run(remove, folder)
+    make_run(remove, folder, suite)

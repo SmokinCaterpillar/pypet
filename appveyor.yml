@@ -5,7 +5,21 @@ environment:
           PYTHON_VERSION: "2.7"
           PYTHON_ARCH: "64"
           MULTIPROC: "OFF"
-          SINGLECORE: "ON"
+          SINGLECORE: "1"
+          EXAMPLES: "ON"
+
+        - PYTHON: "C:\\Python27_64"
+          PYTHON_VERSION: "2.7"
+          PYTHON_ARCH: "64"
+          MULTIPROC: "OFF"
+          SINGLECORE: "2"
+          EXAMPLES: "ON"
+
+        - PYTHON: "C:\\Python27_64"
+          PYTHON_VERSION: "2.7"
+          PYTHON_ARCH: "64"
+          MULTIPROC: "OFF"
+          SINGLECORE: "3"
           EXAMPLES: "ON"
 
         - PYTHON: "C:\\Python27_32"
@@ -40,7 +54,21 @@ environment:
           PYTHON_VERSION: "3.4"
           PYTHON_ARCH: "32"
           MULTIPROC: "OFF"
-          SINGLECORE: "ON"
+          SINGLECORE: "1"
+          EXAMPLES: "ON"
+
+        - PYTHON: "C:\\Python34_32"
+          PYTHON_VERSION: "3.4"
+          PYTHON_ARCH: "32"
+          MULTIPROC: "OFF"
+          SINGLECORE: "2"
+          EXAMPLES: "ON"
+
+        - PYTHON: "C:\\Python34_32"
+          PYTHON_VERSION: "3.4"
+          PYTHON_ARCH: "32"
+          MULTIPROC: "OFF"
+          SINGLECORE: "3"
           EXAMPLES: "ON"
 
 

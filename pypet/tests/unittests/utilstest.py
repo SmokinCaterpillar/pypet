@@ -1,19 +1,17 @@
-
-
 __author__ = 'Robert Meyer'
 
 import time
 import logging
+import sys
+
 import pandas as pd
 import numpy as np
 
-from pypet.tests.test_helpers import add_params, create_param_dict, simple_calculations, make_run,\
-    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name, remove_data
-
+from pypet.tests.testutils.ioutils import make_run,\
+    make_temp_file, remove_data
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter
 
-import sys
 if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
 else:
@@ -29,6 +27,8 @@ import pypet.compat as compat
 
 
 class CartesianTest(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'cartesian_product'
 
     def test_cartesian_product(self):
 
@@ -52,6 +52,8 @@ class CartesianTest(unittest.TestCase):
 
 @unittest.skipIf(sys.version_info < (2, 7, 0), 'progressbar does not work under python 2.6')
 class ProgressBarTest(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'progress_bar'
 
     def test_progressbar(self):
 
@@ -121,6 +123,8 @@ class ProgressBarTest(unittest.TestCase):
 
 class TestFindUnique(unittest.TestCase):
 
+    tags = 'unittest', 'utils', 'find_unique'
+
     def test_find_unique(self):
         paramA = Parameter('ggg', 33)
         paramA._explore([1, 2, 1, 2, 1, 2])
@@ -151,6 +155,8 @@ class TestFindUnique(unittest.TestCase):
 
 class TestDictionaryMethods(unittest.TestCase):
 
+    tags = 'unittest', 'utils'
+
     def test_nest_dicitionary(self):
         mydict = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
         nested = nest_dictionary(mydict, separator='.')
@@ -166,6 +172,8 @@ class TestDictionaryMethods(unittest.TestCase):
 
 @unittest.skipIf(compat.python >= 3, 'Only supported for python 2')
 class TestNewTreeTranslation(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'legacy'
 
     def test_file_translation(self):
         filename = make_temp_file('to_new_tree.hdf5')
@@ -213,6 +221,8 @@ class MyDummy(object):
 
 class TestEqualityOperations(unittest.TestCase):
 
+    tags = 'unittest', 'utils', 'equality'
+
     def test_nested_equal(self):
         self.assertTrue(nested_equal(4, 4))
         self.assertFalse(nested_equal(4, 5))
@@ -247,6 +257,8 @@ class TestEqualityOperations(unittest.TestCase):
 
 
 class TestIteratorChain(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'iterators'
 
     def test_next(self):
         l1 = (x for x in compat.xrange(3))

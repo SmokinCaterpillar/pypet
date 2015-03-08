@@ -1,120 +1,16 @@
 import logging
-logging.basicConfig(level=logging.INFO)
-
-from pypet import BaseParameter, BaseResult
+import unittest
+import numpy as np
+import pandas as pd
+from scipy import sparse as spsp
+from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, PickleParameter, \
+    PickleResult, SparseResult, ObjectTable, BaseParameter, BaseResult
+from pypet.tests.testutils.ioutils import remove_data
+from pypet.utils.comparisons import parameters_equal, results_equal
+from pypet.utils.helpful_functions import flatten_dictionary
 
 __author__ = 'Robert Meyer'
 
-from pypet.utils.comparisons import results_equal,parameters_equal, nested_equal
-from pypet.utils.helpful_functions import nest_dictionary, flatten_dictionary
-from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult, \
-    SparseParameter, SparseResult, ObjectTable
-import pypet.pypetconstants
-import pypet.compat as compat
-import scipy.sparse as spsp
-import os
-
-import random
-
-import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
-
-import shutil
-import numpy as np
-import pandas as pd
-
-
-
-import tempfile
-
-testParams=dict(
-    tempdir = 'tmp_pypet_tests',
-    #''' Temporary directory for the hdf5 files'''
-    remove=True,
-    #''' Whether or not to remove the temporary directory after the tests'''
-    actual_tempdir='',
-    #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
-    user_tempdir='',
-    #'''If the user specifies in run all test a folder, this variable will be used'''
-)
-
-def make_temp_file(filename):
-    global testParams
-    try:
-
-        if ((testParams['user_tempdir'] is not None and testParams['user_tempdir'] != '') and
-                        testParams['actual_tempdir'] == ''):
-            testParams['actual_tempdir'] = testParams['user_tempdir']
-
-        if not os.path.isdir(testParams['actual_tempdir']):
-            os.makedirs(testParams['actual_tempdir'])
-
-        return os.path.join(testParams['actual_tempdir'], filename)
-    except OSError:
-        logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
-                                    testParams['actual_tempdir'] +
-                                    ' I will use pythons gettempdir method instead.')
-        actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
-        testParams['actual_tempdir'] = actual_tempdir
-        return os.path.join(actual_tempdir,filename)
-    except:
-        logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
-        raise
-
-def make_run(remove=None, folder=None, suite=None):
-
-    global testParams
-
-    if remove is not None:
-        testParams['remove'] = remove
-
-    testParams['user_tempdir'] = folder
-
-    try:
-        if suite is None:
-            unittest.main()
-        else:
-            runner = unittest.TextTestRunner(verbosity=2)
-            runner.run(suite)
-    finally:
-        remove_data()
-
-def combined_suites(*test_suites):
-    """Combines several suites into one"""
-    combined_suite = unittest.TestSuite(test_suites)
-    return combined_suite
-
-def combine_test_classes(*test_classes):
-    """ Puts given test classes into a combined suite"""
-    loader = unittest.TestLoader()
-    suites_list = []
-    for test_class in test_classes:
-        if test_class is not None:
-            suite = loader.loadTestsFromTestCase(test_class)
-            suites_list.append(suite)
-    return combined_suites(*suites_list)
-
-def remove_data():
-    global testParams
-    if testParams['remove']:
-        print('REMOVING ALL TEMPORARY DATA')
-        shutil.rmtree(testParams['actual_tempdir'], True)
-
-def make_trajectory_name(testcase):
-    """Creates a trajectory name best on the current `testcase`"""
-    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
-    maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
-
-    if len(name) > maxlen:
-        name = name[len(name)-maxlen:]
-
-        while name.startswith('_'):
-            name = name[1:]
-
-    return name
 
 def create_param_dict(param_dict):
     '''Fills a dictionary with some parameters that can be put into a trajectory.
@@ -179,7 +75,6 @@ def create_param_dict(param_dict):
     param_dict['Pickle']['list']= ['b',[444,43], 44, (),2]
 
 
-
 def add_params(traj,param_dict):
     '''Adds parameters to a trajectory
     '''
@@ -225,11 +120,13 @@ def add_params(traj,param_dict):
     traj.f_add_group('imgeneric.bitch', comment='Generic_Group')
     traj.imgeneric.f_add_leaf('gentest', 'fortytwo', comment='Oh yeah!')
 
+
 def multiply(traj):
     z=traj.x*traj.y
     print('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
     return z
+
 
 def simple_calculations(traj, arg1, simple_kwarg):
 
@@ -374,6 +271,7 @@ def to_dict_wo_config(traj):
 
         return res_dict
 
+
 class TrajectoryComparator(unittest.TestCase):
 
     @classmethod
@@ -429,4 +327,3 @@ class TrajectoryComparator(unittest.TestCase):
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations
                 self.assertTrue(str(node.v_annotations) == str(second_anns))
-

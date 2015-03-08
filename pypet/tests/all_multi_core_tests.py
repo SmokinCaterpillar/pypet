@@ -2,65 +2,37 @@ __author__ = 'Robert Meyer'
 
 import getopt
 import sys
-import os
-import pypet.utils.ptcompat as ptcompat
 
-from pypet.tests.test_helpers import make_run, combined_suites, combine_test_classes
-
-from pypet.tests.hdf5_multiproc_test import MultiprocLockTest,MultiprocQueueTest,MultiprocSortLockTest,MultiprocSortQueueTest, \
-    MultiprocNoPoolLockTest,MultiprocNoPoolQueueTest,MultiprocNoPoolSortLockTest,MultiprocNoPoolSortQueueTest, CapTest
-
-from pypet.tests.link_multiproc_test import MultiprocLinkLockTest, MultiprocLinkNoPoolLockTest, MultiprocLinkNoPoolQueueTest, MultiprocLinkQueueTest
-
-from pypet.tests.pipeline_test import TestMPPostProc, TestMPImmediatePostProc
+from pypet.tests.testutils.ioutils import make_run, do_tag_discover, TEST_IMPORT_ERRORS
 
 
-MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest = None, None
-if ptcompat.tables_version == 3:
-    from pypet.tests.shared_data_test import MultiprocStorageLockTest, MultiprocStorageNoPoolLockTest
+big_suite_1 = do_tag_discover(tags_include=None,
+    tests_include=('MultiprocNoPoolLockTest',
+                   'MultiprocSortQueueTest',
+                   'MultiprocLinkLockTest',
+                   'CapTest',
+                   'MultiprocStorageLockTest'))
 
-ContinueMPTest = None
-ContinueMPPoolTest = None
-try:
-    from pypet.tests.hdf5_removal_and_continue_tests import ContinueMPTest, ContinueMPPoolTest
-except ImportError as e:
-    print('NO DILL TESTS!!!')
-    print(repr(e)) # We end up here if `dill` is not installed
-    pass
+big_suite_2 = do_tag_discover(tags_include=None,
+    tests_include=('MultiprocNoPoolQueueTest',
+                   'MultiprocSortLockTest',
+                   'MultiprocLinkNoPoolLockTest',
+                   'TestMPPostProc',
+                   'ContinueMPPoolTest'))
 
-# Works only if someone has installed Brian
-BrianFullNetworkMPTest = None
-try:
-    from pypet.tests.briantests.brian_full_network_test import  BrianFullNetworkMPTest
-except ImportError as e:
-    print('NO BRIAN NETWORK TESTS!!!')
-    print(repr(e))
-    pass
+big_suite_3 = do_tag_discover(tags_include=None,
+    tests_include=('MultiprocLockTest',
+                   'MultiprocNoPoolSortQueueTest',
+                   'MultiprocLinkNoPoolQueueTest',
+                   'TestMPImmediatePostProc',
+                   'MultiprocStorageNoPoolLockTest'))
 
-
-big_suite_1 = combine_test_classes(MultiprocNoPoolLockTest,
-                                   MultiprocSortQueueTest,
-                                   MultiprocLinkLockTest,
-                                   CapTest,
-                                   MultiprocStorageLockTest)
-
-big_suite_2 = combine_test_classes(MultiprocNoPoolQueueTest,
-                                   MultiprocSortLockTest,
-                                   MultiprocLinkNoPoolLockTest,
-                                   TestMPPostProc,
-                                   ContinueMPPoolTest)
-
-big_suite_3 = combine_test_classes(MultiprocLockTest,
-                                   MultiprocNoPoolSortQueueTest,
-                                   MultiprocLinkNoPoolQueueTest,
-                                   TestMPImmediatePostProc,
-                                   MultiprocStorageNoPoolLockTest)
-
-big_suite_4 = combine_test_classes(MultiprocQueueTest,
-                                   MultiprocNoPoolSortLockTest,
-                                   MultiprocLinkQueueTest,
-                                   ContinueMPTest,
-                                   BrianFullNetworkMPTest)
+big_suite_4 = do_tag_discover(tags_include=None,
+    tests_include=('MultiprocQueueTest',
+                   'MultiprocNoPoolSortLockTest',
+                   'MultiprocLinkQueueTest',
+                   'ContinueMPTest',
+                   'BrianFullNetworkMPTest'))
 
 
 suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3, '4': big_suite_4}
@@ -86,6 +58,8 @@ if __name__ == '__main__':
             print('I will run suite `%s`.' % suite_no)
             suite = suite_dict[suite_no]
 
+    if suite is None:
+        suite = do_tag_discover(tags_include='multiproc', tests_exclude=TEST_IMPORT_ERRORS)
 
     sys.argv=[sys.argv[0]]
     make_run(remove, folder, suite)

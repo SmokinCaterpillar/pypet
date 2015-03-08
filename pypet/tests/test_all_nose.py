@@ -5,26 +5,14 @@ import sys
 import os
 import unittest
 
+from pypet.tests.testutils.ioutils import do_tag_discover, TEST_IMPORT_ERRORS, make_run
+
 class NoseTestDummy(unittest.TestCase):
     pass
 
-from pypet.tests.all_single_core_tests import *
+suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS)
+suite_dict = {}
+for case in suite:
+    class_name = case.__class__.__name__
+    globals()[class_name] = case.__class__
 
-from pypet.tests.all_multi_core_tests import *
-
-
-if __name__ == '__main__':
-    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
-    remove = None
-    folder = None
-    for opt, arg in opt_list:
-        if opt == '-k':
-            remove = False
-            print('I will keep all files.')
-
-        if opt == '--folder':
-            folder = arg
-            print('I will put all data into folder `%s`.' % folder)
-
-    sys.argv=[sys.argv[0]]
-    make_run(remove, folder)

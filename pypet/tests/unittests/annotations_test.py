@@ -1,12 +1,14 @@
 __author__ = 'Robert Meyer'
 
-from pypet.trajectory import Trajectory
-from pypet.storageservice import HDF5StorageService
-from pypet.tests.test_helpers import make_temp_file, remove_data
-from pypet.utils import comparisons as comp
-import numpy as np
 import sys
 import os
+
+import numpy as np
+
+from pypet.trajectory import Trajectory
+from pypet.tests.testutils.ioutils import make_temp_file, remove_data
+from pypet.utils import comparisons as comp
+
 
 try:
     import cPickle as pickle # will fail under python 3
@@ -19,6 +21,8 @@ else:
     import unittest
 
 class AnnotationsTest(unittest.TestCase):
+
+    tags = 'unittest', 'annotations'
 
     def setUp(self):
 

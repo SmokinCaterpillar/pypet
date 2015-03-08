@@ -2,11 +2,9 @@ __author__ = 'Robert Meyer'
 
 import getopt
 import sys
-import os
 
-from pypet.tests.all_single_core_tests import *
 
-from pypet.tests.all_multi_core_tests import *
+from pypet.tests.testutils.ioutils import make_run, do_tag_discover, TEST_IMPORT_ERRORS
 
 
 if __name__ == '__main__':
@@ -23,4 +21,5 @@ if __name__ == '__main__':
             print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
-    make_run(remove, folder)
+    suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS)
+    make_run(remove, folder, suite=suite)

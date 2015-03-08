@@ -1,5 +1,3 @@
-from pypet.naturalnaming import NNGroupNode
-
 __author__ = 'Robert Meyer'
 
 
@@ -37,6 +35,7 @@ class ImAResultInDisguise(Result):
 
 class TrajectoryTest(unittest.TestCase):
 
+    tags = 'unittest', 'trajectory'
 
     def setUp(self):
         name = 'Moop'
@@ -988,6 +987,9 @@ class TrajectoryTest(unittest.TestCase):
 
 
 class TrajectoryFindTest(unittest.TestCase):
+
+    tags = 'unittest', 'trajectory', 'search'
+
     def setUp(self):
         name = 'Traj'
         traj = Trajectory(name)
@@ -1042,86 +1044,89 @@ class TrajectoryFindTest(unittest.TestCase):
 
         traj.f_explore(explore_dict)
 
-class TrajectoryMergeTest(unittest.TestCase):
-
-    def setUp(self):
-        name = 'Moop'
-
-        self.traj = Trajectory(name,[ImAParameterInDisguise])
-
-        comment = 'This is a comment'
-        self.traj.v_comment=comment
-
-        self.assertTrue(comment == self.traj.v_comment)
-
-        self.traj.f_add_parameter('IntParam',3)
-        sparsemat = spsp.csr_matrix((1000,1000))
-        sparsemat[1,2] = 17.777
-
-        #self.traj.f_add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
-
-        self.traj.f_add_parameter('FloatParam')
-
-        self.traj.f_add_derived_parameter(Parameter('FortyTwo', 42))
-        self.traj.f_add_parameter('Trials',0)
-
-        self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
-
-        self.traj.par.FloatParam=4.0
-        self.traj.v_storage_service = LazyStorageService()
-
-
-        self.traj.f_explore({'FloatParam':[1.0,1.1,1.2,1.3],'Trials':[0,1,2,3]})
-
-
-        self.assertTrue(len(self.traj) == 4)
-
-
-        name2 = 'aaaaah'
-        self.traj2 = Trajectory(name2,[ImAParameterInDisguise])
-
-        comment = 'This is a comment'
-        self.traj2.v_comment=comment
-
-        self.assertTrue(comment == self.traj2.v_comment)
-
-        self.traj2.f_add_parameter('IntParam',3)
-        sparsemat = spsp.csr_matrix((1000,1000))
-        sparsemat[1,2] = 17.777
-
-        #self.traj2.f_add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
-        self.traj2.f_add_parameter('Trials',0)
-
-        self.traj2.f_add_parameter('FloatParam')
-
-        self.traj2.f_add_derived_parameter(Parameter('FortyTwo', 42))
-
-        self.traj2.f_add_result(Result,'Im.A.Simple.Result',44444)
-
-        self.traj2.par.FloatParam=4.0
-
-        self.traj2.f_explore({'FloatParam':[42.0,43.0,1.2,1.3],'Trials':[0,1,2,3]})
-        self.traj2.v_storage_service = LazyStorageService()
-
-        self.assertTrue(len(self.traj2) == 4)
-
-
-
-    def test_merge_parameters_without_remove(self):
-        # remove_duplicates = True should be discarded by the trial parameter
-        self.traj._merge_parameters(self.traj2, trial_parameter_name='Trials',remove_duplicates=True)
-
-    def test_merge_parameters_with_remove(self):
-        self.traj._merge_parameters(self.traj2,remove_duplicates=True)
-
-    def test_merge_without_remove(self):
-        self.traj.f_merge(self.traj2, remove_duplicates=True,trial_parameter='Trials')
-
-    def test_merge_with_remove(self):
-        self.traj.f_merge(self.traj2, remove_duplicates=True)
+# class TrajectoryMergeTest(unittest.TestCase):
+#
+#     tags = 'unittest', 'trajectory', 'merge'
+#
+#     def setUp(self):
+#         name = 'Moop'
+#
+#         self.traj = Trajectory(name,[ImAParameterInDisguise])
+#
+#         comment = 'This is a comment'
+#         self.traj.v_comment=comment
+#
+#         self.assertTrue(comment == self.traj.v_comment)
+#
+#         self.traj.f_add_parameter('IntParam',3)
+#         sparsemat = spsp.csr_matrix((1000,1000))
+#         sparsemat[1,2] = 17.777
+#
+#         #self.traj.f_add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
+#
+#         self.traj.f_add_parameter('FloatParam')
+#
+#         self.traj.f_add_derived_parameter(Parameter('FortyTwo', 42))
+#         self.traj.f_add_parameter('Trials',0)
+#
+#         self.traj.f_add_result(Result,'Im.A.Simple.Result',44444)
+#
+#         self.traj.par.FloatParam=4.0
+#         self.traj.v_storage_service = LazyStorageService()
+#
+#
+#         self.traj.f_explore({'FloatParam':[1.0,1.1,1.2,1.3],'Trials':[0,1,2,3]})
+#
+#
+#         self.assertTrue(len(self.traj) == 4)
+#
+#
+#         name2 = 'aaaaah'
+#         self.traj2 = Trajectory(name2,[ImAParameterInDisguise])
+#
+#         comment = 'This is a comment'
+#         self.traj2.v_comment=comment
+#
+#         self.assertTrue(comment == self.traj2.v_comment)
+#
+#         self.traj2.f_add_parameter('IntParam',3)
+#         sparsemat = spsp.csr_matrix((1000,1000))
+#         sparsemat[1,2] = 17.777
+#
+#         #self.traj2.f_add_parameter('SparseParam', sparsemat, param_type=PickleParameter)
+#         self.traj2.f_add_parameter('Trials',0)
+#
+#         self.traj2.f_add_parameter('FloatParam')
+#
+#         self.traj2.f_add_derived_parameter(Parameter('FortyTwo', 42))
+#
+#         self.traj2.f_add_result(Result,'Im.A.Simple.Result',44444)
+#
+#         self.traj2.par.FloatParam=4.0
+#
+#         self.traj2.f_explore({'FloatParam':[42.0,43.0,1.2,1.3],'Trials':[0,1,2,3]})
+#         self.traj2.v_storage_service = LazyStorageService()
+#
+#         self.assertTrue(len(self.traj2) == 4)
+#
+#
+#
+#     def test_merge_parameters_without_remove(self):
+#         # remove_duplicates = True should be discarded by the trial parameter
+#         self.traj._merge_parameters(self.traj2, trial_parameter_name='Trials',remove_duplicates=True)
+#
+#     def test_merge_parameters_with_remove(self):
+#         self.traj._merge_parameters(self.traj2,remove_duplicates=True)
+#
+#     def test_merge_without_remove(self):
+#         self.traj.f_merge(self.traj2, remove_duplicates=True,trial_parameter='Trials')
+#
+#     def test_merge_with_remove(self):
+#         self.traj.f_merge(self.traj2, remove_duplicates=True)
 
 class SingleRunTest(unittest.TestCase):
 
+    tags = 'unittest', 'trajectory', 'single_run'
 
     def setUp(self):
 
@@ -1205,6 +1210,7 @@ class SingleRunTest(unittest.TestCase):
 
 class SingleRunQueueTest(unittest.TestCase):
 
+    tags = 'unittest', 'trajectory', 'single_run', 'multiproc', 'queue'
 
     def setUp(self):
 

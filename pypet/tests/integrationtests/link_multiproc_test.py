@@ -1,13 +1,15 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 import pypet.pypetconstants as pypetconstants
-from pypet.tests.link_test import LinkEnvironmentTest
+from pypet.tests.integrationtests.link_test import LinkEnvironmentTest
 try:
     import psutil
 except ImportError:
     psutil = None
 
 class MultiprocLinkQueueTest(LinkEnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool', 'links'
 
     def set_mode(self):
         LinkEnvironmentTest.set_mode(self)
@@ -21,6 +23,8 @@ class MultiprocLinkQueueTest(LinkEnvironmentTest):
 
 
 class MultiprocLinkLockTest(LinkEnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'links'
 
     # def test_run(self):
     #     super(MultiprocLockTest, self).test_run()
@@ -36,6 +40,8 @@ class MultiprocLinkLockTest(LinkEnvironmentTest):
 
 class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
 
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool', 'links'
+
     def set_mode(self):
         LinkEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_QUEUE
@@ -46,8 +52,9 @@ class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
 
 class MultiprocLinkNoPoolLockTest(LinkEnvironmentTest):
 
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool', 'links'
 
-     def set_mode(self):
+    def set_mode(self):
         LinkEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True

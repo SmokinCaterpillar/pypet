@@ -27,6 +27,41 @@ IF "%SINGLECORE%"=="ON" (
     )
 )
 
+IF "%SINGLECORE%"=="1" (
+    ECHO "##### Running single core test suite 1 #####"
+    python all_single_core_tests.py --suite=1
+
+    IF ERRORLEVEL 1 (
+        ECHO "### Single core failed ###
+        EXIT /b "1
+    ) ELSE (
+        ECHO "### Single core successful ###
+    )
+)
+
+IF "%SINGLECORE%"=="2" (
+    ECHO "##### Running single core test suite 2 #####"
+    python all_single_core_tests.py --suite=2
+
+    IF ERRORLEVEL 1 (
+        ECHO "### Single core failed ###
+        EXIT /b "1
+    ) ELSE (
+        ECHO "### Single core successful ###
+    )
+)
+
+IF "%SINGLECORE%"=="3" (
+    ECHO "##### Running single core test suite 3 #####"
+    python all_single_core_tests.py --suite=3
+
+    IF ERRORLEVEL 1 (
+        ECHO "### Single core failed ###
+        EXIT /b "1
+    ) ELSE (
+        ECHO "### Single core successful ###
+    )
+)
 
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"

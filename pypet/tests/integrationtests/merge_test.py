@@ -1,29 +1,29 @@
 __author__ = 'Robert Meyer'
 
 
-
-
 import sys
 if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
 else:
     import unittest
 
-
 import numpy as np
-from pypet.parameter import Parameter, PickleParameter, ArrayParameter, PickleResult
+from pypet.parameter import Parameter
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import pypetconstants, BaseParameter, BaseResult
+from pypet import pypetconstants
 import logging
 import os
 
-from pypet.tests.test_helpers import add_params, create_param_dict, make_run, simple_calculations, \
-    make_temp_file, TrajectoryComparator, multiply, make_trajectory_name
-from pypet.tests.hdf5_storage_test import ResultSortTest
+from pypet.tests.testutils.ioutils import make_run, make_temp_file, make_trajectory_name
+from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
+    multiply, create_param_dict
+from pypet.tests.integrationtests.environment_test import ResultSortTest
 
 
 class MergeTest(TrajectoryComparator):
+
+    tags = 'integration', 'hdf5', 'environment', 'merge'
 
     def tearDown(self):
         if hasattr(self, 'envs'):
@@ -542,6 +542,8 @@ class MergeTest(TrajectoryComparator):
 
 
 class TestMergeResultsSort(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'merge'
 
     def setUp(self):
         super(TestMergeResultsSort,self).setUp()

@@ -1,29 +1,17 @@
 __author__ = 'Robert Meyer'
 
-import numpy as np
+from pypet.tests.testutils.ioutils import make_temp_file, make_run
 
-import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+from brian import *
 
-from pypet.parameter import Parameter
+from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.trajectory import Trajectory
-from pypet.storageservice import LazyStorageService
-
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult
-import pickle
 import logging
-import cProfile
-from brian import *
 from pypet.utils.explore import cartesian_product
-import shutil
 import time
 import os
-from pypet.tests.test_helpers import make_temp_file, TrajectoryComparator, make_run
-
 
 
 
@@ -123,6 +111,8 @@ def run_net(traj):
 
 class BrianFullNetworkTest(TrajectoryComparator):
 
+    tags = 'brian', 'integration'  # Test tags
+
     def tearDown(self):
         self.env.f_disable_logging()
         super(BrianFullNetworkTest, self).tearDown()
@@ -190,6 +180,8 @@ class BrianFullNetworkTest(TrajectoryComparator):
 
 class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
+    tags = 'brian', 'multiproc', 'integration'  # Test tags
+
     def setUp(self):
         logging.basicConfig(level = logging.INFO)
 
@@ -233,6 +225,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
         self.env = env
         self.traj = traj
+
 
 if __name__ == '__main__':
     make_run(remove=False)

@@ -1,4 +1,4 @@
-__author__ = 'robert'
+__author__ = 'Robert Meyer'
 
 
 import sys
@@ -15,6 +15,8 @@ import inspect
 
 
 class TestAllImport(unittest.TestCase):
+
+    tags = 'unittest', 'import'
 
     def setUp(self):
         logging.basicConfig(level=logging.INFO)

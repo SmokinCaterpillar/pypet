@@ -9,7 +9,7 @@ from pypet.trajectory import load_trajectory
 from pypet import pypetconstants
 
 
-def compact_hdf5_file(filename, name=None, index=None,  keep_backup=True):
+def compact_hdf5_file(filename, name=None, index=None, keep_backup=True):
     """Can compress an HDF5 to reduce file size.
 
     The properties on how to compress the new file are taken from a given
@@ -56,12 +56,15 @@ def compact_hdf5_file(filename, name=None, index=None,  keep_backup=True):
     name_wo_ext, ext = os.path.splitext(filename)
     tmp_filename = name_wo_ext + '_tmp' + ext
 
+    abs_filename = os.path.abspath(filename)
+    abs_tmp_filename = os.path.abspath(tmp_filename)
+
     command = ['ptrepack', '-v',
                '--complib', complib,
                '--complevel', str(complevel),
                '--shuffle', str(int(shuffle)),
                '--fletcher32', str(int(fletcher32)),
-               filename, tmp_filename]
+               abs_filename, abs_tmp_filename]
     str_command = ' '.join(command)
     print('Executing command `%s`' % str_command)
 
