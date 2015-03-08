@@ -4,7 +4,7 @@ cd ..\..\pypet\tests
 
 IF "%EXAMPLES%"=="ON" (
     ECHO "#### Running the examples #####"
-    python run_all_examples.py
+    python all_examples.py
 
     IF ERRORLEVEL 1 (
         ECHO "### Examples failed ###

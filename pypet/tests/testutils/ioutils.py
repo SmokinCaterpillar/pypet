@@ -240,5 +240,7 @@ def do_tag_discover(tags_include=UniversalSet(),
                  tests_exclude=()):
     loader = TagTestDiscoverer(tags_include=tags_include, tags_exclude=tags_exclude,
                               tests_include=tests_include, tests_exclude=tests_exclude)
-    suite = loader.discover(start_dir='./', pattern='*test.py')
+    start_dir = os.path.dirname(os.path.abspath(__file__))
+    start_dir = os.path.abspath(os.path.join(start_dir, '..'))
+    suite = loader.discover(start_dir=start_dir, pattern='*test.py')
     return suite

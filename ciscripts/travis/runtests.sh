@@ -7,7 +7,7 @@ if [[ $EXAMPLES == ON ]]
     then
         conda install matplotlib
         cd ../../pypet/tests
-        python run_all_examples.py
+        python all_examples.py
         cd ../../ciscripts/travis
     fi
 
@@ -27,7 +27,7 @@ if [[ $GIT_TEST == ON ]]
         git config --global user.name "Your Name"
         echo "DummyDummyDummy">>dummy.txt # Create a new dummy file
         git add dummy.txt
-        git add test_git.py
+        git add git_check.py
         git commit -m "First Commit"
         echo "Dummy2">>dummy.txt # Change the file
         echo "Running First Git Test"
@@ -46,7 +46,7 @@ if [[ $GIT_TEST == ON ]]
                 coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
                 mv -v .coverage* ../../../
             else
-                python test_git.py
+                python git_check.py
             fi
         echo "Git Test complete, removing folder"
         cd ..
