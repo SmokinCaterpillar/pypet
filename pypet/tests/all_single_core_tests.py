@@ -10,11 +10,12 @@ unit_suite = do_tag_discover(tags_include='unittest',
                              tags_exclude='multiproc',
                                tests_exclude=TEST_IMPORT_ERRORS)
 integration_suite = do_tag_discover(tags_include='integration',
-                                      tags_exclude=('hdf5_settings', 'multiproc'),
+                                      tags_exclude=('hdf5_settings', 'multiproc', 'links'),
                                       tests_exclude=TEST_IMPORT_ERRORS)
-other_suite = do_tag_discover(tags_include='hdf5_settings')
+link_and_other_suite = do_tag_discover(tags_include=('hdf5_settings', 'links'),
+                                       tags_exclude=('unittest', 'multiproc'))
 
-suite_dict = {'1': unit_suite, '2': integration_suite, '3': other_suite}
+suite_dict = {'1': unit_suite, '2': integration_suite, '3': link_and_other_suite}
 
 
 
@@ -39,7 +40,7 @@ if __name__ == '__main__':
             suite = suite_dict[suite_no]
 
     if suite is None:
-        suite = combined_suites(unit_suite, integration_suite, other_suite)
+        suite = combined_suites(unit_suite, integration_suite, link_and_other_suite)
 
 
     sys.argv=[sys.argv[0]]

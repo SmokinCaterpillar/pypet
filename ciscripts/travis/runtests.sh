@@ -36,14 +36,14 @@ if [[ $GIT_TEST == ON ]]
                 echo "Running git coverage"
                 coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
             else
-                python test_git.py
+                python git_check.py
             fi
         rm -rvf experiments
         echo "Running Second Git Test (without actual commit)"
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py test_git.py
+                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
                 mv -v .coverage* ../../../
             else
                 python test_git.py
