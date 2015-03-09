@@ -15,6 +15,7 @@ class MultiprocLinkQueueTest(LinkEnvironmentTest):
         LinkEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
+        self.log_stdout = True
         if psutil is not None:
             self.ncores = 0
         else:

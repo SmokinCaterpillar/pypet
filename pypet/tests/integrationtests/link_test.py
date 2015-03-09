@@ -55,6 +55,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
         self.shuffle=True
         self.fletcher32 = False
         self.encoding = 'utf8'
+        self.log_stdout=False
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -79,7 +80,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False,
+                          log_stdout=self.log_stdout,
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
