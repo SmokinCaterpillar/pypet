@@ -30,7 +30,7 @@ testParams=dict(
     #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
     user_tempdir='',
     #'''If the user specifies in run all test a folder, this variable will be used'''
-    log_level=logging.INFO
+    log_level=logging.ERROR
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'

@@ -791,7 +791,7 @@ class StorageTest(TrajectoryComparator):
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_file(filename)
-        env = Environment(filename=filename, log_levels=get_log_level(),
+        env = Environment(filename=filename, log_levels=logging.INFO, # needed for the test
                           log_folder=make_temp_file('logs'),
                           log_stdout=True,
                           logger_names=('STDERR', 'STDOUT'))

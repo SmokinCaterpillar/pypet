@@ -89,6 +89,7 @@ class MultiprocNoPoolSortQueueTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
 
     def set_mode(self):
+        ResultSortTest.set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 3
@@ -100,6 +101,7 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
 
     def set_mode(self):
+        ResultSortTest.set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 3

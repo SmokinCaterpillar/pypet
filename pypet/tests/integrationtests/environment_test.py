@@ -300,7 +300,7 @@ class EnvironmentTest(TrajectoryComparator):
         filename = make_temp_file('sloooow.hdf5')
         log_folder = make_temp_file('logs')
         env = Environment(trajectory='traj', add_time=True, filename=filename,
-                          log_stdout=False, log_levels=get_log_level(),
+                          log_stdout=False, log_levels=logging.INFO, # needed for the test!
                           dynamic_imports=SlowResult, log_folder=log_folder,
                           display_time=1)
         traj = env.v_traj
