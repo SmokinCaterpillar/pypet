@@ -4,15 +4,22 @@ import os
 import logging
 import random
 
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 import tables as pt
 import scipy.sparse as spsp
 
 from pypet.shareddata import *
 from pypet import Trajectory
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, make_run
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_tests
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
+import pypet.utils.ptcompat as ptcompat
 
 
 def copy_one_entry_from_giant_matrices(traj):
@@ -79,7 +86,7 @@ def write_into_shared_storage(traj):
     df = traj.df
     df.f_append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
 
-
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataEnvironmentTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment', 'shared'
@@ -331,6 +338,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
 
 
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageLockTest(StorageDataEnvironmentTest):
 
     # def test_run(self):
@@ -343,6 +351,8 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
         self.ncores = 4
         self.use_pool=True
 
+
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageNoPoolLockTest(StorageDataEnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'nopool', 'shared', 'lock'
@@ -355,4 +365,4 @@ class MultiprocStorageNoPoolLockTest(StorageDataEnvironmentTest):
         self.use_pool=False
 
 if __name__ == '__main__':
-    make_run()
+    run_tests()

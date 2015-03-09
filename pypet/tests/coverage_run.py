@@ -40,7 +40,7 @@ pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)
 
-from pypet.tests.testutils.ioutils import make_run, do_tag_discover, TEST_IMPORT_ERRORS
+from pypet.tests.testutils.ioutils import run_tests, discover_tests, TEST_IMPORT_ERROR
 
 if __name__ == '__main__':
     opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
@@ -56,8 +56,10 @@ if __name__ == '__main__':
             print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
-    suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS, tags_exclude='multiproc',
-                    tests_include=('TestMPImmediatePostProc',
+    tests_include = set(('TestMPImmediatePostProc',
                     'MultiprocLinkNoPoolLockTest', 'MultiprocLinkNoPoolQueueTest',
                     'MultiprocLinkQueueTest', 'CapTest'))
-    make_run(remove, folder, suite)
+    pred = lambda class_name, test_name, tags: (class_name in tests_include or
+                                                 'multiproc' not in tags)
+    suite = discover_tests(pred)
+    run_tests(remove, folder, suite)

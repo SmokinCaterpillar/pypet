@@ -11,7 +11,7 @@ import sys
 from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.environment import Environment
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, make_run
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_tests
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -267,4 +267,4 @@ if __name__ == '__main__':
             print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
-    make_run(remove, folder)
+    run_tests(remove, folder)

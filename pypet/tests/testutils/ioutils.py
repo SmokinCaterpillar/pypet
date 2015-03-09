@@ -3,11 +3,10 @@ __author__ = 'Robert Meyer'
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from collections import Set
-
 import pypet.pypetconstants
 import pypet.compat as compat
 from pypet import HasLogger
+from pypet.utils.decorators import copydoc
 import os
 
 import random
@@ -33,9 +32,11 @@ testParams=dict(
     #'''If the user specifies in run all test a folder, this variable will be used'''
 )
 
-TEST_IMPORT_ERRORS = 'ModuleImportFailure'
+TEST_IMPORT_ERROR = 'ModuleImportFailure'
+
 
 def make_temp_file(filename):
+    """Creates a temporary file in a temporary folder"""
     global testParams
     try:
 
@@ -58,8 +59,13 @@ def make_temp_file(filename):
         logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
         raise
 
-def make_run(remove=None, folder=None, suite=None):
 
+def run_tests(remove=None, folder=None, suite=None):
+    """Runs a particular test suite or simply unittest.main.
+
+    Takes care that all temporary data in `folder` is removed if `remove=True`.
+
+    """
     global testParams
 
     if remove is not None:
@@ -67,19 +73,27 @@ def make_run(remove=None, folder=None, suite=None):
 
     testParams['user_tempdir'] = folder
 
+    success = False
     try:
         if suite is None:
             unittest.main()
         else:
             runner = unittest.TextTestRunner(verbosity=2)
-            runner.run(suite)
+            result = runner.run(suite)
+            success = result.wasSuccessful()
     finally:
         remove_data()
+
+    if not success:
+        # Exit with 1 if tests were not successful
+        sys.exit(1)
+
 
 def combined_suites(*test_suites):
     """Combines several suites into one"""
     combined_suite = unittest.TestSuite(test_suites)
     return combined_suite
+
 
 def combine_tests(*tests):
     """ Puts given test classes into a combined suite"""
@@ -91,14 +105,17 @@ def combine_tests(*tests):
             suites_list.append(suite)
     return combined_suites(*suites_list)
 
+
 def remove_data():
+    """Removes all data from temporary folder"""
     global testParams
     if testParams['remove']:
         print('REMOVING ALL TEMPORARY DATA')
         shutil.rmtree(testParams['actual_tempdir'], True)
 
+
 def make_trajectory_name(testcase):
-    """Creates a trajectory name best on the current `testcase`"""
+    """Creates a trajectory name based on the current `testcase`"""
     name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
     maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
 
@@ -112,6 +129,21 @@ def make_trajectory_name(testcase):
 
 
 class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
+    """ Discovers tests and filters according to a `predicate`.
+
+    Note that tests are discovered first and then filtered.
+    This means all tests have already been instantiated at time of filtering.
+
+    `predicate` must accept three variables `class_name`, name of test class,
+    `test_name`, name of the individual test, `tags`, the set of tags assigned
+    to the test class.
+
+    For instance:
+
+         >>> my_pred = lambda class_name, test_name, tags: class_name != 'MyTestClass' and 'mytag' in tags
+         >>> loader = LambdaTestDiscoverer(my_pred)
+
+    """
     def __init__(self, predicate=None):
         super(LambdaTestDiscoverer, self).__init__()
         if predicate is not None:
@@ -139,6 +171,7 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
                 res.append(case)
         return res
 
+    @copydoc(unittest.TestLoader.discover)
     def discover(self, start_dir, pattern='test*.py', top_level_dir=None):
         tmp_suite = super(LambdaTestDiscoverer, self).discover(start_dir=start_dir, pattern=pattern,
                                                         top_level_dir=top_level_dir)
@@ -148,6 +181,11 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
         found_set = set()
         test_list = []
         for case in flattened_suite:
+            if case in found_set:
+                continue
+            else:
+                found_set.add(case)
+
             if not hasattr(case, 'tags'):
                 tags = set()
             else:
@@ -155,18 +193,12 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
             test_name = str(case).split(' ')[0]
             class_name = case.__class__.__name__
 
-            if case in found_set:
-                continue
-            else:
-                found_set.add(case)
-
             if class_name == 'ModuleImportFailure':
                 self._logger.error('ERROR could not import `%s`' % test_name)
             if class_name == 'LoadTestsFailure':
                 self._logger.error('ERROR could not load test `%s`' % test_name)
 
             add = self.predicate(class_name, test_name, tags)
-
             if add:
                 test_list.append(case)
 
@@ -176,7 +208,8 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
         return res_suite
 
 
-def do_tag_discover(predicate=None):
+def discover_tests(predicate=None):
+    """Builds a LambdaTestLoader and discovers tests according to `predicate`."""
     loader = LambdaTestDiscoverer(predicate)
     start_dir = os.path.dirname(os.path.abspath(__file__))
     start_dir = os.path.abspath(os.path.join(start_dir, '..'))

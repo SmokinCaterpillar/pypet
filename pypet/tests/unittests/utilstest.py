@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 import numpy as np
 
-from pypet.tests.testutils.ioutils import make_run,\
+from pypet.tests.testutils.ioutils import run_tests,\
     make_temp_file, remove_data
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter
@@ -293,7 +293,7 @@ class TestIteratorChain(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    make_run()
+    run_tests()
 
 
 
