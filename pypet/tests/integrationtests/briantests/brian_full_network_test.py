@@ -1,6 +1,6 @@
 __author__ = 'Robert Meyer'
 
-from pypet.tests.testutils.ioutils import make_temp_file, run_tests
+from pypet.tests.testutils.ioutils import make_temp_file, run_suite
 
 from brian import *
 
@@ -228,4 +228,4 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
 
 if __name__ == '__main__':
-    run_tests(remove=False)
+    run_suite(remove=False)

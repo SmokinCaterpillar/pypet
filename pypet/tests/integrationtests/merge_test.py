@@ -9,7 +9,7 @@ from pypet import pypetconstants
 import logging
 import os
 
-from pypet.tests.testutils.ioutils import run_tests, make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integrationtests.environment_test import ResultSortTest
@@ -621,4 +621,4 @@ class TestMergeResultsSort(ResultSortTest):
 
 
 if __name__ == '__main__':
-    run_tests()
+    run_suite()

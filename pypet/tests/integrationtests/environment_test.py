@@ -30,7 +30,7 @@ from pypet import Parameter
 
 import tables as pt
 
-from pypet.tests.testutils.ioutils import  run_tests, make_temp_file,  make_trajectory_name
+from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
     simple_calculations, TrajectoryComparator
 
@@ -994,5 +994,5 @@ class ResultSortTest(TrajectoryComparator):
 
 
 if __name__ == '__main__':
-    run_tests()
+    run_suite()
 

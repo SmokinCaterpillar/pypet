@@ -3,7 +3,7 @@ __author__ = 'Robert Meyer'
 import getopt
 import sys
 
-from pypet.tests.testutils.ioutils import run_tests, TEST_IMPORT_ERROR, discover_tests, \
+from pypet.tests.testutils.ioutils import run_suite, TEST_IMPORT_ERROR, discover_tests, \
     combined_suites
 
 unit_pred = lambda class_name, test_name, tags: ('unittest' in tags and
@@ -52,4 +52,4 @@ if __name__ == '__main__':
 
 
     sys.argv=[sys.argv[0]]
-    run_tests(remove, folder, suite)
+    run_suite(remove, folder, suite)

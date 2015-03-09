@@ -40,7 +40,7 @@ pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)
 
-from pypet.tests.testutils.ioutils import run_tests, discover_tests, TEST_IMPORT_ERROR
+from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR
 
 if __name__ == '__main__':
     opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
@@ -62,4 +62,4 @@ if __name__ == '__main__':
     pred = lambda class_name, test_name, tags: (class_name in tests_include or
                                                  'multiproc' not in tags)
     suite = discover_tests(pred)
-    run_tests(remove, folder, suite)
+    run_suite(remove, folder, suite)

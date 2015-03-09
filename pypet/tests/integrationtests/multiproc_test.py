@@ -7,7 +7,7 @@ import os
 from pypet import pypetconstants
 from pypet.environment import Environment
 from pypet.tests.integrationtests.environment_test import EnvironmentTest, ResultSortTest
-from pypet.tests.testutils.ioutils import run_tests,make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name
 from pypet.tests.testutils.data import create_param_dict, add_params
 
 
@@ -154,4 +154,4 @@ class CapTest(EnvironmentTest):
 
 
 if __name__ == '__main__':
-    run_tests()
+    run_suite()

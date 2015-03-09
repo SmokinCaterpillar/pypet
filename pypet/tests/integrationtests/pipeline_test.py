@@ -4,7 +4,7 @@ import os
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_tests, \
+from pypet.tests.testutils.ioutils import run_suite, \
     make_temp_file
 from pypet.tests.testutils.data import TrajectoryComparator
 
@@ -181,4 +181,4 @@ class TestMPImmediatePostProc(TestPostProc):
 
 
 if __name__ == '__main__':
-    run_tests()
+    run_suite()

@@ -15,7 +15,7 @@ import scipy.sparse as spsp
 
 from pypet.shareddata import *
 from pypet import Trajectory
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_tests
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
@@ -365,4 +365,4 @@ class MultiprocStorageNoPoolLockTest(StorageDataEnvironmentTest):
         self.use_pool=False
 
 if __name__ == '__main__':
-    run_tests()
+    run_suite()

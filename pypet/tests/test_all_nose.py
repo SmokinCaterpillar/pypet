@@ -9,7 +9,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.tests.testutils.ioutils import discover_tests, TEST_IMPORT_ERROR, run_tests
+from pypet.tests.testutils.ioutils import discover_tests, TEST_IMPORT_ERROR
 
 class NoseTestDummy(unittest.TestCase):
     pass

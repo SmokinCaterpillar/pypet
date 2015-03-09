@@ -60,7 +60,7 @@ def make_temp_file(filename):
         raise
 
 
-def run_tests(remove=None, folder=None, suite=None):
+def run_suite(remove=None, folder=None, suite=None):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.

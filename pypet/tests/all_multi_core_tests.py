@@ -3,7 +3,7 @@ __author__ = 'Robert Meyer'
 import getopt
 import sys
 
-from pypet.tests.testutils.ioutils import run_tests, discover_tests, TEST_IMPORT_ERROR
+from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR
 
 tests_include=set(('MultiprocNoPoolLockTest',
                    'MultiprocSortQueueTest',
@@ -63,4 +63,4 @@ if __name__ == '__main__':
         suite = discover_tests(pred)
 
     sys.argv=[sys.argv[0]]
-    run_tests(remove, folder, suite)
+    run_suite(remove, folder, suite)

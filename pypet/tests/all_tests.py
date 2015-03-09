@@ -4,7 +4,7 @@ import getopt
 import sys
 
 
-from pypet.tests.testutils.ioutils import run_tests, discover_tests, TEST_IMPORT_ERROR
+from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR
 
 
 if __name__ == '__main__':
@@ -23,4 +23,4 @@ if __name__ == '__main__':
     sys.argv=[sys.argv[0]]
     suite = discover_tests(predicate= lambda class_name, test_name, tags:
                                                 class_name != TEST_IMPORT_ERROR)
-    run_tests(remove, folder, suite=suite)
+    run_suite(remove, folder, suite=suite)
