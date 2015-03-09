@@ -6,16 +6,23 @@ import sys
 from pypet.tests.testutils.ioutils import make_run, TEST_IMPORT_ERRORS, do_tag_discover, \
     combined_suites
 
-unit_suite = do_tag_discover(tags_include='unittest',
-                             tags_exclude='multiproc',
-                               tests_exclude=TEST_IMPORT_ERRORS)
-integration_suite = do_tag_discover(tags_include='integration',
-                                      tags_exclude=('hdf5_settings', 'multiproc', 'links'),
-                                      tests_exclude=TEST_IMPORT_ERRORS)
-link_and_other_suite = do_tag_discover(tags_include=('hdf5_settings', 'links'),
-                                       tags_exclude=('unittest', 'multiproc'))
+unit_pred = lambda class_name, test_name, tags: ('unittest' in tags and
+                                                 'multiproc' not in tags)
+unit_suite = do_tag_discover(unit_pred)
 
-suite_dict = {'1': unit_suite, '2': integration_suite, '3': link_and_other_suite}
+exclude_set = set(('hdf5_settings', 'multiproc', 'merge'))
+integration_pred = lambda class_name, test_name, tags: ('integration' in tags and
+                                                         not bool(exclude_set & tags))
+integration_suite = do_tag_discover(integration_pred)
+
+include_set = set(('hdf5_settings', 'links', 'merge'))
+integration_pred_2 = lambda class_name, test_name, tags: ('integration' in tags and
+                                                          bool(include_set & tags) and
+                                                          'multiproc' not in tags and
+                                                          'links' not in tags)
+integration_suite_2 = do_tag_discover(integration_pred_2)
+
+suite_dict = {'1': unit_suite, '2': integration_suite, '3': integration_suite_2}
 
 
 
@@ -40,7 +47,7 @@ if __name__ == '__main__':
             suite = suite_dict[suite_no]
 
     if suite is None:
-        suite = combined_suites(unit_suite, integration_suite, link_and_other_suite)
+        suite = combined_suites(unit_suite, integration_suite, integration_suite_2)
 
 
     sys.argv=[sys.argv[0]]

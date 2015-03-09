@@ -10,7 +10,8 @@ from pypet.tests.testutils.ioutils import do_tag_discover, TEST_IMPORT_ERRORS, m
 class NoseTestDummy(unittest.TestCase):
     pass
 
-suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS)
+suite = do_tag_discover(predicate= lambda class_name, test_name, tags:
+                                                class_name != TEST_IMPORT_ERRORS)
 suite_dict = {}
 for case in suite:
     class_name = case.__class__.__name__

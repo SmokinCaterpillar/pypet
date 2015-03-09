@@ -33,7 +33,7 @@ testParams=dict(
     #'''If the user specifies in run all test a folder, this variable will be used'''
 )
 
-TEST_IMPORT_ERRORS = ('ModuleImportFailure')
+TEST_IMPORT_ERRORS = 'ModuleImportFailure'
 
 def make_temp_file(filename):
     global testParams
@@ -111,55 +111,18 @@ def make_trajectory_name(testcase):
     return name
 
 
-class UniversalSet(Set):
-    def __len__(self):
-        return 1
-
-    def __contains__(self, key):
-        return True
-
-    def __iter__(self):
-        raise StopIteration('No elements')
-
-    def __reversed__(self):
-        return self
-
-    def __eq__(self, other):
-        if isinstance(other, UniversalSet):
-            return True
-
-    def __or__(self, other):
-        return self
-
-    def __and__(self, other):
-        return other
-
-    def __rand__(self, other):
-        return other
-
-    def __ror__(self, other):
-        return self
-
-
-class TagTestDiscoverer(unittest.TestLoader, HasLogger):
-    def __init__(self, tags_include=UniversalSet(),
-                 tags_exclude=(),
-                 tests_include=(),
-                 tests_exclude=(),
-                 order = ('tags_include', 'tags_exclude', 'tests_include', 'tests_exclude')):
-        super(TagTestDiscoverer, self).__init__()
-        self.tags_include = self._input2set(tags_include)
-        self.tags_exclude = self._input2set(tags_exclude)
-        self.tests_include = self._input2set(tests_include)
-        self.tests_exclude = self._input2set(tests_exclude)
-        self.order = order
+class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
+    def __init__(self, predicate=None):
+        super(LambdaTestDiscoverer, self).__init__()
+        if predicate is not None:
+            self.predicate=predicate
+        else:
+            self.predicate = lambda x, y, z: True
         self._set_logger()
 
     @staticmethod
     def _input2set(element):
-        if isinstance(element, UniversalSet):
-            return element
-        elif isinstance(element, compat.base_type):
+        if isinstance(element, compat.base_type):
             return set([element])
         elif element is None:
             return set()
@@ -171,15 +134,13 @@ class TagTestDiscoverer(unittest.TestLoader, HasLogger):
         res = []
         for case in suite:
             if isinstance(case, unittest.TestSuite):
-                res.extend(TagTestDiscoverer._flatten_suite(case))
-            elif isinstance(case, unittest.TestCase):
-                res.append(case)
+                res.extend(LambdaTestDiscoverer._flatten_suite(case))
             else:
-                raise RuntimeError('You shall not pass')
+                res.append(case)
         return res
 
     def discover(self, start_dir, pattern='test*.py', top_level_dir=None):
-        tmp_suite = super(TagTestDiscoverer, self).discover(start_dir=start_dir, pattern=pattern,
+        tmp_suite = super(LambdaTestDiscoverer, self).discover(start_dir=start_dir, pattern=pattern,
                                                         top_level_dir=top_level_dir)
 
         res_suite = unittest.TestSuite()
@@ -193,7 +154,6 @@ class TagTestDiscoverer(unittest.TestLoader, HasLogger):
                 tags = self._input2set(case.tags)
             test_name = str(case).split(' ')[0]
             class_name = case.__class__.__name__
-            combined_name = class_name + '.' + test_name
 
             if case in found_set:
                 continue
@@ -205,41 +165,19 @@ class TagTestDiscoverer(unittest.TestLoader, HasLogger):
             if class_name == 'LoadTestsFailure':
                 self._logger.error('ERROR could not load test `%s`' % test_name)
 
-            add = False
-            for what in self.order:
-                if what == 'tags_include':
-                    if bool(tags & self.tags_include):
-                        add = True
-                elif what == 'tags_exclude':
-                    if bool(tags & self.tags_exclude):
-                        add = False
-
-                elif what == 'tests_include':
-                    if (class_name in self.tests_include or
-                            test_name in self.tests_include or
-                            combined_name in self.tests_include):
-                        add = True
-                elif what == 'tests_exclude':
-                    if (class_name in self.tests_exclude or
-                            test_name in self.tests_exclude or
-                            combined_name in self.tests_exclude):
-                        add = False
-                else:
-                    raise ValueError('Your order `%s` is not understood.' % what)
+            add = self.predicate(class_name, test_name, tags)
 
             if add:
                 test_list.append(case)
-        test_list = sorted(test_list)
+
+        combined_name_key = lambda key: key.__class__.__name__ + str(key).split(' ')[0]
+        test_list = sorted(test_list, key = combined_name_key)
         res_suite.addTests(test_list)
         return res_suite
 
 
-def do_tag_discover(tags_include=UniversalSet(),
-                 tags_exclude=(),
-                 tests_include=(),
-                 tests_exclude=()):
-    loader = TagTestDiscoverer(tags_include=tags_include, tags_exclude=tags_exclude,
-                              tests_include=tests_include, tests_exclude=tests_exclude)
+def do_tag_discover(predicate=None):
+    loader = LambdaTestDiscoverer(predicate)
     start_dir = os.path.dirname(os.path.abspath(__file__))
     start_dir = os.path.abspath(os.path.join(start_dir, '..'))
     suite = loader.discover(start_dir=start_dir, pattern='*test.py')

@@ -21,5 +21,6 @@ if __name__ == '__main__':
             print('I will put all data into folder `%s`.' % folder)
 
     sys.argv=[sys.argv[0]]
-    suite = do_tag_discover(tests_exclude=TEST_IMPORT_ERRORS)
+    suite = do_tag_discover(predicate= lambda class_name, test_name, tags:
+                                                class_name != TEST_IMPORT_ERRORS)
     make_run(remove, folder, suite=suite)
