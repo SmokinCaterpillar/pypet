@@ -1,7 +1,6 @@
 __author__ = 'Robert Meyer'
 
 import logging
-logging.basicConfig(level=logging.INFO)
 
 import pypet.pypetconstants
 import pypet.compat as compat
@@ -18,7 +17,7 @@ else:
     import unittest
 
 import shutil
-
+import getopt
 import tempfile
 
 testParams=dict(
@@ -60,7 +59,7 @@ def make_temp_file(filename):
         raise
 
 
-def run_suite(remove=None, folder=None, suite=None):
+def run_suite(remove=None, folder=None, suite=None, quiet=False):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.
@@ -72,6 +71,10 @@ def run_suite(remove=None, folder=None, suite=None):
         testParams['remove'] = remove
 
     testParams['user_tempdir'] = folder
+
+    if quiet:
+        root = logging.getLogger()
+        root.addHandler(logging.NullHandler())
 
     success = False
     try:
@@ -215,3 +218,29 @@ def discover_tests(predicate=None):
     start_dir = os.path.abspath(os.path.join(start_dir, '..'))
     suite = loader.discover(start_dir=start_dir, pattern='*test.py')
     return suite
+
+
+def parse_args():
+    """Parses arguments and returns a dictionary"""
+    opt_list, _ = getopt.getopt(sys.argv[1:],'kq',['folder=', 'suite='])
+    opt_dict = {}
+
+    for opt, arg in opt_list:
+        if opt == '-k':
+            opt_dict['remove'] = False
+            print('I will keep all files.')
+
+        if opt == '--folder':
+            opt_dict['folder'] = arg
+            print('I will put all data into folder `%s`.' % arg)
+
+        if opt == '--suite':
+            opt_dict['suite_no'] = arg
+            print('I will run suite `%s`.' % arg)
+
+        if opt == '-q':
+            opt_dict['quiet'] = True
+            print('I will suppress standard output')
+
+    sys.argv=[sys.argv[0]]
+    return opt_dict

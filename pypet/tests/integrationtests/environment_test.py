@@ -12,8 +12,6 @@ from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
 from pypet import pypetconstants, Result
 
-
-logging.basicConfig(level=logging.INFO)
 import pypet.pypetexceptions as pex
 
 import sys
