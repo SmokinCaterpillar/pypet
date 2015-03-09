@@ -1,5 +1,11 @@
 __author__ = 'Robert Meyer'
 
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
+
 import os
 import platform
 import unittest
@@ -15,7 +21,7 @@ from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name
 from pypet.utils import ptcompat
 
 
-
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataTrajectoryTests(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5'
