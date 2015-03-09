@@ -56,7 +56,7 @@ environment:
           PYTHON_ARCH: "32"
           MULTIPROC: "OFF"
           SINGLECORE: "3"
-          EXAMPLES: "ON"
+          EXAMPLES: "OFF"
 
 
 install:
