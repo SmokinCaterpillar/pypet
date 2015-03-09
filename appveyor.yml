@@ -1,3 +1,11 @@
+
+# fetch repository as zip archive
+shallow_clone: true
+
+# set clone depth
+clone_depth: 16
+
+
 environment:
 
     matrix:
