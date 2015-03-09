@@ -18,9 +18,6 @@ class TestAllImport(unittest.TestCase):
 
     tags = 'unittest', 'import'
 
-    def setUp(self):
-        logging.basicConfig(level=logging.INFO)
-
     def test_import_star(self):
         for class_name in pypet.__all__:
             logstr = 'Evaulauting %s: %s' % (class_name, repr(eval(class_name)))

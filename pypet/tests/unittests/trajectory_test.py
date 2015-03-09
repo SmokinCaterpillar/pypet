@@ -1050,7 +1050,6 @@ class SingleRunTest(unittest.TestCase):
 
     def setUp(self):
 
-        logging.basicConfig(level = logging.INFO)
         traj = Trajectory('Test')
 
         traj.v_storage_service = LazyStorageService()
@@ -1131,7 +1130,7 @@ class SingleRunQueueTest(unittest.TestCase):
 
     def setUp(self):
 
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level = logging.ERROR)
         traj = Trajectory('Test')
 
         traj.v_storage_service=LazyStorageService()

@@ -62,10 +62,10 @@ if [[ $TEST_SUITE == ON ]]
                 # but only for one particular setting of the test matrix python = 2.7 and newest
                 # packages
                 echo "Running test suite and keeping all files"
-                python ../../pypet/tests/all_tests.py -k
+                python ../../pypet/tests/all_tests.py -k --loglevel=40
             else
                 echo "Running test suite"
-                python ../../pypet/tests/all_tests.py
+                python ../../pypet/tests/all_tests.py --loglevel=40
             fi
     fi
 

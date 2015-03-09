@@ -18,9 +18,6 @@ class TestAllBrianImport(unittest.TestCase):
 
     tags = 'unittest', 'brian', 'import'
 
-    def setUp(self):
-        logging.basicConfig(level=logging.INFO)
-
     def test_import_star(self):
         for class_name in pypet.brian.__all__:
             logstr = 'Evaulauting %s: %s' % (class_name, repr(eval(class_name)))

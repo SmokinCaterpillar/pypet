@@ -18,7 +18,7 @@ from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, Sparse
     SparseResult, Result, NNGroupNode, ResultGroup, ConfigGroup, DerivedParameterGroup, \
     ParameterGroup, Environment, pypetconstants, compat, HDF5StorageService
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file
+from pypet.tests.testutils.ioutils import make_temp_file, get_log_level
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
@@ -454,7 +454,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_file('cleanup.hdf5')
 
         env = Environment(trajectory='Testmigrate', filename=filename,
-                          log_folder=make_temp_file('logs'))
+                          log_folder=make_temp_file('logs'), log_levels=get_log_level())
         logpath = env.v_log_path
         traj = env.v_trajectory
         traj.f_add_parameter('x', 5)
@@ -505,7 +505,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_file('cleanup.hdf5')
 
         env = Environment(trajectory='Testmigrate2', filename=filename,
-                          log_folder=make_temp_file('logs'))
+                          log_folder=make_temp_file('logs'), log_levels=get_log_level())
         logpath = env.v_log_path
         traj = env.v_trajectory
         traj.f_add_parameter('x', 5)
@@ -550,7 +550,8 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_file('overwrite.hdf5')
 
-        env = Environment(trajectory='testoverwrite', filename=filename, log_folder=None)
+        env = Environment(trajectory='testoverwrite', filename=filename, log_folder=None,
+                          log_levels=get_log_level())
 
         traj = env.v_traj
 
@@ -780,7 +781,7 @@ class StorageTest(TrajectoryComparator):
             filename = 'testsfail.hdf5'
             env = Environment(filename=make_temp_file(filename),
                               log_folder=make_temp_file('logs'),
-                          log_stdout=True,
+                          log_stdout=True, log_levels=get_log_level(),
                           logger_names=('STDERROR', 'STDOUT'),
                           foo='bar')
 
@@ -788,7 +789,7 @@ class StorageTest(TrajectoryComparator):
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_file(filename)
-        env = Environment(filename=filename,
+        env = Environment(filename=filename, log_levels=get_log_level(),
                           log_folder=make_temp_file('logs'),
                           log_stdout=True,
                           logger_names=('STDERR', 'STDOUT'))
@@ -931,7 +932,7 @@ class StorageTest(TrajectoryComparator):
 
         with warnings.catch_warnings(record=True) as w:
 
-            env = Environment(trajectory='test', filename=filename,
+            env = Environment(trajectory='test', filename=filename, log_levels=get_log_level(),
                               dynamically_imported_classes=[], log_folder=None)
 
         with warnings.catch_warnings(record=True) as w:
@@ -1040,12 +1041,12 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_file('hdfsettings.hdf5')
         with Environment('testraj', filename=filename,
-                          add_time=True,
+                         add_time=True,
                          comment='',
                          dynamic_imports=None,
                          log_folder=None,
                          logger_names=None,
-                         log_level=None,
+                         log_levels=None,
                          log_stdout=False,
                          multiproc=False,
                          ncores=3,

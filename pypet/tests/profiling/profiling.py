@@ -43,8 +43,6 @@ def test_run():
 
     global filename
 
-    logging.basicConfig(level = logging.INFO)
-
 
     logfolder = make_temp_file(os.path.join('experiments',
                                                   'tests',

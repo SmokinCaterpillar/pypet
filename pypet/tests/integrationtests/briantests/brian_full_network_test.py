@@ -1,6 +1,6 @@
 __author__ = 'Robert Meyer'
 
-from pypet.tests.testutils.ioutils import make_temp_file, run_suite
+from pypet.tests.testutils.ioutils import make_temp_file, run_suite, get_log_level
 
 from brian import *
 
@@ -118,9 +118,6 @@ class BrianFullNetworkTest(TrajectoryComparator):
         super(BrianFullNetworkTest, self).tearDown()
 
     def setUp(self):
-        logging.basicConfig(level = logging.INFO)
-
-
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
                           filename=make_temp_file(os.path.join(
                               'experiments',
@@ -134,6 +131,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
                               'tests',
                               'briantests',
                               'log')),
+                          log_levels=get_log_level(),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=False)
@@ -183,7 +181,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
     tags = 'brian', 'multiproc', 'integration'  # Test tags
 
     def setUp(self):
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level = logging.ERROR)
 
 
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
@@ -199,6 +197,7 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                               'tests',
                               'briantests',
                               'log')),
+                          log_levels=get_log_level(),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=True,

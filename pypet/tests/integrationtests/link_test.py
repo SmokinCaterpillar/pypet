@@ -11,7 +11,8 @@ import sys
 from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.environment import Environment
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite, \
+    get_log_level
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -64,7 +65,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
     def setUp(self):
         self.set_mode()
 
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level=logging.ERROR)
 
 
         self.logfolder = make_temp_file(os.path.join('experiments',
@@ -81,6 +82,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_stdout=self.log_stdout,
+                          log_levels=get_log_level(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -132,7 +134,7 @@ class LinkMergeTest(TrajectoryComparator):
     tags = 'integration', 'hdf5', 'environment', 'links', 'merge'
 
     def test_merge_with_linked_derived_parameter(self, disable_logging = True):
-        logging.basicConfig(level = logging.INFO)
+        logging.basicConfig(level = logging.ERROR)
 
 
         self.logfolder = make_temp_file(os.path.join('experiments',
@@ -149,9 +151,11 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1, log_folder=self.logfolder,
+                          log_levels=get_log_level(),
                           log_stdout=False)
         self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
                           file_title=self.trajname2, log_folder=self.logfolder,
+                          log_levels=get_log_level(),
                           log_stdout=False)
 
         self.traj1 = self.env1.v_trajectory

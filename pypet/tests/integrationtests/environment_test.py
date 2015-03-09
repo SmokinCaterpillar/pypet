@@ -28,7 +28,8 @@ from pypet import Parameter
 
 import tables as pt
 
-from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name
+from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name,\
+    get_log_level
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
     simple_calculations, TrajectoryComparator
 
@@ -49,10 +50,31 @@ class FullStorageTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'  # Test tags
 
+    def test_multiple_loggers_defined(self):
+        filename = make_temp_file('full_store.hdf5')
+        logfolder = make_temp_file('logs')
+        custom_logger = logging.getLogger('custom')
+        root = logging.getLogger()
+        logstr = 'TEST CUSTOM LOGGING!'
+        rootstr = 'AAAAAAAAAAAA'
+        with Environment(log_folder=logfolder, filename=filename,
+                         logger_names=('', 'custom'),
+                         log_levels=(logging.CRITICAL, logging.DEBUG)) as env:
+            custom_logger.debug(logstr)
+            root.debug(rootstr)
+
+            logpath = env.v_log_path
+
+        with open(os.path.join(logpath, 'main.txt'), 'r') as fh:
+            text = fh.read()
+            self.assertTrue(logstr in text)
+            self.assertFalse(rootstr in text)
+
     def test_not_full_store(self):
         filename = make_temp_file('full_store.hdf5')
         logfolder = make_temp_file('logs')
-        with Environment(log_folder=logfolder, filename=filename) as env:
+        with Environment(log_folder=logfolder, filename=filename,
+                         log_levels=get_log_level()) as env:
 
             traj = env.v_trajectory
 
@@ -69,7 +91,8 @@ class FullStorageTest(TrajectoryComparator):
     def test_full_store(self):
         filename = make_temp_file('full_store.hdf5')
         logfolder = make_temp_file('logs')
-        with Environment(log_folder=logfolder, filename=filename) as env:
+        with Environment(log_folder=logfolder, filename=filename,
+                         log_levels=get_log_level()) as env:
 
             traj = env.v_trajectory
 
@@ -111,7 +134,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.shuffle=True
         self.fletcher32 = False
         self.encoding = 'utf8'
-
+        self.log_stdout=False
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -205,10 +228,6 @@ class EnvironmentTest(TrajectoryComparator):
 
     def setUp(self):
         self.set_mode()
-
-        logging.basicConfig(level = logging.INFO)
-
-
         self.logfolder = make_temp_file(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
@@ -222,7 +241,8 @@ class EnvironmentTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False,
+                          log_stdout=self.log_stdout,
+                          log_levels=get_log_level(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -258,7 +278,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 0)
 
-        env2 = Environment(filename=self.filename, log_folder=None)
+        env2 = Environment(filename=self.filename, log_folder=None, log_levels=get_log_level())
         traj2 = env2.v_trajectory
         traj2.f_store()
 
@@ -268,7 +288,8 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
 
-        env3 = Environment(filename=self.filename, overwrite_file=True, log_folder=None)
+        env3 = Environment(filename=self.filename, overwrite_file=True, log_folder=None,
+                           log_levels=get_log_level())
 
         self.assertFalse(os.path.exists(self.filename))
 
@@ -279,7 +300,7 @@ class EnvironmentTest(TrajectoryComparator):
         filename = make_temp_file('sloooow.hdf5')
         log_folder = make_temp_file('logs')
         env = Environment(trajectory='traj', add_time=True, filename=filename,
-                          log_stdout=False,
+                          log_stdout=False, log_levels=get_log_level(),
                           dynamic_imports=SlowResult, log_folder=log_folder,
                           display_time=1)
         traj = env.v_traj
@@ -466,7 +487,7 @@ class EnvironmentTest(TrajectoryComparator):
 
 
         self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
-                          log_stdout=False)
+                          log_stdout=False, log_levels=get_log_level())
 
         self.traj = self.env.v_trajectory
 
@@ -740,6 +761,7 @@ class ResultSortTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
         self.use_pool=True
+        self.log_stdout=False
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -747,7 +769,6 @@ class ResultSortTest(TrajectoryComparator):
 
     def setUp(self):
         self.set_mode()
-        logging.basicConfig(level = logging.INFO)
 
         self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','test.hdf5'))
         self.logfolder = make_temp_file(os.path.join('experiments',
@@ -757,7 +778,8 @@ class ResultSortTest(TrajectoryComparator):
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False,
+                          log_stdout=self.log_stdout,
+                          log_levels=get_log_level(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
@@ -868,7 +890,7 @@ class ResultSortTest(TrajectoryComparator):
         traj_name = self.env.v_trajectory.v_name
         del self.env
         self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
-                          log_stdout=False)
+                          log_stdout=False, log_levels=get_log_level())
 
         self.traj = self.env.v_trajectory
 

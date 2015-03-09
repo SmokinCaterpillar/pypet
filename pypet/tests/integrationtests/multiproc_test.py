@@ -7,7 +7,8 @@ import os
 from pypet import pypetconstants
 from pypet.environment import Environment
 from pypet.tests.integrationtests.environment_test import EnvironmentTest, ResultSortTest
-from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name, \
+    get_log_level
 from pypet.tests.testutils.data import create_param_dict, add_params
 
 
@@ -114,8 +115,6 @@ class CapTest(EnvironmentTest):
         self.multiproc = True
         self.mode = 'LOCK'
 
-        logging.basicConfig(level = logging.INFO)
-
         self.trajname = make_trajectory_name(self)
 
         self.filename = make_temp_file(os.path.join('experiments',
@@ -129,6 +128,7 @@ class CapTest(EnvironmentTest):
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
+                          log_levels=get_log_level(), log_stdout=False,
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=True,

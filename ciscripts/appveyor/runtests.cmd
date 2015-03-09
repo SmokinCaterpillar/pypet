@@ -17,7 +17,7 @@ IF "%EXAMPLES%"=="ON" (
 
 IF "%SINGLECORE%"=="ON" (
     ECHO "##### Running all single core tests #####"
-    python all_single_core_tests.py -q
+    python all_single_core_tests.py --loglevel=40
 
     IF ERRORLEVEL 1 (
         ECHO "### Single core failed ###
@@ -29,7 +29,7 @@ IF "%SINGLECORE%"=="ON" (
 
 IF "%SINGLECORE%"=="1" (
     ECHO "##### Running single core test suite 1 #####"
-    python all_single_core_tests.py -q --suite=1
+    python all_single_core_tests.py --loglevel=40 --suite=1
 
     IF ERRORLEVEL 1 (
         ECHO "### Single core failed ###
@@ -41,7 +41,7 @@ IF "%SINGLECORE%"=="1" (
 
 IF "%SINGLECORE%"=="2" (
     ECHO "##### Running single core test suite 2 #####"
-    python all_single_core_tests.py -q --suite=2
+    python all_single_core_tests.py --loglevel=40 --suite=2
 
     IF ERRORLEVEL 1 (
         ECHO "### Single core failed ###
@@ -53,7 +53,7 @@ IF "%SINGLECORE%"=="2" (
 
 IF "%SINGLECORE%"=="3" (
     ECHO "##### Running single core test suite 3 #####"
-    python all_single_core_tests.py -q --suite=3
+    python all_single_core_tests.py --loglevel=40 --suite=3
 
     IF ERRORLEVEL 1 (
         ECHO "### Single core failed ###
@@ -63,9 +63,10 @@ IF "%SINGLECORE%"=="3" (
     )
 )
 
+
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"
-    python all_multi_core_tests.py -q
+    python all_multi_core_tests.py --loglevel=40
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -77,7 +78,7 @@ IF "%MULTIPROC%"=="ON" (
 
 IF "%MULTIPROC%"=="1" (
     ECHO "##### Running multiproc test suite 1 #####"
-    python all_multi_core_tests.py -q --suite=1
+    python all_multi_core_tests.py --loglevel=40 --suite=1
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -89,7 +90,7 @@ IF "%MULTIPROC%"=="1" (
 
 IF "%MULTIPROC%"=="2" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py -q --suite=2
+    python all_multi_core_tests.py --loglevel=40 --suite=2
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -101,7 +102,7 @@ IF "%MULTIPROC%"=="2" (
 
 IF "%MULTIPROC%"=="3" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py -q --suite=3
+    python all_multi_core_tests.py --loglevel=40 --suite=3
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -113,7 +114,7 @@ IF "%MULTIPROC%"=="3" (
 
 IF "%MULTIPROC%"=="4" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py -q --suite=4
+    python all_multi_core_tests.py --loglevel=40 --suite=4
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###

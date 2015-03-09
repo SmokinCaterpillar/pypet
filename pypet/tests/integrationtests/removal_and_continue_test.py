@@ -5,13 +5,15 @@ import os
 import numpy as np
 import tables
 import dill
+import logging
 
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name, \
+    get_log_level
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
     simple_calculations, TrajectoryComparator
 
@@ -67,6 +69,7 @@ class ContinueTest(TrajectoryComparator):
                           file_title=trajname,
                           log_folder=self.logfolder,
                           log_stdout=False,
+                          log_levels=get_log_level(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -335,6 +338,7 @@ class ContinueMPTest(ContinueTest):
                           file_title=trajname,
                           log_folder=self.logfolder,
                           log_stdout=False,
+                          log_levels=get_log_level(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -481,6 +485,7 @@ class ContinueMPPoolTest(ContinueMPTest):
                           file_title=trajname,
                           log_folder=self.logfolder,
                           log_stdout=False,
+                          log_levels=get_log_level(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,

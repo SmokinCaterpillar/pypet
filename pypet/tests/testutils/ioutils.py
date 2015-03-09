@@ -29,9 +29,15 @@ testParams=dict(
     #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
     user_tempdir='',
     #'''If the user specifies in run all test a folder, this variable will be used'''
+    log_level=logging.INFO
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
+
+
+def get_log_level():
+    """Simply returns the user chosen log-level"""
+    return testParams['log_level']
 
 
 def make_temp_file(filename):
@@ -59,10 +65,12 @@ def make_temp_file(filename):
         raise
 
 
-def run_suite(remove=None, folder=None, suite=None, quiet=False):
+def run_suite(remove=None, folder=None, suite=None, log_level=None):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.
+
+    You can also define a global `log_level`.
 
     """
     global testParams
@@ -72,9 +80,9 @@ def run_suite(remove=None, folder=None, suite=None, quiet=False):
 
     testParams['user_tempdir'] = folder
 
-    if quiet:
-        root = logging.getLogger()
-        root.addHandler(logging.NullHandler())
+    if log_level is not None:
+        testParams['log_level'] = log_level
+    logging.basicConfig(level=testParams['log_level'])
 
     success = False
     try:
@@ -222,7 +230,7 @@ def discover_tests(predicate=None):
 
 def parse_args():
     """Parses arguments and returns a dictionary"""
-    opt_list, _ = getopt.getopt(sys.argv[1:],'kq',['folder=', 'suite='])
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite=', 'loglevel='])
     opt_dict = {}
 
     for opt, arg in opt_list:
@@ -238,9 +246,9 @@ def parse_args():
             opt_dict['suite_no'] = arg
             print('I will run suite `%s`.' % arg)
 
-        if opt == '-q':
-            opt_dict['quiet'] = True
-            print('I will suppress standard output')
+        if opt == '--loglevel':
+            opt_dict['log_level'] = int(arg)
+            print('Using log level %s.' % arg)
 
     sys.argv=[sys.argv[0]]
     return opt_dict

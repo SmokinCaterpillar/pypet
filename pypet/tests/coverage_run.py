@@ -35,7 +35,7 @@ if ProcessCoverage:
 
 import sys
 import os
-import getopt
+
 pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
 print('Appended path `%s`' % pypetpath)

@@ -9,7 +9,8 @@ from pypet import pypetconstants
 import logging
 import os
 
-from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name, \
+    get_log_level
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integrationtests.environment_test import ResultSortTest
@@ -35,14 +36,12 @@ class MergeTest(TrajectoryComparator):
 
     def make_environment(self, idx, filename):
 
-        logging.basicConfig(level = logging.INFO)
-
         #self.filename = make_temp_file('experiments/tests/HDF5/test.hdf5')
         logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
         trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
         env = Environment(trajectory=trajname,filename=filename, file_title=trajname,
-                          log_folder=logfolder, log_stdout=False,
+                          log_folder=logfolder, log_stdout=False, log_levels=get_log_level(),
                           large_overview_tables=True)
 
 
@@ -544,7 +543,7 @@ class TestMergeResultsSort(ResultSortTest):
 
         env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False,
+                          log_stdout=False, log_levels=get_log_level(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores)

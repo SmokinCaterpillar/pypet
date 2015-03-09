@@ -371,11 +371,11 @@ create such a temporary folder.
 
 You can run all tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
-You can pass additional arguments as `$ python all_tests.py -k -q --folder=myfolder/` with
-`-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
-they will be deleted after the completed tests), `-q` (quiet) to suppress logging output,
+You can pass additional arguments as `$ python all_tests.py -k --log_level=40, --folder=myfolder/` 
+with `-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
+they will be deleted after the completed tests), `--loglevel=` to choose a minimum logging level, 
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
-If the folder cannot be created the program defaults to `tempfile.gettempdir()`.
+If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.
 
 Running all tests can take up to 20 minutes. The test suite encompasses more than **600** tests
 and has a code coverage of about **90%**!
