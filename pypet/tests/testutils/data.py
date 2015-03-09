@@ -1,5 +1,9 @@
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
 import logging
-import unittest
 import numpy as np
 import pandas as pd
 from scipy import sparse as spsp

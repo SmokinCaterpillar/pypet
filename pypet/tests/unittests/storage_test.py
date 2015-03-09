@@ -3,7 +3,10 @@ __author__ = 'Robert Meyer'
 import os
 import platform
 import sys
-import unittest
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
 import warnings
 
 import numpy as np

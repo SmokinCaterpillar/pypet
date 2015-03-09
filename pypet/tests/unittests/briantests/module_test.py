@@ -16,6 +16,8 @@ import inspect
 
 class TestAllBrianImport(unittest.TestCase):
 
+    tags = 'unittest', 'brian', 'import'
+
     def setUp(self):
         logging.basicConfig(level=logging.INFO)
 

@@ -14,8 +14,6 @@ from brian.stdunits import mV, mA, kHz,ms
 from pypet.utils.explore import cartesian_product
 
 
-
-
 class BrianParameterTest(ParameterTest):
 
     tags = 'unittest', 'brian', 'parameter'
