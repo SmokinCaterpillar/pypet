@@ -256,20 +256,3 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
-
-
-if __name__ == '__main__':
-    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder='])
-    remove = None
-    folder = None
-    for opt, arg in opt_list:
-        if opt == '-k':
-            remove = False
-            print('I will keep all files.')
-
-        if opt == '--folder':
-            folder = arg
-            print('I will put all data into folder `%s`.' % folder)
-
-    sys.argv=[sys.argv[0]]
-    run_suite(remove, folder)

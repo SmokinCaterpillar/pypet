@@ -1,6 +1,8 @@
 __author__ = 'Robert Meyer'
 
 import os
+import logging
+rootlogger = logging.getLogger()
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
@@ -33,7 +35,7 @@ class CustomParameter(Parameter):
         super(CustomParameter, self).__init__(*args, **kwargs)
 
 def postproc(traj, results, idx):
-    print(idx)
+    rootlogger.info(idx)
 
     traj.f_load_skeleton()
 

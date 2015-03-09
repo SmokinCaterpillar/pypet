@@ -4,6 +4,7 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 import logging
+
 import numpy as np
 import pandas as pd
 from scipy import sparse as spsp
@@ -126,18 +127,20 @@ def add_params(traj,param_dict):
 
 
 def multiply(traj):
+    rootlogger = logging.getLogger()
     z=traj.x*traj.y
-    print('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
     return z
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
+        rootlogger = logging.getLogger()
 
         if not 'runs' in traj.res:
             traj.res.f_add_result_group('runs')
 
-        print('>>>>>Starting Simple Calculations')
+        rootlogger.info('>>>>>Starting Simple Calculations')
         my_dict = {}
 
         my_dict2={}
@@ -253,7 +256,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('or.not.rrr.crun.jjj', 777, comment='duh**2!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
-        print('<<<<<<Finished Simple Calculations')
+        rootlogger.info('<<<<<<Finished Simple Calculations')
 
         return 42
 

@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import logging
+rootlogger = logging.getLogger()
 
 import pypet.pypetconstants
 import pypet.compat as compat
@@ -121,7 +122,7 @@ def remove_data():
     """Removes all data from temporary folder"""
     global testParams
     if testParams['remove']:
-        print('REMOVING ALL TEMPORARY DATA')
+        rootlogger.info('REMOVING ALL TEMPORARY DATA')
         shutil.rmtree(testParams['actual_tempdir'], True)
 
 

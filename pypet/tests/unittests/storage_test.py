@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 from scipy import sparse as spsp
 import tables as pt
+import logging
+rootlogger = logging.getLogger()
 
 from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, SparseParameter, \
     SparseResult, Result, NNGroupNode, ResultGroup, ConfigGroup, DerivedParameterGroup, \
@@ -629,36 +631,36 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        print('Removing child1')
+        rootlogger.info('Removing child1')
 
         traj.f_remove_child('results', recursive=True)
 
-        print('Doing auto-load')
+        rootlogger.info('Doing auto-load')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)
 
-        print('Removing child2')
+        rootlogger.info('Removing child2')
 
         traj.f_remove_child('results', recursive=True)
 
-        print('auto-loading')
+        rootlogger.info('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[-2].jjj==43)
         self.assertTrue(traj.results.wc2test[-2].hhh==333)
 
-        print('Removing child3')
+        rootlogger.info('Removing child3')
         traj.f_remove_child('results', recursive=True)
 
-        print('auto-loading')
+        rootlogger.info('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[1].jjj==43)
         self.assertTrue(traj.results.wc2test[-1].hhh==333)
 
-        print('Done with wildcard test')
+        rootlogger.info('Done with wildcard test')
 
     def test_store_and_load_large_dictionary(self):
         traj = Trajectory(name='Testlargedict', filename=make_temp_file('large_dict.hdf5'))
@@ -774,7 +776,7 @@ class StorageTest(TrajectoryComparator):
 
         self.compare_trajectories(traj,traj2)
 
-        print('Mismatch testing done!')
+        rootlogger.info('Mismatch testing done!')
 
     def test_fail_on_wrong_kwarg(self):
         with self.assertRaises(ValueError):

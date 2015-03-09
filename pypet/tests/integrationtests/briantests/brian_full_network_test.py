@@ -9,6 +9,7 @@ from pypet.trajectory import Trajectory
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 import logging
+rootlogger = logging.getLogger()
 from pypet.utils.explore import cartesian_product
 import time
 import os
@@ -46,7 +47,7 @@ def add_params(traj):
 def run_net(traj):
 
     clear(True, True)
-    print(traj.defaultclock)
+    rootlogger.info(traj.defaultclock)
     defaultclock.dt=traj.defaultclock
 
     C=traj.C

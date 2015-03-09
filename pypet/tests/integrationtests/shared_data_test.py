@@ -2,6 +2,7 @@ __author__ = 'Robert Meyer'
 
 import os
 import logging
+rootlogger= logging.getLogger()
 import random
 
 import sys
@@ -264,7 +265,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        print('Size is %sMB' % str(size_in_mb))
+        rootlogger.info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
 
     def test_run_large(self):
@@ -287,7 +288,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        print('Size is %sMB' % str(size_in_mb))
+        rootlogger.info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
 
     def add_matrix_params(self, traj):
@@ -332,7 +333,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        print('Size is %sMB' % str(size_in_mb))
+        rootlogger.info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
 
 
