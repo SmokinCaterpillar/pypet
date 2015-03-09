@@ -2,12 +2,12 @@ __author__ = 'Robert Meyer'
 
 import os
 import logging
-rootlogger = logging.getLogger()
+
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, \
-    make_temp_file, get_log_level
+    make_temp_file, get_log_level, get_root_logger
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -35,7 +35,7 @@ class CustomParameter(Parameter):
         super(CustomParameter, self).__init__(*args, **kwargs)
 
 def postproc(traj, results, idx):
-    rootlogger.info(idx)
+    get_root_logger().info(idx)
 
     traj.f_load_skeleton()
 

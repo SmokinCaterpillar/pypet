@@ -9,6 +9,7 @@ else:
 
 import pypet
 from pypet import *
+from pypet.tests.testutils.ioutils import get_root_logger
 
 import logging
 import inspect
@@ -21,7 +22,7 @@ class TestAllImport(unittest.TestCase):
     def test_import_star(self):
         for class_name in pypet.__all__:
             logstr = 'Evaulauting %s: %s' % (class_name, repr(eval(class_name)))
-            logging.getLogger().info(logstr)
+            get_root_logger().info(logstr)
 
     def test_if_all_is_complete(self):
         for item in pypet.__dict__.values():

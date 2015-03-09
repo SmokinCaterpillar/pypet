@@ -29,7 +29,7 @@ from pypet import Parameter
 import tables as pt
 
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name,\
-    get_log_level
+    get_log_level, get_root_logger
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
     simple_calculations, TrajectoryComparator
 
@@ -54,7 +54,7 @@ class FullStorageTest(TrajectoryComparator):
         filename = make_temp_file('full_store.hdf5')
         logfolder = make_temp_file('logs')
         custom_logger = logging.getLogger('custom')
-        root = logging.getLogger()
+        root = get_root_logger()
         logstr = 'TEST CUSTOM LOGGING!'
         rootstr = 'AAAAAAAAAAAA'
         with Environment(log_folder=logfolder, filename=filename,
@@ -327,15 +327,15 @@ class EnvironmentTest(TrajectoryComparator):
         self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
 
     def test_a_large_run(self):
-        logging.getLogger().info('Testing large run')
+        get_root_logger().info('Testing large run')
         self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore
         self.explore_large(self.traj)
         self.make_run_large_data()
 
         # Check if printing and repr work
-        logging.getLogger().info(str(self.env))
-        logging.getLogger().info(repr(self.env))
+        get_root_logger().info(str(self.env))
+        get_root_logger().info(repr(self.env))
 
         newtraj = Trajectory()
         newtraj.f_load(name=self.traj.v_name, as_new=False, load_data=2, filename=self.filename)
@@ -347,7 +347,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        logging.getLogger().info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 30.0, 'Size is %sMB > 30MB' % str(size_in_mb))
 
     def test_run(self):
@@ -365,7 +365,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        logging.getLogger().info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
 
     def test_just_one_run(self):
@@ -380,7 +380,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        logging.getLogger().info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 6MB' % str(size_in_mb))
 
         with self.assertRaises(TypeError):
@@ -464,7 +464,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        logging.getLogger().info('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
+        get_root_logger().info('\n $$$$$$$$$$$$$$$$$ Second Run $$$$$$$$$$$$$$$$$$$$$$$$')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -495,7 +495,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.expand()
 
-        logging.getLogger().info('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
+        get_root_logger().info('\n $$$$$$$$$$$$ Second Run $$$$$$$$$$ \n')
         self.make_run()
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
@@ -879,7 +879,7 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        logging.getLogger().info(self.env.f_run(multiply))
+        get_root_logger().info(self.env.f_run(multiply))
         traj = self.traj
         self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
 

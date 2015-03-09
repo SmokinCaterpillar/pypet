@@ -14,13 +14,12 @@ import pandas as pd
 from scipy import sparse as spsp
 import tables as pt
 import logging
-rootlogger = logging.getLogger()
 
 from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, SparseParameter, \
     SparseResult, Result, NNGroupNode, ResultGroup, ConfigGroup, DerivedParameterGroup, \
     ParameterGroup, Environment, pypetconstants, compat, HDF5StorageService
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, get_log_level
+from pypet.tests.testutils.ioutils import make_temp_file, get_log_level, get_root_logger
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
@@ -631,36 +630,36 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        rootlogger.info('Removing child1')
+        get_root_logger().info('Removing child1')
 
         traj.f_remove_child('results', recursive=True)
 
-        rootlogger.info('Doing auto-load')
+        get_root_logger().info('Doing auto-load')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)
 
-        rootlogger.info('Removing child2')
+        get_root_logger().info('Removing child2')
 
         traj.f_remove_child('results', recursive=True)
 
-        rootlogger.info('auto-loading')
+        get_root_logger().info('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[-2].jjj==43)
         self.assertTrue(traj.results.wc2test[-2].hhh==333)
 
-        rootlogger.info('Removing child3')
+        get_root_logger().info('Removing child3')
         traj.f_remove_child('results', recursive=True)
 
-        rootlogger.info('auto-loading')
+        get_root_logger().info('auto-loading')
         traj.v_auto_load = True
 
         self.assertTrue(traj.results.wctest[1].jjj==43)
         self.assertTrue(traj.results.wc2test[-1].hhh==333)
 
-        rootlogger.info('Done with wildcard test')
+        get_root_logger().info('Done with wildcard test')
 
     def test_store_and_load_large_dictionary(self):
         traj = Trajectory(name='Testlargedict', filename=make_temp_file('large_dict.hdf5'))
@@ -776,7 +775,7 @@ class StorageTest(TrajectoryComparator):
 
         self.compare_trajectories(traj,traj2)
 
-        rootlogger.info('Mismatch testing done!')
+        get_root_logger().info('Mismatch testing done!')
 
     def test_fail_on_wrong_kwarg(self):
         with self.assertRaises(ValueError):

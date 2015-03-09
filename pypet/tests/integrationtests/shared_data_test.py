@@ -2,7 +2,6 @@ __author__ = 'Robert Meyer'
 
 import os
 import logging
-rootlogger= logging.getLogger()
 import random
 
 import sys
@@ -17,7 +16,7 @@ import scipy.sparse as spsp
 from pypet.shareddata import *
 from pypet import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite, \
-    get_log_level
+    get_log_level, get_root_logger
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
@@ -37,7 +36,7 @@ def write_into_shared_storage(traj):
     traj.f_add_result('ggg', 42)
     traj.f_add_derived_parameter('huuu', 46)
 
-    root = logging.getLogger()
+    root = get_root_logger()
     daarrays = traj.res.daarrays
     idx = traj.v_idx
     ncores = traj[traj.v_environment_name].f_get_default('ncores', 1)
@@ -265,7 +264,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        rootlogger.info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
 
     def test_run_large(self):
@@ -288,7 +287,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        rootlogger.info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
 
     def add_matrix_params(self, traj):
@@ -333,7 +332,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
-        rootlogger.info('Size is %sMB' % str(size_in_mb))
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
 
 

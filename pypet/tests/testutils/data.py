@@ -10,7 +10,7 @@ import pandas as pd
 from scipy import sparse as spsp
 from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, PickleParameter, \
     PickleResult, SparseResult, ObjectTable, BaseParameter, BaseResult
-from pypet.tests.testutils.ioutils import remove_data
+from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
 from pypet.utils.helpful_functions import flatten_dictionary
 
@@ -127,7 +127,7 @@ def add_params(traj,param_dict):
 
 
 def multiply(traj):
-    rootlogger = logging.getLogger()
+    rootlogger = get_root_logger()
     z=traj.x*traj.y
     rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
@@ -135,7 +135,7 @@ def multiply(traj):
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
-        rootlogger = logging.getLogger()
+        rootlogger = get_root_logger()
 
         if not 'runs' in traj.res:
             traj.res.f_add_result_group('runs')

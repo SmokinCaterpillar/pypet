@@ -9,7 +9,6 @@ else:
 import os
 import platform
 import logging
-rootlogger = logging.getLogger()
 import numpy as np
 import pandas as pd
 import tables as pt
@@ -259,7 +258,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.f_delete_item(traj.Mine, recursive=True)
 
         size =  os.path.getsize(filename)
-        rootlogger.info('Filesize is %s' % str(size))
+        get_root_logger().info('Filesize is %s' % str(size))
         name_wo_ext, ext = os.path.splitext(filename)
         backup_file_name = name_wo_ext + '_backup' + ext
         code = compact_hdf5_file(filename, keep_backup=True)
@@ -268,7 +267,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         backup_size = os.path.getsize(backup_file_name)
         self.assertTrue(backup_size == size)
         new_size = os.path.getsize(filename)
-        rootlogger.info('New filesize is %s' % str(new_size))
+        get_root_logger().info('New filesize is %s' % str(new_size))
         self.assertTrue(new_size < size, "%s > %s" %(str(new_size), str(size)))
 
     def test_all_arrays(self):

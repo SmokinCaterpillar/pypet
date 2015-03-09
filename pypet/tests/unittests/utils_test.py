@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from pypet.tests.testutils.ioutils import run_suite,\
-    make_temp_file, remove_data
+    make_temp_file, remove_data, get_root_logger
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter
 
@@ -113,7 +113,7 @@ class ProgressBarTest(unittest.TestCase):
             progressbar(irun, 2*total, 0.5)
 
     def test_progressbar_logging(self):
-        logger = logging.getLogger()
+        logger = get_root_logger()
 
         total = 22
 

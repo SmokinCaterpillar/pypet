@@ -1,7 +1,6 @@
 __author__ = 'Robert Meyer'
 
 import logging
-rootlogger = logging.getLogger()
 
 import pypet.pypetconstants
 import pypet.compat as compat
@@ -35,6 +34,9 @@ testParams=dict(
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
 
+def get_root_logger():
+    """Returns root logger"""
+    return logging.getLogger()
 
 def get_log_level():
     """Simply returns the user chosen log-level"""
@@ -55,14 +57,14 @@ def make_temp_file(filename):
 
         return os.path.join(testParams['actual_tempdir'], filename)
     except OSError:
-        logging.getLogger('').warning('Cannot create a temp file in the specified folder `%s`. ' %
+        get_root_logger().warning('Cannot create a temp file in the specified folder `%s`. ' %
                                     testParams['actual_tempdir'] +
                                     ' I will use pythons gettempdir method instead.')
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
         testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir,filename)
     except:
-        logging.getLogger('').error('Could not create a directory. Sorry cannot run them')
+        get_root_logger().error('Could not create a directory. Sorry cannot run them')
         raise
 
 
@@ -122,7 +124,7 @@ def remove_data():
     """Removes all data from temporary folder"""
     global testParams
     if testParams['remove']:
-        rootlogger.info('REMOVING ALL TEMPORARY DATA')
+        get_root_logger().info('REMOVING ALL TEMPORARY DATA')
         shutil.rmtree(testParams['actual_tempdir'], True)
 
 

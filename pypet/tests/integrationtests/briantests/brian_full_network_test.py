@@ -1,6 +1,6 @@
 __author__ = 'Robert Meyer'
 
-from pypet.tests.testutils.ioutils import make_temp_file, run_suite, get_log_level
+from pypet.tests.testutils.ioutils import make_temp_file, run_suite, get_log_level, get_root_logger
 
 from brian import *
 
@@ -9,7 +9,6 @@ from pypet.trajectory import Trajectory
 from pypet.environment import Environment
 from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 import logging
-rootlogger = logging.getLogger()
 from pypet.utils.explore import cartesian_product
 import time
 import os
@@ -47,7 +46,7 @@ def add_params(traj):
 def run_net(traj):
 
     clear(True, True)
-    rootlogger.info(traj.defaultclock)
+    get_root_logger().info(traj.defaultclock)
     defaultclock.dt=traj.defaultclock
 
     C=traj.C
