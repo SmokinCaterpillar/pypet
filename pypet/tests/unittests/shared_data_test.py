@@ -17,7 +17,7 @@ from pypet import Trajectory, SharedArrayResult, SharedTableResult, SharedPandas
     make_shared_result, compact_hdf5_file, SharedCArrayResult, SharedEArrayResult, \
     SharedVLArrayResult
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, get_root_logger
 from pypet.utils import ptcompat
 
 
