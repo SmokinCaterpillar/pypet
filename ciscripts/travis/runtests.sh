@@ -19,7 +19,7 @@ if [[ $GIT_TEST == ON ]]
         pip install django==1.5
         pip install Sumatra
         mkdir git_sumatra_test
-        cp ../../pypet/tests/integrationtests/git_check.py git_sumatra_test
+        cp ../../pypet/tests/integration/git_check.py git_sumatra_test
         cd git_sumatra_test
         git init
         smt init GitTest
