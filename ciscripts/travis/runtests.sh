@@ -3,12 +3,19 @@
 set -e # To exit upon any error
 set -u # Treat references to unset variables as an error
 
-if [[ $EXAMPLES == ON ]]
+if [[ $TEST_SUITE == ON ]]
     then
-        conda install matplotlib
-        cd ../../pypet/tests
-        python all_examples.py
-        cd ../../ciscripts/travis
+        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
+            then
+                # try with many files, i.e. do not remove data after every test
+                # but only for one particular setting of the test matrix python = 2.7 and newest
+                # packages
+                echo "Running test suite and keeping all files"
+                python ../../pypet/tests/all_tests.py -k
+            else
+                echo "Running test suite"
+                python ../../pypet/tests/all_tests.py
+            fi
     fi
 
 if [[ $GIT_TEST == ON ]]
@@ -54,21 +61,6 @@ if [[ $GIT_TEST == ON ]]
         echo "Removal complete"
     fi
 
-if [[ $TEST_SUITE == ON ]]
-    then
-        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
-            then
-                # try with many files, i.e. do not remove data after every test
-                # but only for one particular setting of the test matrix python = 2.7 and newest
-                # packages
-                echo "Running test suite and keeping all files"
-                python ../../pypet/tests/all_tests.py -k
-            else
-                echo "Running test suite"
-                python ../../pypet/tests/all_tests.py
-            fi
-    fi
-
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
@@ -76,4 +68,12 @@ if [[ $COVERAGE == ON ]]
         coverage combine
         coveralls --verbose
         cd ciscripts/travis
+    fi
+
+if [[ $EXAMPLES == ON ]]
+    then
+        conda install matplotlib
+        cd ../../pypet/tests
+        python all_examples.py
+        cd ../../ciscripts/travis
     fi

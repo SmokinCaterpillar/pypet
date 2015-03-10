@@ -14,6 +14,7 @@ except ImportError:
 
 from pypet import Environment
 from pypet import cartesian_product, GitDiffError
+import pypet.compat as compat
 
 
 def multiply(traj):
@@ -51,6 +52,12 @@ def fail_on_diff():
 
 def main(fail=False):
     try:
+        if compat.python == 3:
+            print('Running Python 3, will not use Sumatra.')
+            sumatra_project = None
+        else:
+            sumatra_project = '.'
+
         # Create an environment that handles running
         with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
                          filename=os.path.join('experiments',
@@ -62,7 +69,7 @@ def main(fail=False):
                           small_overview_tables=False,
                           git_repository='.', git_message='Im a message!',
                           git_fail=fail,
-                          sumatra_project='.', sumatra_reason='Testing!') as env:
+                          sumatra_project=sumatra_project, sumatra_reason='Testing!') as env:
 
             # Get the trajectory from the environment
             traj = env.v_trajectory
@@ -76,6 +83,12 @@ def main(fail=False):
 
             # Run the simulation
             env.f_run(multiply)
+
+            # Check that git information was added to the trajectory
+            assert 'config.git.hexsha' in traj
+            assert 'config.git.committed_date' in traj
+            assert 'config.git.message' in traj
+            assert 'config.git.name_rev' in traj
 
             print("Python git test successful")
 
