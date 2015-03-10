@@ -30,7 +30,7 @@ def get_opt():
             opt_dict['fail'] = True
             print('I will try to fail on diffs.')
         if opt == '-n':
-            opt_dict['no_fial'] = True
+            opt_dict['no_fail'] = True
             print('I will try to fail on diffs, but there should not be any.')
 
     return opt_dict
@@ -57,6 +57,9 @@ def main(fail=False):
             sumatra_project = None
         else:
             sumatra_project = '.'
+
+        if fail:
+            print('There better be not any diffs.')
 
         # Create an environment that handles running
         with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
