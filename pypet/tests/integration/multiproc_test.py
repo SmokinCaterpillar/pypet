@@ -6,7 +6,7 @@ import os
 
 from pypet import pypetconstants
 from pypet.environment import Environment
-from pypet.tests.integrationtests.environment_test import EnvironmentTest, ResultSortTest
+from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name, \
     get_log_level
 from pypet.tests.testutils.data import create_param_dict, add_params
@@ -17,7 +17,7 @@ class MultiprocQueueTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool'
 
     def set_mode(self):
-        EnvironmentTest.set_mode(self)
+        super(MultiprocQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 4
@@ -32,17 +32,19 @@ class MultiprocLockTest(EnvironmentTest):
     #     super(MultiprocLockTest, self).test_run()
 
     def set_mode(self):
-        EnvironmentTest.set_mode(self)
+        super(MultiprocLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 4
         self.use_pool=True
+
 
 class MultiprocSortQueueTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool',
 
     def set_mode(self):
+        super(MultiprocSortQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 3
@@ -54,6 +56,7 @@ class MultiprocSortLockTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',
 
     def set_mode(self):
+        super(MultiprocSortLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 4
@@ -65,7 +68,7 @@ class MultiprocNoPoolQueueTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
 
     def set_mode(self):
-        EnvironmentTest.set_mode(self)
+        super(MultiprocNoPoolQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 3
@@ -77,7 +80,7 @@ class MultiprocNoPoolLockTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
 
     def set_mode(self):
-        EnvironmentTest.set_mode(self)
+        super(MultiprocNoPoolLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 2
@@ -89,7 +92,7 @@ class MultiprocNoPoolSortQueueTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
 
     def set_mode(self):
-        ResultSortTest.set_mode()
+        super(MultiprocNoPoolSortQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 3
@@ -101,7 +104,7 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
 
     def set_mode(self):
-        ResultSortTest.set_mode()
+        super(MultiprocNoPoolSortLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 3

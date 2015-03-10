@@ -13,7 +13,7 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajec
     get_log_level
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
-from pypet.tests.integrationtests.environment_test import ResultSortTest
+from pypet.tests.integration.environment_test import ResultSortTest
 
 
 class MergeTest(TrajectoryComparator):

@@ -1,7 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import pypet.pypetconstants as pypetconstants
-from pypet.tests.integrationtests.link_test import LinkEnvironmentTest
+from pypet.tests.integration.link_test import LinkEnvironmentTest
 try:
     import psutil
 except ImportError:
