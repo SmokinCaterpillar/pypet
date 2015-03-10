@@ -28,8 +28,14 @@ if [[ $GIT_TEST == ON ]]
         mkdir git_sumatra_test
         cp ../../pypet/tests/integration/git_check.py git_sumatra_test
         cd git_sumatra_test
+        echo "Initialise git repo"
         git init
-        smt init GitTest
+        if [[ $TRAVIS_PYTHON_VERSION == 2* ]]
+            then
+                # Only use sumatra in case of Python 2
+                echo "Initialise Sumatra Repo"
+                smt init GitTest
+            fi
         git config --global user.email "you@example.com"
         git config --global user.name "Your Name"
         echo "DummyDummyDummy">>dummy.txt # Create a new dummy file
