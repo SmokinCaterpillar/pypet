@@ -572,6 +572,11 @@ class Environment(HasLogger):
         If no changes are detected, the information about the previous commit and the previous
         commit message are added to the trajectory and this user passed message is discarded.
 
+    :param git_fail:
+
+        If `True` the program fails instead of triggering a commit if there are not committed
+        changes found in the code base. In such a case a `GitDiffError` is raised.
+
     :param sumatra_project:
 
         If your simulation is managed by sumatra_, you can specify here the path to the
@@ -814,6 +819,7 @@ class Environment(HasLogger):
                  storage_service=HDF5StorageService,
                  git_repository=None,
                  git_message='',
+                 git_fail=False,
                  sumatra_project=None,
                  sumatra_reason='',
                  sumatra_label=None,
@@ -896,6 +902,7 @@ class Environment(HasLogger):
 
         self._git_repository = git_repository
         self._git_message = git_message
+        self._git_fail = git_fail
 
         # Check if a novel trajectory needs to be created.
         if isinstance(trajectory, compat.base_type):
@@ -922,31 +929,12 @@ class Environment(HasLogger):
 
             self._time = formatted_time
 
-        if storage_service is True: # to allow compatibility with older python versions, i.e. old
-            # keyword use_hdf5
-            storage_service = HDF5StorageService
-        if self._traj.v_storage_service is not None:
-            # Use the service of the trajectory
-            self._logger.info('Found storage service attached to Trajectory. Will use '
-                              'this storage service.')
-            self._storage_service = self.v_trajectory.v_storage_service
-        else:
-            # Create a new service
-            self._storage_service, unused_factory_kwargs = storage_factory(storage_service,
-                                                                        self._traj, **kwargs)
-            unused_kwargs = unused_kwargs - (set(kwargs.keys()) - unused_factory_kwargs)
-
-        if lazy_debug and is_debug():
-            self._storage_service = LazyStorageService()
-
-        self._traj.v_storage_service = self._storage_service
-
         # In case the user provided a git repository path, a git commit is performed
         # and the environment's hexsha is taken from the commit if the commit was triggered by
         # this particular environment, otherwise a new one is generated
         if self._git_repository is not None:
             new_commit, self._hexsha = make_git_commit(self, self._git_repository,
-                                                       self._git_message)
+                                                       self._git_message, self._git_fail)
             # Identifier hexsha
         else:
             new_commit = False
@@ -998,6 +986,37 @@ class Environment(HasLogger):
         self._error_log_handler = error_log_handler
         self._main_log_handler = main_log_handler
 
+        # Drop a message if we made a commit. We cannot drop the message directly after the
+        # commit, because the logging files do not exist yet,
+        # and we want this commit to be tracked
+        if self._git_repository is not None:
+            if new_commit:
+                self._logger.info('Triggered NEW GIT commit `%s`.' % str(self._hexsha))
+            else:
+                self._logger.info('No changes detected, added PREVIOUS GIT commit `%s`.' %
+                                  str(self._hexsha))
+
+        # Create the storage service
+        if storage_service is True: # to allow compatibility with older python versions, i.e. old
+            # keyword use_hdf5
+            storage_service = HDF5StorageService
+        if self._traj.v_storage_service is not None:
+            # Use the service of the trajectory
+            self._logger.info('Found storage service attached to Trajectory. Will use '
+                              'this storage service.')
+            self._storage_service = self.v_trajectory.v_storage_service
+        else:
+            # Create a new service
+            self._storage_service, unused_factory_kwargs = storage_factory(storage_service,
+                                                                        self._traj, **kwargs)
+            unused_kwargs = unused_kwargs - (set(kwargs.keys()) - unused_factory_kwargs)
+
+        if lazy_debug and is_debug():
+            self._storage_service = LazyStorageService()
+
+        self._traj.v_storage_service = self._storage_service
+
+        # Create continue path if desired
         self._continuable = continuable
 
         if self._continuable:
@@ -1014,6 +1033,7 @@ class Environment(HasLogger):
         self._continue_path = continue_path
         self._delete_continue = delete_continue
 
+        # Check multiproc
         self._multiproc = multiproc
         if ncores == 0:
             # Let *pypet* detect CPU count via psutil
@@ -1028,21 +1048,12 @@ class Environment(HasLogger):
         self._use_pool = use_pool
         self._multiproc_wrapper = None # The wrapper Service
 
-        # Drop a message if we made a commit. We cannot drop the message directly after the
-        # commit, because the logging files do not exist yet,
-        # and we want this commit to be tracked
-        if self._git_repository is not None:
-            if new_commit:
-                self._logger.info('Triggered NEW GIT commit `%s`.' % str(self._hexsha))
-            else:
-                self._logger.info('No changes detected, added PREVIOUS GIT commit `%s`.' %
-                                  str(self._hexsha))
-
         self._do_single_runs = do_single_runs
         self._automatic_storing = automatic_storing
         self._clean_up_runs = clean_up_runs
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
+        # Add config data to the trajectory
         if self._do_single_runs:
             # Only add parameters if we actually want single runs to be performed
             config_name = 'environment.%s.multiproc' % self.v_name

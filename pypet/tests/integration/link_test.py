@@ -12,7 +12,7 @@ from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.environment import Environment
 from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite, \
-    get_log_level
+    get_log_level, parse_args
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -256,3 +256,8 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

@@ -9,7 +9,7 @@ else:
 
 import pypet.brian
 from pypet.brian import *
-from pypet.tests.testutils.ioutils import get_root_logger
+from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite
 
 import logging
 import inspect
@@ -28,3 +28,7 @@ class TestAllBrianImport(unittest.TestCase):
         for item in pypet.brian.__dict__.values():
             if inspect.isclass(item) or inspect.isfunction(item):
                 self.assertTrue(item.__name__ in pypet.brian.__all__)
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

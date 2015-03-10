@@ -81,3 +81,13 @@ class DataNotInStorageError(IOError):
 
     def __str__(self):
         return repr(self._msg)
+
+
+class GitDiffError(RuntimeError):
+    """Exception raised if there are uncommited changes."""
+
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __str__(self):
+        return repr(self._msg)

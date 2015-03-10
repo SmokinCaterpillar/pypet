@@ -212,6 +212,12 @@ Yet, we will shortly discuss the most important ones here.
     in the working copy of your code and b) write the corresponding commit code into
     your trajectory so you can immediately see with which version you did your experiments.
 
+* ``git_fail``
+
+    If you don't want automatic commits, simply set ``git_fail=True``. Given changes in your
+    code base, your program will throw a `GitDiffError` instead of making an automatic commit.
+    Then, you can manually make a commit and restart your program with the committed changes.
+
 * ``sumatra_project``
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_

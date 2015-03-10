@@ -11,6 +11,7 @@ from pypet.brian.parameter import BrianMonitorResult
 from pypet.tests.unittests.parameter_test import ResultTest
 from pypet.tests.unittests.briantests.run_a_brian_network import run_network
 import pypet.utils.comparisons as comp
+from pypet.tests.testutils.ioutils import run_suite, parse_args
 
 
 class BrianMonitorTest(ResultTest):
@@ -305,3 +306,6 @@ class BrianMonitorTest(ResultTest):
 
             self.results[key].f_set(testtestextra=42)
 
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

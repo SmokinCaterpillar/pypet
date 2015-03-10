@@ -7,8 +7,8 @@ import sys
 import pandas as pd
 import numpy as np
 
-from pypet.tests.testutils.ioutils import run_suite,\
-    make_temp_file, remove_data, get_root_logger
+from pypet.tests.testutils.ioutils import run_suite, make_temp_file, remove_data, \
+    get_root_logger, parse_args
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter
 
@@ -291,9 +291,9 @@ class TestIteratorChain(unittest.TestCase):
 
         self.assertEqual(len(elem_list), 9)
 
-
 if __name__ == '__main__':
-    run_suite()
+    opt_args = parse_args()
+    run_suite(**opt_args)
 
 
 

@@ -2,6 +2,7 @@ __author__ = 'Robert Meyer'
 
 import pypet.pypetconstants as pypetconstants
 from pypet.tests.integration.link_test import LinkEnvironmentTest
+from pypet.tests.testutils.ioutils import parse_args, run_suite
 try:
     import psutil
 except ImportError:
@@ -61,3 +62,8 @@ class MultiprocLinkNoPoolLockTest(LinkEnvironmentTest):
         self.multiproc = True
         self.ncores = 2
         self.use_pool=False
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

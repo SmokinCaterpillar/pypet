@@ -28,6 +28,9 @@ pypet 0.1b.10
 
 *   Improved test handling and parsing in `pypet.tests`
 
+*   Environment now supports `git_fail` option to fail if there are not committed changes
+    instead of triggering a new commit.
+
 
 pypet 0.1b.9
 

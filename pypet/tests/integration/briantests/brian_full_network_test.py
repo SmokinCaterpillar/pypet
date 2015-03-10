@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
-from pypet.tests.testutils.ioutils import make_temp_file, run_suite, get_log_level, get_root_logger
+from pypet.tests.testutils.ioutils import make_temp_file, run_suite, get_log_level, \
+    get_root_logger, parse_args
 
 from brian import *
 
@@ -227,4 +228,5 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
 
 if __name__ == '__main__':
-    run_suite(remove=False)
+    opt_args = parse_args()
+    run_suite(**opt_args)

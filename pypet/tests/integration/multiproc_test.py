@@ -8,7 +8,7 @@ from pypet import pypetconstants
 from pypet.environment import Environment
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name, \
-    get_log_level
+    get_log_level, parse_args
 from pypet.tests.testutils.data import create_param_dict, add_params
 
 
@@ -156,7 +156,6 @@ class CapTest(EnvironmentTest):
         self.env = env
 
 
-
-
 if __name__ == '__main__':
-    run_suite()
+    opt_args = parse_args()
+    run_suite(**opt_args)

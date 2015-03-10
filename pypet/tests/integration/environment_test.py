@@ -29,7 +29,7 @@ from pypet import Parameter
 import tables as pt
 
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name,\
-    get_log_level, get_root_logger
+    get_log_level, get_root_logger, parse_args
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
     simple_calculations, TrajectoryComparator
 
@@ -1011,8 +1011,6 @@ class ResultSortTest(TrajectoryComparator):
 #         for irun, val in enumerate(list_that_should_change):
 #             self.assertTrue(list_that_should_change[irun] == 1000)
 
-
-
 if __name__ == '__main__':
-    run_suite()
-
+    opt_args = parse_args()
+    run_suite(**opt_args)

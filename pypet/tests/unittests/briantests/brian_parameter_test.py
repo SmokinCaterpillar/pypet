@@ -12,6 +12,7 @@ from pypet.brian.parameter import BrianParameter, BrianResult
 from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest
 from brian.stdunits import mV, mA, kHz,ms
 from pypet.utils.explore import cartesian_product
+from pypet.tests.testutils.ioutils import parse_args, run_suite
 
 
 class BrianParameterTest(ParameterTest):
@@ -102,8 +103,7 @@ class BrianResultStringModeTest(BrianResultTest):
         for res in self.results.values():
             res.v_storage_mode=BrianResult.STRING_MODE
 
-
 if __name__ == '__main__':
-    unittest.main()
-     #cProfile.run('unittest.main()',sort=0)
+    opt_args = parse_args()
+    run_suite(**opt_args)
 

@@ -288,6 +288,11 @@ because most of the time the default settings are sufficient.
 
     Message passed onto git command.
 
+* ``git_fail``
+
+    If `True` the program fails instead of triggering a commit if there are not committed
+    changes found in the code base. In such a case a `GitDiffError` is raised.
+
 * ``do_single_runs``
 
     Whether you intend to actually to compute single runs with the trajectory.
@@ -635,6 +640,10 @@ added to the trajectory.
 By the way, the autocommit function is similar to calling
 ``$ git add -u`` and ``$ git commit -m 'Some Message'``
 in your console.
+
+If you want git version control but no automatic commits of your code base in case of changes,
+you can pass the option `git_fail=True` to the environment. Instead of triggering a new
+commit in case of changed code, the program will throw a ``GitDiffError``.
 
 
 .. _git: http://git-scm.com/

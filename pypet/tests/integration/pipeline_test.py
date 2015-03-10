@@ -6,8 +6,8 @@ import logging
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_suite, \
-    make_temp_file, get_log_level, get_root_logger
+from pypet.tests.testutils.ioutils import run_suite, make_temp_file, get_log_level, \
+    get_root_logger, parse_args
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -182,6 +182,6 @@ class TestMPImmediatePostProc(TestPostProc):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
 
 
-
 if __name__ == '__main__':
-    run_suite()
+    opt_args = parse_args()
+    run_suite(**opt_args)

@@ -9,6 +9,7 @@ else:
     import unittest
 
 from pypet import Trajectory
+from pypet.tests.testutils.ioutils import run_suite, parse_args
 import pypet
 import platform
 
@@ -28,3 +29,8 @@ class LoadOldTrajectoryTest(unittest.TestCase):
         self.assertTrue(old_pypet_traj.par.x==0)
         self.assertTrue(len(old_pypet_traj)==9)
         self.assertTrue(old_pypet_traj.res.runs.r_4.z==12)
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

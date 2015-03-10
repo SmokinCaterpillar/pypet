@@ -17,6 +17,8 @@ try:
 except ImportError:
     git = None
 
+import pypet.pypetexceptions as pex
+
 
 def add_commit_variables(traj, commit):
     """Adds commit information to the trajectory."""
@@ -56,8 +58,13 @@ def add_commit_variables(traj, commit):
         #                   comment='Email of committer')
 
 
-def make_git_commit(environment, git_repository, user_message):
-    """ Makes a commit returns if a new commit was triggered and the SHA_1 code of the commit."""
+def make_git_commit(environment, git_repository, user_message, git_fail):
+    """ Makes a commit and returns if a new commit was triggered and the SHA_1 code of the commit.
+
+    If `git_fail` is `True` program fails instead of triggering a new commit given
+    not committed changes. Then a `GitDiffError` is raised.
+
+    """
 
     # Import GitPython, we do it here to allow also users not having GitPython installed
     # to use the normal environment
@@ -84,6 +91,9 @@ def make_git_commit(environment, git_repository, user_message):
     diff = index.diff(None)
 
     if diff:
+        if git_fail:
+            # User requested fail instead of a new commit
+            raise pex.GitDiffError('Found not committed changes!')
         # Make the commit
         repo.git.add('-u')
         commit = index.commit(message)

@@ -17,7 +17,8 @@ from pypet import Trajectory, SharedArrayResult, SharedTableResult, SharedPandas
     make_shared_result, compact_hdf5_file, SharedCArrayResult, SharedEArrayResult, \
     SharedVLArrayResult
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, get_root_logger
+from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, get_root_logger, \
+    parse_args, run_suite
 from pypet.utils import ptcompat
 
 
@@ -378,3 +379,8 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
                 StorageContextManager(traj).f_open_store()
 
         self.assertFalse(traj.v_storage_service.is_open)
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

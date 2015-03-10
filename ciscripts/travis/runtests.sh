@@ -15,7 +15,7 @@ if [[ $GIT_TEST == ON ]]
     then
         echo "Installing Git and Sumatra Test"
         # sudo apt-get install git
-        pip install --pre GitPython
+        pip install GitPython
         pip install django==1.5
         pip install Sumatra
         mkdir git_sumatra_test
@@ -36,7 +36,7 @@ if [[ $GIT_TEST == ON ]]
                 echo "Running git coverage"
                 coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
             else
-                python git_check.py
+                python git_check.py -f # Also test failing of git
             fi
         rm -rvf experiments
         echo "Running Second Git Test (without actual commit)"
@@ -46,7 +46,7 @@ if [[ $GIT_TEST == ON ]]
                 coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
                 mv -v .coverage* ../../../
             else
-                python git_check.py
+                python git_check.py -n # Test that git is not failing
             fi
         echo "Git Test complete, removing folder"
         cd ..

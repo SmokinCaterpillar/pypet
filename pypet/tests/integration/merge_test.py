@@ -10,7 +10,7 @@ import logging
 import os
 
 from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name, \
-    get_log_level
+    get_log_level, parse_args
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integration.environment_test import ResultSortTest
@@ -618,6 +618,6 @@ class TestMergeResultsSort(ResultSortTest):
         traj.f_explore(self.explore_dict)
 
 
-
 if __name__ == '__main__':
-    run_suite()
+    opt_args = parse_args()
+    run_suite(**opt_args)

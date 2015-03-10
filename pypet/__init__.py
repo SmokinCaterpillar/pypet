@@ -19,7 +19,7 @@ from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
     PickleParameter, Result, SparseResult, PickleResult, ObjectTable, BaseParameter, BaseResult
 from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     NotUniqueNodeError, ParameterLockedException, PresettingError, TooManyGroupsError,\
-    VersionMismatchError
+    VersionMismatchError, GitDiffError
 from pypet.pypetlogging import HasLogger
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
@@ -58,6 +58,7 @@ __all__ = [
     PresettingError.__name__,
     TooManyGroupsError.__name__,
     VersionMismatchError.__name__,
+    GitDiffError.__name__,
     HasLogger.__name__,
     cartesian_product.__name__,
     load_trajectory.__name__,

@@ -1,5 +1,6 @@
 import sys
 import os
+import getopt
 
 try:
     import pypet
@@ -12,7 +13,7 @@ except ImportError:
 
 
 from pypet import Environment
-from pypet import cartesian_product
+from pypet import cartesian_product, GitDiffError
 
 
 def multiply(traj):
@@ -20,19 +21,47 @@ def multiply(traj):
     traj.f_add_result('z',z, comment='Im the product of two reals!')
 
 
-def main():
+def get_opt():
+    opt_list, _ = getopt.getopt(sys.argv[1:],'fn')
+    opt_dict = {}
+    for opt, arg in opt_list:
+        if opt == '-f':
+            opt_dict['fail'] = True
+            print('I will try to fail on diffs.')
+        if opt == '-n':
+            opt_dict['no_fial'] = True
+            print('I will try to fail on diffs, but there should not be any.')
+
+    return opt_dict
+
+
+def fail_on_diff():
+    try:
+        Environment(trajectory='fail',
+                 filename=os.path.join('fail',
+                                       'HDF5',),
+                  file_title='failing',
+                  log_folder=os.path.join('fail', 'LOGS'),
+                  git_repository='.', git_message='Im a message!',
+                  git_fail=True)
+        raise RuntimeError('You should not be here!')
+    except GitDiffError as exc:
+        print('I expected the GitDiffError: `%s`' % str(exc))
+
+
+def main(fail=False):
     try:
         # Create an environment that handles running
         with Environment(trajectory='Example1_Quick_And_Not_So_Dirty',
                          filename=os.path.join('experiments',
-                                               'example_01',
                                                'HDF5',),
                           file_title='Example1_Quick_And_Not_So_Dirty',
-                          log_folder=os.path.join('experiments', 'example_01', 'LOGS'),
+                          log_folder=os.path.join('experiments', 'LOGS'),
                           comment='The first example!',
                           complib='blosc',
                           small_overview_tables=False,
                           git_repository='.', git_message='Im a message!',
+                          git_fail=fail,
                           sumatra_project='.', sumatra_reason='Testing!') as env:
 
             # Get the trajectory from the environment
@@ -59,4 +88,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    opt_dict = get_opt()
+    test_fail = opt_dict.get('fail', False)
+    if test_fail:
+        fail_on_diff()
+    test_no_fail = opt_dict.get('no_fail', False)
+    main(test_no_fail)

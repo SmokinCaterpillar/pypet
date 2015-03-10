@@ -22,6 +22,7 @@ import warnings
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult
+from pypet.tests.testutils.ioutils import parse_args, run_suite
 
 import copy
 
@@ -1163,6 +1164,6 @@ class SingleRunQueueTest(unittest.TestCase):
 
         pass
 
-
 if __name__ == '__main__':
-    unittest.main()
+    opt_args = parse_args()
+    run_suite(**opt_args)

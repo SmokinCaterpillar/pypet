@@ -19,7 +19,8 @@ from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, Sparse
     SparseResult, Result, NNGroupNode, ResultGroup, ConfigGroup, DerivedParameterGroup, \
     ParameterGroup, Environment, pypetconstants, compat, HDF5StorageService
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, get_log_level, get_root_logger
+from pypet.tests.testutils.ioutils import make_temp_file, get_log_level, get_root_logger, \
+    parse_args, run_suite
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
@@ -1126,3 +1127,6 @@ class StorageTest(TrajectoryComparator):
         self.compare_trajectories(traj,traj2)
 
 
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

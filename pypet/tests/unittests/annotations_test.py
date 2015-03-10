@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from pypet.trajectory import Trajectory
-from pypet.tests.testutils.ioutils import make_temp_file, remove_data
+from pypet.tests.testutils.ioutils import make_temp_file, remove_data, run_suite, parse_args
 from pypet.utils import comparisons as comp
 
 
@@ -185,7 +185,6 @@ class AnnotationsTest(unittest.TestCase):
             for idx, val in enumerate(val_list):
                 self.assertTrue(comp.nested_equal(self.annotations[key_list[idx]], val))
 
-
     def test_f_get_errors(self):
         for node in self.traj.f_iter_nodes(recursive=True):
             with self.assertRaises(ValueError):
@@ -198,9 +197,6 @@ class AnnotationsTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             testparam.v_annotations.f_get()
-
-
-
 
     def test_f_set_numbering(self):
         int_list = list(range(10))
@@ -216,3 +212,8 @@ class AnnotationsTest(unittest.TestCase):
                     name = 'annotation_%d' % integer
 
                 self.assertTrue(name in node.v_annotations)
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

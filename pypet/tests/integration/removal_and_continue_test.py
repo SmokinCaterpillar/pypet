@@ -13,7 +13,7 @@ from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name, \
-    get_log_level
+    get_log_level, parse_args
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
     simple_calculations, TrajectoryComparator
 
@@ -496,5 +496,7 @@ class ContinueMPPoolTest(ContinueMPTest):
         self.envs.append(env)
         self.trajs.append( env.v_trajectory)
 
+
 if __name__ == '__main__':
-    run_suite()
+    opt_args = parse_args()
+    run_suite(**opt_args)

@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 from pypet import Trajectory, pypetexceptions, PickleResult
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file
+from pypet.tests.testutils.ioutils import make_temp_file, run_suite, parse_args
 import pypet.pypetexceptions as pex
 
 
@@ -334,3 +334,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
 
         with self.assertRaises(AttributeError):
             traj2.gg
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

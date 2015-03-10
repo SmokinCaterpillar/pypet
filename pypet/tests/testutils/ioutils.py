@@ -253,5 +253,5 @@ def parse_args():
             opt_dict['log_level'] = int(arg)
             print('Using log level %s.' % arg)
 
-    sys.argv=[sys.argv[0]]
+    sys.argv = [sys.argv[0]]
     return opt_dict

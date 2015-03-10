@@ -19,6 +19,8 @@ from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
+from pypet.tests.testutils.ioutils import run_suite, parse_args
+
 
 class ParameterTest(unittest.TestCase):
 
@@ -1036,5 +1038,7 @@ class SparseResultTest(ResultTest):
         self.results['test.res.args'].f_set(*compat.listvalues(self.data))
         self.results['test.res.kwargs'].f_set(**self.data)
 
+
 if __name__ == '__main__':
-    unittest.main()
+    opt_args = parse_args()
+    run_suite(**opt_args)
