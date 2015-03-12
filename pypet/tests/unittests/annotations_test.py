@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from pypet.trajectory import Trajectory
-from pypet.tests.testutils.ioutils import make_temp_file, remove_data, run_suite, parse_args
+from pypet.tests.testutils.ioutils import make_temp_dir, remove_data, run_suite, parse_args
 from pypet.utils import comparisons as comp
 
 
@@ -26,7 +26,7 @@ class AnnotationsTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','annotations.hdf5'))
+        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','annotations.hdf5'))
 
         self.traj = Trajectory(name='Annotations', filename = self.filename)
 

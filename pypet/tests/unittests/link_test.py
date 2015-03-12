@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 from pypet import Trajectory, pypetexceptions, PickleResult
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, run_suite, parse_args
+from pypet.tests.testutils.ioutils import make_temp_dir, run_suite, parse_args
 import pypet.pypetexceptions as pex
 
 
@@ -150,7 +150,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue('circle2' not in traj)
 
     def test_storage_and_loading(self):
-        filename = make_temp_file('linktest.hdf5')
+        filename = make_temp_dir('linktest.hdf5')
         traj = Trajectory(filename=filename)
 
         traj.f_add_parameter_group('test')
@@ -314,7 +314,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.v_idx = 1
 
     def test_link_deletion(self):
-        filename = make_temp_file('linktest2.hdf5')
+        filename = make_temp_dir('linktest2.hdf5')
         traj = Trajectory(filename=filename)
 
         traj.f_add_parameter_group('test')

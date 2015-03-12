@@ -11,8 +11,8 @@ import sys
 from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.environment import Environment
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite, \
-    get_log_level, parse_args
+from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
+    get_log_level, parse_args, get_log_options
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -68,13 +68,13 @@ class LinkEnvironmentTest(TrajectoryComparator):
         logging.basicConfig(level=logging.ERROR)
 
 
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)
-        self.filename = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
                                                     'test%s.hdf5' % self.trajname))
@@ -83,6 +83,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_stdout=self.log_stdout,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -137,14 +138,14 @@ class LinkMergeTest(TrajectoryComparator):
         logging.basicConfig(level = logging.ERROR)
 
 
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
 
         random.seed()
         self.trajname1 = 'T1'+ make_trajectory_name(self)
         self.trajname2 = 'T2'+make_trajectory_name(self)
-        self.filename = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
                                                     'test%s.hdf5' % self.trajname1))
@@ -152,11 +153,11 @@ class LinkMergeTest(TrajectoryComparator):
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1, log_folder=self.logfolder,
                           log_levels=get_log_level(),
-                          log_stdout=False)
+                          log_stdout=False, log_options=get_log_options())
         self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
                           file_title=self.trajname2, log_folder=self.logfolder,
                           log_levels=get_log_level(),
-                          log_stdout=False)
+                          log_stdout=False, log_options=get_log_options())
 
         self.traj1 = self.env1.v_trajectory
         self.traj2 = self.env2.v_trajectory
@@ -214,7 +215,7 @@ class LinkMergeTest(TrajectoryComparator):
 
         name = self.traj1
 
-        self.bfilename = make_temp_file(os.path.join('experiments',
+        self.bfilename = make_temp_dir(os.path.join('experiments',
                                                      'tests',
                                                      'HDF5',
                                                      'backup_test%s.hdf5' % self.trajname1))

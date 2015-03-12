@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import os # For path names being viable under Windows and Linux
+import logging
 
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
@@ -32,6 +33,10 @@ def main():
                       filename=filename,
                       file_title='Example_04_MP',
                       log_folder=log_folder,
+                      # Let's use logging better suited for multiprocessing
+                      log_options=(pypetconstants.LOG_MODE_QUEUE, pypetconstants.LOG_MODE_QUEUE_STREAM),
+                      log_levels=logging.INFO,
+                      log_stdout=False,
                       comment = 'Multiprocessing example!',
                       multiproc=True,
                       ncores=2,
@@ -54,6 +59,7 @@ def main():
 
     # Finally disable logging and close all log-files
     env.f_disable_logging()
+
 
 if __name__ == '__main__':
     # This will execute the main function in case the script is called from the one true

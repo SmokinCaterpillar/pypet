@@ -287,6 +287,8 @@ class TrajectoryComparator(unittest.TestCase):
         root.handlers = [] # delete all handlers
 
     def tearDown(self):
+        if hasattr(self, 'env') and hasattr(self.env, 'f_disable_logging'):
+            self.env.f_disable_logging()
         remove_data()
 
     def compare_trajectories(self,traj1,traj2):

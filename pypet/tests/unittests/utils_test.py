@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 import numpy as np
 
-from pypet.tests.testutils.ioutils import run_suite, make_temp_file, remove_data, \
+from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
     get_root_logger, parse_args
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter
@@ -176,7 +176,7 @@ class TestNewTreeTranslation(unittest.TestCase):
     tags = 'unittest', 'utils', 'legacy'
 
     def test_file_translation(self):
-        filename = make_temp_file('to_new_tree.hdf5')
+        filename = make_temp_dir('to_new_tree.hdf5')
         mytraj = Trajectory('SCRATCH', filename=filename)
 
         mytraj.f_add_parameter('Test.Group.Test', 42)

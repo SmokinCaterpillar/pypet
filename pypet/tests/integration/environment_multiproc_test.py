@@ -7,8 +7,8 @@ import os
 from pypet import pypetconstants
 from pypet.environment import Environment
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
-from pypet.tests.testutils.ioutils import run_suite,make_temp_file, make_trajectory_name, \
-    get_log_level, parse_args
+from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajectory_name, \
+    get_log_level, parse_args, get_log_options
 from pypet.tests.testutils.data import create_param_dict, add_params
 
 
@@ -122,11 +122,11 @@ class CapTest(EnvironmentTest):
 
         self.trajname = make_trajectory_name(self)
 
-        self.filename = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
                                                     '%s.hdf5' % self.trajname))
-        self.logfolder = make_temp_file(os.path.join('experiments','tests','Log'))
+        self.logfolder = make_temp_dir(os.path.join('experiments','tests','Log'))
 
         random.seed()
 
@@ -134,6 +134,7 @@ class CapTest(EnvironmentTest):
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_levels=get_log_level(), log_stdout=False,
+                          log_options=get_log_options(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=True,

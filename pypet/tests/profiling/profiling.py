@@ -22,7 +22,7 @@ class CustomOutput(GraphvizOutput):
 
 from pypet import Environment, Parameter, load_trajectory, cartesian_product
 
-from pypet.tests.testutils.ioutils import make_temp_file
+from pypet.tests.testutils.ioutils import make_temp_dir
 from pypet.tests.testutils.data import create_param_dict, add_params, simple_calculations
 
 filename = None
@@ -44,13 +44,13 @@ def test_run():
     global filename
 
 
-    logfolder = make_temp_file(os.path.join('experiments',
+    logfolder = make_temp_dir(os.path.join('experiments',
                                                   'tests',
                                                   'Log'))
 
     np.random.seed()
     trajname = 'profiling'
-    filename = make_temp_file(os.path.join('experiments',
+    filename = make_temp_dir(os.path.join('experiments',
                                                 'tests',
                                                 'HDF5',
                                                 'test%s.hdf5' % trajname))

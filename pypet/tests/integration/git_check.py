@@ -98,8 +98,8 @@ def main(fail=False):
             # traj.f_expand({'x':[3,3],'y':[42,43]})
             #
             # env.f_run(multiply)
-    except Exception as e:
-        print(repr(e))
+    except Exception as exc:
+        print(repr(exc))
         sys.exit(1)
 
 

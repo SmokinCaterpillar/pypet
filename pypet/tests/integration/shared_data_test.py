@@ -15,8 +15,8 @@ import scipy.sparse as spsp
 
 from pypet.shareddata import *
 from pypet import Trajectory
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, run_suite, \
-    get_log_level, get_root_logger, parse_args
+from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
+    get_log_level, get_root_logger, parse_args, get_log_options
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
@@ -158,13 +158,13 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
     def setUp(self):
         self.set_mode()
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)
-        self.filename = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
                                                     'test%s.hdf5' % self.trajname))
@@ -173,6 +173,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_stdout=False,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,

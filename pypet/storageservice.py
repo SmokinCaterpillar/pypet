@@ -104,10 +104,10 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         try:
             self._pickle_queue = False
             self._queue.put(('STORE', args, kwargs))
-        except IOError as e:
+        except IOError as exc:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % str(e))
+            self._logger.error('Failed putting data to queue due to error: `%s`' % str(exc))
             for trying in range(self._max_tries):
                 try:
                     self._logger.error('Failed sending task %s to queue, I will try again.' %
@@ -118,16 +118,16 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                 except IOError as e2:
                     self._logger.error('Failed putting data to queue due to error: `%s`' % str(e2))
                     time.sleep(self._sleep_time)
-        except TypeError as e:
+        except TypeError as exc:
             # This handles a weird bug under python 3.4 (not 3.3) that sometimes
             # a NoneType is put on the queue instead of real data which needs to be ignored
             self._logger.error('Could not put %s because of: %s, '
                                'I will try again.' %
-                               (str(('STORE', args, kwargs)), str(e)))
+                               (str(('STORE', args, kwargs)), str(exc)))
             try:
                 self._logger.error(
                     'Failed sending task `%s` to queue due to: %s. I will try again.' %
-                    (str(('STORE', args, kwargs)), str(e)))
+                    (str(('STORE', args, kwargs)), str(exc)))
                 self._queue.put(('STORE', args, kwargs))
                 self._logger.error('Second queue sending try was successful!')
             except TypeError as e2:
@@ -137,9 +137,9 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                     (str(('STORE', args, kwargs)), str(e2)))
                 self._queue.put(('STORE', args, kwargs))
                 self._logger.error('Third queue sending try was successful!')
-        except Exception as e:
+        except Exception as exc:
             self._logger.error('Could not put %s because of: %s' %
-                               (str(('STORE', args, kwargs)), str(e)))
+                               (str(('STORE', args, kwargs)), str(exc)))
             raise
         finally:
             self._pickle_queue = old_pickle
@@ -148,10 +148,10 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         """Signals the writer that it can stop listening to the queue"""
         try:
             self._queue.put(('DONE', [], {}))
-        except IOError as e:
+        except IOError as exc:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % str(e))
+            self._logger.error('Failed putting data to queue due to error: `%s`' % str(exc))
             for trying in range(self._max_tries):
                 try:
                     self._logger.error('Failed sending task `DONE` to queue, I will try again.')
@@ -184,7 +184,7 @@ class QueueStorageServiceWriter(HasLogger):
                 to_store_list = []
                 stop_listening = False
                 while True:
-                    # We try to grap more data from the queue to avoid reopneing the
+                    # We try to grab more data from the queue to avoid reopneing the
                     # hdf5 file all the time
                     try:
                         msg, args, kwargs = self._queue.get(False)
@@ -218,17 +218,17 @@ class QueueStorageServiceWriter(HasLogger):
                         self._queue.task_done()
                     except queue.Empty:
                         break
-                    except TypeError as e:
+                    except TypeError as exc:
                         self._logger.error('Could not get %s because of: %s, '
                                            'I will ignore the error and wait for another '
                                            'try.' %
-                                           (str(('STORE', args, kwargs)), str(e)))
+                                           (str(('STORE', args, kwargs)), str(exc)))
                         # Under python 3.4 sometimes NoneTypes are put on the queue
                         # causing a TypeError. Apart form this sketchy handling, I have
                         # so far no solution
-                    except Exception as e:
+                    except Exception as exc:
                         self._logger.error('Could not get %s because of: %s' %
-                                           (str(('STORE', args, kwargs)), str(e)))
+                                           (str(('STORE', args, kwargs)), str(exc)))
                         raise
 
                 if to_store_list:
@@ -237,8 +237,8 @@ class QueueStorageServiceWriter(HasLogger):
                 if stop_listening:
                     break
 
-            except Exception as e2:
-                self._logger.error('Encountered error: `%s`' % str(e2))
+            except Exception as exc2:
+                self._logger.error('Encountered error: `%s`' % str(exc2))
                 raise
 
 class LockWrapper(MultiprocWrapper, HasLogger):
@@ -1263,9 +1263,9 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
 
-        except pt.NoSuchNodeError as e:
+        except pt.NoSuchNodeError as exc:
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
-            raise pex.DataNotInStorageError(str(e))
+            raise pex.DataNotInStorageError(str(exc))
         except:
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
@@ -1866,12 +1866,12 @@ class HDF5StorageService(StorageService, HasLogger):
                     f_fd = self._hdf5store._handle.fileno()
                     self._hdf5store.flush()
                     os.fsync(f_fd)
-            except OSError as e:
+            except OSError as exc:
                 # This seems to be the only way to avoid an OSError under Windows
                 errmsg = ('Encountered OSError while flushing file.'
                                    'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
-                                   'Original error: %s' % str(e))
+                                   'Original error: %s' % str(exc))
                 self._logger.debug(errmsg)
 
             self._hdf5store.close()
@@ -2523,10 +2523,10 @@ class HDF5StorageService(StorageService, HasLogger):
         def _extract_meta_data(attr_name, row, name_in_row, conversion_function):
             try:
                 setattr(self, attr_name, conversion_function(row[name_in_row]))
-            except IndexError as e:
+            except IndexError as exc:
                 self._logger.error('Using default hdf5 setting, '
                                        'could not extract `%s` hdf5 setting because of: %s' %
-                                        (name_in_row, str(e)))
+                                        (name_in_row, str(exc)))
 
         if 'hdf5_settings' in self._overview_group:
             hdf5_table = self._overview_group.hdf5_settings
@@ -4538,8 +4538,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                                             flags=flags)
             except pt.NoSuchNodeError:
                 pass
-        except Exception as e:
-            self._logger.error('Could not store information table due to `%s`.' % str(e))
+        except Exception as exc:
+            self._logger.error('Could not store information table due to `%s`.' % str(exc))
 
         if ((not self._purge_duplicate_comments or definitely_store_comment) and
                     instance.v_comment != ''):
@@ -4561,9 +4561,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                                             flags=flags)
             except pt.NoSuchNodeError:
                 pass
-            except Exception as e:
+            except Exception as exc:
                 self._logger.error('Could not store information '
-                                   'table due to `%s`.' % str(e))
+                                   'table due to `%s`.' % str(exc))
 
     def _prm_store_parameter_or_result(self,
                                        instance,

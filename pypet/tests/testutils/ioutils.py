@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 import logging
 
-import pypet.pypetconstants
+import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet import HasLogger
 from pypet.utils.decorators import copydoc
@@ -22,14 +22,17 @@ import tempfile
 
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
-    #''' Temporary directory for the hdf5 files'''
+    # Temporary directory for the hdf5 files'''
     remove=True,
-    #''' Whether or not to remove the temporary directory after the tests'''
+    # Whether or not to remove the temporary directory after the tests
     actual_tempdir='',
-    #''' Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`'''
+    # Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`
     user_tempdir='',
-    #'''If the user specifies in run all test a folder, this variable will be used'''
-    log_level=logging.ERROR
+    # If the user specifies in run all test a folder, this variable will be used
+    log_level=logging.ERROR,
+    # Specified log level
+    log_options=pypetconstants.LOG_MODE_QUEUE
+    # Specified log options
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
@@ -42,9 +45,12 @@ def get_log_level():
     """Simply returns the user chosen log-level"""
     return testParams['log_level']
 
+def get_log_options():
+    """Returns the log options"""
+    return testParams['log_options']
 
-def make_temp_file(filename):
-    """Creates a temporary file in a temporary folder"""
+def make_temp_dir(filename):
+    """Creates a temporary folder and returns the joined filename"""
     global testParams
     try:
 
@@ -62,13 +68,13 @@ def make_temp_file(filename):
                                     ' I will use pythons gettempdir method instead.')
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
         testParams['actual_tempdir'] = actual_tempdir
-        return os.path.join(actual_tempdir,filename)
+        return os.path.join(actual_tempdir, filename)
     except:
         get_root_logger().error('Could not create a directory. Sorry cannot run them')
         raise
 
 
-def run_suite(remove=None, folder=None, suite=None, log_level=None):
+def run_suite(remove=None, folder=None, suite=None, log_level=None, log_options=None):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.
@@ -85,7 +91,10 @@ def run_suite(remove=None, folder=None, suite=None, log_level=None):
 
     if log_level is not None:
         testParams['log_level'] = log_level
-    logging.basicConfig(level=testParams['log_level'])
+    #logging.basicConfig(level=testParams['log_level'])
+
+    if log_options is not None:
+        testParams['log_options'] = log_options
 
     success = False
     try:
@@ -131,7 +140,7 @@ def remove_data():
 def make_trajectory_name(testcase):
     """Creates a trajectory name based on the current `testcase`"""
     name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
-    maxlen = pypet.pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
+    maxlen = pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
 
     if len(name) > maxlen:
         name = name[len(name)-maxlen:]
@@ -233,7 +242,7 @@ def discover_tests(predicate=None):
 
 def parse_args():
     """Parses arguments and returns a dictionary"""
-    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite=', 'loglevel='])
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite=', 'loglevel=', 'logoptions='])
     opt_dict = {}
 
     for opt, arg in opt_list:
@@ -252,6 +261,10 @@ def parse_args():
         if opt == '--loglevel':
             opt_dict['log_level'] = int(arg)
             print('Using log level %s.' % arg)
+
+        if opt == '--logoptions':
+            opt_dict['log_options'] = arg.split(',')
+            print('Using log options %s.' % arg)
 
     sys.argv = [sys.argv[0]]
     return opt_dict

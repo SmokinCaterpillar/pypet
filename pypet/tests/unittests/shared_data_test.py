@@ -17,7 +17,7 @@ from pypet import Trajectory, SharedArrayResult, SharedTableResult, SharedPandas
     make_shared_result, compact_hdf5_file, SharedCArrayResult, SharedEArrayResult, \
     SharedVLArrayResult
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_file, make_trajectory_name, get_root_logger, \
+from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_root_logger, \
     parse_args, run_suite
 from pypet.utils import ptcompat
 
@@ -28,7 +28,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
     tags = 'unittest', 'trajectory', 'shared', 'hdf5'
 
     def test_converions(self):
-        filename = make_temp_file('hdf5manipulation.hdf5')
+        filename = make_temp_dir('hdf5manipulation.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
 
@@ -164,7 +164,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
 
     def test_storing_and_manipulating(self):
-        filename = make_temp_file('hdf5manipulation.hdf5')
+        filename = make_temp_dir('hdf5manipulation.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
 
@@ -224,7 +224,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
     @unittest.skipIf(platform.system() == 'Windows', 'Not supported under Windows')
     def test_compacting(self):
-        filename = make_temp_file('hdf5compacting.hdf5')
+        filename = make_temp_dir('hdf5compacting.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
         traj.v_storage_service.complevel = 7
@@ -272,7 +272,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         self.assertTrue(new_size < size, "%s > %s" %(str(new_size), str(size)))
 
     def test_all_arrays(self):
-        filename = make_temp_file('hdf5arrays.hdf5')
+        filename = make_temp_dir('hdf5arrays.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
 
@@ -327,7 +327,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
                     raise RuntimeError()
 
     def test_df(self):
-        filename = make_temp_file('hdf5errors.hdf5')
+        filename = make_temp_dir('hdf5errors.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         traj.f_store()
         dadict = {'hi': [ 1,2,3,4,5], 'shu':['bi', 'du', 'da', 'ha', 'hui']}
@@ -348,7 +348,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
 
     def test_errors(self):
-        filename = make_temp_file('hdf5errors.hdf5')
+        filename = make_temp_dir('hdf5errors.hdf5')
         traj = Trajectory(name = make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
 

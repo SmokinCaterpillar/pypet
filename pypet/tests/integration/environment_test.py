@@ -28,8 +28,8 @@ from pypet import Parameter
 
 import tables as pt
 
-from pypet.tests.testutils.ioutils import  run_suite, make_temp_file,  make_trajectory_name,\
-    get_log_level, get_root_logger, parse_args
+from pypet.tests.testutils.ioutils import  run_suite, make_temp_dir,  make_trajectory_name,\
+    get_log_level, get_root_logger, parse_args, get_log_options
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
     simple_calculations, TrajectoryComparator
 
@@ -50,31 +50,11 @@ class FullStorageTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'  # Test tags
 
-    def test_multiple_loggers_defined(self):
-        filename = make_temp_file('full_store.hdf5')
-        logfolder = make_temp_file('logs')
-        custom_logger = logging.getLogger('custom')
-        root = get_root_logger()
-        logstr = 'TEST CUSTOM LOGGING!'
-        rootstr = 'AAAAAAAAAAAA'
-        with Environment(log_folder=logfolder, filename=filename,
-                         logger_names=('', 'custom'),
-                         log_levels=(logging.CRITICAL, logging.DEBUG)) as env:
-            custom_logger.debug(logstr)
-            root.debug(rootstr)
-
-            logpath = env.v_log_path
-
-        with open(os.path.join(logpath, 'main.txt'), 'r') as fh:
-            text = fh.read()
-            self.assertTrue(logstr in text)
-            self.assertFalse(rootstr in text)
-
     def test_not_full_store(self):
-        filename = make_temp_file('full_store.hdf5')
-        logfolder = make_temp_file('logs')
+        filename = make_temp_dir('not_full_store.hdf5')
+        logfolder = make_temp_dir('logs')
         with Environment(log_folder=logfolder, filename=filename,
-                         log_levels=get_log_level()) as env:
+                         log_levels=get_log_level(), log_options=get_log_options()) as env:
 
             traj = env.v_trajectory
 
@@ -89,10 +69,10 @@ class FullStorageTest(TrajectoryComparator):
             self.assertTrue('hi' not in traj)
 
     def test_full_store(self):
-        filename = make_temp_file('full_store.hdf5')
-        logfolder = make_temp_file('logs')
+        filename = make_temp_dir('full_store.hdf5')
+        logfolder = make_temp_dir('logs')
         with Environment(log_folder=logfolder, filename=filename,
-                         log_levels=get_log_level()) as env:
+                         log_levels=get_log_level(), log_options=get_log_options()) as env:
 
             traj = env.v_trajectory
 
@@ -117,6 +97,7 @@ def add_large_data(traj):
     for irun in range(1000):
         array_list.append(np.random.rand(10))
     traj.f_add_result('m4ny', *array_list)
+
 
 class EnvironmentTest(TrajectoryComparator):
 
@@ -228,13 +209,13 @@ class EnvironmentTest(TrajectoryComparator):
 
     def setUp(self):
         self.set_mode()
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
 
         random.seed()
         self.trajname = make_trajectory_name(self)
-        self.filename = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
                                                     'test%s.hdf5' % self.trajname))
@@ -243,6 +224,7 @@ class EnvironmentTest(TrajectoryComparator):
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_stdout=self.log_stdout,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -278,7 +260,8 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 0)
 
-        env2 = Environment(filename=self.filename, log_folder=None, log_levels=get_log_level())
+        env2 = Environment(filename=self.filename, log_folder=None, log_levels=get_log_level(),
+                           log_options=get_log_options())
         traj2 = env2.v_trajectory
         traj2.f_store()
 
@@ -289,7 +272,7 @@ class EnvironmentTest(TrajectoryComparator):
             self.assertTrue(nchildren > 1)
 
         env3 = Environment(filename=self.filename, overwrite_file=True, log_folder=None,
-                           log_levels=get_log_level())
+                           log_levels=get_log_level(), log_options=get_log_options())
 
         self.assertFalse(os.path.exists(self.filename))
 
@@ -297,10 +280,11 @@ class EnvironmentTest(TrajectoryComparator):
         env3.f_disable_logging()
 
     def test_time_display_of_loading(self):
-        filename = make_temp_file('sloooow.hdf5')
-        log_folder = make_temp_file('logs')
+        filename = make_temp_dir('sloooow.hdf5')
+        log_folder = make_temp_dir('logs')
         env = Environment(trajectory='traj', add_time=True, filename=filename,
                           log_stdout=False, log_levels=logging.INFO, # needed for the test!
+                          log_options=pypetconstants.LOG_MODE_QUEUE,
                           dynamic_imports=SlowResult, log_folder=log_folder,
                           display_time=1)
         traj = env.v_traj
@@ -309,7 +293,7 @@ class EnvironmentTest(TrajectoryComparator):
         traj.f_load(load_data=3)
 
         path = env.v_log_path
-        mainfilename = os.path.join(path, 'main.txt')
+        mainfilename = os.path.join(path, 'main_queue_log.txt')
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
             self.assertTrue('nodes/s)' in full_text)
@@ -386,50 +370,6 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(TypeError):
             self.explore(self.traj)
 
-
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
-    def test_logfile_creation(self):
-        # if not self.multiproc:
-        #     return
-        self.traj.f_add_parameter('TEST', 'test_run')
-        ###Explore
-        self.explore(self.traj)
-
-        self.make_run()
-
-        log_path = self.env.v_log_path
-
-        file_list = [file for file in os.listdir(log_path)]
-
-        if self.multiproc:
-            if self.mode == 'LOCK':
-                length = len(self.traj) + 2
-            elif self.mode == 'QUEUE':
-                length = len(self.traj) + 3
-            else:
-                raise RuntimeError('You shall not pass!')
-        else:
-            length = 2
-
-        self.assertTrue(len(file_list) == length ) # assert that there are as many
-        # files as runs plus main.txt and errors and warnings
-
-        for file in file_list:
-            if 'main.txt' in file:
-                pass
-            elif 'errors_and_warnings.txt' in file:
-                pass
-            elif 'process' in file:
-                pass
-            elif 'poolworker' in file:
-                pass
-            elif 'queue' in file:
-                pass
-            else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
-
-
     def test_run_complex(self):
         self.traj.f_add_parameter('TEST', 'test_run_complex')
         ###Explore
@@ -487,7 +427,8 @@ class EnvironmentTest(TrajectoryComparator):
 
 
         self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
-                          log_stdout=False, log_levels=get_log_level())
+                          log_stdout=False, log_levels=get_log_level(),
+                          log_options=get_log_options())
 
         self.traj = self.env.v_trajectory
 
@@ -770,8 +711,8 @@ class ResultSortTest(TrajectoryComparator):
     def setUp(self):
         self.set_mode()
 
-        self.filename = make_temp_file(os.path.join('experiments','tests','HDF5','test.hdf5'))
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','test.hdf5'))
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
         self.trajname = make_trajectory_name(self)
@@ -780,6 +721,7 @@ class ResultSortTest(TrajectoryComparator):
                           file_title=self.trajname, log_folder=self.logfolder,
                           log_stdout=self.log_stdout,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
@@ -890,7 +832,8 @@ class ResultSortTest(TrajectoryComparator):
         traj_name = self.env.v_trajectory.v_name
         del self.env
         self.env = Environment(trajectory=self.traj, log_folder=self.logfolder,
-                          log_stdout=False, log_levels=get_log_level())
+                          log_stdout=False, log_levels=get_log_level(),
+                          log_options=get_log_options())
 
         self.traj = self.env.v_trajectory
 
@@ -960,8 +903,8 @@ class ResultSortTest(TrajectoryComparator):
 #
 #     def test_deep_copy_data(self):
 #
-#         self.filename = make_temp_file('experiments/tests/HDF5/testcopy.hdf5')
-#         self.logfolder = make_temp_file('experiments/tests/Log')
+#         self.filename = make_temp_dir('experiments/tests/HDF5/testcopy.hdf5')
+#         self.logfolder = make_temp_dir('experiments/tests/Log')
 #         self.trajname = make_trajectory_name(self)
 #
 #         env = Environment(trajectory=self.trajname,filename=self.filename,
@@ -987,8 +930,8 @@ class ResultSortTest(TrajectoryComparator):
 #             self.assertTrue(x==42+irun)
 #
 #     def test_not_deep_copy_data(self):
-#         self.filename = make_temp_file('experiments/tests/HDF5/testcoyp2.hdf5')
-#         self.logfolder = make_temp_file('experiments/tests/Log')
+#         self.filename = make_temp_dir('experiments/tests/HDF5/testcoyp2.hdf5')
+#         self.logfolder = make_temp_dir('experiments/tests/Log')
 #         self.trajname = make_trajectory_name(self)
 #
 #         env = Environment(trajectory=self.trajname,filename=self.filename,

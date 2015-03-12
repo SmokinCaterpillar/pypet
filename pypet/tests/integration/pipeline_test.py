@@ -6,8 +6,8 @@ import logging
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_suite, make_temp_file, get_log_level, \
-    get_root_logger, parse_args
+from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, get_log_level, \
+    get_root_logger, parse_args, get_log_options
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -68,18 +68,18 @@ class TestPostProc(TrajectoryComparator):
     def make_environment(self, filename, trajname='Test', **kwargs):
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        filename = make_temp_file(filename)
-        logfolder = make_temp_file(os.path.join('experiments',
+        filename = make_temp_dir(filename)
+        logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
-        cntfolder = make_temp_file(os.path.join('experiments',
+        cntfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
 
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],
                           filename=filename, log_folder=logfolder, log_stdout=False,
-                          log_levels=get_log_level(),
+                          log_levels=get_log_level(), log_options=get_log_options(),
                           **self.env_kwargs)
 
         return env, filename, logfolder, cntfolder

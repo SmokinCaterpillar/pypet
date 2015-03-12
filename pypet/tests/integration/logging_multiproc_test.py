@@ -1,0 +1,41 @@
+__author__ = 'Robert Meyer'
+
+
+from pypet.tests.integration.logging_test import LoggingTest
+from pypet.tests.testutils.ioutils import run_suite, parse_args
+
+
+
+class MultiprocNoPoolQueueLoggingTest(LoggingTest):
+
+    tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'queue'
+
+    def set_mode(self):
+        # import pypet.tests.testutils.ioutils as io
+        # io.testParams['log_level'] = 40
+        # io.testParams['remove'] = False
+        super(MultiprocNoPoolQueueLoggingTest, self).set_mode()
+        self.mode.multiproc = True
+        self.mode.wrap_mode = 'QUEUE'
+        self.mode.ncores = 4
+        self.mode.use_pool = False
+
+
+class MultiprocPoolLockLoggingTest(LoggingTest):
+
+    tags = 'integration', 'environment', 'logging', 'multiproc', 'pool', 'lock'
+
+    def set_mode(self):
+        # import pypet.tests.testutils.ioutils as io
+        # io.testParams['log_level'] = 40
+        # io.testParams['remove'] = False
+        super(MultiprocPoolLockLoggingTest, self).set_mode()
+        self.mode.multiproc = True
+        self.mode.wrap_mode = 'LOCK'
+        self.mode.ncores = 4
+        self.mode.use_pool = True
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

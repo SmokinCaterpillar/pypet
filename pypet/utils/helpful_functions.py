@@ -5,6 +5,9 @@ import sys
 import datetime
 import numpy as np
 import inspect
+import logging
+import logging.config
+logging.config.fileConfig()
 
 from pypet.utils.decorators import deprecated
 from pypet.utils.comparisons import nested_equal as nested_equal_new
@@ -88,8 +91,8 @@ class _Progressbar(object):
         self._percentage_step = percentage_step
         self._current = int(int(index / self._total_norm) / percentage_step)
 
-    def __call__(self, index, total, percentage_step=10, logger='print',
-                 reprint=False, time=True, reset=False):
+    def __call__(self, index, total, percentage_step=10, logger='print', log_level=logging.INFO,
+                 reprint=False, time=True, reset=False, fmt_string=None):
         """Plots a progress bar to the given `logger` for large for loops.
 
         To be used inside a for-loop at the end of the loop.
@@ -102,6 +105,7 @@ class _Progressbar(object):
             Logger to write to, if string 'print' is given, the print statement is
             used. Use None if you don't want to print or log the progressbar statement.
 
+        :param log_level: Log level with which to log.
         :param reprint:
 
             If no new line should be plotted but carriage return (works only for printing)
@@ -111,6 +115,11 @@ class _Progressbar(object):
 
             If the progressbar should be restarted. If progressbar is called with a lower
             index than the one before, the progressbar is automatically restarted.
+
+        :param fmt_string:
+
+            A string which contains exactly one `%s` in order to incorporate the progressbar.
+            If such a string is given, ``fmt_string % progressbar`` is printed/logged.
 
         :return:
 
@@ -130,17 +139,21 @@ class _Progressbar(object):
             current_time = datetime.datetime.now()
 
             if time:
-                time_delta = current_time - self._start_time
-                remaining_seconds = int(np.round(
-                            (self._total_float - indexp1)*(indexp1 + 1.0)/(indexp1 * indexp1) *
-                             time_delta.total_seconds()))
-                remaining_delta = datetime.timedelta(seconds=remaining_seconds)
-                remaining_str = ', remaining: ' + str(remaining_delta)
+                try:
+                    time_delta = current_time - self._start_time
+                    remaining_seconds = int(np.round(
+                                (self._total_float - indexp1) *
+                                (indexp1 + 1.0)/(indexp1 * indexp1) *
+                                 time_delta.total_seconds()))
+                    remaining_delta = datetime.timedelta(seconds=remaining_seconds)
+                    remaining_str = ', remaining: ' + str(remaining_delta)
+                except ZeroDivisionError:
+                    remaining_str = ''
             else:
                 remaining_str = ''
 
             ending = False
-            if index == self._total_minus_one:
+            if index >= self._total_minus_one:
                 statement = '[' + '=' * self._steps +']100.0%'
                 ending=True
             elif reset:
@@ -152,13 +165,15 @@ class _Progressbar(object):
                              ' ' * max(self._steps - next, 0) + ']' + ' %4.1f' % (
                              (index + 1) / (0.01 * total)) + '%' + remaining_str)
 
+            if fmt_string:
+                statement = fmt_string % statement
             if logger == 'print':
                 if reprint and not ending:
                     print(statement, end='\r')
                 else:
                     print(statement)
             elif logger is not None:
-                logger.info(statement)
+                logger.log(msg=statement, level=log_level)
 
         self._current = next
         self._current_index = index
@@ -169,8 +184,8 @@ class _Progressbar(object):
 _progressbar = _Progressbar()
 
 
-def progressbar(index, total, percentage_step=10, logger='print',
-                 reprint=True, time=True, reset=False):
+def progressbar(index, total, percentage_step=10, logger='print', log_level=logging.INFO,
+                 reprint=True, time=True, reset=False, fmt_string=None):
     """Plots a progress bar to the given `logger` for large for loops.
 
     To be used inside a for-loop at the end of the loop:
@@ -193,6 +208,7 @@ def progressbar(index, total, percentage_step=10, logger='print',
         Logger to write to - with level INFO. If string 'print' is given, the print statement is
         used. Use ``None`` if you don't want to print or log the progressbar statement.
 
+    :param log_level: Log level with which to log.
     :param reprint:
 
         If no new line should be plotted but carriage return (works only for printing)
@@ -203,13 +219,20 @@ def progressbar(index, total, percentage_step=10, logger='print',
         If the progressbar should be restarted. If progressbar is called with a lower
         index than the one before, the progressbar is automatically restarted.
 
+    :param fmt_string:
+
+        A string which contains exactly one `%s` in order to incorporate the progressbar.
+        If such a string is given, ``fmt_string % progressbar`` is printed/logged.
+
     :return:
 
         The progressbar string or None if the string has not been updated.
 
     """
     return _progressbar(index=index, total=total, percentage_step=percentage_step,
-                        logger=logger, reprint=reprint, time=time, reset=reset)
+                        logger=logger, log_level=log_level,
+                        reprint=reprint, time=time, reset=reset,
+                        fmt_string=fmt_string)
 
 
 @deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
@@ -236,5 +259,6 @@ def get_matching_kwargs(func, kwargs):
         return matching_kwargs
 
 
-
-
+def remove_all_from_list(the_list, val):
+   """Removes all values from a list based on equality"""
+   return [value for value in the_list if value != val]

@@ -12,8 +12,8 @@ from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_suite, make_temp_file, make_trajectory_name, \
-    get_log_level, parse_args
+from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_trajectory_name, \
+    get_log_level, parse_args, get_log_options
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
     simple_calculations, TrajectoryComparator
 
@@ -58,10 +58,10 @@ class ContinueTest(TrajectoryComparator):
 
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                      'tests',
                                                      'Log'))
-        self.cnt_folder = make_temp_file(os.path.join('experiments','tests','cnt'))
+        self.cnt_folder = make_temp_dir(os.path.join('experiments','tests','cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
@@ -70,6 +70,7 @@ class ContinueTest(TrajectoryComparator):
                           log_folder=self.logfolder,
                           log_stdout=False,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -127,7 +128,7 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_continueing(self):
-        self.filenames = [make_temp_file('test_removal.hdf5'), 0]
+        self.filenames = [make_temp_dir('test_removal.hdf5'), 0]
 
         self.envs=[]
         self.trajs = []
@@ -169,7 +170,7 @@ class ContinueTest(TrajectoryComparator):
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
     def test_continueing_remove_completed(self):
-        self.filenames = [make_temp_file('test_removal_comp.hdf5'), 0]
+        self.filenames = [make_temp_dir('test_removal_comp.hdf5'), 0]
 
         self.envs=[]
         self.trajs = []
@@ -212,7 +213,7 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_removal(self):
-        self.filenames = [make_temp_file(os.path.join('experiments',
+        self.filenames = [make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'HDF5',
                                                       'removal.hdf5')), 0]
@@ -265,7 +266,7 @@ class ContinueTest(TrajectoryComparator):
 
 
     def test_multiple_storage_and_loading(self):
-        self.filenames = [make_temp_file(os.path.join('experiments',
+        self.filenames = [make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'HDF5',
                                                       'merge1.hdf5')), 0]
@@ -324,10 +325,10 @@ class ContinueMPTest(ContinueTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                      'tests',
                                                      'Log'))
-        self.cnt_folder = make_temp_file(os.path.join('experiments',
+        self.cnt_folder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
@@ -339,6 +340,7 @@ class ContinueMPTest(ContinueTest):
                           log_folder=self.logfolder,
                           log_stdout=False,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -355,7 +357,7 @@ class ContinueMPTest(ContinueTest):
         traj.f_explore(cartesian_product(self.explored))
 
     def test_continueing_mp2(self):
-        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
+        self.filenames = [make_temp_dir('test_removal2.hdf5'), 0]
 
 
 
@@ -413,7 +415,7 @@ class ContinueMPTest(ContinueTest):
 
 
     def test_continueing_mp(self):
-        self.filenames = [make_temp_file('test_removal2.hdf5'), 0]
+        self.filenames = [make_temp_dir('test_removal2.hdf5'), 0]
 
 
 
@@ -471,10 +473,10 @@ class ContinueMPPoolTest(ContinueMPTest):
 
     def make_environment_mp(self, idx, filename):
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_file(os.path.join('experiments',
+        self.logfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'Log'))
-        self.cnt_folder = make_temp_file(os.path.join('experiments',
+        self.cnt_folder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
@@ -486,6 +488,7 @@ class ContinueMPPoolTest(ContinueMPTest):
                           log_folder=self.logfolder,
                           log_stdout=False,
                           log_levels=get_log_level(),
+                          log_options=get_log_options(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,

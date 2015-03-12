@@ -768,9 +768,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             param.f_unlock()
             try:
                 param._shrink()
-            except Exception as e:
+            except Exception as exc:
                 self._logger.error('Could not shrink `%s` because of:`%s`' %
-                                   (param.v_full_name, str(e)))
+                                   (param.v_full_name, str(exc)))
 
         # If we shrink, we do not have any explored parameters left and we can erase all
         # run information, and the length of the trajectory is 1 again.
@@ -1102,9 +1102,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     param.f_unlock()
                     try:
                         param._shrink()
-                    except Exception as e:
+                    except Exception as exc:
                         self._logger.error('Could not shrink parameter `%s` '
-                                           'because of:`%s`' % (param_name, str(e)))
+                                           'because of:`%s`' % (param_name, str(exc)))
                     param._explore(param_range)
             raise
 
@@ -1849,9 +1849,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             self._merge_slowly(other_trajectory, rename_dict)
 
-        except ValueError as e:
+        except ValueError as exc:
             # If both trajectories are stored in separate files we end up here
-            self._logger.warning(str(e))
+            self._logger.warning(str(exc))
 
             self._logger.warning('Could not perfom fast merging. '
                                  'I will use the `f_load` method of the other trajectory and '
@@ -1995,11 +1995,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             else:
                                 self._logger.debug('Link `%s` exists already under `%s`.' %
                                                     (link, new_linked_item.v_full_name))
-                        except (AttributeError, ValueError) as e:
+                        except (AttributeError, ValueError) as exc:
                             self._logger.error('Could not copy link `%s` under `%s` linking '
                                                'to `%s` due to `%s`' %
                                                (link, linking_full_name, old_linked_name,
-                                                str(e)))
+                                                str(exc)))
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings
