@@ -5,7 +5,7 @@ import logging
 from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_root_logger, make_temp_dir,\
-    make_trajectory_name, get_log_level, get_log_options
+    make_trajectory_name,  get_log_config, get_log_path
 from pypet import Environment, Trajectory
 import pypet.pypetconstants as pypetconstants
 import os
@@ -18,12 +18,12 @@ class LogWhenStored(Result):
         super(LogWhenStored, self).__init__(full_name, *args, **kwargs)
 
     def _store(self):
-        self._logger.log(self._level, 'LOG_Test in Parameter')
+        self._logger.log(self._level, 'STORE_Test! in parameter')
         return super(LogWhenStored, self)._store()
 
 def add_result(traj, level=logging.ERROR):
     traj.f_ares(LogWhenStored, 'logging.test',
-                42, level=level, comment='I log an error when stored to disk!')
+                42, level=level, comment='STORE_Test!')
 
 def log_error(traj):
     add_result(traj)
@@ -70,8 +70,8 @@ class LoggingTest(TrajectoryComparator):
         self.mode.fletcher32 = False
         self.mode.encoding = 'utf8'
         self.mode.log_stdout=False
-        self.mode.log_levels=get_log_level()
-        self.mode.log_options=get_log_options()
+        self.mode.log_allow_fork=False
+        self.mode.log_config=get_log_config()
 
 
     def make_env(self, **kwargs):
@@ -79,9 +79,8 @@ class LoggingTest(TrajectoryComparator):
         self.mode.__dict__.update(kwargs)
         filename = 'log_testing.hdf5'
         self.filename = make_temp_dir(filename)
-        self.log_folder = make_temp_dir('logs')
         self.traj_name = make_trajectory_name(self)
-        self.env = Environment(trajectory=self.traj_name, log_folder=self.log_folder,
+        self.env = Environment(trajectory=self.traj_name,
                                filename=self.filename, **self.mode.__dict__)
         self.traj = self.env.v_traj
 
@@ -101,63 +100,16 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_creation_normal(self):
         # if not self.multiproc:
         #     return
-        self.make_env(log_options=(pypetconstants.LOG_MODE_FILE), log_levels=logging.INFO)
+        self.make_env(log_config=get_log_config())
         self.add_params(self.traj)
         self.explore(self.traj)
 
         self.env.f_run(log_wo_error_levels)
         self.env.f_disable_logging()
 
-        log_path = self.env.v_log_path
+        traj = self.env.v_traj
 
-        if self.mode.multiproc:
-            if self.mode.wrap_mode == 'LOCK':
-                length = len(self.traj) + 1
-            elif self.mode.wrap_mode == 'QUEUE':
-                length = len(self.traj) + 2
-            else:
-                raise RuntimeError('You shall not pass!')
-        else:
-            length = 1
-
-
-        file_list = [file for file in os.listdir(log_path)]
-
-        self.assertEqual(len(file_list), length) # assert that there are as many
-        # files as runs plus main.txt and errors and warnings
-
-        for file in file_list:
-            openfile = False
-            if 'main' in file:
-                openfile = True
-            elif 'process' in file:
-                openfile = True
-            elif 'poolworker' in file:
-                openfile = True
-            elif 'queue' in file:
-                openfile = True
-            else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
-            if openfile:
-                with open(os.path.join(log_path, file), mode='r') as fh:
-                    text = fh.read()
-                    self.assertIn('pypet.', text)
-
-    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
-    def test_logfile_creation_with_errors(self):
-         # if not self.multiproc:
-        #     return
-        self.make_env(log_options=(pypetconstants.LOG_MODE_FILE))
-        self.add_params(self.traj)
-        self.explore(self.traj)
-
-        self.env.f_run(log_error)
-        if self.mode.multiproc:
-            logging.getLogger('pypet.test').error('ttt')
-        self.env.f_disable_logging()
-
-        log_path = self.env.v_log_path
+        log_path = get_log_path(traj)
 
         if self.mode.multiproc:
             if self.mode.wrap_mode == 'LOCK':
@@ -169,34 +121,90 @@ class LoggingTest(TrajectoryComparator):
         else:
             length = 2
 
+
         file_list = [file for file in os.listdir(log_path)]
 
         self.assertEqual(len(file_list), length) # assert that there are as many
         # files as runs plus main.txt and errors and warnings
 
         for file in file_list:
-            openfile = False
-            if 'main' in file:
-                openfile = True
-            elif 'process' in file:
-                openfile = True
-            elif 'poolworker' in file:
-                openfile = True
-            elif 'queue' in file:
-                openfile = True
+            with open(os.path.join(log_path, file), mode='r') as fh:
+                text = fh.read()
+            count = text.count('INFO_Test!')
+            store_count = text.count('STORE_Test!')
+            if 'LOG.txt' == file:
+                if self.mode.multiproc:
+                    self.assertEqual(count,0)
+                    self.assertEqual(store_count, 0)
+                else:
+                    self.assertEqual(count, len(traj))
+                    self.assertEqual(store_count, len(traj))
+            elif 'ERROR' in file:
+                filesize = os.path.getsize(os.path.join(log_path, file))
+                self.assertEqual(filesize, 0)
+            elif 'LOG' in file:
+                self.assertEqual(count, 1)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
-            if openfile:
-                with open(os.path.join(log_path, file), mode='r') as fh:
-                    text = fh.read()
-                    self.assertIn('pypet.', text)
+
+
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    def test_logfile_creation_with_errors(self):
+         # if not self.multiproc:
+        #     return
+        self.make_env(log_config=(pypetconstants.LOG_MODE_FILE))
+        self.add_params(self.traj)
+        self.explore(self.traj)
+
+        self.env.f_run(log_all_levels)
+        if self.mode.multiproc:
+            logging.getLogger('pypet.test').error('ttt')
+        self.env.f_disable_logging()
+
+        traj = self.env.v_traj
+        log_path = get_log_path(traj)
+
+        if self.mode.multiproc:
+            if self.mode.wrap_mode == 'LOCK':
+                length = 2*len(self.traj) + 2
+            elif self.mode.wrap_mode == 'QUEUE':
+                length = 2*len(self.traj) + 4
+            else:
+                raise RuntimeError('You shall not pass!')
+        else:
+            length = 2
+
+
+        file_list = [file for file in os.listdir(log_path)]
+
+        self.assertEqual(len(file_list), length) # assert that there are as many
+        # files as runs plus main.txt and errors and warnings
+
+        for file in file_list:
+            with open(os.path.join(log_path, file), mode='r') as fh:
+                text = fh.read()
+            info_count = text.count('INFO_Test!')
+            error_count = text.count('ERROR_Test!')
+            if 'LOG.txt' == file:
+                if self.mode.multiproc:
+                    self.assertEqual(info_count,0)
+                else:
+                    self.assertEqual(info_count, len(traj))
+            elif 'ERROR' in file:
+                filesize = os.path.getsize(os.path.join(log_path, file))
+                self.assertEqual(filesize, 0)
+            elif 'LOG' in file:
+                self.assertEqual(info_count, 1)
+            else:
+                self.assertTrue(False, 'There`s a file in the log folder that does not '
+                                       'belong there: %s' % str(file))
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_normal_queue(self):
         # if not self.multiproc:
         #     return
-        self.make_env(log_options=(pypetconstants.LOG_MODE_QUEUE), log_levels=logging.WARNING)
+        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE), log_levels=logging.WARNING)
         self.add_params(self.traj)
         self.explore(self.traj)
 
@@ -233,7 +241,7 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_creation_with_errors_queue(self):
          # if not self.multiproc:
         #     return
-        self.make_env(log_options=(pypetconstants.LOG_MODE_QUEUE))
+        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE))
         self.add_params(self.traj)
         self.explore(self.traj)
 
@@ -270,7 +278,7 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_creation_with_errors_all_loggers(self):
          # if not self.multiproc:
         #     return
-        self.make_env(log_options=(pypetconstants.LOG_MODE_QUEUE, pypetconstants.LOG_MODE_FILE,
+        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE, pypetconstants.LOG_MODE_FILE,
                                     pypetconstants.LOG_MODE_QUEUE_STREAM,
                                     pypetconstants.LOG_MODE_STREAM,
                                     pypetconstants.LOG_MODE_MAIN_STREAM,
@@ -332,8 +340,8 @@ class LoggingTest(TrajectoryComparator):
         logstr = 'TEST CUSTOM LOGGING!'
         logstr2 = 'AAAAAAAAAAAA'
         logstr3 = 'ISHOULDNOTBE'
-        with Environment(log_folder=logfolder, filename=filename,
-                         log_options=pypetconstants.LOG_MODE_QUEUE,
+        with Environment(filename=filename,
+                         log_config=pypetconstants.LOG_MODE_QUEUE,
                          logger_names=('', 'custom', 'custom2'),
                          log_levels=(logging.CRITICAL, logging.DEBUG, logging.DEBUG)) as env:
             custom_logger.debug(logstr)
@@ -355,10 +363,9 @@ class LoggingTest(TrajectoryComparator):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_dir(filename)
         env = Environment(filename=filename, log_levels=logging.CRITICAL, # needed for the test
-                          log_folder=make_temp_dir('logs'),
                           log_stdout=('STDOUT', 50),
                           logger_names=('STDERR', 'STDOUT'),
-                          log_options=pypetconstants.LOG_MODE_QUEUE)
+                          log_config=pypetconstants.LOG_MODE_QUEUE)
 
         path = env.v_log_path
 
@@ -376,7 +383,7 @@ class LoggingTest(TrajectoryComparator):
 
 
     def test_logging_show_progress(self):
-        self.make_env(log_options=(pypetconstants.LOG_MODE_QUEUE),
+        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE),
                       log_levels=logging.INFO,
                       report_progress=(3, 'progress'))
         self.add_params(self.traj)
@@ -397,7 +404,7 @@ class LoggingTest(TrajectoryComparator):
 
 
     def test_logging_show_progress_print(self):
-        self.make_env(log_options=(pypetconstants.LOG_MODE_QUEUE),
+        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE),
                       log_levels=logging.INFO,
                       log_stdout='prostdout',
                       report_progress=(3, 'print'))

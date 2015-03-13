@@ -13,7 +13,7 @@ from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_trajectory_name, \
-    get_log_level, parse_args, get_log_options
+     parse_args, get_log_config
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
     simple_calculations, TrajectoryComparator
 
@@ -67,10 +67,9 @@ class ContinueTest(TrajectoryComparator):
         env = Environment(trajectory=trajname,
                           filename=filename,
                           file_title=trajname,
-                          log_folder=self.logfolder,
                           log_stdout=False,
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -337,10 +336,9 @@ class ContinueMPTest(ContinueTest):
                           dynamically_imported_classes=[CustomParameter],
                           filename=filename,
                           file_title=trajname,
-                          log_folder=self.logfolder,
                           log_stdout=False,
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,
@@ -485,10 +483,9 @@ class ContinueMPPoolTest(ContinueMPTest):
                           dynamic_imports=[CustomParameter],
                           filename=filename,
                           file_title=trajname,
-                          log_folder=self.logfolder,
                           log_stdout=False,
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
                           delete_continue=False,

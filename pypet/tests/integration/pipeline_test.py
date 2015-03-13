@@ -6,8 +6,8 @@ import logging
 
 from pypet.environment import Environment
 from pypet.parameter import Parameter
-from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, get_log_level, \
-    get_root_logger, parse_args, get_log_options
+from pypet.tests.testutils.ioutils import run_suite, make_temp_dir,  \
+    get_root_logger, parse_args, get_log_config
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -78,8 +78,8 @@ class TestPostProc(TrajectoryComparator):
 
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],
-                          filename=filename, log_folder=logfolder, log_stdout=False,
-                          log_levels=get_log_level(), log_options=get_log_options(),
+                          filename=filename, log_stdout=False,
+                          log_allow_fork=False, log_config=get_log_config(),
                           **self.env_kwargs)
 
         return env, filename, logfolder, cntfolder

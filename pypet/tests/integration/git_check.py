@@ -42,7 +42,6 @@ def fail_on_diff():
                  filename=os.path.join('fail',
                                        'HDF5',),
                   file_title='failing',
-                  log_folder=os.path.join('fail', 'LOGS'),
                   git_repository='.', git_message='Im a message!',
                   git_fail=True)
         raise RuntimeError('You should not be here!')
@@ -66,7 +65,6 @@ def main(fail=False):
                          filename=os.path.join('experiments',
                                                'HDF5',),
                           file_title='Example1_Quick_And_Not_So_Dirty',
-                          log_folder=os.path.join('experiments', 'LOGS'),
                           comment='The first example!',
                           complib='blosc',
                           small_overview_tables=False,

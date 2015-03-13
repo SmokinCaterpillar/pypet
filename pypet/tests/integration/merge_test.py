@@ -10,7 +10,7 @@ import logging
 import os
 
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_trajectory_name, \
-    get_log_level, parse_args, get_log_options
+     parse_args, get_log_config
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integration.environment_test import ResultSortTest
@@ -41,8 +41,8 @@ class MergeTest(TrajectoryComparator):
         trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
         env = Environment(trajectory=trajname,filename=filename, file_title=trajname,
-                          log_folder=logfolder, log_stdout=False, log_levels=get_log_level(),
-                          large_overview_tables=True, log_options=get_log_options())
+                          log_stdout=False, log_allow_fork=False,
+                          large_overview_tables=True, log_config=get_log_config())
 
 
         self.envs.append(env)
@@ -542,9 +542,9 @@ class TestMergeResultsSort(ResultSortTest):
         super(TestMergeResultsSort,self).setUp()
 
         env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder,
-                          log_stdout=False, log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          file_title=self.trajname,
+                          log_stdout=False, log_allow_fork=False,
+                          log_config=get_log_config(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores)

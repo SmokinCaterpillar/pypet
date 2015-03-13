@@ -1,245 +1,315 @@
 """Module containing utilities for logging."""
 
 __author__ = 'Robert Meyer'
-
+try:
+    import ConfigParser as cp
+except ImportError:
+    import configparser as cp
+try:
+    import StringIO
+except ImportError:
+    pass
 import logging
+import logging.config
 import os
 import sys
+import ast
+import copy
 import multiprocessing as multip
+import functools
 
 import pypet.pypetconstants as pypetconstants
+import pypet.compat as compat
 
 
-def reset_log_options(log_options):
-    """Removes all queue holders to replace them by the original option."""
-    for idx, log_opt in enumerate(log_options):
-        if isinstance(log_opt, LogQueueHolder):
-            log_options[idx] = log_opt.option
+FILENAME_INDICATORS = (
+    pypetconstants.LOG_ENV,
+    pypetconstants.LOG_PROC,
+    pypetconstants.LOG_TRAJ,
+    pypetconstants.LOG_RUN,
+    '.log',
+    '.txt'
+)
+
+MAIN_LOGGING_DICT = {
+    'version' : 1,
+    'formatters' : {
+        'file': {
+            'format': '%(asctime)s %(name)s %(levelname)-8s %(message)s'
+        },
+        'stream': {
+            'format': '%(processName)-10s %(name)s %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'stream': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'stream'
+        },
+        'file_main': {
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': os.path.join('$TRAJ$','$ENV$','LOG.txt')
+        },
+        'file_error': {
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': os.path.join('$TRAJ$', '$ENV$', 'ERROR.txt'),
+            'level': 'ERROR'
+        }
+    }
+}
 
 
-def set_log_levels(logger_names, log_levels):
-    """Sets a given list of levels to a list of loggers"""
-    loggers = [logging.getLogger(logger_name) for logger_name in logger_names]
-    for idx, logger in enumerate(loggers):
-        log_level = log_levels[idx] if len(log_levels) > 1 else log_levels[0]
-        logger.setLevel(log_level)
+MULTIPROC_LOGGING_DICT = {
+    'version' : 1,
+    'formatters' : {
+        'file': {
+            'format': '%(asctime)s %(name)s %(levelname)-8s %(message)s'
+        },
+    },
+    'handlers': {
+        'file_main': {
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': os.path.join('$TRAJ$', '$ENV$', '$RUN$_$PROC$_LOG.txt')
+        },
+        'file_error': {
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': os.path.join('$TRAJ$', '$ENV$', '$RUN$_$PROC$_ERROR.txt'),
+            'level': 'ERROR'
+        }
+    }
+}
 
 
-def add_handlers(logger_names, handlers_and_tools):
-    """Adds handlers to the given loggers"""
-    loggers = [logging.getLogger(logger_name) for logger_name in logger_names]
-    for logger in loggers:
-        for handler in handlers_and_tools[0]:
-            logger.addHandler(handler)
+def _change_logging_kwargs(kwargs):
+    log_folder = kwargs.pop('log_folder')
+    logger_names = kwargs.pop('logger_names')
+    log_levels = kwargs.pop('log_levels')
+
+    if not isinstance(logger_names, (tuple, list)):
+        logger_names = [logger_names]
+    if not isinstance(log_levels, (tuple, list)):
+        log_levels = [log_levels]
+
+    if len(log_levels) == 1:
+        log_levels = [log_levels[0] for x in logger_names]
+    logger_names = [logger_name if logger_name != '' else 'root'
+                    for logger_name in logger_names]
+
+    main_dict = copy.deepcopy(MAIN_LOGGING_DICT)
+    multiproc_dict = copy.deepcopy(MULTIPROC_LOGGING_DICT)
+
+    for dictionary in (main_dict, multiproc_dict):
+        has_stream = 'stream' in dictionary['handlers']
+        for handler, handler_dict in dictionary['handlers'].items():
+            if 'filename' in handler_dict:
+                handler_dict['filename'] = os.path.join(log_folder, handler_dict['filename'])
+        dictionary['loggers'] = {}
+        logger_dict = dictionary['loggers']
+        for idx, logger_name in enumerate(logger_names):
+            logger_dict[logger_name] = {
+                'level': log_levels[idx],
+                'handlers': ['file_main', 'file_error']
+            }
+            if has_stream:
+                logger_dict[logger_name]['handlers'].append('stream')
+
+    kwargs['log_config'] = (main_dict, multiproc_dict)
+
+def old_logging_config(func):
+    @functools.wraps(func)
+    def new_func(self, *args, **kwargs):
+
+        inside = [x in kwargs for x in ('log_folder', 'logger_names', 'log_levels')]
+        if any(inside):
+            if not all(inside):
+                raise ValueError('If you want to specify logging the old way please provide, '
+                                 'all arguments: log_folder, logger_names, log_levels')
+            if 'log_config' in kwargs and kwargs['log_config'] is not None:
+                raise ValueError('Please set `log_config to `None` if you want to use the old '
+                                 'way of providing logging configuration.')
+            _change_logging_kwargs(kwargs)
+
+        return func(self, *args, **kwargs)
+
+    return new_func
 
 
-def close_handlers_and_tools(handlers_and_tools):
-    """Closes all (file) handlers"""
-    for handler in handlers_and_tools[0]:
-        if hasattr(handler, 'close'):
-            handler.close()
-    for tool in handlers_and_tools[1]:
-        if hasattr(tool, 'finalize'):
-            tool.finalize()
+def try_make_dirs(filename):
+    try:
+        dirname = os.path.dirname(filename)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+    except Exception as exc:
+        sys.stderr.write('ERROR during log config file handling, could not create dirs for '
+                         'filename `%s` because of: %s' % (filename, str(exc)))
+
+def rename_log_file(traj, filename):
+    if pypetconstants.LOG_ENV in filename:
+        env_name = traj.v_environment_name
+        filename = filename.replace(pypetconstants.LOG_ENV, env_name)
+    if pypetconstants.LOG_TRAJ in filename:
+        traj_name = traj.v_name
+        filename = filename.replace(pypetconstants.LOG_TRAJ, traj_name)
+    if pypetconstants.LOG_RUN in filename:
+        run_name = traj.v_crun_
+        filename = filename.replace(pypetconstants.LOG_RUN, run_name)
+    if pypetconstants.LOG_PROC in filename:
+        proc_name = multip.current_process().name
+        filename = filename.replace(pypetconstants.LOG_PROC, proc_name)
+    return filename
 
 
-def remove_handlers(logger_names, handlers_and_tools):
-    """Removes all handlers from the given list of logger names"""
-    loggers = [logging.getLogger(logger_name) for logger_name in logger_names]
-    for logger in loggers:
-        for handler in handlers_and_tools[0]:
-            logger.removeHandler(handler)
+def infer_and_make_dir_from_args(parser_filename):
+    split = parser_filename.split('\'')
+    if len(split) > 1:
+        filename = split[1]
+        try_make_dirs(filename)
 
 
-def make_logging_handlers_and_tools(log_path,
-                           logger_names,
-                           log_levels,
-                           log_stdout,
-                           log_options,
-                           filename='main.txt',
-                           called_from_main=False):
-        """Creates logging handlers and redirects stdout.
+def get_strings(args):
+    string_list = []
+    for it in ast.walk(ast.parse(args)):
+        if isinstance(it, ast.Str):
+            string_list.append(it.s)
+    return string_list
 
-        Moreover, returns the handlers.
 
-        :param log_path: Path to logging folder
-        :param logger_names: List/Tuple of logger names
-        :param log_levels: The associated log levels
-        :param log_stdout: If stdout should be logged
-        :param log_options: Options for the logging handlers
-        :param filename: Filename *without* path, e.g. ``'main.txt'``
+class TrajectoryMock(object):
+    def __init__(self, traj):
+        self.v_environment_name = traj.v_environment_name
+        self.v_name = traj.v_name
+        self.v_crun_ = traj.v_crun_
 
-        :return:
 
-            Pair of handlers and tools.
+class LoggingManager(object):
+    def __init__(self, traj=None, log_config=None, log_stdout=False):
+        self.traj = traj
+        self.log_config = log_config
+        self.log_stdout = log_stdout
+        self._tools = []
+        self._null_handler = logging.NullHandler()
+
+    def add_null_handler(self):
+        root = logging.getLogger()
+        root.addHandler(self._null_handler)
+
+    def remove_null_handler(self):
+        root = logging.getLogger()
+        root.removeHandler(self._null_handler)
+
+    def tabula_rasa(self):
+        for logger in logging.Logger.manager.loggerDict.values():
+            if hasattr(logger, 'handlers'):
+                for handler in logger.handlers:
+                    if hasattr(handler, 'flush'):
+                        handler.flush()
+                    if hasattr(handler, 'close'):
+                        handler.close()
+                logger.handlers = []
+        logging.Logger.manager.loggerDict={}
+
+    @staticmethod
+    def _check_and_replace_parser_args(parser, section, option, rename_func, make_dirs=True):
+        args = parser.get(section, option, raw=True)
+        strings = get_strings(args)
+        replace = False
+        for string in strings:
+            isfilename = any(x in string for x in FILENAME_INDICATORS)
+            if isfilename:
+                newstring = rename_func(string)
+                if make_dirs:
+                    try_make_dirs(newstring)
+                args = args.replace(string, newstring)
+                replace = True
+        if replace:
+            parser.set(section, option, args)
+
+    @staticmethod
+    def _copy_parser(parser):
+        new_parser = cp.ConfigParser()
+        sections = parser.sections()
+        for section in sections:
+            new_parser.add_section(section)
+            options = parser.options(section)
+            for option in options:
+                value = parser.get(section, option, raw=True)
+                new_parser.set(section, option, value)
+        return new_parser
+
+    def _handle_config_parsing(self, log_config):
+        if isinstance(log_config, cp.ConfigParser):
+            parser = self._copy_parser(log_config)
+        else:
+            parser = cp.ConfigParser()
+            parser.read(log_config)
+
+        rename_func = lambda string: rename_log_file(self.traj, string)
+
+        sections = parser.sections()
+        for section in sections:
+            options = parser.options(section)
+            for option in options:
+                if option == 'args':
+                    self._check_and_replace_parser_args(parser, section, option,
+                                                        rename_func=rename_func)
+        return parser
+
+    def _handle_dict_config(self, log_config):
+        """Recursively walks and copies the log_config dict and searches for filenames.
+
+        Creates parent folders of files if necessary.
 
         """
-        handlers = []  # List of created handlers and managment devices
-        tools = []
-        queue_manager = None  # Queue manager if defined, so we have just 1
-        added_queue = False
-
-        if log_levels:
-            # Set the log level to the specified one
-            set_log_levels(logger_names, log_levels)
-
-        for idx, log_opt in enumerate(log_options):
-
-            understood_option = True
-            if log_opt == pypetconstants.LOG_MODE_NULL:
-                handlers.append(logging.NullHandler())
-
-            elif log_opt == pypetconstants.LOG_MODE_FILE:
-                full_filename = os.path.join(log_path, filename)
-                file_handlers = create_main_and_error_file_handler(full_filename)
-                handlers.extend(file_handlers)
-
-            elif log_opt == pypetconstants.LOG_MODE_STREAM:
-                handlers.append(create_stream_handler())
-
-            elif log_opt == pypetconstants.LOG_MODE_MAIN_STREAM:
-                if called_from_main:
-                    handlers.append(create_stream_handler())
-                else:
-                    handlers.append(logging.NullHandler())
-
-            elif (log_opt == pypetconstants.LOG_MODE_QUEUE or
-                            log_opt == pypetconstants.LOG_MODE_QUEUE_STREAM):
-                if queue_manager is None:
-                    queue_manager = LogQueueManager('LogQueueManager')
-                    tools.append(queue_manager)
-                    queue_manager.start()
-
-                queue_holder = queue_manager.get_queue_holder(log_opt)
-
-                if log_opt == pypetconstants.LOG_MODE_QUEUE:
-                    full_filename = os.path.join(log_path, 'main_queue.txt')
-                    handler_maker = FileHandlerMaker(full_filename)
-                elif log_opt == pypetconstants.LOG_MODE_QUEUE_STREAM:
-                    handler_maker = StreamHandlerMaker()
-                else:
-                    raise RuntimeError('You shall not pass!')
-                queue_holder.queue.put(('HANDLERS', handler_maker))
-
-                log_opt = queue_holder
-                log_options[idx] = log_opt
-
+        new_dict = dict()
+        for key in log_config.keys():
+            if key == 'filename':
+                filename = log_config[key]
+                filename = rename_log_file(self.traj, filename)
+                new_dict[key] = filename
+                try_make_dirs(filename)
+            elif isinstance(log_config[key], dict):
+                inner_dict = self._handle_dict_config(log_config[key])
+                new_dict[key] = inner_dict
             else:
-                understood_option = False
+                new_dict[key] = log_config[key]
+        return new_dict
 
-            if isinstance(log_opt, LogQueueHolder):
-                if not added_queue:
-                    queue_handler = LogQueueSender(log_opt.queue)
-                    handlers.append(queue_handler)
-                    added_queue = True
-                understood_option = True
 
-            if not understood_option:
-                raise ValueError('Logging option `%s` not understood.' % str(log_opt))
+    def make_logging_handlers_and_tools(self):
+        """Creates logging handlers and redirects stdout."""
+        if self.log_config:
+            if isinstance(self.log_config, dict):
+                new_dict = self._handle_dict_config(self.log_config)
+                logging.config.dictConfig(new_dict)
+            else:
+                parser = self._handle_config_parsing(self.log_config)
+                if compat.python == 3:
+                    logging.config.fileConfig(parser, disable_existing_loggers=False)
+                else:
+                    memory_file = StringIO.StringIO()
+                    parser.write(memory_file)
+                    memory_file.flush()
+                    memory_file.seek(0)
+                    logging.config.fileConfig(memory_file, disable_existing_loggers=False)
 
-        add_handlers(logger_names, handlers_and_tools=(handlers, tools))
-
-        if log_stdout:
+        if self.log_stdout:
             #  Create a logging mock for stdout
-            std_name, std_level = log_stdout
+            std_name, std_level = self.log_stdout
 
             stdout = StdoutToLogger(logging.getLogger(std_name), log_level=std_level)
             stdout.start()
-            tools.append(stdout)
+            self._tools.append(stdout)
 
-        return handlers, tools
-
-
-def make_premature_handler(logger_names, log_levels, log_options):
-    """Creates a stream logger before the actual logging options are applied"""
-    if (pypetconstants.LOG_MODE_QUEUE_STREAM in log_options or
-                pypetconstants.LOG_MODE_STREAM in log_options):
-        premature_handler = create_stream_handler()
-        set_log_levels(logger_names, log_levels)
-        result = ([premature_handler], [])
-        add_handlers(logger_names, result)
-        return result
-    else:
-        return [], []
-
-
-def create_stream_handler(stream=None):
-    """Creates a StreamHandler with appropriate format."""
-    stream_handler = logging.StreamHandler(stream)
-    stream_format = '%(processName)-10s %(name)s %(levelname)-8s %(message)s'
-    stream_formatter = logging.Formatter(stream_format)
-    stream_handler.setFormatter(stream_formatter)
-    return stream_handler
-
-
-def create_main_and_error_file_handler(filename):
-    """Creates two file handlers, main and error, with apporpriate format"""
-    pypet_root_logger = logging.getLogger('pypet')
-
-    main_log_handler, error_log_handler = None, None
-
-    # Make the log folder
-    log_path = os.path.dirname(filename)
-    if not os.path.isdir(log_path):
-        os.makedirs(log_path)
-
-    filename, ext = os.path.splitext(filename)
-
-
-    file_format = '%(asctime)s %(name)s %(levelname)-8s %(message)s'
-    formatter = logging.Formatter(file_format)
-    handlers = []
-
-    # Add a handler for storing everything to a text file
-    main_file_name = filename + '_log' + ext
-    try:
-        # Handler creation might fail under Windows sometimes
-        main_log_handler = logging.FileHandler(main_file_name)
-        pypet_root_logger.debug('Created logging file: `%s`' % main_file_name)
-        main_log_handler.setFormatter(formatter)
-        handlers.append(main_log_handler)
-    except IOError as exc:
-        pypet_root_logger.error('Could not create file `%s`. '
-                   'I will NOT store log messages to disk. Original Error: `%s`' %
-                                (main_file_name, str(exc)))
-
-    # Add a handler for storing warnings and errors to a text file
-    error_file_name = filename + '_errors' + ext
-    try:
-        # Handler creation might fail under Windows sometimes
-        error_log_handler = RemoveEmptyFileHandler(error_file_name)
-        pypet_root_logger.debug('Created error logging file that will be removed if empty: '
-                                '`%s`' % error_file_name)
-        error_log_handler.setLevel(logging.ERROR)
-        error_log_handler.setFormatter(formatter)
-        handlers.append(error_log_handler)
-    except IOError as exc:
-        pypet_root_logger.error('Could not create file `%s`. '
-                   'I will NOT store log messages to disk. Original Error: `%s`' %
-                                (error_file_name, str(exc)))
-
-    return handlers
-
-
-def queue_handling(queue_writer):
-    """Starts the logging queue writer."""
-    queue_writer.run()
-
-
-class StreamHandlerMaker(object):
-    """Messenger object that can be passed to the queue writer to create the stream handler"""
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-
-    def make_handlers(self):
-        return [create_stream_handler(*self.args, **self.kwargs)]
-
-
-class FileHandlerMaker(StreamHandlerMaker):
-    """Messenger object that can be passed to the queue writer to create the file handlers"""
-    def make_handlers(self):
-        return create_main_and_error_file_handler(*self.args, **self.kwargs)
+    def finalize(self, remove_all_handlers=True):
+        for tool in self._tools:
+            tool.finalize()
+        self._tools = []
+        if remove_all_handlers:
+            self.tabula_rasa()
 
 
 class HasLogger(object):
@@ -347,124 +417,15 @@ class StdoutToLogger(object):
         self._original_steam = None
 
 
-class RemoveEmptyFileHandler(logging.FileHandler):
-    """ Simple FileHandler that removes the log file if it is empty"""
-    def __init__(self, filename, *args, **kwargs):
-        super(RemoveEmptyFileHandler, self).__init__(filename, *args, **kwargs)
-        self.filename = os.path.abspath(filename)
-
-    def close(self):
-        """Closes the FileHandler and removes the log file if it is empty."""
-        super(RemoveEmptyFileHandler, self).close()
-        if os.path.isfile(self.filename) and os.path.getsize(self.filename) == 0:
-            os.remove(self.filename)
-
-
-class LogQueueHolder(object):
-    """Placeholder object that passes a logging queue around"""
-    def __init__(self, manager_name, option, queue):
-        self.manager_name = manager_name
-        self.queue = queue
-        self.option = option
-
-
-class LogQueueManager(object):
-    """Manager to start a logging queue."""
-    def __init__(self, name):
-        self.name = name
-        self.manager = None
-        self.queue = None
-        self.queue_writer = None
-        self.queue_process = None
-
-    def start(self):
-        self.manager = multip.Manager()
-        self.queue = self.manager.Queue()
-        self.queue_writer = LogQueueWriter(self.queue)
-        self.queue_process = multip.Process(name='QueueStreamProcess',
-                                            target=queue_handling,
-                                            args=(self.queue_writer,))
-        self.queue_process.start()
-
-    def get_queue_holder(self, option):
-        return LogQueueHolder(self.name, option, self.queue)
-
-    def finalize(self):
-        self.queue.put(('DONE', None))
-        self.queue_process.join()
-        self.manager.shutdown()
-
-        self.manager = None
-        self.queue = None
-        self.queue_writer = None
-        self.queue_process = None
-
-
-class LogQueueWriter(object):
-    def __init__(self, queue):
-        self.queue = queue
-        self.handlers = []
-
-    def run(self):
-        try:
-            while True:
-                try:
-                    msg, item = self.queue.get()
-                    if msg == 'DONE':
-                        break
-                    elif msg == 'RECORD':
-                        for handler in self.handlers:
-                            if item.levelno >= handler.level:
-                                handler.handle(item)
-                    elif msg == 'HANDLERS':
-                        self.handlers.extend(item.make_handlers())
-                    else:
-                        raise RuntimeError('Wrong message `%s` to log queue writer.' % msg)
-                except Exception as exc:
-                    sys.stderr.write('ERROR in logging queue: `%s`' % str(exc))
-        finally:
-            close_handlers_and_tools((self.handlers, ()))
-            self.handlers = []
-
-
-class LogQueueSender(logging.Handler):
-    """ Sends logging message over a queue."""
-
-    def __init__(self, queue):
-        """
-        Initialise an instance, using the passed queue.
-        """
-        logging.Handler.__init__(self)
-        self.queue = queue
-
-    def emit(self, record):
-        """
-        Emit a record.
-
-        Writes the LogRecord to the queue.
-        """
-        try:
-            exc_info = record.exc_info
-            if exc_info:
-                record.exc_info = None
-            self.queue.put_nowait(('RECORD', record))
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
-
-
-class WithoutHandlersForkContext():
-    def __init__(self, logger_names, handlers_and_tools):
-        self.logger_names = logger_names
-        self.handlers_and_tools = handlers_and_tools
-
-    def __enter__(self):
-        if hasattr(os, 'fork'):
-            remove_handlers(self.logger_names, self.handlers_and_tools)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if hasattr(os, 'fork'):
-            add_handlers(self.logger_names, self.handlers_and_tools)
+# class RemoveEmptyFileHandler(logging.FileHandler):
+#     """ Simple FileHandler that removes the log file if it is empty"""
+#     def __init__(self, filename, *args, **kwargs):
+#         super(RemoveEmptyFileHandler, self).__init__(filename, *args, **kwargs)
+#         self.filename = os.path.abspath(filename)
+#
+#     def close(self):
+#         """Closes the FileHandler and removes the log file if it is empty."""
+#         super(RemoveEmptyFileHandler, self).close()
+#         if os.path.isfile(self.filename) and os.path.getsize(self.filename) == 0:
+#             os.remove(self.filename)
 

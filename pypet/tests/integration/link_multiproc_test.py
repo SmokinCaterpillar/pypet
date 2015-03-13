@@ -8,6 +8,7 @@ try:
 except ImportError:
     psutil = None
 
+
 class MultiprocLinkQueueTest(LinkEnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool', 'links'

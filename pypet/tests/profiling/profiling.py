@@ -56,7 +56,7 @@ def test_run():
                                                 'test%s.hdf5' % trajname))
 
     env = Environment(trajectory=trajname, filename=filename,
-                      file_title=trajname, log_folder=logfolder,
+                      file_title=trajname,
                       log_stdout=False,
                       results_per_run=5,
                       derived_parameters_per_run=5,

@@ -48,7 +48,7 @@ setup(
               'pypet.tests.testutils',
               'pypet.tests.unittests.briantests',
               'pypet.tests.integration.briantests'],
-    package_data={'pypet.tests':['testdata/*.hdf5']},
+    package_data={'pypet.tests': ['testdata/*.hdf5'], 'pypet': ['logging/*.ini']},
     license='BSD',
     author='Robert Meyer',
     author_email='robert.meyer@ni.tu-berlin.de',

@@ -12,7 +12,7 @@ from pypet.parameter import Parameter
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.environment import Environment
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
-    get_log_level, parse_args, get_log_options
+     parse_args, get_log_config
 from pypet.tests.testutils.data import TrajectoryComparator
 
 
@@ -80,10 +80,10 @@ class LinkEnvironmentTest(TrajectoryComparator):
                                                     'test%s.hdf5' % self.trajname))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder,
+                          file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
@@ -151,13 +151,13 @@ class LinkMergeTest(TrajectoryComparator):
                                                     'test%s.hdf5' % self.trajname1))
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
-                          file_title=self.trajname1, log_folder=self.logfolder,
-                          log_levels=get_log_level(),
-                          log_stdout=False, log_options=get_log_options())
+                          file_title=self.trajname1,
+                          log_allow_fork=False,
+                          log_stdout=False, log_config=get_log_config())
         self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
-                          file_title=self.trajname2, log_folder=self.logfolder,
-                          log_levels=get_log_level(),
-                          log_stdout=False, log_options=get_log_options())
+                          file_title=self.trajname2,
+                          log_allow_fork=False,
+                          log_stdout=False, log_config=get_log_config())
 
         self.traj1 = self.env1.v_trajectory
         self.traj2 = self.env2.v_trajectory

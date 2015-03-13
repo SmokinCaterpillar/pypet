@@ -7,7 +7,6 @@ import numpy as np
 import inspect
 import logging
 import logging.config
-logging.config.fileConfig()
 
 from pypet.utils.decorators import deprecated
 from pypet.utils.comparisons import nested_equal as nested_equal_new

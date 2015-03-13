@@ -20,7 +20,7 @@ from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
 from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
     NotUniqueNodeError, ParameterLockedException, PresettingError, TooManyGroupsError,\
     VersionMismatchError, GitDiffError
-from pypet.pypetlogging import HasLogger
+from pypet.pypetlogging import HasLogger, rename_log_file
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.utils.helpful_functions import progressbar
@@ -60,6 +60,7 @@ __all__ = [
     VersionMismatchError.__name__,
     GitDiffError.__name__,
     HasLogger.__name__,
+    rename_log_file.__name__,
     cartesian_product.__name__,
     load_trajectory.__name__,
     compact_hdf5_file.__name__,

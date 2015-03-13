@@ -5,6 +5,7 @@ import logging
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet import HasLogger
+from pypet.pypetlogging import LoggingManager, rename_log_file
 from pypet.utils.decorators import copydoc
 import os
 
@@ -15,6 +16,10 @@ if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
 else:
     import unittest
+try:
+    import ConfigParser as cp
+except ImportError:
+    import configparser as cp
 
 import shutil
 import getopt
@@ -28,30 +33,75 @@ testParams=dict(
     actual_tempdir='',
     # Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`
     user_tempdir='',
-    # If the user specifies in run all test a folder, this variable will be used
-    log_level=logging.ERROR,
     # Specified log level
-    log_options=pypetconstants.LOG_MODE_QUEUE
+    log_config=('test', 'test_multiproc')
     # Specified log options
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
 
+generic_log_folder = None
+
 def get_root_logger():
     """Returns root logger"""
     return logging.getLogger()
 
-def get_log_level():
-    """Simply returns the user chosen log-level"""
-    return testParams['log_level']
+def get_log_config():
+    """Retunrs the log config"""
+    return testParams['log_config']
 
-def get_log_options():
-    """Returns the log options"""
-    return testParams['log_options']
+def get_log_path(traj):
+    return rename_log_file(traj, generic_log_folder)
+
+def prepare_log_config():
+    """Prepares the test logging init files and creates parsers."""
+    confs = testParams['log_config']
+    conf_list = []
+    pypet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+    init_path = os.path.join(pypet_path, 'logging')
+    for idx, conf in enumerate(confs):
+        if conf == 'test':
+            conf_file = os.path.join(init_path, 'test.ini')
+            conf_parser = handle_config_file(conf_file)
+            conf_list.append(conf_parser)
+        elif conf == 'test_multiproc':
+            conf_file = os.path.join(init_path, 'test_multiproc.ini')
+            conf_parser = handle_config_file(conf_file)
+            conf_list.append(conf_parser)
+        else:
+            conf_list.append(conf)
+    testParams['log_config'] = conf_list
+
+def _rename_filename(filename):
+    global generic_log_folder
+
+    if not filename.startswith('$TEMP$'):
+        raise ValueError('$TEMP$ must be at the beginning of the filename!')
+    temp_folder = make_temp_dir('logs')
+    filename = filename.replace('$TEMP$', '')
+    filename = os.path.join(temp_folder, filename)
+    if generic_log_folder is None:
+        generic_log_folder = os.path.dirname(filename)
+    return filename
+
+def handle_config_file(config_file):
+
+    parser = cp.ConfigParser()
+    parser.read(config_file)
+    sections = parser.sections()
+    for section in sections:
+        options = parser.options(section)
+        for option in options:
+            arg = parser.get(section, option, raw=True)
+            if '$TEMP$' in arg:
+                LoggingManager._check_and_replace_parser_args(parser, section, option,
+                                                              rename_func=_rename_filename,
+                                                              make_dirs=False)
+    return parser
+
 
 def make_temp_dir(filename):
     """Creates a temporary folder and returns the joined filename"""
-    global testParams
     try:
 
         if ((testParams['user_tempdir'] is not None and testParams['user_tempdir'] != '') and
@@ -63,7 +113,7 @@ def make_temp_dir(filename):
 
         return os.path.join(testParams['actual_tempdir'], filename)
     except OSError:
-        get_root_logger().warning('Cannot create a temp file in the specified folder `%s`. ' %
+        sys.stderr.write('Cannot create a temp file in the specified folder `%s`. ' %
                                     testParams['actual_tempdir'] +
                                     ' I will use pythons gettempdir method instead.')
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
@@ -74,7 +124,7 @@ def make_temp_dir(filename):
         raise
 
 
-def run_suite(remove=None, folder=None, suite=None, log_level=None, log_options=None):
+def run_suite(remove=None, folder=None, suite=None, log_level=None, log_config=None):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.
@@ -82,8 +132,6 @@ def run_suite(remove=None, folder=None, suite=None, log_level=None, log_options=
     You can also define a global `log_level`.
 
     """
-    global testParams
-
     if remove is not None:
         testParams['remove'] = remove
 
@@ -93,8 +141,10 @@ def run_suite(remove=None, folder=None, suite=None, log_level=None, log_options=
         testParams['log_level'] = log_level
     #logging.basicConfig(level=testParams['log_level'])
 
-    if log_options is not None:
-        testParams['log_options'] = log_options
+    if log_config is not None:
+        testParams['log_config'] = log_config
+
+    prepare_log_config()
 
     success = False
     try:
@@ -133,7 +183,7 @@ def remove_data():
     """Removes all data from temporary folder"""
     global testParams
     if testParams['remove']:
-        get_root_logger().info('REMOVING ALL TEMPORARY DATA')
+        get_root_logger().log(21, 'REMOVING ALL TEMPORARY DATA')
         shutil.rmtree(testParams['actual_tempdir'], True)
 
 
@@ -263,8 +313,11 @@ def parse_args():
             print('Using log level %s.' % arg)
 
         if opt == '--logoptions':
-            opt_dict['log_options'] = arg.split(',')
+            opt_dict['log_config'] = arg.split(',')
             print('Using log options %s.' % arg)
 
     sys.argv = [sys.argv[0]]
     return opt_dict
+
+# Prepare config on loading, if tests are not called via run_suite()
+prepare_log_config()

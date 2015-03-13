@@ -57,7 +57,7 @@ except ImportError:
 
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-import pypet.pypetlogging as plog
+from pypet.pypetlogging import LoggingManager, HasLogger, TrajectoryMock, old_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -69,22 +69,37 @@ from pypet.utils.storagefactory import storage_factory
 from pypet.parameter import Parameter
 
 
+def _configure_logging(kwargs):
+    try:
+        traj = kwargs['traj']
+        log_config = kwargs['log_config']
+        log_stdout = kwargs['log_stdout']
+        log_allow_fork = kwargs['log_allow_fork']
+
+        tabula_rasa = not log_allow_fork and hasattr(os, 'fork')
+        if log_allow_fork and hasattr(os, 'fork'):
+            # If we allow forking and it is possible we already have a redirection of stdout
+            log_stdout = False
+        logging_manager = LoggingManager(traj, log_config, log_stdout=log_stdout)
+        if tabula_rasa:
+            logging_manager.tabula_rasa()
+        logging_manager.make_logging_handlers_and_tools()
+    except Exception as exc:
+        sys.stderr.write('Could not create log file because of: %s' % str(exc))
+        traceback.print_exc()
+
+
+def _logging_and_single_run(kwargs):
+    _configure_logging(kwargs)
+    return _single_run(kwargs)
+
+
 def _single_run(kwargs):
     """ Performs a single run of the experiment.
 
     :param kwargs: Dict of arguments
 
         traj: The trajectory containing all parameters set to the corresponding run index.
-
-        log_path: Path to log files
-
-        logger_names: Names of loggers to apply settings to
-
-        log_levels: The log levels
-
-        log_stdout: Boolean whether to log stdout
-
-        log_options: Modes of logging
         
         runfunc: The user's job function
 
@@ -110,16 +125,9 @@ def _single_run(kwargs):
         Returns a tuple of run index and result: ``(traj.v_idx, result)``
 
     """
-    logger_names = () # Defined here for the finally block
-    handlers_and_tools = None
     pypet_root_logger = logging.getLogger('pypet')
     try:
         traj = kwargs['traj']
-        log_path = kwargs['log_path']
-        logger_names = kwargs['logger_names']
-        log_levels = kwargs['log_levels']
-        log_stdout = kwargs['log_stdout']
-        log_options = kwargs['log_options']
         runfunc = kwargs['runfunc']
         total_runs = kwargs['total_runs']
         multiproc = kwargs['multiproc']
@@ -132,18 +140,6 @@ def _single_run(kwargs):
 
         use_pool = result_queue is None
         idx = traj.v_idx
-
-        if multiproc:
-            # In case of multiprocessing we need new logging handlers!
-            process_name = multip.current_process().name.lower().replace('-', '_')
-            filename = '%s_%s.txt' % (traj.v_crun, process_name)
-            handlers_and_tools = plog.make_logging_handlers_and_tools(log_path=log_path,
-                                                                   logger_names=logger_names,
-                                                                   log_levels=log_levels,
-                                                                   log_stdout=log_stdout,
-                                                                   log_options=log_options,
-                                                                   filename=filename,
-                                                                   called_from_main=False)
 
         pypet_root_logger.info('\n=========================================\n '
                   'Starting single run #%d of %d '
@@ -185,36 +181,14 @@ def _single_run(kwargs):
         # Log traceback of exception
         pypet_root_logger.exception('ERROR occurred during a single run! ')
         raise
-    finally:
-        # Finally remove logging handlers
-        if handlers_and_tools:
-            plog.remove_handlers(logger_names, handlers_and_tools)
-            plog.close_handlers_and_tools(handlers_and_tools)
 
 
-def _queue_handling(queue_handler, log_path, logger_names, log_levels, log_stdout,
-                    log_options):
+def _queue_handling(kwargs):
     """ Starts running a queue handler and creates a log file for the queue."""
-    handlers_and_tools = None # Defined here for the finally block
-    try:
-        if log_path is not None:
-            # Create a new log file for the queue writer
-            filename = 'queue.txt'
-            handlers_and_tools = plog.make_logging_handlers_and_tools(log_path=log_path,
-                                                                   logger_names=logger_names,
-                                                                   log_levels=log_levels,
-                                                                   log_stdout=log_stdout,
-                                                                   log_options=log_options,
-                                                                   filename=filename,
-                                                                   called_from_main=False)
-
-        # Main job, make the listener to the queue start receiving message for writing to disk.
-        queue_handler.run()
-    finally:
-        # Finally remove of logging handlers
-        if handlers_and_tools:
-            plog.remove_handlers(logger_names, handlers_and_tools)
-            plog.close_handlers_and_tools(handlers_and_tools)
+    _configure_logging(kwargs)
+    # Main job, make the listener to the queue start receiving message for writing to disk.
+    queue_handler=kwargs['queue_handler']
+    queue_handler.run()
 
 
 def _trigger_result_snapshot(result, continue_path):
@@ -245,7 +219,7 @@ def _trigger_result_snapshot(result, continue_path):
     shutil.move(dump_filename, rename_filename)
 
 
-class Environment(plog.HasLogger):
+class Environment(HasLogger):
     """ The environment to run a parameter exploration.
 
     The first thing you usually do is to create and environment object that takes care about
@@ -803,16 +777,15 @@ class Environment(plog.HasLogger):
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @kwargs_api_change('pandas_append')
+    @old_logging_config
     def __init__(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
                  dynamic_imports=None,
                  automatic_storing=True,
-                 log_folder='logs',
-                 logger_names=('',),
-                 log_levels=(logging.INFO,),
+                 log_config=('default', 'default'),
                  log_stdout=('STDOUT', logging.INFO),
-                 log_options=(pypetconstants.LOG_MODE_FILE, pypetconstants.LOG_MODE_STREAM),
+                 log_allow_fork=False,
                  report_progress = (10, 'pypet', logging.INFO),
                  multiproc=False,
                  ncores=1,
@@ -882,31 +855,28 @@ class Environment(plog.HasLogger):
 
         unused_kwargs = set(kwargs.keys())
 
+        self._logging_manager = LoggingManager()
+        self._logging_manager.add_null_handler()
         self._set_logger()
+        
+        if isinstance(log_config, compat.base_type):
+            log_config = (log_config, None)
+        if isinstance(log_config, dict):
+            log_config = (log_config, None)
+        log_config = list(log_config)
 
-        if logger_names or logger_names == '':
-            if not isinstance(logger_names, (tuple, list)):
-                logger_names = [logger_names]
-        else:
-            logger_names = []
+        pypet_path = os.path.abspath(os.path.dirname(__file__))
+        init_path = os.path.join(pypet_path, 'logging')
+        if log_config[0] == 'default':
+            log_config[0] = os.path.join(init_path, 'main.ini')
+        if log_config[1] == 'default':
+            log_config[1] = os.path.join(init_path, 'multiproc.ini')
 
-        if log_levels:
-            if not isinstance(log_levels, (tuple, list)):
-                log_levels = [log_levels]
-        else:
-            log_levels = []
-
-        if log_options:
-            if not isinstance(log_options, (tuple, list)):
-                log_options = [log_options]
-            log_options = list(set(log_options))  # important because they get mutated
-            # and can exist only be specified once
-        else:
-            log_options = []
-
-        if log_folder is None:
-            log_options = remove_all_from_list(log_options, pypetconstants.LOG_MODE_FILE)
-            log_options = remove_all_from_list(log_options, pypetconstants.LOG_MODE_QUEUE)
+        for logger_file in log_config:
+            if isinstance(logger_file, compat.base_type):
+                if not os.path.isfile(file):
+                    raise ValueError('Could not find the logger init file '
+                                     '`%s`.' % logger_file)
 
         if log_stdout:
             if log_stdout is True:
@@ -925,9 +895,6 @@ class Environment(plog.HasLogger):
                 report_progress = (10, report_progress, logging.INFO)
             elif len(report_progress) == 2:
                 report_progress = (report_progress[0], report_progress[1], logging.INFO)
-
-        premature_handlers_and_tools = plog.make_premature_handler(logger_names, log_levels,
-                                                                   log_options)
 
         # Helper attributes defined later on
         self._start_timestamp = None
@@ -1006,27 +973,16 @@ class Environment(plog.HasLogger):
         self._traj._environment_hexsha = self._hexsha
         self._traj._environment_name = self._name
 
-        # If no log folder is provided, create the default log folder
-        log_path = None
-        if log_folder == 'logs':
-            log_folder = os.path.join(os.getcwd(), 'logs')
-
-        # The actual log folder is a sub-folder with the trajectory name and the environment name
-        if log_folder:
-            log_path = os.path.join(log_folder, self._traj.v_name)
-            log_path = os.path.join(log_path, self.v_name)
-
-        self._log_folder = log_folder
-        self._log_path = log_path
         self._log_stdout = log_stdout
-        self._log_levels = log_levels
-        self._logger_names = logger_names
-        self._log_options = log_options
+        self._log_allow_fork = log_allow_fork
+        self._log_config_pair = log_config
         self._report_progress = report_progress
 
-        # Create the loggers
-        plog.remove_handlers(logger_names, premature_handlers_and_tools)
-        self._handlers_and_tools = self._make_logging_handlers()
+        self._logging_manager.remove_null_handler()
+        self._logging_manager.log_stdout = self._log_stdout
+        self._logging_manager.traj = self._traj
+        self._logging_manager.log_config = self._log_config_pair[0]
+        self._logging_manager.make_logging_handlers_and_tools()
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
         # commit, because the logging files do not exist yet,
@@ -1211,30 +1167,9 @@ class Environment(plog.HasLogger):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.f_disable_logging()
 
-    def f_disable_logging(self):
+    def f_disable_logging(self, remove_all_handlers=True):
         """Removes all logging handlers and stops logging to files and logging stdout."""
-        if self._handlers_and_tools[0]:
-            self._logger.info('Disabling logging handlers')
-
-        plog.remove_handlers(self._logger_names, self._handlers_and_tools)
-        plog.close_handlers_and_tools(self._handlers_and_tools)
-        self._handlers_and_tools = ([], [])
-        plog.reset_log_options(self._log_options)
-
-    def _make_logging_handlers(self):
-        """Creates logging handlers and redirects stdout.
-
-        Moreover, returns the handlers.
-
-        """
-        filename = 'main.txt'
-        return plog.make_logging_handlers_and_tools(log_path=self._log_path,
-                                                    logger_names=self._logger_names,
-                                                    log_levels=self._log_levels,
-                                                    log_stdout=self._log_stdout,
-                                                    log_options=self._log_options,
-                                                    filename=filename,
-                                                    called_from_main=True)
+        self._logging_manager.finalize(remove_all_handlers)
 
     @deprecated('Please use assignment in environment constructor.')
     def f_switch_off_large_overview(self):
@@ -1868,11 +1803,9 @@ class Environment(plog.HasLogger):
             for n in compat.xrange(start_run_idx, total_runs):
                 if not self._traj._is_completed(n):
                     result_dict = {'traj': self._traj._make_single_run(n),
-                                     'log_path': self._log_path,
-                                     'logger_names': self._logger_names,
-                                     'log_levels': self._log_levels,
+                                     'log_config': self._log_config_pair[1],
                                      'log_stdout': self._log_stdout,
-                                     'log_options': self._log_options,
+                                     'log_allow_fork': self._log_allow_fork,
                                      'runfunc': self._runfunc,
                                      'total_runs': total_runs,
                                      'multiproc': self._multiproc,
@@ -2016,15 +1949,11 @@ class Environment(plog.HasLogger):
                                                        lock_with_manager=lock_with_manager,
                                                        queue=None,
                                                        start_queue_process=True,
-                                                       log_path=self._log_path,
-                                                       logger_names=self._logger_names,
-                                                       log_levels=self._log_levels,
+                                                       log_config=self._log_config_pair[1],
                                                        log_stdout=self._log_stdout,
-                                                       log_options=self._log_options)
+                                                       log_allow_fork=self._log_allow_fork)
 
-                        with plog.WithoutHandlersForkContext(self._logger_names,
-                                                             self._handlers_and_tools):
-                            self._multiproc_wrapper.start()
+                        self._multiproc_wrapper.start()
 
                     self._logger.info(
                         '\n************************************************************\n'
@@ -2038,9 +1967,12 @@ class Environment(plog.HasLogger):
                     if self._use_pool:
                         self._logger.info('Starting pool')
 
-                        with plog.WithoutHandlersForkContext(self._logger_names,
-                                                             self._handlers_and_tools):
-                            mpool = multip.Pool(self._ncores)
+                        init_kwargs = dict(traj=TrajectoryMock(self._traj),
+                                           log_config=self._log_config_pair[1],
+                                           log_stdout=self._log_stdout,
+                                           log_allow_fork=self._log_allow_fork)
+                        mpool = multip.Pool(self._ncores, initializer=_configure_logging,
+                                            initargs=(init_kwargs,))
 
                         pool_results = mpool.imap(_single_run, iterator)
 
@@ -2121,13 +2053,11 @@ class Environment(plog.HasLogger):
                             if len(process_dict) < self._ncores and keep_running and no_cap:
                                 try:
                                     task = next(iterator)
-
-                                    with plog.WithoutHandlersForkContext(self._logger_names,
-                                                             self._handlers_and_tools):
-                                        proc = multip.Process(target=_single_run, args=(task,))
-                                        proc.start()
-                                        process_dict[proc.pid] = proc
-                                        signal_cap = True
+                                    proc = multip.Process(target=_logging_and_single_run,
+                                                          args=(task,))
+                                    proc.start()
+                                    process_dict[proc.pid] = proc
+                                    signal_cap = True
                                 except StopIteration:
                                     # All simulation runs have been started
                                     keep_running = False
@@ -2319,7 +2249,7 @@ class Environment(plog.HasLogger):
 
         return results
 
-class MultiprocContext(plog.HasLogger):
+class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
 
     Can be used if you don't want a full-blown :class:`~pypet.environment.Environment` to
@@ -2431,11 +2361,9 @@ class MultiprocContext(plog.HasLogger):
                  lock_with_manager=True,
                  queue=None,
                  start_queue_process=True,
-                 log_path=None,
-                 logger_names=(),
-                 log_levels=None,
+                 log_config=None,
                  log_stdout=False,
-                 log_options=()):
+                 log_allow_fork=False):
 
         self._set_logger()
 
@@ -2448,11 +2376,9 @@ class MultiprocContext(plog.HasLogger):
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._lock = lock
-        self._log_path = log_path
-        self._log_levels = log_levels
-        self._logger_names = logger_names
+        self._log_allow_fork = log_allow_fork
         self._log_stdout = log_stdout
-        self._log_options = log_options
+        self._log_config = log_config
         self._lock_with_manager = lock_with_manager
         self._start_queue_process = start_queue_process
 
@@ -2517,16 +2443,15 @@ class MultiprocContext(plog.HasLogger):
 
         self._logger.info('Starting the Storage Queue!')
         # Wrap a queue writer around the storage service
-        queue_writer = QueueStorageServiceWriter(self._storage_service, self._queue)
+        queue_handler = QueueStorageServiceWriter(self._storage_service, self._queue)
 
         # Start the queue process
         self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
-                                       args=(queue_writer,
-                                             self._log_path,
-                                             self._logger_names,
-                                             self._log_levels,
-                                             self._log_stdout,
-                                             self._log_options))
+                                       args=(dict(queue_handler=queue_handler,
+                                             traj=TrajectoryMock(self._traj),
+                                             log_config=self._log_config,
+                                             log_stdout=self._log_stdout,
+                                             log_allow_fork=self._log_allow_fork),))
         self._queue_process.start()
 
         # Replace the storage service of the trajectory by a sender.

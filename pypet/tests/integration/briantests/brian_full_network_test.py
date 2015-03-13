@@ -1,7 +1,7 @@
 __author__ = 'Robert Meyer'
 
-from pypet.tests.testutils.ioutils import make_temp_dir, run_suite, get_log_level, \
-    get_root_logger, parse_args, get_log_options
+from pypet.tests.testutils.ioutils import make_temp_dir, run_suite,  \
+    get_root_logger, parse_args, get_log_config
 
 from brian import *
 
@@ -127,13 +127,8 @@ class BrianFullNetworkTest(TrajectoryComparator):
                               'HDF5',
                                'briantest.hdf5')),
                           file_title='test',
-                          log_folder=make_temp_dir(os.path.join(
-                              'experiments',
-                              'tests',
-                              'briantests',
-                              'log')),
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=False)
@@ -194,13 +189,8 @@ class BrianFullNetworkMPTest(BrianFullNetworkTest):
                               'HDF5',
                               'briantest.hdf5')),
                           file_title='test',
-                          log_folder=make_temp_dir(os.path.join(
-                              'experiments',
-                              'tests',
-                              'briantests',
-                              'log')),
-                          log_levels=get_log_level(),
-                          log_options=get_log_options(),
+                          log_allow_fork=False,
+                          log_config=get_log_config(),
                           dynamic_imports=['pypet.brian.parameter.BrianParameter',
                                                         BrianMonitorResult],
                           multiproc=True,

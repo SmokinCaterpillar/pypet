@@ -296,25 +296,7 @@ SHARED_DATA = 'SHARED_DATA_'
 
 ############# LOGGING ############
 
-LOG_MODE_FILE = 'FILE'
-""" Logs messages into file(s). In case of multiprocessing there's one file per run. """
-
-LOG_MODE_QUEUE = 'QUEUE'
-""" Logs messages into a single file. Uses a queue process that digests logging statements in
-the background. """
-
-LOG_MODE_STREAM = 'STREAM'
-""" Logs all messages to standard output (stderr).
-In case of multiprocessing this can lead to a garbled
-output, better use `STREAM_QUEUE_MODE` instead. """
-
-LOG_MODE_QUEUE_STREAM = 'STREAM_QUEUE'
-""" Logs all messages to standard output (stderr),
-but with a queue process in the background to avoid
-garbled output in case of multiprocessing. """
-
-LOG_MODE_MAIN_STREAM = 'MAIN_STREAM'
-""" Logs messages only from the main process to standard output (stderr). """
-
-LOG_MODE_NULL = 'NULL'
-""" No handling of log messages """
+LOG_ENV = '$ENV$'
+LOG_TRAJ = '$TRAJ$'
+LOG_RUN = '$RUN$'
+LOG_PROC = '$PROC$'
