@@ -6,9 +6,9 @@ try:
 except ImportError:
     import configparser as cp
 try:
-    import StringIO
+    from StringIO import StringIO
 except ImportError:
-    pass
+    from io import StringIO
 import logging
 import logging.config
 import os
@@ -31,9 +31,10 @@ FILENAME_INDICATORS = (
     '.txt'
 )
 
-MAIN_LOGGING_DICT = {
-    'version' : 1,
-    'formatters' : {
+LOGGING_DICT = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
         'file': {
             'format': '%(asctime)s %(name)s %(levelname)-8s %(message)s'
         },
@@ -57,18 +58,13 @@ MAIN_LOGGING_DICT = {
             'filename': os.path.join('$TRAJ$', '$ENV$', 'ERROR.txt'),
             'level': 'ERROR'
         }
-    }
-}
-
-
-MULTIPROC_LOGGING_DICT = {
-    'version' : 1,
-    'formatters' : {
+    },
+    'multiproc_formatters': {
         'file': {
             'format': '%(asctime)s %(name)s %(levelname)-8s %(message)s'
         },
     },
-    'handlers': {
+    'multiproc_handlers': {
         'file_main': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
@@ -82,54 +78,55 @@ MULTIPROC_LOGGING_DICT = {
         }
     }
 }
+"""Dictionary containing the default configuration."""
 
 
 def _change_logging_kwargs(kwargs):
-    log_folder = kwargs.pop('log_folder')
-    logger_names = kwargs.pop('logger_names')
-    log_levels = kwargs.pop('log_levels')
+    """ Helper function to turn the simple logging kwargs into a `log_config`."""
+    log_folder = kwargs.pop('log_folder', 'logs')
+    logger_names = kwargs.pop('logger_names', '')
+    log_levels = kwargs.pop('log_levels', logging.INFO)
 
     if not isinstance(logger_names, (tuple, list)):
         logger_names = [logger_names]
     if not isinstance(log_levels, (tuple, list)):
         log_levels = [log_levels]
-
     if len(log_levels) == 1:
         log_levels = [log_levels[0] for x in logger_names]
-    logger_names = [logger_name if logger_name != '' else 'root'
-                    for logger_name in logger_names]
 
-    main_dict = copy.deepcopy(MAIN_LOGGING_DICT)
-    multiproc_dict = copy.deepcopy(MULTIPROC_LOGGING_DICT)
+    # We don't want to manipulate the original dictionary
+    dictionary = copy.deepcopy(LOGGING_DICT)
 
-    for dictionary in (main_dict, multiproc_dict):
-        has_stream = 'stream' in dictionary['handlers']
-        for handler, handler_dict in dictionary['handlers'].items():
+    # Add all handlers to all loggers
+    for prefix in ('', 'multiproc_'):
+        for handler, handler_dict in dictionary[prefix + 'handlers'].items():
             if 'filename' in handler_dict:
                 handler_dict['filename'] = os.path.join(log_folder, handler_dict['filename'])
-        dictionary['loggers'] = {}
-        logger_dict = dictionary['loggers']
+        dictionary[prefix + 'loggers'] = {}
+        logger_dict = dictionary[prefix + 'loggers']
         for idx, logger_name in enumerate(logger_names):
             logger_dict[logger_name] = {
                 'level': log_levels[idx],
-                'handlers': ['file_main', 'file_error']
+                'handlers': list(dictionary[prefix + 'handlers'].keys())
             }
-            if has_stream:
-                logger_dict[logger_name]['handlers'].append('stream')
 
-    kwargs['log_config'] = (main_dict, multiproc_dict)
+    kwargs['log_config'] = dictionary
+
 
 def old_logging_config(func):
+    """Decorator to allow a simple logging configuration.
+
+    This encompasses giving a `log_folder`, `logger_names` as well as `log_levels`.
+
+    """
+
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
         inside = [x in kwargs for x in ('log_folder', 'logger_names', 'log_levels')]
         if any(inside):
-            if not all(inside):
-                raise ValueError('If you want to specify logging the old way please provide, '
-                                 'all arguments: log_folder, logger_names, log_levels')
             if 'log_config' in kwargs and kwargs['log_config'] is not None:
-                raise ValueError('Please set `log_config to `None` if you want to use the old '
+                raise ValueError('Please set `log_config to `None` if you want to use the simple '
                                  'way of providing logging configuration.')
             _change_logging_kwargs(kwargs)
 
@@ -139,6 +136,11 @@ def old_logging_config(func):
 
 
 def try_make_dirs(filename):
+    """ Tries to make directories for a given `filename`.
+
+    Ignores any error but notifies via stderr.
+
+    """
     try:
         dirname = os.path.dirname(filename)
         if not os.path.isdir(dirname):
@@ -147,7 +149,27 @@ def try_make_dirs(filename):
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
                          'filename `%s` because of: %s' % (filename, str(exc)))
 
+
 def rename_log_file(traj, filename):
+    """ Renames a given `filename` with valid wildcard placements.
+
+    :const:`~pypet.pypetconstants.LOG_ENV` ($ENV$) is replaces by the name of the
+    trajectory`s environment.
+
+    :const:`~pypet.pypetconstants.LOG_TRAJ` ($TRAJ$) is replaced by the name of the
+    trajectory.
+
+    :const:`~pypet.pypetconstants.LOG_LOG_RUN` ($RUN$) is replaced by the name of the current
+    run. If the trajectory is not set to a run 'run_ALL' is used.
+
+    :const:`~pypet.pypetconstants.LOG_LOG_PROC` ($PROC$) is replaced by the name fo the
+    current process.
+
+    :param traj:  A trajectory container
+    :param filename:  A filename string
+    :return: The new filename
+
+    """
     if pypetconstants.LOG_ENV in filename:
         env_name = traj.v_environment_name
         filename = filename.replace(pypetconstants.LOG_ENV, env_name)
@@ -163,14 +185,8 @@ def rename_log_file(traj, filename):
     return filename
 
 
-def infer_and_make_dir_from_args(parser_filename):
-    split = parser_filename.split('\'')
-    if len(split) > 1:
-        filename = split[1]
-        try_make_dirs(filename)
-
-
 def get_strings(args):
+    """Returns all valid python strings inside a given argument string."""
     string_list = []
     for it in ast.walk(ast.parse(args)):
         if isinstance(it, ast.Str):
@@ -179,6 +195,13 @@ def get_strings(args):
 
 
 class TrajectoryMock(object):
+    """Helper class that mocks properties of a trajectory.
+
+    The full trajectory is not needed to rename a log file.
+    In order to avoid copying the full trajectory during pickling
+    this class is used.
+
+    """
     def __init__(self, traj):
         self.v_environment_name = traj.v_environment_name
         self.v_name = traj.v_name
@@ -186,22 +209,53 @@ class TrajectoryMock(object):
 
 
 class LoggingManager(object):
-    def __init__(self, traj=None, log_config=None, log_stdout=False):
-        self.traj = traj
+    """ Manager taking care of all logging related issues.
+
+    :param trajectory: Trajectory container of Mock
+    :param log_config: Logging configuration
+
+        Can be a a full name of an `ini` file. An already instantiated config parser,
+        or a logging dictionary.
+
+    :param log_stdout: If `stdout` should be logged.
+    :param log_allow_fork:
+
+        If logging settings should be allowed to be forked by a child process
+        if the OS supports forking.
+
+    """
+    def __init__(self, trajectory=None, log_config=None, log_stdout=False, log_allow_fork=False,
+                 report_progress=False):
+        self.trajectory = trajectory
         self.log_config = log_config
+        self._sc_config = None
+        self._mp_config = None
         self.log_stdout = log_stdout
+        self.log_allow_fork = log_allow_fork
+        self.report_progress = report_progress
         self._tools = []
         self._null_handler = logging.NullHandler()
 
+    def __getstate__(self):
+        """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
+        state_dict = self.__dict__.copy()
+        if isinstance(state_dict['log_config'], cp.RawConfigParser):
+            # Config Parsers are not guaranteed to be picklable
+            state_dict['log_config'] = True
+        return state_dict
+
     def add_null_handler(self):
+        """Adds a NullHanlder to the root logger."""
         root = logging.getLogger()
         root.addHandler(self._null_handler)
 
     def remove_null_handler(self):
+        """Removes the NullHandler from the root logger."""
         root = logging.getLogger()
         root.removeHandler(self._null_handler)
 
     def tabula_rasa(self):
+        """ Removes all loggers and logging handlers and closes them. """
         for logger in logging.Logger.manager.loggerDict.values():
             if hasattr(logger, 'handlers'):
                 for handler in logger.handlers:
@@ -214,6 +268,18 @@ class LoggingManager(object):
 
     @staticmethod
     def _check_and_replace_parser_args(parser, section, option, rename_func, make_dirs=True):
+        """ Searches for parser settings that define filenames.
+
+        If such settings are found, they are renamed according to the wildcard
+        rules. Moreover, it is also tried to create the according folders.
+
+        :param parser:  A config parser
+        :param section: A config section
+        :param option: The section option
+        :param rename_func: A function to rename found files
+        :param make_dirs: If the directories of the file should be created.
+
+        """
         args = parser.get(section, option, raw=True)
         strings = get_strings(args)
         replace = False
@@ -229,25 +295,97 @@ class LoggingManager(object):
             parser.set(section, option, args)
 
     @staticmethod
-    def _copy_parser(parser):
-        new_parser = cp.ConfigParser()
+    def _parser_to_string_io(parser):
+        memory_file = StringIO()
+        parser.write(memory_file)
+        memory_file.flush()
+        memory_file.seek(0)
+        return memory_file
+
+    @staticmethod
+    def _find_multiproc_options(parser):
         sections = parser.sections()
+        if not any(section.startswith('multiproc_') for section in sections):
+            return None
+        mp_parser = cp.ConfigParser()
         for section in sections:
-            new_parser.add_section(section)
-            options = parser.options(section)
-            for option in options:
-                value = parser.get(section, option, raw=True)
-                new_parser.set(section, option, value)
-        return new_parser
+            if section.startswith('multiproc_'):
+                new_section = section.replace('multiproc_', '')
+                mp_parser.add_section(new_section)
+                options = parser.options(section)
+                for option in options:
+                    val = parser.get(section, option, raw=True)
+                    mp_parser.set(new_section, option, val)
+        return mp_parser
+
+    @staticmethod
+    def _find_multiproc_dict(dictionary):
+        if not any(key.startswith('multiproc_') for key in dictionary.keys()):
+            return None
+        mp_dictionary = {}
+        for key in dictionary.keys():
+            if key.startswith('multiproc_'):
+                new_key = key.replace('multiproc_', '')
+                mp_dictionary[new_key] = dictionary[key]
+        mp_dictionary['version'] = dictionary['version']
+        if 'disable_existing_loggers' in dictionary:
+            mp_dictionary['disable_existing_loggers'] = dictionary['disable_existing_loggers']
+        return mp_dictionary
+
+    def check_log_config(self):
+        if self.report_progress:
+            if self.report_progress is True:
+                self.report_progress = (10, 'pypet', logging.INFO)
+            elif isinstance(self.report_progress, int):
+                self.report_progress = (self.report_progress, 'pypet', logging.INFO)
+            elif isinstance(self.report_progress, compat.base_type):
+                self.report_progress = (10, self.report_progress, logging.INFO)
+            elif len(self.report_progress) == 2:
+                self.report_progress = (self.report_progress[0], self.report_progress[1],
+                                        logging.INFO)
+
+        if self.log_config:
+            if isinstance(self.log_config, compat.base_type):
+                if not os.path.isfile(file):
+                    raise ValueError('Could not find the logger init file '
+                                     '`%s`.' % self.log_config)
+
+            if self.log_config == pypetconstants.DEFAULT_LOGGING:
+                pypet_path = os.path.abspath(os.path.dirname(__file__))
+                init_path = os.path.join(pypet_path, 'logging')
+                self.log_config = os.path.join(init_path, 'default.ini')
+
+            if isinstance(self.log_config, compat.base_type):
+                parser = cp.ConfigParser(self.log_config)
+            elif isinstance(self.log_config, cp.RawConfigParser):
+                parser = self.log_config
+            else:
+                parser = None
+
+            if parser is not None:
+                self._sc_config = self._parser_to_string_io(parser)
+                self._mp_config = self._find_multiproc_options(parser)
+                if self._mp_config is not None:
+                    self._mp_config = self._parser_to_string_io(self._mp_config)
+
+            elif isinstance(self.log_config, dict):
+                self._sc_config = self.log_config
+                self._mp_config = self._find_multiproc_dict(self._sc_config)
+
+        if self.log_stdout:
+            if self.log_stdout is True:
+                self.log_stdout = ('STDOUT', logging.INFO)
+            if isinstance(self.log_stdout, compat.base_type):
+                self.log_stdout = (self.log_stdout, logging.INFO)
+            if isinstance(self.log_stdout, int):
+                self.log_stdout = ('STDOUT', self.log_stdout)
+
 
     def _handle_config_parsing(self, log_config):
-        if isinstance(log_config, cp.ConfigParser):
-            parser = self._copy_parser(log_config)
-        else:
-            parser = cp.ConfigParser()
-            parser.read(log_config)
+        parser = cp.ConfigParser()
+        parser.readfp(log_config)
 
-        rename_func = lambda string: rename_log_file(self.traj, string)
+        rename_func = lambda string: rename_log_file(self.trajectory, string)
 
         sections = parser.sections()
         for section in sections:
@@ -268,7 +406,7 @@ class LoggingManager(object):
         for key in log_config.keys():
             if key == 'filename':
                 filename = log_config[key]
-                filename = rename_log_file(self.traj, filename)
+                filename = rename_log_file(self.trajectory, filename)
                 new_dict[key] = filename
                 try_make_dirs(filename)
             elif isinstance(log_config[key], dict):
@@ -279,28 +417,28 @@ class LoggingManager(object):
         return new_dict
 
 
-    def make_logging_handlers_and_tools(self):
+    def make_logging_handlers_and_tools(self, multiproc=False):
         """Creates logging handlers and redirects stdout."""
         if self.log_config:
-            if isinstance(self.log_config, dict):
-                new_dict = self._handle_dict_config(self.log_config)
-                logging.config.dictConfig(new_dict)
+            if multiproc:
+                proc_log_config = self._mp_config
             else:
-                parser = self._handle_config_parsing(self.log_config)
-                if compat.python == 3:
-                    logging.config.fileConfig(parser, disable_existing_loggers=False)
+                proc_log_config = self._sc_config
+
+            if proc_log_config:
+                if isinstance(proc_log_config, dict):
+                    new_dict = self._handle_dict_config(proc_log_config)
+                    logging.config.dictConfig(new_dict)
                 else:
-                    memory_file = StringIO.StringIO()
-                    parser.write(memory_file)
-                    memory_file.flush()
-                    memory_file.seek(0)
+                    parser = self._handle_config_parsing(proc_log_config)
+                    memory_file = self._parser_to_string_io(parser)
                     logging.config.fileConfig(memory_file, disable_existing_loggers=False)
 
         if self.log_stdout:
             #  Create a logging mock for stdout
             std_name, std_level = self.log_stdout
 
-            stdout = StdoutToLogger(logging.getLogger(std_name), log_level=std_level)
+            stdout = StdoutToLogger(std_name, log_level=std_level)
             stdout.start()
             self._tools.append(stdout)
 
@@ -308,6 +446,11 @@ class LoggingManager(object):
         for tool in self._tools:
             tool.finalize()
         self._tools = []
+        for config in (self._sc_config, self._mp_config):
+            if hasattr(config, 'close'):
+                config.close()
+        self._sc_config = None
+        self._mp_config = None
         if remove_all_handlers:
             self.tabula_rasa()
 
@@ -330,11 +473,11 @@ class HasLogger(object):
         Removes the logger to allow pickling and returns a copy of `__dict__`.
 
         """
-        statedict = self.__dict__.copy()
-        if '_logger' in statedict:
+        state_dict = self.__dict__.copy()
+        if '_logger' in state_dict:
             # Pickling does not work with loggers objects, so we just keep the logger's name:
-            statedict['_logger'] = self._logger.name
-        return statedict
+            state_dict['_logger'] = self._logger.name
+        return state_dict
 
     def __setstate__(self, statedict):
         """Called after loading a pickle dump.
@@ -372,17 +515,19 @@ class DisableLogger(object):
         logging.disable(logging.NOTSET)
 
 
-class StdoutToLogger(object):
+class StdoutToLogger(HasLogger):
     """
     Fake file-like stream object that redirects writes to a logger instance.
     """
-    def __init__(self, logger, log_level=logging.INFO):
-        self._logger = logger
+    def __init__(self, logger_name, log_level=logging.INFO):
+        self._logger_name = logger_name
         self._log_level = log_level
         self._linebuf = ''
         self._recursion = False
         self._redirection = False
         self._original_steam = None
+        #self._logger = logging.getLogger(self._logger_name)
+        self._set_logger(name=self._logger_name)
 
     def start(self):
         if sys.stdout is not self:

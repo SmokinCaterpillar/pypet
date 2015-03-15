@@ -5,7 +5,8 @@ import logging
 from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_root_logger, make_temp_dir,\
-    make_trajectory_name,  get_log_config, get_log_path
+    make_trajectory_name,  get_log_config, get_log_path, prepare_log_config
+import pypet.tests.testutils.ioutils as ioutils
 from pypet import Environment, Trajectory
 import pypet.pypetconstants as pypetconstants
 import os
@@ -100,7 +101,7 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_creation_normal(self):
         # if not self.multiproc:
         #     return
-        self.make_env(log_config=get_log_config())
+        self.make_env()
         self.add_params(self.traj)
         self.explore(self.traj)
 
@@ -112,10 +113,14 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         if self.mode.multiproc:
+            if self.mode.use_pool:
+                length = self.mode.ncores * 2
+            else:
+                length = 2 * len(traj)
             if self.mode.wrap_mode == 'LOCK':
-                length = 2*len(self.traj) + 2
+                length += 2
             elif self.mode.wrap_mode == 'QUEUE':
-                length = 2*len(self.traj) + 4
+                length += + 4
             else:
                 raise RuntimeError('You shall not pass!')
         else:
@@ -142,8 +147,17 @@ class LoggingTest(TrajectoryComparator):
             elif 'ERROR' in file:
                 filesize = os.path.getsize(os.path.join(log_path, file))
                 self.assertEqual(filesize, 0)
+            elif 'Queue' in file:
+                self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
-                self.assertEqual(count, 1)
+                if self.mode.multiproc and self.mode.use_pool:
+                    self.assertGreaterEqual(count, 1)
+                else:
+                    self.assertEqual(count, 1)
+                    if self.mode.wrap_mode == 'QUEUE':
+                        self.assertEqual(store_count, 0)
+                    else:
+                        self.assertEqual(store_count, 1)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
@@ -153,7 +167,7 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_creation_with_errors(self):
          # if not self.multiproc:
         #     return
-        self.make_env(log_config=(pypetconstants.LOG_MODE_FILE))
+        self.make_env()
         self.add_params(self.traj)
         self.explore(self.traj)
 
@@ -166,15 +180,18 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         if self.mode.multiproc:
+            if self.mode.use_pool:
+                length = self.mode.ncores * 2
+            else:
+                length = 2 * len(traj)
             if self.mode.wrap_mode == 'LOCK':
-                length = 2*len(self.traj) + 2
+                length += 2
             elif self.mode.wrap_mode == 'QUEUE':
-                length = 2*len(self.traj) + 4
+                length += + 4
             else:
                 raise RuntimeError('You shall not pass!')
         else:
             length = 2
-
 
         file_list = [file for file in os.listdir(log_path)]
 
@@ -184,106 +201,61 @@ class LoggingTest(TrajectoryComparator):
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
-            info_count = text.count('INFO_Test!')
+            count = text.count('INFO_Test!')
             error_count = text.count('ERROR_Test!')
+            store_count = text.count('STORE_Test!')
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
-                    self.assertEqual(info_count,0)
+                    self.assertEqual(count,0)
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(info_count, len(traj))
-            elif 'ERROR' in file:
-                filesize = os.path.getsize(os.path.join(log_path, file))
-                self.assertEqual(filesize, 0)
+                    self.assertEqual(count, len(traj))
+                    self.assertEqual(store_count, len(traj))
+            elif 'ERROR.txt' == file:
+                self.assertEqual(count, 0)
+                if self.mode.multiproc:
+                    self.assertEqual(error_count,0)
+                    self.assertEqual(store_count, 0)
+                else:
+                    self.assertEqual(error_count, len(traj))
+                    self.assertEqual(store_count, len(traj))
+
+            elif 'Queue' in file and 'ERROR' in file:
+                self.assertEqual(store_count, len(traj))
+            elif 'Queue' in file and 'LOG' in file:
+                self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
-                self.assertEqual(info_count, 1)
+                if self.mode.multiproc and self.mode.use_pool:
+                    self.assertGreaterEqual(count, 1)
+                    self.assertGreaterEqual(error_count, 1)
+                else:
+                    self.assertEqual(count, 1)
+                    self.assertEqual(error_count, 1)
+                    if self.mode.wrap_mode == 'QUEUE':
+                        self.assertEqual(store_count, 0)
+                    else:
+                        self.assertEqual(store_count, 1)
+            elif 'ERROR' in file:
+                if self.mode.multiproc and self.mode.use_pool:
+                    self.assertEqual(count, 0)
+                    self.assertGreaterEqual(error_count, 1)
+                else:
+                    self.assertEqual(count, 0)
+                    self.assertEqual(error_count, 1)
+                    if self.mode.wrap_mode == 'QUEUE':
+                        self.assertEqual(store_count, 0)
+                    else:
+                        self.assertEqual(store_count, 1)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
 
-    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
-    def test_logfile_creation_normal_queue(self):
-        # if not self.multiproc:
-        #     return
-        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE), log_levels=logging.WARNING)
-        self.add_params(self.traj)
-        self.explore(self.traj)
-
-        self.env.f_run(log_wo_error_levels)
-        self.env.f_disable_logging()
-
-        log_path = self.env.v_log_path
-        length = 1
-
-        file_list = [file for file in os.listdir(log_path)]
-
-        self.assertEqual(len(file_list), length) # assert that there are as many
-        # files as runs plus main.txt and errors and warnings
-
-        for file in file_list:
-            openfile = False
-            if 'main' in file:
-                openfile = True
-            elif 'process' in file:
-                openfile = True
-            elif 'poolworker' in file:
-                openfile = True
-            elif 'queue' in file:
-                openfile = True
-            else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
-            if openfile:
-                with open(os.path.join(log_path, file), mode='r') as fh:
-                    text = fh.read()
-                    self.assertIn('pypet.', text)
-
-    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
-    def test_logfile_creation_with_errors_queue(self):
+      # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return
-        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE))
-        self.add_params(self.traj)
-        self.explore(self.traj)
-
-        self.env.f_run(log_all_levels)
-        self.env.f_disable_logging()
-
-        log_path = self.env.v_log_path
-
-        length = 2
-
-        file_list = [file for file in os.listdir(log_path)]
-
-        self.assertEqual(len(file_list), length) # assert that there are as many
-        # files as runs plus main.txt and errors and warnings
-
-        for file in file_list:
-            openfile = False
-            if 'main' in file:
-                openfile = True
-            elif 'process' in file:
-                openfile = True
-            elif 'poolworker' in file:
-                openfile = True
-            elif 'queue' in file:
-                openfile = True
-            else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
-            if openfile:
-                with open(os.path.join(log_path, file), mode='r') as fh:
-                    text = fh.read()
-                    self.assertIn('pypet.', text)
-
-    def test_logfile_creation_with_errors_all_loggers(self):
-         # if not self.multiproc:
-        #     return
-        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE, pypetconstants.LOG_MODE_FILE,
-                                    pypetconstants.LOG_MODE_QUEUE_STREAM,
-                                    pypetconstants.LOG_MODE_STREAM,
-                                    pypetconstants.LOG_MODE_MAIN_STREAM,
-                                    pypetconstants.LOG_MODE_NULL))
-
+        self.make_env(logger_names = ('','pypet'), log_level=logging.ERROR, log_config=None,
+                      log_folder=make_temp_dir('logs'))
         self.add_params(self.traj)
         self.explore(self.traj)
 
@@ -292,17 +264,22 @@ class LoggingTest(TrajectoryComparator):
             logging.getLogger('pypet.test').error('ttt')
         self.env.f_disable_logging()
 
-        log_path = self.env.v_log_path
+        traj = self.env.v_traj
+        log_path = get_log_path(traj)
 
         if self.mode.multiproc:
+            if self.mode.use_pool:
+                length = self.mode.ncores * 2
+            else:
+                length = 2 * len(traj)
             if self.mode.wrap_mode == 'LOCK':
-                length = 2*len(self.traj) + 4
+                length += 2
             elif self.mode.wrap_mode == 'QUEUE':
-                length = 2*len(self.traj) + 6
+                length += + 4
             else:
                 raise RuntimeError('You shall not pass!')
         else:
-            length = 4
+            length = 2
 
         file_list = [file for file in os.listdir(log_path)]
 
@@ -310,90 +287,99 @@ class LoggingTest(TrajectoryComparator):
         # files as runs plus main.txt and errors and warnings
 
         for file in file_list:
-            openfile = False
-            if 'main' in file:
-                openfile = True
-            elif 'process' in file:
-                openfile = True
-            elif 'poolworker' in file:
-                openfile = True
-            elif 'queue' in file:
-                openfile = True
+            with open(os.path.join(log_path, file), mode='r') as fh:
+                text = fh.read()
+            count = text.count('INFO_Test!')
+            error_count = text.count('ERROR_Test!')
+            store_count = text.count('STORE_Test!')
+            if 'LOG.txt' == file:
+                if self.mode.multiproc:
+                    self.assertEqual(count,0)
+                    self.assertEqual(store_count, 0)
+                else:
+                    self.assertEqual(count, 0)
+                    self.assertEqual(store_count, 2*len(traj))
+            elif 'ERROR.txt' == file:
+                self.assertEqual(count, 0)
+                if self.mode.multiproc:
+                    self.assertEqual(error_count,0)
+                    self.assertEqual(store_count, 0)
+                else:
+                    self.assertEqual(error_count, 2*len(traj))
+                    self.assertEqual(store_count, 2*len(traj))
+
+            elif 'Queue' in file and 'ERROR' in file:
+                self.assertEqual(store_count, 2*len(traj))
+            elif 'Queue' in file and 'LOG' in file:
+                self.assertEqual(store_count, 2*len(traj))
+            elif 'LOG' in file:
+                if self.mode.multiproc and self.mode.use_pool:
+                    self.assertEqual(count, 0)
+                    self.assertGreaterEqual(error_count, 2)
+                else:
+                    self.assertEqual(count, 0)
+                    self.assertEqual(error_count, 2)
+                    if self.mode.wrap_mode == 'QUEUE':
+                        self.assertEqual(store_count, 0)
+                    else:
+                        self.assertEqual(store_count, 2)
+            elif 'ERROR' in file:
+                if self.mode.multiproc and self.mode.use_pool:
+                    self.assertEqual(count, 0)
+                    self.assertGreaterEqual(error_count, 2)
+                else:
+                    self.assertEqual(count, 0)
+                    self.assertEqual(error_count, 2)
+                    if self.mode.wrap_mode == 'QUEUE':
+                        self.assertEqual(store_count, 0)
+                    else:
+                        self.assertEqual(store_count, 2)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
-            if openfile:
-                with open(os.path.join(log_path, file), mode='r') as fh:
-                    text = fh.read()
-                    self.assertIn('pypet.', text)
 
-    def test_multiple_loggers_defined(self):
-        filename = make_temp_dir('full_store.hdf5')
-        logfolder = make_temp_dir('logs')
-        custom_logger = logging.getLogger('custom')
-        custom2_logger = logging.getLogger('custom2')
-        custom3_logger = logging.getLogger('custom3')
-
-        root = logging.getLogger()
-        rootstr = 'NOTLOGGED'
-
-        logstr = 'TEST CUSTOM LOGGING!'
-        logstr2 = 'AAAAAAAAAAAA'
-        logstr3 = 'ISHOULDNOTBE'
-        with Environment(filename=filename,
-                         log_config=pypetconstants.LOG_MODE_QUEUE,
-                         logger_names=('', 'custom', 'custom2'),
-                         log_levels=(logging.CRITICAL, logging.DEBUG, logging.DEBUG)) as env:
-            custom_logger.debug(logstr)
-            custom2_logger.debug(logstr2)
-            custom3_logger.debug(logstr3)
-            root.debug(rootstr)
-
-            logpath = env.v_log_path
-
-        with open(os.path.join(logpath, 'main_queue_log.txt'), 'r') as fh:
-            text = fh.read()
-            self.assertTrue(logstr in text)
-            self.assertTrue(logstr2 in text)
-            self.assertFalse(logstr3 in text)
-            self.assertFalse(rootstr in text)
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_dir(filename)
-        env = Environment(filename=filename, log_levels=logging.CRITICAL, # needed for the test
-                          log_stdout=('STDOUT', 50),
-                          logger_names=('STDERR', 'STDOUT'),
-                          log_config=pypetconstants.LOG_MODE_QUEUE)
+        folder = make_temp_dir('logs')
+        env = Environment(filename=filename, #log_config=get_log_config(),
+                          log_levels=logging.CRITICAL, # needed for the test
+                          log_stdout=('STDOUT', 50), log_folder=folder
+                          )
 
-        path = env.v_log_path
+        env.f_run(log_error)
+        traj = env.v_traj
+        path = get_log_path(traj)
 
         mainstr = 'sTdOuTLoGGinG'
         print(mainstr)
         env.f_disable_logging()
 
-        mainfilename = os.path.join(path, 'main_queue_log.txt')
+        mainfilename = os.path.join(path, 'LOG.txt')
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
 
         self.assertTrue(mainstr in full_text)
         self.assertTrue('4444444' not in full_text)
-        self.assertTrue('pypet' not in full_text)
+        self.assertTrue('ERROR' not in full_text)
 
 
     def test_logging_show_progress(self):
-        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE),
-                      log_levels=logging.INFO,
-                      report_progress=(3, 'progress'))
+        self.make_env(log_config=None,log_folder=make_temp_dir('logs'),
+                      log_levels=logging.ERROR,
+                      report_progress=(3, 'progress', 40))
         self.add_params(self.traj)
         self.explore(self.traj)
 
         self.env.f_run(log_all_levels)
         self.env.f_disable_logging()
 
-        path = self.env.v_log_path
-        mainfilename = os.path.join(path, 'main_queue_log.txt')
+        traj = self.env.v_traj
+
+        path = get_log_path(traj)
+        mainfilename = os.path.join(path, 'LOG.txt')
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
 
@@ -404,9 +390,7 @@ class LoggingTest(TrajectoryComparator):
 
 
     def test_logging_show_progress_print(self):
-        self.make_env(log_config=(pypetconstants.LOG_MODE_QUEUE),
-                      log_levels=logging.INFO,
-                      log_stdout='prostdout',
+        self.make_env(log_config=get_log_config(), log_stdout=('prostdout', 20),
                       report_progress=(3, 'print'))
         self.add_params(self.traj)
         self.explore(self.traj)
@@ -414,16 +398,15 @@ class LoggingTest(TrajectoryComparator):
         self.env.f_run(log_all_levels)
         self.env.f_disable_logging()
 
-        path = self.env.v_log_path
-        mainfilename = os.path.join(path, 'main_queue_log.txt')
+        path = get_log_path(self.env.v_traj)
+        mainfilename = os.path.join(path, 'LOG.txt')
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
 
         progress = 'prostdout INFO     PROGRESS: Finished'
         self.assertTrue(progress in full_text)
         bar = '[=='
-        self.assertTrue(bar in full_text)
-
+        self.assertIn(bar, full_text)
 
 
 if __name__ == '__main__':

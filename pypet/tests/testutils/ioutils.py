@@ -34,7 +34,7 @@ testParams=dict(
     # Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`
     user_tempdir='',
     # Specified log level
-    log_config=('test', 'test_multiproc')
+    log_config='test'
     # Specified log options
 )
 
@@ -42,35 +42,35 @@ TEST_IMPORT_ERROR = 'ModuleImportFailure'
 
 generic_log_folder = None
 
+
 def get_root_logger():
     """Returns root logger"""
     return logging.getLogger()
 
+
 def get_log_config():
-    """Retunrs the log config"""
+    """Returns the log config"""
     return testParams['log_config']
+
 
 def get_log_path(traj):
     return rename_log_file(traj, generic_log_folder)
 
+
 def prepare_log_config():
     """Prepares the test logging init files and creates parsers."""
-    confs = testParams['log_config']
+    conf = testParams['log_config']
     conf_list = []
     pypet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
     init_path = os.path.join(pypet_path, 'logging')
-    for idx, conf in enumerate(confs):
-        if conf == 'test':
-            conf_file = os.path.join(init_path, 'test.ini')
-            conf_parser = handle_config_file(conf_file)
-            conf_list.append(conf_parser)
-        elif conf == 'test_multiproc':
-            conf_file = os.path.join(init_path, 'test_multiproc.ini')
-            conf_parser = handle_config_file(conf_file)
-            conf_list.append(conf_parser)
-        else:
-            conf_list.append(conf)
-    testParams['log_config'] = conf_list
+
+    if conf == 'test':
+        conf_file = os.path.join(init_path, 'test.ini')
+        conf_parser = handle_config_file(conf_file)
+        conf = conf_parser
+
+    testParams['log_config'] = conf
+
 
 def _rename_filename(filename):
     global generic_log_folder
@@ -84,8 +84,8 @@ def _rename_filename(filename):
         generic_log_folder = os.path.dirname(filename)
     return filename
 
-def handle_config_file(config_file):
 
+def handle_config_file(config_file):
     parser = cp.ConfigParser()
     parser.read(config_file)
     sections = parser.sections()

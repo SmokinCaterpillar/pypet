@@ -20,7 +20,7 @@ from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, Sparse
     ParameterGroup, Environment, pypetconstants, compat, HDF5StorageService
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, get_root_logger, \
-    parse_args, run_suite, get_log_config
+    parse_args, run_suite, get_log_config, get_log_path
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
@@ -457,9 +457,10 @@ class StorageTest(TrajectoryComparator):
 
         env = Environment(trajectory='Testmigrate', filename=filename,
                           log_allow_fork=False,
-                          log_config=pypetconstants.LOG_MODE_QUEUE)
-        logpath = env.v_log_path
+                          log_config=get_log_config())
+
         traj = env.v_trajectory
+        logpath = get_log_path(traj)
         traj.f_add_parameter('x', 5)
 
         traj.f_store()
@@ -497,7 +498,7 @@ class StorageTest(TrajectoryComparator):
 
         # full_file_name = os.path.join(logpath, 'main_log.txt')
         # if not os.path.isfile(full_file_name):
-        full_file_name = os.path.join(logpath, 'main_queue_log.txt')
+        full_file_name = os.path.join(logpath, 'LOG.txt')
 
         with open(full_file_name) as fh:
             text = fh.read()
@@ -512,10 +513,11 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('cleanup.hdf5')
 
         env = Environment(trajectory='Testmigrate2', filename=filename,
-                          log_config=pypetconstants.LOG_MODE_QUEUE,
+                          log_config=get_log_config(),
                           log_allow_fork=False)
-        logpath = env.v_log_path
+
         traj = env.v_trajectory
+        logpath = get_log_path(traj)
         traj.f_add_parameter('x', 5)
 
         traj.f_store()
@@ -547,7 +549,7 @@ class StorageTest(TrajectoryComparator):
 
         # full_file_name = os.path.join(logpath, 'main_log.txt')
         # if not os.path.isfile(full_file_name):
-        full_file_name = os.path.join(logpath, 'main_queue_log.txt')
+        full_file_name = os.path.join(logpath, 'LOG.txt')
 
         with open(full_file_name) as fh:
             text = fh.read()
@@ -561,7 +563,7 @@ class StorageTest(TrajectoryComparator):
 
         filename = make_temp_dir('overwrite.hdf5')
 
-        env = Environment(trajectory='testoverwrite', filename=filename, log_folder=None,
+        env = Environment(trajectory='testoverwrite', filename=filename,
                           log_allow_fork=False, log_config=get_log_config())
 
         traj = env.v_traj
@@ -1023,9 +1025,7 @@ class StorageTest(TrajectoryComparator):
                          add_time=True,
                          comment='',
                          dynamic_imports=None,
-                         logger_names=None,
-                         log_levels=None,
-                         log_stdout=False,
+                         log_config=None,
                          multiproc=False,
                          ncores=3,
                          wrap_mode=pypetconstants.WRAP_MODE_LOCK,

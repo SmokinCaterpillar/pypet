@@ -519,7 +519,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         or squared bracket indexing"""
         return self._with_links
 
-    @ v_with_links.setter
+    @v_with_links.setter
     def v_with_links(self, val):
         """Sets the usage of links"""
         self._with_links = bool(val)

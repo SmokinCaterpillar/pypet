@@ -71,23 +71,17 @@ from pypet.parameter import Parameter
 
 def _configure_logging(kwargs):
     try:
-        traj = kwargs['traj']
-        log_config = kwargs['log_config']
-        log_stdout = kwargs['log_stdout']
-        log_allow_fork = kwargs['log_allow_fork']
-
-        tabula_rasa = not log_allow_fork and hasattr(os, 'fork')
-        if log_allow_fork and hasattr(os, 'fork'):
+        logging_manager = kwargs['logging_manager']
+        if hasattr(os, 'fork'):
             # If we allow forking and it is possible we already have a redirection of stdout
-            log_stdout = False
-        logging_manager = LoggingManager(traj, log_config, log_stdout=log_stdout)
+            logging_manager.log_stdout = False
+        tabula_rasa = not logging_manager.log_allow_fork and hasattr(os, 'fork')
         if tabula_rasa:
             logging_manager.tabula_rasa()
-        logging_manager.make_logging_handlers_and_tools()
+        logging_manager.make_logging_handlers_and_tools(multiproc=True)
     except Exception as exc:
         sys.stderr.write('Could not create log file because of: %s' % str(exc))
         traceback.print_exc()
-
 
 def _logging_and_single_run(kwargs):
     _configure_logging(kwargs)
@@ -783,7 +777,7 @@ class Environment(HasLogger):
                  comment='',
                  dynamic_imports=None,
                  automatic_storing=True,
-                 log_config=('default', 'default'),
+                 log_config=pypetconstants.DEFAULT_LOGGING,
                  log_stdout=('STDOUT', logging.INFO),
                  log_allow_fork=False,
                  report_progress = (10, 'pypet', logging.INFO),
@@ -855,46 +849,12 @@ class Environment(HasLogger):
 
         unused_kwargs = set(kwargs.keys())
 
-        self._logging_manager = LoggingManager()
+        self._logging_manager = LoggingManager(log_config=log_config, log_stdout=log_stdout,
+                                               log_allow_fork=log_allow_fork,
+                                               report_progress=report_progress)
+        self._logging_manager.check_log_config()
         self._logging_manager.add_null_handler()
         self._set_logger()
-        
-        if isinstance(log_config, compat.base_type):
-            log_config = (log_config, None)
-        if isinstance(log_config, dict):
-            log_config = (log_config, None)
-        log_config = list(log_config)
-
-        pypet_path = os.path.abspath(os.path.dirname(__file__))
-        init_path = os.path.join(pypet_path, 'logging')
-        if log_config[0] == 'default':
-            log_config[0] = os.path.join(init_path, 'main.ini')
-        if log_config[1] == 'default':
-            log_config[1] = os.path.join(init_path, 'multiproc.ini')
-
-        for logger_file in log_config:
-            if isinstance(logger_file, compat.base_type):
-                if not os.path.isfile(file):
-                    raise ValueError('Could not find the logger init file '
-                                     '`%s`.' % logger_file)
-
-        if log_stdout:
-            if log_stdout is True:
-                log_stdout = ('STDOUT', logging.INFO)
-            if isinstance(log_stdout, compat.base_type):
-                log_stdout = (log_stdout, logging.INFO)
-            if isinstance(log_stdout, int):
-                log_stdout = ('STDOUT', log_stdout)
-
-        if report_progress:
-            if report_progress is True:
-                report_progress = (10, 'pypet', logging.INFO)
-            elif isinstance(report_progress, int):
-                report_progress = (report_progress, 'pypet', logging.INFO)
-            elif isinstance(report_progress, compat.base_type):
-                report_progress = (10, report_progress, logging.INFO)
-            elif len(report_progress) == 2:
-                report_progress = (report_progress[0], report_progress[1], logging.INFO)
 
         # Helper attributes defined later on
         self._start_timestamp = None
@@ -973,15 +933,8 @@ class Environment(HasLogger):
         self._traj._environment_hexsha = self._hexsha
         self._traj._environment_name = self._name
 
-        self._log_stdout = log_stdout
-        self._log_allow_fork = log_allow_fork
-        self._log_config_pair = log_config
-        self._report_progress = report_progress
-
+        self._logging_manager.trajectory = self._traj
         self._logging_manager.remove_null_handler()
-        self._logging_manager.log_stdout = self._log_stdout
-        self._logging_manager.traj = self._traj
-        self._logging_manager.log_config = self._log_config_pair[0]
         self._logging_manager.make_logging_handlers_and_tools()
 
         # Drop a message if we made a commit. We cannot drop the message directly after the
@@ -1287,9 +1240,10 @@ class Environment(HasLogger):
         return self.v_trajectory
 
     @property
+    @deprecated('No longer supported, please don`t use it anymore.')
     def v_log_path(self):
         """The full path to the (sub) folder where log files are stored"""
-        return self._log_path
+        return ''
 
     @property
     def v_hexsha(self):
@@ -1777,8 +1731,9 @@ class Environment(HasLogger):
         self._traj.f_store(only_init=True)
 
     def _show_progress(self, n, total_runs, finish=False):
-        if self._report_progress:
-            percentage, logger_name, log_level = self._report_progress
+        report_progress = self._logging_manager.report_progress
+        if report_progress:
+            percentage, logger_name, log_level = report_progress
             if logger_name == 'print':
                 logger = 'print'
             else:
@@ -1803,9 +1758,7 @@ class Environment(HasLogger):
             for n in compat.xrange(start_run_idx, total_runs):
                 if not self._traj._is_completed(n):
                     result_dict = {'traj': self._traj._make_single_run(n),
-                                     'log_config': self._log_config_pair[1],
-                                     'log_stdout': self._log_stdout,
-                                     'log_allow_fork': self._log_allow_fork,
+                                     'logging_manager': self._logging_manager,
                                      'runfunc': self._runfunc,
                                      'total_runs': total_runs,
                                      'multiproc': self._multiproc,
@@ -1939,19 +1892,21 @@ class Environment(HasLogger):
                         pass
                     else:
                         # Prepare Multiprocessing
-                        lock_with_manager = self._use_pool or self._immediate_postproc
+                        lock_with_manager = (self._use_pool or
+                                             self._immediate_postproc or
+                                             not hasattr(os, 'fork'))
 
                         self._multiproc_wrapper = MultiprocContext(self._traj,
-                                                       self._wrap_mode,
-                                                       full_copy=None,
-                                                       manager=manager,
-                                                       lock=None,
-                                                       lock_with_manager=lock_with_manager,
-                                                       queue=None,
-                                                       start_queue_process=True,
-                                                       log_config=self._log_config_pair[1],
-                                                       log_stdout=self._log_stdout,
-                                                       log_allow_fork=self._log_allow_fork)
+                                           self._wrap_mode,
+                                           full_copy=None,
+                                           manager=manager,
+                                           lock=None,
+                                           lock_with_manager=lock_with_manager,
+                                           queue=None,
+                                           start_queue_process=True,
+                                           log_config=self._logging_manager.log_config,
+                                           log_stdout=self._logging_manager.log_stdout,
+                                           log_allow_fork=self._logging_manager.log_allow_fork)
 
                         self._multiproc_wrapper.start()
 
@@ -1967,12 +1922,12 @@ class Environment(HasLogger):
                     if self._use_pool:
                         self._logger.info('Starting pool')
 
-                        init_kwargs = dict(traj=TrajectoryMock(self._traj),
-                                           log_config=self._log_config_pair[1],
-                                           log_stdout=self._log_stdout,
-                                           log_allow_fork=self._log_allow_fork)
+
+                        self._logging_manager.trajectory = TrajectoryMock(self._traj)
+                        init_kwargs = dict(logging_manager=self._logging_manager)
                         mpool = multip.Pool(self._ncores, initializer=_configure_logging,
                                             initargs=(init_kwargs,))
+                        self._logging_manager.trajectory = self._traj
 
                         pool_results = mpool.imap(_single_run, iterator)
 
@@ -2376,11 +2331,15 @@ class MultiprocContext(HasLogger):
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._lock = lock
-        self._log_allow_fork = log_allow_fork
-        self._log_stdout = log_stdout
-        self._log_config = log_config
         self._lock_with_manager = lock_with_manager
         self._start_queue_process = start_queue_process
+        self._logging_manager = None
+
+        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+            self._logging_manager = LoggingManager(log_config=log_config,
+                                                   log_stdout=log_stdout,
+                                                   log_allow_fork=log_allow_fork)
+            self._logging_manager.check_log_config()
 
         if full_copy is not None:
             self._traj.v_full_copy=full_copy
@@ -2446,13 +2405,12 @@ class MultiprocContext(HasLogger):
         queue_handler = QueueStorageServiceWriter(self._storage_service, self._queue)
 
         # Start the queue process
+        self._logging_manager.trajectory = TrajectoryMock(self._traj)
         self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
                                        args=(dict(queue_handler=queue_handler,
-                                             traj=TrajectoryMock(self._traj),
-                                             log_config=self._log_config,
-                                             log_stdout=self._log_stdout,
-                                             log_allow_fork=self._log_allow_fork),))
+                                             logging_manager=self._logging_manager),))
         self._queue_process.start()
+        self._logging_manager.trajectory = self._traj
 
         # Replace the storage service of the trajectory by a sender.
         # The sender will put all data onto the queue.
