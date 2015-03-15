@@ -496,9 +496,10 @@ class NoInterpolationParser(cp.ConfigParser):
     def __init__(self):
         try:
             # Needed for Python 3, see [http://bugs.python.org/issue21265]
-            super(NoInterpolationParser, self).__init__(interpolation=None)
+            super(NoInterpolationParser, self).__init__(self, interpolation=None)
         except TypeError:
-            super(NoInterpolationParser, self).__init__()
+            # Python 2.x
+            cp.ConfigParser.__init__(self)
 
 
 class HasLogger(object):
