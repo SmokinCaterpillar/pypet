@@ -234,7 +234,7 @@ class LoggingManager(object):
         self.log_allow_fork = log_allow_fork
         self.report_progress = report_progress
         self._tools = []
-        self._null_handler = logging.NullHandler()
+        self._null_handler = NullHandler()
 
     def __getstate__(self):
         """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
@@ -296,6 +296,7 @@ class LoggingManager(object):
 
     @staticmethod
     def _parser_to_string_io(parser):
+        """Turns a ConfigParser into a StringIO stream."""
         memory_file = StringIO()
         parser.write(memory_file)
         memory_file.flush()
@@ -304,10 +305,16 @@ class LoggingManager(object):
 
     @staticmethod
     def _find_multiproc_options(parser):
+        """ Searches for multiprocessing options within a ConfigParser.
+
+        If such options are found, they are copied (without the `'multiproc_'` prefix)
+        into a new parser.
+
+        """
         sections = parser.sections()
         if not any(section.startswith('multiproc_') for section in sections):
             return None
-        mp_parser = cp.ConfigParser()
+        mp_parser = NoInterpolationParser()
         for section in sections:
             if section.startswith('multiproc_'):
                 new_section = section.replace('multiproc_', '')
@@ -320,6 +327,12 @@ class LoggingManager(object):
 
     @staticmethod
     def _find_multiproc_dict(dictionary):
+        """ Searches for multiprocessing options in a given `dictionary`.
+
+        If found they are copied (without the `'multiproc_'` prefix)
+        into a new dictionary
+
+        """
         if not any(key.startswith('multiproc_') for key in dictionary.keys()):
             return None
         mp_dictionary = {}
@@ -333,6 +346,11 @@ class LoggingManager(object):
         return mp_dictionary
 
     def check_log_config(self):
+        """ Checks and converts all settings if necessary passed to the Manager.
+
+        Searches for multiprocessing options as well.
+
+        """
         if self.report_progress:
             if self.report_progress is True:
                 self.report_progress = (10, 'pypet', logging.INFO)
@@ -356,7 +374,7 @@ class LoggingManager(object):
                 self.log_config = os.path.join(init_path, 'default.ini')
 
             if isinstance(self.log_config, compat.base_type):
-                parser = cp.ConfigParser(self.log_config)
+                parser = NoInterpolationParser(self.log_config)
             elif isinstance(self.log_config, cp.RawConfigParser):
                 parser = self.log_config
             else:
@@ -380,9 +398,15 @@ class LoggingManager(object):
             if isinstance(self.log_stdout, int):
                 self.log_stdout = ('STDOUT', self.log_stdout)
 
-
     def _handle_config_parsing(self, log_config):
-        parser = cp.ConfigParser()
+        """ Checks for filenames within a config file and translates them.
+
+        Moreover, directories for the files are created as well.
+
+        :param log_config: Config file as a stream (like StringIO)
+
+        """
+        parser = NoInterpolationParser()
         parser.readfp(log_config)
 
         rename_func = lambda string: rename_log_file(self.trajectory, string)
@@ -399,7 +423,7 @@ class LoggingManager(object):
     def _handle_dict_config(self, log_config):
         """Recursively walks and copies the log_config dict and searches for filenames.
 
-        Creates parent folders of files if necessary.
+        Translates filenames and creates directories if necessary.
 
         """
         new_dict = dict()
@@ -453,6 +477,28 @@ class LoggingManager(object):
         self._mp_config = None
         if remove_all_handlers:
             self.tabula_rasa()
+
+
+class NullHandler(logging.Handler):
+    """No-op handler stolen from python 2.7, because it is not available in 2.6!"""
+    def handle(self, record):
+        pass
+
+    def emit(self, record):
+        pass
+
+    def createLock(self):
+        self.lock = None
+
+
+class NoInterpolationParser(cp.ConfigParser):
+    """Dummy class to solve a Python 3 bug"""
+    def __init__(self):
+        try:
+            # Needed for Python 3, see [http://bugs.python.org/issue21265]
+            super(NoInterpolationParser, self).__init__(interpolation=None)
+        except TypeError:
+            super(NoInterpolationParser, self).__init__()
 
 
 class HasLogger(object):
