@@ -344,7 +344,8 @@ class LoggingTest(TrajectoryComparator):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_dir(filename)
         folder = make_temp_dir('logs')
-        env = Environment(filename=filename, #log_config=get_log_config(),
+        env = Environment(trajectory=make_trajectory_name(self),
+                          filename=filename, #log_config=get_log_config(),
                           log_levels=logging.CRITICAL, # needed for the test
                           log_stdout=('STDOUT', 50), log_folder=folder
                           )

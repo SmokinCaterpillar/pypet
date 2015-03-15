@@ -140,10 +140,15 @@ class _Progressbar(object):
             if time:
                 try:
                     time_delta = current_time - self._start_time
+                    try:
+                        total_seconds = time_delta.total_seconds()
+                    except AttributeError:
+                        total_seconds = ((time_delta.microseconds +
+                                            (time_delta.seconds +
+                                             time_delta.days * 24 * 3600)* 10**6) / 10**6)
                     remaining_seconds = int(np.round(
                                 (self._total_float - indexp1) *
-                                (indexp1 + 1.0)/(indexp1 * indexp1) *
-                                 time_delta.total_seconds()))
+                                    (indexp1 + 1.0)/(indexp1 * indexp1) * total_seconds))
                     remaining_delta = datetime.timedelta(seconds=remaining_seconds)
                     remaining_str = ', remaining: ' + str(remaining_delta)
                 except ZeroDivisionError:
