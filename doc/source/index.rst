@@ -57,9 +57,9 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
-   manual_toc
-   misc_toc
-   code_toc
+   manual/manual_toc
+   manual/misc_toc
+   manual/code_toc
 
 
 The documentation is also available for `download in PDF format`_.
@@ -67,7 +67,7 @@ The documentation is also available for `download in PDF format`_.
 .. _download in PDF format: https://media.readthedocs.org/pdf/pypet/latest/pypet.pdf
 
 
-.. include:: contact_license.rst
+.. include:: manual/contact_license.rst
 
 
 -----

@@ -262,7 +262,3 @@ def get_matching_kwargs(func, kwargs):
         matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
         return matching_kwargs
 
-
-def remove_all_from_list(the_list, val):
-   """Removes all values from a list based on equality"""
-   return [value for value in the_list if value != val]

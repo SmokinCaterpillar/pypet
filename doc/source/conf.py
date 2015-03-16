@@ -176,7 +176,7 @@ htmlhelp_basename = 'pypetdoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
-fh = open('latex_preamble.tex', 'r+')
+fh = open('latex/latex_preamble.tex', 'r+')
 PREAMBLE = fh.read()
 fh.close()
 latex_elements = {

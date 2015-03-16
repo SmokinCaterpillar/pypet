@@ -44,16 +44,9 @@ def test_run():
     global filename
 
 
-    logfolder = make_temp_dir(os.path.join('experiments',
-                                                  'tests',
-                                                  'Log'))
-
     np.random.seed()
     trajname = 'profiling'
-    filename = make_temp_dir(os.path.join('experiments',
-                                                'tests',
-                                                'HDF5',
-                                                'test%s.hdf5' % trajname))
+    filename = make_temp_dir(os.path.join('hdf5', 'test%s.hdf5' % trajname))
 
     env = Environment(trajectory=trajname, filename=filename,
                       file_title=trajname,
@@ -106,6 +99,7 @@ if __name__ == '__main__':
     service_filter = GlobbingFilter(include=['*storageservice.*', '*ptcompat.*',
                                              '*naturalnaming.*', '*parameter.*',
                                              '*trajectory.*'])
+
     config = Config(groups=True, verbose=True)
     config.trace_filter = service_filter
 

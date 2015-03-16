@@ -20,6 +20,7 @@ import functools
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
+from pypet.utils.helpful_functions import progressbar
 
 
 FILENAME_INDICATORS = (
@@ -113,7 +114,7 @@ def _change_logging_kwargs(kwargs):
     kwargs['log_config'] = dictionary
 
 
-def old_logging_config(func):
+def simple_logging_config(func):
     """Decorator to allow a simple logging configuration.
 
     This encompasses giving a `log_folder`, `logger_names` as well as `log_levels`.
@@ -150,7 +151,7 @@ def try_make_dirs(filename):
                          'filename `%s` because of: %s' % (filename, str(exc)))
 
 
-def rename_log_file(traj, filename):
+def rename_log_file(traj, filename, process_name=None):
     """ Renames a given `filename` with valid wildcard placements.
 
     :const:`~pypet.pypetconstants.LOG_ENV` ($ENV$) is replaces by the name of the
@@ -167,6 +168,11 @@ def rename_log_file(traj, filename):
 
     :param traj:  A trajectory container
     :param filename:  A filename string
+    :param process_name:
+
+        The name of the desired process. If `None` the name of the current process is
+        taken determined by the multiprocessing module.
+
     :return: The new filename
 
     """
@@ -180,8 +186,9 @@ def rename_log_file(traj, filename):
         run_name = traj.v_crun_
         filename = filename.replace(pypetconstants.LOG_RUN, run_name)
     if pypetconstants.LOG_PROC in filename:
-        proc_name = multip.current_process().name
-        filename = filename.replace(pypetconstants.LOG_PROC, proc_name)
+        if process_name is None:
+            process_name = multip.current_process().name
+        filename = filename.replace(pypetconstants.LOG_PROC, process_name)
     return filename
 
 
@@ -192,6 +199,56 @@ def get_strings(args):
         if isinstance(it, ast.Str):
             string_list.append(it.s)
     return string_list
+
+
+class HasLogger(object):
+    """Abstract super class that automatically adds a logger to a class.
+
+    To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
+    If ``name=None`` the logger name is picked as follows:
+
+        ``self._logger = logging.getLogger(type(self).__name__)``
+
+    The logger can be accessed via ``myobj._logger``.
+
+    """
+
+    def __getstate__(self):
+        """Called for pickling.
+
+        Removes the logger to allow pickling and returns a copy of `__dict__`.
+
+        """
+        state_dict = self.__dict__.copy()
+        if '_logger' in state_dict:
+            # Pickling does not work with loggers objects, so we just keep the logger's name:
+            state_dict['_logger'] = self._logger.name
+        return state_dict
+
+    def __setstate__(self, statedict):
+        """Called after loading a pickle dump.
+
+        Restores `__dict__` from `statedict` and adds a new logger.
+
+        """
+        self.__dict__.update(statedict)
+        if '_logger' in statedict:
+            # If we re-instantiate the component the logger attribute only contains a name,
+            # so we also need to re-create the logger:
+            self._set_logger(statedict['_logger'])
+
+    def _set_logger(self, name=None):
+        """Adds a logger with a given `name`.
+
+        If no name is given, name is constructed as
+        `type(self).__name__`.
+
+        """
+        if name is None:
+            name = 'pypet.%s' % type(self).__name__
+        else:
+            name = 'pypet.%s' % name
+        self._logger = logging.getLogger(name)
 
 
 class TrajectoryMock(object):
@@ -244,8 +301,31 @@ class LoggingManager(object):
             state_dict['log_config'] = True
         return state_dict
 
+    def show_progress(self, n, total_runs, multiproc=False, ncores=1, finish=False):
+        """Displays a progressbar"""
+        if self.report_progress:
+            percentage, logger_name, log_level = self.report_progress
+            if logger_name == 'print':
+                logger = 'print'
+            else:
+                logger = logging.getLogger(logger_name)
+
+            if finish:
+                real_n = total_runs - 1
+            elif multiproc:
+                real_n = n - ncores
+            else:
+                real_n = n - 1
+
+            if real_n >= 0:
+                fmt_string = 'PROGRESS: Finished %d/%d runs ' % (real_n + 1, total_runs) + '%s'
+                reprint = log_level == 0
+                progressbar(real_n, total_runs, percentage_step=percentage,
+                            logger=logger, log_level=log_level,
+                            fmt_string=fmt_string, reprint=reprint)
+
     def add_null_handler(self):
-        """Adds a NullHanlder to the root logger."""
+        """Adds a NullHandler to the root logger."""
         root = logging.getLogger()
         root.addHandler(self._null_handler)
 
@@ -255,7 +335,7 @@ class LoggingManager(object):
         root.removeHandler(self._null_handler)
 
     def tabula_rasa(self):
-        """ Removes all loggers and logging handlers and closes them. """
+        """Removes all loggers and logging handlers and closes them. """
         for logger in logging.Logger.manager.loggerDict.values():
             if hasattr(logger, 'handlers'):
                 for handler in logger.handlers:
@@ -271,7 +351,7 @@ class LoggingManager(object):
         """ Searches for parser settings that define filenames.
 
         If such settings are found, they are renamed according to the wildcard
-        rules. Moreover, it is also tried to create the according folders.
+        rules. Moreover, it is also tried to create the corresponding folders.
 
         :param parser:  A config parser
         :param section: A config section
@@ -366,7 +446,12 @@ class LoggingManager(object):
             if self.log_config == pypetconstants.DEFAULT_LOGGING:
                 pypet_path = os.path.abspath(os.path.dirname(__file__))
                 init_path = os.path.join(pypet_path, 'logging')
-                self.log_config = os.path.join(init_path, 'default.ini')
+                if os.sep == '\\':
+                    # Use the windows setting
+                    # The only differences is the path separator `\`
+                    self.log_config = os.path.join(init_path, 'windows_default.ini')
+                else:
+                    self.log_config = os.path.join(init_path, 'default.ini')
 
             if isinstance(self.log_config, compat.base_type):
                 if not os.path.isfile(self.log_config):
@@ -422,7 +507,7 @@ class LoggingManager(object):
         return parser
 
     def _handle_dict_config(self, log_config):
-        """Recursively walks and copies the log_config dict and searches for filenames.
+        """Recursively walks and copies the `log_config` dict and searches for filenames.
 
         Translates filenames and creates directories if necessary.
 
@@ -476,6 +561,7 @@ class LoggingManager(object):
             self._tools.append(stdout)
 
     def finalize(self, remove_all_handlers=True):
+        """Finalizes the manager, closes and removes all handlers if desired."""
         for tool in self._tools:
             tool.finalize()
         self._tools = []
@@ -501,7 +587,7 @@ class NullHandler(logging.Handler):
 
 
 class NoInterpolationParser(cp.ConfigParser):
-    """Dummy class to solve a Python 3 bug"""
+    """Dummy class to solve a Python 3 bug/feature in configparser.py"""
     def __init__(self):
         try:
             # Needed for Python 3, see [http://bugs.python.org/issue21265]
@@ -509,56 +595,6 @@ class NoInterpolationParser(cp.ConfigParser):
         except TypeError:
             # Python 2.x
             cp.ConfigParser.__init__(self)
-
-
-class HasLogger(object):
-    """Abstract super class that automatically adds a logger to a class.
-
-    To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
-    If ``name=None`` the logger name is picked as follows:
-
-        ``self._logger = logging.getLogger(type(self).__name__)``
-
-    The logger can be accessed via ``myobj._logger``.
-
-    """
-
-    def __getstate__(self):
-        """Called for pickling.
-
-        Removes the logger to allow pickling and returns a copy of `__dict__`.
-
-        """
-        state_dict = self.__dict__.copy()
-        if '_logger' in state_dict:
-            # Pickling does not work with loggers objects, so we just keep the logger's name:
-            state_dict['_logger'] = self._logger.name
-        return state_dict
-
-    def __setstate__(self, statedict):
-        """Called after loading a pickle dump.
-
-        Restores `__dict__` from `statedict` and adds a new logger.
-
-        """
-        self.__dict__.update(statedict)
-        if '_logger' in statedict:
-            # If we re-instantiate the component the logger attribute only contains a name,
-            # so we also need to re-create the logger:
-            self._set_logger(statedict['_logger'])
-
-    def _set_logger(self, name=None):
-        """Adds a logger with a given `name`.
-
-        If no name is given, name is constructed as
-        `type(self).__name__`.
-
-        """
-        if name is None:
-            name = 'pypet.%s' % type(self).__name__
-        else:
-            name = 'pypet.%s' % name
-        self._logger = logging.getLogger(name)
 
 
 class DisableLogger(object):
@@ -572,9 +608,7 @@ class DisableLogger(object):
 
 
 class StdoutToLogger(HasLogger):
-    """
-    Fake file-like stream object that redirects writes to a logger instance.
-    """
+    """Fake file-like stream object that redirects writes to a logger instance."""
     def __init__(self, logger_name, log_level=logging.INFO):
         self._logger_name = logger_name
         self._log_level = log_level
@@ -585,6 +619,11 @@ class StdoutToLogger(HasLogger):
         #self._logger = logging.getLogger(self._logger_name)
         self._set_logger(name=self._logger_name)
 
+    def __getstate__(self):
+        state_dict = super(StdoutToLogger, self).__getstate__()
+        # The original stream cannot be pickled
+        state_dict['_original_stream'] = None
+
     def start(self):
         if sys.stdout is not self:
             self._original_steam = sys.stdout
@@ -594,7 +633,7 @@ class StdoutToLogger(HasLogger):
             print('Established redirection of `stdout`.')
 
     def write(self, buf):
-        """Writes data from bugger to logger"""
+        """Writes data from buffer to logger"""
         if not self._recursion:
             self._recursion = True
             try:
@@ -611,11 +650,12 @@ class StdoutToLogger(HasLogger):
         pass
 
     def finalize(self):
-        if self._redirection:
+        """Disables redirection"""
+        if self._original_steam is not None and self._redirection:
             sys.stdout = self._original_steam
             print('Disabled redirection of `stdout`.')
-        self._redirection = False
-        self._original_steam = None
+            self._redirection = False
+            self._original_steam = None
 
 
 # class RemoveEmptyFileHandler(logging.FileHandler):

@@ -57,14 +57,14 @@ except ImportError:
 
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-from pypet.pypetlogging import LoggingManager, HasLogger, TrajectoryMock, old_logging_config
+from pypet.pypetlogging import LoggingManager, HasLogger, TrajectoryMock, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
-from pypet.utils.helpful_functions import is_debug, progressbar, remove_all_from_list
+from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 from pypet.parameter import Parameter
 
@@ -765,7 +765,7 @@ class Environment(HasLogger):
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @kwargs_api_change('pandas_append')
-    @old_logging_config
+    @simple_logging_config
     def __init__(self, trajectory='trajectory',
                  add_time=True,
                  comment='',
@@ -1725,27 +1725,11 @@ class Environment(HasLogger):
         self._traj.f_store(only_init=True)
 
     def _show_progress(self, n, total_runs, finish=False):
-        report_progress = self._logging_manager.report_progress
-        if report_progress:
-            percentage, logger_name, log_level = report_progress
-            if logger_name == 'print':
-                logger = 'print'
-            else:
-                logger = logging.getLogger(logger_name)
-
-            if finish:
-                real_n = total_runs - 1
-            elif self._multiproc:
-                real_n = n - self._ncores
-            else:
-                real_n = n - 1
-
-            if real_n >= 0:
-                fmt_string = 'PROGRESS: Finished %d/%d runs ' % (real_n + 1, total_runs) + '%s'
-                reprint = log_level == 0
-                progressbar(real_n, total_runs, percentage_step=percentage,
-                            logger=logger, log_level=log_level,
-                            fmt_string=fmt_string, reprint=reprint)
+        """Displays a progressbar"""
+        self._logging_manager.show_progress(n, total_runs,
+                                            multiproc=self._multiproc,
+                                            ncores=self._ncores,
+                                            finish=finish)
 
     def _make_iterator(self, result_queue, start_run_idx, total_runs):
         """ Returns an iterator over all runs for multiprocessing """

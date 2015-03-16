@@ -36,13 +36,13 @@ Brain Days and EuroPython Poster
 There is a poster about *pypet* that was shown at the `Berlin Brain Days 2013`_ and
 the `EuroPython 2014`_.
 
-.. image:: bbd_2013_poster/meyer_bbd_2013_small.png
+.. image:: ../bbd_2013_poster/meyer_bbd_2013_small.png
 
 Download:
 
-* :download:`CLICK ME for PDF DOWNLOAD <./bbd_2013_poster/meyer_bbd_2013.pdf>`
+* :download:`CLICK ME for PDF DOWNLOAD <../bbd_2013_poster/meyer_bbd_2013.pdf>`
 
-* :download:`CLICK ME for PNG DOWNLOAD <./bbd_2013_poster/meyer_bbd_2013.png>`
+* :download:`CLICK ME for PNG DOWNLOAD <../bbd_2013_poster/meyer_bbd_2013.png>`
 
 
 .. _`Berlin Brain Days 2013`: http://www.neuroscience-berlin.de/bbd/
@@ -95,7 +95,7 @@ and ``--folder=`` to specify a folder where to store the HDF5 files instead of t
 If the folder cannot be created, the program defaults to ``tempfile.gettempdir()``.
 
 If you do not want to browse to your installation folder, you can also download the
-:download:`all_tests.py <../../pypet/tests/all_tests.py>` script.
+:download:`all_tests.py <../../../pypet/tests/all_tests.py>` script.
 
 Running all tests can take up to 20 minutes and might temporarily take up to
 1 GB of disk space. The test suite encompasses more than **600** tests

@@ -238,7 +238,8 @@ Let's take a look at the snippet at once:
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01', log_folder='./LOGS/')
+                      file_title='Example_01',
+                      comment = 'I am the first example!')
 
     # Get the trajectory from the environment
     traj = env.v_trajectory
@@ -283,14 +284,14 @@ will run the simulation.
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01', log_folder='./LOGS/',
+                      file_title='Example_01',
                       comment = 'I am the first example!')
 
 
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
-store the trajectory into, the title of the file, a folder for the log files, and a
-comment that is added to the trajectory. There are more options available like
-the number of processors for multiprocessing or how verbose the final HDF5 file is supposed to be.
+store the trajectory into, the title of the file, and a comment that is added to the trajectory. 
+There are more options available like the number of processors for multiprocessing or 
+how verbose the final HDF5 file is supposed to be.
 Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 

@@ -1,16 +1,8 @@
 __author__ = 'Robert Meyer'
 
 import logging
-
-import pypet.pypetconstants as pypetconstants
-import pypet.compat as compat
-from pypet import HasLogger
-from pypet.pypetlogging import LoggingManager, rename_log_file
-from pypet.utils.decorators import copydoc
 import os
-
 import random
-
 import sys
 if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
@@ -20,10 +12,16 @@ try:
     import ConfigParser as cp
 except ImportError:
     import configparser as cp
-
 import shutil
 import getopt
 import tempfile
+
+import pypet.pypetconstants as pypetconstants
+import pypet.compat as compat
+from pypet import HasLogger
+from pypet.pypetlogging import LoggingManager, rename_log_file
+from pypet.utils.decorators import copydoc
+
 
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
@@ -53,8 +51,9 @@ def get_log_config():
     return testParams['log_config']
 
 
-def get_log_path(traj):
-    return rename_log_file(traj, generic_log_folder)
+def get_log_path(traj, process_name=None):
+    """Returns the path to the log files based on trajectory name etc."""
+    return rename_log_file(traj, generic_log_folder, process_name=process_name)
 
 
 def prepare_log_config():
@@ -65,7 +64,10 @@ def prepare_log_config():
     init_path = os.path.join(pypet_path, 'logging')
 
     if conf == 'test':
-        conf_file = os.path.join(init_path, 'test.ini')
+        if os.sep == '\\':
+            conf_file = os.path.join(init_path, 'windows_test.ini')
+        else:
+            conf_file = os.path.join(init_path, 'test.ini')
         conf_parser = handle_config_file(conf_file)
         conf = conf_parser
 
@@ -73,6 +75,7 @@ def prepare_log_config():
 
 
 def _rename_filename(filename):
+    """Replaces the $TEMP$ wildcard in a filename"""
     global generic_log_folder
 
     if not filename.startswith('$TEMP$'):
@@ -86,6 +89,7 @@ def _rename_filename(filename):
 
 
 def handle_config_file(config_file):
+    """Searches for the $TEMP$ wildcard in a given config file and replaces it."""
     parser = cp.ConfigParser()
     parser.read(config_file)
     sections = parser.sections()
@@ -319,5 +323,5 @@ def parse_args():
     sys.argv = [sys.argv[0]]
     return opt_dict
 
-# Prepare config on loading, if tests are not called via run_suite()
+# Prepare config on loading, just in case tests are not called via run_suite()
 prepare_log_config()

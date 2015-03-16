@@ -241,7 +241,7 @@ the *trajectory* can also be used to store results.
 All data that you hand over to a *trajectory* is automatically
 stored into an HDF5 file by the :class:`~pypet.storageservice.HDF5StorageService`.
 
-.. image:: figures/layout.png
+.. image:: ../figures/layout.png
     :width: 850
 
 
@@ -280,7 +280,7 @@ Let's take a look at the snippet at once:
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01', log_folder='./LOGS/',
+                      file_title='Example_01',
                       comment='I am a simple example!',
                       large_overview_tables=True)
 
@@ -340,13 +340,13 @@ care that the function ``multiply`` is called with each choice of parameters onc
 
     # Create an environment that handles running our simulation
     env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01', log_folder='./LOGS/',
+                      file_title='Example_01',
                       comment = 'I am a simple example!',
                       large_overview_tables=True)
 
 
 We pass some arguments here to the constructor. This is the name of the new trajectory,
-a filename to store the trajectory into, the title of the file, a folder for the log files, and a
+a filename to store the trajectory into, the title of the file, and a
 descriptive comment that is attached to the trajectory. We also set
 ``large_overview_tables=True`` to get a nice summary of all our computed :math:`z` values
 in a single table. This is disabled by default to yield smaller and more compact HDF5 files.

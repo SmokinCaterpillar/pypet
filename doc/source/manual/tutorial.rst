@@ -63,7 +63,7 @@ the previous three. Thus, using a complete different python script than for the 
 
 This conceptualization is depicted in the figure below:
 
-.. image:: figures/experiment_phases.png
+.. image:: ../figures/experiment_phases.png
     :width: 850
 
 
@@ -158,35 +158,13 @@ Yet, we will shortly discuss the most important ones here.
 
     A nice descriptive comment about what you are going to do in your numerical experiment.
 
-* ``log_folder``
+* ``log_config``
 
-    The environment automatically makes use of logging_. You can specify a folder where all
-    log-files should be stored. Default is `current_working_directory/logs/`. If
-    *pypet* should not create any log files, set ``log_folder=None``.
-
-* ``logger_names``
-
-    If your ``log_folder`` is not ``None``, you can specify a list (or tuple) of logger names for which
-    logging statements are actually recorded and stored into the files in the ``log_folder``.
-    Default is ``('',)``, that is the *root* logger. Accordingly, all loggers of your
-    program are recorded. If you only want to record from your own loggers and spare
-    all messages emitted by *pypet* (all *pypet* logger names start with ``'pypet.'``)
-    you could pass something like ``logger_names=('MyCustomLogger1, MyCustomLogger2, ...')``.
-
-* ``log_levels``
-
-    A list (or tuple) of levels, one for each logger you specified in ``logger_names``.
-    Only messages emitted by the loggers equal or higher than the level are recorded.
-    If ``logger_names`` contains several names but ``log_levels`` has only one entry,
-    the level is considered for all loggers. Default is ``log_levels=(logging.INFO,)``
-
-* ``log_stdout``
-
-    If ``log_stdout=True`` *pypet* will not only record logger messages but also all
-    ``print(...)`` statements within your program (to be precise ``stdout`` and ``stderr``
-    are redirected to loggers with names ``'STDOUT'`` and ``'STDERR'``).
-    Keep in mind if you use *pypet* in an interactive console like *IPython*,
-    you must set ``log_stdout=False``.
+    The name of a logging ``.ini`` file specifying the logging set up.
+    See :ref:`more-on-logging`, or the `logging documentation`_ and how to specify
+    `logging config files`_. If set to :const:`~pypet.pypetconstants.DEFAULT_LOGGING`
+    (``'DEFAULT'``) the default settings are used. Simply set to `None` if you want to
+    disable logging.
 
 * ``multiproc``
 
@@ -239,7 +217,7 @@ Ok, so let's start with creating an environment:
                             'Exploring different input currents, '
                             'as well as refractory periods',
                       add_time=False, # We don't want to add the current time to the name,
-                      log_folder='./logs/',
+                      log_config='DEFAULT',
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       filename='./hdf5/', # We only pass a folder here, so the name is chosen
@@ -944,7 +922,7 @@ we can spare us an environment and only use a trajectory container.
 
 The outcome of your little experiment should be the following image:
 
-.. image:: figures/tutorial.png
+.. image:: ../figures/tutorial.png
     :width: 850
 
 Finally, I just want to make some final remarks on the analysis script.
@@ -993,7 +971,9 @@ Cheers,
 
 .. _leaky integrate-and-fire model: http://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire
 
-.. _logging: https://docs.python.org/2/library/logging.html
+.. _logging config files: https://docs.python.org/2/library/logging.config.html#logging-config-fileformat
+
+.. _logging documentation: https://docs.python.org/2/library/logging.html
 
 .. _git: http://git-scm.com/
 

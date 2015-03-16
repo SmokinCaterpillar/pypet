@@ -157,6 +157,7 @@ def main():
                             'as well as refractory periods',
                       add_time=False, # We don't want to add the current time to the name,
                       log_stdout=True,
+                      log_config='DEFAULT',
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)
                       wrap_mode='QUEUE',
