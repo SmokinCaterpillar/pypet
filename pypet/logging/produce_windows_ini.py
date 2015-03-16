@@ -12,7 +12,7 @@ def main():
             with open(filename, mode='r') as fh:
                 all_text = fh.read()
 
-            windows_text = all_text.replace('/', '\\')
+            windows_text = all_text.replace('/', '\\\\')
 
             path, filename = os.path.split(filename)
             windows_filename = 'windows_' + filename
