@@ -443,6 +443,14 @@ class LoggingManager(object):
 
     def make_logging_handlers_and_tools(self, multiproc=False):
         """Creates logging handlers and redirects stdout."""
+
+        log_stdout = self.log_stdout
+        if multiproc and hasattr(os, 'fork'):
+            # If we allow forking and it is possible we already have a redirection of stdout
+            log_stdout = False
+            if not self.log_allow_fork:
+                self.tabula_rasa()
+
         if self.log_config:
             if multiproc:
                 proc_log_config = self._mp_config
@@ -458,7 +466,7 @@ class LoggingManager(object):
                     memory_file = self._parser_to_string_io(parser)
                     logging.config.fileConfig(memory_file, disable_existing_loggers=False)
 
-        if self.log_stdout:
+        if log_stdout:
             #  Create a logging mock for stdout
             std_name, std_level = self.log_stdout
 

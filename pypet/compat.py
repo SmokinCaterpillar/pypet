@@ -6,10 +6,11 @@ Module to allow the same code to work with both Python 2 and 3.
 
 import sys
 
-python = sys.version_info[0]
+python_major = sys.version_info[0]
+python_minor = sys.version_info[1]
 python_version_string = '.'.join([str(x) for x in sys.version_info[0:3]])
 
-if python == 2:
+if python_major == 2:
 
     # different types of ints
     int_types = (int, long)
@@ -44,7 +45,7 @@ if python == 2:
     xrange = xrange
     # Returns the iterator function range
 
-elif python == 3:
+elif python_major == 3:
 
     int_types = (int,)
     long_type = int

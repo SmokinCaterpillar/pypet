@@ -72,15 +72,9 @@ from pypet.parameter import Parameter
 def _configure_logging(kwargs):
     try:
         logging_manager = kwargs['logging_manager']
-        if hasattr(os, 'fork'):
-            # If we allow forking and it is possible we already have a redirection of stdout
-            logging_manager.log_stdout = False
-        tabula_rasa = not logging_manager.log_allow_fork and hasattr(os, 'fork')
-        if tabula_rasa:
-            logging_manager.tabula_rasa()
         logging_manager.make_logging_handlers_and_tools(multiproc=True)
     except Exception as exc:
-        sys.stderr.write('Could not create log file because of: %s' % str(exc))
+        sys.stderr.write('Could not configure logging system because of: %s' % str(exc))
         traceback.print_exc()
 
 def _logging_and_single_run(kwargs):

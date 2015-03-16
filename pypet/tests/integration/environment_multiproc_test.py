@@ -10,6 +10,8 @@ from pypet.tests.integration.environment_test import EnvironmentTest, ResultSort
 from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajectory_name, \
      parse_args, get_log_config
 from pypet.tests.testutils.data import create_param_dict, add_params
+import pypet.compat as compat
+import sys
 
 
 class MultiprocQueueTest(EnvironmentTest):
@@ -130,8 +132,22 @@ class CapTest(EnvironmentTest):
 
         random.seed()
 
-
-        env = Environment(trajectory=self.trajname,filename=self.filename,
+        if sys.version_info < (2, 7, 0):
+            # Python 2.6 does not support dictConfig, i.e. `log_folder`, `log_levels` etc.
+            env = Environment(trajectory=self.trajname,filename=self.filename,
+                          file_title=self.trajname,
+                          log_allow_fork=False, log_stdout=False,
+                          log_config=None,
+                          results_per_run=5,
+                          derived_parameters_per_run=5,
+                          multiproc=True,
+                          ncores=3,
+                          cpu_cap=0.001, # Ensure that these are triggered
+                          memory_cap=0.001,
+                          swap_cap=0.001,
+                          use_pool=False)
+        else:
+            env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           logger_names=('pypet', 'test', ''), log_levels='INFO',
                           log_allow_fork=False, log_stdout=False,

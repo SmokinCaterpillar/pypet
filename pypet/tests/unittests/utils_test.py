@@ -170,7 +170,7 @@ class TestDictionaryMethods(unittest.TestCase):
         self.assertTrue(flattened == expected)
 
 
-@unittest.skipIf(compat.python >= 3, 'Only supported for python 2')
+@unittest.skipIf(compat.python_major >= 3, 'Only supported for python 2')
 class TestNewTreeTranslation(unittest.TestCase):
 
     tags = 'unittest', 'utils', 'legacy'

@@ -51,7 +51,7 @@ def fail_on_diff():
 
 def main(fail=False):
     try:
-        if compat.python == 3:
+        if compat.python_major == 3:
             print('Running Python 3, will not use Sumatra.')
             sumatra_project = None
         else:

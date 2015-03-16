@@ -1,15 +1,19 @@
 __author__ = 'Robert Meyer'
 
 import logging
+import os
+import sys
+if (sys.version_info < (2, 7, 0)):
+    import unittest2 as unittest
+else:
+    import unittest
 
 from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import parse_args, run_suite, get_root_logger, make_temp_dir,\
-    make_trajectory_name,  get_log_config, get_log_path, prepare_log_config
-import pypet.tests.testutils.ioutils as ioutils
-from pypet import Environment, Trajectory
-import pypet.pypetconstants as pypetconstants
-import os
+from pypet.tests.testutils.ioutils import parse_args, run_suite, make_temp_dir,\
+    make_trajectory_name,  get_log_config, get_log_path
+from pypet import Environment
+
 
 
 class LogWhenStored(Result):
@@ -250,7 +254,8 @@ class LoggingTest(TrajectoryComparator):
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
 
-      # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
     def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return
@@ -345,9 +350,9 @@ class LoggingTest(TrajectoryComparator):
         filename = make_temp_dir(filename)
         folder = make_temp_dir('logs')
         env = Environment(trajectory=make_trajectory_name(self),
-                          filename=filename, #log_config=get_log_config(),
-                          log_levels=logging.CRITICAL, # needed for the test
-                          log_stdout=('STDOUT', 50), log_folder=folder
+                          filename=filename, log_config=get_log_config(),
+                          # log_levels=logging.CRITICAL, # needed for the test
+                          log_stdout=('STDOUT', 50), #log_folder=folder
                           )
 
         env.f_run(log_error)
@@ -364,12 +369,13 @@ class LoggingTest(TrajectoryComparator):
 
         self.assertTrue(mainstr in full_text)
         self.assertTrue('4444444' not in full_text)
-        self.assertTrue('ERROR' not in full_text)
+        self.assertTrue('DEBUG' not in full_text)
 
 
     def test_logging_show_progress(self):
-        self.make_env(log_config=None,log_folder=make_temp_dir('logs'),
-                      log_levels=logging.ERROR,
+        self.make_env(log_config=get_log_config(),
+                      # log_folder=make_temp_dir('logs'),
+                      # log_levels=logging.ERROR,
                       report_progress=(3, 'progress', 40))
         self.add_params(self.traj)
         self.explore(self.traj)
