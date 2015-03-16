@@ -160,10 +160,10 @@ def rename_log_file(traj, filename, process_name=None):
     :const:`~pypet.pypetconstants.LOG_TRAJ` ($TRAJ$) is replaced by the name of the
     trajectory.
 
-    :const:`~pypet.pypetconstants.LOG_LOG_RUN` ($RUN$) is replaced by the name of the current
+    :const:`~pypet.pypetconstants.LOG_RUN` ($RUN$) is replaced by the name of the current
     run. If the trajectory is not set to a run 'run_ALL' is used.
 
-    :const:`~pypet.pypetconstants.LOG_LOG_PROC` ($PROC$) is replaced by the name fo the
+    :const:`~pypet.pypetconstants.LOG_PROC` ($PROC$) is replaced by the name fo the
     current process.
 
     :param traj:  A trajectory container
@@ -205,7 +205,7 @@ class HasLogger(object):
     """Abstract super class that automatically adds a logger to a class.
 
     To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
-    If ``name=None`` the logger name is picked as follows:
+    If ``name=None`` the logger name is chosen as follows:
 
         ``self._logger = logging.getLogger(type(self).__name__)``
 

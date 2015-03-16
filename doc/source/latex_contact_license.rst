@@ -2,4 +2,4 @@
 Contact and License
 ===================
 
-.. include:: ../manual/contact_license.rst
+.. include:: contact_license.rst

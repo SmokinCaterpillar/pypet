@@ -61,48 +61,28 @@ because most of the time the default settings are sufficient.
     Be aware of data loss if you set this to ``False`` and not
     manually store everything.
 
+* ``log_config``
 
-* ``log_folder``
+    Can be path to a logging `.ini` file specifying the logging configuration.
+    For an example of such a file see :ref:`more-on-logging`.
+    Can also be a dictionary that is accepted by the built-in logging module.
+    Set to `None` if you don't want *pypet* to configure logging.
 
-    The ``log_folder`` specifies where all log files will be stored.
-    The environment will create a sub-folder with the name of the trajectory and the name
-    of the environment where all txt files will be put.
-    The environment will create a major logfile (*main.txt*) incorporating all messages of the
-    current log level and beyond and
-    a log file that only contains warnings and errors *errors_and_warnings.txt*.
+    If not specified, the default settings are used. Moreover, you can manually tweak the
+    default settings (only python 2.7 and up) without creating a new `ini` file.
+    Instead of the `log_config` parameter, pass a ``log_folder``,
+    a list of `logger_names` and corresponding `log_levels` to fine grain
+    the loggers to which the default settings apply.
 
-    Moreover, if you use multiprocessing,
-    there will be a log file for every single run and process named
-    *run_XXXXXXXX_process_YYYY.txt* with *XXXXXXXX* the run id and *YYYY* the process
-    id. It contains all log messages produced by the corresponding process within the single run.
+    For example:
 
-    If you don't want the logging message stored to the file system set to ``None``.
+    ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
 
-    If you don't set a log level elsewhere before, the standard level will be *INFO*
-    (if you have no clue what I am talking about, take a look at the logging_ module).
+* ``log_allow_fork``
 
-* ``logger_names``
-
-    List or tuple of logger names to which the logging settings apply, i.e which log messages
-    are stored to disk by *pypet*.
-    Default is root ``('',)``, i.e.  all logging messages are logged to the folder
-    specified above. For instance, if you only want *pypet* to save messages created by itself
-    and not by your own loggers use ``logger_names='(pypet,)'``. If you only
-    want to store message from your custom loggers, you could pass the names of your
-    loggers, like ``logger_names=('MyCustomLogger1', 'MyCustomLogger2', ...)``.
-    Or, for example, if you only want to store messages from
-    ``stdout`` and ``stderr`` set ``logger_names`` to ``('STDOUT','STDERR')``.
-
-* ``log_levels``
-
-    List or tuple of log levels with the same length as ``logger_names``.
-    If the length is 1 and ``loger_names`` has more than 1 entry,
-    the log level is used for all loggers.
-
-    Default is level ``(logging.INFO,)``.
-    If you choose ``(logging.DEBUG,)`` more verbose statements will be displayed.
-    Set to ``None`` if you don't want to set log-levels or if you already
-    specified log-levels somewhere else.
+    Only important on *Unix* systems that allow forking of child processes for multiprocessing.
+    If you want to erase all log settings in the forked child processes and create new
+    logging settings, set this to `False`. This is recommended to avoid garbled log files.
 
 * ``log_stdout``
 
@@ -110,6 +90,20 @@ because most of the time the default settings are sufficient.
     Disable if only logging statement should be recorded. Note if you work with an
     interactive console like *IPython*, it is a good idea to set ``log_stdout=False``
     to avoid messing up the console output.
+
+* ``report_progress``
+
+    If progress of runs and an estimate of the remaining time should be shown.
+    Can be `True` or `False` or a triple ``(10, 'pypet', logging.Info)`` where the first number
+    is the percentage and update step of the resulting progressbar and
+    the second one is a corresponding logger name with which the progress should be logged.
+    If you use `'print'`, the `print` statement is used instead. The third value
+    specifies the logging level (level of logging statement *not* a filter)
+    with which the progress should be logged.
+
+    Note that the progress is based on finished runs. If you use the `QUEUE` wrapping
+    in case of multiprocessing and if storing takes long, the estimate of the remaining
+    time might not be very accurate.
 
 * ``multiproc``
 
@@ -443,31 +437,23 @@ potentially be run by several environments due to merging or extending an existi
 Thus, you will be able to track how your trajectory was built over time.
 
 
+.. _more-on-logging:
+
 ^^^^^^^
 Logging
 ^^^^^^^
 
 Per default the environment will created loggers_ and stores all logged messages
-to log files. This includes also everything written to the standard streams ``stdout`` and
-``stderr``, like ``print`` statements, for instance. To disable logging of the standard streams
+to log files. This includes also everything written to the standard stream ``stdout``,
+like ``print`` statements, for instance. To disable logging of the standard streams
 set ``log_stdout=False``. Note that you should always do this in case you use an interactive
-console like *IPython*. Otherwise your console output will be garbled due to the redirection
-of standard streams.
+console like *IPython*. Otherwise your console output will be garbled.
 
-You can find the log files in the ``log_folder`` you specified. They are placed in
-a sub-folder with the name of the current *trajectory* and the current *environment*.
-To disable logging to files simply set ``log_folder=None``.
-
-Moreover, you can fine tune what is supposed to be logged to files.
-By passing a list of ``logger_names`` you tell *pypet* which loggers should be recorded
-to the files (default is the root logger, i.e. all loggers,
-``logger_names=('',)``).
-Accordingly, you can set individual log levels for all these
-loggers via a ``log_levels`` list of same length (default is ``log_levels=(logging.INFO,)``).
+#TODO!!!!!!
 
 After your experiments are finished you can disable logging to files via
 :func:`~pypet.environment.Environment.f_disable_logging`. This also restores the
-standard streams.
+standard stream.
 
 Furthermore, an environment can also be used as a context manager such that logging
 is automatically disabled in the end:
@@ -478,9 +464,7 @@ is automatically disabled in the end:
     from pypet import Environment
 
     with Environment(trajectory='mytraj',
-                     log_folder='logs',
-                     logger_names=('',),
-                     log_levels=(logging.DEBUG),
+                     log_config='DEFAULT,
                      log_stdout=True) as env:
         traj = env.v_trajectory
 
@@ -494,9 +478,7 @@ This is equivalent to:
     from pypet import Environment
 
     env = Environment(trajectory='mytraj',
-                      log_folder='logs',
-                      logger_names=('',),
-                      log_levels=(logging.DEBUG,),
+                      log_config='DEFAULT'
                       log_stdout=True)
     traj = env.v_trajectory
 

@@ -67,7 +67,7 @@ The documentation is also available for `download in PDF format`_.
 .. _download in PDF format: https://media.readthedocs.org/pdf/pypet/latest/pypet.pdf
 
 
-.. include:: manual/contact_license.rst
+.. include:: contact_license.rst
 
 
 -----

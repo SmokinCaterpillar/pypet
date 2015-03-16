@@ -17,4 +17,4 @@ D-10587 Berlin
 License
 -------
 
-.. literalinclude:: ../../../LICENSE
+.. literalinclude:: ../../LICENSE

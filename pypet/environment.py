@@ -255,29 +255,28 @@ class Environment(HasLogger):
         and the name of the environment.
         If you don't want any log files, set to ``None``.
 
-    :param logger_names:
+    :param log_config:
 
-        List or tuple of logger names to which the logging settings apply.
-        Default is root ``('',)``, i.e.  all logging messages are logged to the folder
-        specified above. For instance, if you only want *pypet* to save messages created by itself
-        and not by your own loggers use ``logger_names='(pypet,)'``. If you only
-        want to store message from your custom loggers, you could pass the names of your
-        loggers, like ``logger_names=('MyCustomLogger1', 'MyCustomLogger2', ...)``.
-        Or, for example, if you only want to store messages from
-        ``stdout`` and ``stderr`` set ``logger_names`` to ``('STDOUT','STDERR')``.
+        Can be path to a logging `.ini` file specifying the logging configuration.
+        For an example of such a file see :ref:`more-on-logging`.
+        Can also be a dictionary that is accepted by the built-in logging module.
+        Set to `None` if you don't want *pypet* to configure logging.
 
-    :param log_levels:
+        If not specified, the default settings are used. Moreover, you can manually tweak the
+        default settings (only python 2.7 and up) without creating a new `ini` file.
+        Instead of the `log_config` parameter, pass a ``log_folder``,
+        a list of `logger_names` and corresponding `log_levels` to fine grain
+        the loggers to which the default settings apply.
 
-        List or tuple of log levels with the same length as ``logger_names``.
-        If the length is 1 and ``logger_names`` has more than 1 entry,
-        the log level is used for all loggers.
+        For example:
 
-        Defines the lower filtering level for the logger.
+        ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
 
-        Default is level ``(logging.INFO,)``.
-        If you choose ``(logging.DEBUG,)`` more verbose statements will be displayed.
-        Set to ``None`` if you don't want to set log-levels or if you already
-        specified log-levels somewhere else.
+    :param log_allow_fork:
+
+        Only important on *Unix* systems that allow forking of child processes for multiprocessing.
+        If you want to erase all log settings in the forked child processes and create new
+        logging settings, set this to `False`. This is recommended to avoid garbled log files.
 
     :param log_stdout:
 
@@ -287,41 +286,7 @@ class Environment(HasLogger):
         to avoid messing up the console output.
 
         Can also be a tuple: ('mylogger', 10), specifying a logger name as well as a log-level.
-        The log-level defines with what level `stdout` is logged, it is *not* a filter value
-        as above for `log-levels`.
-
-    :param log_options:
-
-        Defines which logging handlers are created, can be combination of:
-
-        :const:`~pypet.pypetconstants.LOG_MODE_FILE`: ('FILE')
-
-            Logs messages into file(s). In case of multiprocessing there's one file per run.
-
-        :const:`~pypet.pypetconstants.LOG_MODE_QUEUE`: ('QUEUE')
-
-            Logs messages into a single file. Uses a queue process that digests logging statements in
-            the background.
-
-        :const:`~pypet.pypetconstants.LOG_MODE_STREAM`: ('STREAM'):
-
-            Logs all messages to standard output (stderr).
-            In case of multiprocessing this can lead to a garbled
-            output, better use `STREAM_QUEUE_MODE` instead.
-
-        :const:`~pypet.pypetconstants.LOG_MODE_QUEUE_STREAM`: ('STREAM_QUEUE')
-
-            Logs all messages to standard output (stderr),
-            but with a queue process in the background to avoid
-            garbled output in case of multiprocessing.
-
-        :const:`~pypet.pypetconstants.LOG_MODE_MAIN_STREAM`: ('MAIN_STREAM')
-
-            Logs messages only from the main process to standard output (stderr).
-
-        :const:`~pypet.pypetconstants.LOG_MODE_NULL`: ('NULL')
-
-            No handling of log messages
+        The log-level defines with what level `stdout` is logged, it is *not* a filter.
 
     :param report_progress:
 
@@ -772,8 +737,8 @@ class Environment(HasLogger):
                  dynamic_imports=None,
                  automatic_storing=True,
                  log_config=pypetconstants.DEFAULT_LOGGING,
-                 log_stdout=('STDOUT', logging.INFO),
                  log_allow_fork=False,
+                 log_stdout=('STDOUT', logging.INFO),
                  report_progress = (5, 'pypet', logging.INFO),
                  multiproc=False,
                  ncores=1,
@@ -2255,33 +2220,20 @@ class MultiprocContext(HasLogger):
         You can pass a multiprocessing queue here, if you already instantiated one.
         Leave ``None`` if you want the wrapper to create one in case of ''`QUEUE'`` wrapping.
 
-    :param log_path:
+    :param log_config:
 
-        You can specify an absolute path to a folder where log files should be stored
-        in case you instantiated logging.
-        Only useful in case of you use the ``'QUEUE'`` wrapping. Messages from the newly
-        started queue process will be logged to a file. Note that
-        messages of your custom sub-processes are not automatically logged,
-        you have to enable this manually in your processes.
+        Path to logging config file or dictionary to configure logging for the
+        spawned queue process. Thus, only considered if the queue wrap mode is chosen.
 
-        Leave ``None`` if you don't want messages from the queue process to be logged to
-        a file.
+    :param log_allow_fork:
 
-    :param logger_names:
-
-        List of logger names for the queue process
-
-    :param log_levels:
-
-        The logging levels if you use logging
+        If logging configuration should be forked from parent process. `False` is recommended.
 
     :param log_stdout:
 
-        If stdout and stderr of the queue process should also be logged.
+        If stdout of the queue process should also be logged.
 
-    :param log_options:
 
-        If a new stream handler should be added to each logger for the queue process.
 
 
     For an usage example see :ref:`example-16`.
@@ -2296,8 +2248,8 @@ class MultiprocContext(HasLogger):
                  queue=None,
                  start_queue_process=True,
                  log_config=None,
-                 log_stdout=False,
-                 log_allow_fork=False):
+                 log_allow_fork=False,
+                 log_stdout=False):
 
         self._set_logger()
 
