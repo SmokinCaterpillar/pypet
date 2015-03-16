@@ -32,11 +32,6 @@ def main():
     env = Environment(trajectory='Example_04_MP',
                       filename=filename,
                       file_title='Example_04_MP',
-                      log_folder=log_folder,
-                      # Let's use logging better suited for multiprocessing
-                      log_options=(pypetconstants.LOG_MODE_QUEUE, pypetconstants.LOG_MODE_QUEUE_STREAM),
-                      log_levels=logging.INFO,
-                      log_stdout=False,
                       comment = 'Multiprocessing example!',
                       multiproc=True,
                       ncores=2,

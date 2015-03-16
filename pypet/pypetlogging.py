@@ -363,18 +363,19 @@ class LoggingManager(object):
                                         logging.INFO)
 
         if self.log_config:
-            if isinstance(self.log_config, compat.base_type):
-                if not os.path.isfile(file):
-                    raise ValueError('Could not find the logger init file '
-                                     '`%s`.' % self.log_config)
-
             if self.log_config == pypetconstants.DEFAULT_LOGGING:
                 pypet_path = os.path.abspath(os.path.dirname(__file__))
                 init_path = os.path.join(pypet_path, 'logging')
                 self.log_config = os.path.join(init_path, 'default.ini')
 
             if isinstance(self.log_config, compat.base_type):
-                parser = NoInterpolationParser(self.log_config)
+                if not os.path.isfile(self.log_config):
+                    raise ValueError('Could not find the logger init file '
+                                     '`%s`.' % self.log_config)
+
+            if isinstance(self.log_config, compat.base_type):
+                parser = NoInterpolationParser()
+                parser.read(self.log_config)
             elif isinstance(self.log_config, cp.RawConfigParser):
                 parser = self.log_config
             else:
