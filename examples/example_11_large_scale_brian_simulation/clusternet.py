@@ -492,12 +492,12 @@ class CNNetworkRunner(NetworkRunner):
 
     def add_parameters(self, traj):
         """Adds all necessary parameters to `traj` container."""
-        par= traj.f_add_parameter(BrianParameter,'simulation.durations.initial_run', 1000*ms,
+        par= traj.f_add_parameter(BrianParameter,'simulation.durations.initial_run', 500*ms,
                              comment='Initialisation run for more realistic '
                                             'measurement conditions.')
 
         par.v_annotations.order=0
-        par=traj.f_add_parameter(BrianParameter,'simulation.durations.measurement_run', 5000*ms,
+        par=traj.f_add_parameter(BrianParameter,'simulation.durations.measurement_run', 2000*ms,
                              comment='Measurement run that is considered for '
                                                 'statistical evaluation')
         par.v_annotations.order=1

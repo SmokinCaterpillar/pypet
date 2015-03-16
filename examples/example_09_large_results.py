@@ -11,7 +11,7 @@ from pypet import pypetconstants
 
 # We can create a trajectory and hand it a filename directly and it will create an
 # HDF5StorageService for us:
-filename = os.path.join('experiments', 'example_09', 'HDF5', 'example_09.hdf5')
+filename = os.path.join('hdf5', 'example_09.hdf5')
 traj = Trajectory(name='example_09_huge_data',
                   filename=filename)
 

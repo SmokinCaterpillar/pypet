@@ -20,12 +20,10 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-filename = os.path.join('experiments', 'example_01', 'HDF5','example_01.hdf5')
-log_folder = os.path.join('experiments','example_01', 'LOGS')
+filename = os.path.join('hdf5','example_01.hdf5')
 env = Environment(trajectory='Multiplication',
                   filename=filename,
                   file_title='Example_01_First_Steps',
-                  log_folder=log_folder,
                   comment='The first example!',
                   large_overview_tables=True,  # To see a nice overview of all
                   # computed `z` values in the resulting HDF5 file.

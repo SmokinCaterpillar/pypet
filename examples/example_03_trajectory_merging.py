@@ -14,14 +14,13 @@ def multiply(traj):
 
 
 # Create 2 environments that handle running
-filename = os.path.join('experiments', 'example_03', 'HDF5', 'example_03.hdf5')
-log_folder = os.path.join('experiments', 'example_03', 'LOGS')
+filename = os.path.join('hdf5', 'example_03.hdf5')
 env1 = Environment(trajectory='Traj1',filename=filename,
-                  file_title='Example_03', log_folder=log_folder,
+                  file_title='Example_03',
                   comment='I will be increased!')
 
 env2 = Environment(trajectory='Traj2',filename=filename,
-                  file_title='Example_03', log_folder=None, # One environment keeping log files
+                  file_title='Example_03', log_config=None, # One environment keeping log files
                   # is enough
                   comment = 'I am going to be merged into some other trajectory!')
 

@@ -6,7 +6,7 @@ from pypet import Trajectory, NotUniqueNodeError
 
 
 # We first generate a new Trajectory
-filename = os.path.join('experiments', 'example_02', 'HDF5', 'example_02.hdf5')
+filename = os.path.join('hdf5', 'example_02.hdf5')
 traj = Trajectory('Example', filename=filename,
                   comment='Access and Storage!')
 

@@ -18,12 +18,10 @@ from clusternet import CNMonitorAnalysis, CNNeuronGroup, CNNetworkRunner, CNConn
 
 
 def main():
-    filename = os.path.join('experiments', 'example_11', 'HDF5', 'Clustered_Network.hdf5')
-    log_folder = os.path.join('experiments', 'example_11', 'LOGS')
+    filename = os.path.join('hdf5', 'Clustered_Network.hdf5')
     env = Environment(trajectory='Clustered_Network',
                       add_time=False,
                       filename=filename,
-                      log_folder=log_folder,
                       continuable=False,
                       lazy_debug=False,
                       multiproc=True,
@@ -36,7 +34,7 @@ def main():
     traj = env.v_trajectory
 
     # We introduce a `meta` parameter that we can use to easily rescale our network
-    scale = 0.25 # To obtain the results from the paper scale this to 1.0
+    scale = 0.5  # To obtain the results from the paper scale this to 1.0
     # Be aware that your machine will need a lot of memory then!
     traj.f_add_parameter('simulation.scale', scale,
             comment='Meta parameter that can scale default settings. '
@@ -59,7 +57,7 @@ def main():
 
     # We need `tolist` here since our parameter is a python float and not a
     # numpy float.
-    explore_list = np.arange(1.0, 2.6, 0.25).tolist()
+    explore_list = np.arange(1.0, 2.6, 0.2).tolist()
     # Explore different values of `R_ee`
     traj.f_explore({'R_ee' : explore_list})
 

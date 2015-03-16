@@ -150,13 +150,11 @@ def diff_lorenz(value_array, sigma, beta, rho):
 # And here goes our main function
 def main():
 
-    filename = os.path.join('experiments', 'example_05', 'HDF5', 'example_05.hdf5')
-    log_folder = os.path.join('experiments', 'example_05', 'LOGS')
+    filename = os.path.join('hdf5', 'example_05.hdf5')
     env = Environment(trajectory='Example_05_Euler_Integration',
                       filename=filename,
                       file_title='Example_05_Euler_Integration',
-                      log_folder=log_folder,
-                      comment = 'Go for Euler!')
+                      comment='Go for Euler!')
 
 
     traj = env.v_trajectory

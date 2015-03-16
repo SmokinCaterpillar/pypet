@@ -26,12 +26,10 @@ def multiply(traj, result_list):
 
 def main():
     # Create an environment that handles running
-    filename = os.path.join('experiments', 'example_12', 'HDF5', 'example_12.hdf5')
-    log_folder = os.path.join('experiments', 'example_12', 'LOGS')
+    filename = os.path.join('hdf5', 'example_12.hdf5')
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_12_Sharing_Data',
-                      log_folder=log_folder,
                       comment='The first example!',
                       continuable=False, # We have shared data in terms of a multiprocessing list,
                       # so we CANNOT use the continue feature.

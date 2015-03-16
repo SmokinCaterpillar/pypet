@@ -20,12 +20,10 @@ def multiply(traj):
 
 
 # Create an environment that handles running
-filename = os.path.join('experiments', 'example_14', 'HDF5','example_14.hdf5')
-log_folder = os.path.join('experiments','example_14', 'LOGS')
+filename = os.path.join('hdf5','example_14.hdf5')
 env = Environment(trajectory='Multiplication',
                   filename=filename,
                   file_title='Example_14_Links',
-                  log_folder=log_folder,
                   comment='How to use links')
 
 # The environment has created a trajectory container for us

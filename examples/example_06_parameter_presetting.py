@@ -75,12 +75,10 @@ def diff_roessler(value_array, a, c):
 # And here goes our main function
 def main():
 
-    filename = os.path.join('experiments', 'example_06', 'HDF5', 'example_06.hdf5')
-    log_folder = os.path.join('experiments', 'example_06', 'LOGS')
+    filename = os.path.join('hdf5', 'example_06.hdf5')
     env = Environment(trajectory='Example_06_Euler_Integration',
                       filename=filename,
                       file_title='Example_06_Euler_Integration',
-                      log_folder=log_folder,
                       comment = 'Go for Euler!')
 
 

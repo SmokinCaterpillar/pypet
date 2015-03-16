@@ -30,7 +30,7 @@ def main():
     # We don't use an environment so we enable logging manually
     logging.basicConfig(level=logging.INFO)
 
-    filename = os.path.join('experiments', 'example_16', 'HDF5','example_16.hdf5')
+    filename = os.path.join('hdf5','example_16.hdf5')
     traj = Trajectory(filename=filename, overwrite_file=True)
 
     # The result that will be manipulated

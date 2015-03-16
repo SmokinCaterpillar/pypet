@@ -95,12 +95,10 @@ def main():
 
 
     # Let's do multiprocessing this time with a lock (which is default)
-    filename = os.path.join('experiments', 'example_07', 'HDF5', 'example_07.hdf5')
-    log_folder = os.path.join('experiments', 'example_07', 'LOGS')
+    filename = os.path.join('hdf5', 'example_07.hdf5')
     env = Environment(trajectory='Example_07_BRIAN',
                       filename=filename,
-                      file_title='Example_07_Euler_Integration',
-                      log_folder=log_folder,
+                      file_title='Example_07_Brian',
                       comment = 'Go Brian!',
                       dynamically_imported_classes=[BrianMonitorResult, BrianParameter],
                       multiproc=True,

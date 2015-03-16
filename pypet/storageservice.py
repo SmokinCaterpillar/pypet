@@ -874,9 +874,10 @@ class HDF5StorageService(StorageService, HasLogger):
         if overwrite_file:
             try:
                 os.remove(filename)
-                self._logger.info('You specified ``overwrite_file=True``, so I deleted file `%s`.' %
-                                  filename)
+                self._logger.info('You specified ``overwrite_file=True``, so I deleted the '
+                                  'file `%s`.' % filename)
             except OSError:
+                # File not found, we're good
                 pass
 
         # We don't want the NN warnings of Pytables to display because they can be

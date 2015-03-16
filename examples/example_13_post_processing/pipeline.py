@@ -33,8 +33,6 @@ def main():
                             'Exploring different input currents, '
                             'as well as refractory periods',
                       add_time=False, # We don't want to add the current time to the name,
-                      log_folder='logs',
-                      log_level=logging.INFO,
                       log_stdout=True,
                       multiproc=True,
                       ncores=2, #My laptop has 2 cores ;-)

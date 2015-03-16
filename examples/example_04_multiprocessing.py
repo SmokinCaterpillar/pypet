@@ -27,8 +27,7 @@ def main():
 
     # Create an environment that handles running.
     # Let's enable multiprocessing with 2 workers.
-    filename = os.path.join('experiments', 'example_04', 'HDF5', 'example_04.hdf5')
-    log_folder = os.path.join('experiments', 'example_04', 'LOGS')
+    filename = os.path.join('hdf5', 'example_04.hdf5')
     env = Environment(trajectory='Example_04_MP',
                       filename=filename,
                       file_title='Example_04_MP',

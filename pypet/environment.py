@@ -774,7 +774,7 @@ class Environment(HasLogger):
                  log_config=pypetconstants.DEFAULT_LOGGING,
                  log_stdout=('STDOUT', logging.INFO),
                  log_allow_fork=False,
-                 report_progress = (10, 'pypet', logging.INFO),
+                 report_progress = (5, 'pypet', logging.INFO),
                  multiproc=False,
                  ncores=1,
                  use_pool=False,
@@ -1743,7 +1743,8 @@ class Environment(HasLogger):
             if real_n >= 0:
                 fmt_string = 'PROGRESS: Finished %d/%d runs ' % (real_n + 1, total_runs) + '%s'
                 reprint = log_level == 0
-                progressbar(real_n, total_runs, logger=logger, log_level=log_level,
+                progressbar(real_n, total_runs, percentage_step=percentage,
+                            logger=logger, log_level=log_level,
                             fmt_string=fmt_string, reprint=reprint)
 
     def _make_iterator(self, result_queue, start_run_idx, total_runs):
