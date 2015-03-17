@@ -369,7 +369,9 @@ class LoggingManager(object):
                 newstring = rename_func(string)
                 if make_dirs:
                     try_make_dirs(newstring)
-                args = args.replace(string, newstring)
+                raw_string = string.replace('\\', '\\\\')
+                raw_newstring = newstring.replace('\\', '\\\\')
+                args = args.replace(raw_string, raw_newstring)
                 replace = True
         if replace:
             parser.set(section, option, args)
