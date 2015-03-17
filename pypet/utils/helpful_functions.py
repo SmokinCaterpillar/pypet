@@ -91,7 +91,7 @@ class _Progressbar(object):
         self._current = int(int(index / self._total_norm) / percentage_step)
 
     def __call__(self, index, total, percentage_step=10, logger='print', log_level=logging.INFO,
-                 reprint=False, time=True, reset=False, fmt_string=None):
+                 reprint=False, time=True, fmt_string=None, reset=False):
         """Plots a progress bar to the given `logger` for large for loops.
 
         To be used inside a for-loop at the end of the loop.
@@ -110,10 +110,6 @@ class _Progressbar(object):
             If no new line should be plotted but carriage return (works only for printing)
 
         :param time: If the remaining time should be calculated and displayed
-        :param reset:
-
-            If the progressbar should be restarted. If progressbar is called with a lower
-            index than the one before, the progressbar is automatically restarted.
 
         :param fmt_string:
 
@@ -123,6 +119,11 @@ class _Progressbar(object):
         :return:
 
             The progressbar string or None if the string has not been updated.
+
+        :param reset:
+
+            If the progressbar should be restarted. If progressbar is called with a lower
+            index than the one before, the progressbar is automatically restarted.
 
         """
         indexp1 = index + 1
@@ -145,10 +146,12 @@ class _Progressbar(object):
                     except AttributeError:
                         total_seconds = ((time_delta.microseconds +
                                             (time_delta.seconds +
-                                             time_delta.days * 24 * 3600)* 10**6) / 10**6)
-                    remaining_seconds = int(np.round(
-                                (self._total_float - indexp1) *
-                                    (indexp1 + 1.0)/(indexp1 * indexp1) * total_seconds))
+                                             time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
+                    # remaining_seconds = int(np.round(
+                    #             (self._total_float - indexp1) * (indexp1 + 1.0) /
+                    #             (indexp1 * indexp1) * total_seconds))
+                    remaining_seconds = int(self._total_float * total_seconds / float(index) -
+                                       total_seconds)
                     remaining_delta = datetime.timedelta(seconds=remaining_seconds)
                     remaining_str = ', remaining: ' + str(remaining_delta)
                 except ZeroDivisionError:
@@ -189,7 +192,7 @@ _progressbar = _Progressbar()
 
 
 def progressbar(index, total, percentage_step=10, logger='print', log_level=logging.INFO,
-                 reprint=True, time=True, reset=False, fmt_string=None):
+                 reprint=True, time=True, fmt_string=None, reset=False):
     """Plots a progress bar to the given `logger` for large for loops.
 
     To be used inside a for-loop at the end of the loop:
@@ -218,15 +221,16 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
         If no new line should be plotted but carriage return (works only for printing)
 
     :param time: If the remaining time should be estimated and displayed
-    :param reset:
-
-        If the progressbar should be restarted. If progressbar is called with a lower
-        index than the one before, the progressbar is automatically restarted.
 
     :param fmt_string:
 
         A string which contains exactly one `%s` in order to incorporate the progressbar.
         If such a string is given, ``fmt_string % progressbar`` is printed/logged.
+
+    :param reset:
+
+        If the progressbar should be restarted. If progressbar is called with a lower
+        index than the one before, the progressbar is automatically restarted.
 
     :return:
 

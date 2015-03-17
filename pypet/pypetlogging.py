@@ -317,6 +317,11 @@ class LoggingManager(object):
             else:
                 real_n = n - 1
 
+            if n == 0:
+                # Reset in the beginning to get a better time estimate
+                progressbar(-1, total_runs, percentage_step=percentage ,
+                            logger=None, reset=True)
+
             if real_n >= 0:
                 fmt_string = 'PROGRESS: Finished %d/%d runs ' % (real_n + 1, total_runs) + '%s'
                 reprint = log_level == 0
@@ -369,6 +374,7 @@ class LoggingManager(object):
                 newstring = rename_func(string)
                 if make_dirs:
                     try_make_dirs(newstring)
+                # To work with windows path specifications we need this replacement:
                 raw_string = string.replace('\\', '\\\\')
                 raw_newstring = newstring.replace('\\', '\\\\')
                 args = args.replace(raw_string, raw_newstring)
