@@ -143,7 +143,11 @@ def _single_run(kwargs):
         traj._set_finish_time()
 
         # And store some meta data and all other data if desired
-        traj._store_final(do_store_data=automatic_storing)
+        if automatic_storing:
+            store_data = pypetconstants.STORE_DATA
+        else:
+            store_data = pypetconstants.STORE_NOTHING
+        traj._store_final(store_data=store_data)
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run and not multiproc:
@@ -1513,8 +1517,7 @@ class Environment(HasLogger):
         cnt_file = open(cnt_filename, 'rb')
         continue_dict = dill.load(cnt_file)
         cnt_file.close()
-        snapshot_traj = continue_dict['trajectory']
-        traj = copy.deepcopy(snapshot_traj) # We can deep copy since everything was picklable
+        traj = continue_dict['trajectory']
 
         # We need to update the information about the trajectory name
         config_name = 'config.environment.%s.trajectory.name' % self.v_name
@@ -1559,9 +1562,6 @@ class Environment(HasLogger):
                           load_results=pypetconstants.LOAD_NOTHING,
                           load_other_data=pypetconstants.LOAD_NOTHING)
 
-        snapshot_traj.f_load(load_data=pypetconstants.LOAD_SKELETON)  # Load the full skeleton
-        # to see what we need to remove from disk
-
         # Now we have to reconstruct previous results
         result_tuple_list = []
         full_filename_list = []
@@ -1584,8 +1584,7 @@ class Environment(HasLogger):
 
         run_indices = [result[0] for result in result_list]
         # Remove incomplete runs and check which result snapshots need to be removed
-        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices,
-                                                                 snapshot_traj)
+        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
         cleaned_run_indices_set = set(cleaned_run_indices)
 
         new_result_list = []
@@ -1684,7 +1683,7 @@ class Environment(HasLogger):
         # Make some preparations (locking of parameters etc) and store the trajectory
         self._logger.info('I am preparing the Trajectory for the experiment and '
                           'initialise the store.')
-        self._traj._prepare_experiment(self._clean_up_runs)
+        self._traj._prepare_experiment()
 
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)

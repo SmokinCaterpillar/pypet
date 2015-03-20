@@ -15,10 +15,7 @@ import inspect
 import copy as cp
 import sys
 from copy import deepcopy
-
 import numpy as np
-
-
 if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
 else:
@@ -47,6 +44,7 @@ from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, depre
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 
+
 def load_trajectory(name=None,
                     index=None,
                     as_new=False,
@@ -61,6 +59,7 @@ def load_trajectory(name=None,
                     dynamic_imports=None,
                     new_name='my_trajectory',
                     add_time=True,
+                    wildcard_functions=None,
                     storage_service=storage.HDF5StorageService,
                     **kwargs):
     """Helper function that creates a novel trajectory and loads it from disk.
@@ -80,7 +79,7 @@ def load_trajectory(name=None,
     traj.f_load(name=name, index=index, as_new=as_new, load_parameters=load_parameters,
                 load_derived_parameters=load_derived_parameters, load_results=load_results,
                 load_other_data=load_other_data, recursive=recursive, load_data=load_data,
-                max_depth=max_depth, force=force,
+                max_depth=max_depth, force=force, wildcard_functions=wildcard_functions,
                 storage_service=storage_service, **kwargs)
     return traj
 
@@ -109,6 +108,20 @@ def _keep_linked(traj, node):
                 return False
     return True
 
+
+def make_run_name(idx):
+    if idx >= 0:
+        return pypetconstants.FORMATTED_RUN_NAME % idx
+    else:
+        return pypetconstants.RUN_NAME_DUMMY
+
+def make_set_name(idx):
+    GROUPSIZE = 1000
+    set_idx =  idx // GROUPSIZE
+    if set_idx >= 0:
+        return pypetconstants.FORMATTED_SET_NAME % set_idx
+    else:
+        return pypetconstants.SET_NAME_DUMMY
 
 class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup):
     """The trajectory manages results and parameters.
@@ -204,6 +217,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         If you only have a single class to import, you do not need the list brackets:
         `dynamic_imports = 'pypet.parameter.PickleParameter'`
 
+    :param wildcard_functions:
+
+        Dictionary of wildcards like `$` and corresponding functions that are called upon
+        finding such a wildcard.
+
     :param storage_service:
 
         Pass a storage service used by the Trajectory. Alternatively, pass a constructor
@@ -230,7 +248,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     """
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, name='my_trajectory', add_time=True, comment='',
-                 dynamic_imports=None, storage_service=None, **kwargs):
+                 dynamic_imports=None, wildcard_functions=None,
+                 storage_service=None, **kwargs):
         # This is true during the actual runs:
         self._is_run = False
 
@@ -241,6 +260,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._length = 1
 
         super(Trajectory, self).__init__()
+
+        self._set_logger()
 
         self._version = VERSION
         self._python = '.'.join([str(x) for x in sys.version_info[0:3]])
@@ -268,6 +289,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._config = {}  # Contains all config parameters
         self._all_groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
+        self._new_nodes = OrderedDict() # Contains all elements added during a
+        # particular single run with full names as keys and a (parent, child) pair as value
         self._other_leaves = {}  # Contains ALL other user added leaves
         self._linked_by = {} #Contains all nodes that are linked to
 
@@ -280,10 +303,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # dictionaries as values. The inner dictionaries contain meta information about the runs
         # like time of creation, whether they have been completed and so on.
         # Check function 'f_get_run_information' for a description
-
-        # Per Definition the length is set to be 1. Even with an empty trajectory
-        # in principle you could make a single run
-        self._add_run_info(0)
 
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access = True
@@ -327,7 +346,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                              '%s please choose other names.'
                              % (name, faulty_names))
 
-        self._set_logger()
+        internal_wildcard_functions = {('$', 'crun'): make_run_name,
+                                       ('$set', 'crunset'): make_set_name}
+        if wildcard_functions:
+            internal_wildcard_functions.update(wildcard_functions)
+
+        self._wildcard_functions = {}
+        self._wildcard_cache = {}
+        self._wildcard_keys = {}
+
+        self.f_add_wildcard_functions(internal_wildcard_functions)
+
+        # Per Definition the length is set to be 1. Even with an empty trajectory
+        # in principle you could make a single run
+        self._add_run_info(0)
+        self._test_run_addition(1)
 
         self._comment = ''
         self.v_comment = comment
@@ -338,8 +371,45 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             raise ValueError('The following keyword arguments were not used: `%s`' %
                              str(unused_kwargs))
 
+    def f_get_wildcards(self):
+        """Returns a list of all defined wildcards"""
+        return compat.listkeys(self._wildcard_keys)
+
+    def f_is_wildcard(self, wildcard):
+        """Checks if a given `wildcard` is really a wildcard."""
+        return wildcard in self._wildcard_keys
+
+    def f_add_wildcard_functions(self, func_dict):
+        """#TODO"""
+        for wildcards, function in compat.iteritems(func_dict):
+            if not isinstance(wildcards, tuple):
+                wildcards = (wildcards,)
+            wildcard = wildcards[0]
+            for other_wildcard in wildcards:
+                self._wildcard_keys[other_wildcard] = wildcard
+            self._wildcard_functions[wildcard] = function
+            self._logger.info('Added wildcard function `%s`.' % wildcard)
+
+    def f_wildcard(self, wildcard='$', run_idx=None):
+        """#TODO"""
+        if run_idx is None:
+            run_idx = self.v_idx
+        wildcard = self._wildcard_keys[wildcard]
+        try:
+            return self._wildcard_cache[(wildcard, run_idx)]
+        except KeyError:
+
+            translation = self._wildcard_functions[wildcard](run_idx)
+            if len(translation) > pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
+                raise TypeError('Your tranlsated wildcard name is too long `%s` has %d '
+                                'characters but only %d are '
+                                'allowed.' % (translation, len(translation),
+                                              pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH))
+            self._wildcard_cache[(wildcard, run_idx)] = translation
+            return translation
+
     def __getstate__(self):
-        result = self.__dict__.copy()
+        result = super(Trajectory, self).__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
         # Accordingly, we need to store the length in the helper variable
@@ -348,12 +418,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             runname = self._single_run_ids[self.v_idx]
             result['_run_information'] = {runname: self._run_information[runname]}
             result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
-        del result['_logger']
+        result['_wildcard_cache'] = {}
+        result['_match_cache'] = {}
         return result
-
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._set_logger()
 
     def __str__(self):
         if self.v_comment:
@@ -651,7 +718,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self.f_set_crun(None)
 
-    def _remove_incomplete_runs(self, start_timestamp, run_indices, snapshot_traj):
+    def _remove_incomplete_runs(self, start_timestamp, run_indices):
         """Requests the storage service to delete incomplete runs.
 
         Called by the environment if you resume a crashed trajectory to allow
@@ -695,53 +762,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if self.f_is_completed(index):
                 cleaned_run_indices.append(index)
 
-        # Next, delete all the data for not completed runs
-        for run_name in self._run_information:
-            info_dict = self._run_information[run_name]
-            completed = info_dict['completed']
-
-            if not completed:
-                for where in snapshot_traj._run_parent_groups:
-                    run_parent = snapshot_traj._run_parent_groups[where]
-                    if run_parent.f_contains(run_name, shortcuts=False):
-                        run_node = run_parent.f_get(run_name, shortcuts=False)
-                        items = []
-                        if run_node.v_is_group:
-                            for grp in run_node.f_iter_nodes(with_links=False):
-                                if (not grp.v_is_leaf and grp.f_has_links() and
-                                        not self.f_contains(grp.v_full_name,
-                                                            shortcuts=False,
-                                                            with_links=False)):
-
-                                    link_tuples = zip(itools.repeat(grp),
-                                                      compat.listkeys(grp._links))
-                                    snapshot_traj.f_delete_links(link_tuples,
-                                                        remove_from_trajectory=True)
-
-                            for node in run_node.f_iter_nodes(with_links=False):
-                                if not self.f_contains(node.v_full_name, shortcuts=False,
-                                                                with_links=False):
-                                    items.append(node)
-                            items = reversed(items) # Reverse so that we delete
-                            # leaf nodes before group nodes, i.e. group nodes
-                            # are empty when whe delete them
-                        elif not self.f_contains(run_node.v_full_name, shortcuts=False,
-                                                 with_links=False):
-                            items = [run_node]
-
-                        if items:
-                            snapshot_traj.f_delete_items(items,
-                                            remove_from_trajectory=True)
-
-                        if (snapshot_traj.f_contains(run_node.v_full_name,
-                                            shortcuts=False) and
-                                run_node.f_has_children()):
-                            for node in run_node.f_iter_nodes(with_links=False):
-                                if not self.f_contains(node.v_full_name,
-                                                                shortcuts=False,
-                                                                with_links=False):
-                                    raise RuntimeError('Something is wrong')
-
         return cleaned_run_indices
 
     @not_in_run
@@ -778,6 +798,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._run_information = {}
         self._single_run_ids = {}
         self._add_run_info(0)
+        self._test_run_addition(1)
 
     def _preset(self, name, args, kwargs):
         """Generic preset function, marks a parameter or config for presetting."""
@@ -836,7 +857,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._preset(param_name, args, kwargs)
 
-    def _prepare_experiment(self, clean_up_runs):
+    def _prepare_experiment(self):
         """Called by the environment to make some initial configurations before performing the
         individual runs.
 
@@ -858,11 +879,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self.f_lock_parameters()
         self.f_lock_derived_parameters()
-
-        if clean_up_runs:
-            # If the trajectory is ought to be expanded we remove the subtrees of previous results
-            # since they won't be used during an experiment
-            self._remove_run_data()
 
     @not_in_run
     @kwargs_api_change('backwards_search')
@@ -1089,6 +1105,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             original_length = len(self)
             for irun in range(original_length, length):
                 self._add_run_info(irun)
+            self._test_run_addition(length)
 
             # We need to update the explored parameters:
             if self._stored:
@@ -1107,6 +1124,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                            'because of:`%s`' % (param_name, str(exc)))
                     param._explore(param_range)
             raise
+
+    def _test_run_addition(self, length):
+        """Tests if the user's run naming works and every index produces a new run name"""
+        if not len(self) == length:
+            raise RuntimeError('Your trajectory has a wrong length. Your naming function '
+                               'does not work!')
+        dummy = self.f_wildcard('$', -1)
+        if dummy in self._run_information:
+            raise RuntimeError('Your renaming function does not return an appropriate value for '
+                               '`-1`. `%s` is actual an already given run name.' % dummy)
 
     def _store_expansion(self):
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
@@ -1217,6 +1244,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             for irun in range(length):
                 self._add_run_info(irun)
+            self._test_run_addition(length)
 
         except Exception:
             # Remove the added parameters again
@@ -1236,7 +1264,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """Adds a new run to the `_run_information` dict."""
 
         if name is None:
-            name = pypetconstants.FORMATTED_RUN_NAME % idx
+            name = self.f_wildcard('$', idx)
         # The `_single_run_ids` dict is bidirectional and maps indices to run names and vice versa
         self._single_run_ids[name] = idx
         self._single_run_ids[idx] = name
@@ -2711,6 +2739,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def _make_single_run(self, idx):
         """ Modifies the trajectory for single runs executed by the environment """
         self._is_run = False # to be able to use f_set_crun
+        self._new_nodes = OrderedDict()
         self.f_set_crun(idx)
         self._is_run = True
         self._set_start_time()
@@ -3129,10 +3158,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._run_information[self.v_crun]['completed'] = 1
         _keep_linked_lambda = lambda node: _keep_linked(self, node)
 
-        for group_name in self._run_parent_groups:
-            group = self._run_parent_groups[group_name]
-            if group.f_contains(self.v_crun):
-                group.f_remove_child(self.v_crun, recursive=True, predicate=_keep_linked_lambda)
+        while len(self._new_nodes):
+            _, child_parent_pair = self._new_nodes.popitem(last=False)
+            parent, child = child_parent_pair
+            child_name = child.v_name
+            parent.f_remove_child(child_name, recursive=True, predicate=_keep_linked_lambda)
 
     def f_to_dict(self, fast_access=False, short_names=False, copy=True,
                   with_links=True):
@@ -3291,16 +3321,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def _store_final(self, do_store_data=False):
+    def _store_final(self, store_data=pypetconstants.STORE_NOTHING):
         """Signals the storage service that single run is completed
 
         :param do_store_data: If all data should be stored as in `f_store`.
 
         """
-        if do_store_data:
-            store_data = pypetconstants.STORE_DATA
-        else:
-            store_data = pypetconstants.STORE_NOTHING
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
                                     store_final=True,

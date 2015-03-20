@@ -75,13 +75,13 @@ def prepare_log_config():
 
 
 def _rename_filename(filename):
-    """Replaces the $TEMP$ wildcard in a filename"""
+    """Replaces the $temp$ wildcard in a filename"""
     global generic_log_folder
 
-    if not filename.startswith('$TEMP$'):
-        raise ValueError('$TEMP$ must be at the beginning of the filename!')
+    if not filename.startswith('$temp'):
+        raise ValueError('$temp must be at the beginning of the filename!')
     temp_folder = make_temp_dir('logs')
-    filename = filename.replace('$TEMP$', '')
+    filename = filename.replace('$temp', '')
     filename = os.path.join(temp_folder, filename)
     if generic_log_folder is None:
         generic_log_folder = os.path.dirname(filename)
@@ -89,7 +89,7 @@ def _rename_filename(filename):
 
 
 def handle_config_file(config_file):
-    """Searches for the $TEMP$ wildcard in a given config file and replaces it."""
+    """Searches for the $temp wildcard in a given config file and replaces it."""
     parser = cp.ConfigParser()
     parser.read(config_file)
     sections = parser.sections()
@@ -97,7 +97,7 @@ def handle_config_file(config_file):
         options = parser.options(section)
         for option in options:
             arg = parser.get(section, option, raw=True)
-            if '$TEMP$' in arg:
+            if '$temp' in arg:
                 LoggingManager._check_and_replace_parser_args(parser, section, option,
                                                               rename_func=_rename_filename,
                                                               make_dirs=False)

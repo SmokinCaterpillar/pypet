@@ -143,6 +143,9 @@ HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 excluding the microseconds"""
 HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
 """Maximum number of attributes before a distinct table is created"""
+HDF5_MAX_GROUP_CHILDREN = 5000
+"""Maximum number of children that are allowed to be placed in a hdf5 group,
+after that the storage service will default to a nested structure."""
 
 ######## Multiprocessing Modes #############
 
@@ -229,6 +232,15 @@ RUN_NAME_DUMMY = 'run_ALL'
 FORMATTED_RUN_NAME = RUN_NAME + '%0' + str(FORMAT_ZEROS) + 'd'
 """Name formatted with leading zeros"""
 
+SET_FORMAT_ZEROS = 5
+""" Number of leading zeros for set"""
+SET_NAME = 'run_set_'
+"""Name of a run set"""
+SET_NAME_DUMMY = 'run_set_ALL'
+"""Dummy name if not created during run"""
+FORMATTED_SET_NAME = SET_NAME + '%0' + str(SET_FORMAT_ZEROS) + 'd'
+"""Name formatted with leading zeros"""
+
 
 ### Constants how to store individual leaf data into HDF5 ######
 
@@ -294,11 +306,13 @@ SHARED_DATA = 'SHARED_DATA_'
 """ An HDF5 data object for direct interaction """
 
 
+
+
 ############# LOGGING ############
 
-LOG_ENV = '$ENV$'
-LOG_TRAJ = '$TRAJ$'
-LOG_RUN = '$RUN$'
-LOG_PROC = '$PROC$'
+LOG_ENV = '$env'
+LOG_TRAJ = '$traj'
+LOG_RUN = '$run'
+LOG_PROC = '$proc'
 
 DEFAULT_LOGGING = 'DEFAULT'

@@ -289,7 +289,7 @@ class ParameterTest(unittest.TestCase):
 
     def test_rename(self):
         for name,param in self.param.items():
-            param._rename('test.test.wirsing')
+            param._set_details('test.test.wirsing')
             self.assertTrue(param.v_name=='wirsing')
             self.assertTrue(param.v_full_name=='test.test.wirsing')
             self.assertTrue(param.v_location=='test.test')
@@ -352,7 +352,7 @@ class ParameterTest(unittest.TestCase):
 
             param._load(store_dict)
 
-            param._rename(self.location+'.'+key)
+            param._set_details(self.location+'.'+key)
 
             self.param[key] = param
 
@@ -836,7 +836,7 @@ class ResultTest(unittest.TestCase):
 
     def test_rename(self):
         for name,res in self.results.items():
-            res._rename('test.test.wirsing')
+            res._set_details('test.test.wirsing')
             self.assertTrue(res.v_name=='wirsing')
             self.assertTrue(res.v_full_name=='test.test.wirsing')
             self.assertTrue(res.v_location=='test.test')
@@ -952,7 +952,7 @@ class ResultTest(unittest.TestCase):
 
             res._load(store_dict)
 
-            res._rename(key)
+            res._set_details(key)
 
             self.results[key] = res
 

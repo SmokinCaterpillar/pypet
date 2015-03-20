@@ -12,7 +12,6 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
-import itertools as itools
 
 try:
     import queue
@@ -3230,17 +3229,19 @@ class HDF5StorageService(StorageService, HasLogger):
                                                load_data=pypetconstants.LOAD_SKELETON,
                                                with_links=False, recursive=False, _trajectory=traj,
                                                _as_new=as_new, _hdf5_group=self._trajectory_group)
-                if not link_name in new_traj_node._links:
-                    new_traj_node._nn_interface._create_link(new_traj_node ,
-                                                                   link_name,
-                                                                   traj.f_get(full_name),
-                                                                   check_naming=False)
-                elif load_data == pypetconstants.OVERWRITE_DATA:
+
+                if (load_data == pypetconstants.OVERWRITE_DATA and
+                            link_name in new_traj_node._links):
                     new_traj_node.f_remove_link(link_name)
-                    new_traj_node._nn_interface._create_link(new_traj_node ,
-                                                               link_name,
-                                                               traj.f_get(full_name),
-                                                               check_naming=False)
+                if not link_name in new_traj_node._links:
+                    new_traj_node._nn_interface._add_generic(new_traj_node,
+                                                                type_name=nn.LINK,
+                                                                group_type_name=nn.GROUP,
+                                                                args=(link_name,
+                                                                      traj.f_get(full_name)),
+                                                                kwargs={},
+                                                                add_prefix=False,
+                                                                check_naming=False)
                 else:
                     raise RuntimeError('You shall not pass!')
         except pt.NoSuchNodeError:
@@ -3360,13 +3361,14 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
                 if max_depth is None:
                     max_depth = float('inf')
-                for group_name in traj._run_parent_groups:
-                    group = traj._run_parent_groups[group_name]
-                    if group.f_contains(traj.v_crun):
-                        self._tree_store_sub_branch(group, traj.v_crun, store_data=store_data,
+                for child_name in traj._new_nodes:
+                    parent_group, child_node = traj._new_nodes[child_name]
+                    if not child_node._stored or child_name in parent_group._links:
+                        self._tree_store_sub_branch(parent_group, child_node.v_name,
+                                              store_data=store_data,
                                               with_links=True,
                                               recursive=recursive,
-                                              max_depth=max_depth - group.v_depth,
+                                              max_depth=max_depth - child_node.v_depth,
                                               hdf5_group=None)
 
         if store_final:
@@ -4299,7 +4301,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 new_full_name = '.'.join(split_name)
                 old_full_name = instance.v_full_name
-                instance._rename(new_full_name)
+                instance._set_details(new_full_name)
                 try:
                     table_name = where + '_runs_summary'
                     table = getattr(self._overview_group, table_name)
@@ -4344,7 +4346,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     pass
                 finally:
                     # Get the old name back
-                    instance._rename(old_full_name)
+                    instance._set_details(old_full_name)
 
     def _all_meta_add_summary(self, instance):
         """Adds data to the summary tables and returns if `instance`s comment has to be stored.
@@ -4390,7 +4392,7 @@ class HDF5StorageService(StorageService, HasLogger):
             new_full_name = '.'.join(split_name)
             old_full_name = instance.v_full_name
             # Rename the item for easier storage
-            instance._rename(new_full_name)
+            instance._set_details(new_full_name)
             try:
 
                 # True if comment must be moved upwards to lower index
@@ -4504,7 +4506,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 definitely_store_comment = True
             finally:
                 # Get the old name back
-                instance._rename(old_full_name)
+                instance._set_details(old_full_name)
 
         return where, definitely_store_comment
 

@@ -9,13 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
+SIZE = 100
+
 def job(traj):
-    traj.f_ares('result', 42, comment='A result')
+    traj.f_ares('set_%d.$.result' % int(traj.v_idx / SIZE), 42, comment='A result')
 
 
 
 def get_runtime(length):
-    filename = os.path.join('tmp', 'hdf5', 'many_runs.hdf5')
+    filename = os.path.join('tmp', 'hdf5', 'many_runs_improved.hdf5')
     start = time.time()
     with Environment(filename = filename,
                       log_levels=50, report_progress=(2, 'progress', 50),
