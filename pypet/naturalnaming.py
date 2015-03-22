@@ -634,7 +634,7 @@ class NaturalNamingInterface(HasLogger):
                 if non_empties and item.f_is_empty():
                     continue
 
-            # Explored Parameters cannot be removed, this would break the underlying hdf5 file
+            # Explored Parameters cannot be deleted, this would break the underlying hdf5 file
             # structure
             if (msg == pypetconstants.DELETE and
                         item.v_full_name in self._root_instance._explored_parameters):
@@ -743,7 +743,8 @@ class NaturalNamingInterface(HasLogger):
                 del root._other_leaves[full_name]
 
             if full_name in root._explored_parameters:
-                del root._explored_parameters[full_name]
+                root._explored_parameters[full_name] = None
+                # We always keep the explored parameters
 
                 # If we remove an explored parameter and the trajectory was not stored to disk
                 # before we need to check if there are no explored parameters left. If so
@@ -1391,11 +1392,11 @@ class NaturalNamingInterface(HasLogger):
                            (faulty_names, name, len(name),
                             pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
 
-        if parent_length + len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
-            faulty_names = '%s `%s` is too long the location can only have ' \
-                           '%d characters but it has %d,' % \
-                           (faulty_names, location, len(location),
-                            pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
+        # if parent_length + len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
+        #     faulty_names = '%s `%s` is too long the location can only have ' \
+        #                    '%d characters but it has %d,' % \
+        #                    (faulty_names, location, len(location),
+        #                     pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
 
         return faulty_names
 
@@ -1551,6 +1552,9 @@ class NaturalNamingInterface(HasLogger):
         self._add_to_nodes_and_leaves(instance)
         parent_node._children[name] = instance
         parent_node._leaves[name] = instance
+
+        if full_name in self._root_instance._explored_parameters:
+            instance._explored = True  # Mark this parameter as explored.
 
         self._logger.debug('Added `%s` to trajectory.' % full_name)
 
@@ -2712,10 +2716,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                 raise AttributeError('%s is read only!' % key)
             else:
                 python_property.fset(self, value)
-        elif (isinstance(value, tuple) and
-            len(value) == 2 and isinstance(value[1], compat.base_type)):
-            value, comment = value
-            self.f_add_leaf(key, value, comment=comment)
         elif isinstance(value, (NNGroupNode, NNLeafNode)):
             old_name = value.v_full_name
             try:
@@ -2734,6 +2734,10 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             except:
                 value._set_details(old_name)
                 raise
+        elif self.f_get_root()._lazy_adding:
+            if not isinstance(value, tuple):
+                value = (value,)
+            self.f_add_leaf(key, *value)
         else:
             instance = self.f_get(key)
             instance.f_set(value)

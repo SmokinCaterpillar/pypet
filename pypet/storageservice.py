@@ -12,6 +12,7 @@ import tables.parameters as ptpa
 import os
 import warnings
 import time
+import hashlib
 
 try:
     import queue
@@ -623,23 +624,20 @@ class HDF5StorageService(StorageService, HasLogger):
     DERIVED_PARAMETERS = 'derived_parameters'
 
     NAME_TABLE_MAPPING = {
-        '_overview_config': 'config',
-        '_overview_parameters': 'parameters',
-        '_overview_derived_parameters_trajectory': 'derived_parameters_trajectory',
-        '_overview_derived_parameters_runs': 'derived_parameters_runs',
-        '_overview_results_trajectory': 'results_trajectory',
-        '_overview_results_runs': 'results_runs',
-        '_overview_explored_parameters': 'explored_parameters',
-        '_overview_derived_parameters_runs_summary': 'derived_parameters_runs_summary',
-        '_overview_results_runs_summary': 'results_runs_summary'
+        '_overview_config': 'config_overview',
+        '_overview_parameters': 'parameters_overview',
+        '_overview_derived_parameters': 'derived_parameters_overview',
+        '_overview_results': 'results_overview',
+        '_overview_explored_parameters': 'explored_parameters_overview',
+        '_overview_derived_parameters_summary': 'derived_parameters_summary',
+        '_overview_results_summary': 'results_summary'
     }
     ''' Mapping of trajectory config names to the tables'''
 
     PR_ATTR_NAME_MAPPING = {
         '_derived_parameters_per_run': 'derived_parameters_per_run',
         '_results_per_run': 'results_per_run',
-        '_purge_duplicate_comments': 'purge_duplicate_comments',
-        '_overview_explored_parameters_runs': 'explored_parameters_runs'
+        '_purge_duplicate_comments': 'purge_duplicate_comments'
     }
     '''Mapping of Attribute names for hdf5_settings table'''
 
@@ -652,8 +650,6 @@ class HDF5StorageService(StorageService, HasLogger):
         'encoding'
     ]
     '''List of HDF5StorageService Attributes that have to be stored into the hdf5_settings table'''
-
-
 
     ### Storing Data Constants
     STORAGE_TYPE = 'SRVC_STORE'
@@ -766,7 +762,8 @@ class HDF5StorageService(StorageService, HasLogger):
     COMMENT = INIT_PREFIX + 'COMMENT'
     ''' Comment of parameter or result'''
     LENGTH = INIT_PREFIX + 'LENGTH'
-    ''' Length of a parameter if it is explored'''
+    ''' Length of a parameter if it is explored, no longer in use, only for backwards
+    compatibility'''
     LEAF = 'SRVC_LEAF'
     ''' Whether an hdf5 node is a leaf node'''
 
@@ -851,13 +848,10 @@ class HDF5StorageService(StorageService, HasLogger):
         self._overview_parameters = small_overview_tables
         self._overview_config = small_overview_tables
         self._overview_explored_parameters = small_overview_tables
-        self._overview_explored_parameters_runs = large_overview_tables
-        self._overview_derived_parameters_trajectory = small_overview_tables
-        self._overview_derived_parameters_runs = large_overview_tables
-        self._overview_derived_parameters_runs_summary = summary_tables
-        self._overview_results_trajectory = small_overview_tables
-        self._overview_results_runs = large_overview_tables
-        self._overview_results_runs_summary = summary_tables
+        self._overview_derived_parameters = large_overview_tables
+        self._overview_derived_parameters_summary = summary_tables
+        self._overview_results = large_overview_tables
+        self._overview_results_summary = summary_tables
 
         self._overview_group_ = None  # to cache link to overview
 
@@ -1050,17 +1044,10 @@ class HDF5StorageService(StorageService, HasLogger):
         for attr_name in HDF5StorageService.NAME_TABLE_MAPPING:
             table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
             value = getattr(self, attr_name)
-            if table_name in ('parameters', 'config'):
-                table_name += '_overview'
             _set_config('hdf5.overview.' + table_name,
                                     value,
                                     comment='Whether or not to have an overview '
                                             'table with that name')
-
-        _set_config('hdf5.overview.explored_parameters_runs',
-                                self._overview_explored_parameters_runs,
-                                comment='Whether there are overview tables about the '
-                                        'explored parameters in each run')
 
         _set_config('hdf5.purge_duplicate_comments',
                                 self._purge_duplicate_comments,
@@ -1379,11 +1366,6 @@ class HDF5StorageService(StorageService, HasLogger):
                 :param store_data: How to store data see above
 
                 :param store_final: If final meta info should be stored
-
-                :param store_full_in_run:
-
-                    If the whole trajectory should be stored and not only data below
-                    run groups of the current run.
 
             * :const:`pypet.pypetconstants.LEAF`
 
@@ -1709,8 +1691,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                      'using default value `%s`.' %
                                      (name, str(getattr(self, attr_name))))
 
-        if ((not self._overview_results_runs_summary or
-                    not self._overview_derived_parameters_runs_summary) and
+        if ((not self._overview_results_summary or
+                    not self._overview_derived_parameters_summary) and
                     self._purge_duplicate_comments):
             raise RuntimeError('You chose to purge duplicate comments but disabled a summary '
                                    'table. You can only use the purging if you enable '
@@ -1943,149 +1925,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._logger.info('Finished backup of %s.' % traj.v_name)
 
-    def _trj_copy_table_entries(self, rename_dict, other_trajectory_name):
-        """Copy the overview table entries from another trajectory into the current one.
-
-        :param rename_dict:
-
-            Dictionary with old names (keys) and new names (values).
-
-        :param other_trajectory_name:
-
-            Name of other trajectory
-
-        """
-        self._trj_copy_table_entries_from_table_name('derived_parameters_runs', rename_dict,
-                                                     other_trajectory_name)
-        self._trj_copy_table_entries_from_table_name('results_trajectory', rename_dict,
-                                                     other_trajectory_name)
-        self._trj_copy_table_entries_from_table_name('results_runs', rename_dict,
-                                                     other_trajectory_name)
-
-        self._trj_copy_summary_table_entries_from_table_name('results_runs_summary', rename_dict,
-                                                             other_trajectory_name)
-        self._trj_copy_summary_table_entries_from_table_name('derived_parameters_runs_summary',
-                                                             rename_dict, other_trajectory_name)
-
-    def _trj_copy_summary_table_entries_from_table_name(self, tablename, rename_dict,
-                                                        other_trajectory_name):
-        """Copy a the summary table entries from another trajectory into the current one
-
-        :param tablename:
-
-            Name of overview table
-
-        :param rename_dict:
-
-            Dictionary with old names (keys) and new names (values).
-
-        :param other_trajectory_name:
-
-            Name of other trajectory
-
-        """
-        count_dict = {}  # Dictionary containing the number of items that are merged for
-        # a particular result summary
-
-        # In the overview table location literally contains `run_XXXXXXXX`
-        run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
-
-        for old_name in rename_dict:
-            # Check for the summary entry in the other trajectory
-            old_split_name = old_name.split('.')
-            for idx, name in enumerate(old_split_name):
-                add_to_count = False
-                if (name.startswith(pypetconstants.RUN_NAME) and
-                            name != pypetconstants.RUN_NAME_DUMMY):
-                    old_split_name[idx] = run_mask
-                    add_to_count = True
-                    break
-
-            if add_to_count:
-                old_mask_name = '.'.join(old_split_name)
-
-                if not old_mask_name in count_dict:
-                    count_dict[old_mask_name] = 0
-
-                count_dict[old_mask_name] += 1
-
-        try:
-            # get the other table
-            other_table = ptcompat.get_node(self._hdf5file,
-                                            '/' + other_trajectory_name + '/overview/' + tablename)
-
-            new_row_dict = {}  # Dictionary with full names as keys and summary row dicts as values
-
-            for row in other_table:
-                # Iterate through the rows of the overview table
-                location = compat.tostr(row['location'])
-                name = compat.tostr(row['name'])
-                full_name = location + '.' + name
-
-                # If we need the overview entry mark it for merging
-                if full_name in count_dict:
-                    new_row_dict[full_name] = self._trj_read_out_row(other_table.colnames, row)
-
-            # Get the summary table in the current trajectory
-            table = ptcompat.get_node(self._hdf5file,
-                                      '/' + self._trajectory_name + '/overview/' + tablename)
-
-            for row in table:
-                # Iterate through the current rows
-                location = compat.tostr(row['location'])
-                name = compat.tostr(row['name'])
-                full_name = location + '.' + name
-
-                # Update the number of items according to the number or merged items
-                if full_name in new_row_dict:
-                    row['number_of_items'] = row['number_of_items'] + count_dict[full_name]
-                    # Delete used row dicts
-                    del new_row_dict[full_name]
-                    row.update()
-
-            table.flush()
-            self._hdf5file.flush()
-
-            # Finally we need to create new rows for results that are part of the other
-            # trajectory but which could not be found in the current one
-            for key in sorted(new_row_dict.keys()):
-                not_inserted_row = new_row_dict[key]
-                new_row = table.row
-
-                for col_name in table.colnames:
-
-                    # This is to allow backwards compatibility
-                    if (col_name == 'example_item_run_name' and
-                            not col_name in other_table.colnames):
-                        continue
-
-                    if col_name == 'example_item_run_name':
-                        # The example item run name has changed due to merging
-                        old_run_name = compat.tostr(not_inserted_row[col_name])
-                        # Get the old name
-                        old_full_name = key.replace(run_mask, old_run_name)
-                        # Find the new name
-                        new_full_name = rename_dict[old_full_name]
-                        # Extract the new run name
-                        split_name = new_full_name.split('.')
-                        new_run_name=''
-                        for split in split_name:
-                            if split.startswith(pypetconstants.RUN_NAME):
-                                new_run_name = split
-                                break
-                        new_row[col_name] = new_run_name
-                    else:
-                        new_row[col_name] = not_inserted_row[col_name]
-
-                new_row.append()
-
-            table.flush()
-            self._hdf5file.flush()
-
-        except pt.NoSuchNodeError:
-            self._logger.info('Did not find table `%s` in one of the trajectories,'
-                              ' skipped copying.' % tablename)
-
     @staticmethod
     def _trj_read_out_row(colnames, row):
         """Reads out a row and returns a dictionary containing the row content.
@@ -2101,78 +1940,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
         return result_dict
 
-    def _trj_copy_table_entries_from_table_name(self, tablename, rename_dict,
-                                                other_trajectory_name):
-        """Copy overview tables (not summary) from other trajectory into the current one.
-
-        :param tablename:
-
-            Name of overview table
-
-        :param rename_dict:
-
-            Dictionary with old names (keys) and new names (values).
-
-        :param other_trajectory_name:
-
-            Name of other trajectory
-
-        """
-        try:
-            other_table = ptcompat.get_node(self._hdf5file,
-                                            '/' + other_trajectory_name + '/overview/' + tablename)
-            new_row_dict = {}
-
-            for row in other_table.iterrows():
-                # Iterate through the summary table
-                location = compat.tostr(row['location'])
-                name = compat.tostr(row['name'])
-                full_name = location + '.' + name
-
-                if full_name in rename_dict:
-                    # If the item is marked for merge we need to copy its overview info
-                    read_out_row = self._trj_read_out_row(other_table.colnames, row)
-                    new_location = rename_dict[full_name].split('.')
-                    new_location = '.'.join(new_location[0:-1])
-                    read_out_row['location'] = new_location
-                    new_row_dict[rename_dict[full_name]] = read_out_row
-
-            table = ptcompat.get_node(self._hdf5file,
-                                      '/' + self._trajectory_name + '/overview/' + tablename)
-
-            # I am pretty sure this is no longer necessary
-            # # Insert data into the current overview table
-            # for row in table.iterrows():
-            #     location = compat.tostr(row['location'])
-            #     name = compat.tostr(row['name'])
-            #     full_name = location + '.' + name
-            #
-            #     if full_name in new_row_dict:
-            #         for col_name in table.colnames:
-            #             row[col_name] = new_row_dict[full_name][col_name]
-            #
-            #         del new_row_dict[full_name]
-            #         row.update()
-            #
-            # table.flush()
-            # self._hdf5file.flush()
-
-            # It may be the case that the we need to insert a new row
-            for key in sorted(new_row_dict.keys()):
-                not_inserted_row = new_row_dict[key]
-                new_row = table.row
-
-                for col_name in table.colnames:
-                    new_row[col_name] = not_inserted_row[col_name]
-
-                new_row.append()
-
-            table.flush()
-            self._hdf5file.flush()
-
-        except pt.NoSuchNodeError:
-            self._logger.info('Did not find table `%s` in one of the trajectories,'
-                              ' skipped copying.' % tablename)
 
     def _trj_merge_trajectories(self, other_trajectory_name, rename_dict, move_nodes=False,
                                 delete_trajectory=False):
@@ -2218,8 +1985,6 @@ class HDF5StorageService(StorageService, HasLogger):
             # by the trajectory
             old_group._v_attrs._f_copy(where=ptcompat.get_node(self._hdf5file, new_location))
 
-        self._trj_copy_table_entries(rename_dict, other_trajectory_name)
-
         if delete_trajectory:
             ptcompat.remove_node(self._hdf5file,
                                  where='/', name=other_trajectory_name, recursive=True)
@@ -2247,22 +2012,13 @@ class HDF5StorageService(StorageService, HasLogger):
         # Store extended parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
-            # First we delete the parameter
-            try:
-                self.store(pypetconstants.DELETE, param)
-            except pt.NoSuchNodeError:
-                pass  # We can end up here if the parameter was never stored
 
-            # And then we add it again
-            self.store(pypetconstants.LEAF, param)
+            self._prm_store_parameter_or_result(param, store_data=pypetconstants.OVERWRITE_DATA)
 
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group, 'runs')
         actual_rows = run_table.nrows
         self._all_fill_run_table_with_dummys(actual_rows, len(traj))
-
-        add_table = self._overview_explored_parameters_runs
-
 
         # Extract parameter summary and if necessary create new explored parameter tables
         # in the result groups
@@ -2273,13 +2029,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             traj._set_explored_parameters_to_idx(idx)
 
-            create_run_group = ('results.runs.%s' % run_name) in traj
-
-            run_summary = self._srn_add_explored_params(run_name,
-                                                        compat.listvalues(
-                                                            traj._explored_parameters),
-                                                        add_table,
-                                                        create_run_group=create_run_group)
+            run_summary = self._srn_summarize_explored_parameters(compat.listvalues(
+                                                            traj._explored_parameters))
 
             run_info['parameter_summary'] = run_summary
 
@@ -2464,6 +2215,8 @@ class HDF5StorageService(StorageService, HasLogger):
         self._grp_load_group(traj, load_data=load_data,
                              with_links=False, recursive=False, _traj=traj,
                              _as_new=as_new, _hdf5_group=self._trajectory_group)
+
+        self._trj_load_exploration(traj)
 
         if as_new:
             length = int(metarow['length'])
@@ -2693,16 +2446,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         runtable = getattr(self._overview_group, 'runs')
-
-        for idx in range(start, stop):
-            insert_dict = {}
-            insert_dict['idx'] = idx
-            insert_dict['name'] = pypetconstants.FORMATTED_RUN_NAME % idx
-
-            self._all_add_or_modify_row('Dummy Row', insert_dict, runtable,
-                                        flags=(HDF5StorageService.ADD_ROW,))
-
-        runtable.flush()
+        rows = [(idx, 'Dummy', '45 BC', 1337.0,
+                 42.0, '2001', 'Test', 'abcd', 0) for idx in range(start, stop)]
+        if rows:
+            runtable.append(rows)
+            runtable.flush()
 
     def _trj_store_meta_data(self, traj):
         """ Stores general information about the trajectory in the hdf5file.
@@ -2790,8 +2538,8 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict[name] = getattr(self, attr_name)
 
         self._all_add_or_modify_row(traj.v_name, insert_dict, hdf5table, index=0,
-                                    flags=(
-                                        HDF5StorageService.ADD_ROW, HDF5StorageService.MODIFY_ROW))
+                                    flags=(HDF5StorageService.ADD_ROW,
+                                           HDF5StorageService.MODIFY_ROW))
 
 
         # Fill table with dummy entries starting from the current table size
@@ -2804,6 +2552,10 @@ class HDF5StorageService(StorageService, HasLogger):
                                   recursive=False,
                                   _hdf5_group=self._trajectory_group)
 
+        # Store the list of explored paramters
+        self._trj_store_explorations(traj)
+
+        # Prepare the exploration tables
         # Prepare the overview tables
         tostore_tables = []
 
@@ -2818,6 +2570,50 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._srvc_make_overview_tables(tostore_tables, traj)
 
+    def _trj_load_exploration(self, traj):
+        """Recalls names of all explored parameters"""
+        if hasattr(self._overview_group, 'explorations'):
+            explorations_table = ptcompat.get_child(self._overview_group, 'explorations')
+            if len(explorations_table) != len(traj):
+                data = explorations_table.read()
+                for element in data:
+                    param_name = compat.tostr(element[0])
+                    if param_name not in traj._explored_parameters:
+                        traj._explored_parameters[param_name] = None
+        elif hasattr(self._trajectory_group, 'parameters'):
+            parameters = ptcompat.get_child(self._trajectory_group, 'parameters')
+            for group in ptcompat.walk_groups(parameters):
+                if self._all_get_from_attrs(group, HDF5StorageService.LENGTH):
+                    group_location = group._v_pathname
+                    full_name = '.'.join(group_location.split('/')[2:]+[group._v_name])
+                    traj._explored_parameters[full_name] = None
+
+    def _trj_store_explorations(self, traj):
+        """Stores a all explored parameter names for internal recall"""
+        nexplored = len(traj._explored_parameters)
+        if nexplored > 0:
+            if hasattr(self._overview_group, 'explorations'):
+                explorations_table = ptcompat.get_child(self._overview_group, 'explorations')
+                if len(explorations_table) != nexplored:
+                    ptcompat.remove_node(self._hdf5file, where=self._overview_group,
+                                         name='explorations')
+        if not hasattr(self._overview_group, 'explorations'):
+            explored_list = compat.listkeys(traj._explored_parameters)
+            if explored_list:
+                string_col = self._all_get_table_col('explorations',
+                                                      explored_list,
+                                                      'overview.explorations')
+            else:
+                string_col = pt.StringCol(1)
+            description = {'explorations': string_col}
+            explorations_table = ptcompat.create_table(self._hdf5file,
+                                                       where=self._overview_group,
+                                                       name='explorations',
+                                                       description=description)
+            rows = [(x,) for x in explored_list]
+            if rows:
+                explorations_table.append(rows)
+                explorations_table.flush()
 
     def _srvc_make_overview_tables(self, tables_to_make, traj=None):
         """Creates the overview tables in overview group"""
@@ -2833,63 +2629,47 @@ class HDF5StorageService(StorageService, HasLogger):
                 pos=0)
             paramdescriptiondict['name'] = pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH,
                                                         pos=1)
-            if not table_name == 'explored_parameters' and not 'groups' in table_name:
-                paramdescriptiondict['value'] = pt.StringCol(
-                    pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)
 
-            if table_name == 'config':
+            paramdescriptiondict['comment'] = pt.StringCol(
+                    pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH)
+
+            paramdescriptiondict['value'] = pt.StringCol(
+                    pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH, pos=2)
+
+            if table_name == 'config_overview':
                 if traj is not None:
                     expectedrows = len(traj._config)
 
-            if table_name == 'parameters':
+            if table_name == 'parameters_overview':
                 if traj is not None:
                     expectedrows = len(traj._parameters)
 
-            if table_name == 'explored_parameters':
+            if table_name == 'explored_parameters_overview':
                 paramdescriptiondict['range'] = pt.StringCol(
-                    pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH)
+                    pypetconstants.HDF5_STRCOL_MAX_RANGE_LENGTH)
+                paramdescriptiondict['length'] = pt.IntCol()
                 if traj is not None:
                     expectedrows = len(traj._explored_parameters)
 
-            if table_name == 'results_trajectory':
-                if traj is not None:
-                    expectedrows = len(traj._results)
-
-            if table_name == 'derived_parameters_trajectory':
-                if traj is not None:
-                    expectedrows = len(traj._derived_parameters)
-
-            if table_name in ['derived_parameters_trajectory', 'results_trajectory',
-                              'derived_parameters_runs_summary', 'results_runs_summary',
-                              'config', 'parameters', 'explored_parameters']:
-
-                if table_name.startswith('derived') or table_name in ('parameters', 'config'):
-                    paramdescriptiondict['length'] = pt.IntCol()
-
-                paramdescriptiondict['comment'] = pt.StringCol(
-                    pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH)
-
             if table_name.endswith('summary'):
-                paramdescriptiondict['number_of_items'] = pt.IntCol(dflt=1)
-                paramdescriptiondict['example_item_run_name'] = \
-                    pt.StringCol(len(pypetconstants.RUN_NAME) + pypetconstants.FORMAT_ZEROS + 3,
-                                 pos=2)
+                paramdescriptiondict['hexdigest'] = pt.StringCol(64, pos=10)
 
             # Check if the user provided an estimate of the amount of results per run
             # This can help to speed up storing
-            if table_name.startswith('derived_parameters_runs'):
+            if table_name == 'derived_parameters_overview':
 
                 expectedrows = self._derived_parameters_per_run
 
-                if not table_name.endswith('summary') and traj is not None:
+                if traj is not None:
                     expectedrows *= len(traj)
+                    expectedrows += len(traj._derived_parameters)
 
-            if table_name.startswith('results_runs'):
+            if table_name == 'results_overview':
                 expectedrows = self._results_per_run
 
-                if not expectedrows <= 0:
-                    if not table_name.endswith('summary') and traj is not None:
-                        expectedrows *= len(traj)
+                if traj is not None:
+                    expectedrows *= len(traj)
+                    expectedrows += len(traj._results)
 
             if expectedrows > 0:
                 paramtable = self._all_get_or_create_table(where=self._overview_group,
@@ -3087,17 +2867,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         class_name = self._all_get_from_attrs(hdf5_group, HDF5StorageService.CLASS_NAME)
-        range_length = self._all_get_from_attrs(hdf5_group, HDF5StorageService.LENGTH)
 
         # Create the instance with the appropriate constructor
         class_constructor = trajectory._create_class(class_name)
 
         instance = trajectory._construct_instance(class_constructor, name)
 
-        if instance.v_is_parameter:
-            instance._explored = range_length is not None
-
-        return instance, range_length
+        return instance
 
     def _tree_load_nodes_dfs(self, parent_traj_node, load_data, with_links, recursive,
                          max_depth, current_depth, trajectory, as_new, hdf5_group):
@@ -3142,13 +2918,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     instance = parent_traj_node._children[name]
                 # Otherwise we need to create a new instance
                 else:
-                    instance, range_length = self._tree_create_leaf(name, trajectory, hdf5_group)
-
-                    if range_length is not None and range_length != len(trajectory):
-                        raise RuntimeError('Something is completely odd. You load parameter'
-                                   ' `%s` of length %d into a trajectory of length'
-                                   ' %d. They should be equally long!' %
-                                   (name, range_length, len(trajectory)))
+                    instance = self._tree_create_leaf(name, trajectory, hdf5_group)
 
                     # Add the instance to the trajectory tree
                     parent_traj_node._nn_interface._add_generic(parent_traj_node,
@@ -3157,10 +2927,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                 args=(instance,), kwargs={},
                                                                 add_prefix=False,
                                                                 check_naming=False)
-
-                    # If it has a range we add it to the explored parameters
-                    if range_length:
-                        trajectory._explored_parameters[instance.v_full_name] = instance
 
                 self._prm_load_parameter_or_result(instance, load_data=load_data,
                                                    _hdf5_group=hdf5_group)
@@ -3344,46 +3110,32 @@ class HDF5StorageService(StorageService, HasLogger):
     def _srn_store_single_run(self, traj, store_final=False,
                               recursive=True,
                               store_data=pypetconstants.STORE_DATA,
-                              max_depth=None,
-                              store_full_in_run=False):
+                              max_depth=None):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data != pypetconstants.STORE_NOTHING:
-            if store_full_in_run:
-                self._logger.info('Storing full date tree of trajectory during single run!')
-                for child in traj._children:
-                    self._tree_store_sub_branch(traj, child,
-                                          store_data=store_data, with_links=True,
-                                          recursive=True,
-                                          max_depth=max_depth,
-                                          hdf5_group=self._trajectory_group)
-            else:
-                self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
-                if max_depth is None:
-                    max_depth = float('inf')
-                for child_name in traj._new_nodes:
-                    parent_group, child_node = traj._new_nodes[child_name]
-                    if not child_node._stored or child_name in parent_group._links:
-                        self._tree_store_sub_branch(parent_group, child_node.v_name,
-                                              store_data=store_data,
-                                              with_links=True,
-                                              recursive=recursive,
-                                              max_depth=max_depth - child_node.v_depth,
-                                              hdf5_group=None)
+            self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
+            if max_depth is None:
+                max_depth = float('inf')
+            for child_name in traj._new_nodes:
+                parent_group, child_node = traj._new_nodes[child_name]
+                if not child_node._stored or child_name in parent_group._links:
+                    self._tree_store_sub_branch(parent_group, child_node.v_name,
+                                          store_data=store_data,
+                                          with_links=True,
+                                          recursive=recursive,
+                                          max_depth=max_depth - child_node.v_depth,
+                                          hdf5_group=None)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
             idx = traj.v_idx
 
-            add_table = self._overview_explored_parameters_runs
-
             # For better readability and if desired add the explored parameters to the results
             # Also collect some summary information about the explored parameters
             # So we can add this to the `run` table
-            run_summary = self._srn_add_explored_params(traj.v_crun,
-                                                        compat.listvalues(
-                                                            traj._explored_parameters),
-                                                        add_table)
+            run_summary = self._srn_summarize_explored_parameters(compat.listvalues(
+                                                            traj._explored_parameters))
 
             # Finally, add the real run information to the `run` table
             runtable = getattr(self._overview_group, 'runs')
@@ -3402,9 +3154,8 @@ class HDF5StorageService(StorageService, HasLogger):
             self._all_add_or_modify_row(traj, insert_dict, runtable,
                                         index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
-    def _srn_add_explored_params(self, run_name, paramlist, add_table, create_run_group=False):
-        """If desired adds an explored parameter overview table to the results in each
-        single run and summarizes the parameter settings.
+    def _srn_summarize_explored_parameters(self, paramlist):
+        """Summarizes the parameter settings.
 
         :param run_name: Name of the single run
 
@@ -3418,48 +3169,6 @@ class HDF5StorageService(StorageService, HasLogger):
             Might be necessary when trajectories are merged.
 
         """
-
-        # Layout of overview table
-        paramdescriptiondict = {'name': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH),
-                                'value': pt.StringCol(pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH)}
-
-        location = 'results.runs.' + run_name
-
-        where = location
-        where = where.replace('.', '/')
-
-        if not where in self._trajectory_group:
-            if create_run_group:
-                self._all_create_or_get_groups(location)
-            else:
-                add_table = False
-
-        if add_table:
-
-            rungroup = getattr(self._trajectory_group, where)
-
-            # Check if the table already exists
-            if 'explored_parameters' in rungroup:
-                # This can happen if trajectories are merged
-                # If the number of explored parameters changed due to merging we
-                # need to create the table new in order to show the correct parameters
-                paramtable = getattr(rungroup, 'explored_parameters')
-
-                # If more parameters became explored we need to create the table new
-                if paramtable.nrows != len(paramlist):
-                    del paramtable
-                    ptcompat.remove_node(self._hdf5file, where=rungroup,
-                                         name='explored_parameters')
-                else:
-                    add_table = False
-
-            if not 'explored_parameters' in rungroup:
-                paramtable = ptcompat.create_table(self._hdf5file,
-                                                   where=rungroup,
-                                                   name='explored_parameters',
-                                                   description=paramdescriptiondict,
-                                                   title='explored_parameters',
-                                                   filters=self._all_get_filters())
 
         runsummary = ''
         paramlist = sorted(paramlist, key=lambda name: name.v_name + name.v_location)
@@ -3482,57 +3191,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
             runsummary = runsummary + param_name + ': ' + valstr
 
-            # If Add the explored parameter overview table if dersired and necessary
-            if add_table:
-                self._all_store_param_or_result_table_entry(expparam, paramtable,
-                                                            (HDF5StorageService.ADD_ROW,))
-
         return runsummary
 
 
-    ################# Methods used across Storing and Loading different Items #####################
-
-    @staticmethod
-    def _all_find_param_or_result_entry_and_return_iterator(param_or_result, table):
-        """Searches for a particular entry in `table` based on the name and location
-        of `param_or_result` and returns an iterator over the found rows
-        (should contain only a single row).
-
-        """
-        location = param_or_result.v_location
-        name = param_or_result.v_name
-
-        condvars = {'namecol': table.cols.name, 'locationcol': table.cols.location,
-                    'name': name, 'location': location}
-
-        condition = """(namecol == name) & (locationcol == location)"""
-
-        return table.where(condition, condvars=condvars)
-
-
-    @staticmethod
-    def _all_get_table_name(where, creator_name):
-        """Returns an overview table name for a given subtree name
-
-        :param where:
-
-            Either `parameters`, `config`, `derived_parameters`, or `results`
-
-        :param creator_name:
-
-            Either `trajectory` or `run_XXXXXXXXX`
-
-        :return: Name of overview table
-
-        """
-        if where in ['config', 'parameters']:
-            return where
-        else:
-            if creator_name == 'trajectory' or creator_name == pypetconstants.RUN_NAME_DUMMY:
-                return '%s_trajectory' % where
-            else:
-                return '%s_runs' % where
-
+    ################# Methods used across Storing and Loading different Items ##################
 
     def _all_store_param_or_result_table_entry(self, instance, table, flags,
                                                additional_info=None):
@@ -3580,13 +3242,12 @@ class HDF5StorageService(StorageService, HasLogger):
 
             condition = """(namecol == name) & (locationcol == location)"""
 
-        colnames = set(table.colnames)
-
         if HDF5StorageService.REMOVE_ROW in flags:
             # If we want to remove a row, we don't need to extract information
             insert_dict = {}
         else:
             # Extract information to insert from the instance and the additional info dict
+            colnames = set(table.colnames)
             insert_dict = self._all_extract_insert_dict(instance, colnames, additional_info)
 
         # Write the table entry
@@ -3806,6 +3467,15 @@ class HDF5StorageService(StorageService, HasLogger):
 
         return data, type_changed
 
+    @staticmethod
+    def _all_kill_iterator(iterator):
+        if iterator is not None:
+            try:
+                while True:
+                    next(iterator)
+            except StopIteration:
+                pass
+
     def _all_add_or_modify_row(self, item_name, insert_dict, table, index=None, condition=None,
                                condvars=None,
                                flags=(ADD_ROW, MODIFY_ROW,)):
@@ -3840,6 +3510,9 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
         """
+        if len(flags) == 0:
+            # No flags means no-op
+            return
 
         # You can only specify either an index or a condition not both
         if index is not None and condition is not None:
@@ -3858,7 +3531,7 @@ class HDF5StorageService(StorageService, HasLogger):
         except StopIteration:
             row = None
 
-        multiple_entries = []
+        # multiple_entries = []
 
         if ((HDF5StorageService.MODIFY_ROW in flags or HDF5StorageService.ADD_ROW in flags) and
                     HDF5StorageService.REMOVE_ROW in flags):
@@ -3887,17 +3560,6 @@ class HDF5StorageService(StorageService, HasLogger):
             if row is not None:
                 # Only delete if the row does exist otherwise we do not have to do anything
                 row_number = row.nrow
-
-                try:
-                    for new_row in row_iterator:
-                        new_row_number = new_row.nrow
-                        if new_row_number > row_number:
-                            new_row_number -= 1 # -1 because we will remove the current row
-                        multiple_entries.append(new_row_number)
-                        # later on
-                except StopIteration:
-                    pass
-
                 try:
                     ptcompat.remove_rows(table, start=row_number, stop=row_number+1)
                 except NotImplementedError:
@@ -3908,46 +3570,28 @@ class HDF5StorageService(StorageService, HasLogger):
             raise ValueError('Something is wrong, you might not have found '
                              'a row, or your flags are not set appropriately')
 
-        # Check if there are several entries which should not happen
-        # and correct for that
-        if len(multiple_entries) == 0:
-            try:
-                for new_row in row_iterator:
-                    multiple_entries.append(new_row.nrow)
-            except TypeError:
-                pass
-            except StopIteration:
-                pass
-
+        self._all_kill_iterator(row_iterator)
         table.flush()
 
-        if len(multiple_entries) > 0:
-            self._logger.error('There is something wrong, `%s` '
-                               'appears more than once in table %s.'
-                               % (item_name, table._v_name))
-            self._srvc_fix_table(table, multiple_entries)
-
-        # Check if we added something. Note that row is also not None in case REMOVE_ROW,
-        # then it refers to the deleted row
         if HDF5StorageService.REMOVE_ROW not in flags and row is None:
             raise RuntimeError('Could not add or modify entries of `%s` in '
                                'table %s' % (item_name, table._v_name))
 
-    def _srvc_fix_table(self, table, multiple_entries):
-        """ Fixes mutliple entries in a table.
-
-        This may happen due to deleting leaves,
-        because the last row cannot be removed with PyTables
-
-        """
-        self._logger.error('I will fix this by removing all entries except the last')
-        removed = 0
-        for row_number in sorted(multiple_entries):
-            ptcompat.remove_rows(table, start=row_number - removed,
-                                 stop=row_number - removed + 1)
-            removed += 1 # keep track of how many have been removed, because
-                         # the index of the later rows are decreased thereby
-            table.flush()
+    # def _srvc_fix_table(self, table, multiple_entries):
+    #     """ Fixes mutliple entries in a table.
+    #
+    #     This may happen due to deleting leaves,
+    #     because the last row cannot be removed with PyTables
+    #
+    #     """
+    #     self._logger.error('I will fix this by removing all entries except the last')
+    #     removed = 0
+    #     for row_number in sorted(multiple_entries):
+    #         ptcompat.remove_rows(table, start=row_number - removed,
+    #                              stop=row_number - removed + 1)
+    #         removed += 1 # keep track of how many have been removed, because
+    #                      # the index of the later rows are decreased thereby
+    #         table.flush()
 
     def _all_insert_into_row(self, row, insert_dict):
         """Copies data from `insert_dict` into a pytables `row`."""
@@ -4003,8 +3647,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
                 self._logger)
 
-        if 'example_item_run_name' in colnames:
-            insert_dict['example_item_run_name'] = additional_info['example_item_run_name']
+        if 'hexdigest' in colnames:
+            insert_dict['hexdigest'] = additional_info['hexdigest']
 
         if 'idx' in colnames:
             insert_dict['idx'] = item.v_idx
@@ -4020,14 +3664,14 @@ class HDF5StorageService(StorageService, HasLogger):
         if 'range' in colnames:
             insert_dict['range'] = self._all_cut_string(
                 compat.tobytes(repr(item.f_get_range())),
-                pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
+                pypetconstants.HDF5_STRCOL_MAX_RANGE_LENGTH,
                 self._logger)
 
         # To allow backwards compatibility
         if 'array' in colnames:
             insert_dict['array'] = self._all_cut_string(
                 compat.tobytes(repr(item.f_get_range())),
-                pypetconstants.HDF5_STRCOL_MAX_ARRAY_LENGTH,
+                pypetconstants.HDF5_STRCOL_MAX_RANGE_LENGTH,
                 self._logger)
 
         if 'version' in colnames:
@@ -4279,76 +3923,7 @@ class HDF5StorageService(StorageService, HasLogger):
                         raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
                                                      'type `%s`.' % (key, str(dtype)))
 
-    def _prm_meta_remove_summary(self, instance):
-        """Changes a summary table entry if the current `instance` is removed from the trajectory
-        and from disk.
-
-        The number of items represented by a summary is decreased, if the
-        number of items shrinks to zero the whole row is deleted.
-
-        """
-        split_name = instance.v_full_name.split('.')
-        where = split_name[0]
-
-        if where in ['derived_parameters', 'results']:
-            # There are only summaries for derived parameters and results
-            creator_name = instance.v_run_branch
-            if (creator_name.startswith(pypetconstants.RUN_NAME) and
-                creator_name != pypetconstants.RUN_NAME_DUMMY):
-                run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
-
-                split_name[instance._run_branch_pos - 1] = run_mask
-
-                new_full_name = '.'.join(split_name)
-                old_full_name = instance.v_full_name
-                instance._set_details(new_full_name)
-                try:
-                    table_name = where + '_runs_summary'
-                    table = getattr(self._overview_group, table_name)
-
-                    row_iterator = self._all_find_param_or_result_entry_and_return_iterator(
-                        instance, table)
-
-                    row = next(row_iterator)
-
-                    # Decrease the number of items represented by the summary
-                    nitems = row['number_of_items'] - 1
-                    row['number_of_items'] = nitems
-                    row.update()
-
-                    table.flush()
-
-                    multiple_entries = []
-
-                    try:
-                        for new_row in row_iterator:
-                            multiple_entries.append(new_row.nrow)
-                    except StopIteration:
-                        pass
-
-                    if len(multiple_entries) > 0:
-                        self._logger.error('There is something wrong, `%s` '
-                                           'appears more than once in table %s.'
-                                           % (instance.v_full_name, table._v_name))
-                        self._srvc_fix_table(table, multiple_entries)
-
-                    if nitems == 0:
-                        # Here the summary became obsolete
-                        self._all_store_param_or_result_table_entry(
-                            instance,
-                            table,
-                            flags=(HDF5StorageService.REMOVE_ROW,))
-
-
-                except pt.NoSuchNodeError:
-                    pass
-                except StopIteration:
-                    pass
-                finally:
-                    # Get the old name back
-                    instance._set_details(old_full_name)
-
-    def _all_meta_add_summary(self, instance):
+    def _prm_meta_add_summary(self, instance):
         """Adds data to the summary tables and returns if `instance`s comment has to be stored.
 
         Also moves comments upwards in the hierarchy if purge_duplicate_comments is true
@@ -4361,154 +3936,56 @@ class HDF5StorageService(StorageService, HasLogger):
             * Boolean whether to store the comment to `instance`s hdf5 node
 
         """
+        if instance.v_comment == '':
+            return False
+
+        where = instance.v_branch
         definitely_store_comment = True
 
-        split_name = instance.v_full_name.split('.')
-        where = split_name[0]
+        # Get the hexdigest of the comment to see if such a comment has been stored before
+        hexdigest = hashlib.sha1(instance.v_comment).hexdigest()
 
-        # Check if we are in the subtree that has runs overview tables
-        creator_name = instance.v_run_branch
-        if (creator_name.startswith(pypetconstants.RUN_NAME) and
-                    creator_name != pypetconstants.RUN_NAME_DUMMY):
+        # Get the overview table
+        table_name = where + '_summary'
 
+        # Check if the overview table exists, otherwise skip the rest of
+        # the meta adding
+        if table_name in self._overview_group:
+            table = getattr(self._overview_group, table_name)
+        else:
+            return definitely_store_comment
+
+
+        try:
+            condvars = {'hexdigestcol': table.cols.hexdigest,
+                'hexdigest': hexdigest}
+
+            condition = """(hexdigestcol == hexdigest)"""
+
+            row_iterator = table.where(condition, condvars=condvars)
+
+            row = None
             try:
-                # Get the overview table
-                table_name = where + '_runs_summary'
+                row = next(row_iterator)
+            except StopIteration:
+                pass
 
-                # Check if the overview table exists, otherwise skip the rest of
-                # the meta adding
-                if table_name in self._overview_group:
-                    table = getattr(self._overview_group, table_name)
-                else:
-                    return where, definitely_store_comment
-            except pt.NoSuchNodeError:
-                return where, definitely_store_comment
+            if row is None:
+                self._all_store_param_or_result_table_entry(instance, table,
+                                                            flags=(
+                                                                HDF5StorageService.ADD_ROW,),
+                                                            additional_info={
+                                                                'hexdigest': hexdigest})
 
-            # Create the dummy name `result.run_XXXXXXXX` as a general mask and example item
-            run_mask = pypetconstants.RUN_NAME + 'X' * pypetconstants.FORMAT_ZEROS
-
-            split_name[instance._run_branch_pos - 1] = run_mask
-
-            new_full_name = '.'.join(split_name)
-            old_full_name = instance.v_full_name
-            # Rename the item for easier storage
-            instance._set_details(new_full_name)
-            try:
-
-                # True if comment must be moved upwards to lower index
-                erase_old_comment = False
-
-                # Find the overview table entry
-
-                row_iterator = \
-                    self._all_find_param_or_result_entry_and_return_iterator(instance, table)
-
-                row = None
-                try:
-                    row = next(row_iterator)
-                except StopIteration:
-                    pass
-
-                if row is not None:
-                    # If row found we need to increase the number of items
-                    nitems = row['number_of_items'] + 1
-
-                    # Get the run name of the example
-                    example_item_run_name = compat.tostr(row['example_item_run_name'])
-
-                    # Get the old comment:
-                    location_string = compat.tostr(row['location'])
-                    other_parent_node_name = location_string.replace(run_mask,
-                                                                     example_item_run_name)
-                    other_parent_node_name = '/' + self._trajectory_name + '/' + \
-                                             other_parent_node_name.replace('.', '/')
-
-                    # If the instance actually has the name of the run as it's own name
-                    # We need this replacement as well:
-                    instance_name = instance.v_name.replace(run_mask, example_item_run_name)
-                    example_item_node = ptcompat.get_node(self._hdf5file,
-                                                          where=other_parent_node_name,
-                                                          name=instance_name)
-
-                    # Check if comment is obsolete
-                    example_comment = ''
-                    if HDF5StorageService.COMMENT in example_item_node._v_attrs:
-                        example_comment = str(
-                            example_item_node._v_attrs[HDF5StorageService.COMMENT])
-                    definitely_store_comment = instance.v_comment != example_comment
-
-                    # We can rely on lexicographic comparisons with run indices
-                    if creator_name < example_item_run_name:
-                        # In case the statement is true and the comments are equal, we need
-                        # to move the comment to a result or derived parameter with a lower
-                        # run name:
-                        if not definitely_store_comment:
-
-                            # We need to purge the comment in the other result or derived parameter
-                            erase_old_comment = True
-                            definitely_store_comment = True
-
-                            row['example_item_run_name'] = creator_name
-
-                            row['value'] = self._all_cut_string(
-                                instance.f_val_to_str(),
-                                pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH,
-                                self._logger)
-                        else:
-                            self._logger.warning('Your example value and comment in the overview'
-                                                 ' table cannot be set to the lowest index'
-                                                 ' item because results or derived parameters'
-                                                 ' with lower indices have '
-                                                 ' a different comment! The comment of `%s` '
-                                                 ' in run `%s'
-                                                 ' differs from the current result or'
-                                                 ' derived parameter in run `%s`.' %
-                                                 (instance.v_name, creator_name,
-                                                  example_item_run_name))
-
-                    row['number_of_items'] = nitems
-                    row.update()
-
-                    table.flush()
-
-                    multiple_entries = []
-
-                    try:
-                        for new_row in row_iterator:
-                            multiple_entries.append(new_row.nrow)
-                    except StopIteration:
-                        pass
-
-                    if len(multiple_entries) > 0:
-                        self._logger.error('There is something wrong, `%s` '
-                                           'appears more than once in table %s.'
-                                           % (instance.v_full_name, table._v_name))
-                        self._srvc_fix_table(table, multiple_entries)
-
-                    if (self._purge_duplicate_comments and erase_old_comment and
-                                HDF5StorageService.COMMENT in example_item_node._v_attrs):
-                        del example_item_node._v_attrs[HDF5StorageService.COMMENT]
-
-                    self._hdf5file.flush()
-                else:
-                    self._all_store_param_or_result_table_entry(instance, table,
-                                                                flags=(
-                                                                    HDF5StorageService.ADD_ROW,),
-                                                                additional_info={
-                                                                    'example_item_run_name':
-                                                                    creator_name})
-
-                    definitely_store_comment = True
-
-            # There are 2 cases of exceptions, either the table is switched off, or
-            # the entry already exists, in both cases we  have to store the comments
-            except pt.NoSuchNodeError:
                 definitely_store_comment = True
-            finally:
-                # Get the old name back
-                instance._set_details(old_full_name)
+            else:
+                definitely_store_comment = False
+                self._all_kill_iterator(row_iterator)
 
-        return where, definitely_store_comment
+        except pt.NoSuchNodeError:
+            definitely_store_comment = True
+
+        return definitely_store_comment
 
     def _prm_add_meta_info(self, instance, group, overwrite=False):
         """Adds information to overview tables and meta information to
@@ -4521,7 +3998,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """
 
         if overwrite:
-            flags = (HDF5StorageService.ADD_ROW, HDF5StorageService.MODIFY_ROW)
+            flags = ()
         else:
             flags = (HDF5StorageService.ADD_ROW,)
 
@@ -4529,16 +4006,17 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             # Check if we need to store the comment. Maybe update the overview tables
             # accordingly if the current run index is lower than the one in the table.
-            where, definitely_store_comment = self._all_meta_add_summary(instance)
+            definitely_store_comment = self._prm_meta_add_summary(instance)
 
             try:
                 # Update the summary overview table
-                table_name = self._all_get_table_name(where, instance.v_run_branch)
+                table_name = instance.v_branch + '_overview'
 
                 table = getattr(self._overview_group, table_name)
+                if len(table) < pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH:
 
-                self._all_store_param_or_result_table_entry(instance, table,
-                                                            flags=flags)
+                    self._all_store_param_or_result_table_entry(instance, table,
+                                                                flags=flags)
             except pt.NoSuchNodeError:
                 pass
         except Exception as exc:
@@ -4553,15 +4031,16 @@ class HDF5StorageService(StorageService, HasLogger):
         setattr(group._v_attrs, HDF5StorageService.CLASS_NAME, instance.f_get_class_name())
         setattr(group._v_attrs, HDF5StorageService.LEAF, True)
 
-        if instance.v_is_parameter and instance.f_has_range():
+        if instance.v_is_parameter and instance.v_explored:
             # If the stored parameter was an explored one we need to mark this in the
             # explored overview table
-            setattr(group._v_attrs, HDF5StorageService.LENGTH, instance.f_get_range_length())
             try:
                 tablename = 'explored_parameters'
                 table = getattr(self._overview_group, tablename)
-                self._all_store_param_or_result_table_entry(instance, table,
-                                                            flags=flags)
+
+                if len(table) < pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH:
+                    self._all_store_param_or_result_table_entry(instance, table,
+                                                                flags=flags)
             except pt.NoSuchNodeError:
                 pass
             except Exception as exc:
@@ -4641,7 +4120,6 @@ class HDF5StorageService(StorageService, HasLogger):
             # Get the data to store from the instance
             if not instance.f_is_empty():
                 store_dict = instance._store()
-
             try:
                 # Ask the instance for storage flags
                 instance_flags = instance._store_flags().copy() # copy to avoid modifying the
@@ -4726,7 +4204,8 @@ class HDF5StorageService(StorageService, HasLogger):
             if _newly_created or overwrite is True:
                 # If we created a new group or the parameter was extended we need to
                 # update the meta information and summary tables
-                self._prm_add_meta_info(instance, _hdf5_group, overwrite=overwrite is True)
+                self._prm_add_meta_info(instance, _hdf5_group,
+                                        overwrite=not _newly_created)
 
             instance._stored = True
 
@@ -4839,7 +4318,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 description = {}
                 for colname in first_row:
                     data = first_row[colname]
-                    column = self._prm_get_table_col(key, [data], fullname)
+                    column = self._all_get_table_col(key, [data], fullname)
                     description[colname] = column
 
         if 'description' in kwargs:
@@ -5141,63 +4620,7 @@ class HDF5StorageService(StorageService, HasLogger):
             _hdf5_group = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
 
         if delete_only is None:
-            if instance.v_is_leaf:
-                # If we delete a leaf we need to take care about overview tables
-                base_group = split_name[0]
-
-                table_name = self._all_get_table_name(base_group, instance.v_run_branch)
-
-                if table_name in self._overview_group:
-                    table = getattr(self._overview_group, table_name)
-
-                    self._all_store_param_or_result_table_entry(
-                        instance,
-                        table,
-                        flags=(HDF5StorageService.REMOVE_ROW,))
-
-                if instance.v_is_parameter:
-                    table_name = 'explored_parameters'
-                    if table_name in self._overview_group:
-                        table = getattr(self._overview_group, table_name)
-
-                        self._all_store_param_or_result_table_entry(
-                            instance,
-                            table,
-                            flags=(HDF5StorageService.REMOVE_ROW,))
-
-                self._prm_meta_remove_summary(instance)
-
-                _hdf5_group._f_remove(recursive=True)
-            else:
-                if not recursive and len(_hdf5_group._v_groups) != 0:
-                    raise TypeError('You cannot remove the group `%s`, it has children, please '
-                                    'use `recursive=True` to enforce removal.' %
-                                    instance.v_full_name)
-                trajectory = instance.v_root
-                leaf_deletion_list = []
-                for hdf5_sub_group in ptcompat.walk_groups(_hdf5_group):
-                    # We have to manually remove all leaves to ensure deletion from the
-                    # overview tables
-                    if self._all_get_from_attrs(hdf5_sub_group, HDF5StorageService.LEAF):
-                        leaf_deletion_list.append(hdf5_sub_group)
-
-                for hdf5_sub_group in leaf_deletion_list:
-                    # Delete every leaf one by one to ensure removal from overview tables
-                    full_name = '.'.join(hdf5_sub_group._v_pathname.split('/')[2:])
-                    mock_instance, range_length = self._tree_create_leaf(full_name, trajectory,
-                                                             hdf5_sub_group)
-                    if range_length:
-                        # You cannot delete an explored parameter
-                        raise TypeError('Your want to delete the explored parameter `%s`. '
-                                           'Sorry, I cannot delete explored parameters, please '
-                                           'create a new empty trajectory instead or load '
-                                           'as new.' % full_name)
-                    self._all_delete_parameter_or_result_or_group(mock_instance,
-                                                                  delete_only=None,
-                                                                  remove_from_item=False,
-                                                                  recursive=False,
-                                                                  _hdf5_group=hdf5_sub_group)
-                _hdf5_group._f_remove(recursive=recursive)
+            _hdf5_group._f_remove(recursive=True)
         else:
             if not instance.v_is_leaf:
                 raise ValueError('You can only choose `delete_only` mode for leafs.')
@@ -5375,13 +4798,13 @@ class HDF5StorageService(StorageService, HasLogger):
             _convert_lists_and_tuples(val)
 
             # get a pytables column from the data
-            col = self._prm_get_table_col(key, val, fullname)
+            col = self._all_get_table_col(key, val, fullname)
 
             descriptiondict[key] = col
 
         return descriptiondict, original_data_type_dict
 
-    def _prm_get_table_col(self, key, column, fullname):
+    def _all_get_table_col(self, key, column, fullname):
         """ Creates a pytables column instance.
 
         The type of column depends on the type of `column[0]`.

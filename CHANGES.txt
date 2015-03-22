@@ -31,6 +31,23 @@ pypet 0.1b.10
 *   Environment now supports `git_fail` option to fail if there are not committed changes
     instead of triggering a new commit.
 
+*   Users can now define their own functions to produce run-names.
+
+*   Likewise users can define their onw wildcards
+
+*   The lazy version of adding elements (`traj.par.x = 42, 'A comment') now needs to
+    be turned on by the user via (`traj.v_lazy_adding = True`) before it can be used.
+
+*   HDF5_STRCOL_MAX_ARRAY_LENGTH has been renamed to HDF5_STRCOL_MAX_RANGE_LENGTH
+
+*   The summary tables have been shortened. Now there's no distinction anymore between
+    the actual runs and everything else.
+
+*   Moreover, data added to summary tables is no longer deleted. There also exists a
+    maximum length for these tables (1000).
+
+*   The overview about the explored parameters in each run has been removed (due to size)
+
 
 pypet 0.1b.9
 

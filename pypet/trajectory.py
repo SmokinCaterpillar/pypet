@@ -75,12 +75,12 @@ def load_trajectory(name=None,
     elif name is not None and index is not None:
         raise ValueError('Please specify either a name or an index')
 
-    traj = Trajectory(name=new_name, add_time=add_time, dynamic_imports=dynamic_imports)
+    traj = Trajectory(name=new_name, add_time=add_time, dynamic_imports=dynamic_imports,
+                      wildcard_functions=wildcard_functions)
     traj.f_load(name=name, index=index, as_new=as_new, load_parameters=load_parameters,
                 load_derived_parameters=load_derived_parameters, load_results=load_results,
                 load_other_data=load_other_data, recursive=recursive, load_data=load_data,
-                max_depth=max_depth, force=force, wildcard_functions=wildcard_functions,
-                storage_service=storage_service, **kwargs)
+                max_depth=max_depth, force=force, storage_service=storage_service, **kwargs)
     return traj
 
 
@@ -285,7 +285,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._parameters = {}  # Contains all parameters
         self._derived_parameters = {}  # Contains all derived parameters
         self._results = {}  # Contains all results
-        self._explored_parameters = {}  # Contains all explored parameters
+        self._explored_parameters = {}  # Contains all explored parameters, even when they are not
+        # loaded it still contains all keys!
         self._config = {}  # Contains all config parameters
         self._all_groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
@@ -311,7 +312,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._max_depth = None
         self._auto_load = False
         self._with_links = True
-        self._fast_adding = True
+        self._lazy_adding = False
 
         self._expansion_not_stored = False
 
@@ -384,28 +385,26 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         for wildcards, function in compat.iteritems(func_dict):
             if not isinstance(wildcards, tuple):
                 wildcards = (wildcards,)
-            wildcard = wildcards[0]
-            for other_wildcard in wildcards:
-                self._wildcard_keys[other_wildcard] = wildcard
-            self._wildcard_functions[wildcard] = function
-            self._logger.info('Added wildcard function `%s`.' % wildcard)
+            for wildcard in wildcards:
+                self._wildcard_keys[wildcard] = wildcards
+            self._wildcard_functions[wildcards] = function
+            self._logger.info('Added wildcard function `%s`.' % str(wildcards))
 
     def f_wildcard(self, wildcard='$', run_idx=None):
         """#TODO"""
         if run_idx is None:
             run_idx = self.v_idx
-        wildcard = self._wildcard_keys[wildcard]
+        wildcards = self._wildcard_keys[wildcard]
         try:
-            return self._wildcard_cache[(wildcard, run_idx)]
+            return self._wildcard_cache[(wildcards, run_idx)]
         except KeyError:
-
-            translation = self._wildcard_functions[wildcard](run_idx)
+            translation = self._wildcard_functions[wildcards](run_idx)
             if len(translation) > pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
                 raise TypeError('Your tranlsated wildcard name is too long `%s` has %d '
                                 'characters but only %d are '
                                 'allowed.' % (translation, len(translation),
                                               pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH))
-            self._wildcard_cache[(wildcard, run_idx)] = translation
+            self._wildcard_cache[(wildcards, run_idx)] = translation
             return translation
 
     def __getstate__(self):
@@ -571,6 +570,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._full_copy
 
+    @property
+    def v_lazy_adding(self):
+        """If lazy additions are allowed.
+
+        I.e. `traj.par.x = 42` which adds a new parameter with value 42"""
+        return self._lazy_adding
+
+    @v_lazy_adding.setter
+    def v_lazy_adding(self, val):
+        """Sets lazy adding"""
+        self._lazy_adding = bool(val)
+
     @v_full_copy.setter
     @not_in_run
     def v_full_copy(self, val):
@@ -578,7 +589,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if val != self._full_copy:
             self._full_copy = val
             for param in compat.itervalues(self._explored_parameters):
-                param.v_full_copy = val
+                if param is not None:
+                    param.v_full_copy = val
 
     @property
     def v_with_links(self):
@@ -1068,6 +1080,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             ' dictionary, i.e. %s != %s' %
                             (str(set(self._explored_parameters.keys())),
                              str(set(build_dict.keys()))))
+        if any(x is None for x in self._explored_parameters.values()):
+            raise TypeError('At least one of your explored parameters is not fully loaded, '
+                            'please load it.')
 
         old_ranges = None
         if fail_safe:
@@ -1123,6 +1138,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         self._logger.error('Could not shrink parameter `%s` '
                                            'because of:`%s`' % (param_name, str(exc)))
                     param._explore(param_range)
+                    param._explored = True
             raise
 
     def _test_run_addition(self, length):
@@ -1139,8 +1155,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
         for param in compat.itervalues(self._explored_parameters):
             try:
-                self._storage_service.store(pypetconstants.DELETE, param,
-                                            trajectory_name=self.v_name)
+                self.f_store_item(param, store_data=pypetconstants.OVERWRITE_DATA)
             except Exception:
                 pass  # We end up here if the parameter was not stored to disk, yet
             self.f_store_item(param)
@@ -1236,6 +1251,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 full_name = act_param.v_full_name
                 self._explored_parameters[full_name] = act_param
 
+                act_param._explored = True
+
                 # Compare the length of two consecutive parameters in the `build_dict`
                 if len(self._explored_parameters) == 1:
                     length = act_param.f_get_range_length()
@@ -1251,6 +1268,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for param in added_explored_parameters:
                 param.f_unlock()
                 param._shrink()
+                param._explored = False
                 full_name = param.v_full_name
                 del self._explored_parameters[full_name]
             if len(self._explored_parameters) == 0:
@@ -1498,7 +1516,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             raise ValueError('The following keyword arguments were not used: `%s`' %
                              str(unused_kwargs))
 
-        if not dynamic_imports is None:
+        if dynamic_imports is not None:
             self.f_add_to_dynamic_imports(dynamic_imports)
 
         if load_data is not None:
@@ -2610,7 +2628,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @kwargs_api_change('new_name')
     @kwargs_mutual_exclusive('only_init', 'recursive', lambda x: not x)
     def f_store(self, only_init=False, store_data=pypetconstants.STORE_DATA,
-                max_depth=None, store_full_in_run=False):
+                max_depth=None):
         """ Stores the trajectory to disk and recursively all data in the tree.
 
         :param only_init:
@@ -2679,12 +2697,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             Maximum depth to store tree (inclusive). During single runs `max_depth` is also counted
             from root.
 
-        :param store_full_in_run:
-
-            Only useful during single runs. If ``store_full_in_run=True`` the full tree
-            is traversed instead of just items below groups called `run_XXXXXXXXXX`.
-            Accordingly, storing is analogous to storing a trajectory not during a single run.
-
 
         """
         if self._is_run:
@@ -2693,8 +2705,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         store_final=False,
                                         recursive=not only_init,
                                         store_data=store_data,
-                                        max_depth=max_depth,
-                                        store_full_in_run=store_full_in_run)
+                                        max_depth=max_depth)
         else:
 
             if self._stored and self._expansion_not_stored:
@@ -2734,7 +2745,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         for param in compat.itervalues(self._explored_parameters):
-            param._set_parameter_access(idx)
+            if param is not None:
+                param._set_parameter_access(idx)
 
     def _make_single_run(self, idx):
         """ Modifies the trajectory for single runs executed by the environment """
@@ -3252,6 +3264,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """ Returns a dictionary containing the full parameter names as keys and the parameters
          or the parameter data items as values.
 
+         IMPORTANT: This dictionary always contains all explored parameters as keys.
+         Even when they are not loaded, in this case the value is simply `None`.
+         `fast_access` only works if all explored parameters are loaded.
+
 
         :param fast_access:
 
@@ -3330,8 +3346,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                     trajectory_name=self.v_name,
                                     store_final=True,
-                                    store_data=store_data,
-                                    store_full_in_run=False)
+                                    store_data=store_data)
 
     def f_store_item(self, item, *args, **kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.Trajectory.f_store_items`."""

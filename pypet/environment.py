@@ -28,8 +28,7 @@ import traceback
 import hashlib
 import time
 import datetime
-import copy
-
+import inspect
 
 try:
     from sumatra.projects import load_project
@@ -37,7 +36,6 @@ try:
 except ImportError:
     load_project = None
     PythonExecutable = None
-
 try:
     import dill
     # If you do not set this log-level dill will flood any log file :-(
@@ -244,6 +242,11 @@ class Environment(HasLogger):
           If you only have a single class to import, you do not need
           the list brackets:
           `dynamic_imports = 'pypet.parameter.PickleParameter'`
+
+    :param wildcard_functions:
+
+        Dictionary of wildcards like `$` and corresponding functions that are called upon
+        finding such a wildcard.
 
     :param automatic_storing:
 
@@ -739,6 +742,7 @@ class Environment(HasLogger):
                  add_time=True,
                  comment='',
                  dynamic_imports=None,
+                 wildcard_functions=None,
                  automatic_storing=True,
                  log_config=pypetconstants.DEFAULT_LOGGING,
                  log_allow_fork=False,
@@ -855,6 +859,7 @@ class Environment(HasLogger):
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
                                     dynamic_imports=dynamic_imports,
+                                    wildcard_functions=wildcard_functions,
                                     comment=comment)
 
             self._timestamp = self.v_trajectory.v_timestamp  # Timestamp of creation
@@ -1127,16 +1132,15 @@ class Environment(HasLogger):
     def f_set_large_overview(self, switch):
         """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.results_runs = switch
-        self._traj.config.hdf5.overview.derived_parameters_runs = switch
-        self._traj.config.hdf5.overview.explored_parameters_runs = switch
+        self._traj.config.hdf5.overview.results_overview = switch
+        self._traj.config.hdf5.overview.derived_parameters_overview = switch
 
     @deprecated('Please use assignment in environment constructor.')
     def f_set_summary(self, switch):
         """Switches summary tables on (`switch=True`) or off (`switch=False`). """
         switch = switch
-        self._traj.config.hdf5.overview.derived_parameters_runs_summary = switch
-        self._traj.config.hdf5.overview.results_runs_summary = switch
+        self._traj.config.hdf5.overview.derived_parameters_summary = switch
+        self._traj.config.hdf5.overview.results_summary = switch
         self._traj.config.hdf5.purge_duplicate_comments = switch
 
     @deprecated('Please use assignment in environment constructor.')
@@ -1145,9 +1149,7 @@ class Environment(HasLogger):
         switch = switch
         self._traj.config.hdf5.overview.parameters_overview = switch
         self._traj.config.hdf5.overview.config_overview = switch
-        self._traj.config.hdf5.overview.explored_parameters = switch
-        self._traj.config.hdf5.overview.derived_parameters_trajectory = switch
-        self._traj.config.hdf5.overview.results_trajectory = switch
+        self._traj.config.hdf5.overview.explored_parameters_overview = switch
 
     def f_continue(self, trajectory_name=None, continue_folder=None):
         """Resumes crashed trajectories.
@@ -2094,9 +2096,28 @@ class Environment(HasLogger):
 
         config_name = 'environment.%s.automatic_storing' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_name,
+            self._traj.f_add_config(Parameter, config_name, self._automatic_storing,
                                     comment='If trajectory should be stored automatically in the '
                                             'end.').f_lock()
+
+        for idx, pair in enumerate(self._traj._wildcard_functions.items()):
+            wildcards, wc_function = pair
+            for jdx, wildcard in enumerate(wildcards):
+                config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
+                                (self.v_name, idx, jdx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wildcard,
+                                    comment='Wildcard symbol for the wildcard function').f_lock()
+            try:
+                source = inspect.getsource(wc_function)
+                config_name = ('environment.%s.wildcards.function_%d.source' %
+                            (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, source,
+                                comment='Source code of wildcard function').f_lock()
+            except Exception:
+                pass  # We cannot find the source, just leave it
+
         if self._automatic_storing:
             self._logger.info('\n************************************************************\n'
                               'STARTING FINAL STORING of trajectory\n`%s`'

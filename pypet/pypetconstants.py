@@ -127,25 +127,26 @@ PARAMETER_SUPPORTED_DATA = (numpy.int8,
 
 
 
-################### HDF5 Naming and Comments ##########################
+################### HDF5 Naming and Comments ########################
+
 HDF5_STRCOL_MAX_NAME_LENGTH = 128
 """Maximum length of a (short) name"""
-HDF5_STRCOL_MAX_LOCATION_LENGTH = 256
+HDF5_STRCOL_MAX_LOCATION_LENGTH = 512
 """Maximum length of the location string"""
 HDF5_STRCOL_MAX_VALUE_LENGTH = 64
 """Maximum length of a value string"""
 HDF5_STRCOL_MAX_COMMENT_LENGTH = 512
 """Maximum length of a comment """
-HDF5_STRCOL_MAX_ARRAY_LENGTH = 1024
+HDF5_STRCOL_MAX_RANGE_LENGTH = 1024
 """Maximum length of a parameter array summary """
 HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 """Maximum length of human readable runtime, 18 characters allows to display up to 999 days
 excluding the microseconds"""
 HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
 """Maximum number of attributes before a distinct table is created"""
-HDF5_MAX_GROUP_CHILDREN = 5000
-"""Maximum number of children that are allowed to be placed in a hdf5 group,
-after that the storage service will default to a nested structure."""
+HDF5_MAX_OVERVIEW_TABLE_LENGTH = 1000
+"""Maximum number of entries in an overview table"""
+
 
 ######## Multiprocessing Modes #############
 

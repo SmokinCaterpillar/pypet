@@ -2,8 +2,27 @@
 
 * New method to determine overview
 
-* Remove merging of overview tables
+* Remove merging of overview tables *DONE*
 
 * fix merging
 
 * Fixing link additions
+
+* new lazy mode  *DONE*
+
+* testing if user functions can be pickled. *NAH wont do it*
+
+* Don't store exploration in storage but let the trajectory always know which parameters are
+explored  *DONE*
+
+
+* IMPORTANT: add new `explorations table`! *DONE*
+
+* Change info about summary tables
+
+
+* Add doc for new logging
+
+* Docs for wildcard functions
+
+* write tests for wildcards

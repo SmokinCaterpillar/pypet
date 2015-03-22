@@ -102,10 +102,10 @@ def add_params(traj,param_dict):
             raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
 
 
-    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test')
-    traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test')
-    traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test')
-    traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test')
+    traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test1')
+    traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test2')
+    traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test3')
+    traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test4')
 
 
     traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)

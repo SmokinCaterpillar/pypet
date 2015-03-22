@@ -36,7 +36,7 @@ from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
 
 def add_one_particular_item(traj, store_full):
     traj.hi = 42, 'hi!'
-    traj.f_store(store_full_in_run=store_full)
+    traj.f_store()
     traj.f_remove_child('hi')
 
 
@@ -50,29 +50,14 @@ class FullStorageTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'  # Test tags
 
-    def test_not_full_store(self):
-        filename = make_temp_dir('not_full_store.hdf5')
-        with Environment(filename=filename,
-                         log_allow_fork=False, log_config=get_log_config()) as env:
-
-            traj = env.v_trajectory
-
-            traj.par.x = 3, 'jj'
-
-            traj.f_explore({'x': [1,2,3]})
-
-            env.f_run(add_one_particular_item, False)
-
-            traj = load_trajectory(index=-1, filename=filename)
-
-            self.assertTrue('hi' not in traj)
-
     def test_full_store(self):
         filename = make_temp_dir('full_store.hdf5')
         with Environment(filename=filename,
                          log_allow_fork=False, log_config=get_log_config()) as env:
 
             traj = env.v_trajectory
+
+            traj.v_lazy_adding = True
 
             traj.par.x = 3, 'jj'
 
@@ -420,8 +405,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         traj_name = self.traj.v_name
 
-        traj_name = self.traj.v_name
-
 
         self.env = Environment(trajectory=self.traj,
                           log_stdout=False, log_allow_fork=False,
@@ -430,6 +413,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj = self.env.v_trajectory
 
         self.traj.f_load(name=traj_name)
+        self.traj.res.f_remove()
+        self.traj.dpar.f_remove()
 
         self.expand()
 
@@ -457,7 +442,7 @@ class EnvironmentTest(TrajectoryComparator):
     ################## Overview TESTS #############################
 
     def test_switch_ON_large_tables(self):
-        self.traj.f_add_parameter('TEST', 'test_switch_off_LARGE_tables')
+        self.traj.f_add_parameter('TEST', 'test_switch_ON_LARGE_tables')
         ###Explore
         self.explore(self.traj)
 
@@ -466,9 +451,9 @@ class EnvironmentTest(TrajectoryComparator):
 
         hdf5file = pt.openFile(self.filename)
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
-        should_not = ['derived_parameters_runs', 'results_runs']
-        for name in should_not:
-            self.assertTrue(name in overview_group, '%s in overviews but should not!' % name)
+        should = ['derived_parameters_overview', 'results_overview']
+        for name in should:
+            self.assertTrue(name in overview_group, '%s not in overviews but it should!' % name)
         hdf5file.close()
 
         self.traj.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
@@ -565,90 +550,76 @@ class EnvironmentTest(TrajectoryComparator):
 
         hdf5file.close()
 
-    def test_purge_duplicate_comments_but_check_moving_comments_up_the_hierarchy(self):
-        self.explore(self.traj)
-
-        with self.assertRaises(RuntimeError):
-            self.traj.hdf5.purge_duplicate_comments=1
-            self.traj.overview.results_runs_summary=0
-            self.make_run()
-
-        self.traj.f_get('purge_duplicate_comments').f_unlock()
-        self.traj.hdf5.purge_duplicate_comments=1
-        self.traj.f_get('results_runs_summary').f_unlock()
-        self.traj.overview.results_runs_summary=1
-
-        # We fake that the trajectory starts with run_00000001
-        self.traj._run_information['run_00000000']['completed']=1
-        self.make_run()
-
-        # Now we make the first run
-        self.traj._run_information['run_00000000']['completed']=0
-        self.make_run()
-
-
-        hdf5file = pt.openFile(self.filename, mode='a')
-
-        try:
-            traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
-
-
-            for node in traj_group._f_walkGroups():
-                if 'SRVC_LEAF' in node._v_attrs:
-                    if ('run_' in node._v_pathname and
-                            not pypetconstants.RUN_NAME_DUMMY in node._v_pathname):
-                        #comment_run_name=self.get_comment_run_name(traj_group, node._v_pathname, node._v_name)
-                        comment_run_name = 'run_00000000'
-                        if comment_run_name in node._v_pathname:
-                            self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                            'There is no comment in node %s!' % node._v_name)
-                        else:
-                            self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
-                                            'There is a comment in node %s!' % node._v_name)
-                    else:
-                        self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                    'There is no comment in node %s!' % node._v_name)
-        finally:
-            hdf5file.close()
-
 
     def test_purge_duplicate_comments(self):
         self.explore(self.traj)
 
         with self.assertRaises(RuntimeError):
             self.traj.hdf5.purge_duplicate_comments = 1
-            self.traj.overview.results_runs_summary = 0
+            self.traj.overview.results_summary = 0
             self.make_run()
 
         self.traj.f_get('purge_duplicate_comments').f_unlock()
         self.traj.hdf5.purge_duplicate_comments=1
-        self.traj.f_get('results_runs_summary').f_unlock()
-        self.traj.overview.results_runs_summary=1
+        self.traj.f_get('results_summary').f_unlock()
+        self.traj.overview.results_summary=1
         self.make_run()
 
 
         hdf5file = pt.openFile(self.filename, mode='a')
 
+        ncomments = {}
+
         try:
-            traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
+            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
 
 
             for node in traj_group._f_walkGroups():
-                if 'SRVC_LEAF' in node._v_attrs:
-                    if ('run_' in node._v_pathname and
-                            not pypetconstants.RUN_NAME_DUMMY in node._v_pathname):
-                        comment_run_name = 'run_00000000'
-                        if comment_run_name in node._v_pathname:
-                            self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                            'There is no comment in node %s!' % node._v_name)
-                        else:
-                            self.assertTrue(not ('SRVC_INIT_COMMENT' in node._v_attrs),
-                                            'There is a comment in node %s!' % node._v_name)
-                    else:
-                        self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                    'There is no comment in node %s!' % node._v_name)
+                if ('/derived_parameters/' in node._v_pathname or
+                    '/results/' in node._v_pathname):
+                    if 'SRVC_LEAF' in node._v_attrs:
+                        if 'SRVC_INIT_COMMENT' in node._v_attrs:
+                            comment = node._v_attrs['SRVC_INIT_COMMENT']
+                            if comment not in ncomments:
+                                ncomments[comment] = 0
+                            ncomments[comment] += 1
         finally:
             hdf5file.close()
+
+        self.assertGreaterEqual(len(ncomments), 1)
+        self.assertTrue(all(x == 1 for x in ncomments.values()))
+
+    def test_NOT_purge_duplicate_comments(self):
+        self.explore(self.traj)
+        self.traj.f_get('purge_duplicate_comments').f_unlock()
+        self.traj.hdf5.purge_duplicate_comments=0
+        self.traj.f_get('results_summary').f_unlock()
+        self.traj.overview.results_summary=0
+        self.make_run()
+
+
+        hdf5file = pt.openFile(self.filename, mode='a')
+
+        ncomments = {}
+
+        try:
+            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
+
+
+            for node in traj_group._f_walkGroups():
+                if ('/derived_parameters/' in node._v_pathname or
+                    '/results/' in node._v_pathname):
+                    if 'SRVC_LEAF' in node._v_attrs:
+                        if 'SRVC_INIT_COMMENT' in node._v_attrs:
+                            comment = node._v_attrs['SRVC_INIT_COMMENT']
+                            if comment not in ncomments:
+                                ncomments[comment] = 0
+                            ncomments[comment] += 1
+        finally:
+            hdf5file.close()
+
+        self.assertGreaterEqual(len(ncomments), 1)
+        self.assertTrue(any(x > 1 for x in ncomments.values()))
 
 
 class TestOtherHDF5Settings(EnvironmentTest):
@@ -687,7 +658,6 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = True
         self.encoding='latin1'
-
 
 
 class ResultSortTest(TrajectoryComparator):
@@ -803,8 +773,8 @@ class ResultSortTest(TrajectoryComparator):
             self.assertTrue('run_%08d' % (idx+1) not in nameset)
             self.assertTrue('run_%08d' % idx in nameset)
             self.assertTrue(traj.v_crun == run_name)
-            self.assertTrue(newtraj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(newtraj.z),str(traj.x),str(traj.y)))
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
 
         self.assertTrue(traj.v_idx == -1)
         self.assertTrue(traj.v_crun is None)
@@ -885,8 +855,8 @@ class ResultSortTest(TrajectoryComparator):
         for x in range(len(traj)):
             traj.v_idx=x
 
-            self.assertTrue(traj.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(traj.z),str(traj.x),str(traj.y)))
+            self.assertTrue(traj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
         traj.v_idx=-1
 
 
