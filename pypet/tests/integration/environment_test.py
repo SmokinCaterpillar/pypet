@@ -93,7 +93,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.use_pool=True
         self.pandas_format='fixed'
         self.pandas_append=False
-        self.complib = 'blosc'
+        self.complib = 'zlib'
         self.complevel=9
         self.shuffle=True
         self.fletcher32 = False
@@ -634,7 +634,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.use_pool=True
         self.pandas_format='table'
         self.pandas_append=True
-        self.complib = 'zlib'
+        self.complib = 'blosc'
         self.complevel=2
         self.shuffle=False
         self.fletcher32 = False

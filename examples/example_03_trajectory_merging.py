@@ -64,14 +64,13 @@ traj1.f_merge(traj2, remove_duplicates=True, backup_filename=True,
 traj1.f_load(load_parameters=2, load_results=2)
 
 for run_name in traj1.f_get_run_names():
-    # We can make the trajectory belief it is a single run and it will blind out all other
-    # runs and will only look for results for the current index. Also all parameters will
-    # be treated as they were in the specific run.
+    # We can make the trajectory belief it is a single run. All parameters will
+    # be treated as they were in the specific run. And we can use the `crun` wildcard.
     traj1.f_as_run(run_name)
     x=traj1.x
     y=traj1.y
-    # We can rely on fast access here, because the result only contains a single value with name 'z'
-    z=traj1.z
+    # We need to specify the current run, because there exists more than one z value
+    z=traj1.crun.z
     print('%s: x=%f, y=%f, z=%f' % (run_name, x, y, z))
 
 # Don't forget to reset you trajectory to the default settings, to release its belief to

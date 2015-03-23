@@ -84,44 +84,21 @@ def load_trajectory(name=None,
     return traj
 
 
-def _keep_linked(traj, node):
-    """Helper predicate to keep nodes that were linked from somewhere else.
-
-    Returns ``True`` for nodes that can be deleted and ``False`` for nodes that cannot.
-
-    """
-    full_name = node.v_full_name
-    if full_name in traj._linked_by:
-        linking = traj._linked_by[full_name]
-        for linking_name in compat.iterkeys(linking):
-            linking_node, link_set = linking[linking_name]
-            if linking_node.v_run_branch == 'trajectory':
-                for link in link_set:
-                    if (link == pypetconstants.RUN_NAME_DUMMY or
-                            not link.startswith(pypetconstants.RUN_NAME)):
-                        return False
-                    elif not traj._is_completed(link):
-                        return False
-            elif linking_node.v_run_branch == pypetconstants.RUN_NAME_DUMMY:
-                return False
-            elif not traj._is_completed(linking_node.v_run_branch):
-                return False
-    return True
-
-
 def make_run_name(idx):
     if idx >= 0:
         return pypetconstants.FORMATTED_RUN_NAME % idx
     else:
         return pypetconstants.RUN_NAME_DUMMY
 
+
 def make_set_name(idx):
     GROUPSIZE = 1000
-    set_idx =  idx // GROUPSIZE
+    set_idx = idx // GROUPSIZE
     if set_idx >= 0:
         return pypetconstants.FORMATTED_SET_NAME % set_idx
     else:
         return pypetconstants.SET_NAME_DUMMY
+
 
 class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup):
     """The trajectory manages results and parameters.
@@ -292,6 +269,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
         self._new_nodes = OrderedDict() # Contains all elements added during a
         # particular single run with full names as keys and a (parent, child) pair as value
+        self._new_links = OrderedDict() # Contains all new added links during a single run
         self._other_leaves = {}  # Contains ALL other user added leaves
         self._linked_by = {} #Contains all nodes that are linked to
 
@@ -355,6 +333,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._wildcard_functions = {}
         self._wildcard_cache = {}
         self._wildcard_keys = {}
+        self._reversed_wildcards = {} # Only needed for merging
 
         self.f_add_wildcard_functions(internal_wildcard_functions)
 
@@ -533,7 +512,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """"
         Similar to ``v_crun`` but returns ``'run_ALL'`` if ``v_crun`` is ``None``.
         """
-        return self.v_crun if self.v_crun is not None else pypetconstants.RUN_NAME_DUMMY
+        return self.v_crun if self.v_crun is not None else self.f_wildcard('$', -1)
 
     @property
     def v_crun(self):
@@ -676,7 +655,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             i.e. `traj.results.run_00000004.z` will still work.
 
         """
-        if (name_or_idx is None or name_or_idx == pypetconstants.RUN_NAME_DUMMY or
+        if (name_or_idx is None or name_or_idx == self.f_wildcard('$', -1) or
                     name_or_idx == -1):
             self.f_restore_default()
         else:
@@ -967,33 +946,35 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 value = None
                 if len(self._run_parent_groups) > 0:
                     for run_parent_group in compat.itervalues(self._run_parent_groups):
+                        if value is not None:
+                            raise pex.NotUniqueNodeError('`%s` has been found in several runs '
+                                                         'at once.' % name)
                         try:
-                            value = run_parent_group.f_get(name,
+                            value = run_parent_group.f_get(run_name + '.' + name,
                                                            fast_access=False,
                                                            with_links=with_links,
                                                            shortcuts=shortcuts,
                                                            max_depth=max_depth,
                                                            auto_load=auto_load)
-                            if old_value is not None:
-                                raise pex.NotUniqueNodeError('`%s` has been found twice: '
-                                                             '`%s` and `%s`' % (name,
-                                                                            old_value.v_full_name,
-                                                                            value.v_full_name))
-
-
-
-                            if pypetconstants.RUN_NAME not in value.v_full_name:
-                                value = old_value
-                                raise  AttributeError('Item does not belong to run')
-                            elif (not include_default_run
-                                and pypetconstants.RUN_NAME_DUMMY in value.v_full_name):
-                                value = old_value
-                                raise AttributeError('I was told to ignore default runs')
-
-                            old_value = value
 
                         except (AttributeError, pex.DataNotInStorageError):
                             pass
+
+                    if value is None and include_default_run:
+                        for run_parent_group in compat.itervalues(self._run_parent_groups):
+                            if value is not None:
+                                raise pex.NotUniqueNodeError('`%s` has been found in several runs '
+                                                         'at once.' % name)
+                            try:
+                                value = run_parent_group.f_get(self.f_wildcard('$', -1) +
+                                                               '.' + name,
+                                                               fast_access=False,
+                                                               with_links=with_links,
+                                                               shortcuts=shortcuts,
+                                                               max_depth=max_depth,
+                                                               auto_load=auto_load)
+                            except (AttributeError, pex.DataNotInStorageError):
+                                pass
 
                     if value is not None:
 
@@ -1315,22 +1296,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not par.f_is_empty():
                 par.f_lock()
 
-    def _remove_run_data(self):
-        """ Removes all data of completed runs.
-
-        Keeps data that is externally linked.
-
-        """
-        _keep_linked_lambda = lambda node: _keep_linked(self, node)
-        for group_name in self._run_parent_groups:
-            group = self._run_parent_groups[group_name]
-            for child_name in compat.listkeys(group.f_get_children(copy=False)):
-                if (child_name.startswith(pypetconstants.RUN_NAME) and
-                        child_name != pypetconstants.RUN_NAME_DUMMY and
-                            self.f_is_completed(child_name)):
-                    group.f_remove_child(child_name, recursive=True,
-                                         predicate=_keep_linked_lambda)
-
     def _finalize(self):
         """Final rollback initiated by the environment
 
@@ -1543,7 +1508,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
-                                            ignore_trajectory_derived_parameters):
+                                            ignore_data):
         """ Checks if two trajectories live in the same space and can be merged. """
 
         if not isinstance(other_trajectory, Trajectory):
@@ -1555,14 +1520,22 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if other_trajectory._stored:
             other_trajectory.f_load_skeleton()
 
+        # Check wildcard set
+        other_wildcard_set = set(x[1] for x in other_trajectory._wildcard_functions.keys())
+        wildcard_set = set(x[1] for x in self._wildcard_functions.keys())
+        diff = wildcard_set.symmetric_difference(other_wildcard_set)
+        if diff:
+            raise TypeError('The wildcard sets are not matching. `%s` != `%s`' %
+                            (str(wildcard_set), str(other_wildcard_set)))
+
         # Load all parameters of the current and the other trajectory
         if self._stored:
             # To suppress warnings if nothing needs to be loaded
             with self._nn_interface._disable_logger:
-                self.f_load_items(compat.itervalues(self._parameters), only_empties=True)
+                self.f_load_items(self._parameters.keys(), only_empties=True)
         if other_trajectory._stored:
             with self._nn_interface._disable_logger:
-                other_trajectory.f_load_items(compat.itervalues(other_trajectory._parameters),
+                other_trajectory.f_load_items(other_trajectory._parameters.keys(),
                                               only_empties=True)
 
         self.f_restore_default()
@@ -1572,47 +1545,44 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         allotherparams = other_trajectory._parameters.copy()
 
         # If not ignored, add also the trajectory derived parameters to check for merging
-        if not ignore_trajectory_derived_parameters and 'derived_parameters' in self:
-            my_traj_dpars = self._get_traj_dpars_or_results(self, 'derived_parameters')
+        if 'derived_parameters' in self:
+            my_traj_dpars = self._derived_parameters
             if self._stored:
-                self.f_load_items(compat.itervalues(my_traj_dpars), only_empties=True)
+                self.f_load_items(my_traj_dpars.keys(), only_empties=True)
             allmyparams.update(my_traj_dpars)
-            other_traj_dpars = self._get_traj_dpars_or_results(other_trajectory,
-                                                               'derived_parameters')
+            other_traj_dpars = other_trajectory._derived_parameters
             if other_trajectory._stored:
-                other_trajectory.f_load_items(other_traj_dpars.values(),
-                                              only_empties=True)
+                other_trajectory.f_load_items(other_traj_dpars.keys(), only_empties=True)
             allotherparams.update(other_traj_dpars)
-
 
         # Check if the trajectories have the same parameters:
         my_keyset = set(allmyparams.keys())
         other_keyset = set(allotherparams.keys())
-        if not my_keyset == other_keyset:
-            diff1 = my_keyset - other_keyset
-            diff2 = other_keyset - my_keyset
+        diff = my_keyset.symmetric_difference(other_keyset) - ignore_data
+        if diff:
             run_difference_can_be_resolved = True
-            for full_name in diff1:
-                if pypetconstants.RUN_NAME not in full_name:
+            for full_name in diff:
+                split_name = full_name.split('.')
+                if not any(x in self._run_information or
+                                x in other_trajectory._run_information
+                                    for x in split_name):
                     run_difference_can_be_resolved = False
                     break
-            if run_difference_can_be_resolved:
-                for full_name in diff2:
-                    if pypetconstants.RUN_NAME not in full_name:
-                        run_difference_can_be_resolved = False
-                        break
             if not run_difference_can_be_resolved:
                 raise TypeError('Cannot merge trajectories, '
                                 'they do not live in the same space,the '
-                                'f_set of parameters `%s` is only '
-                                'found in the current trajectory '
-                                'and `%s` only in the other trajectory.' %
-                                (str(diff1), str(diff2)))
+                                'set of parameters `%s` is only '
+                                'found in one trajectory' % str(diff))
 
         # Check if corresponding parameters in both trajectories are of the same type
         for key, other_param in allotherparams.items():
+            if key in ignore_data:
+                continue
             my_param = self.f_get(key)
-            if pypetconstants.RUN_NAME in key:
+            split_key = key.split('.')
+            if any(x in self._run_information or
+                        x in other_trajectory._run_information
+                            for x in split_key):
                 pass
             else:
                 if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
@@ -1641,12 +1611,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     **kwargs)
 
+    def _make_reversed_wildcards(self):
+        """Creates a full mapping from all wildcard translations to the corresponding wildcards"""
+        for wildcards, func in self._wildcard_functions.items():
+            for irun in range(-1, len(self)):
+                translated_name = func(irun)
+                self._reversed_wildcards[translated_name] = (irun, wildcards)
+
     @not_in_run
     @kwargs_api_change('backup_filename', 'backup')
     @kwargs_api_change('move_nodes', 'move_data')
+    @kwargs_api_change('ignore_trajectory_derived_parameters')
+    @kwargs_api_change('ignore_trajectory_results')
     def f_merge(self, other_trajectory, trial_parameter=None, remove_duplicates=False,
-                ignore_trajectory_derived_parameters=False,
-                ignore_trajectory_results=False,
+                ignore_data=(),
                 backup=True,
                 move_data=False,
                 delete_other_trajectory=False,
@@ -1679,17 +1657,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             Requires N1 * N2 (quadratic complexity in single runs).
             A ValueError is raised if no runs would be merged.
 
-        :param ignore_trajectory_derived_parameters:
+        :param ignore_data:
 
-            Whether you want to ignore or merge derived parameters
-            kept under `.derived_parameters.trajectory`
-
-        :param ignore_trajectory_results:
-
-            As above but with results. If you have trajectory results
-            with the same name in both trajectories, the result
-            in the current trajectory is kept and the other one is
-            not merged into the current trajectory.
+            List of full names of data that should be ignored and not merged.
 
         :param backup:
 
@@ -1739,94 +1709,22 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         of single runs are copied, so you don't have to worry about these.
 
         """
+        # Keep the timestamp of the merge
+        timestamp = time.time()
+        original_ignore_data = set(ignore_data)
+        ignore_data = original_ignore_data.copy()
+
         # Check if trajectories can be merged
-        self._check_if_both_have_same_parameters(other_trajectory,
-                                                 ignore_trajectory_derived_parameters)
+        self._check_if_both_have_same_parameters(other_trajectory, ignore_data)
+
+        # Create a full mapping set for renaming
+        self._make_reversed_wildcards()
+        other_trajectory._make_reversed_wildcards()
 
         # BACKUP if merge is possible
         if backup:
             other_trajectory.f_backup()
             self.f_backup()
-
-        # Add meta information about the merge to the current trajectory
-        self._logger.info('Adding merge information')
-        timestamp = time.time()
-        formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        hexsha = hashlib.sha1(compat.tobytes(self.v_name +
-                                             str(self.v_timestamp) +
-                                             other_trajectory.v_name +
-                                             str(other_trajectory.v_timestamp) +
-                                             VERSION)).hexdigest()
-
-        short_hexsha = hexsha[0:7]
-
-        if keep_info:
-            merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
-
-            config_name = 'merge.%s.timestamp' % merge_name
-            self.f_add_config(config_name, timestamp,
-                              comment='Timestamp of merge')
-
-            config_name = 'merge.%s.hexsha' % merge_name
-            self.f_add_config(config_name, hexsha,
-                              comment='SHA-1 identifier of the merge')
-
-            config_name = 'merge.%s.remove_duplicates' % merge_name
-            self.f_add_config(config_name, remove_duplicates,
-                              comment='Option to remove duplicate entries')
-
-            config_name = 'merge.%s.ignore_trajectory_derived_parameters' % merge_name
-            self.f_add_config(config_name, ignore_trajectory_derived_parameters,
-                              comment='Whether or not to ignore trajectory derived'
-                                      ' parameters')
-
-            config_name = 'merge.%s.ignore_trajectory_results' % merge_name
-            self.f_add_config(config_name, ignore_trajectory_results,
-                              comment='Whether or not to ignore trajectory results')
-
-            config_name = 'merge.%s.length_before_merge' % merge_name
-            self.f_add_config(config_name, len(self),
-                              comment='Length of trajectory before merge')
-
-            self.config.merge.v_comment = 'Settings and information of the different merges'
-
-            if self.v_version != VERSION:
-                config_name = 'merge.%s.version' % merge_name
-                self.f_add_config(config_name, self.v_version,
-                                  comment='Pypet version if it differs from the version'
-                                          ' of the trajectory')
-
-            if trial_parameter is not None:
-                config_name = 'merge.%s.trial_parameter' % merge_name
-                self.f_add_config(config_name, len(other_trajectory),
-                                  comment='Name of trial parameter')
-
-            if keep_other_trajectory_info:
-
-                if other_trajectory.v_version != self.v_version:
-                    config_name = 'merge.%s.other_trajectory.version' % merge_name
-                    self.f_add_config(config_name, other_trajectory.v_version,
-                                      comment='The version of pypet you used to manage the other'
-                                              ' trajectory. Only added if other trajectory\'s'
-                                              ' version differs from current trajectory version.')
-
-                config_name = 'merge.%s.other_trajectory.name' % merge_name
-                self.f_add_config(config_name, other_trajectory.v_name,
-                                  comment='Name of other trajectory merged into the current one')
-
-                config_name = 'merge.%s.other_trajectory.timestamp' % merge_name
-                self.f_add_config(config_name, other_trajectory.v_timestamp,
-                                  comment='Timestamp of creation of other trajectory '
-                                          'merged into the current one')
-
-                config_name = 'merge.%s.other_trajectory.length' % merge_name
-                self.f_add_config(config_name, len(other_trajectory),
-                                  comment='Length of other trajectory')
-
-                if other_trajectory.v_comment:
-                    config_name = 'merge.%s.other_trajectory.comment' % merge_name
-                    self.f_add_config(config_name, other_trajectory.v_comment,
-                                      comment='Comment of other trajectory')
 
         # Merge parameters and keep track which runs where used and which parameters need
         # to be updated
@@ -1835,37 +1733,43 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             other_trajectory,
             remove_duplicates,
             trial_parameter,
-            ignore_trajectory_derived_parameters)
-        if keep_info:
-            config_name = 'merge.%s.merged_runs' % merge_name
-            self.f_add_config(config_name, int(np.sum(used_runs)),
-                              comment='Number of merged runs')
+            ignore_data)
 
-        if np.all(used_runs == 0):
+        ignore_data.update(set(changed_parameters))
+
+        if len(used_runs) == 0:
             raise ValueError('Your merge discards all runs of the other trajectory, maybe you '
                              'try to merge a trajectory with itself?')
+
+
+
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
         rename_dict = {}
 
+        self._logger.info('Merging run information')
+        allowed_translations = set([translation for translation, pair in
+                                    other_trajectory._reversed_wildcards.items() if
+                                        pair[0] in used_runs])
+        self._merge_single_runs(other_trajectory, used_runs)
+
+        self._logger.info('Merging derived parameters')
+        self._merge_derived_parameters(other_trajectory=other_trajectory,
+                                         used_runs=used_runs,
+                                         rename_dict=rename_dict,
+                                         allowed_translations=allowed_translations,
+                                         ignore_data=ignore_data)
+
         # Keep track of all trajectory results that should be merged and put
         # information into `rename_dict`
-        if not ignore_trajectory_results and 'results' in other_trajectory:
-            self._logger.info('Merging trajectory results skeletons')
-            self._merge_trajectory_results(other_trajectory, rename_dict)
+        self._merge_results(other_trajectory=other_trajectory,
+                             used_runs=used_runs,
+                             rename_dict=rename_dict,
+                             allowed_translations=allowed_translations,
+                             ignore_data=ignore_data)
 
-        # Single runs are rather easy to merge, we simply keep track of the changed namings
-        # of the results and derived parameters in `rename_dict`
-        # and let the storage service do the job in the next step
-        self._logger.info('Merging single run skeletons')
-        run_name_dict = self._merge_single_runs(other_trajectory, used_runs, rename_dict)
 
-        # Now merge derived parameters which can be resolved run based
-        if not ignore_trajectory_derived_parameters:
-            self._merge_derived_parameters_run_based(other_trajectory,
-                                                     run_name_dict,
-                                                     rename_dict)
 
         # The storage service needs to prepare the file for merging.
         # This includes updating meta information and already storing the merged parameters
@@ -1913,32 +1817,177 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._merge_config(other_trajectory)
 
         # Finally merging links
-        self._merge_links(other_trajectory, run_name_dict)
+        self._merge_links(other_trajectory=other_trajectory,
+                         used_runs=used_runs,
+                         allowed_translations=allowed_translations,
+                         ignore_data=original_ignore_data)
+
+        # Add meta information about the merge to the current trajectory
+        self._logger.info('Adding merge information')
+        formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+        hexsha = hashlib.sha1(compat.tobytes(self.v_name +
+                                             str(self.v_timestamp) +
+                                             other_trajectory.v_name +
+                                             str(other_trajectory.v_timestamp) +
+                                             VERSION)).hexdigest()
+
+        short_hexsha = hexsha[0:7]
+
+        if keep_info:
+            merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
+
+            config_name = 'merge.%s.merged_runs' % merge_name
+            self.f_add_config(config_name, len(used_runs),
+                              comment='Number of merged runs')
+
+            config_name = 'merge.%s.timestamp' % merge_name
+            self.f_add_config(config_name, timestamp,
+                              comment='Timestamp of merge')
+
+            config_name = 'merge.%s.hexsha' % merge_name
+            self.f_add_config(config_name, hexsha,
+                              comment='SHA-1 identifier of the merge')
+
+            config_name = 'merge.%s.remove_duplicates' % merge_name
+            self.f_add_config(config_name, remove_duplicates,
+                              comment='Option to remove duplicate entries')
+
+            if original_ignore_data:
+                config_name = 'merge.%s.ignore_data' % merge_name
+                self.f_add_config(config_name, tuple(original_ignore_data),
+                                  comment='Data to ignore during merge')
+
+            config_name = 'merge.%s.length_before_merge' % merge_name
+            self.f_add_config(config_name, len(self),
+                              comment='Length of trajectory before merge')
+
+            self.config.merge.v_comment = 'Settings and information of the different merges'
+
+            if self.v_version != VERSION:
+                config_name = 'merge.%s.version' % merge_name
+                self.f_add_config(config_name, self.v_version,
+                                  comment='Pypet version if it differs from the version'
+                                          ' of the trajectory')
+
+            if trial_parameter is not None:
+                config_name = 'merge.%s.trial_parameter' % merge_name
+                self.f_add_config(config_name, len(other_trajectory),
+                                  comment='Name of trial parameter')
+
+            if keep_other_trajectory_info:
+
+                if other_trajectory.v_version != self.v_version:
+                    config_name = 'merge.%s.other_trajectory.version' % merge_name
+                    self.f_add_config(config_name, other_trajectory.v_version,
+                                      comment='The version of pypet you used to manage the other'
+                                              ' trajectory. Only added if other trajectory\'s'
+                                              ' version differs from current trajectory version.')
+
+                config_name = 'merge.%s.other_trajectory.name' % merge_name
+                self.f_add_config(config_name, other_trajectory.v_name,
+                                  comment='Name of other trajectory merged into the current one')
+
+                config_name = 'merge.%s.other_trajectory.timestamp' % merge_name
+                self.f_add_config(config_name, other_trajectory.v_timestamp,
+                                  comment='Timestamp of creation of other trajectory '
+                                          'merged into the current one')
+
+                config_name = 'merge.%s.other_trajectory.length' % merge_name
+                self.f_add_config(config_name, len(other_trajectory),
+                                  comment='Length of other trajectory')
+
+                if other_trajectory.v_comment:
+                    config_name = 'merge.%s.other_trajectory.comment' % merge_name
+                    self.f_add_config(config_name, other_trajectory.v_comment,
+                                      comment='Comment of other trajectory')
 
         # Write out the merged data to disk
         self._logger.info('Writing merged data to disk')
         self.f_store(store_data=pypetconstants.STORE_DATA)
 
+        self._reversed_wildcards = {}
+        other_trajectory._reversed_wildcards = {}
+
         self._logger.info('Finished Merging!')
 
-    def _merge_derived_parameters_run_based(self,
-                                            other_trajectory,
-                                            run_name_dict,
-                                            rename_dict):
+    def _merge_single_runs(self, other_trajectory, used_runs):
+        """  Updates the `run_information` of the current trajectory."""
+        count = len(self)  # Variable to count the increasing new run indices and create
+        # new run names
+
+        run_indices = range(len(other_trajectory))
+
+        run_name_dict = OrderedDict()
+
+        to_store_groups_with_annotations = []
+
+        for idx in run_indices:
+            # Iterate through all used runs and store annotated groups and mark results and
+            # derived parameters for merging
+            if idx in used_runs:
+                # Update the run information dict of the current trajectory
+                other_info_dict = other_trajectory.f_get_run_information(idx)
+                time_ = other_info_dict['time']
+                timestamp = other_info_dict['timestamp']
+                completed = other_info_dict['completed']
+                short_environment_hexsha = other_info_dict['short_environment_hexsha']
+                finish_timestamp = other_info_dict['finish_timestamp']
+                runtime = other_info_dict['runtime']
+
+                new_idx = used_runs[idx]
+                new_runname = self.f_wildcard('$', new_idx)
+
+                run_name_dict[idx] = new_runname
+
+                info_dict = dict(
+                    idx=new_idx,
+                    time=time_,
+                    timestamp=timestamp,
+                    completed=completed,
+                    short_environment_hexsha=short_environment_hexsha,
+                    finish_timestamp=finish_timestamp,
+                    runtime=runtime)
+
+                self._add_run_info(**info_dict)
+
+    def _rename_full_name(self, full_name, other_trajectory, used_runs=None, new_run_idx=None):
+        """Renames a full name based on the wildcards and a particular run"""
+        split_name = full_name.split('.')
+        for idx, name in enumerate(split_name):
+            if name in other_trajectory._reversed_wildcards:
+                run_idx, wildcards = other_trajectory._reversed_wildcards[name]
+                if new_run_idx is None:
+                    new_run_idx = used_runs[run_idx]
+                new_name = self.f_wildcard(wildcards[0], new_run_idx)
+                split_name[idx] = new_name
+        full_name = '.'.join(split_name)
+        return full_name
+
+
+    def _merge_derived_parameters(self,
+                                    other_trajectory,
+                                    used_runs,
+                                    rename_dict,
+                                    allowed_translations,
+                                    ignore_data):
         """ Merges derived parameters that have the `run_ALL` in a name.
 
         Creates a new parameter with the name of the first new run and links to this
         parameter to avoid copying in all other runs.
 
         """
-        other_derived_parameters = \
-            other_trajectory._get_traj_dpars_or_results(other_trajectory, 'derived_parameters')
-        _, new_first_run_name = next(iter(compat.iteritems(run_name_dict)))
-        # get first runname
+        other_derived_parameters = other_trajectory._derived_parameters.copy()
+        # get first run_idx
+        new_first_run_idx = min(used_runs.values())
 
+        run_name_dummys = set([f(-1) for f in other_trajectory._wildcard_functions.values()])
         for param_name in other_derived_parameters:
-            if not pypetconstants.RUN_NAME_DUMMY in param_name:
+            if param_name in ignore_data:
                 continue
+            split_name = param_name.split('.')
+            if not any(x in run_name_dummys for x in split_name):
+                continue
+            ignore_data.add(param_name)
 
             if param_name in self:
                 my_param = self.f_get(param_name, fast_access=False)
@@ -1947,8 +1996,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         not (my_param.f_has_range() or param.f_has_range())):
                     continue
 
-            first_new_param_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY,
-                                                      new_first_run_name)
+            first_new_param_name = self._rename_full_name(param_name,
+                                                          other_trajectory,
+                                                          new_run_idx=new_first_run_idx)
 
             rename_dict[param_name] = first_new_param_name
             comment = param.v_comment
@@ -1957,10 +2007,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             first_param = self.f_add_leaf(param_type,
                                           first_new_param_name,
                                           comment=comment)
-            for run_name in run_name_dict.values():
-                if run_name == new_first_run_name:
+            for run_idx in used_runs.values():
+                if run_idx == new_first_run_idx:
                     continue
-                next_name = param_name.replace(pypetconstants.RUN_NAME_DUMMY, run_name)
+                next_name = self._rename_full_name(param_name, other_trajectory,
+                                                    new_run_idx=run_idx)
                 split_name = next_name.split('.')
                 link_name = split_name.pop()
                 location_name = '.'.join(split_name)
@@ -1971,53 +2022,73 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
                 the_group.f_add_link(link_name, first_param)
 
-    def _merge_links(self, other_trajectory, run_name_dict):
+        for param_name in other_derived_parameters:
+            if param_name in ignore_data:
+                continue
+            split_name = param_name.split('.')
+            ignore_data.add(param_name)
+            if any(x in other_trajectory._reversed_wildcards and x not in allowed_translations
+                        for x in split_name):
+                continue
+            new_name = self._rename_full_name(param_name, other_trajectory,
+                                                    used_runs=used_runs)
+            if self.f_contains(new_name):
+                my_param = self.f_get(new_name, fast_access=False)
+                param = other_derived_parameters[param_name]
+                if (my_param._equal_values(my_param.f_get(), param.f_get()) and
+                        not (my_param.f_has_range() or param.f_has_range())):
+                    continue
+                else:
+                    raise TypeError('Cannot merge parameter `%s`.' % new_name)
+            rename_dict[param_name] = new_name
+
+
+    def _merge_links(self, other_trajectory, used_runs, allowed_translations, ignore_data):
         """ Merges all links"""
         linked_items = other_trajectory._linked_by
+        run_name_dummys = set([f(-1) for f in other_trajectory._wildcard_functions.values()])
         if len(linked_items) > 0:
             self._logger.info('Merging potential links!')
             for old_linked_name in other_trajectory._linked_by:
-                if pypetconstants.RUN_NAME_DUMMY in old_linked_name:
+                if old_linked_name in ignore_data:
+                    continue
+                split_name = old_linked_name.split('.')
+                if any(x in run_name_dummys for x in split_name):
                     self._logger.warning('Ignoring all links linking to `%s` because '
-                                         'I don`t know how to resolve links under a `%s` node.' %
-                                         (old_linked_name, pypetconstants.RUN_NAME_DUMMY))
+                                     'I don`t know how to resolve links under `%s` nodes.' %
+                                     (old_linked_name, str(run_name_dummys)))
                     continue
                 old_link_dict = other_trajectory._linked_by[old_linked_name]
-                old_linked_item = other_trajectory.f_get(old_linked_name)
-                if old_linked_item.v_run_branch in run_name_dict:
-                    pos_list = []
-                    for idx, split in enumerate(old_linked_name.split('.')):
-                        if split.startswith(pypetconstants.RUN_NAME):
-                            pos_list.append(idx)
-                    new_runname = run_name_dict[old_linked_item.v_run_branch]
-                    new_linked_full_name = self._rename_key(old_linked_name,
-                                                             pos_list, new_runname)
+                split_name = old_linked_name.split('.')
+                if all(x in allowed_translations for x in split_name):
+                    new_linked_full_name = self._rename_full_name(old_linked_name,
+                                                                  other_trajectory,
+                                                                  used_runs=used_runs)
                 else:
                     new_linked_full_name = old_linked_name
 
                 for linking_node, link_set in compat.itervalues(old_link_dict):
 
                     linking_full_name = linking_node.v_full_name
-
-                    if pypetconstants.RUN_NAME_DUMMY in linking_full_name:
+                    split_name = linking_full_name .split('.')
+                    if any(x in run_name_dummys for x in split_name):
                         self._logger.warning('Ignoring links under `%s` because '
                                              'I don`t know how to resolve links '
                                              'under a `%s` node.' %
                                              (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
 
-                    if linking_node.v_run_branch in run_name_dict:
-                        pos_list = []
-                        for idx, split in enumerate(linking_full_name.split('.')):
-                            if split.startswith(pypetconstants.RUN_NAME):
-                                pos_list.append(idx)
-                        new_runname = run_name_dict[linking_node.v_run_branch]
-                        new_linking_full_name = self._rename_key(linking_full_name,
-                                                                 pos_list, new_runname)
+                    split_name = linking_full_name .split('.')
+                    if any(x in allowed_translations for x in split_name):
+                        new_linking_full_name = self._rename_full_name(linking_full_name,
+                                                                      other_trajectory,
+                                                                      used_runs=used_runs)
                     else:
                         new_linking_full_name = linking_full_name
 
                     for link in link_set:
-                        if link == pypetconstants.RUN_NAME_DUMMY:
+                        if (linking_full_name + '.' + link) in ignore_data:
+                            continue
+                        if link in run_name_dummys:
                             self._logger.warning('Ignoring link `%s` under `%s` because '
                                                  'I don`t know how to resolve '
                                                  'links named as `%s`.' %
@@ -2034,8 +2105,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                               shortcuts=False)
                             else:
                                 new_linking_item =  self.f_add_group(new_linking_full_name)
-                            if link in run_name_dict:
-                                link = run_name_dict[link]
+                            if link in allowed_translations:
+                                run_idx, wildcards = other_trajectory._reversed_wildcards[link]
+                                link = self.f_wildcard(wildcards[0], used_runs[run_idx])
                             if not link in new_linking_item._links:
                                 new_linking_item.f_add_link(link, new_linked_item)
                             else:
@@ -2119,17 +2191,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 with self._nn_interface._disable_logger:
                     other_trajectory.f_load_items(other_instance)
 
-            # The empty instances for the new data have already been created before
-            my_instance = self.f_get(new_key)
+            if not self.f_contains(new_key):
+                class_name = other_instance.f_get_class_name()
+                class_ = self._create_class(class_name)
+                my_instance = self.f_add_leaf(class_, new_key)
+            else:
+                my_instance = self.f_get(new_key, shortcuts=False)
 
             if not my_instance.f_is_empty():
-                raise RuntimeError('You want to slowly merge results, but your target result '
-                                   '`%s` is not _empty, this should not happen.' %
-                                   my_instance.v_full_name)
+                raise RuntimeError('Something is wrong! Your item `%s` should be empty.' % new_key)
 
             load_dict = other_instance._store()
             my_instance._load(load_dict)
             my_instance.f_set_annotations(**other_instance.v_annotations.f_to_dict(copy=False))
+            my_instance.v_comment = other_instance.v_comment
 
             self.f_store_item(my_instance)
 
@@ -2140,16 +2215,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             other_instance.f_empty()
             my_instance.f_empty()
 
-    def _merge_trajectory_results(self, other_trajectory, rename_dict):
-        """Checks which results under `.results.trajectory` should be merged.
-
-        If a result is marked for merge an empty instance is created in the current trajectory.
-
-        Emits a warning if a result in the other trajectory already exists in the current one.
-
-        Stores all group nodes with annotations that are not part of the current trajectory
-        to disk. Results are only created empty and not stored in order to try to
-        conduct faster merging and copying of results in the hdf5 file.
+    def _merge_results(self, other_trajectory, rename_dict, used_runs, allowed_translations,
+                       ignore_data):
+        """Merges all results.
 
         :param rename_dict:
 
@@ -2160,221 +2228,27 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
 
-        other_result_nodes = self._get_traj_dpars_or_results_node_iterator(other_trajectory,
-                                                                           'results')
+        other_results = other_trajectory._results.copy()
 
-        to_store_groups_with_annotations = []
+        for result_name in other_results:
+            if result_name in ignore_data:
+                continue
+            split_name = result_name.split('.')
+            ignore_data.add(result_name)
+            if any(x in other_trajectory._reversed_wildcards and x not in allowed_translations
+                        for x in split_name):
 
-        for node in other_result_nodes:
-            full_name = node.v_full_name
-            if node.v_is_leaf:
-                # If the node is a result, check if the result already exists,
-                # if not mark it for merge later on
-                if full_name in self:
-                    self._logger.warning(
-                        'You already have a trajectory result called `%s` in your '
-                        'trajectory. I will not copy it.' % full_name)
-                else:
-                    rename_dict[full_name] = full_name
-                    comment = node.v_comment
-                    result_type = node.f_get_class_name()
-                    result_type = self._create_class(result_type)
-                    self.f_add_result(result_type, full_name, comment=comment)
-            else:
-                # If the group is annotated and unknown to the current trajectory we
-                # want to copy the annotations into the current trajectory
-                if not full_name in self:
-                    if not node.v_annotations.f_is_empty():
-                        new_group = self.f_add_result_group(full_name)
-
-                        annotationdict = node.v_annotations.f_to_dict()
-                        new_group.f_set_annotations(**annotationdict)
-
-                        to_store_groups_with_annotations.append(new_group)
-
-        # If we have annotated groups, store them
-        if len(to_store_groups_with_annotations) > 0:
-            self.f_store_items(to_store_groups_with_annotations)
-
-
-    def _merge_single_runs(self, other_trajectory, used_runs, rename_dict):
-        """Checks which single run results and derived parameters should be marked for merge.
-
-        If a result or derived parameter is marked for merge
-        an empty instance is created in the current trajectory.
-
-        Updates the `run_information` of the current trajectory.
-
-        Stores all group nodes with annotations that are not part of the current trajectory
-        to disk. Results are only created empty and not stored in order to try to
-        conduct faster merging and copying of results in the hdf5 file.
-
-        :param used_runs:
-
-            Binary vector of length `len(other_trajectory)`,
-            `1.0` marks a run that is supposed to be merged, runs flagged with `0.0` are skipped.
-
-        :param rename_dict:
-
-            Dictionary that is filled with the names of groups, results and derived parameters
-            in the `other_trajectory` as keys and the corresponding new names
-            in the current trajectory as values. We DO need to rename results and derived
-            parameters here because the names of the single runs are changed.
-            For example, the result `.results.run_0000001.myresult` might be reassigned the
-            new full name `.results.run_00000012.myresult` when merged into the current trajectory.
-
-        :return:
-
-            Dictionary containing the old run names as keys and new run names as values
-
-        """
-        count = len(self)  # Variable to count the increasing new run indices and create
-        # new run names
-
-        run_names = other_trajectory.f_get_run_names()
-
-        run_name_dict = OrderedDict()
-
-        to_store_groups_with_annotations = []
-
-        for run_name in run_names:
-            # Iterate through all used runs and store annotated groups and mark results and
-            # derived parameters for merging
-            idx = other_trajectory.f_get_run_information(run_name)['idx']
-            if used_runs[idx]:
-                iter_list = []
-                for parent_group in compat.itervalues(other_trajectory._run_parent_groups):
-                    if parent_group.f_contains(run_name, with_links=False):
-                        node = parent_group.f_get(run_name)
-                        if node.v_is_leaf:
-                            nodes_iterator = iter([node])
-                        else:
-                            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=False)
-                        iter_list.append(nodes_iterator)
-
-                nodes_iterator = itools.chain(*iter_list)
-
-                # Update the run information dict of the current trajectory
-                other_info_dict = other_trajectory.f_get_run_information(run_name)
-                time_ = other_info_dict['time']
-                timestamp = other_info_dict['timestamp']
-                completed = other_info_dict['completed']
-                short_environment_hexsha = other_info_dict['short_environment_hexsha']
-                finish_timestamp = other_info_dict['finish_timestamp']
-                runtime = other_info_dict['runtime']
-
-                new_runname = pypetconstants.FORMATTED_RUN_NAME % count
-
-                run_name_dict[run_name] = new_runname
-
-                info_dict = dict(
-                    idx=count,
-                    time=time_,
-                    timestamp=timestamp,
-                    completed=completed,
-                    short_environment_hexsha=short_environment_hexsha,
-                    finish_timestamp=finish_timestamp,
-                    runtime=runtime)
-
-                self._add_run_info(**info_dict)
-
-                count += 1
-
-                for node in nodes_iterator:
-                    full_name = node.v_full_name
-                    pos_list = []
-                    for idx, split in enumerate(full_name.split('.')):
-                        if split.startswith(pypetconstants.RUN_NAME):
-                            pos_list.append(idx)
-                    new_full_name = self._rename_key(full_name, pos_list, new_runname)
-
-                    if node.v_is_leaf:
-                        # Create new empty result/derived param instance
-                        # for every result/ derived param
-                        # in the other trajectory
-                        # that is going to be merged into the current one
-                        rename_dict[full_name] = new_full_name
-                        comment = node.v_comment
-                        leaf_type = node.f_get_class_name()
-                        leaf_type = self._create_class(leaf_type)
-                        if full_name.startswith('results.'):
-                            self.f_add_result(leaf_type, new_full_name, comment=comment)
-                        else:
-                            self.f_add_derived_parameter(leaf_type, new_full_name,
-                                                         comment=comment)
-                    else:
-                        if not node.v_annotations.f_is_empty() or node.v_comment != '':
-                            # Store all group nodes that are annotated
-                            if full_name.startswith('results.'):
-                                new_group = self.f_add_result_group(new_full_name)
-                            else:
-                                new_group = self.f_add_derived_parameter_group(new_full_name)
-
-                            if not node.v_annotations.f_is_empty():
-                                annotationdict = node.v_annotations.f_to_dict()
-                                new_group.f_set_annotations(**annotationdict)
-
-                            if node.v_comment != '':
-                                new_group.v_comment = node.v_comment
-
-                            to_store_groups_with_annotations.append(new_group)
-
-        # If we have annotated groups, store them
-        if len(to_store_groups_with_annotations) > 0:
-            self.f_store_items(to_store_groups_with_annotations)
-
-        return run_name_dict
-
-    @staticmethod
-    def _rename_key(key, pos_list, new_name):
-        """Rename positions of a key string with colon separation.
-
-        Example usage:
-
-        >>> Trajectory._rename_key('pos0.pos1.pos2', pos_list=[1], new_name='homer')
-        'po0.homer.pos2'
-
-        """
-        split_key = key.split('.')
-        for pos in pos_list:
-            split_key[pos] = new_name
-        renamed_key = '.'.join(split_key)
-        return renamed_key
-
-    @staticmethod
-    def _get_traj_dpars_or_results(traj, where):
-        """Extracts all parameters or results that are not below any group called run_XXXXXXXX"""
-        result_dict = {}
-        if where not in ['results', 'derived_parameters']:
-            raise RuntimeError('You shall not pass!')
-
-        if traj.f_contains(where):
-            group = traj[where]
-            for leaf in group.f_iter_leaves(with_links=False):
-                if (leaf.v_run_branch == 'trajectory' or
-                        leaf.v_run_branch == pypetconstants.RUN_NAME_DUMMY):
-                    result_dict[leaf.v_full_name] = leaf
-
-        return result_dict
-
-    @staticmethod
-    def _get_traj_dpars_or_results_node_iterator(traj, where):
-        """Returns an iterator over all nodes not hanging below `run_XXXXXXXX`"""
-
-        if where not in ['results', 'derived_parameters']:
-            raise RuntimeError('You shall not pass!')
-
-        if traj.f_contains(where):
-            group = traj[where]
-            predicate = lambda x: (x.v_run_branch == 'trajectory' or
-                                   x.v_run_branch == pypetconstants.RUN_NAME_DUMMY)
-            return filter(predicate, group.f_iter_nodes(recursive=True))
-        else:
-            return iter([])
+                continue
+            new_name = self._rename_full_name(result_name, other_trajectory,
+                                                    used_runs=used_runs)
+            if self.f_contains(new_name):
+                self._logger.warning('I found result `%s` already, I will ignore it.' % new_name)
+                continue
+            rename_dict[result_name] = new_name
 
     def _merge_parameters(self, other_trajectory, remove_duplicates=False,
                           trial_parameter_name=None,
-                          ignore_trajectory_derived_parameters=False):
+                          ignore_data=()):
         """Merges parameters from the other trajectory into the current one.
 
         The explored parameters in the current trajectory are directly enlarged (in RAM),
@@ -2389,9 +2263,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             1.
 
-                Binary vector of length `len(other_trajectory)`,
-                `1.0` marks a run that is supposed to be merged, runs flagged with `0.0`
-                are skipped.
+                Dictionary of run index mappings from old trajectroy to the new one.
 
             2.
 
@@ -2468,17 +2340,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # to spot parameters that need to be enlarge or become new explored parameters
         params_to_merge = other_trajectory._parameters.copy()
 
-        if not ignore_trajectory_derived_parameters:
-            trajectory_derived_parameters = \
-                self._get_traj_dpars_or_results(self, 'derived_parameters')
-            params_to_merge.update(trajectory_derived_parameters)
+        params_to_merge.update(other_trajectory._derived_parameters)
+        for ignore in ignore_data:
+            if ignore in params_to_merge:
+                del params_to_merge[ignore]
 
+        run_name_dummys = set([f(-1) for f in other_trajectory._wildcard_functions.values()])
         # Iterate through all parameters of the other trajectory
         # and check which differ from the parameters of the current trajectory
         for key in params_to_merge:
             other_param = params_to_merge[key]
 
-            if pypetconstants.RUN_NAME in key:
+            # We don't need to merge anything based on wildcards
+            split_key = key.split('.')
+            if any(x in other_trajectory._reversed_wildcards for x in split_key):
                 continue
 
             my_param = self.f_get(key)
@@ -2504,7 +2379,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     remove_duplicates = False
 
         # Check if we use all runs or remove duplicates:
-        use_runs = np.ones(len(other_trajectory))
+        used_runs = {}
+        for idx in range(len(other_trajectory)):
+            used_runs[idx] = idx
         if remove_duplicates:
 
             # We need to compare all parameter combinations in the current trajectory
@@ -2536,7 +2413,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     # point. We can also skip comparing to the rest of the points in the
                     # current trajectory
                     if change:
-                        use_runs[irun] = 0.0
+                        del used_runs[irun]
                         break
 
             # Restore changed default values
@@ -2546,9 +2423,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
 
         # Merge parameters into the current trajectory
-        adding_length = int(sum(use_runs))
+        adding_length = len(used_runs)
+        starting_length = len(self)
         if adding_length == 0:
-            return use_runs, []
+            return used_runs, []
+        count = 0
+        for key in sorted(used_runs.keys()):
+            used_runs[key] = starting_length + count
+            count += 1
 
         for my_param, other_param in compat.itervalues(params_to_change):
             fullname = my_param.v_full_name
@@ -2561,8 +2443,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 # In case we do not use all runs we need to filter the ranges of the
                 # parameters of the other trajectory
                 if other_param.f_has_range():
-                    other_range = (x for run, x in zip(use_runs, other_param.f_get_range())
-                                   if run)
+                    other_range = (x for jdx, x in enumerate(other_param.f_get_range())
+                                                             if jdx in used_runs)
                 else:
                     other_range = (other_param.f_get() for _ in compat.xrange(adding_length))
 
@@ -2581,7 +2463,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not fullname in self._explored_parameters:
                 self._explored_parameters[fullname] = my_param
 
-        return use_runs, compat.listkeys(params_to_change)
+        return used_runs, compat.listkeys(params_to_change)
 
     @not_in_run
     def f_migrate(self, new_name=None, in_store=False,
@@ -2737,7 +2619,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._idx = -1
         self._crun = None
         for param in compat.itervalues(self._explored_parameters):
-            param._restore_default()
+            if param is not None:
+                param._restore_default()
 
     def _set_explored_parameters_to_idx(self, idx):
         """ Notifies the explored parameters what current point in the parameter space
@@ -2752,6 +2635,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """ Modifies the trajectory for single runs executed by the environment """
         self._is_run = False # to be able to use f_set_crun
         self._new_nodes = OrderedDict()
+        self._new_links = OrderedDict()
         self.f_set_crun(idx)
         self._is_run = True
         self._set_start_time()
@@ -3168,13 +3052,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         self._run_information[self.v_crun]['completed'] = 1
-        _keep_linked_lambda = lambda node: _keep_linked(self, node)
+        while len(self._new_links):
+            name_pair, child_parent_pair = self._new_links.popitem(last=False)
+            parent_node, _ = child_parent_pair
+            _, link = name_pair
+            parent_node.f_remove_child(link)
 
         while len(self._new_nodes):
             _, child_parent_pair = self._new_nodes.popitem(last=False)
             parent, child = child_parent_pair
             child_name = child.v_name
-            parent.f_remove_child(child_name, recursive=True, predicate=_keep_linked_lambda)
+            parent.f_remove_child(child_name, recursive=True)
 
     def f_to_dict(self, fast_access=False, short_names=False, copy=True,
                   with_links=True):

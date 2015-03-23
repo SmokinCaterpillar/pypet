@@ -198,11 +198,11 @@ class LinkMergeTest(TrajectoryComparator):
             else:
                 self.assertTrue(param == 53)
 
-        self.assertTrue(len(self.traj1)>old_length)
+        self.assertTrue(len(self.traj1) > old_length)
 
         for irun in range(len(self.traj1.f_get_run_names())):
-            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
             self.assertTrue(self.traj1.res['r_%d' % irun] == self.traj1.paramB)
+            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
 
         if disable_logging:
             self.env1.f_disable_logging()

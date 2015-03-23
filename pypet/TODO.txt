@@ -1,6 +1,6 @@
-* Countdown for continuation
+* Countdown for continuation *PROBABLY NOT NECESSARY*
 
-* New method to determine overview
+* New method to determine overview *DONE*
 
 * Remove merging of overview tables *DONE*
 

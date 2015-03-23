@@ -718,8 +718,6 @@ class NaturalNamingInterface(HasLogger):
 
         """
         full_name = node.v_full_name
-        name = node.v_name
-
         root = self._root_instance
 
         if full_name == '':
@@ -773,8 +771,8 @@ class NaturalNamingInterface(HasLogger):
                 for link in list(link_set):
                     linking_group.f_remove_link(link)
         
-        if node.v_full_name in self._root_instance._new_nodes:
-            del self._root_instance._new_nodes[node.v_full_name]
+        if (node.v_location, node.v_name) in self._root_instance._new_nodes:
+            del self._root_instance._new_nodes[(node.v_location, node.v_name)]
 
         # Finally remove all references in the dictionaries for fast search
         self._remove_from_nodes_and_leaves(node)
@@ -1244,13 +1242,13 @@ class NaturalNamingInterface(HasLogger):
         try:
             act_node = start_node
             last_idx = len(split_names) - 1
+            add_link = type_name == LINK
             # last_name = start_node.v_crun
             for idx, name in enumerate(split_names):
                 if name not in act_node._children:
-                    new_node = None
                     if idx == last_idx:
 
-                        if type_name == LINK:
+                        if add_link:
                             new_node = self._create_link(act_node, name, instance)
                         elif group_type_name != type_name:
                             # We are at the end of the chain and we add a leaf node
@@ -1278,9 +1276,13 @@ class NaturalNamingInterface(HasLogger):
 
                     if name in self._root_instance._run_information:
                         self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
-                    if new_node is not None and self._root_instance._is_run:
-                        self._root_instance._new_nodes[new_node.v_full_name] = (act_node,
-                                                                                new_node)
+                    if self._root_instance._is_run:
+                        if add_link:
+                            self._root_instance._new_links[(act_node.v_full_name, name)] = \
+                                (act_node, new_node)
+                        else:
+                            self._root_instance._new_nodes[(act_node.v_full_name, name)] = \
+                                (act_node, new_node)
                 else:
                     if name in act_node._links:
                         raise AttributeError('You cannot hop over links when adding '
@@ -1313,6 +1315,8 @@ class NaturalNamingInterface(HasLogger):
         self._links_count[name] = self._links_count[name] - 1
         if self._links_count[name] < 1:
             del self._links_count[name]
+        if (act_node, name) in self._root_instance._new_links:
+            del self._root_instance[(act_node, name)]
 
     def _create_link(self, act_node, name, instance):
         """Creates a link and checks if names are appropriate
@@ -1639,13 +1643,11 @@ class NaturalNamingInterface(HasLogger):
             run_name_set = set()
             for item in run_list:
                 if item == -1:
-                    run_name_set.add(pypetconstants.RUN_NAME_DUMMY)
+                    run_name_set.add(self._root_instance.f_wildcard('$', -1))
                 elif isinstance(item, int):
-                    run_name_set.add(pypetconstants.FORMATTED_RUN_NAME % item)
-                elif item.startswith(pypetconstants.RUN_NAME):
-                    run_name_set.add(item)
+                    run_name_set.add(self._root_instance.f_idx_to_run(item))
                 else:
-                    raise ValueError('Your tuple of runs is not understood to form a predicate.')
+                    run_name_set.add(item)
             predicate = lambda x: _run_predicate(x, run_name_set)
 
         if recursive:
@@ -1791,23 +1793,27 @@ class NaturalNamingInterface(HasLogger):
 
     def _get_candidate_dict(self, key, crun, use_upper_bound=True):
         # First find all nodes where the key matches the (short) name of the node
-        if crun is None:
-            return self._nodes_and_leaves[key]
-        # This can be false in case of links which are not added to the run sorted nodes and leaves
-        else:
-            temp_dict = {}
-            if crun in self._nodes_and_leaves_runs_sorted[key]:
-                temp_dict = self._nodes_and_leaves_runs_sorted[key][crun]
-                if use_upper_bound and len(temp_dict) > FAST_UPPER_BOUND:
-                    raise pex.TooManyGroupsError('Too many nodes')
+        try:
+            if crun is None:
+                return self._nodes_and_leaves[key]
+            # This can be false in case of links which are not added to the run sorted nodes and leaves
+            else:
+                temp_dict = {}
+                if crun in self._nodes_and_leaves_runs_sorted[key]:
+                    temp_dict = self._nodes_and_leaves_runs_sorted[key][crun]
+                    if use_upper_bound and len(temp_dict) > FAST_UPPER_BOUND:
+                        raise pex.TooManyGroupsError('Too many nodes')
 
-            temp_dict2 = {}
-            if 'trajectory' in self._nodes_and_leaves_runs_sorted[key]:
-                temp_dict2 = self._nodes_and_leaves_runs_sorted[key]['trajectory']
-                if use_upper_bound and len(temp_dict) + len(temp_dict2) > FAST_UPPER_BOUND:
-                    raise pex.TooManyGroupsError('Too many nodes')
+                temp_dict2 = {}
+                if 'trajectory' in self._nodes_and_leaves_runs_sorted[key]:
+                    temp_dict2 = self._nodes_and_leaves_runs_sorted[key]['trajectory']
+                    if use_upper_bound and len(temp_dict) + len(temp_dict2) > FAST_UPPER_BOUND:
+                        raise pex.TooManyGroupsError('Too many nodes')
 
-            return ChainMap(temp_dict, temp_dict2)
+                return ChainMap(temp_dict, temp_dict2)
+        except KeyError:
+            # We end up here if `key` is actually a link
+            return {}
 
     def _very_fast_search(self, node, key, crun):
         """Fast search for a node in the tree.
@@ -2177,9 +2183,9 @@ class NaturalNamingInterface(HasLogger):
 
             if is_wildcard:
                 wildcard_positions.append((idx, key))
-                if root._crun not in self._nodes_and_leaves:
+                if root.f_wildcard(key) not in self._nodes_and_leaves:
                     try_auto_load_directly1 = True
-                if pypetconstants.RUN_NAME_DUMMY not in self._nodes_and_leaves:
+                if root.f_wildcard(key, -1) not in self._nodes_and_leaves:
                     try_auto_load_directly2 = True
 
         if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
@@ -2622,7 +2628,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             ValueError if child does not exist.
 
         """
-        if not name in self._children:
+        if name not in self._children:
             raise ValueError('Your group `%s` does not contain the child `%s`.' %
                              (self.v_full_name, name))
         else:

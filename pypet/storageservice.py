@@ -1981,8 +1981,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                        recursive=True)
 
             # And finally copy the attributes of leaf nodes
-            # Attributes of group nodes are NOT copied, this has to be done
-            # by the trajectory
             old_group._v_attrs._f_copy(where=ptcompat.get_node(self._hdf5file, new_location))
 
         if delete_trajectory:
@@ -2574,7 +2572,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """Recalls names of all explored parameters"""
         if hasattr(self._overview_group, 'explorations'):
             explorations_table = ptcompat.get_child(self._overview_group, 'explorations')
-            if len(explorations_table) != len(traj):
+            if len(explorations_table) != len(traj._explored_parameters):
                 data = explorations_table.read()
                 for element in data:
                     param_name = compat.tostr(element[0])
@@ -3117,15 +3115,25 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
             if max_depth is None:
                 max_depth = float('inf')
-            for child_name in traj._new_nodes:
-                parent_group, child_node = traj._new_nodes[child_name]
-                if not child_node._stored or child_name in parent_group._links:
-                    self._tree_store_sub_branch(parent_group, child_node.v_name,
+            for name_pair in traj._new_nodes:
+                _, name = name_pair
+                parent_group, child_node = traj._new_nodes[name_pair]
+                if not child_node._stored:
+                    self._tree_store_sub_branch(parent_group, name,
                                           store_data=store_data,
                                           with_links=True,
                                           recursive=recursive,
                                           max_depth=max_depth - child_node.v_depth,
                                           hdf5_group=None)
+            for name_pair in traj._new_links:
+                _, link = name_pair
+                parent_group, _ = traj._new_links[name_pair]
+                self._tree_store_sub_branch(parent_group, link,
+                                            store_data=store_data,
+                                            with_links=True,
+                                            recursive=recursive,
+                                            max_depth=max_depth - parent_group.v_depth - 1,
+                                            hdf5_group=None)
 
         if store_final:
             self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
@@ -4035,7 +4043,7 @@ class HDF5StorageService(StorageService, HasLogger):
             # If the stored parameter was an explored one we need to mark this in the
             # explored overview table
             try:
-                tablename = 'explored_parameters'
+                tablename = 'explored_parameters_overview'
                 table = getattr(self._overview_group, tablename)
 
                 if len(table) < pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH:
