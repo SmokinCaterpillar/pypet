@@ -2006,7 +2006,6 @@ class HDF5StorageService(StorageService, HasLogger):
         self._all_add_or_modify_row(traj.v_name, insert_dict, infotable, index=0,
                                     flags=(HDF5StorageService.MODIFY_ROW,))
 
-
         # Store extended parameters
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
@@ -2214,8 +2213,6 @@ class HDF5StorageService(StorageService, HasLogger):
                              with_links=False, recursive=False, _traj=traj,
                              _as_new=as_new, _hdf5_group=self._trajectory_group)
 
-        self._trj_load_exploration(traj)
-
         if as_new:
             length = int(metarow['length'])
             for irun in range(length):
@@ -2233,7 +2230,6 @@ class HDF5StorageService(StorageService, HasLogger):
 
             single_run_table = self._overview_group.runs
 
-            # Load the run information about the single runs
             for row in single_run_table.iterrows():
                 name = compat.tostr(row['name'])
                 idx = int(row['idx'])
@@ -2266,6 +2262,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 traj._add_run_info(**info_dict)
 
+            # Load explorations
+            self._trj_load_exploration(traj)
             # Load the hdf5 config data:
             self._srvc_load_hdf5_settings()
 
@@ -2296,12 +2294,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                'derived_parameters_per_run', int)
             _extract_meta_data('_purge_duplicate_comments', hdf5_row,
                                'purge_duplicate_comments', bool)
-            _extract_meta_data('_overview_explored_parameters_runs', hdf5_row,
-                               'explored_parameters_runs', bool)
 
             for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
-                attr_value = bool(hdf5_row[table_name])
-                setattr(self, attr_name, attr_value)
+                _extract_meta_data(attr_name, hdf5_row, table_name, bool)
         else:
             self._logger.warning(
                     'Could not find `hdf5_settings` overview table. I will use the '
@@ -2518,8 +2513,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Store the hdf5 properties in an overview table
         hdf5_description_dict.update({'purge_duplicate_comments': pt.BoolCol(pos=pos + 2),
                                       'results_per_run': pt.IntCol(pos=pos + 3),
-                                      'derived_parameters_per_run': pt.IntCol(pos=pos + 4),
-                                      'explored_parameters_runs': pt.BoolCol(pos=pos + 1)})
+                                      'derived_parameters_per_run': pt.IntCol(pos=pos + 4)})
 
         hdf5table = self._all_get_or_create_table(where=self._overview_group,
                                                   tablename='hdf5_settings',
@@ -2572,19 +2566,21 @@ class HDF5StorageService(StorageService, HasLogger):
         """Recalls names of all explored parameters"""
         if hasattr(self._overview_group, 'explorations'):
             explorations_table = ptcompat.get_child(self._overview_group, 'explorations')
-            if len(explorations_table) != len(traj._explored_parameters):
-                data = explorations_table.read()
-                for element in data:
-                    param_name = compat.tostr(element[0])
-                    if param_name not in traj._explored_parameters:
-                        traj._explored_parameters[param_name] = None
-        elif hasattr(self._trajectory_group, 'parameters'):
-            parameters = ptcompat.get_child(self._trajectory_group, 'parameters')
-            for group in ptcompat.walk_groups(parameters):
-                if self._all_get_from_attrs(group, HDF5StorageService.LENGTH):
-                    group_location = group._v_pathname
-                    full_name = '.'.join(group_location.split('/')[2:]+[group._v_name])
-                    traj._explored_parameters[full_name] = None
+            data = explorations_table.read()
+            for element in data:
+                param_name = compat.tostr(element[0])
+                if param_name not in traj._explored_parameters:
+                    traj._explored_parameters[param_name] = None
+        else:
+            # This is for backwards compatibility
+            for what in ('parameters', 'derived_parameters'):
+                if hasattr(self._trajectory_group, what):
+                    parameters = ptcompat.get_child(self._trajectory_group, what)
+                    for group in ptcompat.walk_groups(parameters):
+                        if self._all_get_from_attrs(group, HDF5StorageService.LENGTH):
+                            group_location = group._v_pathname
+                            full_name = '.'.join(group_location.split('/')[2:])
+                            traj._explored_parameters[full_name] = None
 
     def _trj_store_explorations(self, traj):
         """Stores a all explored parameter names for internal recall"""
@@ -4628,6 +4624,10 @@ class HDF5StorageService(StorageService, HasLogger):
             _hdf5_group = ptcompat.get_node(self._hdf5file, where=where, name=node_name)
 
         if delete_only is None:
+            if instance.v_is_group and not recursive and len(_hdf5_group._v_children) != 0:
+                    raise TypeError('You cannot remove the group `%s`, it has children, please '
+                                    'use `recursive=True` to enforce removal.' %
+                                    instance.v_full_name)
             _hdf5_group._f_remove(recursive=True)
         else:
             if not instance.v_is_leaf:

@@ -65,8 +65,9 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.par.FloatParam=4.0
 
+        self.traj.v_lazy_adding = True
         self.traj.par.expexp = 42, 'another param to explore'
-
+        self.traj.v_lazy_adding = False
 
         self.explore_dict = {'FloatParam':[1.0, 1.1, 1.2, 1.3]}
 
@@ -483,22 +484,11 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('f_get')
 
         with self.assertRaises(ValueError):
-            self.traj.f_add_result('test.$.k.$')
+            self.traj.f_add_result('test.$.k.$dsa')
 
-        rg=self.traj.f_add_result_group('ggg.$')
-        with self.assertRaises(ValueError):
-            rg.f_add_result('$.fff')
-
-        self.traj.f_add_result_group('test.$.k')
-        with self.assertRaises(ValueError):
-            self.traj.res.k.f_add_result('$.jjj')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('e'*129)
-
-        with self.assertRaises(ValueError):
-            self.traj.f_add_parameter('e'*120+'.j'*120+'.k'*40)
-
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('_crun',22)
@@ -589,7 +579,7 @@ class TrajectoryTest(unittest.TestCase):
 
         traj.f_add_config_group('ff')
 
-        root = traj.ff.f_get_root()
+        root = traj.ff.v_root
 
         self.assertTrue(root is traj)
 
@@ -678,7 +668,7 @@ class TrajectoryTest(unittest.TestCase):
 
         ### should raise an error because 'I_do_not_exist', does not exist:
         with self.assertRaises(pex.PresettingError):
-            self.traj._prepare_experiment(True)
+            self.traj._prepare_experiment()
 
     def test_f_get_run_information(self):
         traj = Trajectory()
@@ -782,6 +772,8 @@ class TrajectoryTest(unittest.TestCase):
     def test_remove_of_all_type(self):
         traj = Trajectory()
 
+        traj.v_lazy_adding = True
+
         traj.par.x = 42, 'param'
 
         traj.dpar.y = 43, 'dpar'
@@ -813,7 +805,7 @@ class TrajectoryTest(unittest.TestCase):
         traj.f_remove_child('derived_parameters', recursive=True)
         self.assertTrue('y' not in traj)
 
-        self.assertTrue(traj.k == 44)
+        self.assertEqual(traj.k[0], 44)
         traj.f_remove_child('results', recursive = True)
         self.assertTrue('k' not in traj)
 
@@ -821,7 +813,7 @@ class TrajectoryTest(unittest.TestCase):
         traj.f_remove_child('config', recursive = True)
         self.assertTrue('z' not in traj)
 
-        self.assertTrue(traj.l == 111)
+        self.assertTrue(traj.l[0] == 111)
         traj.f_remove_child('l')
         self.assertTrue('l' not in traj)
 
@@ -910,6 +902,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_dir(self):
 
+        self.traj.v_lazy_adding = True
         self.traj.par.ggg = 444, 'Hey'
         self.assertTrue('(' in str(self.traj.f_get('ggg')))
 
@@ -932,6 +925,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_short_names_to_dict_failure(self):
 
+        self.traj.v_lazy_adding = True
         self.traj.f_add_parameter('lll.ggg' , 44)
         self.traj.par.ggg = 444, 'Hey'
 
@@ -949,6 +943,25 @@ class TrajectoryTest(unittest.TestCase):
             len(self.traj._results) + len(self.traj._derived_parameters) +\
             len(self.traj._other_leaves)
         self.assertTrue(count == all_leaves)
+
+    def test_new_grouping(self):
+
+        traj = Trajectory()
+
+        traj.par = Parameter('x', 42)
+
+        therange = range(2001)
+        traj.f_explore({'x':therange})
+
+        for irun in therange:
+            traj.v_idx = irun
+            traj.f_add_result('$set.$')
+        traj.v_idx = -1
+
+        self.assertTrue('run_set_00001' in traj)
+        self.assertTrue('run_set_00004' not in traj)
+        self.assertEqual(len(traj.res._children), 3)
+        self.assertEqual(len(traj.run_set_00001._children), 1000)
 
     def test_short_cuts(self):
 
@@ -975,11 +988,9 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
-
         srun = self.traj._make_single_run(3)
 
         srun.f_add_result('sdffds',42)
-
 
         self.assertEqual(id(srun.results.crun), id(srun.results.f_get(srun.v_crun)))
         # self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))

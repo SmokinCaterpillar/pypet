@@ -27,14 +27,11 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj.f_add_parameter_group('test.test3')
         traj.f_add_parameter_group('test2')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             traj.par.f_add_link('test', traj.test2)
 
         with self.assertRaises(ValueError):
             traj.f_add_link('parameters', traj.test)
-
-        with self.assertRaises(ValueError):
-            traj.f_add_link('ps.ss', traj.test)
 
         with self.assertRaises(ValueError):
             traj.f_add_link('kkkk', PickleResult('fff', 555))
@@ -182,11 +179,9 @@ class LinkTrajectoryTests(TrajectoryComparator):
         self.assertTrue(len(traj._linked_by), len(traj2._linked_by))
         self.compare_trajectories(traj, traj2)
 
-        self.assertTrue('jj' in traj2._nn_interface._nodes_and_leaves)
-        self.assertTrue('jj' in traj2._nn_interface._nodes_and_leaves_runs_sorted)
+        self.assertTrue('jj' in traj2._nn_interface._links_count)
         traj2.f_remove_child('jj')
-        self.assertTrue('jj' not in traj2._nn_interface._nodes_and_leaves)
-        self.assertTrue('jj' not in traj2._nn_interface._nodes_and_leaves_runs_sorted)
+        self.assertTrue('jj' not in traj2._nn_interface._links_count)
         traj2.f_remove_child('hh')
         traj2.f_remove_child('ii')
 

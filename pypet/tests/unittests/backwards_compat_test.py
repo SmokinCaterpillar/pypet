@@ -29,6 +29,10 @@ class LoadOldTrajectoryTest(unittest.TestCase):
         self.assertTrue(old_pypet_traj.par.x==0)
         self.assertTrue(len(old_pypet_traj)==9)
         self.assertTrue(old_pypet_traj.res.runs.r_4.z==12)
+        nexplored = len(old_pypet_traj._explored_parameters)
+        self.assertGreater(nexplored, 0)
+        for param in old_pypet_traj.f_get_explored_parameters():
+            self.assertTrue(old_pypet_traj.f_contains(param))
 
 
 if __name__ == '__main__':

@@ -92,6 +92,7 @@ class LoggingTest(TrajectoryComparator):
 
     def add_params(self, traj):
 
+        traj.v_lazy_adding = True
         traj.par.p1 = 42, 'Hey'
         traj.f_apar('g1.p2', 145, comment='Test')
 

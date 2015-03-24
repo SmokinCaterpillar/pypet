@@ -13,7 +13,7 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_traject
      parse_args, get_log_config
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
-from pypet.tests.integration.environment_test import ResultSortTest
+from pypet.tests.integration.environment_test import ResultSortTest, my_set_func, my_run_func
 
 
 class MergeTest(TrajectoryComparator):
@@ -34,7 +34,7 @@ class MergeTest(TrajectoryComparator):
         simple_kwarg= 13.0
         env.f_run(simple_calculations, simple_arg, simple_kwarg=simple_kwarg)
 
-    def make_environment(self, idx, filename):
+    def make_environment(self, idx, filename, **kwargs):
 
         #self.filename = make_temp_dir('experiments/tests/HDF5/test.hdf5')
         logfolder = make_temp_dir(os.path.join('experiments','tests','Log'))
@@ -42,7 +42,8 @@ class MergeTest(TrajectoryComparator):
 
         env = Environment(trajectory=trajname,filename=filename, file_title=trajname,
                           log_stdout=False, log_allow_fork=False,
-                          large_overview_tables=True, log_config=get_log_config())
+                          large_overview_tables=True, log_config=get_log_config(),
+                          **kwargs)
 
 
         self.envs.append(env)
@@ -60,7 +61,8 @@ class MergeTest(TrajectoryComparator):
             if isinstance(filename,int):
                 filename = self.filenames[filename]
 
-            self.make_environment( irun, filename)
+            self.make_environment( irun, filename, wildcard_functions =
+            {('$', 'crun') : my_run_func, ('$set', 'crunset'): my_set_func})
 
         self.param_dict={}
         create_param_dict(self.param_dict)
@@ -392,9 +394,17 @@ class MergeTest(TrajectoryComparator):
         self.trajs[2].f_add_result('%s.rrr' % run_name2, 123)
         self.trajs[2].f_store_item('%s.rrr' % run_name2)
 
+        self.trajs[1].f_add_result('Ignore.Me', 42)
+        self.trajs[1].f_apar('Ignore.Me', 42)
+        self.trajs[1].f_adpar('Ignore.Me', 42)
+
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
-        merged_traj.f_merge(self.trajs[1], move_data=False, delete_other_trajectory=False, remove_duplicates=True)
+        merged_traj.f_merge(self.trajs[1], move_data=False,
+                            delete_other_trajectory=False,
+                            remove_duplicates=True,
+                            ignore_data=('results.Ignore.Me', 'parameters.Ignore.Me',
+                            'derived_parameters.Ignore.Me'))
         merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,

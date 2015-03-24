@@ -51,12 +51,16 @@ LOGGING_DICT = {
         'file_main': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
-            'filename': os.path.join('$TRAJ$','$ENV$','LOG.txt')
+            'filename': os.path.join(pypetconstants.LOG_TRAJ,
+                                     pypetconstants.LOG_ENV,
+                                     'LOG.txt')
         },
         'file_error': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
-            'filename': os.path.join('$TRAJ$', '$ENV$', 'ERROR.txt'),
+            'filename': os.path.join(pypetconstants.LOG_TRAJ,
+                                     pypetconstants.LOG_ENV,
+                                     'ERROR.txt'),
             'level': 'ERROR'
         }
     },
@@ -69,12 +73,18 @@ LOGGING_DICT = {
         'file_main': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
-            'filename': os.path.join('$TRAJ$', '$ENV$', '$RUN$_$PROC$_LOG.txt')
+            'filename': os.path.join(pypetconstants.LOG_TRAJ,
+                                     pypetconstants.LOG_ENV,
+                                     '%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
+                                                        pypetconstants.LOG_PROC))
         },
         'file_error': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
-            'filename': os.path.join('$TRAJ$', '$ENV$', '$RUN$_$PROC$_ERROR.txt'),
+            'filename': os.path.join(pypetconstants.LOG_TRAJ,
+                                     pypetconstants.LOG_ENV,
+                                     '%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
+                                                        pypetconstants.LOG_PROC)),
             'level': 'ERROR'
         }
     }
@@ -154,16 +164,16 @@ def try_make_dirs(filename):
 def rename_log_file(traj, filename, process_name=None):
     """ Renames a given `filename` with valid wildcard placements.
 
-    :const:`~pypet.pypetconstants.LOG_ENV` ($ENV$) is replaces by the name of the
+    :const:`~pypet.pypetconstants.LOG_ENV` ($env) is replaces by the name of the
     trajectory`s environment.
 
-    :const:`~pypet.pypetconstants.LOG_TRAJ` ($TRAJ$) is replaced by the name of the
+    :const:`~pypet.pypetconstants.LOG_TRAJ` ($traj) is replaced by the name of the
     trajectory.
 
-    :const:`~pypet.pypetconstants.LOG_RUN` ($RUN$) is replaced by the name of the current
+    :const:`~pypet.pypetconstants.LOG_RUN` ($run) is replaced by the name of the current
     run. If the trajectory is not set to a run 'run_ALL' is used.
 
-    :const:`~pypet.pypetconstants.LOG_PROC` ($PROC$) is replaced by the name fo the
+    :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
 
     :param traj:  A trajectory container
@@ -341,7 +351,8 @@ class LoggingManager(object):
 
     def tabula_rasa(self):
         """Removes all loggers and logging handlers and closes them. """
-        for logger in logging.Logger.manager.loggerDict.values():
+        all_loggers = compat.listvalues(logging.Logger.manager.loggerDict) + [logging.getLogger()]
+        for logger in all_loggers:
             if hasattr(logger, 'handlers'):
                 for handler in logger.handlers:
                     if hasattr(handler, 'flush'):

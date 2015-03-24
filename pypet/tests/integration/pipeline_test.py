@@ -84,7 +84,6 @@ class TestPostProc(TrajectoryComparator):
 
         return env, filename, logfolder, cntfolder
 
-
     def test_postprocessing(self):
 
         filename = 'testpostproc.hdf5'

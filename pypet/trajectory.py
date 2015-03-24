@@ -365,6 +365,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not isinstance(wildcards, tuple):
                 wildcards = (wildcards,)
             for wildcard in wildcards:
+                if wildcard in self._wildcard_keys:
+                    raise ValueError('Your wildcard `%s` is used twice1' % wildcard)
                 self._wildcard_keys[wildcard] = wildcards
             self._wildcard_functions[wildcards] = function
             self._logger.info('Added wildcard function `%s`.' % str(wildcards))
@@ -940,15 +942,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         old_crun = self.v_crun
 
         try:
-            for run_name in self.f_iter_runs():
-                # Iterate over all runs
-                old_value = None
-                value = None
-                if len(self._run_parent_groups) > 0:
+
+            if len(self._run_parent_groups) > 0:
+                for run_name in self.f_iter_runs():
+                    # Iterate over all runs
+                    value = None
+                    already_found = False
                     for run_parent_group in compat.itervalues(self._run_parent_groups):
-                        if value is not None:
-                            raise pex.NotUniqueNodeError('`%s` has been found in several runs '
-                                                         'at once.' % name)
+
                         try:
                             value = run_parent_group.f_get(run_name + '.' + name,
                                                            fast_access=False,
@@ -956,15 +957,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                            shortcuts=shortcuts,
                                                            max_depth=max_depth,
                                                            auto_load=auto_load)
+                            if already_found:
+                                raise pex.NotUniqueNodeError('`%s` has been found several times '
+                                                             'in one run.' % name)
+                            else:
+                                already_found = True
 
                         except (AttributeError, pex.DataNotInStorageError):
                             pass
 
                     if value is None and include_default_run:
                         for run_parent_group in compat.itervalues(self._run_parent_groups):
-                            if value is not None:
-                                raise pex.NotUniqueNodeError('`%s` has been found in several runs '
-                                                         'at once.' % name)
                             try:
                                 value = run_parent_group.f_get(self.f_wildcard('$', -1) +
                                                                '.' + name,
@@ -973,6 +976,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                                shortcuts=shortcuts,
                                                                max_depth=max_depth,
                                                                auto_load=auto_load)
+                                if already_found:
+                                    raise pex.NotUniqueNodeError('`%s` has been found several '
+                                                                 'times in one run.' % name)
+                                else:
+                                    already_found = True
                             except (AttributeError, pex.DataNotInStorageError):
                                 pass
 
@@ -1261,6 +1269,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                       completed=0, parameter_summary='Not yet my friend!',
                       short_environment_hexsha='notyet!'):
         """Adds a new run to the `_run_information` dict."""
+
+        if idx in self._single_run_ids:
+            # Delete old entries, they might be replaced by a new name
+            old_name = self._single_run_ids[idx]
+            del self._single_run_ids[old_name]
+            del self._single_run_ids[idx]
+            del self._run_information[old_name]
 
         if name is None:
             name = self.f_wildcard('$', idx)
@@ -1559,20 +1574,24 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         my_keyset = set(allmyparams.keys())
         other_keyset = set(allotherparams.keys())
         diff = my_keyset.symmetric_difference(other_keyset) - ignore_data
+        run_dummys = (self.f_wildcard('$', -1), other_trajectory.f_wildcard('$', -1))
         if diff:
             run_difference_can_be_resolved = True
             for full_name in diff:
                 split_name = full_name.split('.')
                 if not any(x in self._run_information or
-                                x in other_trajectory._run_information
-                                    for x in split_name):
+                                x in other_trajectory._run_information or
+                                    x in run_dummys
+                                        for x in split_name):
                     run_difference_can_be_resolved = False
                     break
+                elif full_name in allotherparams:
+                    del allotherparams[full_name]
             if not run_difference_can_be_resolved:
                 raise TypeError('Cannot merge trajectories, '
                                 'they do not live in the same space,the '
                                 'set of parameters `%s` is only '
-                                'found in one trajectory' % str(diff))
+                                'found in one trajectory.' % str(diff))
 
         # Check if corresponding parameters in both trajectories are of the same type
         for key, other_param in allotherparams.items():
@@ -1616,7 +1635,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         for wildcards, func in self._wildcard_functions.items():
             for irun in range(-1, len(self)):
                 translated_name = func(irun)
-                self._reversed_wildcards[translated_name] = (irun, wildcards)
+                if not translated_name in self._reversed_wildcards:
+                    self._reversed_wildcards[translated_name] = ([], wildcards)
+                self._reversed_wildcards[translated_name][0].append(irun)
 
     @not_in_run
     @kwargs_api_change('backup_filename', 'backup')
@@ -1751,7 +1772,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._logger.info('Merging run information')
         allowed_translations = set([translation for translation, pair in
                                     other_trajectory._reversed_wildcards.items() if
-                                        pair[0] in used_runs])
+                                        any(x in used_runs for x in pair[0])])
         self._merge_single_runs(other_trajectory, used_runs)
 
         self._logger.info('Merging derived parameters')
@@ -1955,14 +1976,25 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         split_name = full_name.split('.')
         for idx, name in enumerate(split_name):
             if name in other_trajectory._reversed_wildcards:
-                run_idx, wildcards = other_trajectory._reversed_wildcards[name]
+                run_indices, wildcards = other_trajectory._reversed_wildcards[name]
                 if new_run_idx is None:
-                    new_run_idx = used_runs[run_idx]
-                new_name = self.f_wildcard(wildcards[0], new_run_idx)
+                    # We can safely take the first index of the index list that matches
+                    run_idx = None
+                    for run_jdx in run_indices:
+                        if run_jdx in used_runs:
+                            run_idx = used_runs[run_jdx]
+                            break
+                        elif run_jdx == -1:
+                            run_idx = -1
+                            break
+                    if run_idx is None:
+                        raise RuntimeError('You shall not pass!')
+                else:
+                    run_idx = new_run_idx
+                new_name = self.f_wildcard(wildcards[0], run_idx)
                 split_name[idx] = new_name
         full_name = '.'.join(split_name)
         return full_name
-
 
     def _merge_derived_parameters(self,
                                     other_trajectory,
@@ -1980,18 +2012,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # get first run_idx
         new_first_run_idx = min(used_runs.values())
 
-        run_name_dummys = set([f(-1) for f in other_trajectory._wildcard_functions.values()])
+        run_name_dummy = other_trajectory.f_wildcard('$', -1)
         for param_name in other_derived_parameters:
             if param_name in ignore_data:
                 continue
             split_name = param_name.split('.')
-            if not any(x in run_name_dummys for x in split_name):
+            if not any(x in run_name_dummy for x in split_name):
                 continue
             ignore_data.add(param_name)
 
-            if param_name in self:
-                my_param = self.f_get(param_name, fast_access=False)
-                param = other_derived_parameters[param_name]
+            param = other_derived_parameters[param_name]
+            new_param_name = self._rename_full_name(param_name, other_trajectory,
+                                                    used_runs=used_runs)
+            if new_param_name in self:
+                my_param = self.f_get(new_param_name, fast_access=False)
                 if (my_param._equal_values(my_param.f_get(), param.f_get()) and
                         not (my_param.f_has_range() or param.f_has_range())):
                     continue
@@ -2039,7 +2073,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         not (my_param.f_has_range() or param.f_has_range())):
                     continue
                 else:
-                    raise TypeError('Cannot merge parameter `%s`.' % new_name)
+                    self._logger.error('Could not merge parameter `%s`. '
+                                       'I will ignore it!' % new_name)
             rename_dict[param_name] = new_name
 
 
@@ -2075,7 +2110,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         self._logger.warning('Ignoring links under `%s` because '
                                              'I don`t know how to resolve links '
                                              'under a `%s` node.' %
-                                             (linking_full_name, pypetconstants.RUN_NAME_DUMMY))
+                                             (linking_full_name, str(run_name_dummys)))
 
                     split_name = linking_full_name .split('.')
                     if any(x in allowed_translations for x in split_name):
@@ -2094,7 +2129,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                  'links named as `%s`.' %
                                                  (link,
                                                   linking_full_name,
-                                                  pypetconstants.RUN_NAME_DUMMY))
+                                                  str(run_name_dummys)))
                             continue
 
                         try:
@@ -2106,8 +2141,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             else:
                                 new_linking_item =  self.f_add_group(new_linking_full_name)
                             if link in allowed_translations:
-                                run_idx, wildcards = other_trajectory._reversed_wildcards[link]
-                                link = self.f_wildcard(wildcards[0], used_runs[run_idx])
+                                run_indices, wildcards = other_trajectory._reversed_wildcards[link]
+                                link = self.f_wildcard(wildcards[0], used_runs[run_indices[0]])
                             if not link in new_linking_item._links:
                                 new_linking_item.f_add_link(link, new_linked_item)
                             else:
@@ -2237,7 +2272,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             ignore_data.add(result_name)
             if any(x in other_trajectory._reversed_wildcards and x not in allowed_translations
                         for x in split_name):
-
                 continue
             new_name = self._rename_full_name(result_name, other_trajectory,
                                                     used_runs=used_runs)

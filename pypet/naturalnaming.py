@@ -99,6 +99,9 @@ SHORTCUT_SET = set(['dpar', 'par', 'conf', 'res'])
 
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
+class _NEW_GROUP(object): pass
+new_group = _NEW_GROUP() # Dummy for lazy adding of new group nodes
+
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
@@ -195,7 +198,6 @@ class NNTreeNode(WithAnnotations):
         return self._full_name[:-len(self._name) - 1]
 
     @property
-    @deprecated('No longer supported please use v_run_idx')
     def v_run_branch(self):
         """ If this node is hanging below a branch named `run_XXXXXXXXX`.
 
@@ -741,22 +743,16 @@ class NaturalNamingInterface(HasLogger):
                 del root._other_leaves[full_name]
 
             if full_name in root._explored_parameters:
-                root._explored_parameters[full_name] = None
-                # We always keep the explored parameters
 
-                # If we remove an explored parameter and the trajectory was not stored to disk
-                # before we need to check if there are no explored parameters left. If so
-                # the length of the trajectory is shrunk to 1.
+                if root._stored:
+                    # We always keep the explored parameters in case the trajectory was stored
+                    root._explored_parameters[full_name] = None
+                else:
+                    del root._explored_parameters[full_name]
                 if len(root._explored_parameters) == 0:
-                    if root._stored:
-                        self._logger.warning('You removed an explored parameter, but your '
-                                             'trajectory was already stored to disk. So it is '
-                                             'not shrunk!')
-                    else:
-                        root.f_shrink()
+                    root.f_shrink()
 
             del self._flat_leaf_storage_dict[full_name]
-
         else:
             del root._all_groups[full_name]
 
@@ -1139,7 +1135,7 @@ class NaturalNamingInterface(HasLogger):
                     raise ValueError('You cannot create a link to the root node')
                 if start_node.v_is_root and name in SUBTREE_MAPPING:
                     raise ValueError('`%s` is a reserved name for a group under root.' % name)
-                if not self._root_instance.f_contains(instance):
+                if not self._root_instance.f_contains(instance, with_links=False, shortcuts=False):
                     raise ValueError('You can only link to items within the trajectory tree!')
 
         # Check if the name fulfils the prefix conditions, if not change the name accordingly.
@@ -1290,7 +1286,7 @@ class NaturalNamingInterface(HasLogger):
                                              'There is a link called `%s` under `%s`.' %
                                              (name, act_node.v_full_name))
                     if idx == last_idx:
-                        raise AttributeError('You already have a group/instance `%s` under '
+                        raise AttributeError('You already have a group/instance/link `%s` under '
                                              '`%s`' % (name, act_node.v_full_name))
                 act_node = act_node._children[name]
             return act_node
@@ -1815,7 +1811,7 @@ class NaturalNamingInterface(HasLogger):
             # We end up here if `key` is actually a link
             return {}
 
-    def _very_fast_search(self, node, key, crun):
+    def _very_fast_search(self, node, key, max_depth, with_links, crun):
         """Fast search for a node in the tree.
 
         The tree is not traversed but the reference dictionaries are searched.
@@ -1828,13 +1824,21 @@ class NaturalNamingInterface(HasLogger):
 
             Name of node to find
 
+        :param max_depth:
+
+            Maximum depth.
+
+        :param with_links:
+
+            If we work with links than we can only be sure to found the node in case we
+            have a single match. Otherwise the other match might have been linked as well.
+
         :param crun:
 
             If given only nodes belonging to this particular run are searched and the rest
             is blinded out.
 
-
-        :return: The found node
+        :return: The found node and its depth
 
         :raises:
 
@@ -1848,12 +1852,19 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        parent_full_name = node.v_full_name
+        if key in self._links_count:
+            return
 
+        parent_full_name = node.v_full_name
+        starting_depth = node.v_depth
         candidate_dict = self._get_candidate_dict(key, crun)
 
         # If there are to many potential candidates sequential search might be too slow
-        if len(candidate_dict) > FAST_UPPER_BOUND:
+        if with_links:
+            upper_bound = 1
+        else:
+            upper_bound = FAST_UPPER_BOUND
+        if len(candidate_dict) > upper_bound:
             raise pex.TooManyGroupsError('Too many nodes')
 
         # Next check if the found candidates could be reached from the parent node
@@ -1861,24 +1872,19 @@ class NaturalNamingInterface(HasLogger):
         for goal_name in candidate_dict:
 
             # Check if we have found a matching node
-
             if goal_name.startswith(parent_full_name):
-
-                # In case of several solutions raise an error:
-                if result_node is not None:
-                    raise pex.NotUniqueNodeError('Node `%s` has been found more than once,'
-                                                 'full name of first occurrence is `%s` and of'
-                                                 'second `%s`'
-                                                 % (key, goal_name, result_node.v_full_name))
-
                 candidate = candidate_dict[goal_name]
-                # name and key can differ if it is actually a link, this also holds
-                # if the found node's name does not start with the full parent name
-                if (key == candidate.v_name and
-                                      candidate.v_full_name.startswith(parent_full_name)):
+                if candidate.v_depth - starting_depth <= max_depth:
+                    # In case of several solutions raise an error:
+                    if result_node is not None:
+                        raise pex.NotUniqueNodeError('Node `%s` has been found more than once,'
+                                                     'full name of first occurrence is `%s` and of'
+                                                     'second `%s`'
+                                                     % (key, goal_name, result_node.v_full_name))
                     result_node = candidate
 
-        return result_node
+        if result_node is not None:
+            return result_node, result_node.v_depth
 
     def _search(self, node, key, max_depth=float('inf'), with_links=True, crun=None):
         """ Searches for an item in the tree below `node`
@@ -1912,15 +1918,14 @@ class NaturalNamingInterface(HasLogger):
             return node._children[key], 1
 
         # First the very fast search is tried that does not need tree traversal.
-        if max_depth == float('inf'):
-            try:
-                result_node = self._very_fast_search(node, key, crun)
-                if result_node is not None:
-                    return result_node, 0
-            except pex.TooManyGroupsError:
-                pass
-            except pex.NotUniqueNodeError:
-                pass
+        try:
+            result = self._very_fast_search(node, key, max_depth, with_links, crun)
+            if result:
+                return result
+        except pex.TooManyGroupsError:
+            pass
+        except pex.NotUniqueNodeError:
+            pass
 
         # Slowly traverse the entire tree
         nodes_iterator = self._iter_nodes(node, recursive=True,
@@ -2490,7 +2495,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         if isinstance(name_or_item, compat.base_type):
             name = name_or_item
             if isinstance(full_name_or_item, compat.base_type):
-                instance = self.f_get_root().f_get(full_name_or_item)
+                instance = self.v_root.f_get(full_name_or_item)
             else:
                 instance =  full_name_or_item
         else:
@@ -2532,7 +2537,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         return self._nn_interface._add_generic(self, type_name=LEAF,
                                                group_type_name=GROUP,
-                                               args=args, kwargs=kwargs)
+                                               args=args, kwargs=kwargs,
+                                               add_prefix=False)
 
     def f_links(self):
         """Returns the number of links of the group"""
@@ -2730,9 +2736,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                 else:
                     name = value.v_full_name
                     if name == '':
-                        value._set_details(key)
+                        value._rename(key)
                     elif name != key:
-                        value._set_details(key + '.' + name)
+                        value._rename(key + '.' + name)
                     if isinstance(value, NNGroupNode):
                         self.f_add_group(value)
                     else:
@@ -2740,10 +2746,13 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             except:
                 value._set_details(old_name)
                 raise
-        elif self.f_get_root()._lazy_adding:
-            if not isinstance(value, tuple):
-                value = (value,)
-            self.f_add_leaf(key, *value)
+        elif self.v_root._lazy_adding:
+            if value is new_group:
+                self.f_add_group(key)
+            else:
+                if not isinstance(value, tuple):
+                    value = (value,)
+                self.f_add_leaf(key, *value)
         else:
             instance = self.f_get(key)
             instance.f_set(value)

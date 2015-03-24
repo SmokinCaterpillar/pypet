@@ -88,4 +88,4 @@ branches:
     - develop
     - master
     - python6
-    - link_feature
+    - hdf5_children_splitting

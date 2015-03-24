@@ -4,9 +4,9 @@
 
 * Remove merging of overview tables *DONE*
 
-* fix merging
+* fix merging *DONE*
 
-* Fixing link additions
+* Fixing link additions *DONE*
 
 * new lazy mode  *DONE*
 
@@ -25,4 +25,4 @@ explored  *DONE*
 
 * Docs for wildcard functions
 
-* write tests for wildcards
+* write tests for wildcards *DONE*

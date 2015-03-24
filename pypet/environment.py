@@ -1089,7 +1089,14 @@ class Environment(HasLogger):
         self.f_disable_logging()
 
     def f_disable_logging(self, remove_all_handlers=True):
-        """Removes all logging handlers and stops logging to files and logging stdout."""
+        """Removes all logging handlers and stops logging to files and logging stdout.
+
+        :param remove_all_handlers:
+
+            If `True` all logging handlers are closed and removed.
+            If you want to keep the handlers set to `False`.
+
+        """
         self._logging_manager.finalize(remove_all_handlers)
 
     @deprecated('Please use assignment in environment constructor.')
@@ -1757,9 +1764,6 @@ class Environment(HasLogger):
 
             new_traj_length = len(self._traj)
             new_runs = new_traj_length - old_traj_length
-
-            if self._clean_up_runs:
-                self._traj._remove_run_data()
 
         return repeat, start_run_idx, new_runs
 

@@ -104,7 +104,7 @@ def add_params(traj,param_dict):
 
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test1')
     traj.f_add_derived_parameter('Another.StringGroup.$', 'too bad!?', comment='test2')
-    traj.f_add_derived_parameter('Another.$.String', 'Really?', comment='test3')
+    traj.f_add_derived_parameter('Another.$set.$.String', 'Really?', comment='test3')
     traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test4')
 
 
@@ -188,6 +188,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.res.runs.f_add_result('hhg', 5555, comment='jjjj')
 
         traj.res.f_add_result(name='lll', comment='duh', data=444)
+
+        traj.res.f_add_result(name='test.$set.$', comment='duh', data=444)
 
         try:
             traj.f_add_config('teeeeest', 12)
@@ -327,7 +329,7 @@ class TrajectoryComparator(unittest.TestCase):
         # Check the annotations
         for node in traj1.f_iter_nodes(recursive=True):
 
-            if (not 'run' in node.v_full_name) or 'run_00000000' in node.v_full_name:
+            if node.v_run_branch == traj1.f_wildcard('$', 0) or node.v_run_branch == 'trajectory':
                 if node.v_comment != '' and node.v_full_name in traj2:
                     second_comment = traj2.f_get(node.v_full_name).v_comment
                     self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %

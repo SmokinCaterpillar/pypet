@@ -99,6 +99,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.fletcher32 = False
         self.encoding = 'utf8'
         self.log_stdout=False
+        self.wildcard_functions = None
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -209,6 +210,7 @@ class EnvironmentTest(TrajectoryComparator):
                           log_allow_fork=False,
                           log_config=get_log_config(),
                           results_per_run=5,
+                          wildcard_functions=self.wildcard_functions,
                           derived_parameters_per_run=5,
                           multiproc=self.multiproc,
                           ncores=self.ncores,
@@ -622,6 +624,12 @@ class EnvironmentTest(TrajectoryComparator):
         self.assertTrue(any(x > 1 for x in ncomments.values()))
 
 
+def my_run_func(idx):
+    return 'hello_%d' % idx
+
+def my_set_func(idx):
+    return 'huhu_%d' % idx
+
 class TestOtherHDF5Settings(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'hdf5_settings'
@@ -641,11 +649,13 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.encoding='latin1'
 
 
+
 class TestOtherHDF5Settings2(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'hdf5_settings'
 
     def set_mode(self):
+
         EnvironmentTest.set_mode(self)
         self.mode = 'LOCK'
         self.multiproc = False
@@ -658,6 +668,8 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = True
         self.encoding='latin1'
+        self.wildcard_functions = {('$', 'crun') : my_run_func, ('$set', 'crunset'): my_set_func}
+
 
 
 class ResultSortTest(TrajectoryComparator):

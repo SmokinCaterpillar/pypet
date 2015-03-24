@@ -24,6 +24,7 @@ from pypet.tests.testutils.ioutils import make_temp_dir, get_root_logger, \
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
+from pypet import new_group as a_new_group
 
 
 class FakeResult(Result):
@@ -162,12 +163,17 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('newassignment.hdf5')
         traj = Trajectory(filename=filename)
 
+        traj.v_lazy_adding = True
         comment = 'A number'
         traj.par.x = 44, comment
 
         self.assertTrue(traj.f_get('x').v_comment == comment)
 
+        traj.par.iamgroup = a_new_group
 
+        self.assertTrue(isinstance(traj.iamgroup, ParameterGroup))
+
+        traj.v_lazy_adding = False
         traj.x = 45
         self.assertTrue(traj.par.f_get('x').f_get() == 45)
 
@@ -177,9 +183,10 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.f_get('f').v_name == 'f')
 
+        traj.v_lazy_adding = True
         traj.res.k = 22, 'Hi'
         self.assertTrue(isinstance(traj.f_get('k'), Result))
-        self.assertTrue(traj.f_get('k').v_comment == 'Hi')
+        self.assertTrue(traj.f_get('k')[1] == 'Hi')
 
         with self.assertRaises(AttributeError):
             traj.res.k = 33, 'adsd'
@@ -191,7 +198,7 @@ class StorageTest(TrajectoryComparator):
 
 
         traj.crun = 43, 'JJJ'
-        self.assertTrue(traj.run_A == 43)
+        self.assertTrue(traj.run_A[0] == 43)
 
         with self.assertRaises(AttributeError):
             traj.f_set_properties(j=7)
@@ -203,16 +210,16 @@ class StorageTest(TrajectoryComparator):
 
 
 
-        self.assertTrue(traj.f_get('hui').v_comment == 'l')
+        self.assertTrue(traj.f_get('hui')[1] == 'l')
 
         with self.assertRaises(AttributeError):
             traj.hui = ('445', 'kkkk',)
 
         traj.f_get('hui').f_set(('445', 'kkkk',))
 
-        self.assertTrue(traj.f_get('hui').v_comment == 'l')
+        self.assertTrue(traj.f_get('hui')[1] == 'l')
 
-        self.assertTrue(traj.hui == ('445', 'kkkk',))
+        self.assertTrue(traj.hui[0] == ('445', 'kkkk',))
 
         traj.f_add_link('klkikju', traj.par) # for shizzle
 
@@ -368,7 +375,7 @@ class StorageTest(TrajectoryComparator):
         traj = Trajectory(name='traj', add_time=True, filename=filename)
         res=traj.f_add_result('aaa.bbb.ccc.iii', 42, 43, comment=7777 * '6')
         traj.ccc.v_annotations['gg']=4
-        res=traj.f_add_result('aaa.ddd.eee.jjj', 42, 43, comment=7777 * '6')
+        res=traj.f_add_result('aaa.ddd.eee.jjj', 42, 43, comment=777 * '6')
         traj.ccc.v_annotations['j'] = 'osajdsojds'
         traj.f_store(only_init=True)
         traj.f_store_item('aaa', recursive=True)
@@ -451,111 +458,36 @@ class StorageTest(TrajectoryComparator):
             self.assertTrue('fail' not in josie2)
 
 
-    def test_clean_up_multiple_table_entries(self):
+    def test_maximum_overview_size(self):
 
-        filename = make_temp_dir('cleanup.hdf5')
+        filename = make_temp_dir('maxisze.hdf5')
 
         env = Environment(trajectory='Testmigrate', filename=filename,
                           log_allow_fork=False,
                           log_config=get_log_config())
 
         traj = env.v_trajectory
-        logpath = get_log_path(traj)
-        traj.f_add_parameter('x', 5)
+        for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
+            traj.f_add_parameter('f%d.x' % irun, 5)
 
         traj.f_store()
 
-        traj.f_delete_item(traj.f_get('x'))
-
-        traj.f_get('x').f_unlock()
-        traj.par.x = 10
-
-        traj.f_add_parameter('y', 43)
 
         store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
-        self.assertTrue(table.nrows == 1)
-
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters_overview
+        self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
 
-        traj.f_store_item(traj.f_get('y'))
-        traj.f_store_item(traj.f_get('x'))
-
-        store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
-        self.assertTrue(table.nrows == 3)
-
-        store.close()
-
-        traj.f_delete_item(traj.f_get('x'))
-
-
-        store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
-        self.assertTrue(table.nrows == 1)
-
-        store.close()
-
-        # full_file_name = os.path.join(logpath, 'main_log.txt')
-        # if not os.path.isfile(full_file_name):
-        full_file_name = os.path.join(logpath, 'LOG.txt')
-
-        with open(full_file_name) as fh:
-            text = fh.read()
-
-            etext ='appears more than once in table'
-            self.assertTrue(etext in text)
-
-        env.f_disable_logging()
-
-    def test_clean_up_multiple_table_entries2(self):
-
-        filename = make_temp_dir('cleanup.hdf5')
-
-        env = Environment(trajectory='Testmigrate2', filename=filename,
-                          log_config=get_log_config(),
-                          log_allow_fork=False)
-
-        traj = env.v_trajectory
-        logpath = get_log_path(traj)
-        traj.f_add_parameter('x', 5)
+        for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH,
+                  2*pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
+            traj.f_add_parameter('f%d.x' % irun, 5)
 
         traj.f_store()
 
-        traj.f_delete_item(traj.f_get('x'))
-
-        traj.f_add_parameter('y', 43)
-
         store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
-        self.assertTrue(table.nrows == 1)
-
+        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters_overview
+        self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
-
-        traj.f_store_item(traj.f_get('y'))
-        traj.f_store_item(traj.f_get('x'))
-
-        traj.f_get('x').f_unlock()
-        traj.par.x = 10
-
-        traj.f_store_item(traj.f_get('x'), overwrite=True)
-
-        store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters
-        self.assertTrue(table.nrows == 2)
-        self.assertTrue(compat.tostr(table[0]['value']) == '10')
-
-        store.close()
-
-        # full_file_name = os.path.join(logpath, 'main_log.txt')
-        # if not os.path.isfile(full_file_name):
-        full_file_name = os.path.join(logpath, 'LOG.txt')
-
-        with open(full_file_name) as fh:
-            text = fh.read()
-
-            etext ='appears more than once in table'
-            self.assertTrue(etext in text)
 
         env.f_disable_logging()
 
@@ -634,6 +566,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_result('wc2test.$.hhh', 333)
         traj.f_add_leaf('results.wctest.run_00000000.jjj', 42)
         traj.f_add_result('results.wctest.run_00000001.jjj', 43)
+        traj.f_add_result('results.wctest.%s.jjj' % traj.f_wildcard('$', -1), 43)
 
         traj.v_as_run = 1
 
@@ -659,8 +592,8 @@ class StorageTest(TrajectoryComparator):
         get_root_logger().info('auto-loading')
         traj.v_auto_load = True
 
-        self.assertTrue(traj.results.wctest[-2].jjj==43)
-        self.assertTrue(traj.results.wc2test[-2].hhh==333)
+        self.assertTrue(traj.results.wctest[-1].jjj==43)
+        self.assertTrue(traj.results.wc2test[-1].hhh==333)
 
         get_root_logger().info('Removing child3')
         traj.f_remove_child('results', recursive=True)
@@ -801,7 +734,7 @@ class StorageTest(TrajectoryComparator):
     def test_delete_whole_subtrees(self):
         filename = make_temp_dir('testdeltree.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=filename)
+                          filename=filename, large_overview_tables=True)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
         dpar = traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
@@ -814,9 +747,9 @@ class StorageTest(TrajectoryComparator):
 
         with ptcompat.open_file(filename) as fh:
             daroot = ptcompat.get_child(fh.root, traj.v_name)
-            dpar_table = daroot.overview.derived_parameters_trajectory
+            dpar_table = daroot.overview.derived_parameters_overview
             self.assertTrue(len(dpar_table) == 2)
-            res_table = daroot.overview.results_trajectory
+            res_table = daroot.overview.results_overview
             self.assertTrue((len(res_table)) == 2)
 
         with self.assertRaises(TypeError):
@@ -844,10 +777,10 @@ class StorageTest(TrajectoryComparator):
 
         with ptcompat.open_file(filename) as fh:
             daroot = ptcompat.get_child(fh.root, traj.v_name)
-            dpar_table = daroot.overview.derived_parameters_trajectory
-            self.assertTrue(len(dpar_table) == 1)
-            res_table = daroot.overview.results_trajectory
-            self.assertTrue((len(res_table)) == 1)
+            dpar_table = daroot.overview.derived_parameters_overview
+            self.assertTrue(len(dpar_table) == 2)
+            res_table = daroot.overview.results_overview
+            self.assertTrue((len(res_table)) == 2)
 
         traj.f_add_parameter('ggg', 43)
         traj.f_add_parameter('hhh.mmm', 45)
@@ -860,19 +793,22 @@ class StorageTest(TrajectoryComparator):
 
         with ptcompat.open_file(filename) as fh:
             daroot = ptcompat.get_child(fh.root, traj.v_name)
-            par_table = daroot.overview.parameters
+            par_table = daroot.overview.parameters_overview
             self.assertTrue(len(par_table) == 4)
 
-        traj.f_delete_item('par.hhh', recursive=True)
+        traj.f_delete_item('par.hhh', recursive=True, remove_from_trajectory=True)
+
+        traj.f_add_parameter('saddsdfdsfd', 111)
+        traj.f_store()
 
         with ptcompat.open_file(filename) as fh:
             daroot = ptcompat.get_child(fh.root, traj.v_name)
-            par_table = daroot.overview.parameters
-            self.assertTrue(len(par_table) == 2)
+            par_table = daroot.overview.parameters_overview
+            self.assertTrue(len(par_table) == 5)
 
-        with self.assertRaises(TypeError):
-            # We cannot delete something containing an explored parameter
-            traj.f_delete_item('par', recursive=True)
+        # with self.assertRaises(TypeError):
+        #     # We cannot delete something containing an explored parameter
+        #     traj.f_delete_item('par', recursive=True)
 
         with self.assertRaises(TypeError):
             traj.f_delete_item('ggg')
@@ -1066,7 +1002,6 @@ class StorageTest(TrajectoryComparator):
                 self.assertTrue(row[table_name])
 
             self.assertTrue(row['purge_duplicate_comments'])
-            self.assertTrue(row['explored_parameters_runs'])
             self.assertTrue(row['results_per_run']==19)
             self.assertTrue(row['derived_parameters_per_run'] == 17)
 

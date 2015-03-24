@@ -6,7 +6,8 @@ import os
 
 from pypet import pypetconstants
 from pypet.environment import Environment
-from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
+from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest,\
+    TestOtherHDF5Settings2
 from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajectory_name, \
      parse_args, get_log_config
 from pypet.tests.testutils.data import create_param_dict, add_params
@@ -14,7 +15,7 @@ import pypet.compat as compat
 import sys
 
 
-class MultiprocQueueTest(EnvironmentTest):
+class MultiprocQueueTest(TestOtherHDF5Settings2):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool'
 

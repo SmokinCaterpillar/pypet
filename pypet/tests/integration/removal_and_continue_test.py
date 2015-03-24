@@ -357,8 +357,6 @@ class ContinueMPTest(ContinueTest):
     def test_continueing_mp2(self):
         self.filenames = [make_temp_dir('test_removal2.hdf5'), 0]
 
-
-
         self.envs=[]
         self.trajs = []
 
@@ -369,8 +367,6 @@ class ContinueMPTest(ContinueTest):
             self.make_environment_mp( irun, filename)
 
         self.param_dict={'x':1.0, 'y':2.0}
-
-
 
         for irun in range(len(self.filenames)):
             self.trajs[irun].f_add_parameter(CustomParameter,'x', 1.0)
@@ -384,8 +380,6 @@ class ContinueMPTest(ContinueTest):
         for irun in range(len(self.filenames)):
 
             self.envs[irun].f_run(Multiply(), arg)
-
-
 
         traj_name = self.trajs[0].v_name
         continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
@@ -407,15 +401,13 @@ class ContinueMPTest(ContinueTest):
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
         for run_name in self.trajs[-1].f_iter_runs():
-            self.assertTrue(self.trajs[-1].z in results)
+            self.assertTrue(self.trajs[-1].crun.z in results)
 
         self.assertTrue(len(self.trajs[-1])== len(results))
 
 
     def test_continueing_mp(self):
         self.filenames = [make_temp_dir('test_removal2.hdf5'), 0]
-
-
 
         self.envs=[]
         self.trajs = []
@@ -462,7 +454,7 @@ class ContinueMPTest(ContinueTest):
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
         for run_name in self.trajs[0].f_iter_runs():
-            self.assertTrue(self.trajs[0].z in results)
+            self.assertTrue(self.trajs[0].crun.z in results)
 
 
 class ContinueMPPoolTest(ContinueMPTest):
