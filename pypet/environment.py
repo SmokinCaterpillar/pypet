@@ -64,6 +64,7 @@ from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
+from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
 
 
@@ -282,7 +283,7 @@ class Environment(HasLogger):
         Set to `None` if you don't want *pypet* to configure logging.
 
         If not specified, the default settings are used. Moreover, you can manually tweak the
-        default settings (only python 2.7 and up) without creating a new `ini` file.
+        default settings without creating a new `ini` file.
         Instead of the `log_config` parameter, pass a ``log_folder``,
         a list of `logger_names` and corresponding `log_levels` to fine grain
         the loggers to which the default settings apply.
@@ -737,8 +738,13 @@ class Environment(HasLogger):
 
         Analogous to the above.
 
+    Finally, you can also pass properties of the trajectory, like ``v_with_links=True``
+    (you can leave the prefix ``v_``, i.e. ``with_links`` works, too).
+    Thus, you can change the settings of the trajectory immediately.
+
     """
 
+    @parse_config
     @kwargs_api_change('use_hdf5', 'storage_service')
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')

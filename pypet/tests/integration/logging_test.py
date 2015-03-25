@@ -257,7 +257,7 @@ class LoggingTest(TrajectoryComparator):
                                        'belong there: %s' % str(file))
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
-    @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
+    # @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
     def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return

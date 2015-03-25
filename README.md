@@ -57,6 +57,8 @@ If you use Python 2.6 you also need
 
 * importlib >= 1.0.1
 
+* logutils >= 0.3.3
+
 * unittest2
 
 For git integration you additionally need

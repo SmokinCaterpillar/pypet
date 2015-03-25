@@ -21,10 +21,11 @@ except ImportError:
     install_requires.append('importlib')
 
 if (sys.version_info < (2, 7, 0)):
+    # For Python 2.6 we additionally need these packages:
     install_requires.append(['unittest2'])
-    # For Python 2.6 we additionally need ordereddict
     install_requires.append('ordereddict >= 1.1')
     install_requires.append('importlib >= 1.0.1')
+    install_requires.append('logutils >= 0.3.3')
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()

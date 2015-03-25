@@ -1,6 +1,7 @@
 """Module containing utilities for logging."""
 
 __author__ = 'Robert Meyer'
+
 try:
     import ConfigParser as cp
 except ImportError:
@@ -10,7 +11,15 @@ try:
 except ImportError:
     from io import StringIO
 import logging
-import logging.config
+from logging.config import fileConfig
+try:
+    from logging.config import dictConfig
+except ImportError:
+    from logutils.dictconfig import dictConfig
+try:
+    from logging import NullHandler
+except ImportError:
+    from logutils import NullHandler
 import os
 import sys
 import ast
@@ -351,16 +360,7 @@ class LoggingManager(object):
     def tabula_rasa(self):
         """Removes all loggers and logging handlers and closes them. """
         erase_dict = {'disable_existing_loggers': False, 'version': 1}
-        logging.config.dictConfig(erase_dict)
-        # all_loggers = compat.listvalues(logging.Logger.manager.loggerDict) + [logging.getLogger()]
-        # for logger in all_loggers:
-        #     if hasattr(logger, 'handlers'):
-        #         for handler in logger.handlers:
-        #             if hasattr(handler, 'flush'):
-        #                 handler.flush()
-        #             if hasattr(handler, 'close'):
-        #                 handler.close()
-        #         logger.handlers = []
+        dictConfig(erase_dict)
 
     @staticmethod
     def _check_and_replace_parser_args(parser, section, option, rename_func, make_dirs=True):
@@ -563,11 +563,11 @@ class LoggingManager(object):
             if proc_log_config:
                 if isinstance(proc_log_config, dict):
                     new_dict = self._handle_dict_config(proc_log_config)
-                    logging.config.dictConfig(new_dict)
+                    dictConfig(new_dict)
                 else:
                     parser = self._handle_config_parsing(proc_log_config)
                     memory_file = self._parser_to_string_io(parser)
-                    logging.config.fileConfig(memory_file, disable_existing_loggers=False)
+                    fileConfig(memory_file, disable_existing_loggers=False)
 
         if log_stdout:
             #  Create a logging mock for stdout
@@ -589,18 +589,6 @@ class LoggingManager(object):
         self._mp_config = None
         if remove_all_handlers:
             self.tabula_rasa()
-
-
-class NullHandler(logging.Handler):
-    """No-op handler stolen from python 2.7, because it is not available in 2.6!"""
-    def handle(self, record):
-        pass
-
-    def emit(self, record):
-        pass
-
-    def createLock(self):
-        self.lock = None
 
 
 class NoInterpolationParser(cp.ConfigParser):

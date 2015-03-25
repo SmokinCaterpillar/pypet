@@ -87,7 +87,7 @@ because most of the time the default settings are sufficient.
     Set to `None` if you don't want *pypet* to configure logging.
 
     If not specified, the default settings are used. Moreover, you can manually tweak the
-    default settings (only python 2.7 and up) without creating a new `ini` file.
+    default settings without creating a new `ini` file.
     Instead of the `log_config` parameter, pass a ``log_folder``,
     a list of `logger_names` and corresponding `log_levels` to fine grain
     the loggers to which the default settings apply.
@@ -414,6 +414,10 @@ These are handed over to the service:
 
     Analogous to the above.
 
+Finally, you can also pass properties of the trajectory, like ``v_auto_load=True``
+(you can leave the prefix ``v_``, i.e. ``auto_load`` works, too).
+Thus, you can change the settings of the trajectory immediately.
+
 
 .. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
@@ -727,7 +731,7 @@ and ``small_overview_tables``:
 
 * The `explored_parameters_overview` overview table showing the explored parameter ranges
 
-Be aware that *overview* and *summary* tables are **only** for eye-balling of data.
+**IMPORTRANT**: Be aware that *overview* and *summary* tables are **only** for eye-balling of data.
 You should **never** rely on data in these tables because it might be truncated or outdated.
 Moreover, the size of these tables is restricted to 1000 entries. If you add more
 parameters or results, these are no longer listed in the *overview* tables.

@@ -18,11 +18,13 @@ explored  *DONE*
 
 * IMPORTANT: add new `explorations table`! *DONE*
 
-* Change info about summary tables
+* Change info about summary tables *DONE*
 
 
 * Add doc for new logging
 
 * Docs for wildcard functions
+
+*  Write doc for config parsing
 
 * write tests for wildcards *DONE*

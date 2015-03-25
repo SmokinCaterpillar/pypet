@@ -103,6 +103,8 @@ If you use Python 2.6 you also need
 
 * importlib_ >= 1.0.1
 
+* logutils_ >= 0.3.3
+
 * unittest2_
 
 For git integration you additionally need
@@ -512,5 +514,5 @@ Cheers,
 
 .. _unittest2: https://pypi.python.org/pypi/unittest2/1.0.1
 
-
+.. _logutils: https://pypi.python.org/pypi/logutils
 

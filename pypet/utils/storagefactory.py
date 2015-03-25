@@ -12,6 +12,7 @@ import os
 
 from pypet.utils.helpful_functions import get_matching_kwargs
 from pypet.storageservice import HDF5StorageService
+from pypet.utils.dynamicimports import create_class
 import pypet.compat as compat
 
 
@@ -45,20 +46,20 @@ def storage_factory(storage_service, trajectory=None, **kwargs):
         A storage service and a set of not used keyword arguments from kwargs
 
     """
-    if isinstance(storage_service, compat.base_type) and 'filename' not in kwargs:
-        kwargs['filename'] = storage_service
-        storage_service = None
 
     if 'filename' in kwargs and storage_service is None:
         filename = kwargs['filename']
         _, ext = os.path.splitext(filename)
         if ext in ('.hdf', '.h4', '.hdf4', '.he2', '.h5', '.hdf5', '.he5'):
-            return _create_storage(HDF5StorageService, trajectory, **kwargs)
+            storage_service = HDF5StorageService
         else:
             raise ValueError('Extension `%s` of filename `%s` not understood.' %
                              (ext, filename))
+    elif isinstance(storage_service, compat.base_type):
+        class_name = storage_service.split('.')[-1]
+        storage_service = create_class(class_name, [storage_service, HDF5StorageService])
 
-    elif inspect.isclass(storage_service):
+    if inspect.isclass(storage_service):
         return _create_storage(storage_service, trajectory, **kwargs)
     else:
         return storage_service, set(kwargs.keys())
