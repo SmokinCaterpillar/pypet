@@ -474,7 +474,7 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
         self.assertTrue(1 not in res_dict)
 
-        res_dict =  self.traj.f_get_from_runs('test', where='Portland')
+        res_dict =  self.traj.f_get_from_runs('test')
         self.assertTrue(len(res_dict) == 0)
 
     def test_illegal_namings(self):

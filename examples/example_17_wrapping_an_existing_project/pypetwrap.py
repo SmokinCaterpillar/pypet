@@ -71,6 +71,7 @@ def main():
     # extract the trajectory
     traj = env.v_traj
 
+    traj.v_lazy_adding = True
     traj.par.ncells = 400, 'Number of cells'
     traj.par.steps = 250, 'Number of timesteps'
     traj.par.rule_number = 30, 'The ca rule'
@@ -100,7 +101,7 @@ def main():
     for idx, run_name in enumerate(traj.f_iter_runs()):
         # Plot all patterns
         filename = os.path.join(folder, make_filename(traj))
-        plot_pattern(traj.pattern, traj.rule_number, filename)
+        plot_pattern(traj.crun.pattern, traj.rule_number, filename)
         progressbar(idx, len(traj), logger=logger)
 
     # Finally disable logging and close all log-files

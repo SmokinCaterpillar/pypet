@@ -30,6 +30,7 @@ env = Environment(trajectory='Multiplication',
 traj = env.v_trajectory
 
 # Add both parameters
+traj.v_lazy_adding = True
 traj.par.x = 1, 'I am the first dimension!'
 traj.par.y = 1, 'I am the second dimension!'
 
@@ -43,13 +44,9 @@ traj.f_add_link('mylink1', traj.f_get('x'))
 print('x=' + str(traj.mylink1))
 # We can try to avoid fast access as well, and recover the original parameter
 print(str(traj.f_get('mylink1')))
-# Be aware that colon notation is not allowed for adding links. Accordingly, this fails:
-try:
-    traj.f_add_link('parameters.mylink2', traj.f_get('y'))
-except ValueError:
-    print('Told you!')
-# But we could do this instead:
-traj.parameters.f_add_link('mylink2', traj.f_get('y'))
+# And also colon notation is allowed that creates new groups on the fly
+traj.f_add_link('parameters.mynewgroup.mylink2', traj.f_get('y'))
+
 
 
 # And, of course, we can also use the links during run:

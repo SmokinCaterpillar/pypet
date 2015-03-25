@@ -2380,6 +2380,25 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         return '%s %s%s: %s' % (self.f_get_class_name(), self.v_full_name, commentstring,
                                 children_string)
 
+    def _add_group_from_storage(self, args, kwargs):
+        """Can be called from storage service to create a new group to bypass name checking"""
+        return self._nn_interface._add_generic(self,
+                                                type_name=GROUP,
+                                                group_type_name=GROUP,
+                                                args=args,
+                                                kwargs=kwargs,
+                                                add_prefix=False,
+                                                check_naming=False)
+
+    def _add_leaf_from_storage(self, args, kwargs):
+        """Can be called from storage service to create a new leaf to bypass name checking"""
+        return self._nn_interface._add_generic(self,
+                                                type_name=LEAF,
+                                                group_type_name=GROUP,
+                                                args=args, kwargs=kwargs,
+                                                add_prefix=False,
+                                                check_naming=False)
+
     def __dir__(self):
         """Adds all children to auto-completion"""
         result = dir(type(self)) + compat.listkeys(self.__dict__)

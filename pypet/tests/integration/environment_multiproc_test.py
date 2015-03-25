@@ -9,10 +9,15 @@ from pypet.environment import Environment
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest,\
     TestOtherHDF5Settings2
 from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajectory_name, \
-     parse_args, get_log_config
+     parse_args, get_log_config, unittest
 from pypet.tests.testutils.data import create_param_dict, add_params
 import pypet.compat as compat
 import sys
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 
 class MultiprocQueueTest(TestOtherHDF5Settings2):
@@ -114,6 +119,7 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
         self.use_pool=False
 
 
+@unittest.skipIf(psutil is None, 'Only makes sense if psutil is installed')
 class CapTest(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool', 'cap'

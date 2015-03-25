@@ -75,6 +75,7 @@ def _configure_logging(kwargs):
         sys.stderr.write('Could not configure logging system because of: %s' % str(exc))
         traceback.print_exc()
 
+
 def _logging_and_single_run(kwargs):
     _configure_logging(kwargs)
     return _single_run(kwargs)

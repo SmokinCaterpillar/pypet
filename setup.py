@@ -24,6 +24,7 @@ if (sys.version_info < (2, 7, 0)):
     install_requires.append(['unittest2'])
     # For Python 2.6 we additionally need ordereddict
     install_requires.append('ordereddict >= 1.1')
+    install_requires.append('importlib >= 1.0.1')
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()

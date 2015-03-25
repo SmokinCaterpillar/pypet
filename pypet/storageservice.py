@@ -2566,9 +2566,8 @@ class HDF5StorageService(StorageService, HasLogger):
         """Recalls names of all explored parameters"""
         if hasattr(self._overview_group, 'explorations'):
             explorations_table = ptcompat.get_child(self._overview_group, 'explorations')
-            data = explorations_table.read()
-            for element in data:
-                param_name = compat.tostr(element[0])
+            for row in explorations_table.iterrows():
+                param_name = compat.tostr(row['explorations'])
                 if param_name not in traj._explored_parameters:
                     traj._explored_parameters[param_name] = None
         else:
@@ -2604,7 +2603,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                        where=self._overview_group,
                                                        name='explorations',
                                                        description=description)
-            rows = [(x,) for x in explored_list]
+            rows = [(compat.tobytes(x),) for x in explored_list]
             if rows:
                 explorations_table.append(rows)
                 explorations_table.flush()
@@ -2915,12 +2914,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     instance = self._tree_create_leaf(name, trajectory, hdf5_group)
 
                     # Add the instance to the trajectory tree
-                    parent_traj_node._nn_interface._add_generic(parent_traj_node,
-                                                                type_name=nn.LEAF,
-                                                                group_type_name=nn.GROUP,
-                                                                args=(instance,), kwargs={},
-                                                                add_prefix=False,
-                                                                check_naming=False)
+                    parent_traj_node._add_leaf_from_storage(args=(instance,), kwargs={})
 
                 self._prm_load_parameter_or_result(instance, load_data=load_data,
                                                    _hdf5_group=hdf5_group)
@@ -2944,13 +2938,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     else:
                         args = (name,)
                     # If the group does not exist create it'
-                    traj_group = parent_traj_node._nn_interface._add_generic(parent_traj_node,
-                                                                            type_name=nn.GROUP,
-                                                                            group_type_name=nn.GROUP,
-                                                                            args=args,
-                                                                            kwargs={},
-                                                                            add_prefix=False,
-                                                                            check_naming=False)
+                    traj_group = parent_traj_node._add_group_from_storage(args=args, kwargs={})
 
                 # Load annotations and comment
                 self._grp_load_group(traj_group, load_data=load_data, with_links=with_links,
@@ -3659,7 +3647,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if 'time' in colnames:
             time_ = item._time if not item._is_run else item._time_run
-            insert_dict['time'] = time_
+            insert_dict['time'] = compat.tobytes(time_)
 
         if 'timestamp' in colnames:
             timestamp = item._timestamp if not item._is_run else item._timestamp_run
@@ -3947,7 +3935,9 @@ class HDF5StorageService(StorageService, HasLogger):
         definitely_store_comment = True
 
         # Get the hexdigest of the comment to see if such a comment has been stored before
-        hexdigest = hashlib.sha1(instance.v_comment).hexdigest()
+        bytes_comment = compat.tobytes(instance.v_comment)
+        hexdigest = hashlib.sha1(bytes_comment).hexdigest()
+        hexdigest = compat.tobytes(hexdigest)
 
         # Get the overview table
         table_name = where + '_summary'

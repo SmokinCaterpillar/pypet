@@ -101,6 +101,10 @@ If you use Python 2.6 you also need
 
 * ordereddict_ >= 1.1
 
+* importlib_ >= 1.0.1
+
+* unittest2_
+
 For git integration you additionally need
 
 * GitPython_ >= 0.3.1
@@ -503,6 +507,10 @@ Cheers,
 .. _Sumatra: http://neuralensemble.org/sumatra/
 
 .. _dill: https://pypi.python.org/pypi/dill
+
+.. _importlib: https://pypi.python.org/pypi/importlib/1.0.1
+
+.. _unittest2: https://pypi.python.org/pypi/unittest2/1.0.1
 
 
 

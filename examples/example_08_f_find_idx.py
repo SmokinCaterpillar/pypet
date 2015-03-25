@@ -51,7 +51,7 @@ for idx in idx_iterator:
     traj.v_idx=idx
     run_name = traj.v_as_run
     # and print everything nicely
-    print('%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.z))
+    print('%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.crun.z))
 
 # And we do not forget to set everything back to normal
 traj.f_restore_default()

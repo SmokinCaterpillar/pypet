@@ -55,6 +55,10 @@ If you use Python 2.6 you also need
 
 * ordereddict >= 1.1
 
+* importlib >= 1.0.1
+
+* unittest2
+
 For git integration you additionally need
 
 * GitPython >= 0.3.1
