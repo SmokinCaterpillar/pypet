@@ -68,7 +68,7 @@ class ContinueTest(TrajectoryComparator):
                           filename=filename,
                           file_title=trajname,
                           log_stdout=False,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
@@ -337,7 +337,7 @@ class ContinueMPTest(ContinueTest):
                           filename=filename,
                           file_title=trajname,
                           log_stdout=False,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,
@@ -476,7 +476,7 @@ class ContinueMPPoolTest(ContinueMPTest):
                           filename=filename,
                           file_title=trajname,
                           log_stdout=False,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,

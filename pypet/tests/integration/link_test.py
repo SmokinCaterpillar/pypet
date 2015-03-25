@@ -82,7 +82,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
@@ -152,11 +152,11 @@ class LinkMergeTest(TrajectoryComparator):
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1,
-                          log_allow_fork=False,
+
                           log_stdout=False, log_config=get_log_config())
         self.env2 = Environment(trajectory=self.trajname2, filename=self.filename,
                           file_title=self.trajname2,
-                          log_allow_fork=False,
+
                           log_stdout=False, log_config=get_log_config())
 
         self.traj1 = self.env1.v_trajectory

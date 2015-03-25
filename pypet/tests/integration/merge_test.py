@@ -41,7 +41,7 @@ class MergeTest(TrajectoryComparator):
         trajname = make_trajectory_name(self) + '__' +str(idx) +'_'
 
         env = Environment(trajectory=trajname,filename=filename, file_title=trajname,
-                          log_stdout=False, log_allow_fork=False,
+                          log_stdout=False,
                           large_overview_tables=True, log_config=get_log_config(),
                           **kwargs)
 
@@ -553,7 +553,7 @@ class TestMergeResultsSort(ResultSortTest):
 
         env2 = Environment(trajectory=self.trajname+'2',filename=self.filename,
                           file_title=self.trajname,
-                          log_stdout=False, log_allow_fork=False,
+                          log_stdout=False,
                           log_config=get_log_config(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,

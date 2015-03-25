@@ -247,7 +247,18 @@ class Environment(HasLogger):
     :param wildcard_functions:
 
         Dictionary of wildcards like `$` and corresponding functions that are called upon
-        finding such a wildcard.
+        finding such a wildcard. For example, to replace the `$` aka `crun` wildcard,
+        you can pass the following: ``wildcard_functions = {('$', 'crun'): myfunc}``.
+
+        Your wildcard function `myfunc` must return a unique run name as a function of
+        a given integer run index. Moreover, your function must also return a unique
+        *dummy* name for the run index being `-1`.
+
+        Of course, you can define your
+        own wildcards like `wildcard_functions = {('$mycard', 'mycard'): myfunc)}.
+        These are not required to return a unique name for each run index, but can be used
+        to group runs into buckets by returning the same name for several run indices.
+        Yet, all wildcard functions need to return a dummy name for the index `-1`.
 
     :param automatic_storing:
 
@@ -279,12 +290,6 @@ class Environment(HasLogger):
         For example:
 
         ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
-
-    :param log_allow_fork:
-
-        Only important on *Unix* systems that allow forking of child processes for multiprocessing.
-        If you want to erase all log settings in the forked child processes and create new
-        logging settings, set this to `False`. This is recommended to avoid garbled log files.
 
     :param log_stdout:
 
@@ -746,7 +751,6 @@ class Environment(HasLogger):
                  wildcard_functions=None,
                  automatic_storing=True,
                  log_config=pypetconstants.DEFAULT_LOGGING,
-                 log_allow_fork=False,
                  log_stdout=('STDOUT', logging.INFO),
                  report_progress = (5, 'pypet', logging.INFO),
                  multiproc=False,
@@ -818,7 +822,6 @@ class Environment(HasLogger):
         unused_kwargs = set(kwargs.keys())
 
         self._logging_manager = LoggingManager(log_config=log_config, log_stdout=log_stdout,
-                                               log_allow_fork=log_allow_fork,
                                                report_progress=report_progress)
         self._logging_manager.check_log_config()
         self._logging_manager.add_null_handler()
@@ -1070,6 +1073,14 @@ class Environment(HasLogger):
             self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
 
         self._trajectory_name = self._traj.v_name
+        for kwarg in list(unused_kwargs):
+            try:
+                val = kwargs[kwarg]
+                self._traj.f_set_properties(**{kwarg: val})
+                self._logger.info('Set trajectory property `%s` to `%s`.' % (kwarg, str(val)))
+                unused_kwargs.remove(kwarg)
+            except AttributeError:
+                pass
         if len(unused_kwargs) > 0:
             raise ValueError('You passed keyword arguments to the environment that you '
                                  'did not use. The following keyword arguments were ignored: '
@@ -1855,8 +1866,7 @@ class Environment(HasLogger):
                                            queue=None,
                                            start_queue_process=True,
                                            log_config=self._logging_manager.log_config,
-                                           log_stdout=self._logging_manager.log_stdout,
-                                           log_allow_fork=self._logging_manager.log_allow_fork)
+                                           log_stdout=self._logging_manager.log_stdout)
 
                         self._multiproc_wrapper.start()
 
@@ -2250,10 +2260,6 @@ class MultiprocContext(HasLogger):
         Path to logging config file or dictionary to configure logging for the
         spawned queue process. Thus, only considered if the queue wrap mode is chosen.
 
-    :param log_allow_fork:
-
-        If logging configuration should be forked from parent process. `False` is recommended.
-
     :param log_stdout:
 
         If stdout of the queue process should also be logged.
@@ -2273,7 +2279,6 @@ class MultiprocContext(HasLogger):
                  queue=None,
                  start_queue_process=True,
                  log_config=None,
-                 log_allow_fork=False,
                  log_stdout=False):
 
         self._set_logger()
@@ -2293,8 +2298,7 @@ class MultiprocContext(HasLogger):
 
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
             self._logging_manager = LoggingManager(log_config=log_config,
-                                                   log_stdout=log_stdout,
-                                                   log_allow_fork=log_allow_fork)
+                                                   log_stdout=log_stdout)
             self._logging_manager.check_log_config()
 
         if full_copy is not None:

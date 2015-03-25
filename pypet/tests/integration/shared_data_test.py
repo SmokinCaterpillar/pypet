@@ -172,7 +172,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=False,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           results_per_run=5,
                           derived_parameters_per_run=5,

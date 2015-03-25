@@ -79,7 +79,7 @@ class TestPostProc(TrajectoryComparator):
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],
                           filename=filename, log_stdout=False,
-                          log_allow_fork=False, log_config=get_log_config(),
+                          log_config=get_log_config(),
                           **self.env_kwargs)
 
         return env, filename, logfolder, cntfolder

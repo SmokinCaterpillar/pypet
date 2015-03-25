@@ -21,8 +21,8 @@ import pypet.pypetexceptions as pex
 import warnings
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
-from pypet import pypetconstants, BaseResult
-from pypet.tests.testutils.ioutils import parse_args, run_suite
+from pypet import pypetconstants, BaseResult, Environment
+from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
 
 import copy
 
@@ -95,6 +95,15 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
+    def test_change_properties_with_environment(self):
+        filename = make_temp_dir('dummy.h5')
+        with Environment(trajectory=self.traj,
+                        log_config=get_log_config(), filename=filename,
+                         lazy_adding=True, v_auto_load=True, with_links=False) as env:
+
+            self.assertTrue(self.traj.v_lazy_adding)
+            self.assertTrue(self.traj.v_auto_load)
+            self.assertFalse(self.traj.v_with_links)
 
 
     def test_truncation_of_string_statements_of_group_nodes(self):

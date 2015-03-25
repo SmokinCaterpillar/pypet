@@ -53,7 +53,7 @@ class FullStorageTest(TrajectoryComparator):
     def test_full_store(self):
         filename = make_temp_dir('full_store.hdf5')
         with Environment(filename=filename,
-                         log_allow_fork=False, log_config=get_log_config()) as env:
+                         log_config=get_log_config()) as env:
 
             traj = env.v_trajectory
 
@@ -207,7 +207,6 @@ class EnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_allow_fork=False,
                           log_config=get_log_config(),
                           results_per_run=5,
                           wildcard_functions=self.wildcard_functions,
@@ -245,7 +244,7 @@ class EnvironmentTest(TrajectoryComparator):
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 0)
 
-        env2 = Environment(filename=self.filename, log_allow_fork=False,
+        env2 = Environment(filename=self.filename,
                            log_config=get_log_config())
         traj2 = env2.v_trajectory
         traj2.f_store()
@@ -257,7 +256,7 @@ class EnvironmentTest(TrajectoryComparator):
             self.assertTrue(nchildren > 1)
 
         env3 = Environment(filename=self.filename, overwrite_file=True,
-                           log_allow_fork=False, log_config=get_log_config())
+                           log_config=get_log_config())
 
         self.assertFalse(os.path.exists(self.filename))
 
@@ -409,7 +408,7 @@ class EnvironmentTest(TrajectoryComparator):
 
 
         self.env = Environment(trajectory=self.traj,
-                          log_stdout=False, log_allow_fork=False,
+                          log_stdout=False,
                           log_config=get_log_config())
 
         self.traj = self.env.v_trajectory
@@ -697,7 +696,7 @@ class ResultSortTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_allow_fork=False,
+
                           log_config=get_log_config(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
@@ -809,7 +808,7 @@ class ResultSortTest(TrajectoryComparator):
         traj_name = self.env.v_trajectory.v_name
         del self.env
         self.env = Environment(trajectory=self.traj,
-                          log_stdout=False, log_allow_fork=False,
+                          log_stdout=False,
                           log_config=get_log_config())
 
         self.traj = self.env.v_trajectory

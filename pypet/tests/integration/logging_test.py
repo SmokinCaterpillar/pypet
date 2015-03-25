@@ -61,6 +61,10 @@ class LoggingTest(TrajectoryComparator):
     def setUp(self):
         self.set_mode()
 
+    def tearDown(self):
+        super(LoggingTest, self).tearDown()
+        logging.getLogger().manager.loggerDict = {}
+
     def set_mode(self):
         self.mode = Dummy()
         self.mode.wrap_mode = 'LOCK'
@@ -75,7 +79,6 @@ class LoggingTest(TrajectoryComparator):
         self.mode.fletcher32 = False
         self.mode.encoding = 'utf8'
         self.mode.log_stdout=False
-        self.mode.log_allow_fork=False
         self.mode.log_config=get_log_config()
 
 
@@ -99,8 +102,6 @@ class LoggingTest(TrajectoryComparator):
 
     def explore(self, traj):
         traj.f_explore({'p1': range(7)})
-
-
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_normal(self):
@@ -398,7 +399,7 @@ class LoggingTest(TrajectoryComparator):
 
 
     def test_logging_show_progress_print(self):
-        self.make_env(log_config=get_log_config(), log_stdout=('prostdout', 20),
+        self.make_env(log_config=get_log_config(), log_stdout=('prostdout', 50),
                       report_progress=(3, 'print'))
         self.add_params(self.traj)
         self.explore(self.traj)
@@ -411,7 +412,7 @@ class LoggingTest(TrajectoryComparator):
         with open(mainfilename, mode='r') as mainf:
             full_text = mainf.read()
 
-        progress = 'prostdout INFO     PROGRESS: Finished'
+        progress = 'prostdout CRITICAL PROGRESS: Finished'
         self.assertTrue(progress in full_text)
         bar = '[=='
         self.assertIn(bar, full_text)

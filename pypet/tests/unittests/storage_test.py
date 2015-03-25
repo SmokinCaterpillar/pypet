@@ -463,7 +463,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('maxisze.hdf5')
 
         env = Environment(trajectory='Testmigrate', filename=filename,
-                          log_allow_fork=False,
+
                           log_config=get_log_config())
 
         traj = env.v_trajectory
@@ -496,7 +496,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('overwrite.hdf5')
 
         env = Environment(trajectory='testoverwrite', filename=filename,
-                          log_allow_fork=False, log_config=get_log_config())
+                          log_config=get_log_config())
 
         traj = env.v_traj
 
@@ -726,7 +726,7 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             filename = 'testsfail.hdf5'
             env = Environment(filename=make_temp_dir(filename),
-                          log_stdout=True, log_allow_fork=False,
+                          log_stdout=True,
                           log_config=get_log_config(),
                           logger_names=('STDERROR', 'STDOUT'),
                           foo='bar')
@@ -848,7 +848,7 @@ class StorageTest(TrajectoryComparator):
 
         with warnings.catch_warnings(record=True) as w:
 
-            env = Environment(trajectory='test', filename=filename, log_allow_fork=False,
+            env = Environment(trajectory='test', filename=filename,
                               dynamically_imported_classes=[],
                               log_config=get_log_config())
 

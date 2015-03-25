@@ -48,6 +48,8 @@ pypet 0.1b.10
 
 *   The overview about the explored parameters in each run has been removed (due to size)
 
+*   Summary tables are now only based on the comments not the names!
+
 
 pypet 0.1b.9
 

@@ -143,7 +143,7 @@ class CapTest(EnvironmentTest):
             # Python 2.6 does not support dictConfig, i.e. `log_folder`, `log_levels` etc.
             env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname,
-                          log_allow_fork=False, log_stdout=False,
+                          log_stdout=False,
                           log_config=None,
                           results_per_run=5,
                           derived_parameters_per_run=5,
@@ -157,7 +157,7 @@ class CapTest(EnvironmentTest):
             env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname, log_folder=self.logfolder,
                           logger_names=('pypet', 'test', ''), log_levels='INFO',
-                          log_allow_fork=False, log_stdout=False,
+                          log_stdout=False,
                           log_config=None,
                           results_per_run=5,
                           derived_parameters_per_run=5,

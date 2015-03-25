@@ -285,20 +285,19 @@ class LoggingManager(object):
         or a logging dictionary.
 
     :param log_stdout: If `stdout` should be logged.
-    :param log_allow_fork:
 
-        If logging settings should be allowed to be forked by a child process
-        if the OS supports forking.
+    :param report_progress:
+
+        How to report progress.
 
     """
-    def __init__(self, trajectory=None, log_config=None, log_stdout=False, log_allow_fork=False,
+    def __init__(self, trajectory=None, log_config=None, log_stdout=False,
                  report_progress=False):
         self.trajectory = trajectory
         self.log_config = log_config
         self._sc_config = None
         self._mp_config = None
         self.log_stdout = log_stdout
-        self.log_allow_fork = log_allow_fork
         self.report_progress = report_progress
         self._tools = []
         self._null_handler = NullHandler()
@@ -351,16 +350,17 @@ class LoggingManager(object):
 
     def tabula_rasa(self):
         """Removes all loggers and logging handlers and closes them. """
-        all_loggers = compat.listvalues(logging.Logger.manager.loggerDict) + [logging.getLogger()]
-        for logger in all_loggers:
-            if hasattr(logger, 'handlers'):
-                for handler in logger.handlers:
-                    if hasattr(handler, 'flush'):
-                        handler.flush()
-                    if hasattr(handler, 'close'):
-                        handler.close()
-                logger.handlers = []
-        logging.Logger.manager.loggerDict={}
+        erase_dict = {'disable_existing_loggers': False, 'version': 1}
+        logging.config.dictConfig(erase_dict)
+        # all_loggers = compat.listvalues(logging.Logger.manager.loggerDict) + [logging.getLogger()]
+        # for logger in all_loggers:
+        #     if hasattr(logger, 'handlers'):
+        #         for handler in logger.handlers:
+        #             if hasattr(handler, 'flush'):
+        #                 handler.flush()
+        #             if hasattr(handler, 'close'):
+        #                 handler.close()
+        #         logger.handlers = []
 
     @staticmethod
     def _check_and_replace_parser_args(parser, section, option, rename_func, make_dirs=True):
@@ -553,8 +553,6 @@ class LoggingManager(object):
         if multiproc and hasattr(os, 'fork'):
             # If we allow forking and it is possible we already have a redirection of stdout
             log_stdout = False
-            if not self.log_allow_fork:
-                self.tabula_rasa()
 
         if self.log_config:
             if multiproc:

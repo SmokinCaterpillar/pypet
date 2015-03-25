@@ -54,6 +54,24 @@ because most of the time the default settings are sufficient.
     two classes named ``'MyCustomParameterClass'`` in two different python modules!
     The identification of the class is based only on its name and not its path in your packages.
 
+* ``wildcard_functions``
+
+    Dictionary of wildcards like `$` and corresponding functions that are called upon
+    finding such a wildcard. For example, to replace the `$` aka `crun` wildcard,
+    you can pass the following: ``wildcard_functions = {('$', 'crun'): myfunc}``.
+
+    Your wildcard function `myfunc` must return a unique run name as a function of
+    a given integer run index. Moreover, your function must also return a unique
+    *dummy* name for the run index being `-1`.
+
+    Of course, you can define your
+    own wildcards like `wildcard_functions = {('$mycard', 'mycard'): myfunc)}.
+    These are not required to return a unique name for each run index, but can be used
+    to group runs into buckets by returning the same name for several run indices.
+    Yet, all wildcard functions need to return a dummy name for the index `-1`.
+
+    You may also want to take a look at :ref:`more-on-wildcards`.
+
 * ``automatic_storing``
 
     If ``True`` the trajectory will be stored at the end of the simulation and
@@ -77,12 +95,6 @@ because most of the time the default settings are sufficient.
     For example:
 
     ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
-
-* ``log_allow_fork``
-
-    Only important on *Unix* systems that allow forking of child processes for multiprocessing.
-    If you want to erase all log settings in the forked child processes and create new
-    logging settings, set this to `False`. This is recommended to avoid garbled log files.
 
 * ``log_stdout``
 
@@ -443,13 +455,14 @@ Thus, you will be able to track how your trajectory was built over time.
 Logging
 ^^^^^^^
 
+*pypet* comes with a full fledged logging environment.
+
 Per default the environment will created loggers_ and stores all logged messages
 to log files. This includes also everything written to the standard stream ``stdout``,
 like ``print`` statements, for instance. To disable logging of the standard streams
 set ``log_stdout=False``. Note that you should always do this in case you use an interactive
 console like *IPython*. Otherwise your console output will be garbled.
 
-#TODO!!!!!!
 
 After your experiments are finished you can disable logging to files via
 :func:`~pypet.environment.Environment.f_disable_logging`. This also restores the
@@ -673,9 +686,11 @@ These overview tables give you a nice summary about all *parameters* and
 The following tables are created depending of your choice of ``large_overview_tables``
 and ``small_overview_tables``:
 
-* An `info` table listing general information about your trajectory
+* An `info` table listing general information about your trajectory (needed internally)
 
-* A `runs` table summarizing the single runs
+* A `runs` table summarizing the single runs (needed internally)
+
+* An `explorations` table listing only the names of explored parameters (needed internally)
 
 * The branch tables:
 
@@ -687,40 +702,39 @@ and ``small_overview_tables``:
 
         As above, but config parameters
 
-    `results_runs`
+    `results_overview`
 
-        All results of all individual runs, to reduce memory size only a short value
+        All results  to reduce memory size only a short value
         summary and the name is given. Per default this table is switched off, to enable it
         pass ``large_overview_tables=True`` to your environment.
 
 
-    `results_runs_summary`
+    `results_summary`
 
-        Only the very first result with a particular name is listed. For instance
-        if you create the result 'my_result' in all runs only the result of `run_00000000`
-        is listed with detailed information.
+        Only the very first result with a particular **comment** is listed. For instance,
+        if you create the result 'my_result' in all with the comment
+        ``'Contains my important data'``. Only the very first result having this comment is
+        put into the summary table.
 
         If you use this table, you can purge duplicate comments,
         see :ref:`more-on-duplicate-comments`.
 
-    `results_trajectory`
+    `derived_parameters_overview`
 
-        All results created not within single runs
+    `derived_parameters_summary`
 
-    `derived_parameters_trajectory`
+        Both are analogous to the result overviews above
 
-    `derived_parameters_runs`
+* The `explored_parameters_overview` overview table showing the explored parameter ranges
 
-    `derived_parameters_runs_summary`
-
-        All three are analogous to the result overviews above
-
-* The `explored_parameters` overview table showing the explored parameter ranges
-
-* In each subtree *results.run_XXXXXXXX* there will be another explored parameter table summarizing
-  the values in each run.
-  Per default these tables are switched off, to enable it pass ``large_overview_tables=True``
-  to your environment.
+Be aware that *overview* and *summary* tables are **only** for eye-balling of data.
+You should **never** rely on data in these tables because it might be truncated or outdated.
+Moreover, the size of these tables is restricted to 1000 entries. If you add more
+parameters or results, these are no longer listed in the *overview* tables.
+Finally, deleting or merging information does not affect the overview tables.
+Thus, deleted data remains in the table and is not removed. Again, the overview
+tables are unreliable and their only purpose is to provide a quick glance at your data
+for eye-balling.
 
 
 .. _more-on-duplicate-comments:
@@ -729,7 +743,7 @@ and ``small_overview_tables``:
 HDF5 Purging  of duplicate Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Adding a result with the same name and same comment in every single run, may create
+Adding a result with the same comment in every single run, may create
 a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
 To get rid of this overhead use the option ``purge_duplicate_comments=True`` and
 ``summary_tables=True``.
@@ -748,14 +762,9 @@ Furthermore, if you reload your data from the example above,
 the result instance ``results.runs.run_00000001.my_result``
 won't have a comment only the instance ``results.runs.run_00000000.my_result``.
 
-**IMPORTANT**: If you use multiprocessing, the storage service will take care that the comment for
-the result or derived parameter with the lowest run index will be considered, regardless
-of the order of the finishing of your runs. Note that this only works properly if all
-comments are the same. Otherwise the comment in the overview table might not be the one
-with the lowest run index. Moreover, if you merge trajectories (see ref:`more-on-merging`)
-there is no support for purging comments in the other trajectory.
-All comments of the other trajectory's results and derived parameters will be kept and
-merged into your current one.
+**IMPORTANT**: If you use multiprocessing, the comment of the first result that was stored
+is used. Since runs are performed synchronously there is no guarantee that the comment
+of the result with the lowest run index is kept.
 
 **IMPORTANT** Purging of duplicate comments requires overview tables. Since there are no
 overview tables for *group* nodes, this feature does not work for comments in *group* nodes.
