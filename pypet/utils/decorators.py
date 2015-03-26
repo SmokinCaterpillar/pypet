@@ -187,7 +187,7 @@ def retry(n, errors, logger_name=None):
 
     If the `n` retries are not enough, the error is reraised.
 
-    Optionally takes a 'logger_name' of a given logger to print the output.
+    Optionally takes a 'logger_name' of a given logger to print the caught error.
 
     """
 
@@ -199,13 +199,15 @@ def retry(n, errors, logger_name=None):
                 try:
                     return func(*args, **kwargs)
                 except errors as exc:
-                    if logger_name:
-                        logger = logging.getLogger(logger_name)
-                        logger.error('Could not execute `%s` due to: '
-                                     '%s' % (func.__name__, str(exc)))
                     if retries >= n:
                         raise
                     retries += 1
+
+                    if logger_name:
+                        logger = logging.getLogger(logger_name)
+                        logger.error('Starting the next try, '
+                                     'because I could not execute `%s` due to: '
+                                     '%s' % (func.__name__, str(exc)))
         return new_func
 
     return wrapper
