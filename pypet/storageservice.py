@@ -281,7 +281,11 @@ class LockWrapper(MultiprocWrapper, HasLogger):
 
     def acquire_lock(self):
         if not self._is_locked:
-            self._lock.acquire()
+            try:
+                self._lock.acquire()
+            except TypeError:
+                # let's retry
+                self._lock.acquire()
             self._is_locked = True
 
     def release_lock(self):

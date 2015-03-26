@@ -744,7 +744,7 @@ class Environment(HasLogger):
 
     """
 
-    # @parse_config
+    @parse_config
     @kwargs_api_change('use_hdf5', 'storage_service')
     @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
