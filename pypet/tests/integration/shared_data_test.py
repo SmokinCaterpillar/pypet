@@ -108,10 +108,14 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
     def explore(self, traj, trials=3):
         self.explored ={'Normal.trial': range(trials),
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
-            'csr_mat' :[spsp.csr_matrix((2222,22)), spsp.csr_matrix((2222,22))]}
+            'csr_mat' :[spsp.lil_matrix((2222,22)), spsp.lil_matrix((2222,22))]}
 
         self.explored['csr_mat'][0][1,2]=44.0
         self.explored['csr_mat'][1][2,2]=33
+
+
+        self.explored['csr_mat'][0] = self.explored['csr_mat'][0].tocsr()
+        self.explored['csr_mat'][1] = self.explored['csr_mat'][0].tocsr()
 
 
         traj.f_explore(cartesian_product(self.explored))

@@ -506,11 +506,13 @@ class PickleParameterTest(ParameterTest):
         if not hasattr(self,'data'):
             self.data={}
 
-        self.data['spsparse_csc'] = spsp.csc_matrix((1000,100))
+        self.data['spsparse_csc'] = spsp.lil_matrix((1000,100))
         self.data['spsparse_csc'][1,2] = 44.5
+        self.data['spsparse_csc'] = self.data['spsparse_csc'].tocsc()
 
-        self.data['spsparse_csr'] = spsp.csr_matrix((2222,22))
+        self.data['spsparse_csr'] = spsp.lil_matrix((2222,22))
         self.data['spsparse_csr'][1,3] = 44.5
+        self.data['spsparse_csr'] = self.data['spsparse_csr'].tocsr()
 
         self.data['spsparse_lil'] = spsp.lil_matrix((111,111))
         self.data['spsparse_lil'][3,2] = 44.5
@@ -574,19 +576,21 @@ class SparseParameterTest(ParameterTest):
         if not hasattr(self,'data'):
             self.data={}
 
-        self.data['spsparse_csc'] = spsp.csc_matrix((1000,100))
+        self.data['spsparse_csc'] = spsp.lil_matrix((1000,100))
         self.data['spsparse_csc'][1,2] = 44.5
+        self.data['spsparse_csc'] = self.data['spsparse_csc'].tocsc()
 
-        self.data['spsparse_csr'] = spsp.csr_matrix((2222,22))
+        self.data['spsparse_csr'] = spsp.lil_matrix((2222,22))
         self.data['spsparse_csr'][1,3] = 44.5
+        self.data['spsparse_csr'] = self.data['spsparse_csr'].tocsr()
 
-        self.data['spsparse_bsr'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_bsr'] = spsp.lil_matrix((111,111))
         self.data['spsparse_bsr'][3,2] = 44.5
-        self.data['spsparse_bsr'] = self.data['spsparse_bsr'].tobsr()
+        self.data['spsparse_bsr'] = self.data['spsparse_bsr'].tocsr().tobsr()
 
-        self.data['spsparse_dia'] = spsp.csr_matrix((111,111))
+        self.data['spsparse_dia'] = spsp.lil_matrix((111,111))
         self.data['spsparse_dia'][3,2] = 44.5
-        self.data['spsparse_dia'] = self.data['spsparse_dia'].todia()
+        self.data['spsparse_dia'] = self.data['spsparse_dia'].tocsr().todia()
 
         super(SparseParameterTest,self).setUp()
 

@@ -271,11 +271,19 @@ class EnvironmentTest(TrajectoryComparator):
                           log_stdout=False,
                           log_config=get_log_config(),
                           dynamic_imports=SlowResult,
-                          display_time=1)
+                          display_time=0.1)
         traj = env.v_traj
         res=traj.f_add_result(SlowResult, 'iii', 42, 43, comment='llk')
         traj.f_store()
+        service_logger = traj.v_storage_service._logger
+        root = logging.getLogger('pypet')
+        old_level = service_logger.level
+        service_logger.level = logging.INFO
+        root.level = logging.INFO
+
         traj.f_load(load_data=3)
+        service_logger.level = old_level
+        root.level = old_level
 
         path = get_log_path(traj)
         mainfilename = os.path.join(path, 'LOG.txt')

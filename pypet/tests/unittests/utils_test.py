@@ -46,13 +46,13 @@ class RetryTest(unittest.TestCase):
 
     def test_fail_after_n_tries(self):
         x = RaisesNTypeErrors(5)
-        x = retry(4, TypeError, 'ERROR')(x)
+        x = retry(4, TypeError, 0.01, 'ERROR')(x)
         with self.assertRaises(TypeError):
             x()
 
     def test_succeeds_after_retries(self):
         x = RaisesNTypeErrors(5)
-        x = retry(5, TypeError, 'ERROR')(x)
+        x = retry(5, TypeError, 0.01, 'ERROR')(x)
         x()
 
 

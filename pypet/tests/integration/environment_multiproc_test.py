@@ -142,7 +142,7 @@ class CapTest(EnvironmentTest):
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                       file_title=self.trajname, log_folder=self.logfolder,
-                      logger_names=('pypet', 'test', ''), log_levels='ERROR',
+                      logger_names=('pypet', 'test'), log_levels='ERROR',
                       log_stdout=False,
                       log_config=None,
                       results_per_run=5,
