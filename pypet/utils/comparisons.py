@@ -133,6 +133,8 @@ def nested_equal(a, b):
             return True
         # for types that support __eq__
         try:
+            if spsp.issparse(a):
+                raise TypeError('Too do not test for equality for sparse matrices.')
             custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
             # if equality is implemented
             if isinstance(custom_eq, (bool, np.bool_)):
@@ -153,7 +155,7 @@ def nested_equal(a, b):
             if a.nnz == 0:
                 return b.nnz == 0
             else:
-                return np.all((a == b).data)
+                return not np.any((a != b).data)
         if isinstance(a, (pd.DataFrame, pd.Series)):
             try:
                 if type(a) is not type(b):

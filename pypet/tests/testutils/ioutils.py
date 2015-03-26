@@ -257,18 +257,20 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
         flattened_suite = self._flatten_suite(tmp_suite)
         found_set = set()
         test_list = []
-        for case in flattened_suite:
-            if case in found_set:
-                continue
-            else:
-                found_set.add(case)
 
+        for case in flattened_suite:
+            test_name = str(case).split(' ')[0]
+            class_name = case.__class__.__name__
             if not hasattr(case, 'tags'):
                 tags = set()
             else:
                 tags = self._input2set(case.tags)
-            test_name = str(case).split(' ')[0]
-            class_name = case.__class__.__name__
+
+            combined = (class_name, test_name, tuple(tags))
+            if combined in found_set:
+                continue
+            else:
+                found_set.add(combined)
 
             if class_name == 'ModuleImportFailure':
                 self._logger.error('ERROR could not import `%s`' % test_name)

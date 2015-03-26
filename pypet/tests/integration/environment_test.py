@@ -105,34 +105,34 @@ class EnvironmentTest(TrajectoryComparator):
         matrices_csr = []
         for irun in range(3):
 
-            spsparse_csr = spsp.csr_matrix((111,111))
+            spsparse_csr = spsp.lil_matrix((111,111))
             spsparse_csr[3,2+irun] = 44.5*irun
 
-            matrices_csr.append(spsparse_csr)
+            matrices_csr.append(spsparse_csr.tocsr())
 
         matrices_csc = []
         for irun in range(3):
 
-            spsparse_csc = spsp.csc_matrix((111,111))
+            spsparse_csc = spsp.lil_matrix((111,111))
             spsparse_csc[3,2+irun] = 44.5*irun
 
-            matrices_csc.append(spsparse_csc)
+            matrices_csc.append(spsparse_csc.tocsc())
 
         matrices_bsr = []
         for irun in range(3):
 
-            spsparse_bsr = spsp.csr_matrix((111,111))
+            spsparse_bsr = spsp.lil_matrix((111,111))
             spsparse_bsr[3,2+irun] = 44.5*irun
 
-            matrices_bsr.append(spsparse_bsr.tobsr())
+            matrices_bsr.append(spsparse_bsr.tocsr().tobsr())
 
         matrices_dia = []
         for irun in range(3):
 
-            spsparse_dia = spsp.csr_matrix((111,111))
+            spsparse_dia = spsp.lil_matrix((111,111))
             spsparse_dia[3,2+irun] = 44.5*irun
 
-            matrices_dia.append(spsparse_dia.todia())
+            matrices_dia.append(spsparse_dia.tocsc().todia())
 
 
         self.explore_dict={'string':[np.array(['Uno', 'Dos', 'Tres']),
@@ -174,11 +174,13 @@ class EnvironmentTest(TrajectoryComparator):
     def explore(self, traj):
         self.explored ={'Normal.trial': [0],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
-            'csr_mat' :[spsp.csr_matrix((2222,22)), spsp.csr_matrix((2222,22))]}
+            'csr_mat' :[spsp.lil_matrix((2222,22)), spsp.lil_matrix((2222,22))]}
 
         self.explored['csr_mat'][0][1,2]=44.0
         self.explored['csr_mat'][1][2,2]=33
 
+        self.explored['csr_mat'][0] = self.explored['csr_mat'][0].tocsr()
+        self.explored['csr_mat'][1] = self.explored['csr_mat'][0].tocsr()
 
         traj.f_explore(cartesian_product(self.explored))
 
@@ -432,10 +434,12 @@ class EnvironmentTest(TrajectoryComparator):
     def expand(self):
         self.expanded ={'Normal.trial': [1],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
-            'csr_mat' :[spsp.csr_matrix((2222,22)), spsp.csr_matrix((2222,22))]}
+            'csr_mat' :[spsp.lil_matrix((2222,22)), spsp.lil_matrix((2222,22))]}
 
         self.expanded['csr_mat'][0][1,2]=44.0
         self.expanded['csr_mat'][1][2,2]=33
+        self.expanded['csr_mat'][0]=self.expanded['csr_mat'][0].tocsr()
+        self.expanded['csr_mat'][1]=self.expanded['csr_mat'][1].tocsr()
 
         self.traj.f_expand(cartesian_product(self.expanded))
 

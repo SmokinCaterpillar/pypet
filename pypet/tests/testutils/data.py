@@ -45,13 +45,15 @@ def create_param_dict(param_dict):
     param_dict['Numpy_2D']['double'] = np.matrix([[1.0,2.0],[3.0,4.0]])
     param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
 
-    spsparse_csc = spsp.csc_matrix((2222,22))
+    spsparse_csc = spsp.lil_matrix((2222,22))
     spsparse_csc[1,2] = 44.6
     spsparse_csc[1,9] = 44.5
+    spsparse_csc = spsparse_csc.tocsc()
 
-    spsparse_csr = spsp.csr_matrix((2222,22))
+    spsparse_csr = spsp.lil_matrix((2222,22))
     spsparse_csr[1,3] = 44.7
     spsparse_csr[17,17] = 44.755555
+    spsparse_csr = spsparse_csr.tocsr()
 
     spsparse_bsr = spsp.bsr_matrix(np.matrix([[1, 1, 0, 0, 2, 2],
         [1, 1, 0, 0, 2, 2],
@@ -108,7 +110,8 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test4')
 
 
-    traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),comment='Only my opinion bro!',)
+    traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),
+                      comment='Only my opinion bro!',)
 
     traj.results.f_add_leaf('Test', 42, comment='NC')
     traj.f_add_group('derived_parameters.uo', comment='Yeah, this is unsuals')
@@ -212,7 +215,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.f_add_result('empty.stuff', (), [], {}, np.array([]), comment='empty stuff')
         #traj.f_add_derived_parameter('All.To.String', str(traj.f_to_dict(fast_access=True,short_names=False)))
 
-        myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
+        myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa','',''],'TC3':[1.2,42.2,77]})
 
         myseries = myframe['TC1']
 

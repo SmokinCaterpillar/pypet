@@ -279,13 +279,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
-    @retry(10, TypeError, 'pypet.retry')
+    @retry(10, TypeError, 0.001, 'pypet.retry')
     def acquire_lock(self):
         if not self._is_locked:
             self._lock.acquire()
             self._is_locked = True
 
-    @retry(10, TypeError, 'pypet.retry')
+    @retry(10, TypeError, 0.001, 'pypet.retry')
     def release_lock(self):
         if self._is_locked and not self._storage_service.is_open:
             self._lock.release()
@@ -4672,24 +4672,21 @@ class HDF5StorageService(StorageService, HasLogger):
             description_dict, data_type_dict = self._prm_make_description(data, fullname)
             description_dicts = [{}]
 
-            if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
-                # For optimzation we want to store the original data types into another table
+            if len(description_dict) > ptpa.MAX_COLUMNS:
+                # For optimization we want to store the original data types into another table
+                # and split the tables into several ones
                 new_table_group = ptcompat.create_group(self._hdf5file, where=hdf5_group,
                                                     name=tablename,
                                                     filters=self._all_get_filters(kwargs.copy()))
 
-                if len(description_dict) > ptpa.MAX_COLUMNS:
-                    # For further optimization we need to split the table into several
-                    count = 0
-                    for innerkey in description_dict:
-                        val = description_dict[innerkey]
-                        if count == ptpa.MAX_COLUMNS:
-                            description_dicts.append({})
-                            count = 0
-                        description_dicts[-1][innerkey] = val
-                        count += 1
-                else:
-                    description_dicts = [description_dict]
+                count = 0
+                for innerkey in description_dict:
+                    val = description_dict[innerkey]
+                    if count == ptpa.MAX_COLUMNS:
+                        description_dicts.append({})
+                        count = 0
+                    description_dicts[-1][innerkey] = val
+                    count += 1
 
                 setattr(new_table_group._v_attrs, HDF5StorageService.STORAGE_TYPE,
                         HDF5StorageService.TABLE)
@@ -4723,8 +4720,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     row.append()
 
                 # Remember the original types of the data for perfect recall
-                if idx == 0 and len(
-                        description_dict) <= pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
+                if idx == 0 and len(description_dict) <= ptpa.MAX_COLUMNS:
                     # We only have a single table and
                     # we can store the original data types as attributes
                     for field_name in data_type_dict:
@@ -4737,7 +4733,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 table.flush()
                 self._hdf5file.flush()
 
-            if len(description_dict) > pypetconstants.HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS:
+            if len(description_dict) > ptpa.MAX_COLUMNS:
                 # We have potentially many split tables and the data types are
                 # stored into an additional table for performance reasons
                 tblname = tablename + '__' + HDF5StorageService.STORAGE_TYPE
@@ -4755,7 +4751,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 row = table.row
 
                 for n in range(len(field_names)):
-                    # Fill the columns with data, note if the parameter was extended nstart!=0
+                    # Fill the columns with data
 
                     for key in data_type_table_dict:
                         row[key] = data_type_table_dict[key][n]
@@ -5129,8 +5125,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 data_type_table = table_or_group._v_children[data_type_table_name]
                 data_type_dict = {}
                 for row in data_type_table:
-                    fieldname = str(row['field_name'])
-                    data_type_dict[fieldname] = str(row['data_type'])
+                    fieldname = compat.tostr(row['field_name'])
+                    data_type_dict[fieldname] = compat.tostr(row['data_type'])
 
                 for sub_table in table_or_group:
                     sub_table_name = sub_table._v_name

@@ -5,6 +5,7 @@ __author__ = 'Robert Meyer'
 import functools
 import warnings
 import logging
+import time
 
 
 def deprecated(msg=''):
@@ -180,12 +181,14 @@ def with_open_store(func):
     return new_func
 
 
-def retry(n, errors, logger_name=None):
+def retry(n, errors, wait=0.0, logger_name=None):
     """This is a decorator that retries a function.
 
     Tries `n` times and catches a given tuple of `errors`.
 
     If the `n` retries are not enough, the error is reraised.
+
+    If desired `waits` some seconds.
 
     Optionally takes a 'logger_name' of a given logger to print the caught error.
 
@@ -208,6 +211,8 @@ def retry(n, errors, logger_name=None):
                         logger.error('Starting the next try, '
                                      'because I could not execute `%s` due to: '
                                      '%s' % (func.__name__, str(exc)))
+                    if wait:
+                        time.sleep(wait)
         return new_func
 
     return wrapper

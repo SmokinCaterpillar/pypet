@@ -142,8 +142,6 @@ HDF5_STRCOL_MAX_RANGE_LENGTH = 1024
 HDF5_STRCOL_MAX_RUNTIME_LENGTH = 18
 """Maximum length of human readable runtime, 18 characters allows to display up to 999 days
 excluding the microseconds"""
-HDF5_MAX_OBJECT_TABLE_TYPE_ATTRS = 32
-"""Maximum number of attributes before a distinct table is created"""
 HDF5_MAX_OVERVIEW_TABLE_LENGTH = 1000
 """Maximum number of entries in an overview table"""
 

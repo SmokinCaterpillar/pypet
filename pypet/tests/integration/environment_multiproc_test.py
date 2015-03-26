@@ -139,34 +139,20 @@ class CapTest(EnvironmentTest):
 
         random.seed()
 
-        if sys.version_info < (2, 7, 0):
-            # Python 2.6 does not support dictConfig, i.e. `log_folder`, `log_levels` etc.
-            env = Environment(trajectory=self.trajname,filename=self.filename,
-                          file_title=self.trajname,
-                          log_stdout=False,
-                          log_config=None,
-                          results_per_run=5,
-                          derived_parameters_per_run=5,
-                          multiproc=True,
-                          ncores=3,
-                          cpu_cap=0.001, # Ensure that these are triggered
-                          memory_cap=0.001,
-                          swap_cap=0.001,
-                          use_pool=False)
-        else:
-            env = Environment(trajectory=self.trajname,filename=self.filename,
-                          file_title=self.trajname, log_folder=self.logfolder,
-                          logger_names=('pypet', 'test', ''), log_levels='INFO',
-                          log_stdout=False,
-                          log_config=None,
-                          results_per_run=5,
-                          derived_parameters_per_run=5,
-                          multiproc=True,
-                          ncores=3,
-                          cpu_cap=0.001, # Ensure that these are triggered
-                          memory_cap=0.001,
-                          swap_cap=0.001,
-                          use_pool=False)
+
+        env = Environment(trajectory=self.trajname,filename=self.filename,
+                      file_title=self.trajname, log_folder=self.logfolder,
+                      logger_names=('pypet', 'test', ''), log_levels='ERROR',
+                      log_stdout=False,
+                      log_config=None,
+                      results_per_run=5,
+                      derived_parameters_per_run=5,
+                      multiproc=True,
+                      ncores=3,
+                      cpu_cap=0.001, # Ensure that these are triggered
+                      memory_cap=0.001,
+                      swap_cap=0.001,
+                      use_pool=False)
 
         traj = env.v_trajectory
 

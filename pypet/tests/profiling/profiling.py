@@ -88,7 +88,7 @@ def test_run():
 
 
 def test_load():
-    newtraj = load_trajectory(index=-1, filename=filename, load_data=2)
+    newtraj = load_trajectory(index=-1, filename=filename, load_data=1)
 
 
 if __name__ == '__main__':
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     print('DONE RUN PROFILE')
 
     graphviz = CustomOutput()
-    graphviz.output_file = './tmp/load_profile.png'
+    graphviz.output_file = './tmp/load_mode_1_profile.png'
 
     print('LOAD PROFILE')
     with PyCallGraph(config=config, output=graphviz):
