@@ -29,7 +29,7 @@ from pypet._version import __version__ as VERSION
 from pypet.parameter import ObjectTable, Parameter
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger, DisableLogger
-from pypet.utils.decorators import deprecated
+from pypet.utils.decorators import deprecated, retry
 
 
 class MultiprocWrapper(object):
@@ -279,15 +279,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
+    @retry(10, TypeError, 'pypet.retry')
     def acquire_lock(self):
         if not self._is_locked:
-            try:
-                self._lock.acquire()
-            except TypeError:
-                # let's retry
-                self._lock.acquire()
+            self._lock.acquire()
             self._is_locked = True
 
+    @retry(10, TypeError, 'pypet.retry')
     def release_lock(self):
         if self._is_locked and not self._storage_service.is_open:
             self._lock.release()

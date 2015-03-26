@@ -22,8 +22,38 @@ from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
+from pypet.utils.decorators import retry
 import pypet.compat as compat
 
+
+
+class RaisesNTypeErrors(object):
+
+    def __init__(self, n):
+        self.__name__ = RaisesNTypeErrors.__name__
+        self.n = n
+        self.retries = 0
+
+    def __call__(self):
+        if self.retries < self.n:
+            self.retries += 1
+            raise TypeError('Nope!')
+
+
+class RetryTest(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'retry'
+
+    def test_fail_after_n_tries(self):
+        x = RaisesNTypeErrors(5)
+        x = retry(4, TypeError, 'ERROR')(x)
+        with self.assertRaises(TypeError):
+            x()
+
+    def test_succeeds_after_retries(self):
+        x = RaisesNTypeErrors(5)
+        x = retry(5, TypeError, 'ERROR')(x)
+        x()
 
 
 class CartesianTest(unittest.TestCase):

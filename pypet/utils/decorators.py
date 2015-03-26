@@ -4,6 +4,7 @@ __author__ = 'Robert Meyer'
 
 import functools
 import warnings
+import logging
 
 
 def deprecated(msg=''):
@@ -177,3 +178,34 @@ def with_open_store(func):
         return func(self, *args, **kwargs)
 
     return new_func
+
+
+def retry(n, errors, logger_name=None):
+    """This is a decorator that retries a function.
+
+    Tries `n` times and catches a given tuple of `errors`.
+
+    If the `n` retries are not enough, the error is reraised.
+
+    Optionally takes a 'logger_name' of a given logger to print the output.
+
+    """
+
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            retries = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except errors as exc:
+                    if logger_name:
+                        logger = logging.getLogger(logger_name)
+                        logger.error('Could not execute `%s` due to: '
+                                     '%s' % (func.__name__, str(exc)))
+                    if retries >= n:
+                        raise
+                    retries += 1
+        return new_func
+
+    return wrapper
