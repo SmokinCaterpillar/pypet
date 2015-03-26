@@ -12,6 +12,7 @@ except ImportError:
 
 import pypet.compat as compat
 
+
 def parse_config(init_func):
     @functools.wraps(init_func)
     def new_func(env, *args, **kwargs):

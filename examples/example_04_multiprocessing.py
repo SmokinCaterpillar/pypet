@@ -14,7 +14,6 @@ def multiply(traj):
     traj.f_add_result('z',z=z, comment='I am the product of two reals!')
 
 
-
 def main():
     """Main function to protect the *entry point* of the program.
 

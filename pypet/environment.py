@@ -1901,11 +1901,11 @@ class Environment(HasLogger):
                         mpool.close()
                         mpool.join()
 
-                        self._logger.info('Pool has joined, will delete it.')
-                        del mpool
-
                         # We want to consistently return a list of results not an iterator
                         results.extend([result for result in pool_results])
+
+                        self._logger.info('Pool has joined, will delete it.')
+                        del mpool
 
                     else:
 
