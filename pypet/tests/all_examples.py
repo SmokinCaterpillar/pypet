@@ -32,11 +32,13 @@ if len(to_skip) == 0:
 else:
     print('----- I will skip the following tests: `%s` ----' % to_skip)
 
+
 def skip(name):
     for item in to_skip:
         if item in name:
             return True
     return False
+
 
 def prepend_mpl_import(filename):
     """Writes a new python file and prepends the a matplotlib import.
@@ -55,6 +57,7 @@ def prepend_mpl_import(filename):
         fh.write(file_text)
 
     return new_filename
+
 
 def execute_example(filename):
     """Executes a file as script.
@@ -133,6 +136,7 @@ def main():
         print("Running analysis")
         execute_example('plotff.py')
         os.chdir('..')
+
 
 if __name__ == '__main__':
     main()
