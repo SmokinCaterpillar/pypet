@@ -28,3 +28,9 @@ explored  *DONE*
 *  Write doc for config parsing
 
 * write tests for wildcards *DONE*
+
+* Document new lazy mode
+
+* Document new cap feature
+
+* Add slots

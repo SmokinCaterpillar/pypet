@@ -150,7 +150,7 @@ class CapTest(EnvironmentTest):
                       multiproc=True,
                       ncores=3,
                       cpu_cap=0.001, # Ensure that these are triggered
-                      memory_cap=0.001,
+                      memory_cap=(0.001, 150.0),
                       swap_cap=0.001,
                       use_pool=False)
 

@@ -159,6 +159,8 @@ pypet 0.1b.9
 
 *    Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
 
+*   One can pass an estimate for memory that each run needs to better protect the memory
+    cap.
 
 pypet 0.1b.8
 

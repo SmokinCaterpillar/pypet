@@ -1,6 +1,7 @@
 __author__ = 'Robert Meyer'
 
 import logging
+import itertools as itools
 import os
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -63,6 +64,15 @@ class LoggingTest(TrajectoryComparator):
 
     def tearDown(self):
         super(LoggingTest, self).tearDown()
+        root = logging.getLogger()
+        for logger in itools.chain(root.manager.loggerDict.values(), [root]):
+            if hasattr(logger, 'handlers'):
+                for handler in logger.handlers:
+                    if hasattr(handler, 'flush'):
+                        handler.flush()
+                    if hasattr(handler, 'close'):
+                        handler.close()
+                logger.handlers = []
         logging.getLogger().manager.loggerDict = {}
 
     def set_mode(self):

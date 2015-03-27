@@ -807,13 +807,16 @@ class Environment(HasLogger):
                 'You CANNOT perform immediate post-processing if you DO use wrap mode '
                 '`QUEUE`.')
 
+        if not isinstance(memory_cap, tuple):
+            memory_cap = (memory_cap, 0.0)
+
         if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
-            memory_cap <= 0.0 or memory_cap > 1.0 or
+            memory_cap[0] <= 0.0 or memory_cap[0] > 1.0 or
                 swap_cap <= 0.0 or swap_cap > 1.0):
             raise ValueError('Please choose cap values larger than 0.0 '
                              'and smaller or equal to 1.0.')
 
-        check_usage = cpu_cap < 1.0 or memory_cap < 1.0 or swap_cap < 1.0
+        check_usage = cpu_cap < 1.0 or memory_cap[0] < 1.0 or swap_cap < 1.0
 
         if check_usage and psutil is None:
             raise ValueError('You cannot enable monitoring without having '
@@ -840,6 +843,11 @@ class Environment(HasLogger):
 
         self._cpu_cap = cpu_cap
         self._memory_cap = memory_cap
+        if psutil is not None:
+            # Total memory in MB
+            self._total_memory = psutil.virtual_memory().total / 1024.0 / 1024.0
+            # Estimated memory needed by each process as ratio
+            self._est_per_process = self._memory_cap[1] / self._total_memory
         self._swap_cap = swap_cap
         self._check_usage = check_usage
 
@@ -1001,13 +1009,14 @@ class Environment(HasLogger):
                     self._traj.f_add_config(Parameter, config_name, self._cpu_cap,
                                             comment='Maximum cpu usage beyond '
                                                     'which no new processes '
-                                                    'are spawned').f_lock()
+                                                    'are spawned.').f_lock()
 
                     config_name = 'environment.%s.memory_cap' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._memory_cap,
-                                            comment='Maximum RAM usage beyond which '
-                                                    'no new processes '
-                                                    'are spawned').f_lock()
+                                            comment='Tuple, first entry: Maximum RAM usage beyond '
+                                                    'which no new processes are spawned; '
+                                                    'second entry: Estimated usage per '
+                                                    'process in MB. 0 if not estimated.').f_lock()
 
                     config_name = 'environment.%s.swap_cap' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._swap_cap,
@@ -1785,6 +1794,17 @@ class Environment(HasLogger):
 
         return repeat, start_run_idx, new_runs
 
+    def _estimate_memory_utilization(self, process_dict):
+        """Estimates memory utilization to come if process was started"""
+        n_processes = len(process_dict)
+        total_utilization = psutil.virtual_memory().percent / 100.0
+        curr_all_processes = sum(psutil.Process(x).memory_percent() for x in process_dict) / 100.0
+        missing_utilization = max(0.0, n_processes * self._est_per_process - curr_all_processes)
+        estimated_utilization = total_utilization
+        estimated_utilization += missing_utilization
+        estimated_utilization += self._est_per_process
+        return estimated_utilization
+
     def _execute_runs(self, pipeline):
         """ Starts the individual single runs.
 
@@ -1914,7 +1934,7 @@ class Environment(HasLogger):
                                 'Monitoring usage statistics. I will not spawn new processes '
                                 'if one of the following cap thresholds is crossed, '
                                 'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
-                                (self._cpu_cap, self._memory_cap, self._swap_cap))
+                                (self._cpu_cap, self._memory_cap[0], self._swap_cap))
                             psutil.cpu_percent()  # Just for initialisation
 
                         no_cap = True  # Evaluates if new processes are allowed to be started
@@ -1942,7 +1962,7 @@ class Environment(HasLogger):
                                 no_cap = True
                                 if len(process_dict) > 0:
                                     cpu_usage = psutil.cpu_percent() / 100.0
-                                    memory_usage = psutil.phymem_usage().percent / 100.0
+                                    memory_usage = self._estimate_memory_utilization(process_dict)
                                     swap_usage = psutil.swap_memory().percent / 100.0
                                     if cpu_usage > self._cpu_cap:
                                         no_cap = False
@@ -1952,13 +1972,16 @@ class Environment(HasLogger):
                                                 'CPU Cap reached, %.2f >= %.2f.' %
                                                 (cpu_usage, self._cpu_cap))
                                             signal_cap = False
-                                    elif memory_usage > self._memory_cap:
+                                    elif memory_usage > self._memory_cap[0]:
                                         no_cap = False
                                         if signal_cap:
                                             self._logger.warning('Could not start next process '
                                                                  'immediately. Memory Cap '
+                                                                 'including the estimated memory '
+                                                                 'by each process '
                                                                  'reached, %.2f >= %.2f.' %
-                                                                 (memory_usage, self._memory_cap))
+                                                                 (memory_usage,
+                                                                  self._memory_cap[0]))
                                             signal_cap = False
                                     elif swap_usage > self._swap_cap:
                                         no_cap = False
