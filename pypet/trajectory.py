@@ -3664,11 +3664,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         In case of a single run it spares all non-available functions
 
         """
-        result = dir(type(self))
+        result = super(Trajectory, self).__dir__()
         if self._is_run:
             result = [x for x in result if not x.startswith('f_') or
                       not getattr(getattr(self, x), '_not_in_run', False)]
-        result.extend(compat.listkeys(self.__dict__))
         if not is_debug():
             result.extend(self._children.keys())
         return result

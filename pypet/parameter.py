@@ -2006,8 +2006,9 @@ class Result(BaseResult):
 
     def __dir__(self):
         """Adds all data to auto-completion"""
-        result = dir(type(self)) + compat.listkeys(self.__dict__)
-        result.extend(self._data.keys())
+        result = super(Result, self).__dir__()
+        if self._data_ is not None:
+            result.extend(self._data.keys())
         return result
 
     @property

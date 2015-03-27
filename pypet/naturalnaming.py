@@ -2409,7 +2409,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     def __dir__(self):
         """Adds all children to auto-completion"""
-        result = dir(type(self)) + compat.listkeys(self.__dict__)
+        result = super(NNGroupNode, self).__dir__()
         if not is_debug():
             result.extend(self._children.keys())
         return result
