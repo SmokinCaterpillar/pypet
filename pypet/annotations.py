@@ -25,9 +25,9 @@ __author__ = 'Robert Meyer'
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
 import pypet.compat as compat
+from pypet.slots import HasSlots
 
-
-class Annotations(object):
+class Annotations(HasSlots):
     """ Simple container class for annotations.
 
     Every tree node (*leaves* and *group* nodes) can be annotated.
@@ -41,9 +41,20 @@ class Annotations(object):
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
     """
+    __slots__ = ['_dict_']
+
+    def __init__(self):
+        self._dict_ = None
+
+    @property
+    def _dict(self):
+        if self._dict_ is None:
+            self._dict_ = {}
+        return self._dict_
+
 
     def __iter__(self):
-        return self.__dict__.__iter__()
+        return self._dict.__iter__()
 
     def __getitem__(self, item):
         """Equivalent to calling f_get()"""
@@ -55,32 +66,50 @@ class Annotations(object):
         Treats integer values as `f_get`.
 
         """
+        self.f_set(**{key: value})
+
+    def __delitem__(self, key):
+        self.f_remove(key)
+
+    def f_to_dict(self, copy=True):
+        """Returns annotations as dictionary.
+
+        :param copy: Whether to return a shallow copy or the real thing (aka _dict).
+
+        """
+        if copy:
+            return self._dict.copy()
+        else:
+            return self._dict
+
+    def f_is_empty(self):
+        """Checks if annotations are empty"""
+        return len(self._dict) == 0
+
+    def f_empty(self):
+        """Removes all annotations from RAM """
+        self._dict_ = None
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            # We set a private attribute
+            super(Annotations, self).__setattr__(key, value)
+        else:
+            self.f_set_single(key, value)
+
+    def __getattr__(self, item):
+        return self.f_get(item)
+
+    def __delattr__(self, item):
+        self.f_remove(item)
+
+    def _translate_key(self, key):
         if isinstance(key, int):
             if key == 0:
                 key = 'annotation'
             else:
                 key = 'annotation_%d' % key
-
-        setattr(self, key, value)
-
-    def f_to_dict(self, copy=True):
-        """Returns annotations as dictionary.
-
-        :param copy: Whether to return a shallow copy or the real thing (aka __dict__).
-
-        """
-        if copy:
-            return self.__dict__.copy()
-        else:
-            return self.__dict__
-
-    def f_is_empty(self):
-        """Checks if annotations are empty"""
-        return len(self.__dict__) == 0
-
-    def f_empty(self):
-        """Removes all annotations from RAM """
-        self.__dict__ = {}
+        return key
 
     def f_get(self, *args):
         """Returns annotations
@@ -96,24 +125,22 @@ class Annotations(object):
         """
 
         if len(args) == 0:
-            if len(self.__dict__) == 1:
-                return self.__dict__[compat.listkeys(self.__dict__)[0]]
-            elif len(self.__dict__) > 1:
+            if len(self._dict) == 1:
+                return self._dict[compat.listkeys(self._dict)[0]]
+            elif len(self._dict) > 1:
                 raise ValueError('Your annotation contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
-                                 (str(compat.listkeys(self.__dict__))))
+                                 (str(compat.listkeys(self._dict))))
             else:
                 raise AttributeError('Your annotation is empty, cannot access data.')
 
         result_list = []
         for name in args:
-            if isinstance(name, int):
-                if name == 0:
-                    name = 'annotation'
-                else:
-                    name = 'annotation_%d' % name
-
-            result_list.append(getattr(self, name))
+            name = self._translate_key(name)
+            try:
+                result_list.append(self._dict[name])
+            except KeyError:
+                raise AttributeError('Your annotation does not contain %s.' % name)
 
         if len(args) == 1:
             return result_list[0]
@@ -128,24 +155,30 @@ class Annotations(object):
 
         """
         for idx, arg in enumerate(args):
-            if idx == 0:
-                valstr = 'annotation'
-            else:
-                valstr = 'annotation_' + str(idx)
+            valstr = self._translate_key(idx)
             self.f_set_single(valstr, arg)
 
         for key, arg in kwargs.items():
             self.f_set_single(key, arg)
 
+    def f_remove(self, key):
+        """Removes `key` from annotations"""
+        key = self._translate_key(key)
+        try:
+            del self._dict[key]
+        except KeyError:
+            raise AttributeError('Your annotations do not contain %s' % key)
+
+
     def f_set_single(self, name, data):
         """ Sets a single annotation. """
-        setattr(self, name, data)
+        self._dict[name] = data
 
     def f_ann_to_str(self):
         """Returns all annotations lexicographically sorted as a concatenated string."""
         resstr = ''
-        for key in sorted(self.__dict__.keys()):
-            resstr += '%s=%s; ' % (key, str(self.__dict__[key]))
+        for key in sorted(self._dict.keys()):
+            resstr += '%s=%s; ' % (key, str(self._dict[key]))
         return resstr[:-2]
 
     def __str__(self):
@@ -153,6 +186,9 @@ class Annotations(object):
 
 
 class WithAnnotations(HasLogger):
+
+    __slots__ = ['_annotations']
+
     def __init__(self):
         self._annotations = Annotations()  # The annotation object to handle annotations
 

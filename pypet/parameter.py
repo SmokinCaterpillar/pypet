@@ -147,8 +147,10 @@ class BaseParameter(NNLeafNode):
 
     """
 
+    __slots__ = ['_locked', '_full_copy', '_explored']
+
     def __init__(self, full_name, comment=''):
-        super(BaseParameter, self).__init__(full_name, comment, parameter=True)
+        super(BaseParameter, self).__init__(full_name, comment, is_parameter=True)
 
         self._locked = False
 
@@ -748,6 +750,8 @@ class Parameter(BaseParameter):
 
     """
 
+    __slots__ = ['_data', '_default', '_explored_range']
+
     def __init__(self, full_name, data=None, comment=''):
         super(Parameter, self).__init__(full_name, comment)
         self._data = None
@@ -1226,6 +1230,8 @@ class ArrayParameter(Parameter):
 
     """
 
+    __slots__ = []
+
     IDENTIFIER = '__rr__'
     """Identifier to mark stored data as an array"""
 
@@ -1387,6 +1393,8 @@ class SparseParameter(ArrayParameter):
     """Data names for serialization of dia matrices"""
     OTHER_NAME_LIST = ['format', 'data', 'indices', 'indptr', 'shape']
     """Data names for serialization of csr, csc, and bsr matrices"""
+
+    __slots__ = []
 
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
@@ -1721,6 +1729,8 @@ class PickleParameter(Parameter):
     """
     PROTOCOL = '__pckl_prtcl__'
 
+    __slots__ = ['_protocol']
+
     def __init__(self, full_name, data=None, comment='', protocol=2):
         super(PickleParameter, self).__init__(full_name, data, comment)
         self._protocol = None
@@ -1867,8 +1877,10 @@ class BaseResult(NNLeafNode):
 
     """
 
+    __slots__ = []
+
     def __init__(self, full_name, comment=''):
-        super(BaseResult, self).__init__(full_name, comment, parameter=False)
+        super(BaseResult, self).__init__(full_name, comment, is_parameter=False)
 
 
 class Result(BaseResult):
@@ -1976,12 +1988,21 @@ class Result(BaseResult):
 
     """
 
+    __slots__ = ['_data_']
+
     def __init__(self, full_name, *args, **kwargs):
         comment = kwargs.pop('comment', '')
         super(Result, self).__init__(full_name, comment)
-        self._data = {}
+        self._data_ = None
         self._set_logger()
         self.f_set(*args, **kwargs)
+
+    @property
+    def _data(self):
+        """To avoid the overhead of producing an empty dictionary"""
+        if self._data_ is None:
+            self._data_ = {}
+        return self._data_
 
     def __dir__(self):
         """Adds all data to auto-completion"""
@@ -2103,8 +2124,7 @@ class Result(BaseResult):
 
     @copydoc(BaseResult.f_empty)
     def f_empty(self):
-        del self._data
-        self._data = {}
+        self._data_ = None
 
     def f_set(self, *args, **kwargs):
         """ Method to put data into the result.
@@ -2310,7 +2330,7 @@ class Result(BaseResult):
 
     def _load(self, load_dict):
         """Loads data from load_dict"""
-        self._data = load_dict
+        self._data_ = load_dict
 
     def __delitem__(self, key):
         """ Deletes an item, see also __delattr__"""
@@ -2364,9 +2384,6 @@ class Result(BaseResult):
             self.f_set_single(key, value)
 
     def __getattr__(self, name):
-        if not '_data' in self.__dict__:
-            raise AttributeError('This is to avoid pickling issues!')
-
         return self.f_get(name)
 
 
@@ -2382,6 +2399,8 @@ class SparseResult(Result):
 
     IDENTIFIER = SparseParameter.IDENTIFIER
     """Identifier string to label sparse matrix data"""
+
+    __slots__ = []
 
     @copydoc(Result.f_set_single)
     def f_set_single(self, name, item):
@@ -2477,6 +2496,8 @@ class PickleResult(Result):
 
     """
     PROTOCOL = PickleParameter.PROTOCOL
+
+    __slots__ = ['_protocol']
 
     def __init__(self, full_name, *args, **kwargs):
         self._protocol = None

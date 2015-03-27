@@ -121,6 +121,14 @@ class AnnotationsTest(unittest.TestCase):
 
             self.assertTrue(node.v_annotations.f_is_empty())
 
+    def test_item_deletion(self):
+        for node in self.traj.f_iter_nodes(recursive=True):
+            name_list=[name for name in node.v_annotations]
+            for name in name_list:
+                del node.v_annotations[name]
+
+            self.assertTrue(node.v_annotations.f_is_empty())
+
     def test_get_item(self):
         for node in self.traj.f_iter_nodes(recursive=True):
             for key, val1 in node.v_annotations.f_to_dict().items():

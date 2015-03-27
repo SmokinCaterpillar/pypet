@@ -95,10 +95,11 @@ if __name__ == '__main__':
     if not os.path.isdir('./tmp'):
         os.mkdir('tmp')
     graphviz = CustomOutput()
-    graphviz.output_file = './tmp/run_profile.png'
-    service_filter = GlobbingFilter(include=['*storageservice.*', '*ptcompat.*',
-                                             '*naturalnaming.*', '*parameter.*',
-                                             '*trajectory.*'])
+    graphviz.output_file = './tmp/run_profile_traj_slots.png'
+    # service_filter = GlobbingFilter(include=['*storageservice.*', '*ptcompat.*',
+    #                                          '*naturalnaming.*', '*parameter.*',
+    #                                          '*trajectory.*'])
+    service_filter = GlobbingFilter(include=['*naturalnaming.*', '*trajectory.*'])
 
     config = Config(groups=True, verbose=True)
     config.trace_filter = service_filter
@@ -109,7 +110,7 @@ if __name__ == '__main__':
     print('DONE RUN PROFILE')
 
     graphviz = CustomOutput()
-    graphviz.output_file = './tmp/load_mode_1_profile.png'
+    graphviz.output_file = './tmp/load_mode_1_profile_traj_slots.png'
 
     print('LOAD PROFILE')
     with PyCallGraph(config=config, output=graphviz):

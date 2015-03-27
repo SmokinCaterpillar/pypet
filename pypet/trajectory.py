@@ -223,6 +223,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     filename='experiment.hdf5', file_title='Experiments')
 
     """
+
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     def __init__(self, name='my_trajectory', add_time=True, comment='',
                  dynamic_imports=None, wildcard_functions=None,
@@ -399,7 +400,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             result['_run_information'] = {runname: self._run_information[runname]}
             result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
         result['_wildcard_cache'] = {}
-        result['_match_cache'] = {}
         return result
 
     def __str__(self):
@@ -1025,7 +1025,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return all(
                 (runinfo['completed'] for runinfo in compat.itervalues(self._run_information)))
         else:
-            return self.f_get_run_information(name_or_id)['completed']
+            return self.f_get_run_information(name_or_id, copy=False)['completed']
 
     @not_in_run
     def f_expand(self, build_dict, fail_safe=True):

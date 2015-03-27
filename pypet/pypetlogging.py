@@ -30,6 +30,7 @@ import functools
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet.utils.helpful_functions import progressbar
+from pypet.slots import HasSlots
 
 
 FILENAME_INDICATORS = (
@@ -220,7 +221,7 @@ def get_strings(args):
     return string_list
 
 
-class HasLogger(object):
+class HasLogger(HasSlots):
     """Abstract super class that automatically adds a logger to a class.
 
     To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
@@ -232,13 +233,15 @@ class HasLogger(object):
 
     """
 
+    __slots__ = ('_logger',)
+
     def __getstate__(self):
         """Called for pickling.
 
         Removes the logger to allow pickling and returns a copy of `__dict__`.
 
         """
-        state_dict = self.__dict__.copy()
+        state_dict = super(HasLogger, self).__getstate__()
         if '_logger' in state_dict:
             # Pickling does not work with loggers objects, so we just keep the logger's name:
             state_dict['_logger'] = self._logger.name
@@ -250,7 +253,7 @@ class HasLogger(object):
         Restores `__dict__` from `statedict` and adds a new logger.
 
         """
-        self.__dict__.update(statedict)
+        super(HasLogger, self).__setstate__(statedict)
         if '_logger' in statedict:
             # If we re-instantiate the component the logger attribute only contains a name,
             # so we also need to re-create the logger:

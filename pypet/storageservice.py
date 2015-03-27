@@ -82,15 +82,10 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         """One can access the queue"""
         return self._queue
 
-    def __setstate__(self, statedict):
-        self.__dict__.update(statedict)
-        self._set_logger()
-
     def __getstate__(self):
-        result = self.__dict__.copy()
+        result = super(QueueStorageServiceSender, self).__getstate__()
         if not self._pickle_queue:
             result['_queue'] = None
-        del result['_logger']
         return result
 
     def load(self, *args, **kwargs):
@@ -3755,7 +3750,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Only store annotations if the item has some
         if not item_with_annotations.v_annotations.f_is_empty():
 
-            anno_dict = item_with_annotations.v_annotations.__dict__
+            anno_dict = item_with_annotations.v_annotations._dict
 
             current_attrs = node._v_attrs
 

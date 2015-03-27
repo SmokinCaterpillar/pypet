@@ -60,10 +60,6 @@ class LoggingTest(TrajectoryComparator):
     tags = 'integration', 'environment', 'logging'
 
     def setUp(self):
-        self.set_mode()
-
-    def tearDown(self):
-        super(LoggingTest, self).tearDown()
         root = logging.getLogger()
         for logger in itools.chain(root.manager.loggerDict.values(), [root]):
             if hasattr(logger, 'handlers'):
@@ -73,7 +69,12 @@ class LoggingTest(TrajectoryComparator):
                     if hasattr(handler, 'close'):
                         handler.close()
                 logger.handlers = []
-        logging.getLogger().manager.loggerDict = {}
+            if hasattr(logger, 'setLevel'):
+                logger.setLevel(logging.NOTSET)
+        self.set_mode()
+
+    def tearDown(self):
+        super(LoggingTest, self).tearDown()
 
     def set_mode(self):
         self.mode = Dummy()

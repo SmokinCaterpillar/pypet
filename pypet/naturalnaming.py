@@ -105,6 +105,9 @@ new_group = _NEW_GROUP() # Dummy for lazy adding of new group nodes
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
+    __slots__ = ['_is_leaf', '_stored', '_comment', '_depth', '_full_name', '_name',
+                 '_run_branch', '_branch']
+
     def __init__(self, full_name, comment, is_leaf):
         super(NNTreeNode, self).__init__()
         self._is_leaf = is_leaf  # Whether or not a node is a leaf, aka terminal node.
@@ -247,15 +250,18 @@ class KnowsTrajectory(object):
     queue, for instance) only the item itself serialized and not the full tree.
 
     """
+    __slots__ = []
     KNOWS_TRAJECTORY = True
 
 
 class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
 
-    def __init__(self, full_name, comment, parameter):
+    __slots__ = ['_is_parameter']
+
+    def __init__(self, full_name, comment, is_parameter):
         super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, is_leaf=True)
-        self._parameter = parameter
+        self._is_parameter = is_parameter
 
     def f_supports_fast_access(self):
         """Whether or not fast access can be supported by the parameter or result.
@@ -288,7 +294,7 @@ class NNLeafNode(NNTreeNode):
     @property
     def v_is_parameter(self):
         """Whether the node is a parameter or not (i.e. a result)"""
-        return self._parameter
+        return self._is_parameter
 
     def f_val_to_str(self):
         """ Returns a string summarizing the data handled by the parameter or result
@@ -2341,6 +2347,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     """
 
+    __slots__ = ['_children', '_links', '_groups', '_leaves', '_nn_interface']
+
     def __init__(self, full_name='', trajectory=None, comment=''):
         super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
         self._children = {}
@@ -2788,9 +2796,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         if isinstance(name, compat.base_type) and name.startswith('_'):
             raise AttributeError('Trajectory node does not contain `%s`' % name)
 
-        if not '_nn_interface' in self.__dict__:
-            raise AttributeError('This is to avoid pickling issues')
-
         return self._nn_interface._get(self, name,
                                        fast_access=self.v_root.v_fast_access,
                                        shortcuts=self.v_root.v_shortcuts,
@@ -3231,6 +3236,7 @@ class ParameterGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
+    __slots__ = []
 
     def f_add_parameter_group(self, *args, **kwargs):
         """Adds an empty parameter group under the current node.
@@ -3289,6 +3295,8 @@ class ResultGroup(NNGroupNode):
     You can add other groups or results to it.
 
     """
+
+    __slots__ = []
 
     def f_add_result_group(self, *args, **kwargs):
         """Adds an empty result group under the current node.
@@ -3350,6 +3358,8 @@ class DerivedParameterGroup(NNGroupNode):
 
     """
 
+    __slots__ = []
+
     def f_add_derived_parameter_group(self, *args, **kwargs):
         """Adds an empty derived parameter group under the current node.
 
@@ -3390,6 +3400,8 @@ class ConfigGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
+
+    __slots__ = []
 
     def f_add_config_group(self, *args, **kwargs):
         """Adds an empty config group under the current node.
