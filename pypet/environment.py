@@ -73,7 +73,7 @@ def _configure_logging(kwargs):
         logging_manager = kwargs['logging_manager']
         logging_manager.make_logging_handlers_and_tools(multiproc=True)
     except Exception as exc:
-        sys.stderr.write('Could not configure logging system because of: %s' % str(exc))
+        sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
         traceback.print_exc()
 
 
@@ -2202,9 +2202,9 @@ class Environment(HasLogger):
         for run_name in self._traj.f_get_run_names():
             if not self._traj._is_completed(run_name):
                 all_completed = False
-                self._logger.error('Run `%s` did NOT completed!' % run_name)
+                self._logger.error('Run `%s` did NOT complete!' % run_name)
         if all_completed:
-            self._logger.info('All runs of trajectory `%s` were completed succesfully.' %
+            self._logger.info('All runs of trajectory `%s` were completed successfully.' %
                               self._traj.v_name)
 
         if self._sumatra_project is not None:

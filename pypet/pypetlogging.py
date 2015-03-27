@@ -167,7 +167,7 @@ def try_make_dirs(filename):
             os.makedirs(dirname)
     except Exception as exc:
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
-                         'filename `%s` because of: %s' % (filename, str(exc)))
+                         'filename `%s` because of: %s' % (filename, repr(exc)))
 
 
 def rename_log_file(traj, filename, process_name=None):

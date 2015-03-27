@@ -46,7 +46,7 @@ def fail_on_diff():
                   git_fail=True)
         raise RuntimeError('You should not be here!')
     except GitDiffError as exc:
-        print('I expected the GitDiffError: `%s`' % str(exc))
+        print('I expected the GitDiffError: `%s`' % repr(exc))
 
 
 def main(fail=False):

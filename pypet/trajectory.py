@@ -783,7 +783,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 param._shrink()
             except Exception as exc:
                 self._logger.error('Could not shrink `%s` because of:`%s`' %
-                                   (param.v_full_name, str(exc)))
+                                   (param.v_full_name, repr(exc)))
 
         # If we shrink, we do not have any explored parameters left and we can erase all
         # run information, and the length of the trajectory is 1 again.
@@ -1125,7 +1125,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                         param._shrink()
                     except Exception as exc:
                         self._logger.error('Could not shrink parameter `%s` '
-                                           'because of:`%s`' % (param_name, str(exc)))
+                                           'because of:`%s`' % (param_name, repr(exc)))
                     param._explore(param_range)
                     param._explored = True
             raise
@@ -1822,7 +1822,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         except ValueError as exc:
             # If both trajectories are stored in separate files we end up here
-            self._logger.warning(str(exc))
+            self._logger.warning(repr(exc))
 
             self._logger.warning('Could not perfom fast merging. '
                                  'I will use the `f_load` method of the other trajectory and '
@@ -2152,7 +2152,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                             self._logger.error('Could not copy link `%s` under `%s` linking '
                                                'to `%s` due to `%s`' %
                                                (link, linking_full_name, old_linked_name,
-                                                str(exc)))
+                                                repr(exc)))
 
     def _merge_config(self, other_trajectory):
         """Merges meta data about previous merges, git commits, and environment settings

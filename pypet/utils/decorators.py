@@ -210,7 +210,7 @@ def retry(n, errors, wait=0.0, logger_name=None):
                         logger = logging.getLogger(logger_name)
                         logger.error('Starting the next try, '
                                      'because I could not execute `%s` due to: '
-                                     '%s' % (func.__name__, str(exc)))
+                                     '%s' % (func.__name__, repr(exc)))
                     if wait:
                         time.sleep(wait)
         return new_func

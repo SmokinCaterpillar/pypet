@@ -107,7 +107,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         except IOError as exc:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % str(exc))
+            self._logger.error('Failed putting data to queue due to error: `%s`' % repr(exc))
             for trying in range(self._max_tries):
                 try:
                     self._logger.error('Failed sending task %s to queue, I will try again.' %
@@ -123,11 +123,11 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
             # a NoneType is put on the queue instead of real data which needs to be ignored
             self._logger.error('Could not put %s because of: %s, '
                                'I will try again.' %
-                               (str(('STORE', args, kwargs)), str(exc)))
+                               (str(('STORE', args, kwargs)), repr(exc)))
             try:
                 self._logger.error(
                     'Failed sending task `%s` to queue due to: %s. I will try again.' %
-                    (str(('STORE', args, kwargs)), str(exc)))
+                    (str(('STORE', args, kwargs)), repr(exc)))
                 self._queue.put(('STORE', args, kwargs))
                 self._logger.error('Second queue sending try was successful!')
             except TypeError as e2:
@@ -139,7 +139,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                 self._logger.error('Third queue sending try was successful!')
         except Exception as exc:
             self._logger.error('Could not put %s because of: %s' %
-                               (str(('STORE', args, kwargs)), str(exc)))
+                               (str(('STORE', args, kwargs)), repr(exc)))
             raise
         finally:
             self._pickle_queue = old_pickle
@@ -151,7 +151,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         except IOError as exc:
             # # This is due to a bug in Python, repeating the operation works :-/
             # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % str(exc))
+            self._logger.error('Failed putting data to queue due to error: `%s`' % repr(exc))
             for trying in range(self._max_tries):
                 try:
                     self._logger.error('Failed sending task `DONE` to queue, I will try again.')
@@ -178,68 +178,65 @@ class QueueStorageServiceWriter(HasLogger):
 
     def run(self):
         """Starts listening to the queue."""
-        while True:
-            args, kwargs = None, None
-            try:
-                to_store_list = []
-                stop_listening = False
-                while True:
-                    # We try to grab more data from the queue to avoid reopneing the
-                    # hdf5 file all the time
-                    try:
-                        msg, args, kwargs = self._queue.get(False)
-                        if msg == 'DONE':
-                            stop_listening = True
-                        elif msg == 'STORE':
-                            if 'msg' in kwargs:
-                                store_msg = kwargs.pop('msg')
-                            else:
-                                store_msg = args[0]
-                                args = args[1:]
-                            if 'stuff_to_store' in kwargs:
-                                stuff_to_store = kwargs.pop('stuff_to_store')
-                            else:
-                                stuff_to_store = args[0]
-                                args = args[1:]
-                            trajectory_name = kwargs.pop('trajectory_name')
-                            if self._trajectory_name is None:
-                                self._trajectory_name = trajectory_name
-                            elif self._trajectory_name != trajectory_name:
-                                raise RuntimeError('Cannot store into two different trajectories. '
-                                                   'I am supposed to store into %s, '
-                                                   'but I should also '
-                                                   'store into %s.' %
-                                                   (self._trajectory_name, trajectory_name))
-
-                            to_store_list.append((store_msg, stuff_to_store, args, kwargs))
-                        else:
-                            raise RuntimeError(
-                                'You queued something that was not intended to be queued!')
-                        self._queue.task_done()
-                    except queue.Empty:
+        try:
+            while True:
+                try:
+                    msg, args, kwargs = self._queue.get(False)
+                except TypeError as exc:
+                    # Under python 3.4 sometimes NoneTypes are put on the queue
+                    # causing a TypeError. Apart form this sketchy handling, I have
+                    # so far no solution
+                    self._logger.error('Could not perform get because of: %s, '
+                                       'I will ignore the error and wait for another '
+                                       'try.' % repr(exc))
+                    time.sleep(0.001)
+                    continue
+                except queue.Empty:
+                    time.sleep(0.001)
+                    continue
+                try:
+                    if msg == 'DONE':
                         break
-                    except TypeError as exc:
-                        self._logger.error('Could not get %s because of: %s, '
-                                           'I will ignore the error and wait for another '
-                                           'try.' %
-                                           (str(('STORE', args, kwargs)), str(exc)))
-                        # Under python 3.4 sometimes NoneTypes are put on the queue
-                        # causing a TypeError. Apart form this sketchy handling, I have
-                        # so far no solution
-                    except Exception as exc:
-                        self._logger.error('Could not get %s because of: %s' %
-                                           (str(('STORE', args, kwargs)), str(exc)))
-                        raise
+                    elif msg == 'STORE':
+                        if 'msg' in kwargs:
+                            store_msg = kwargs.pop('msg')
+                        else:
+                            store_msg = args[0]
+                            args = args[1:]
+                        if 'stuff_to_store' in kwargs:
+                            stuff_to_store = kwargs.pop('stuff_to_store')
+                        else:
+                            stuff_to_store = args[0]
+                            args = args[1:]
+                        trajectory_name = kwargs['trajectory_name']
+                        if self._trajectory_name is None:
+                            self._trajectory_name = trajectory_name
+                            if not self._storage_service.is_open:
+                                self._storage_service.store(pypetconstants.OPEN_FILE, None,
+                                                            trajectory_name=trajectory_name)
+                                self._logger.info('Opened the hdf5 file.')
+                        elif self._trajectory_name != trajectory_name:
+                            raise RuntimeError('Cannot store into two different trajectories. '
+                                               'I am supposed to store into %s, '
+                                               'but I should also '
+                                               'store into %s.' %
+                                               (self._trajectory_name, trajectory_name))
 
-                if to_store_list:
-                    self._storage_service.store(pypetconstants.LIST, to_store_list,
-                                                trajectory_name=self._trajectory_name)
-                if stop_listening:
-                    break
+                        self._storage_service.store(store_msg, stuff_to_store, *args, **kwargs)
+                        self._storage_service.store(pypetconstants.FLUSH, None)
+                    else:
+                        raise RuntimeError(
+                            'You queued something that was not intended to be queued!')
+                    self._queue.task_done()
+                except Exception as exc:
+                    self._logger.error('Could not perform get because of: %s' % repr(exc))
+                    raise
+        finally:
+            if self._storage_service.is_open:
+                self._storage_service.store(pypetconstants.CLOSE_FILE, None)
 
-            except Exception as exc2:
-                self._logger.error('Encountered error: `%s`' % str(exc2))
-                raise
+                self._logger.info('Closed the hdf5 file.')
+
 
 class LockWrapper(MultiprocWrapper, HasLogger):
     """For multiprocessing in :const:`~pypet.pypetconstants.WRAP_MODE_LOCK` mode,
@@ -1254,7 +1251,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         except pt.NoSuchNodeError as exc:
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
-            raise pex.DataNotInStorageError(str(exc))
+            raise pex.DataNotInStorageError(repr(exc))
         except:
             self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
             raise
@@ -1614,13 +1611,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 return self._hdf5_interact_with_data(stuff_to_store, *args, **kwargs)
 
             elif msg == pypetconstants.OPEN_FILE:
-                opened = False # Wee need to keep the file open to allow later interaction
+                opened = False  # Wee need to keep the file open to allow later interaction
                 self._keep_open = True
                 self._node_processing_timer.active = False # This might be open quite long
                 # so we don't want to display horribly long opening times
 
             elif msg == pypetconstants.CLOSE_FILE:
-                opened = True # Simply conduct the closing routine afterwards
+                opened = True  # Simply conduct the closing routine afterwards
                 self._keep_open = False
 
             elif msg == pypetconstants.FLUSH:
@@ -1780,7 +1777,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             elif mode == 'r':
 
-                if not self._trajectory_name is None and not self._trajectory_index is None:
+                if self._trajectory_name is not None and self._trajectory_index is not None:
                     raise ValueError('Please specify either a name of a trajectory or an index, '
                                      'but not both at the same time.')
 
@@ -1855,7 +1852,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 errmsg = ('Encountered OSError while flushing file.'
                                    'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
-                                   'Original error: %s' % str(exc))
+                                   'Original error: %s' % repr(exc))
                 self._logger.debug(errmsg)
 
             self._hdf5store.close()
@@ -2277,7 +2274,7 @@ class HDF5StorageService(StorageService, HasLogger):
             except IndexError as exc:
                 self._logger.error('Using default hdf5 setting, '
                                        'could not extract `%s` hdf5 setting because of: %s' %
-                                        (name_in_row, str(exc)))
+                                        (name_in_row, repr(exc)))
 
         if 'hdf5_settings' in self._overview_group:
             hdf5_table = self._overview_group.hdf5_settings
@@ -4016,7 +4013,7 @@ class HDF5StorageService(StorageService, HasLogger):
             except pt.NoSuchNodeError:
                 pass
         except Exception as exc:
-            self._logger.error('Could not store information table due to `%s`.' % str(exc))
+            self._logger.error('Could not store information table due to `%s`.' % repr(exc))
 
         if ((not self._purge_duplicate_comments or definitely_store_comment) and
                     instance.v_comment != ''):
@@ -4041,7 +4038,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 pass
             except Exception as exc:
                 self._logger.error('Could not store information '
-                                   'table due to `%s`.' % str(exc))
+                                   'table due to `%s`.' % repr(exc))
 
     def _prm_store_parameter_or_result(self,
                                        instance,
