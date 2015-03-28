@@ -24,12 +24,11 @@ class HasSlots(object):
 
     def __getstate__(self):
         if hasattr(self, '__dict__'):
-            #  We don't require that all sub-classes also define slots,
+            # We don't require that all sub-classes also define slots,
             # so they may provide a dictionary
             statedict = self.__dict__.copy()
         else:
             statedict = {}
-
         # Get all slots of potential parent classes
         for slot in self._get_all_slots():
             try:
