@@ -1988,26 +1988,26 @@ class Result(BaseResult):
 
     """
 
-    __slots__ = ['_data_']
+    __slots__ = ['__data']
 
     def __init__(self, full_name, *args, **kwargs):
         comment = kwargs.pop('comment', '')
         super(Result, self).__init__(full_name, comment)
-        self._data_ = None
+        self.__data = None
         self._set_logger()
         self.f_set(*args, **kwargs)
 
     @property
     def _data(self):
         """To avoid the overhead of producing an empty dictionary"""
-        if self._data_ is None:
-            self._data_ = {}
-        return self._data_
+        if self.__data is None:
+            self.__data = {}
+        return self.__data
 
     def __dir__(self):
         """Adds all data to auto-completion"""
         result = super(Result, self).__dir__()
-        if self._data_ is not None:
+        if self.__data is not None:
             result.extend(self._data.keys())
         return result
 
@@ -2125,7 +2125,7 @@ class Result(BaseResult):
 
     @copydoc(BaseResult.f_empty)
     def f_empty(self):
-        self._data_ = None
+        self.__data = None
 
     def f_set(self, *args, **kwargs):
         """ Method to put data into the result.
@@ -2331,7 +2331,7 @@ class Result(BaseResult):
 
     def _load(self, load_dict):
         """Loads data from load_dict"""
-        self._data_ = load_dict
+        self.__data = load_dict
 
     def __delitem__(self, key):
         """ Deletes an item, see also __delattr__"""

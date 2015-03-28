@@ -75,7 +75,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         array = traj.array
 
-        array = make_ordinary_result(array, new_data_name='super')
+        array = make_ordinary_result(array, trajectory=traj, new_data_name='super')
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         array = traj.array
         self.assertTrue(isinstance(array, Result))#
@@ -83,14 +83,14 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         self.assertTrue(np.all(array.super == thedata))
 
         t1 = traj.t1
-        t1 = make_ordinary_result(t1)
+        t1 = make_ordinary_result(t1, trajectory=traj,)
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         t1 = traj.t1
         self.assertTrue(isinstance(t1, ObjectTable))#
         self.assertTrue(np.all(t1['huhu'][0] == np.ones(3)))
 
         df = traj.df
-        df = make_ordinary_result(df)
+        df = make_ordinary_result(df, trajectory=traj,)
         traj.f_load_item(df)
         theframe = df.f_get()
         self.assertTrue(isinstance(df, Result))
@@ -104,7 +104,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
             listres[0] = 4
 
         self.assertTrue(listres[0] == 4)
-        listres = make_ordinary_result(listres, new_data_name='yuppy')
+        listres = make_ordinary_result(listres, trajectory=traj, new_data_name='yuppy')
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         listres = traj.mylist
         self.assertTrue(isinstance(listres, Result))
@@ -131,7 +131,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         mytuple = make_shared_result(mytuple, traj, old_data_name='k', new_class=SharedArrayResult)
         self.assertTrue(mytuple[1] == 2)
 
-        mytuple = make_ordinary_result(mytuple, new_data_name='k')
+        mytuple = make_ordinary_result(mytuple, trajectory=traj, new_data_name='k')
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         mytuple = traj.mytuple
         self.assertTrue(isinstance(mytuple.k, tuple))
@@ -143,7 +143,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         theframe = myframe.f_read()
         self.assertTrue(theframe['answer'][0] == 42)
 
-        myframe = make_ordinary_result(myframe, new_data_name='jj')
+        myframe = make_ordinary_result(myframe, trajectory=traj, new_data_name='jj')
         traj.f_load_item(myframe)
         self.assertTrue(myframe.jj['answer'][0] == 42)
 
@@ -155,7 +155,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         self.assertTrue(rows[0][0] == 42)
 
-        mytable = make_ordinary_result(mytable, new_data_name='jup')
+        mytable = make_ordinary_result(mytable, trajectory=traj, new_data_name='jup')
 
         traj.f_load_item(mytable)
 

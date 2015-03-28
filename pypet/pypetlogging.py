@@ -233,7 +233,7 @@ class HasLogger(HasSlots):
 
     """
 
-    __slots__ = ('_logger',)
+    __slots__ = ['_logger']
 
     def __getstate__(self):
         """Called for pickling.

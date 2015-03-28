@@ -62,20 +62,33 @@ class StorageContextManager(HasLogger):
         service.store(pypetconstants.FLUSH, None)
 
 
-def make_ordinary_result(shared_result, new_data_name=None):
-    """ Irreversible!"""
+def make_ordinary_result(shared_result, trajectory, new_data_name=None):
+    """Turns a given shared result into a new result.
+
+    Removes the old result from the trajectory.
+
+    :return: The new result.
+
+    """
     if new_data_name is None:
         new_data_name = shared_result.v_name
     kwargs = dict(new_class_name=Result.__name__, new_data_name=new_data_name)
     shared_result._request_data('make_ordinary', kwargs=kwargs)
-    del shared_result._traj
-    del shared_result._data_name
-    shared_result.__class__ = Result
-    shared_result.__init__(shared_result.v_full_name, comment=shared_result.v_comment)
-    return shared_result
+    new_result = Result(shared_result.v_full_name, comment=shared_result.v_comment)
+    trajectory.f_remove_item(shared_result)
+    trajectory.f_add_result(new_result)
+    return new_result
 
 
-def make_shared_result(ordinary_result, trajectory, new_class=None, old_data_name=None):
+def make_shared_result(ordinary_result, trajectory, old_data_name=None, new_class=None):
+    """Turns an ordinary result into a shared one.
+
+    Removes the old result from the trajectory and replaces it.
+    Empties the given result.
+
+    :return: The new shared result
+
+    """
     data_dict = ordinary_result.f_to_dict(copy=False)
     if len(data_dict) > 1:
         raise TypeError('Cannot make the result shared, it manages more than one data item.')
@@ -92,30 +105,28 @@ def make_shared_result(ordinary_result, trajectory, new_class=None, old_data_nam
         elif isinstance(data, (np.ndarray, np.matrix)):
             new_class = SharedCArrayResult
     ordinary_result.f_empty()
-    old_class = ordinary_result.__class__
-    try:
-        ordinary_result.__class__ = new_class
-        ordinary_result.__init__(ordinary_result.v_full_name, trajectory=trajectory,
-                                 comment=ordinary_result.v_comment)
-        ordinary_result._data_name = old_data_name
-        kwargs = dict(new_class_name=new_class.__name__, new_data_name=ordinary_result.v_name)
-        ordinary_result._request_data('make_shared', kwargs=kwargs)
-        ordinary_result._data_name = ordinary_result.v_name
-        return ordinary_result
-    except Exception:
-        ordinary_result.__class__ = old_class
-        raise
+    new_result = new_class(ordinary_result.v_full_name, trajectory=trajectory,
+                           comment=ordinary_result.v_comment)
+    kwargs = dict(new_class_name=new_class.__name__, old_data_name=old_data_name)
+    new_result._request_data('make_shared', kwargs=kwargs)
+    new_result._data_name = ordinary_result.v_name
+    trajectory.f_remove_item(ordinary_result)
+    trajectory.f_add_result(new_result)
+    return new_result
+
 
 
 class SharedDataResult(BaseResult, KnowsTrajectory):
+
+    __slots__ = ['_traj']
+
     def __init__(self, full_name=None, trajectory=None, comment=''):
         super(SharedDataResult, self).__init__(full_name=full_name, comment=comment)
         self._traj=trajectory
-        self._data_name = self.v_name
         self._set_logger()
 
     def f_create_shared_data(self, **kwargs):
-        if not self._traj.f_contains(self, shortcuts=False):
+        if not self._traj.f_contains(self, shortcuts=False, with_links=False):
             raise RuntimeError('Your trajectory must contain the shared result, otherwise '
                                'the shared data cannot be created.')
         if not self.v_stored:
@@ -136,7 +147,7 @@ class SharedDataResult(BaseResult, KnowsTrajectory):
 
     def _request_data(self, request, args=None, kwargs=None):
         return self._storage_service.store(pypetconstants.ACCESS_DATA, self._full_name,
-                                           self._data_name,
+                                           self.v_name,
                                            request, args, kwargs,
                                            trajectory_name=self._traj.v_name)
 
@@ -441,7 +452,7 @@ class SharedPandasDataResult(SharedDataResult):
         self._pandas_data = None
         super(SharedPandasDataResult, self).__init__(full_name=full_name,
                                                      trajectory=trajectory,
-                                                     comment=comment,)
+                                                     comment=comment)
 
     def f_create_shared_data(self, data=None, format='table', **kwargs):
         if data is None:

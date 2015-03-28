@@ -5212,6 +5212,21 @@ class HDF5StorageService(StorageService, HasLogger):
         if request == 'create_shared_data' or request == 'pandas_put':
             return self._prm_write_shared_data(key=item_name, hdf5_group=hdf5_group,
                                         full_name=path_to_data, **kwargs)
+        elif request == 'make_shared':
+            if hdf5_group._v_nchildren != 1:
+                raise RuntimeError('Cannot convert to shared result, the hdf5_group `%s` '
+                                   'has more than one child.' % hdf5_group._v_name)
+            new_class_name = kwargs.pop('new_class_name')
+            old_data_name = kwargs.pop('old_data_name')
+            hdf5data = ptcompat.get_child(hdf5_group, old_data_name)
+            new_data_name = item_name
+            flag = getattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE)
+            setattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE, flag)
+            setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE,
+                    HDF5StorageService.SHARED_DATA)
+            hdf5data._f_rename(new_data_name)
+            setattr(hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME, new_class_name)
+            return
 
         hdf5data = ptcompat.get_child(hdf5_group, item_name)
 
@@ -5231,21 +5246,6 @@ class HDF5StorageService(StorageService, HasLogger):
             flag = getattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE)
             delattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE)
             setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE, flag)
-            hdf5data._f_rename(new_data_name)
-            setattr(hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME, new_class_name)
-            return
-        elif request == 'make_shared':
-            if hdf5_group._v_nchildren != 1:
-                raise RuntimeError('Cannot convert to shared result, the hdf5_group `%s` '
-                                   'has more than one child.' % hdf5_group._v_name)
-            new_class_name = kwargs.pop('new_class_name')
-            new_data_name = kwargs.pop('new_data_name', None)
-            if new_data_name is None:
-                new_data_name = item_name
-            flag = getattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE)
-            setattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE, flag)
-            setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE,
-                    HDF5StorageService.SHARED_DATA)
             hdf5data._f_rename(new_data_name)
             setattr(hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME, new_class_name)
             return
