@@ -13,8 +13,7 @@ from pypet.naturalnaming import ResultGroup, ParameterGroup, \
     DerivedParameterGroup, ConfigGroup, NNGroupNode, NNLeafNode
 from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
     PickleResult, SparseParameter, SparseResult
-from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
-    SharedVLArrayResult, SharedPandasDataResult, SharedTableResult
+from pypet.shareddata import SharedResult
 
 
 def load_class(full_class_string):

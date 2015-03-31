@@ -1990,6 +1990,11 @@ class Result(BaseResult):
 
     __slots__ = ['_data_']
 
+    SUPPORTED_DATA = set((np.ndarray, ObjectTable,
+                       DataFrame, Series, Panel, Panel4D,
+                       dict, tuple, list, np.matrix) +
+                       pypetconstants.PARAMETER_SUPPORTED_DATA)
+
     def __init__(self, full_name, *args, **kwargs):
         comment = kwargs.pop('comment', '')
         super(Result, self).__init__(full_name, comment)
@@ -2036,14 +2041,18 @@ class Result(BaseResult):
         self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
                              'longer have an effect. Data will always be printed.')
 
-    def __contains__(self, key):
+    def f_translate_key(self, key):
+        """Translates integer indeces into the appropriate names"""
         if isinstance(key, int):
             if key == 0:
                 key = self.v_name
             else:
                 key = self.v_name + '_%d' % key
-        return key in self._data
+        return key
 
+    def __contains__(self, key):
+        key = self.f_translate_key(key)
+        return key in self._data
 
     def f_val_to_str(self):
         """Summarizes data handled by the result as a string.
@@ -2155,10 +2164,7 @@ class Result(BaseResult):
 
         """
         for idx, arg in enumerate(args):
-            if idx == 0:
-                valstr = self.v_name
-            else:
-                valstr = self.v_name + '_' + str(idx)
+            valstr = self.f_translate_key(idx)
             self.f_set_single(valstr, arg)
 
         for key, arg in kwargs.items():
@@ -2176,11 +2182,7 @@ class Result(BaseResult):
         Treats integer values as `f_get`.
 
         """
-        if isinstance(key, int):
-            if key == 0:
-                key = self.v_name
-            else:
-                key = self.v_name + '_%d' % key
+        key = self.f_translate_key(key)
 
         setattr(self, key, value)
 
@@ -2230,12 +2232,7 @@ class Result(BaseResult):
 
         result_list = []
         for name in args:
-            if isinstance(name, int):
-                if name == 0:
-                    name = self.v_name
-                else:
-                    name = self.v_name + '_%d' % name
-
+            name = self.f_translate_key(name)
             if not name in self._data:
                 if name == 'data' and len(self._data) == 1:
                     return self._data[compat.listkeys(self._data)[0]]
@@ -2305,11 +2302,7 @@ class Result(BaseResult):
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
-        return type(item) in ((np.ndarray, ObjectTable,
-                               DataFrame, Series, Panel, Panel4D,
-                               dict, tuple, list, np.matrix) +
-                              pypetconstants.PARAMETER_SUPPORTED_DATA)
-
+        return type(item) in Result.SUPPORTED_DATA
 
     def f_supports_fast_access(self):
         """Whether or not the result supports fast access.
@@ -2333,15 +2326,18 @@ class Result(BaseResult):
         """Loads data from load_dict"""
         self._data_ = load_dict
 
+    def f_remove(self, *args):
+        """Removes `*args` from the result"""
+        for arg in args:
+            arg = self.f_translate_key(arg)
+            if arg in self._data:
+                del self._data[arg]
+            else:
+                raise AttributeError('Your result `%s` does not contain %s.' % (self.name_, arg))
+
     def __delitem__(self, key):
         """ Deletes an item, see also __delattr__"""
-        if isinstance(key, int):
-            if key == 0:
-                key = self.v_name
-            else:
-                key = self.v_name + '_%d' % key
-
-        del self._data[key]
+        self.f_remove(key)
 
     def __delattr__(self, item):
         """ Deletes an item from the result.
@@ -2364,11 +2360,9 @@ class Result(BaseResult):
 
         """
         if item[0] == '_':
-            del self.__dict__[item]
-        elif item in self._data:
-            del self._data[item]
+            super(Result, self).__delattr__(item)
         else:
-            raise AttributeError('Your result `%s` does not contain %s.' % (self.name_, item))
+            self.f_remove(item)
 
     def __setattr__(self, key, value):
         if key[0] == '_':

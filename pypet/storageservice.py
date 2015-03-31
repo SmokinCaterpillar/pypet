@@ -30,6 +30,7 @@ from pypet.parameter import ObjectTable, Parameter
 import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger, DisableLogger
 from pypet.utils.decorators import deprecated, retry
+import pypet.shareddata as shared
 
 
 class MultiprocWrapper(object):
@@ -713,7 +714,6 @@ class HDF5StorageService(StorageService, HasLogger):
     ''' An HDF5 data object for direct interaction '''
 
     TYPE_FLAG_MAPPING = {
-
         ObjectTable: TABLE,
         list: ARRAY,
         tuple: ARRAY,
@@ -723,7 +723,13 @@ class HDF5StorageService(StorageService, HasLogger):
         DataFrame: FRAME,
         Series: SERIES,
         Panel: PANEL,
-        Panel4D: PANEL
+        Panel4D: PANEL,
+        shared.SharedTable: SHARED_DATA,
+        shared.SharedArray: SHARED_DATA,
+        shared.SharedPandasFrame: SHARED_DATA,
+        shared.SharedCArray: SHARED_DATA,
+        shared.SharedEArray: SHARED_DATA,
+        shared.SharedVLArray: SHARED_DATA,
     }
     ''' Mapping from object type to storage flag'''
 
@@ -4183,6 +4189,9 @@ class HDF5StorageService(StorageService, HasLogger):
                               HDF5StorageService.PANEL):
                     self._prm_write_pandas_data(key, data_to_store, _hdf5_group, fullname,
                                                 flag, **kwargs)
+                elif flag == HDF5StorageService.SHARED_DATA:
+                    pass  # Shared data needs to be explicelty created and is not stored on
+                    # the fly
                 else:
                     raise RuntimeError('You shall not pass!')
 
@@ -4214,18 +4223,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 _hdf5_group._f_remove(recursive=True)
             raise
 
-    def _prm_write_shared_data(self, key, hdf5_group, full_name, **kwargs):
+    def _shared_write_shared_data(self, key, hdf5_group, full_name, **kwargs):
         try:
-
-            if 'obj' in kwargs:
-                data = kwargs.pop('obj')
-            elif 'object' in kwargs:
-                data = kwargs.pop('object')
-            elif 'data' in kwargs:
-                data = kwargs.pop('data')
-            else:
-                data = None
-
+            data = kwargs.pop('obj', None)
             flag = kwargs.pop('flag', None)
 
             if flag is None and data is None:
@@ -4239,14 +4239,17 @@ class HDF5StorageService(StorageService, HasLogger):
             if flag == HDF5StorageService.TABLE:
                 self._prm_write_shared_table(key, hdf5_group,
                                            full_name, **kwargs)
+
             elif flag in (HDF5StorageService.FRAME,
                           HDF5StorageService.SERIES,
                           HDF5StorageService.PANEL) :
 
-                self._prm_write_pandas_data(key, data, hdf5_group, full_name, flag, **kwargs)
+                self._prm_write_pandas_data(key, data,
+                                            hdf5_group,
+                                            full_name, flag, **kwargs)
             else:
-                self._prm_write_shared_array(key, data, hdf5_group,
-                                           full_name, flag, **kwargs)
+                self._prm_write_shared_array(key, data,
+                                             hdf5_group, full_name, flag, **kwargs)
 
             hdf5data = ptcompat.get_child(hdf5_group, key)
             setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE,
@@ -4543,7 +4546,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=data, **kwargs)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as exc:
                 if type(data) is dict and len(data) == 0:
                     # We cannot store an empty dictionary,
                     # but we can use an empty tuple as a dummy.
@@ -4998,7 +5001,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                HDF5StorageService.PANEL):
                 self._prm_read_pandas(node, load_dict, full_name)
             elif load_type.startswith(HDF5StorageService.SHARED_DATA):
-                pass # Shared data does not need to be loaded, it remains on disk.
+                self._prm_read_shared_data(node, load_dict, instance)
             else:
                 raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
                                              'structure of %s [%s].' %
@@ -5065,12 +5068,39 @@ class HDF5StorageService(StorageService, HasLogger):
             self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name, full_name))
             raise
 
+    def _prm_read_shared_data(self, shared_node, load_dict, instance):
+        """Reads shared data and constructs the appropraite class.
+
+        :param shared_node:
+
+            hdf5 node storing the pandas DataFrame
+
+        :param load_dict:
+
+            Dictionary to keep the loaded data in
+
+        :param full_name:
+
+            Full name of the parameter or result whose data is to be loaded
+
+        """
+        try:
+            data_type = self._all_get_from_attrs(shared_node,
+                                                 HDF5StorageService.SHARED_DATA_TYPE)
+            constructor = shared.FLAG_CLASS_MAPPING[data_type]
+            name = shared_node._v_name
+            load_dict[name] = constructor(name=name, parent=instance)
+        except:
+            self._logger.error('Failed loading `%s` of `%s`.' % (shared_node._v_name,
+                                                                 instance.v_full_name))
+            raise
+
     def _prm_read_pandas(self, pd_node, load_dict, full_name):
         """Reads a DataFrame from dis.
 
         :param pd_node:
 
-            hdf5 node stroing the pandas DataFrame
+            hdf5 node storing the pandas DataFrame
 
         :param load_dict:
 
@@ -5210,27 +5240,19 @@ class HDF5StorageService(StorageService, HasLogger):
         hdf5_group = self._all_get_node_by_name(path_to_data)
 
         if request == 'create_shared_data' or request == 'pandas_put':
-            return self._prm_write_shared_data(key=item_name, hdf5_group=hdf5_group,
+            return self._shared_write_shared_data(key=item_name, hdf5_group=hdf5_group,
                                         full_name=path_to_data, **kwargs)
-        elif request == 'make_shared':
-            if hdf5_group._v_nchildren != 1:
-                raise RuntimeError('Cannot convert to shared result, the hdf5_group `%s` '
-                                   'has more than one child.' % hdf5_group._v_name)
-            new_class_name = kwargs.pop('new_class_name')
-            old_data_name = kwargs.pop('old_data_name')
-            hdf5data = ptcompat.get_child(hdf5_group, old_data_name)
-            new_data_name = item_name
+
+        hdf5data = ptcompat.get_child(hdf5_group, item_name)
+
+        if request == 'make_shared':
+            hdf5data = ptcompat.get_child(hdf5_group, item_name)
             flag = getattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE)
             setattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE, flag)
             setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE,
                     HDF5StorageService.SHARED_DATA)
-            hdf5data._f_rename(new_data_name)
-            setattr(hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME, new_class_name)
             return
-
-        hdf5data = ptcompat.get_child(hdf5_group, item_name)
-
-        if request == '__thenode__':
+        elif request == '__thenode__':
             return hdf5data
         elif request == 'pandas_get':
             data_dict = {}
@@ -5239,15 +5261,9 @@ class HDF5StorageService(StorageService, HasLogger):
         elif request == 'pandas_select':
             return self._prm_select_shared_pandas_data(hdf5data, path_to_data, **kwargs)
         elif request == 'make_ordinary':
-            new_class_name = kwargs.pop('new_class_name')
-            new_data_name = kwargs.pop('new_data_name', None)
-            if new_data_name is None:
-                new_data_name = item_name
             flag = getattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE)
             delattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE)
             setattr(hdf5data._v_attrs, HDF5StorageService.STORAGE_TYPE, flag)
-            hdf5data._f_rename(new_data_name)
-            setattr(hdf5_group._v_attrs, HDF5StorageService.CLASS_NAME, new_class_name)
             return
 
         if kwargs and kwargs.pop('_col_func', False):

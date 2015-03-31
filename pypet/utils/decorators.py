@@ -172,8 +172,8 @@ def with_open_store(func):
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
-        if not self._traj.v_storage_service.is_open:
-            raise RuntimeError('Function `%s` is only available if the storage is open.' %
+        if not self.traj.v_storage_service.is_open:
+            raise TypeError('Function `%s` is only available if the storage is open.' %
                             func.__name__)
 
         return func(self, *args, **kwargs)

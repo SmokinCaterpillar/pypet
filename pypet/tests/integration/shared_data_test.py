@@ -48,10 +48,10 @@ def write_into_shared_storage(traj):
     ca[idx] = idx
     root.info('3. a')
     ea = daarrays.ea
-    ea.f_append(np.ones((1,10))*idx)
+    ea.append(np.ones((1,10))*idx)
     root.info('4. sequential')
     vla = daarrays.vla
-    vla.f_append(np.ones(idx+2)*idx)
+    vla.append(np.ones(idx+2)*idx)
     root.info('5. Block')
     if idx > ncores+2:
         x, y = a[idx-ncores], idx-ncores
@@ -72,11 +72,11 @@ def write_into_shared_storage(traj):
 
     with StorageContextManager(traj) as cm:
         t1 = tabs.t1
-        row = t1.v_row
+        row = t1.row
         row['run_name'] = compat.tobytes(traj.v_crun)
         row['idx'] = idx
         row.append()
-        t1.f_flush()
+        t1.flush()
 
     t2 = tabs.t2
     row = t2[idx]
@@ -85,7 +85,7 @@ def write_into_shared_storage(traj):
                                                                                    traj.v_crun) )
 
     df = traj.df
-    df.f_append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
+    df.append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataEnvironmentTest(TrajectoryComparator):
@@ -133,31 +133,31 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         length = len(traj)
         da_data = np.zeros(length, dtype=np.int)
         traj.f_store(only_init=True)
-        traj.f_add_result(SharedArrayResult, 'daarrays.a').f_create_shared_data(obj=da_data)
-        traj.f_add_result(SharedCArrayResult, 'daarrays.ca').f_create_shared_data( obj=da_data)
-        traj.f_add_result(SharedEArrayResult, 'daarrays.ea').f_create_shared_data(shape=(0, 10),
+        traj.f_add_result(SharedResult, 'daarrays.a', SharedArray()).create_shared_data(obj=da_data)
+        traj.f_add_result(SharedResult, 'daarrays.ca', SharedCArray()).create_shared_data( obj=da_data)
+        traj.f_add_result(SharedResult, 'daarrays.ea', SharedEArray()).create_shared_data(shape=(0, 10),
                                                             atom=pt.FloatAtom(),
                                                             expectedrows=length)
-        traj.f_add_result(SharedVLArrayResult, 'daarrays.vla').f_create_shared_data(atom=pt.FloatAtom())
+        traj.f_add_result(SharedResult, 'daarrays.vla', SharedVLArray()).create_shared_data(atom=pt.FloatAtom())
 
 
-        traj.f_add_result(SharedTableResult, 'tabs.t1').f_create_shared_data(description={'idx': pt.IntCol(), 'run_name': pt.StringCol(30)},
+        traj.f_add_result(SharedResult, 'tabs.t1', SharedTable()).create_shared_data(description={'idx': pt.IntCol(), 'run_name': pt.StringCol(30)},
                         expectedrows=length)
 
-        traj.f_add_result(SharedTableResult, 'tabs.t2').f_create_shared_data(description={'run_name': pt.StringCol(3000)})
+        traj.f_add_result(SharedResult, 'tabs.t2', SharedTable()).create_shared_data(description={'run_name': pt.StringCol(3000)})
 
-        traj.f_add_result(SharedPandasDataResult, 'pandas.df').f_create_shared_data()
+        traj.f_add_result(SharedResult, 'pandas.df', SharedPandasFrame())
 
         traj.f_store()
 
         with StorageContextManager(traj) as cm:
             for run_name in self.traj.f_get_run_names():
-                row = traj.t2.v_row
+                row = traj.t2.row
                 row['run_name'] = run_name
                 row.append()
-            traj.t2.f_flush()
+            traj.t2.flush()
 
-        traj.t2.f_create_index('run_name')
+        traj.t2.create_index('run_name')
 
 
     def setUp(self):
@@ -244,7 +244,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 idx = row['idx']
                 self.assertTrue(traj.f_idx_to_run(run_name) == idx)
 
-        for entry in traj.df.f_read().iterrows():
+        for entry in traj.df.read().iterrows():
             run_name = entry[1]['run_name']
             idx = entry[1]['idx']
             self.assertTrue(traj.f_idx_to_run(idx) == run_name)
@@ -262,7 +262,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj, newtraj)
+
 
         self.check_insertions(self.traj)
         self.check_insertions(newtraj)
@@ -271,6 +271,16 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
+
+        for res in self.traj.results.f_iter_leaves():
+            if isinstance(res, SharedResult):
+                for key in res.f_to_dict():
+                    item = res[key]
+                    if isinstance(item, SharedData):
+                        make_ordinary_result(res, key, trajectory=self.traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.compare_trajectories(self.traj, newtraj)
 
     def test_run_large(self):
 
@@ -281,11 +291,11 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         self.env.f_run(write_into_shared_storage)
 
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj, newtraj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
 
         self.check_insertions(self.traj)
         self.check_insertions(newtraj)
@@ -295,11 +305,21 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
 
+        for res in self.traj.results.f_iter_leaves():
+            if isinstance(res, SharedResult):
+                for key in res.f_to_dict():
+                    item = res[key]
+                    if isinstance(item, SharedData):
+                        make_ordinary_result(res, key, trajectory=self.traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.compare_trajectories(self.traj, newtraj)
+
     def add_matrix_params(self, traj):
         shape=(300,301,305)
         traj.f_store(only_init=True)
-        traj.f_add_result(SharedCArrayResult, 'matrices.m1').f_create_shared_data(obj=np.random.rand(*shape))
-        traj.f_add_result(SharedCArrayResult, 'matrices.m2').f_create_shared_data(obj=np.random.rand(*shape))
+        traj.f_add_result(SharedResult, 'matrices.m1', SharedCArray()).create_shared_data(obj=np.random.rand(*shape))
+        traj.f_add_result(SharedResult, 'matrices.m2', SharedCArray()).create_shared_data(obj=np.random.rand(*shape))
         traj.f_store()
 
 
@@ -311,7 +331,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
             with StorageContextManager(traj):
                 m1 = matrices.m1
                 m2 = matrices.m2
-                self.assertTrue(m1[irun,irun,irun] == m2[irun,irun,irun])
+                self.assertEqual(m1[irun,irun,irun], m2[irun,irun,irun])
 
 
     def test_giant_matrices(self):
@@ -330,7 +350,6 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj, newtraj)
 
         self.check_matrices(self.traj)
         self.check_matrices(newtraj)
@@ -339,6 +358,16 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
+
+        for res in self.traj.results.f_iter_leaves():
+            if isinstance(res, SharedResult):
+                for key in res.f_to_dict():
+                    item = res[key]
+                    if isinstance(item, SharedData):
+                        make_ordinary_result(res, key, trajectory=self.traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.compare_trajectories(self.traj, newtraj)
 
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')

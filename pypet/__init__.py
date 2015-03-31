@@ -24,9 +24,9 @@ from pypet.pypetlogging import HasLogger, rename_log_file
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.utils.helpful_functions import progressbar
-from pypet.shareddata import SharedArrayResult, SharedCArrayResult, SharedEArrayResult,\
-    SharedVLArrayResult, SharedPandasDataResult, SharedTableResult,\
-    KnowsTrajectory, StorageContextManager, make_ordinary_result, make_shared_result
+from pypet.shareddata import SharedArray, SharedCArray, SharedEArray,\
+    SharedVLArray, SharedPandasFrame, SharedTable, SharedResult, \
+    StorageContextManager, make_ordinary_result, make_shared_result
 
 
 __all__ = [
@@ -67,12 +67,13 @@ __all__ = [
     compact_hdf5_file.__name__,
     KnowsTrajectory.__name__,
     StorageContextManager.__name__,
-    SharedArrayResult.__name__,
-    SharedCArrayResult.__name__,
-    SharedEArrayResult.__name__,
-    SharedVLArrayResult.__name__,
-    SharedPandasDataResult.__name__,
-    SharedTableResult.__name__,
+    SharedArray.__name__,
+    SharedCArray.__name__,
+    SharedEArray.__name__,
+    SharedVLArray.__name__,
+    SharedPandasFrame.__name__,
+    SharedTable.__name__,
+    SharedResult.__name__,
     make_ordinary_result.__name__,
     make_shared_result.__name__,
     progressbar.__name__,
