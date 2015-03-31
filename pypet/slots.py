@@ -5,10 +5,11 @@ __author__ = 'Robert Meyer'
 
 import pypet.compat as compat
 
+
 class MetaSlotMachine(type):
     """Meta-class that adds the attribute `__all_slots__` to a class.
 
-    `__all_slots__` contains each and every slot of a class,
+    `__all_slots__` contains all unique slots of a class,
     including the ones that are inherited from parents.
 
     """
@@ -18,15 +19,21 @@ class MetaSlotMachine(type):
 
     @staticmethod
     def _get_all_slots(cls):
-        """Returns all slots as set"""
+        """Returns all unique slots as a list"""
+        # Get all `__slots__` lists from the method-resolution-order (mro)
         all_slots = (getattr(cls_, '__slots__', []) for cls_ in cls.__mro__)
+        # Find all unique slots from all `__slots__` lists
         return list(set(slot for slots in all_slots for slot in slots))
+
 
 def add_metaclass(metaclass):
     """Adds a metaclass to a given class.
 
     This decorator is used instead of `__metaclass__` to allow for
     Python 2 and 3 compatibility.
+
+    Inspired by the *six* module
+    (https://bitbucket.org/gutworth/six/src/784c6a213c4527ea18f86a800f51bf16bc1df5bc/six.py?at=default)
 
     """
     def wrapper(cls):

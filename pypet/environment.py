@@ -1798,7 +1798,13 @@ class Environment(HasLogger):
         """Estimates memory utilization to come if process was started"""
         n_processes = len(process_dict)
         total_utilization = psutil.virtual_memory().percent / 100.0
-        curr_all_processes = sum(psutil.Process(x).memory_percent() for x in process_dict) / 100.0
+        sum = 0.0
+        for proc in compat.itervalues(process_dict):
+            try:
+                sum += psutil.Process(proc.pid).memory_percent()
+            except psutil.NoSuchProcess:
+                pass
+        curr_all_processes = sum / 100.0
         missing_utilization = max(0.0, n_processes * self._est_per_process - curr_all_processes)
         estimated_utilization = total_utilization
         estimated_utilization += missing_utilization
