@@ -60,12 +60,6 @@ class HasSlots(object):
     """
     __slots__ = ['__weakref__']
 
-    def _get_all_slots(self):
-        """Returns all slots as set"""
-        return self.__all_slots__
-        # all_slots = (getattr(cls, '__slots__', []) for cls in self.__class__.__mro__)
-        # return set(slot for slots in all_slots for slot in slots)
-
     def __getstate__(self):
         if hasattr(self, '__dict__'):
             # We don't require that all sub-classes also define slots,

@@ -2218,6 +2218,7 @@ class Environment(HasLogger):
 
         return results
 
+
 class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
 
