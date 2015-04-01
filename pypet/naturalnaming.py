@@ -2771,7 +2771,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             except:
                 value._set_details(old_name)
                 raise
-        elif self.v_root._lazy_adding:
+        elif self.v_root.v_lazy_adding:
             if value is new_group:
                 self.f_add_group(key)
             else:

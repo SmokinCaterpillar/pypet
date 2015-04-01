@@ -35,7 +35,7 @@ explored  *DONE*
 
 * Add slots *DONE*
 
-* Add optimization tips
+* Add optimization tips *DONE*
 
 * Write an example for grouping *DONE*
 
