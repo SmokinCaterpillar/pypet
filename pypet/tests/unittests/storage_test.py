@@ -744,7 +744,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_store()
 
         traj = load_trajectory(index=-1, filename=filename, with_run_information=False)
-        self.assertEqual(len(traj), 1)
+        self.assertEqual(len(traj), length)
         self.assertEqual(len(traj._run_information), 1)
 
     def test_delete_whole_subtrees(self):

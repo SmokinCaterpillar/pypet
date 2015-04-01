@@ -2266,6 +2266,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                  'short_environment_hexsha': hexsha}
 
                     traj._add_run_info(**info_dict)
+            else:
+                traj._length = single_run_table.nrows
 
             # Load explorations
             self._trj_load_exploration(traj)
