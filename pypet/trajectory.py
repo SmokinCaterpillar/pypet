@@ -60,6 +60,7 @@ def load_trajectory(name=None,
                     new_name='my_trajectory',
                     add_time=True,
                     wildcard_functions=None,
+                    with_run_information=True,
                     storage_service=storage.HDF5StorageService,
                     **kwargs):
     """Helper function that creates a novel trajectory and loads it from disk.
@@ -80,7 +81,8 @@ def load_trajectory(name=None,
     traj.f_load(name=name, index=index, as_new=as_new, load_parameters=load_parameters,
                 load_derived_parameters=load_derived_parameters, load_results=load_results,
                 load_other_data=load_other_data, recursive=recursive, load_data=load_data,
-                max_depth=max_depth, force=force, storage_service=storage_service, **kwargs)
+                max_depth=max_depth, force=force, with_run_information=with_run_information,
+                storage_service=storage_service, **kwargs)
     return traj
 
 
@@ -1283,16 +1285,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._single_run_ids[name] = idx
         self._single_run_ids[idx] = name
 
-        info_dict = {}
-        info_dict['idx'] = idx
-        info_dict['timestamp'] = timestamp
-        info_dict['finish_timestamp'] = finish_timestamp
-        info_dict['runtime'] = runtime
-        info_dict['time'] = time
-        info_dict['completed'] = completed
-        info_dict['name'] = name
-        info_dict['parameter_summary'] = parameter_summary
-        info_dict['short_environment_hexsha'] = short_environment_hexsha
+        info_dict = {'idx': idx,
+                     'timestamp': timestamp,
+                     'finish_timestamp': finish_timestamp,
+                     'runtime': runtime,
+                     'time': time,
+                     'completed': completed,
+                     'name': name,
+                     'parameter_summary': parameter_summary,
+                     'short_environment_hexsha': short_environment_hexsha}
 
         self._run_information[name] = info_dict
         self._length = len(self._run_information)
@@ -1357,6 +1358,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                max_depth=None,
                force=False,
                dynamic_imports=None,
+               with_run_information=True,
                storage_service=None, **kwargs):
         """Loads a trajectory via the storage service.
 
@@ -1464,6 +1466,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             The classes passed here are added for good and will be kept by the trajectory.
             Please add your dynamically imported classes only once.
 
+        :param with_run_information:
+
+            If information about the individual runs should be loaded. If you have many
+            runs, like 1,000,000 or more you can spare time by setting
+            `with_run_information=False`.
+            Note that `f_get_run_information` and `f_idx_to_run` do not work in such a case.
+            Moreover, setting `v_idx` does not work either. If you load the trajectory
+            without this information, be careful, this is not recommended.
+
         :param storage_service:
 
             Pass a storage service used by the trajectory. Alternatively pass a constructor
@@ -1513,14 +1524,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                    load_other_data=load_other_data,
                                    recursive=recursive,
                                    max_depth=max_depth,
+                                   with_run_information=with_run_information,
                                    force=force)
 
         # If a trajectory is newly loaded, all parameters are unlocked.
         if as_new:
             for param in compat.itervalues(self._parameters):
                 param.f_unlock()
-        self._length = len(self._run_information)
-
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
                                             ignore_data):

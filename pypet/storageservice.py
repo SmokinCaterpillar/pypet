@@ -2040,7 +2040,8 @@ class HDF5StorageService(StorageService, HasLogger):
     ######################## Loading a Trajectory #################################################
 
     def _trj_load_trajectory(self, traj, as_new, load_parameters, load_derived_parameters,
-                             load_results, load_other_data, recursive, max_depth, force):
+                             load_results, load_other_data, recursive, max_depth,
+                             with_run_information, force):
         """Loads a single trajectory from a given file.
 
 
@@ -2059,6 +2060,10 @@ class HDF5StorageService(StorageService, HasLogger):
         :param recursive: If data should be loaded recursively
 
         :param max_depth: Maximum depth of loading
+
+        :param with_run_information:
+
+            If run information should be loaded
 
         :param force: Force load in case there is a pypet version mismatch
 
@@ -2118,7 +2123,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Loads meta data like the name, timestamps etc.
         # load_data is only used here to determine how to load the annotations
         load_data = max(load_parameters, load_derived_parameters, load_results, load_other_data)
-        self._trj_load_meta_data(traj, load_data, as_new,  force)
+        self._trj_load_meta_data(traj, load_data, as_new, with_run_information, force)
 
         if (load_parameters != pypetconstants.LOAD_NOTHING or
                     load_derived_parameters != pypetconstants.LOAD_NOTHING or
@@ -2182,7 +2187,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                      _trajectory=traj, _as_new=as_new,
                                      _hdf5_group=self._trajectory_group)
 
-    def _trj_load_meta_data(self, traj,  load_data, as_new, force):
+    def _trj_load_meta_data(self, traj,  load_data, as_new, with_run_information, force):
         """Loads meta information about the trajectory
 
         Checks if the version number does not differ from current pypet version
@@ -2230,37 +2235,37 @@ class HDF5StorageService(StorageService, HasLogger):
 
             single_run_table = self._overview_group.runs
 
-            for row in single_run_table.iterrows():
-                name = compat.tostr(row['name'])
-                idx = int(row['idx'])
-                timestamp = float(row['timestamp'])
-                time_ = compat.tostr(row['time'])
-                completed = int(row['completed'])
-                summary = compat.tostr(row['parameter_summary'])
-                hexsha = compat.tostr(row['short_environment_hexsha'])
+            if with_run_information:
+                for row in single_run_table.iterrows():
+                    name = compat.tostr(row['name'])
+                    idx = int(row['idx'])
+                    timestamp = float(row['timestamp'])
+                    time_ = compat.tostr(row['time'])
+                    completed = int(row['completed'])
+                    summary = compat.tostr(row['parameter_summary'])
+                    hexsha = compat.tostr(row['short_environment_hexsha'])
 
 
-                # To allow backwards compatibility we need this try catch block
-                try:
-                    runtime = compat.tostr(row['runtime'])
-                    finish_timestamp = float(row['finish_timestamp'])
-                except IndexError as ke:
-                    runtime = ''
-                    finish_timestamp = 0.0
-                    self._logger.warning('Could not load runtime, ' + repr(ke))
+                    # To allow backwards compatibility we need this try catch block
+                    try:
+                        runtime = compat.tostr(row['runtime'])
+                        finish_timestamp = float(row['finish_timestamp'])
+                    except IndexError as ke:
+                        runtime = ''
+                        finish_timestamp = 0.0
+                        self._logger.debug('Could not load runtime, ' + repr(ke))
 
-                info_dict = {}
-                info_dict['idx'] = idx
-                info_dict['timestamp'] = timestamp
-                info_dict['time'] = time_
-                info_dict['completed'] = completed
-                info_dict['name'] = name
-                info_dict['parameter_summary'] = summary
-                info_dict['short_environment_hexsha'] = hexsha
-                info_dict['runtime'] = runtime
-                info_dict['finish_timestamp'] = finish_timestamp
+                    info_dict = {'idx': idx,
+                                 'timestamp': timestamp,
+                                 'finish_timestamp': finish_timestamp,
+                                 'runtime': runtime,
+                                 'time': time_,
+                                 'completed': completed,
+                                 'name': name,
+                                 'parameter_summary': summary,
+                                 'short_environment_hexsha': hexsha}
 
-                traj._add_run_info(**info_dict)
+                    traj._add_run_info(**info_dict)
 
             # Load explorations
             self._trj_load_exploration(traj)

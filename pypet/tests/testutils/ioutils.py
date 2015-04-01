@@ -273,9 +273,10 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
                 found_set.add(combined)
 
             if class_name == 'ModuleImportFailure':
-                self._logger.error('ERROR could not import `%s`' % test_name)
+                self._logger.error('Could not import `%s`, I will skip the tests.' % test_name)
             if class_name == 'LoadTestsFailure':
-                self._logger.error('ERROR could not load test `%s`' % test_name)
+                self._logger.error('Could not load test `%s`, maybe this is an ERROR. '
+                                   'I will skip the test.' % test_name)
 
             add = self.predicate(class_name, test_name, tags)
             if add:

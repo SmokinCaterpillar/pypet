@@ -162,6 +162,12 @@ pypet 0.1b.9
 *   One can pass an estimate for memory that each run needs to better protect the memory
     cap.
 
+*   All tree nodes except the trajectory now use __slots__ for faster and more compact
+    creation.
+
+*   You can now request to load a trajectory without `run_information` to spare time.
+
+
 pypet 0.1b.8
 
 *   Support for python 3.3 and 3.4!

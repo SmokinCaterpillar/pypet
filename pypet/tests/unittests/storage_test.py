@@ -731,6 +731,22 @@ class StorageTest(TrajectoryComparator):
                           logger_names=('STDERROR', 'STDOUT'),
                           foo='bar')
 
+    def test_no_run_information_loading(self):
+        filename = make_temp_dir('testnoruninfo.hdf5')
+        traj = Trajectory(name='TestDelete',
+                          filename=filename)
+
+        length = 100000
+        traj.v_lazy_adding = True
+        traj.par.x = 42
+        traj.f_explore({'x': range(length)})
+
+        traj.f_store()
+
+        traj = load_trajectory(index=-1, filename=filename, with_run_information=False)
+        self.assertEqual(len(traj), 1)
+        self.assertEqual(len(traj._run_information), 1)
+
     def test_delete_whole_subtrees(self):
         filename = make_temp_dir('testdeltree.hdf5')
         traj = Trajectory(name='TestDelete',
