@@ -9,21 +9,14 @@ import pypet.compat as compat
 class MetaSlotMachine(type):
     """Meta-class that adds the attribute `__all_slots__` to a class.
 
-    `__all_slots__` contains all unique slots of a class,
+    `__all_slots__`  is a set that contains all unique slots of a class,
     including the ones that are inherited from parents.
 
     """
-    def __init__(cls, name, bases, dct):
-        super(MetaSlotMachine, cls).__init__(name, bases, dct)
-        cls.__all_slots__ = MetaSlotMachine._get_all_slots(cls)
-
-    @staticmethod
-    def _get_all_slots(cls):
-        """Returns all unique slots as a list"""
-        # Get all `__slots__` lists from the method-resolution-order (mro)
-        all_slots = (getattr(cls_, '__slots__', []) for cls_ in cls.__mro__)
-        # Find all unique slots from all `__slots__` lists
-        return list(set(slot for slots in all_slots for slot in slots))
+    def __init__(cls, name, bases, dictionary):
+        super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
+        cls.__all_slots__ = set()
+        cls.__all_slots__.update(*(getattr(c, '__slots__', ()) for c in cls.__mro__))
 
 
 def add_metaclass(metaclass):
@@ -32,7 +25,7 @@ def add_metaclass(metaclass):
     This decorator is used instead of `__metaclass__` to allow for
     Python 2 and 3 compatibility.
 
-    Inspired by the *six* module
+    Inspired by the *six* module:
     (https://bitbucket.org/gutworth/six/src/784c6a213c4527ea18f86a800f51bf16bc1df5bc/six.py?at=default)
 
     """
@@ -48,6 +41,7 @@ def add_metaclass(metaclass):
         cls_dict.pop('__weakref__', None)
         return metaclass(cls.__name__, cls.__bases__, cls_dict)
     return wrapper
+
 
 @add_metaclass(MetaSlotMachine)
 class HasSlots(object):
@@ -80,12 +74,14 @@ class HasSlots(object):
         return statedict
 
     def __setstate__(self, state):
+        """Recalls state for items with slots"""
         for key, value in state.items():
             setattr(self, key, value)
 
     def __dir__(self):
-        result = dir(self.__class__)
-        result.extend(self.__all_slots__)
+        """Includes all slots in the `dir` method"""
+        result = set()
+        result.update(dir(self.__class__), self.__all_slots__)
         if hasattr(self, '__dict__'):
-            result.extend(compat.iterkeys(self.__dict__))
-        return result
+            result.update(compat.iterkeys(self.__dict__))
+        return list(result)

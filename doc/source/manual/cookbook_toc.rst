@@ -9,7 +9,7 @@ Here you can find some more detailed explanations of various concepts of *pypet*
 
 
 .. toctree::
-      :maxdepth: 2
+      :maxdepth: 3
 
       ../cookbook/trajectory
       ../cookbook/parameter

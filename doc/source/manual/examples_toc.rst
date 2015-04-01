@@ -1,18 +1,18 @@
 
 .. _theexamples:
 
-=====================
+========
 Examples
-=====================
+========
 
 Here you can find some example code how to use the *pypet*.
 All examples were written and tested with python 2.7 and
 most of them also work under python 3.
 
 
----------------
+--------------
 Basic Concepts
----------------
+--------------
 
 .. toctree::
     :maxdepth: 1
@@ -25,6 +25,7 @@ Basic Concepts
     ../examplesdoc/example_09
     ../examplesdoc/example_13
     ../examplesdoc/example_17
+    ../examplesdoc/example_18
 
 ..
     Ex1: First steps
@@ -35,11 +36,12 @@ Basic Concepts
     Ex9: Large Results
     Ex13: Pipeline and post-processing
     Ex17: Wrapping an existing project
+    Ex18: Many runs
 
 
-------------------
+-----------------
 Advanced Concepts
-------------------
+-----------------
 
 .. toctree::
     :maxdepth: 1

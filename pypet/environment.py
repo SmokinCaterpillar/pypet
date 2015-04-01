@@ -69,6 +69,7 @@ from pypet.parameter import Parameter
 
 
 def _configure_logging(kwargs):
+    """Requests the logging manager to configure logging."""
     try:
         logging_manager = kwargs['logging_manager']
         logging_manager.make_logging_handlers_and_tools(multiproc=True)
@@ -78,6 +79,7 @@ def _configure_logging(kwargs):
 
 
 def _logging_and_single_run(kwargs):
+    """Wrapper function that first configures logging and starts a single run afterwards."""
     _configure_logging(kwargs)
     return _single_run(kwargs)
 
@@ -268,13 +270,6 @@ class Environment(HasLogger):
         Be aware of data loss if you set this to `False` and not
         manually store everything.
 
-    :param log_folder:
-
-        Path to a folder where all log files will be stored. Defaults to ``'./logs'``.
-        The log files will be added to a sub-folder with the name of the trajectory
-        and the name of the environment.
-        If you don't want any log files, set to ``None``.
-
     :param log_config:
 
         Can be path to a logging `.ini` file specifying the logging configuration.
@@ -381,11 +376,15 @@ class Environment(HasLogger):
     :param memory_cap:
 
         Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
-        processes are spawned.
+        processes are spawned. Can also be a tuple ``(limit, memory_per_process)``,
+        first value is the cap value (between 0.0 and 1,0),
+        second one is the estimated memory per process in mega bytes (MB).
+        If an estimate is given a new process is not started if
+        the threshold would be crossed including the estimate.
 
     :param swap_cap:
 
-        Analogous to `memory_cap` but the swap memory is considered.
+        Analogous to `cpu_cap` but the swap memory is considered.
 
     :param wrap_mode:
 
@@ -1734,6 +1733,7 @@ class Environment(HasLogger):
     def _make_iterator(self, result_queue, start_run_idx, total_runs):
         """ Returns an iterator over all runs for multiprocessing """
         def _do_iter():
+            total_minus_start = total_runs - start_run_idx
             for n in compat.xrange(start_run_idx, total_runs):
                 if not self._traj._is_completed(n):
                     result_dict = {'traj': self._traj._make_single_run(n),
@@ -1747,7 +1747,7 @@ class Environment(HasLogger):
                                      'clean_up_runs': self._clean_up_runs,
                                      'continue_path': self._continue_path,
                                      'automatic_storing': self._automatic_storing}
-                    self._show_progress(n, total_runs)
+                    self._show_progress(n - start_run_idx, total_minus_start)
                     yield result_dict
         return _do_iter()
 
@@ -2299,9 +2299,6 @@ class MultiprocContext(HasLogger):
     :param log_stdout:
 
         If stdout of the queue process should also be logged.
-
-
-
 
     For an usage example see :ref:`example-16`.
 

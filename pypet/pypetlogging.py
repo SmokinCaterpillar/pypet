@@ -21,6 +21,7 @@ try:
 except ImportError:
     from logutils import NullHandler
 import os
+import math
 import sys
 import ast
 import copy
@@ -33,14 +34,13 @@ from pypet.utils.helpful_functions import progressbar
 from pypet.slots import HasSlots
 
 
-FILENAME_INDICATORS = (
-    pypetconstants.LOG_ENV,
-    pypetconstants.LOG_PROC,
-    pypetconstants.LOG_TRAJ,
-    pypetconstants.LOG_RUN,
-    '.log',
-    '.txt'
-)
+FILENAME_INDICATORS = set([pypetconstants.LOG_ENV,
+                           pypetconstants.LOG_PROC,
+                           pypetconstants.LOG_TRAJ,
+                           pypetconstants.LOG_RUN,
+                           '.log',
+                           '.txt' ])
+"""Set of strings that mark a log file"""
 
 LOGGING_DICT = {
     'version': 1,
@@ -313,6 +313,8 @@ class LoggingManager(object):
         self.report_progress = report_progress
         self._tools = []
         self._null_handler = NullHandler()
+        self._format_string = 'PROGRESS: Finished %d/%d runs '
+        # Format string for the progressbar
 
     def __getstate__(self):
         """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
@@ -332,26 +334,33 @@ class LoggingManager(object):
                 logger = logging.getLogger(logger_name)
 
             if finish:
-                real_n = total_runs - 1
+                completed_n = total_runs - 1
             elif multiproc:
-                real_n = n - ncores
+                completed_n = n - ncores
             else:
-                real_n = n - 1
+                completed_n = n - 1
 
             if n == 0:
                 # Reset in the beginning to get a better time estimate
                 progressbar(-1, total_runs, percentage_step=percentage ,
                             logger=None, reset=True)
+                # Compute the number of digits and avoid log10(0)
+                digits = int(math.log10(total_runs + 0.1)) + 1
+                self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '
 
-            if real_n >= 0:
-                fmt_string = 'PROGRESS: Finished %d/%d runs ' % (real_n + 1, total_runs) + '%s'
+            if completed_n >= 0:
+                fmt_string = self._format_string % (completed_n + 1, total_runs) + '%s'
                 reprint = log_level == 0
-                progressbar(real_n, total_runs, percentage_step=percentage,
+                progressbar(completed_n, total_runs, percentage_step=percentage,
                             logger=logger, log_level=log_level,
                             fmt_string=fmt_string, reprint=reprint)
 
     def add_null_handler(self):
-        """Adds a NullHandler to the root logger."""
+        """Adds a NullHandler to the root logger.
+
+        This is simply added to avoid warnings that no logger has been configured.
+
+        """
         root = logging.getLogger()
         root.addHandler(self._null_handler)
 
@@ -548,7 +557,6 @@ class LoggingManager(object):
                 new_dict[key] = log_config[key]
         return new_dict
 
-
     def make_logging_handlers_and_tools(self, multiproc=False):
         """Creates logging handlers and redirects stdout."""
 
@@ -664,17 +672,4 @@ class StdoutToLogger(HasLogger):
             print('Disabled redirection of `stdout`.')
             self._redirection = False
             self._original_steam = None
-
-
-# class RemoveEmptyFileHandler(logging.FileHandler):
-#     """ Simple FileHandler that removes the log file if it is empty"""
-#     def __init__(self, filename, *args, **kwargs):
-#         super(RemoveEmptyFileHandler, self).__init__(filename, *args, **kwargs)
-#         self.filename = os.path.abspath(filename)
-#
-#     def close(self):
-#         """Closes the FileHandler and removes the log file if it is empty."""
-#         super(RemoveEmptyFileHandler, self).close()
-#         if os.path.isfile(self.filename) and os.path.getsize(self.filename) == 0:
-#             os.remove(self.filename)
 

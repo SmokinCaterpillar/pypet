@@ -4,7 +4,7 @@ Library Reference
 
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
 
     ../pypetdoc/environmentdoc
     ../pypetdoc/trajectorydoc

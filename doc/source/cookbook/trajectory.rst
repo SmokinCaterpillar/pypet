@@ -30,13 +30,13 @@ translated into the corresponding long forms.
 
 .. _more-on-trajectories:
 
-======================================
+====================
 More on Trajectories
-======================================
+====================
 
-------------------------------------
+----------
 Trajectory
-------------------------------------
+----------
 
 For some example code on on topics discussed here
 see the :ref:`example-02` script.
@@ -208,30 +208,43 @@ Likewise
 
 adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
 
-Finally, there's an even simpler way to add a parameter or result:
+Finally, there's an even simpler way to add a parameter or result, so called lazy adding.
+You have to turn it on to via `traj.v_lazy_adding=True`
 
+    >>> traj.v_lazy_adding=True
     >>> traj.parameters.myparam = 42, 'I am a useful comment'
 
 Accordingly, this is internally translated into
 
-    >>> traj.parameters.f_add_leaf('myparam', 42, comment='I am a useful comment')
+    >>> traj.parameters.f_add_leaf('myparam', 42, 'I am a useful comment')
 
 Where :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf` is a generic addition function,
 see :ref:`generic-addition` below.
-This only works in case of using the assignment operator ``=`` in combination with
-a tuple of exactly length 2 and the second entry of the tuple being
-a comment string. Thus, if you try to add a new parameter or result this way
-you have to provide a (useful) comment explaining what your data is about.
-And don't you dare simply writing the empty string ``''``!
+This does work for results as well, but you **cannot** pass comments, because
 
-For instance, the following does not work in terms of creating a new parameter:
+    >>> traj.results.myresult = 42, 'I am NOT a comment!'
 
-    >>> traj.parameters.anotherparam = 42
+will create a result with two data items, first being the value ``42`` and the second one
+a string ``'I am NOT a comment'``. Comments can be passed to the standard results only as
+keyword arguments and all *lazy* values are passed as positional arguments.
+Yet, you can pass as many items to a result as you want. This, for instance, is legit:
 
-Instead, this will search for the leaf ``anotherparam`` in the trajectory tree and
-try to change it's value to ``42``. If it doesn't find the parameter, *pypet*
-throws an ``AttributeError``. In contrast, ``traj.paramerer.myparam = 42, 'Comment'`` may also
-throw an ``AtributeError`` but in the opposite case if ``myparam`` already exists in your tree.
+    >>> traj.results.another_result = 42, 43, 44
+    >>> traj.results.another_result.v_comment = 'Result containing 3 integer values'
+    >>> traj.results.another_result[2]
+    44
+
+As long as *lazy adding* is turned on, you cannot change existing values. Thus,
+
+    >>> traj.parameters.myparam = 43
+
+will throw an ``AttributeError`` because ``myparam`` already exists, and has the value ``42``.
+Yet, after turning it off, it works again:
+
+   >>> traj.v_lazy_adding = False
+   >>> traj.par.myparam = 43
+   >>> traj.myparam
+   43
 
 The different ways of adding data are also explained in example :ref:`example-15`.
 
@@ -338,6 +351,79 @@ to the current run, like ``run_00000002``) first. If this fails, it will fall ba
 Accordingly, you have to write less code and post-processing and data analysis become easier.
 
 
+.. _more-on-wildcards:
+
+^^^^^^^^^^^^^^^^^
+More on Wildcards
+^^^^^^^^^^^^^^^^^
+
+So far we have seen that the `'$'` wildcard translates into the current run name.
+Similarly does `crun`.
+So, ``traj.res.runs['$'].myresult`` is equivalent to ``traj.res.runs.crun.myresult``.
+By default, there exists another wildcard called `'$set'` or `crunset`. Both translate to
+grouping of results into buckets of 1000 runs. More precisely, they are translated to
+`run_set_XXXXX` where `XXXXX` is just the set number. So the first 1000 runs are translated
+into ``run_set_00000``, the next 1000 into ``run_set_00001`` and so on.
+
+Why is this useful? Well, if you perform many runs, more than 10,000, HDF5 becomes rather slow,
+because it cannot handle nodes with so many children. Grouping your results into
+buckets simply overcomes this problem. Accordingly, you could add a result as:
+
+    >>> traj.f_add_result('$set.$.myresult', 42)
+
+And all results will be sorted into groups of 1000 runs, like
+``traj.results.run_set_00002.run_00002022`` for run 2022.
+
+This is also shown in :ref:`example-18`.
+
+Moreover, you can actually define your own wildcards or even replace the existing ones.
+When creating a trajectory you can pass particular wildcard functions via ``wildcard_functions``.
+This has to be a dictionary containing tuples of wildcards like ``('$', 'crun)`` as keys and
+translation functions as values. The function needs to take a single argument, that is the
+current run index and resolve it into a name. So it must handle all integers of 0 and larger.
+Moreover, it must also handle `-1` to create a *dummy* name. For instance, you could define
+your own naming scheme via:
+
+.. code-block:: python
+
+    from pypet import Trajectory
+
+    def my_run_names(idx):
+        return 'this_is_run_%d' % d
+
+    my_wildcards = {('$', 'crun'): my_run_names}
+    traj = Trajectory(wildcard_functions=my_wildcards)
+
+Now calling ``traj.f_add_result('mygroup.$.myresult', 42)`` during a run, translates into
+``traj.mygroup.this_is_run_7`` for index 7.
+
+There's basically no constrain on the wildcard functions, except for the one defining
+`('$', 'crun')` because it has to return a unique name for every integer from -1 to infinity.
+However, other wildcards can be more open and group many runs together:
+
+.. code-block:: python
+
+    from pypet import Trajectory
+
+    def my_run_names(idx):
+        return 'this_is_run_%d' % d
+
+    def my_group_names(idx):
+        if idx == -1:
+            return 'dummy_group'
+        elif idx < 9000:
+            return 'smaller_than_9000'
+        else:
+            return 'over_9000'
+
+      my_wildcards = {('$', 'crun'): my_run_names,
+                      ('$mygrouping', 'mygrouping'): my_group_names}
+      traj = Trajectory(wildcard_functions=my_wildcards)
+
+
+Thus, `traj.f_add_result('mygroup.$mygrouping.$.myresult', 42)`` would translate into
+``traj.results.mygroup.over_9000.this_is_run_9009`` for run 9009.``
+
 .. _generic-addition:
 
 ^^^^^^^^^^^^^^^^
@@ -351,14 +437,6 @@ generic functions :func:`~pypet.naturalnaming.NNGroupNode.f_add_group` and
 :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf`. Note however, that the four subtrees are
 reserved. Thus, if you add anything below one of the four, the corresponding
 speciality functions from above are called instead of the generic ones.
-
-Be careful, if you add any items during a single run, which are not located below
-a group called ``run_XXXXXXXX`` (where *run_XXXXXXXXX* is
-the name of your current run) these items
-are not automatically stored and you need to store them manually before the end of the run
-via :func:`~pypet.trajectory.Trajectory.f_store_items` or
-:func:`~pypet.naturalnaming.NNGroupNode.f_store` or
-:func:`~pypet.naturalnaming.NNGroupNode.f_store_child`.
 
 
 .. _more-on-access:

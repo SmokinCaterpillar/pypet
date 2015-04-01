@@ -1,6 +1,6 @@
-======================
+=====================
 FAQs and Known Issues
-======================
+=====================
 
 **Q:** How can I open and inspect an HDF5 file created by *pypet*?
 
@@ -31,6 +31,14 @@ or some similar function!?
     solve linear algebra operations. Yet, there are many
     issues with openBLAS and multiprocessing. To resolve this set the
     environment variables ``OPENBLAS_NUM_THREADS=1`` and ``OMP_NUM_THREADS=1``.
+
+
+**Q:** Exploring many runs (10k+) *pypet* becomes incredibly slow when it comes to
+loading and storing data!?
+
+    **A:** HDF5 has a hard time managing nodes with many children. To avoid this
+    simply group your result into buckets using the `'$set'` wildcard. See also the
+    :ref:`optimization-tips`.
 
 
 **Q:** *pypet* produces enormously large files of several Gigabytes despite them containing

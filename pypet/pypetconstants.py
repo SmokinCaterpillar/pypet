@@ -305,13 +305,16 @@ SHARED_DATA = 'SHARED_DATA_'
 """ An HDF5 data object for direct interaction """
 
 
-
-
 ############# LOGGING ############
 
 LOG_ENV = '$env'
+"""Wildcard replaced by name of environment"""
 LOG_TRAJ = '$traj'
+"""Wildcard replaced by name of trajectory"""
 LOG_RUN = '$run'
+"""Wildcard replaced by name of current run"""
 LOG_PROC = '$proc'
+"""Wildcard replaced by the name of the current process"""
 
 DEFAULT_LOGGING = 'DEFAULT'
+"""Default logging configuration"""

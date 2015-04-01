@@ -21,16 +21,22 @@ explored  *DONE*
 * Change info about summary tables *DONE*
 
 
-* Add doc for new logging
+* Add doc for new logging *DONE*
 
-* Docs for wildcard functions
+* Docs for wildcard functions *DONE*
 
-*  Write doc for config parsing
+*  Write doc for config parsing *Done*
 
 * write tests for wildcards *DONE*
 
-* Document new lazy mode
+* Document new lazy mode  *Done*
 
-* Document new cap feature
+* Document new cap feature *Done*
 
-* Add slots
+* Add slots *DONE*
+
+* Add optimization tips
+
+* Write an example for grouping *DONE*
+
+* Add to FAQs

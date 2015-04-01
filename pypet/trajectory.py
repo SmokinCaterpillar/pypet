@@ -383,11 +383,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return self._wildcard_cache[(wildcards, run_idx)]
         except KeyError:
             translation = self._wildcard_functions[wildcards](run_idx)
-            if len(translation) > pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
-                raise TypeError('Your tranlsated wildcard name is too long `%s` has %d '
-                                'characters but only %d are '
-                                'allowed.' % (translation, len(translation),
-                                              pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH))
             self._wildcard_cache[(wildcards, run_idx)] = translation
             return translation
 

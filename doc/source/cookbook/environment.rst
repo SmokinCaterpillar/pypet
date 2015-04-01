@@ -173,11 +173,15 @@ because most of the time the default settings are sufficient.
 * ``memory_cap``
 
     Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
-    processes are spawned.
+    processes are spawned. Can also be a tuple ``(limit, memory_per_process)``,
+    first value is the cap value (between 0.0 and 1,0),
+    second one is the estimated memory per process in mega bytes (MB).
+    If an estimate is given a new process is not started if
+    the threshold would be crossed including the estimate.
 
 * ``swap_cap``
 
-    Analogous to ``memory_cap`` but the swap memory is considered.
+    Analogous to ``cpu_cap`` but the swap memory is considered.
 
 * ``wrap_mode``
 
@@ -262,7 +266,6 @@ because most of the time the default settings are sufficient.
 
 
     .. _dill: https://pypi.python.org/pypi/dill
-
 
 * ``continue_folder``
 
@@ -467,10 +470,60 @@ like ``print`` statements, for instance. To disable logging of the standard stre
 set ``log_stdout=False``. Note that you should always do this in case you use an interactive
 console like *IPython*. Otherwise your console output will be garbled.
 
-
 After your experiments are finished you can disable logging to files via
 :func:`~pypet.environment.Environment.f_disable_logging`. This also restores the
 standard stream.
+
+You can tweak the standard logging settings via passing the following arguments to the environment.
+`log_folder` specifies a folder where all log-files are stored. `logger_names` is a list
+of logger names to which the standard settings apply. `log_levels` is a list of levels
+with which the specified loggers should be logged.
+
+.. code-block:: python
+
+    import logging
+    from pypet import Environment
+
+    env =  Environment(trajectory='mytraj',
+                     log_folder = './logs/',
+                     logger_nmes = ('pypet', 'MyCustomLogger'),
+                     log_levels=(logging.ERROR, logging.INFO),
+                     log_stdout=True)
+
+
+
+Furthermore, if the standard settings don't suite you at all,
+you can fine grain logging via a logging config file passed via ``log_config='/test/ini.'``.
+This file has to follow the `logging configurations`_ of the logging module.
+
+Additionally, if you create file handlers you can use the following wildcards in the filenames
+which are replaced during runtime:
+
+    :const:`~pypet.pypetconstants.LOG_ENV` ($env) is replaces by the name of the
+    trajectory`s environment.
+
+    :const:`~pypet.pypetconstants.LOG_TRAJ` ($traj) is replaced by the name of the
+    trajectory.
+
+    :const:`~pypet.pypetconstants.LOG_RUN` ($run) is replaced by the name of the current
+    run. If the trajectory is not set to a run 'run_ALL' is used.
+
+    :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
+    current process.
+
+Note that in contrast to the standard logging package, *pypet* will automatically create
+folders for your log-files if these don't exist.
+
+You can further specify settings for multiprocessing logging which will overwrite your current
+settings within each new process. To specify settings only used for multiprocessing,
+simply append `multiproc_` to the sections of the `.ini` file.
+
+An example logging `ini` file including multiprocessing is given below.
+
+Download: :download:`default.ini <../../../pypet/logging/default.ini>`
+
+.. literalinclude:: ../../../pypet/logging/default.ini
+
 
 Furthermore, an environment can also be used as a context manager such that logging
 is automatically disabled in the end:
@@ -505,6 +558,8 @@ This is equivalent to:
 
 
 .. _loggers: https://docs.python.org/2/library/logging.html
+
+.. _`logging configurations`: https://docs.python.org/2/library/logging.config.html#logging-config-fileformat
 
 
 .. _more-on-multiprocessing:
@@ -556,8 +611,9 @@ The data is than passed to the subprocess by forking on OS level and not by pick
 However, this only works under **Linux**. If you use **Windows** and choose ``use_pool=False``
 you still need to rely on pickle_ because **Windows** does not support forking of python processes.
 
-Moreover, if you **enable** multiprocessing and **disable** pool usage, besides the maximum number of
-utilized processors ``ncores``, you can specify usage cap levels with ``cpu_cap``, ``memory_cap``,
+Moreover, if you **enable** multiprocessing and **disable** pool usage,
+besides the maximum number of utilized processors ``ncores``,
+you can specify usage cap levels with ``cpu_cap``, ``memory_cap``,
 and ``swap_cap`` as fractions of the maximum capacity.
 Values must be chosen larger than 0.0 and smaller or equal to 1.0. If any of these thresholds is
 crossed no new processes will be started by *pypet*. For instance, if you want to use 3 cores
@@ -565,6 +621,12 @@ aka ``ncores=3`` and set a memory cap of ``memory_cap=0.9`` and let's assume tha
 2 processes are started with currently 95 percent of you RAM are occupied.
 Accordingly, *pypet* will not start the third process until RAM usage drops again below
 (or equal to) 90 percent.
+
+In addition, (only) the ``memory_cap`` argument can alternatively be a tuple with two entries:
+ ``(cap, memory_per_process)``. First entry is the cap value between 0.0 and 1.0 and the second
+ one is the estimated memory per process in mega-bytes (MB). If you specify such an estimate,
+ starting a new process is suspended if the threshold would be reached including the estimated
+ memory.
 
 Moreover, to prevent dead-lock *pypet* will regardless of the cap values always start at
 least one process.
@@ -574,7 +636,7 @@ if one of the process that computes your single runs needs more RAM/Swap or CPU 
 value, this is its very own problem.
 The process will **not** be terminated by *pypet*. The process will only cause *pypet* to not start
 new processes until the utilization falls below the threshold again.
-In order to use this cap feature you need the psutil_ package.
+In order to use this cap feature, you need the psutil_ package.
 
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
@@ -743,9 +805,9 @@ for eye-balling.
 
 .. _more-on-duplicate-comments:
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-HDF5 Purging  of duplicate Comments
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HDF5 Purging of Duplicate Comments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Adding a result with the same comment in every single run, may create
 a lot of overhead. Since the very same comment would be stored in every node in the HDF5 file.
@@ -774,6 +836,42 @@ of the result with the lowest run index is kept.
 overview tables for *group* nodes, this feature does not work for comments in *group* nodes.
 So try to avoid to adding the same comments over and over again in *group* nodes
 within single runs.
+
+
+.. _more-on-config:
+
+-------------------
+Using a Config File
+-------------------
+
+You are not limited to specify the logging environment within an `.ini` file.
+You can actually specify all settings of the environment and already add some basic parameters
+or config data yourself. Simply pass ``config='my_config_file.ini`` to the environment.
+If your `.ini` file encompasses logging settings, you don't have to pass another ``log_config``.
+
+Anything found in an `environment`, `trajectory` or `storage_service` section is directly
+passed to the environment constructor.
+Yet, you can still specify other setting of the environment. Settings passed to the constructor
+directly take precedence over settings specified in the ini file.
+
+Anything found under `parameters` or `config` is added to the trajectory as
+parameter or config data.
+
+
+An example `ini` file including logging can be found below.
+
+Download: :download:`environment_config.ini <../../../pypet/logging/env_config_test.ini>`
+
+.. literalinclude:: ../../../pypet/logging/env_config_test.ini
+
+Example usage:
+
+.. code-block:: python
+
+     env = Environment(config='path/to/my_config.ini',
+                       multiproc = False # This will set multiproc to `False` regardless of the
+                       # setting within the `my_config.ini` file.
+                       )
 
 
 .. _more-on-running:

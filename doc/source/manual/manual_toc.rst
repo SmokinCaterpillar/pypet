@@ -7,6 +7,7 @@
 
    introduction
    tutorial
-   cookbook
-   examples
+   cookbook_toc
+   examples_toc
+   optimization_tips
    faqs

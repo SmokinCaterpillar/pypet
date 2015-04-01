@@ -38,7 +38,7 @@ try:
     traj.parameters.u = 2
     print('I won`t be reached')
 except AttributeError as exc:
-    print('Told you: `%s`' % str(exc))
+    print('Told you: `%s`' % repr(exc))
 # See:
 print('u=' + str(traj.par.u))
 

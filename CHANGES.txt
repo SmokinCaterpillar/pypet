@@ -31,7 +31,7 @@ pypet 0.1b.10
 *   Environment now supports `git_fail` option to fail if there are not committed changes
     instead of triggering a new commit.
 
-*   Users can now define their own functions to produce run-names.
+*   Users can now define their own functions to produce run-names
 
 *   Likewise users can define their onw wildcards
 
@@ -49,6 +49,15 @@ pypet 0.1b.10
 *   The overview about the explored parameters in each run has been removed (due to size)
 
 *   Summary tables are now only based on the comments not the names!
+
+*   One can pass an estimate for memory that each run needs to better protect the memory
+    cap.
+
+*   All tree nodes except the trajectory now use __slots__ for faster and more compact
+    creation.
+
+*   You can now request to load a trajectory without `run_information` to save time for huge
+    trajectories.
 
 
 pypet 0.1b.9
@@ -135,15 +144,12 @@ pypet 0.1b.9
 
 *   BUG FIX: Log files are now closed when the handlers are removed
 
-*   BUG FIX: ``max_depth`` is now really alway in relation to the start node and not
+*   BUG FIX: ``max_depth`` is now really always in relation to the start node and not
     in relation to intermediate results
 
 *   API change for `f_migrate` to match new concept of storage service
 
 *   Short function names for item additions like `f_apar` besides `f_add_parameter`.
-
-*   One can now set ``store_full_in_run=True`` to store the entire trajectory during a
-    single run
 
 *   Abbreviations like `par` and `dpar` can now also be used for item creation and
     are always translated
@@ -157,15 +163,7 @@ pypet 0.1b.9
 
 *   BUG FIX: ``crun`` is now also accepted for adding of data and not only for requests
 
-*    Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
-
-*   One can pass an estimate for memory that each run needs to better protect the memory
-    cap.
-
-*   All tree nodes except the trajectory now use __slots__ for faster and more compact
-    creation.
-
-*   You can now request to load a trajectory without `run_information` to spare time.
+*   Setting `ncores=0` lets *pypet* determine the number of CPUs automatically (requires psutil).
 
 
 pypet 0.1b.8

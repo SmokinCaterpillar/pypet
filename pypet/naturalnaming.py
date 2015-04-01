@@ -2205,8 +2205,6 @@ class NaturalNamingInterface(HasLogger):
 
         run_idx = root.v_idx
 
-
-
         if run_idx > -1:
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
