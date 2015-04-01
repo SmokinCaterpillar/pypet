@@ -57,7 +57,11 @@ pypet 0.1b.10
     creation.
 
 *   You can now request to load a trajectory without `run_information` to save time for huge
-    trajectories.
+    trajectories
+
+*   Trajectories use ordered dictionaries to remember what was added during a single run.
+    Accordingly, now every data added during a single run regardless if they were added below
+    a group `run_XXXXXXXX` is stored.
 
 
 pypet 0.1b.9
