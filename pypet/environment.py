@@ -2054,6 +2054,7 @@ class Environment(HasLogger):
 
                                 # Delete the terminated processes
                                 if not proc.is_alive():
+                                    proc.join()
                                     del process_dict[pid]
                                     del proc
 

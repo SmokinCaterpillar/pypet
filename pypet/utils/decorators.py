@@ -208,9 +208,8 @@ def retry(n, errors, wait=0.0, logger_name=None):
 
                     if logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.exception('Starting the next try, '
-                                     'I could not execute `%s`. '
-                                     '%s' % func.__name__)
+                        logger.exception('I could not execute `%s`, '
+                                         'starting next try. ' % func.__name__)
                     if wait:
                         time.sleep(wait)
         return new_func
