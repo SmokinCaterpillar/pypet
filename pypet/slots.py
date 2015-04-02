@@ -16,6 +16,7 @@ class MetaSlotMachine(type):
     def __init__(cls, name, bases, dictionary):
         super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
         slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
+        # slots might only be a single string, so we need to put these into a tuple
         slots_converted = ((slots,) if isinstance(slots, compat.base_type) else slots
                                     for slots in slots_iterator)
         cls.__all_slots__ = set()

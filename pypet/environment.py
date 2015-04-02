@@ -2422,10 +2422,13 @@ class MultiprocContext(HasLogger):
 
         """
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE and self._queue_process is not None:
-            self._logger.info('Ending the Storage Queue. The Queue will no longer accept data to '
-                              'store!')
+            self._logger.info('The Storage Queue will no longer accept new data. '
+                              'Hang in there for a little while. '
+                              'There still might be some data in the queue that '
+                              'needs to be stored.')
             self._traj.v_storage_service.send_done()
             self._queue_process.join()
+            self._logger.info('The Storage Queue has joined.')
 
         if self._manager is not None:
             self._manager.shutdown()

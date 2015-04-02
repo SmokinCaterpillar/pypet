@@ -31,6 +31,7 @@ def main():
                       file_title='Example_18_Many_Runs',
                       comment='Contains many runs',
                       multiproc=True,
+                      use_pool=True,
                       ncores=2,
                       wrap_mode='QUEUE')
 
@@ -41,8 +42,8 @@ def main():
     traj.f_add_parameter('x', 1, comment='I am the first dimension!')
     traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 
-    # Explore the parameters with a cartesian product, yielding 2500 runs
-    traj.f_explore(cartesian_product({'x': range(50), 'y': range(50)}))
+    # Explore the parameters with a cartesian product, yielding 1200 runs
+    traj.f_explore(cartesian_product({'x': range(30), 'y': range(40)}))
 
     # Run the simulation
     env.f_run(multiply)
@@ -53,7 +54,7 @@ def main():
     # turn auto loading on, since results have not been loaded, yet
     traj.v_auto_load = True
     # Use the `v_idx` functionality
-    traj.v_idx = 2042
+    traj.v_idx = 1042
     print('The result of run %d is: ' % traj.v_idx)
     # Now we can rely on the wildcards
     print(traj.res.crunset.crun.z)
