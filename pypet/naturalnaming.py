@@ -105,8 +105,8 @@ new_group = _NEW_GROUP() # Dummy for lazy adding of new group nodes
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
-    __slots__ = ['_is_leaf', '_stored', '_comment', '_depth', '_full_name', '_name',
-                 '_run_branch', '_branch']
+    __slots__ = ('_is_leaf', '_stored', '_comment', '_depth', '_full_name', '_name',
+                 '_run_branch', '_branch')
 
     def __init__(self, full_name, comment, is_leaf):
         super(NNTreeNode, self).__init__()
@@ -250,14 +250,14 @@ class KnowsTrajectory(object):
     queue, for instance) only the item itself serialized and not the full tree.
 
     """
-    __slots__ = []
+    __slots__ = ()
     KNOWS_TRAJECTORY = True
 
 
 class NNLeafNode(NNTreeNode):
     """ Abstract class interface of result or parameter (see :mod:`pypet.parameter`)"""
 
-    __slots__ = ['_is_parameter']
+    __slots__ = ('_is_parameter',)
 
     def __init__(self, full_name, comment, is_parameter):
         super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, is_leaf=True)
@@ -2345,7 +2345,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     """
 
-    __slots__ = ['_children', '_links', '_groups', '_leaves', '_nn_interface']
+    __slots__ = ('_children', '_links', '_groups', '_leaves', '_nn_interface',)
 
     def __init__(self, full_name='', trajectory=None, comment=''):
         super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
@@ -3234,7 +3234,7 @@ class ParameterGroup(NNGroupNode):
     You can add other groups or parameters to it.
 
     """
-    __slots__ = []
+    __slots__ = ()
 
     def f_add_parameter_group(self, *args, **kwargs):
         """Adds an empty parameter group under the current node.
@@ -3294,7 +3294,7 @@ class ResultGroup(NNGroupNode):
 
     """
 
-    __slots__ = []
+    __slots__ = ()
 
     def f_add_result_group(self, *args, **kwargs):
         """Adds an empty result group under the current node.
@@ -3356,7 +3356,7 @@ class DerivedParameterGroup(NNGroupNode):
 
     """
 
-    __slots__ = []
+    __slots__ = ()
 
     def f_add_derived_parameter_group(self, *args, **kwargs):
         """Adds an empty derived parameter group under the current node.
@@ -3399,7 +3399,7 @@ class ConfigGroup(NNGroupNode):
 
     """
 
-    __slots__ = []
+    __slots__ = ()
 
     def f_add_config_group(self, *args, **kwargs):
         """Adds an empty config group under the current node.

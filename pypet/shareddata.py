@@ -494,7 +494,7 @@ FLAG_CLASS_MAPPING = {
 class SharedResult(Result, KnowsTrajectory):
     """Behaves exactly like the normal `Result` but accepts `SharedData` subclasses as data."""
 
-    __slots__ = ['_traj']
+    __slots__ = ('_traj',)
 
     SUPPORTED_DATA = set(FLAG_CLASS_MAPPING.values())
 

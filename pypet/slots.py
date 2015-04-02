@@ -15,8 +15,11 @@ class MetaSlotMachine(type):
     """
     def __init__(cls, name, bases, dictionary):
         super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
+        slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
+        slots_converted = ((slots,) if isinstance(slots, compat.base_type) else slots
+                                    for slots in slots_iterator)
         cls.__all_slots__ = set()
-        cls.__all_slots__.update(*(getattr(c, '__slots__', ()) for c in cls.__mro__))
+        cls.__all_slots__.update(*slots_converted)
 
 
 def add_metaclass(metaclass):
@@ -34,7 +37,7 @@ def add_metaclass(metaclass):
         slots = cls_dict.get('__slots__', None)
         if slots is not None:
             if isinstance(slots, compat.base_type):
-                slots = [slots]
+                slots = (slots,)
             for slot in slots:
                 cls_dict.pop(slot)
         cls_dict.pop('__dict__', None)
@@ -52,7 +55,7 @@ class HasSlots(object):
     lists all slots.
 
     """
-    __slots__ = ['__weakref__']
+    __slots__ = ('__weakref__',)
 
     def __getstate__(self):
         if hasattr(self, '__dict__'):

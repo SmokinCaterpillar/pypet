@@ -71,7 +71,7 @@ class BrianParameter(Parameter):
     STRING_MODE = 'STRING'
     '''String storage mode'''
 
-    __slots__ = '_storage_mode'
+    __slots__ = ('_storage_mode',)
 
     def __init__(self, full_name, data=None, comment='', storage_mode=FLOAT_MODE):
         super(BrianParameter, self).__init__(full_name, data, comment)
@@ -305,7 +305,7 @@ class BrianResult(Result):
     STRING_MODE = 'STRING'
     '''String storage mode'''
 
-    __slots__ = ['_storage_mode']
+    __slots__ = ('_storage_mode',)
 
     def __init__(self, full_name, *args, **kwargs):
         self._storage_mode = None
@@ -694,7 +694,7 @@ class BrianMonitorResult(Result):
     '''Array storage mode, not recommended if you have many neurons!'''
 
     #keywords=set(['data','values','spikes','times','rate','count','mean_var',])
-    __slots__ = ['_storage_mode', '_monitor_type']
+    __slots__ = ('_storage_mode', '_monitor_type')
 
     def __init__(self, full_name, *args, **kwargs):
 

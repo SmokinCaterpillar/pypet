@@ -25,8 +25,9 @@ from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.utils.helpful_functions import progressbar
 from pypet.shareddata import SharedArray, SharedCArray, SharedEArray,\
-    SharedVLArray, SharedPandasFrame, SharedTable, SharedResult, \
+    SharedVLArray, SharedPandasFrame, SharedTable, SharedResult,\
     StorageContextManager, make_ordinary_result, make_shared_result
+from pypet.slots import HasSlots
 
 
 __all__ = [
@@ -60,6 +61,7 @@ __all__ = [
     TooManyGroupsError.__name__,
     VersionMismatchError.__name__,
     GitDiffError.__name__,
+    HasSlots.__name__,
     HasLogger.__name__,
     rename_log_file.__name__,
     cartesian_product.__name__,

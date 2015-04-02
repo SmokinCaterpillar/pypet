@@ -147,7 +147,7 @@ class BaseParameter(NNLeafNode):
 
     """
 
-    __slots__ = ['_locked', '_full_copy', '_explored']
+    __slots__ = ('_locked', '_full_copy', '_explored')
 
     def __init__(self, full_name, comment=''):
         super(BaseParameter, self).__init__(full_name, comment, is_parameter=True)
@@ -750,7 +750,7 @@ class Parameter(BaseParameter):
 
     """
 
-    __slots__ = ['_data', '_default', '_explored_range']
+    __slots__ = ('_data', '_default', '_explored_range')
 
     def __init__(self, full_name, data=None, comment=''):
         super(Parameter, self).__init__(full_name, comment)
@@ -1230,7 +1230,7 @@ class ArrayParameter(Parameter):
 
     """
 
-    __slots__ = []
+    __slots__ = ()
 
     IDENTIFIER = '__rr__'
     """Identifier to mark stored data as an array"""
@@ -1394,7 +1394,7 @@ class SparseParameter(ArrayParameter):
     OTHER_NAME_LIST = ['format', 'data', 'indices', 'indptr', 'shape']
     """Data names for serialization of csr, csc, and bsr matrices"""
 
-    __slots__ = []
+    __slots__ = ()
 
     def _values_of_same_type(self, val1, val2):
         """Checks if two values agree in type.
@@ -1729,7 +1729,7 @@ class PickleParameter(Parameter):
     """
     PROTOCOL = '__pckl_prtcl__'
 
-    __slots__ = ['_protocol']
+    __slots__ = ('_protocol',)
 
     def __init__(self, full_name, data=None, comment='', protocol=2):
         super(PickleParameter, self).__init__(full_name, data, comment)
@@ -1877,7 +1877,7 @@ class BaseResult(NNLeafNode):
 
     """
 
-    __slots__ = []
+    __slots__ = ()
 
     def __init__(self, full_name, comment=''):
         super(BaseResult, self).__init__(full_name, comment, is_parameter=False)
@@ -1988,7 +1988,7 @@ class Result(BaseResult):
 
     """
 
-    __slots__ = ['_data_']
+    __slots__ = ('_data_',)
 
     SUPPORTED_DATA = set((np.ndarray, ObjectTable,
                        DataFrame, Series, Panel, Panel4D,
@@ -2395,7 +2395,7 @@ class SparseResult(Result):
     IDENTIFIER = SparseParameter.IDENTIFIER
     """Identifier string to label sparse matrix data"""
 
-    __slots__ = []
+    __slots__ = ()
 
     @copydoc(Result.f_set_single)
     def f_set_single(self, name, item):
@@ -2492,7 +2492,7 @@ class PickleResult(Result):
     """
     PROTOCOL = PickleParameter.PROTOCOL
 
-    __slots__ = ['_protocol']
+    __slots__ = ('_protocol',)
 
     def __init__(self, full_name, *args, **kwargs):
         self._protocol = None

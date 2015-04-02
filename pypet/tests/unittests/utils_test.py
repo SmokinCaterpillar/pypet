@@ -3,6 +3,7 @@ __author__ = 'Robert Meyer'
 import time
 import logging
 import sys
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -24,6 +25,8 @@ from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
 from pypet.utils.decorators import retry
 import pypet.compat as compat
+from pypet import HasSlots
+
 
 
 
@@ -321,9 +324,39 @@ class TestIteratorChain(unittest.TestCase):
 
         self.assertEqual(len(elem_list), 9)
 
+class Slots1(HasSlots):
+    __slots__ = 'hi'
+
+
+class Slots2(Slots1):
+    __slots__ = ['ho']
+
+
+class Slots3(Slots2):
+    __slots__ = ('hu', 'he')
+
+
+class Slots4(Slots3):
+    __slots__ = ()
+
+
+class SlotsTest(unittest.TestCase):
+
+    tags = 'unittest', 'utils', 'slots'
+
+    def test_all_slots(self):
+        slot = Slots4()
+        all_slots = set(('hi', 'ho', 'hu', 'he', '__weakref__'))
+        self.assertEqual(all_slots, slot.__all_slots__)
+
+    def test_pickling(self):
+        slot = Slots4()
+        all_slots = set(('hi', 'ho', 'hu', 'he', '__weakref__'))
+        new_slot = pickle.loads(pickle.dumps(slot))
+        self.assertEqual(all_slots, new_slot.__all_slots__)
+
 if __name__ == '__main__':
     opt_args = parse_args()
     run_suite(**opt_args)
-
 
 

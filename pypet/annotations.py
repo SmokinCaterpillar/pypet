@@ -41,7 +41,7 @@ class Annotations(HasSlots):
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
     """
-    __slots__ = ['_dict_']
+    __slots__ = ('_dict_',)
 
     def __init__(self):
         self._dict_ = None
@@ -187,7 +187,7 @@ class Annotations(HasSlots):
 
 class WithAnnotations(HasLogger):
 
-    __slots__ = ['_annotations']
+    __slots__ = ('_annotations',)
 
     def __init__(self):
         self._annotations = Annotations()  # The annotation object to handle annotations
