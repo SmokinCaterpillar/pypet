@@ -40,3 +40,5 @@ explored  *DONE*
 * Write an example for grouping *DONE*
 
 * Add to FAQs *DONE*
+
+* Document new maxsize feature

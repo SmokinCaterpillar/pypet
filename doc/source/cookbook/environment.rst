@@ -143,6 +143,11 @@ because most of the time the default settings are sufficient.
     Thus, if your simulation data cannot be pickled (which is the case for some BRIAN networks,
     for instance), choose ``use_pool=False`` and ``continuable=False`` (see below).
 
+* ``queue_maxsize``
+
+    Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
+    ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+
 * ``cpu_cap``
 
     If ``multiproc=True`` and ``use_pool=False`` you can specify a maximum CPU utilization between

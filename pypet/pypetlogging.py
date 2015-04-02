@@ -39,7 +39,7 @@ FILENAME_INDICATORS = set([pypetconstants.LOG_ENV,
                            pypetconstants.LOG_TRAJ,
                            pypetconstants.LOG_RUN,
                            '.log',
-                           '.txt' ])
+                           '.txt'])
 """Set of strings that mark a log file"""
 
 LOGGING_DICT = {
@@ -94,7 +94,7 @@ LOGGING_DICT = {
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
                                      '%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
-                                                        pypetconstants.LOG_PROC)),
+                                                          pypetconstants.LOG_PROC)),
             'level': 'ERROR'
         }
     }
@@ -113,14 +113,14 @@ def _change_logging_kwargs(kwargs):
     if not isinstance(log_levels, (tuple, list)):
         log_levels = [log_levels]
     if len(log_levels) == 1:
-        log_levels = [log_levels[0] for x in logger_names]
+        log_levels = [log_levels[0] for _ in logger_names]
 
     # We don't want to manipulate the original dictionary
     dictionary = copy.deepcopy(LOGGING_DICT)
 
     # Add all handlers to all loggers
     for prefix in ('', 'multiproc_'):
-        for handler, handler_dict in dictionary[prefix + 'handlers'].items():
+        for handler_dict in dictionary[prefix + 'handlers'].values():
             if 'filename' in handler_dict:
                 handler_dict['filename'] = os.path.join(log_folder, handler_dict['filename'])
         dictionary[prefix + 'loggers'] = {}
@@ -215,9 +215,9 @@ def rename_log_file(traj, filename, process_name=None):
 def get_strings(args):
     """Returns all valid python strings inside a given argument string."""
     string_list = []
-    for it in ast.walk(ast.parse(args)):
-        if isinstance(it, ast.Str):
-            string_list.append(it.s)
+    for elem in ast.walk(ast.parse(args)):
+        if isinstance(elem, ast.Str):
+            string_list.append(elem.s)
     return string_list
 
 
@@ -342,7 +342,7 @@ class LoggingManager(object):
 
             if n == 0:
                 # Reset in the beginning to get a better time estimate
-                progressbar(-1, total_runs, percentage_step=percentage ,
+                progressbar(-1, total_runs, percentage_step=percentage,
                             logger=None, reset=True)
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
@@ -369,7 +369,8 @@ class LoggingManager(object):
         root = logging.getLogger()
         root.removeHandler(self._null_handler)
 
-    def tabula_rasa(self):
+    @staticmethod
+    def tabula_rasa():
         """Removes all loggers and logging handlers and closes them. """
         erase_dict = {'disable_existing_loggers': False, 'version': 1}
         dictConfig(erase_dict)
@@ -641,6 +642,7 @@ class StdoutToLogger(HasLogger):
         state_dict['_original_stream'] = None
 
     def start(self):
+        """Starts redirection of `stdout`"""
         if sys.stdout is not self:
             self._original_steam = sys.stdout
             sys.stdout = self

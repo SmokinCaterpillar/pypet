@@ -77,7 +77,7 @@ def make_ordinary_result(result, key, trajectory=None, reload=True):
     return result
 
 
-def make_shared_result(result, key, trajectory, new_class = None):
+def make_shared_result(result, key, trajectory, new_class=None):
     """Turns an ordinary result into a shared one.
 
     Removes the old result from the trajectory and replaces it.
@@ -373,12 +373,12 @@ class SharedTable(SharedData):
                                                          _col_func=colname is not None))
 
     def reindex_dirty(self, colname=None):
-        return self._request_data('reindex_dirty',  kwargs=dict(colname=colname,
-                                                                _col_func= colname is not None))
+        return self._request_data('reindex_dirty', kwargs=dict(colname=colname,
+                                                                _col_func=colname is not None))
 
     def remove_index(self, colname):
         return self._request_data('remove_index', args=(colname,),
-                                  kwargs=dict( _col_func=True))
+                                  kwargs=dict(_col_func=True))
 
     def create_index(self, colname, optlevel=6,
                        kind='medium', filters=None,

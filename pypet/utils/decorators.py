@@ -201,16 +201,16 @@ def retry(n, errors, wait=0.0, logger_name=None):
             while True:
                 try:
                     return func(*args, **kwargs)
-                except errors as exc:
+                except errors:
                     if retries >= n:
                         raise
                     retries += 1
 
                     if logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.error('Starting the next try, '
-                                     'because I could not execute `%s` due to: '
-                                     '%s' % (func.__name__, repr(exc)))
+                        logger.exception('Starting the next try, '
+                                     'I could not execute `%s`. '
+                                     '%s' % func.__name__)
                     if wait:
                         time.sleep(wait)
         return new_func

@@ -75,8 +75,6 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._queue = storage_queue
         self._set_logger()
         self._pickle_queue = True
-        self._max_tries = 99
-        self._sleep_time = 0.1
 
     @property
     def queue(self):
@@ -94,70 +92,27 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                                   'load data in a multiprocessing environment, use the Lock '
                                   'wrapping.')
 
+    @retry(99, Exception, 0.01, 'pypet.retry')
+    def _put_on_queue(self, to_put):
+        """Puts data on queue"""
+        old_pickle = self._pickle_queue
+        while True:
+            try:
+                self._pickle_queue = False
+                self._queue.put(to_put, 1.42)
+                break
+            except queue.Full:
+                pass  # This is ok, we just keep waiting until space is available
+            finally:
+                self._pickle_queue = old_pickle
+
     def store(self, *args, **kwargs):
         """Puts data to store on queue."""
-        old_pickle = self._pickle_queue
-        try:
-            self._pickle_queue = False
-            self._queue.put(('STORE', args, kwargs))
-        except IOError as exc:
-            # # This is due to a bug in Python, repeating the operation works :-/
-            # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % repr(exc))
-            for trying in range(self._max_tries):
-                try:
-                    self._logger.error('Failed sending task %s to queue, I will try again.' %
-                                       str(('STORE', args, kwargs)))
-                    self._queue.put(('STORE', args, kwargs))
-                    self._logger.error('Queue sending try #%d  was successful!' % trying)
-                    break
-                except IOError as e2:
-                    self._logger.error('Failed putting data to queue due to error: `%s`' % str(e2))
-                    time.sleep(self._sleep_time)
-        except TypeError as exc:
-            # This handles a weird bug under python 3.4 (not 3.3) that sometimes
-            # a NoneType is put on the queue instead of real data which needs to be ignored
-            self._logger.error('Could not put %s because of: %s, '
-                               'I will try again.' %
-                               (str(('STORE', args, kwargs)), repr(exc)))
-            try:
-                self._logger.error(
-                    'Failed sending task `%s` to queue due to: %s. I will try again.' %
-                    (str(('STORE', args, kwargs)), repr(exc)))
-                self._queue.put(('STORE', args, kwargs))
-                self._logger.error('Second queue sending try was successful!')
-            except TypeError as e2:
-                self._logger.error(
-                    'Failed sending task %s to queue due to: %s. I will try one last '
-                    'time again.' %
-                    (str(('STORE', args, kwargs)), str(e2)))
-                self._queue.put(('STORE', args, kwargs))
-                self._logger.error('Third queue sending try was successful!')
-        except Exception as exc:
-            self._logger.error('Could not put %s because of: %s' %
-                               (str(('STORE', args, kwargs)), repr(exc)))
-            raise
-        finally:
-            self._pickle_queue = old_pickle
+        self._put_on_queue(('STORE', args, kwargs))
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
-        try:
-            self._queue.put(('DONE', [], {}))
-        except IOError as exc:
-            # # This is due to a bug in Python, repeating the operation works :-/
-            # # See http://bugs.python.org/issue5155
-            self._logger.error('Failed putting data to queue due to error: `%s`' % repr(exc))
-            for trying in range(self._max_tries):
-                try:
-                    self._logger.error('Failed sending task `DONE` to queue, I will try again.')
-                    self._queue.put(('DONE', [], {}))
-                    self._logger.error('Queue sending try #%d  was successful!' % trying)
-                    break
-                except IOError as e2:
-                    self._logger.error('Failed putting data to queue due to error: `%s`' % str(e2))
-                    time.sleep(self._sleep_time)
-
+        self._put_on_queue(('DONE', [], {}))
 
 class QueueStorageServiceWriter(HasLogger):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
@@ -181,42 +136,63 @@ class QueueStorageServiceWriter(HasLogger):
         self._storage_service.store(pypetconstants.CLOSE_FILE, None)
         self._logger.info('Closed the hdf5 file.')
 
+    @retry(99, Exception, 0.01, 'pypet.retry')
+    def _get_from_queue(self):
+        """Gets data from queue"""
+        result = None
+        while True:
+            try:
+                result = self._queue.get(1.42)
+                self._queue.task_done()
+                break
+            except queue.Empty:
+                pass  # This is ok, we just wait for input
+        return result
+
+    def _handle_data(self, msg, args, kwargs):
+        """Handles data and returns `True` or `False` if everything is done."""
+        stop = False
+        try:
+            if msg == 'DONE':
+                stop = True
+            elif msg == 'STORE':
+                if 'msg' in kwargs:
+                    store_msg = kwargs.pop('msg')
+                else:
+                    store_msg = args[0]
+                    args = args[1:]
+                if 'stuff_to_store' in kwargs:
+                    stuff_to_store = kwargs.pop('stuff_to_store')
+                else:
+                    stuff_to_store = args[0]
+                    args = args[1:]
+                trajectory_name = kwargs['trajectory_name']
+                if self._trajectory_name != trajectory_name:
+                    if self._storage_service.is_open:
+                        self._close_file()
+                    self._trajectory_name = trajectory_name
+                    self._open_file()
+                self._storage_service.store(store_msg, stuff_to_store, *args, **kwargs)
+                self._storage_service.store(pypetconstants.FLUSH, None)
+            else:
+                raise RuntimeError('You queued something that was not '
+                                   'intended to be queued. I did not understand message '
+                                   '`%s`.' % msg)
+        except Exception:
+            self._logger.exception('ERROR occurred during storing!')
+            time.sleep(0.01)
+            pass  # We don't want to kill the queue process in case of an error
+
+        return stop
+
     def run(self):
         """Starts listening to the queue."""
         try:
             while True:
-                try:
-                    msg, args, kwargs = self._queue.get()
-                    self._queue.task_done()
-                    if msg == 'DONE':
-                        break
-                    elif msg == 'STORE':
-                        if 'msg' in kwargs:
-                            store_msg = kwargs.pop('msg')
-                        else:
-                            store_msg = args[0]
-                            args = args[1:]
-                        if 'stuff_to_store' in kwargs:
-                            stuff_to_store = kwargs.pop('stuff_to_store')
-                        else:
-                            stuff_to_store = args[0]
-                            args = args[1:]
-                        trajectory_name = kwargs['trajectory_name']
-                        if self._trajectory_name != trajectory_name:
-                            if self._storage_service.is_open:
-                                self._close_file()
-                            self._trajectory_name = trajectory_name
-                            self._open_file()
-                        self._storage_service.store(store_msg, stuff_to_store, *args, **kwargs)
-                        self._storage_service.store(pypetconstants.FLUSH, None)
-                    else:
-                        raise RuntimeError('You queued something that was not '
-                                           'intended to be queued. I did not understand message '
-                                           '`%s`.' % msg)
-                except Exception as exc:
-                    self._logger.exception('ERROR occurred during storing!')
-                    time.sleep(0.01)
-                    pass  # We don't want to kill the queue process in case of an error
+                msg, args, kwargs = self._get_from_queue()
+                stop = self._handle_data(msg, args, kwargs)
+                if stop:
+                    break
         finally:
             if self._storage_service.is_open:
                 self._close_file()
@@ -261,13 +237,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
-    @retry(10, TypeError, 0.001, 'pypet.retry')
+    @retry(99, TypeError, 0.01, 'pypet.retry')
     def acquire_lock(self):
         if not self._is_locked:
             self._lock.acquire()
             self._is_locked = True
 
-    @retry(10, TypeError, 0.001, 'pypet.retry')
+    @retry(99, TypeError, 0.01, 'pypet.retry')
     def release_lock(self):
         if self._is_locked and not self._storage_service.is_open:
             self._lock.release()
