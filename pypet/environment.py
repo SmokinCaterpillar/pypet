@@ -1912,8 +1912,7 @@ class Environment(HasLogger):
                     iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
 
                     if self._use_pool:
-                        self._logger.info('Starting pool')
-
+                        self._logger.info('Starting Pool')
 
                         self._logging_manager.trajectory = TrajectoryMock(self._traj)
                         init_kwargs = dict(logging_manager=self._logging_manager)
