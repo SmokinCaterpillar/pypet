@@ -177,7 +177,7 @@ class QueueStorageServiceWriter(HasLogger):
         try:
             while True:
                 try:
-                    msg, args, kwargs = self._queue.get(False)
+                    msg, args, kwargs = self._queue.get()
                 except TypeError as exc:
                     # Under python 3.4 sometimes NoneTypes are put on the queue
                     # causing a TypeError. Apart form this sketchy handling, I have
@@ -185,10 +185,7 @@ class QueueStorageServiceWriter(HasLogger):
                     self._logger.error('Could not perform get because of: %s, '
                                        'I will ignore the error and wait for another '
                                        'try.' % repr(exc))
-                    time.sleep(0.001)
-                    continue
-                except queue.Empty:
-                    time.sleep(0.001)
+                    time.sleep(0.01)
                     continue
                 try:
                     if msg == 'DONE':
@@ -225,8 +222,8 @@ class QueueStorageServiceWriter(HasLogger):
                             'You queued something that was not intended to be queued!')
                     self._queue.task_done()
                 except Exception as exc:
-                    self._logger.error('Could not perform get because of: %s' % repr(exc))
-                    raise
+                    self._logger.exception('ERROR occurred during storing!')
+                    pass  # We don't want to kill the queue process in case of an error
         finally:
             if self._storage_service.is_open:
                 self._storage_service.store(pypetconstants.CLOSE_FILE, None)
