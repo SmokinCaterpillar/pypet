@@ -165,12 +165,21 @@ class QueueStorageServiceWriter(HasLogger):
     def __init__(self, storage_service, storage_queue):
         self._storage_service = storage_service
         self._queue = storage_queue
-        self._trajectory_name = None
+        self._trajectory_name = ''
         self._set_logger()
 
     def __repr__(self):
         return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
                                                      repr(self._storage_service))
+
+    def _open_file(self):
+        self._storage_service.store(pypetconstants.OPEN_FILE, None,
+                                    trajectory_name=self._trajectory_name)
+        self._logger.info('Opened the hdf5 file.')
+
+    def _close_file(self):
+        self._storage_service.store(pypetconstants.CLOSE_FILE, None)
+        self._logger.info('Closed the hdf5 file.')
 
     def run(self):
         """Starts listening to the queue."""
@@ -178,16 +187,7 @@ class QueueStorageServiceWriter(HasLogger):
             while True:
                 try:
                     msg, args, kwargs = self._queue.get()
-                except TypeError as exc:
-                    # Under python 3.4 sometimes NoneTypes are put on the queue
-                    # causing a TypeError. Apart form this sketchy handling, I have
-                    # so far no solution
-                    self._logger.error('Could not perform get because of: %s, '
-                                       'I will ignore the error and wait for another '
-                                       'try.' % repr(exc))
-                    time.sleep(0.01)
-                    continue
-                try:
+                    self._queue.task_done()
                     if msg == 'DONE':
                         break
                     elif msg == 'STORE':
@@ -202,33 +202,25 @@ class QueueStorageServiceWriter(HasLogger):
                             stuff_to_store = args[0]
                             args = args[1:]
                         trajectory_name = kwargs['trajectory_name']
-                        if self._trajectory_name is None:
+                        if self._trajectory_name != trajectory_name:
+                            if self._storage_service.is_open:
+                                self._close_file()
                             self._trajectory_name = trajectory_name
-                            if not self._storage_service.is_open:
-                                self._storage_service.store(pypetconstants.OPEN_FILE, None,
-                                                            trajectory_name=trajectory_name)
-                                self._logger.info('Opened the hdf5 file.')
-                        elif self._trajectory_name != trajectory_name:
-                            raise RuntimeError('Cannot store into two different trajectories. '
-                                               'I am supposed to store into %s, '
-                                               'but I should also '
-                                               'store into %s.' %
-                                               (self._trajectory_name, trajectory_name))
-
+                            self._open_file()
                         self._storage_service.store(store_msg, stuff_to_store, *args, **kwargs)
                         self._storage_service.store(pypetconstants.FLUSH, None)
                     else:
-                        raise RuntimeError(
-                            'You queued something that was not intended to be queued!')
-                    self._queue.task_done()
+                        raise RuntimeError('You queued something that was not '
+                                           'intended to be queued. I did not understand message '
+                                           '`%s`.' % msg)
                 except Exception as exc:
                     self._logger.exception('ERROR occurred during storing!')
+                    time.sleep(0.01)
                     pass  # We don't want to kill the queue process in case of an error
         finally:
             if self._storage_service.is_open:
-                self._storage_service.store(pypetconstants.CLOSE_FILE, None)
-
-                self._logger.info('Closed the hdf5 file.')
+                self._close_file()
+            self._trajectory_name = ''
 
 
 class LockWrapper(MultiprocWrapper, HasLogger):
