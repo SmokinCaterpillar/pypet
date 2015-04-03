@@ -355,7 +355,7 @@ Acknowledgements
 
 *   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
-    You might wanna check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
+    You might want to check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
     tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
@@ -376,11 +376,13 @@ to write files to a temporary folder.
 The tests suite will make use of the `tempfile.gettempdir()` function to
 create such a temporary folder.
 
-You can run all tests with `$ python all_tests.py` which can also be found under
+Each test module can be run individually, for instance `$ python trajectory_test.py`.
+
+You can run **all** tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
-You can pass additional arguments as `$ python all_tests.py -k --log_level=20, --folder=myfolder/` 
-with `-k` to keep the HDF5 files created by the tests (if you want to inspect them, otherwise
-they will be deleted after the completed tests), `--loglevel=` to choose a minimum logging level, 
+You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/`
+with `-k` to keep the HDF5 and log files created by the tests 
+(if you want to inspect them, otherwise they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.
 

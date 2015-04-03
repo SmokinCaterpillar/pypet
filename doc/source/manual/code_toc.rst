@@ -13,7 +13,7 @@ Library Reference
     ../pypetdoc/utilsdoc
     ../pypetdoc/pypetexceptionsdoc
     ../pypetdoc/pypetconstantsdoc
-    ../pypetdoc/pypetloggingdoc
+    ../pypetdoc/slotsloggingdoc
     ../pypetdoc/storageservicedoc
     ../pypetdoc/brianparameterdoc
     ../pypetdoc/briannetworkdoc

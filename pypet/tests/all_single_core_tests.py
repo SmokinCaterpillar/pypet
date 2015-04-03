@@ -1,7 +1,5 @@
 __author__ = 'Robert Meyer'
 
-import getopt
-import sys
 
 from pypet.tests.testutils.ioutils import run_suite, TEST_IMPORT_ERROR, discover_tests, \
     parse_args

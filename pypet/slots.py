@@ -33,6 +33,30 @@ def add_metaclass(metaclass):
     Inspired by the *six* module:
     (https://bitbucket.org/gutworth/six/src/784c6a213c4527ea18f86a800f51bf16bc1df5bc/six.py?at=default)
 
+    For example:
+
+    .. code-block:: python
+
+         @add_metaclass(MyMetaClass)
+         class MyClass(object):
+             pass
+
+    is equivalent to
+
+    .. code-block:: python
+
+         class MyClass(object):
+             __metaclass__ = MyMetaClass
+
+    in Python 2 or
+
+    .. code-block:: python
+
+        class MyClass(object, metaclass=MyMetaClass)
+            pass
+
+    in Python 3.
+
     """
     def wrapper(cls):
         cls_dict = cls.__dict__.copy()

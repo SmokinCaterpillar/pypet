@@ -59,7 +59,7 @@ def get_log_path(traj, process_name=None):
 def prepare_log_config():
     """Prepares the test logging init files and creates parsers."""
     conf = testParams['log_config']
-    conf_list = []
+
     pypet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
     init_path = os.path.join(pypet_path, 'logging')
 
@@ -117,10 +117,10 @@ def make_temp_dir(filename):
 
         return os.path.join(testParams['actual_tempdir'], filename)
     except OSError:
-        sys.stderr.write('Cannot create a temp file in the specified folder `%s`. ' %
-                                    testParams['actual_tempdir'] +
-                                    ' I will use pythons gettempdir method instead.')
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
+
+        sys.stderr.write('I used `tempfile.gettempdir()` to create the temporary folder '
+                         '`%s`.\n' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir, filename)
     except:
@@ -128,12 +128,10 @@ def make_temp_dir(filename):
         raise
 
 
-def run_suite(remove=None, folder=None, suite=None, log_level=None, log_config=None):
+def run_suite(remove=None, folder=None, suite=None):
     """Runs a particular test suite or simply unittest.main.
 
     Takes care that all temporary data in `folder` is removed if `remove=True`.
-
-    You can also define a global `log_level`.
 
     """
     if remove is not None:
@@ -141,19 +139,12 @@ def run_suite(remove=None, folder=None, suite=None, log_level=None, log_config=N
 
     testParams['user_tempdir'] = folder
 
-    if log_level is not None:
-        testParams['log_level'] = log_level
-    #logging.basicConfig(level=testParams['log_level'])
-
-    if log_config is not None:
-        testParams['log_config'] = log_config
-
     prepare_log_config()
 
     success = False
     try:
         if suite is None:
-            unittest.main()
+            unittest.main(verbosity=2)
         else:
             runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
@@ -299,7 +290,7 @@ def discover_tests(predicate=None):
 
 def parse_args():
     """Parses arguments and returns a dictionary"""
-    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite=', 'loglevel=', 'logoptions='])
+    opt_list, _ = getopt.getopt(sys.argv[1:],'k',['folder=', 'suite='])
     opt_dict = {}
 
     for opt, arg in opt_list:
@@ -314,14 +305,6 @@ def parse_args():
         if opt == '--suite':
             opt_dict['suite_no'] = arg
             print('I will run suite `%s`.' % arg)
-
-        if opt == '--loglevel':
-            opt_dict['log_level'] = int(arg)
-            print('Using log level %s.' % arg)
-
-        if opt == '--logoptions':
-            opt_dict['log_config'] = arg.split(',')
-            print('Using log options %s.' % arg)
 
     sys.argv = [sys.argv[0]]
     return opt_dict

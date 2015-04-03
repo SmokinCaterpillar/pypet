@@ -22,7 +22,7 @@ If this line is executed in each of your, let's say 100,000 runs, the node ``som
 will have at least 100k children. Hence, storage and loading becomes extremely slow.
 
 The simplest way around this problem is to group your results into buckets using the
-`'$set'` wildcard, see also :ref:`more-on-wildcards`. Accordingly, your result addition becomes:
+``'$set'`` wildcard, see also :ref:`more-on-wildcards`. Accordingly, your result addition becomes:
 
     >>> traj.f_add_result('some_group.$set.$.z', 42, comment='Universal answer.')
 
