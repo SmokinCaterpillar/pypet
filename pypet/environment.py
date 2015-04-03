@@ -1989,7 +1989,6 @@ class Environment(HasLogger):
                                        lock=None,
                                        lock_with_manager=lock_with_manager,
                                        queue=None,
-                                       # Educated guess about the queue size
                                        queue_maxsize=self._queue_maxsize,
                                        start_queue_process=True,
                                        log_config=self._logging_manager.log_config,
@@ -2047,7 +2046,6 @@ class Environment(HasLogger):
                         process_dict = {}  # Dict containing all subprocees
 
                         while len(process_dict) > 0 or keep_running:
-
                             # First check if some processes did finish their job
                             for pid in compat.listkeys(process_dict):
                                 proc = process_dict[pid]

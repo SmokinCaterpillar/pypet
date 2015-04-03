@@ -73,6 +73,8 @@ pypet 0.1b.10
     `sys.__stdout__`. Thus, using another Python interpreter with a redirection of
     `stdout` and calling `f_disable_logging` no longer disables `print` completely.
 
+*   Refactored 'QUEUE' wrapping. The user can now decide the maximum size of the Storage Queue.
+
 
 pypet 0.1b.9
 

@@ -99,7 +99,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         while True:
             try:
                 self._pickle_queue = False
-                self._queue.put(to_put, 1.42)
+                self._queue.put(to_put, block=True, timeout=1.42)
                 break
             except queue.Full:
                 pass  # This is ok, we just keep waiting until space is available
@@ -142,7 +142,7 @@ class QueueStorageServiceWriter(HasLogger):
         result = None
         while True:
             try:
-                result = self._queue.get(1.42)
+                result = self._queue.get(block=True, timeout=1.42)
                 self._queue.task_done()
                 break
             except queue.Empty:

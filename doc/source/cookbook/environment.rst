@@ -656,9 +656,16 @@ the process. This has the advantage that your worker processes are only busy wit
 and are not bothered with writing data to a file.
 More important, they don't spend time waiting for other
 processes to release a thread lock to allow file writing.
-The disadvantage are that you can only store but not load data and
+The disadvantages are that you can only store but not load data and
 storage relies a lot on pickling of data, so often your entire
-trajectory is send over the queue.
+trajectory is send over the queue. Moreover, in case of ``'QUEUE'`` wrapping you can
+choose the ``queue_maxsize`` of elements that can be put on the queue. To few means that
+your worker processes may need to wait until they can put more data on the queue.
+To many could blow up your memory in cases the single runs are actually faster than the storage
+of the data. ``0`` means a queue of infinite size. Default is ``-1`` meaning *pypet*
+makes a conservative estimate of twice te number of processes (i.e. ``2 * ncores``).
+This doesn't sound a lot. However, keep in mind that a single element on the queue might already
+be quite large like the entire data gathered in a single run.
 
 If you chose the ``'LOCK'`` mode, every process will place a lock before it opens the HDF5 file
 for writing data. Thus, only one process at a time stores data. The advantages are the
