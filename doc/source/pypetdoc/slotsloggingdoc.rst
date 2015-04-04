@@ -7,6 +7,7 @@ For performance reasons all tree nodes support slots_.
 They all sub-class the ``HasSlots`` class, which is the top-level class of *pypet*
 (its direct descendant is ``HasLogger``, see below).
 This class provides an ``__all_slots__`` property
+(with the help of the ``MetaSlotMachine`` metaclass)
 that lists all existing ``__slots__`` of a class including the inherited ones.
 Moreover, via ``__getstate__`` and ``__setstate__`` ``HasSlots`` takes care that all
 sub-classes can be pickled with the lowest protocol and don't need to implement
@@ -23,6 +24,12 @@ handle their ``__dict__`` in ``__getstate__`` and ``__setstate__``.
 
 
 .. autofunction:: pypet.slots.add_metaclass
+
+
+.. autoclass:: pypet.slots.MetaSlotMachine
+    :members:
+    :private-members:
+    :special-members:
 
 
 =======
