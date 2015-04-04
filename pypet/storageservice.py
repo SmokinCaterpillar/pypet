@@ -328,8 +328,9 @@ class LazyStorageService(StorageService):
         """Nope, I won't care, dude!"""
         pass
 
-    def store(self, msg, stuff_to_store, *args, **kwargs):
+    def store(self, *args, **kwargs):
         """Do whatever you want, I won't store anything!"""
+        pass
 
 
 class NodeProcessingTimer(HasLogger):

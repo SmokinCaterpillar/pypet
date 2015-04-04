@@ -1,9 +1,9 @@
 __author__ = 'Robert Meyer'
 
 import time
-import logging
 import sys
 import pickle
+from collections import Set, Sequence, Mapping
 
 import pandas as pd
 import numpy as np
@@ -251,6 +251,54 @@ class TestNewTreeTranslation(unittest.TestCase):
 class MyDummy(object):
     pass
 
+class MyDummyWithSlots(object):
+    __slots__ = ('a', 'b')
+
+class MyDummyWithSlots2(HasSlots):
+    __slots__ = ('a', 'b')
+
+
+class MyDummySet(Set):
+    def __init__(self, *args, **kwargs):
+        self._set = set(*args, **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self._set, item)
+
+    def __contains__(self, item):
+        return self._set.__contains__(item)
+
+    def __len__(self):
+        return self._set.__len__()
+
+    def __iter__(self):
+        return self._set.__iter__()
+
+class MyDummyList(Sequence):
+    def __init__(self, *args, **kwargs):
+        self._list = list(*args, **kwargs)
+
+    def __len__(self):
+        return self._list.__len__()
+
+    def __getitem__(self, item):
+        return self._list.__getitem__(item)
+
+    def append(self, item):
+        return self._list.append(item)
+
+class MyDummyMapping(Mapping):
+    def __init__(self, *args, **kwargs):
+        self._dict = dict(*args, **kwargs)
+
+    def __getitem__(self, item):
+        return self._dict.__getitem__(item)
+
+    def __iter__(self):
+        return self._dict.__iter__()
+
+    def __len__(self):
+        return self._dict.__len__()
 
 class TestEqualityOperations(unittest.TestCase):
 
@@ -286,6 +334,43 @@ class TestEqualityOperations(unittest.TestCase):
         a.h = [1, 2, 42]
         b.h = [1, 2, 43]
 
+        self.assertFalse(nested_equal(a, b))
+
+        a = MyDummyWithSlots()
+        a.a = 1
+        a.b = 2
+        b = MyDummyWithSlots2()
+        b.a = 1
+        b.b = 2
+
+        self.assertTrue(nested_equal(a, b))
+
+        a = MyDummySet([1,2,3])
+        a.add(4)
+        b = MyDummySet([1,2,3,4])
+        self.assertTrue(nested_equal(a, b))
+
+        a = MyDummyList([1,2,3])
+        a.append(4)
+        b = MyDummyList([1,2,3,4])
+        self.assertTrue(nested_equal(a, b))
+
+        a = MyDummyMapping(a='b', c=42)
+        b = MyDummyMapping(a='b', c=42)
+        self.assertTrue(nested_equal(a, b))
+
+        a = MyDummySet([1,2,3])
+        a.add(4)
+        b = MyDummySet([1,2,3,5])
+        self.assertFalse(nested_equal(a, b))
+
+        a = MyDummyList([1,2,3])
+        a.append(5)
+        b = MyDummyList([1,2,3,4])
+        self.assertFalse(nested_equal(a, b))
+
+        a = MyDummyMapping(a='b', c=a)
+        b = MyDummyMapping(a='b', c=b)
         self.assertFalse(nested_equal(a, b))
 
 

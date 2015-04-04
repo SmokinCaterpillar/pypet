@@ -25,6 +25,7 @@ handle their ``__dict__`` in ``__getstate__`` and ``__setstate__``.
 
 .. autofunction:: pypet.slots.add_metaclass
 
+.. autofunction:: pypet.slots.get_all_slots
 
 .. autoclass:: pypet.slots.MetaSlotMachine
     :members:

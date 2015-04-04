@@ -2,7 +2,7 @@
 
 __author__ = 'Robert Meyer'
 
-from collections import Sequence, Mapping, Set
+from collections import Sequence, Mapping
 
 try:
     from future_builtins import zip
@@ -17,6 +17,7 @@ import scipy.sparse as spsp
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
+import pypet.slots as slots
 
 
 def results_equal(a, b):
@@ -107,6 +108,27 @@ def parameters_equal(a, b):
     return True
 
 
+def get_all_attributes(instance):
+    """Returns an attribute value dictionary much like `__dict__` but incorporates `__slots__`"""
+    try:
+        result_dict = instance.__dict__.copy()
+    except AttributeError:
+        result_dict = {}
+
+    if hasattr(instance, '__all_slots__'):
+        all_slots = instance.__all_slots__
+    else:
+        all_slots = slots.get_all_slots(instance.__class__)
+
+    for slot in all_slots:
+        result_dict[slot] = getattr(instance, slot)
+
+    result_dict.pop('__dict__', None)
+    result_dict.pop('__weakref__', None)
+
+    return result_dict
+
+
 def nested_equal(a, b):
     """Compares two objects recursively by their elements, also handling numpy objects.
 
@@ -116,95 +138,101 @@ def nested_equal(a, b):
     .. _HERE: http://stackoverflow.com/questions/18376935/best-practice-for-equality-in-python
 
     """
-    try:
-        if a is b:
-            return True
-        # for types that support __eq__
-        try:
-            if spsp.issparse(a):
-                raise TypeError('To not test for equality for sparse matrices.')
-            custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
-            # if equality is implemented
-            if isinstance(custom_eq, (bool, np.bool_)):
-                return custom_eq
-        except (AttributeError, NotImplementedError, TypeError, ValueError):
-            pass
+    if a is b:
+        return True
 
-        if a is None:
-            return b is None
-        if (isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA) and
-              isinstance(b, pypetconstants.PARAMETER_SUPPORTED_DATA)):
-            return a == b
-        if isinstance(a, (pd.Panel, pd.Panel4D)):
-            return nested_equal(a.to_frame(), b.to_frame())
-        if spsp.isspmatrix(a):
-            if a.nnz == 0:
-                return b.nnz == 0
+    if a is None:
+        return b is None
+
+    if (isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA) and
+            isinstance(b, pypetconstants.PARAMETER_SUPPORTED_DATA)):
+        return a == b
+
+    if spsp.isspmatrix(a) and spsp.isspmatrix(b):
+        if a.nnz == 0:
+            return b.nnz == 0
+        else:
+            return not np.any((a != b).data)
+
+    if isinstance(a, (pd.Panel, pd.Panel4D)) and isinstance(b, (pd.Panel, pd.Panel4D)):
+        return nested_equal(a.to_frame(), b.to_frame())
+
+    if isinstance(a, (pd.DataFrame, pd.Series)) and isinstance(b, (pd.DataFrame, pd.Series)):
+        try:
+            if type(a) is not type(b):
+                return False
+            if isinstance(a, pd.DataFrame) and a.empty and b.empty:
+                return True
+            new_frame = a == b
+            new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
+            if isinstance(new_frame, pd.DataFrame):
+                return np.all(new_frame.as_matrix())
             else:
-                return not np.any((a != b).data)
-        if isinstance(a, (pd.DataFrame, pd.Series)):
-            try:
-                if type(a) is not type(b):
-                    return False
-                if isinstance(a, pd.DataFrame) and a.empty and b.empty:
-                    return True
-                new_frame = a == b
-                new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
-                if isinstance(new_frame, pd.DataFrame):
-                    return np.all(new_frame.as_matrix())
+                eq = new_frame.all() # In older pandas versions,
+                # series do not support as_matrix
+                if isinstance(eq, (bool, np.bool_)):
+                    return eq
                 else:
-                    eq = new_frame.all() # In older pandas versions,
-                    # series do not support as_matrix
-                    if isinstance(eq, (bool, np.bool_)):
-                        return eq
-                    else:
-                        raise ValueError('')
-            except (ValueError, TypeError):
-                # The Value Error can happen if the data frame is of dtype=object and contains
-                # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
-                if isinstance(a, pd.DataFrame):
-                    for name in a:
-                        cola = a[name]
-                        if not name in b:
-                            return False
-                        colb = b[name]
-                        if not len(cola) == len(colb):
-                            return False
-                        for idx, itema in enumerate(cola):
-                            itemb = colb[idx]
-                            if not nested_equal(itema, itemb):
-                                return False
-                else:
-                    if not len(a) == len(b):
+                    raise ValueError('')
+        except (ValueError, TypeError):
+            # The Value Error can happen if the data frame is of dtype=object and contains
+            # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
+            if isinstance(a, pd.DataFrame):
+                for name in a:
+                    cola = a[name]
+                    if not name in b:
                         return False
-                    for idx, itema in enumerate(a):
-                        itemb = b[idx]
+                    colb = b[name]
+                    if not len(cola) == len(colb):
+                        return False
+                    for idx, itema in enumerate(cola):
+                        itemb = colb[idx]
                         if not nested_equal(itema, itemb):
                             return False
-                return True
-        if isinstance(a, np.ndarray):
-            if a.shape != b.shape:
-                return False
-            return np.all(a == b)
-        if isinstance(a, Sequence):
-            return all(nested_equal(x, y) for x, y in zip(a, b))
-        if isinstance(a, Mapping):
-            if set(a.keys()) != set(b.keys()):
-                return False
-            return all(nested_equal(a[k], b[k]) for k in a.keys())
-        if isinstance(a, Set):
-            return a == b
+            else:
+                if not len(a) == len(b):
+                    return False
+                for idx, itema in enumerate(a):
+                    itemb = b[idx]
+                    if not nested_equal(itema, itemb):
+                        return False
+            return True
 
-        if hasattr(a, '__dict__'):
-            if not hasattr(b, '__dict__'):
-                return False
+    if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
+        if a.shape != b.shape:
+            return False
+        return np.all(a == b)
 
-            if set(a.__dict__.keys()) != set(b.__dict__.keys()):
-                return False
+    if isinstance(a, Sequence) and isinstance(b, Sequence):
+        return all(nested_equal(x, y) for x, y in zip(a, b))
 
-            return all(nested_equal(a.__dict__[k], b.__dict__[k]) for k in a.__dict__.keys())
+    if isinstance(a, Mapping) and isinstance(b, Mapping):
+        keys_a = a.keys()
+        if set(keys_a) != set(b.keys()):
+            return False
+        return all(nested_equal(a[k], b[k]) for k in keys_a)
 
-        return False
+    # for types that support __eq__
+    try:
+        custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
+        # if equality is implemented
+        if isinstance(custom_eq, (bool, np.bool_)):
+            return custom_eq
+        all_equals = all(custom_eq)
+        if isinstance(all_equals, (bool, np.bool_)):
+            return all_equals
+    except (AttributeError, NotImplementedError, TypeError, ValueError):
+        pass
 
-    except Exception as exc:
-        return False
+    attributes_a = get_all_attributes(a)
+
+    if len(attributes_a) > 0:
+        attributes_b = get_all_attributes(b)
+
+        keys_a = compat.listkeys(attributes_a)
+        if set(keys_a) != set(compat.iterkeys(attributes_b)):
+            return False
+
+        return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
+
+    return False

@@ -6,22 +6,16 @@ __author__ = 'Robert Meyer'
 import pypet.compat as compat
 
 
-class MetaSlotMachine(type):
-    """Meta-class that adds the attribute `__all_slots__` to a class.
-
-    `__all_slots__`  is a set that contains all unique slots of a class,
-    including the ones that are inherited from parents.
-
-    """
-    def __init__(cls, name, bases, dictionary):
-        super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
-        slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
-        # `__slots__` might might only be a single string,
-        # so we need to put the strings into a tuple.
-        slots_converted = ((slots,) if isinstance(slots, compat.base_type) else slots
-                                    for slots in slots_iterator)
-        cls.__all_slots__ = set()
-        cls.__all_slots__.update(*slots_converted)
+def get_all_slots(cls):
+    """Iterates through a class' (`cls`) mro to get all slots as a set."""
+    slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
+    # `__slots__` might only be a single string,
+    # so we need to put the strings into a tuple.
+    slots_converted = ((slots,) if isinstance(slots, compat.base_type) else slots
+                                for slots in slots_iterator)
+    all_slots = set()
+    all_slots.update(*slots_converted)
+    return all_slots
 
 
 def add_metaclass(metaclass):
@@ -70,6 +64,18 @@ def add_metaclass(metaclass):
         cls_dict.pop('__weakref__', None)
         return metaclass(cls.__name__, cls.__bases__, cls_dict)
     return wrapper
+
+
+class MetaSlotMachine(type):
+    """Meta-class that adds the attribute `__all_slots__` to a class.
+
+    `__all_slots__`  is a set that contains all unique slots of a class,
+    including the ones that are inherited from parents.
+
+    """
+    def __init__(cls, name, bases, dictionary):
+        super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
+        cls.__all_slots__ = get_all_slots(cls)
 
 
 @add_metaclass(MetaSlotMachine)
