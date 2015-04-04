@@ -29,19 +29,13 @@ def results_equal(a, b):
     :raises: ValueError if both inputs are no result instances
 
     """
-    if a.v_is_parameter or b.v_is_parameter:
+    if a.v_is_parameter and b.v_is_parameter:
         raise ValueError('Both inputs are not results.')
 
     if a.v_is_parameter or b.v_is_parameter:
         return False
 
-    if not a.v_name == b.v_name:
-        return False
-
-    if not a.v_location == b.v_location:
-        return False
-
-    if not a.v_full_name == b.v_full_name:
+    if a.v_full_name != b.v_full_name:
         return False
 
     if hasattr(a, '_data') and not hasattr(b, '_data'):
@@ -82,13 +76,7 @@ def parameters_equal(a, b):
             not a.v_is_parameter):
         return False
 
-    if not a.v_name == b.v_name:
-        return False
-
-    if not a.v_location == b.v_location:
-        return False
-
-    if not a.v_full_name == b.v_full_name:
+    if a.v_full_name != b.v_full_name:
         return False
 
     if a.f_is_empty() and b.f_is_empty():
@@ -134,7 +122,7 @@ def nested_equal(a, b):
         # for types that support __eq__
         try:
             if spsp.issparse(a):
-                raise TypeError('Too do not test for equality for sparse matrices.')
+                raise TypeError('To not test for equality for sparse matrices.')
             custom_eq = a.__eq__(b)  # Best way I came up with to check in python 2 and 3
             # if equality is implemented
             if isinstance(custom_eq, (bool, np.bool_)):
@@ -142,12 +130,10 @@ def nested_equal(a, b):
         except (AttributeError, NotImplementedError, TypeError, ValueError):
             pass
 
-        # Check equality according to type type [sic].
         if a is None:
             return b is None
-        if isinstance(a, (compat.unicode_type, compat.bytes_type)):
-            return a == b
-        if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
+        if (isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA) and
+              isinstance(b, pypetconstants.PARAMETER_SUPPORTED_DATA)):
             return a == b
         if isinstance(a, (pd.Panel, pd.Panel4D)):
             return nested_equal(a.to_frame(), b.to_frame())
