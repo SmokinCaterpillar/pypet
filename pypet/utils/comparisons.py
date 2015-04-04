@@ -141,11 +141,12 @@ def nested_equal(a, b):
     if a is b:
         return True
 
-    if a is None:
-        return b is None
+    if a is None or b is None:
+        return False
 
-    if (isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA) and
-            isinstance(b, pypetconstants.PARAMETER_SUPPORTED_DATA)):
+    if isinstance(a, pypetconstants.PARAMETER_SUPPORTED_DATA):
+        if not isinstance(b, pypetconstants.PARAMETER_SUPPORTED_DATA):
+            return False
         return a == b
 
     if spsp.isspmatrix(a) and spsp.isspmatrix(b):
@@ -154,10 +155,12 @@ def nested_equal(a, b):
         else:
             return not np.any((a != b).data)
 
-    if isinstance(a, (pd.Panel, pd.Panel4D)) and isinstance(b, (pd.Panel, pd.Panel4D)):
+    if isinstance(a, (pd.Panel, pd.Panel4D)):
+        if not isinstance(b, (pd.Panel, pd.Panel4D)):
+            return False
         return nested_equal(a.to_frame(), b.to_frame())
 
-    if isinstance(a, (pd.DataFrame, pd.Series)) and isinstance(b, (pd.DataFrame, pd.Series)):
+    if isinstance(a, (pd.DataFrame, pd.Series)):
         try:
             if type(a) is not type(b):
                 return False
@@ -173,7 +176,7 @@ def nested_equal(a, b):
                 if isinstance(eq, (bool, np.bool_)):
                     return eq
                 else:
-                    raise ValueError('')
+                    raise ValueError('No boolean value')
         except (ValueError, TypeError):
             # The Value Error can happen if the data frame is of dtype=object and contains
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
@@ -198,15 +201,21 @@ def nested_equal(a, b):
                         return False
             return True
 
-    if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
+    if isinstance(a, np.ndarray):
+        if not isinstance(b, np.ndarray):
+            return False
         if a.shape != b.shape:
             return False
         return np.all(a == b)
 
-    if isinstance(a, Sequence) and isinstance(b, Sequence):
+    if isinstance(a, Sequence):
+        if not isinstance(b, Sequence):
+            return False
         return all(nested_equal(x, y) for x, y in zip(a, b))
 
-    if isinstance(a, Mapping) and isinstance(b, Mapping):
+    if isinstance(a, Mapping):
+        if not isinstance(b, Mapping):
+            return False
         keys_a = a.keys()
         if set(keys_a) != set(b.keys()):
             return False
