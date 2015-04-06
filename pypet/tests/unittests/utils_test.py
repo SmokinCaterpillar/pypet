@@ -318,31 +318,44 @@ class TestEqualityOperations(unittest.TestCase):
     def test_nested_equal(self):
         self.assertTrue(nested_equal(4, 4))
         self.assertFalse(nested_equal(4, 5))
+        self.assertFalse(nested_equal(5, 4))
 
         self.assertTrue(nested_equal(4, np.int8(4)))
+        self.assertTrue(nested_equal(np.int8(4), 4))
 
         self.assertFalse(nested_equal(4, np.int8(5)))
+
+        self.assertFalse(nested_equal( np.int8(5), 4))
 
         frameA = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
         frameB = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
 
         self.assertTrue(nested_equal(frameA, frameB))
+        self.assertTrue(nested_equal(frameB, frameA))
 
         frameB.loc[0,'a'][0,0] = 3
         self.assertFalse(nested_equal(frameA, frameB))
+        self.assertFalse(nested_equal(frameB, frameA))
 
         seriesA = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
         seriesB = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
 
         self.assertTrue(nested_equal(seriesA, seriesB))
 
+        self.assertTrue(nested_equal(seriesB, seriesA))
+
         seriesA.loc[0] = 777
         self.assertFalse(nested_equal(seriesA, seriesB))
+
+        self.assertFalse(nested_equal(seriesB, seriesA))
+
 
         seriesA = pd.Series([1,2,3])
         seriesB = pd.Series([1,2,3])
 
         self.assertTrue(nested_equal(seriesA, seriesB))
+
+        self.assertTrue(nested_equal(seriesB, seriesA))
 
         a = MyDummy()
         a.g = 4
@@ -350,11 +363,14 @@ class TestEqualityOperations(unittest.TestCase):
         b.g = 4
 
         self.assertTrue(nested_equal(a, b))
+        self.assertTrue(nested_equal(b, a))
+
 
         a.h = [1, 2, 42]
         b.h = [1, 2, 43]
 
         self.assertFalse(nested_equal(a, b))
+        self.assertFalse(nested_equal(b, a))
 
         a = MyDummyWithSlots()
         a.a = 1
@@ -365,42 +381,70 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertTrue(nested_equal(a, b))
 
+        self.assertTrue(nested_equal(b, a))
+
         a = MyDummySet([1,2,3])
         a.add(4)
         b = MyDummySet([1,2,3,4])
         self.assertTrue(nested_equal(a, b))
+
+        self.assertTrue(nested_equal(b, a))
 
         a = MyDummyList([1,2,3])
         a.append(4)
         b = MyDummyList([1,2,3,4])
         self.assertTrue(nested_equal(a, b))
 
+        self.assertTrue(nested_equal(b, a))
+
         a = MyDummyMapping(a='b', c=42)
         b = MyDummyMapping(a='b', c=42)
         self.assertTrue(nested_equal(a, b))
+
+        self.assertTrue(nested_equal(b, a))
 
         a = MyDummySet([1,2,3])
         a.add(4)
         b = MyDummySet([1,2,3,5])
         self.assertFalse(nested_equal(a, b))
+        self.assertFalse(nested_equal(b, a))
 
         a = MyDummyList([1,2,3])
         a.append(5)
         b = MyDummyList([1,2,3,4])
         self.assertFalse(nested_equal(a, b))
 
+        self.assertFalse(nested_equal(b, a))
+
         a = MyDummyMapping(a='b', c=a)
         b = MyDummyMapping(a='b', c=b)
         self.assertFalse(nested_equal(a, b))
+
+        self.assertFalse(nested_equal(b, a))
 
         a = MyDummyCMP(42)
         b = MyDummyCMP(42)
 
         self.assertTrue(nested_equal(a, b))
+        self.assertTrue(nested_equal(b, a))
+        if compat.python_major == 2:
+            self.assertTrue(a == b)
 
         b = MyDummyCMP(1)
 
         self.assertFalse(nested_equal(a, b))
+
+        self.assertFalse(nested_equal(b, a))
+        if compat.python_major == 2:
+            self.assertTrue(not (a == b))
+
+        self.assertFalse(nested_equal(a, 22))
+        self.assertFalse(nested_equal(22, a))
+
+        self.assertFalse(nested_equal(None, a))
+        self.assertFalse(nested_equal(a, None))
+
+        self.assertTrue(nested_equal(None, None))
 
 
 class TestIteratorChain(unittest.TestCase):
