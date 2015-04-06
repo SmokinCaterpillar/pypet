@@ -308,6 +308,10 @@ class TestEqualityOperations(unittest.TestCase):
         self.assertTrue(nested_equal(4, 4))
         self.assertFalse(nested_equal(4, 5))
 
+        self.assertTrue(nested_equal(4, np.int8(4)))
+
+        self.assertFalse(nested_equal(4, np.int8(5)))
+
         frameA = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
         frameB = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
 

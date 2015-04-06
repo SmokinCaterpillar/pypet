@@ -253,10 +253,10 @@ def nested_equal(a, b):
         pass
 
     attributes_a = get_all_attributes(a)
-
+    attributes_b = get_all_attributes(b)
+    if len(attributes_a) != len(attributes_b):
+        return False
     if len(attributes_a) > 0:
-        attributes_b = get_all_attributes(b)
-
         keys_a = compat.listkeys(attributes_a)
         if set(keys_a) != set(compat.iterkeys(attributes_b)):
             return False
