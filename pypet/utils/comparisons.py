@@ -246,12 +246,17 @@ def nested_equal(a, b):
     # Equality for general objects
     # for types that support __eq__
     try:
-        equality = a.__eq__(b)
-        if isinstance(equality, (bool, np.bool_)):
-            return equality
+        equality = NotImplemented
+        if hasattr(a, '__eq__'):
+            equality = a.__eq__(b)
+        if equality is NotImplemented and hasattr(b, '__eq__'):
+            equality = b.__eq__(a)
+        if equality is not NotImplemented:
+            return bool(equality)
     except (AttributeError, NotImplementedError, TypeError, ValueError):
         pass
 
+    # Compare objects based on their attributes
     attributes_a = get_all_attributes(a)
     attributes_b = get_all_attributes(b)
     if len(attributes_a) != len(attributes_b):
@@ -263,9 +268,8 @@ def nested_equal(a, b):
 
         return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
 
-    # Finally let's go for simple equality if the rest does not work
-    equality = a == b
-    if isinstance(equality, (bool, np.bool_)):
-        return equality
-    else:
+    # Finally let's go for simple equality in Python 2 this would also consider `__cmp__`
+    try:
+        return bool(a == b)
+    except ValueError:
         return False
