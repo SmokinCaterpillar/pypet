@@ -251,6 +251,14 @@ def nested_equal(a, b):
             equality = a.__eq__(b)
         if equality is NotImplemented and hasattr(b, '__eq__'):
             equality = b.__eq__(a)
+        if equality is NotImplemented and hasattr(a, '__cmp__'):
+            cmp = a.__cmp__(b)
+            if cmp is not NotImplemented:
+                equality = cmp == 0
+        if equality is NotImplemented and hasattr(b, '__cmp__'):
+            cmp = b.__cmp__(a)
+            if cmp is not NotImplemented:
+                equality = cmp == 0
         if equality is not NotImplemented:
             return bool(equality)
     except (AttributeError, NotImplementedError, TypeError, ValueError):
@@ -269,7 +277,4 @@ def nested_equal(a, b):
         return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
 
     # Finally let's go for simple equality in Python 2 this would also consider `__cmp__`
-    try:
-        return bool(a == b)
-    except ValueError:
-        return False
+    return False
