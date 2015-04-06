@@ -257,6 +257,17 @@ class MyDummyWithSlots(object):
 class MyDummyWithSlots2(HasSlots):
     __slots__ = ('a', 'b')
 
+class MyDummyCMP(object):
+    def __init__(self, data):
+        self.data = data
+
+    def __cmp__(self, other):
+        if self.data == other.data:
+            return 0
+        elif self.data < other.data:
+            return -1
+        else:
+            return 1
 
 class MyDummySet(Set):
     def __init__(self, *args, **kwargs):
@@ -380,6 +391,15 @@ class TestEqualityOperations(unittest.TestCase):
 
         a = MyDummyMapping(a='b', c=a)
         b = MyDummyMapping(a='b', c=b)
+        self.assertFalse(nested_equal(a, b))
+
+        a = MyDummyCMP(42)
+        b = MyDummyCMP(42)
+
+        self.assertTrue(nested_equal(a, b))
+
+        b = MyDummyCMP(1)
+
         self.assertFalse(nested_equal(a, b))
 
 

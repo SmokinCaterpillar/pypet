@@ -16,7 +16,6 @@ from pypet.tests.testutils.ioutils import parse_args, run_suite, make_temp_dir,\
 from pypet import Environment
 
 
-
 class LogWhenStored(Result):
 
     def __init__(self, full_name, *args, **kwargs):
@@ -162,8 +161,12 @@ class LoggingTest(TrajectoryComparator):
                     self.assertEqual(count, len(traj))
                     self.assertEqual(store_count, len(traj))
             elif 'ERROR' in file:
-                filesize = os.path.getsize(os.path.join(log_path, file))
-                self.assertEqual(filesize, 0)
+                full_path = os.path.join(log_path, file)
+                filesize = os.path.getsize(full_path)
+                with open(full_path) as fh:
+                    text = fh.read()
+                if 'Retry' not in text:
+                    self.assertEqual(filesize, 0)
             elif 'Queue' in file:
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:

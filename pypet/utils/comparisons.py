@@ -276,5 +276,5 @@ def nested_equal(a, b):
 
         return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
 
-    # Finally let's go for simple equality in Python 2 this would also consider `__cmp__`
+    # Ok they are really not equal
     return False

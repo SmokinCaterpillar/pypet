@@ -200,7 +200,10 @@ def retry(n, errors, wait=0.0, logger_name=None):
             retries = 0
             while True:
                 try:
-                    return func(*args, **kwargs)
+                    result = func(*args, **kwargs)
+                    if retries:
+                        logger.error('Retry of `%s` successful' % func.__name__)
+                    return result
                 except errors:
                     if retries >= n:
                         raise
