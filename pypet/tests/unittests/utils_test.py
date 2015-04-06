@@ -324,6 +324,11 @@ class TestEqualityOperations(unittest.TestCase):
         seriesA.loc[0] = 777
         self.assertFalse(nested_equal(seriesA, seriesB))
 
+        seriesA = pd.Series([1,2,3])
+        seriesB = pd.Series([1,2,3])
+
+        self.assertTrue(nested_equal(seriesA, seriesB))
+
         a = MyDummy()
         a.g = 4
         b = MyDummy()

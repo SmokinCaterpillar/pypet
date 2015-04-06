@@ -176,10 +176,11 @@ def nested_equal(a, b):
     if a_series != b_series:
         return False
     if a_series:
-        eq = (a == b).all()
-        if isinstance(eq, (bool, np.bool_)):
+        try:
+            eq = (a == b).all()
             return eq
-        else:
+        except (TypeError, ValueError):
+            # If Sequence itself contains numpy arrays we get here
             if not len(a) == len(b):
                 return False
             for idx, itema in enumerate(a):
