@@ -83,7 +83,6 @@ class CartesianTest(unittest.TestCase):
                                                     (str(cartesian_dict),str(result_dict)))
 
 
-@unittest.skipIf(sys.version_info < (2, 7, 0), 'progressbar does not work under python 2.6')
 class ProgressBarTest(unittest.TestCase):
 
     tags = 'unittest', 'utils', 'progress_bar'
@@ -148,11 +147,15 @@ class ProgressBarTest(unittest.TestCase):
     def test_progressbar_logging(self):
         logger = get_root_logger()
 
-        total = 22
+        total = 33
 
         for irun in range(total):
             time.sleep(0.005)
             progressbar(irun, total, logger=logger)
+
+        for irun in range(total):
+            time.sleep(0.005)
+            progressbar(irun, total, logger='GetLogger')
 
 class TestFindUnique(unittest.TestCase):
 
