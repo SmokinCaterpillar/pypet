@@ -17,7 +17,7 @@ class MultiprocNoPoolQueueLoggingTest(LoggingTest):
         super(MultiprocNoPoolQueueLoggingTest, self).set_mode()
         self.mode.multiproc = True
         self.mode.wrap_mode = 'QUEUE'
-        self.mode.ncores = 4
+        self.mode.ncores = 2
         self.mode.use_pool = False
 
 
@@ -47,7 +47,7 @@ class MultiprocPoolQueueLoggingTest(LoggingTest):
         super(MultiprocPoolQueueLoggingTest, self).set_mode()
         self.mode.multiproc = True
         self.mode.wrap_mode = 'QUEUE'
-        self.mode.ncores = 4
+        self.mode.ncores = 2
         self.mode.use_pool = True
 
 

@@ -171,7 +171,7 @@ class LoggingTest(TrajectoryComparator):
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 1)
+                    self.assertGreaterEqual(count, 1, '%d < 1 for file %s' % (count, file))
                 else:
                     self.assertEqual(count, 1)
                     if self.mode.wrap_mode == 'QUEUE':
@@ -181,6 +181,7 @@ class LoggingTest(TrajectoryComparator):
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
+        pass
 
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
