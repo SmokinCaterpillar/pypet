@@ -244,25 +244,36 @@ def nested_equal(a, b):
         return all(nested_equal(a[k], b[k]) for k in keys_a)
 
     # Equality for general objects
-    # for types that support __eq__
+    # for types that support __eq__ or __cmp__
+    equality = NotImplemented
     try:
-        equality = NotImplemented
-        if hasattr(a, '__eq__'):
-            equality = a.__eq__(b)
-        if equality is NotImplemented and hasattr(b, '__eq__'):
+        equality = a.__eq__(b)
+    except (AttributeError, NotImplementedError, TypeError, ValueError):
+        pass
+    if equality is NotImplemented:
+        try:
             equality = b.__eq__(a)
-        if equality is NotImplemented and hasattr(a, '__cmp__'):
+        except (AttributeError, NotImplementedError, TypeError, ValueError):
+            pass
+    if equality is NotImplemented:
+        try:
             cmp = a.__cmp__(b)
             if cmp is not NotImplemented:
                 equality = cmp == 0
-        if equality is NotImplemented and hasattr(b, '__cmp__'):
+        except (AttributeError, NotImplementedError, TypeError, ValueError):
+            pass
+    if equality is NotImplemented:
+        try:
             cmp = b.__cmp__(a)
             if cmp is not NotImplemented:
                 equality = cmp == 0
-        if equality is not NotImplemented:
+        except (AttributeError, NotImplementedError, TypeError, ValueError):
+            pass
+    if equality is not NotImplemented:
+        try:
             return bool(equality)
-    except (AttributeError, NotImplementedError, TypeError, ValueError):
-        pass
+        except (AttributeError, NotImplementedError, TypeError, ValueError):
+            pass
 
     # Compare objects based on their attributes
     attributes_a = get_all_attributes(a)
