@@ -93,6 +93,28 @@ class _Progressbar(object):
         self._norm_factor = total * percentage_step / 100.0
         self._current_interval = int((index + 1.0) / self._norm_factor)
 
+    def _get_remaining(self, index):
+        """Calculates remaining time as a string"""
+        try:
+            current_time = datetime.datetime.now()
+            time_delta = current_time - self._start_time
+            try:
+                total_seconds = time_delta.total_seconds()
+            except AttributeError:
+                # for backwards-compatibility
+                # Python 2.6 does not support `total_seconds`
+                total_seconds = ((time_delta.microseconds +
+                                    (time_delta.seconds +
+                                     time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
+            remaining_seconds = int((self._total - self._start_index) *
+                                    total_seconds / float(index - self._start_index) -
+                                    total_seconds)
+            remaining_delta = datetime.timedelta(seconds=remaining_seconds)
+            remaining_str = ', remaining: ' + str(remaining_delta)
+        except ZeroDivisionError:
+            remaining_str = ''
+        return remaining_str
+
     def __call__(self, index, total, percentage_step=5, logger='print', log_level=logging.INFO,
                  reprint=False, time=True, length=20, fmt_string=None,  reset=False):
         """Plots a progress bar to the given `logger` for large for loops.
@@ -142,25 +164,8 @@ class _Progressbar(object):
         ending = index >= self._total_minus_one
 
         if next_interval > self._current_interval or ending or reset:
-            current_time = datetime.datetime.now()
             if time:
-                try:
-                    time_delta = current_time - self._start_time
-                    try:
-                        total_seconds = time_delta.total_seconds()
-                    except AttributeError:
-                        # for backwards-compatibility
-                        # Python 2.6 does not support `total_seconds`
-                        total_seconds = ((time_delta.microseconds +
-                                            (time_delta.seconds +
-                                             time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
-                    remaining_seconds = int((self._total - self._start_index) *
-                                            total_seconds / float(index - self._start_index) -
-                                            total_seconds)
-                    remaining_delta = datetime.timedelta(seconds=remaining_seconds)
-                    remaining_str = ', remaining: ' + str(remaining_delta)
-                except ZeroDivisionError:
-                    remaining_str = ''
+                remaining_str = self._get_remaining(index)
             else:
                 remaining_str = ''
 
