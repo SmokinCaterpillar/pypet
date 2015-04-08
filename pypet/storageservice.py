@@ -93,7 +93,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
                                   'load data in a multiprocessing environment, use the Lock '
                                   'wrapping.')
 
-    @retry(99, Exception, 0.01, 'pypet.retry')
+    @retry(42, Exception, 0.01, 'pypet.retry')
     def _put_on_queue(self, to_put):
         """Puts data on queue"""
         old_pickle = self._pickle_queue
@@ -137,7 +137,7 @@ class QueueStorageServiceWriter(HasLogger):
         self._storage_service.store(pypetconstants.CLOSE_FILE, None)
         self._logger.info('Closed the hdf5 file.')
 
-    @retry(99, Exception, 0.01, 'pypet.retry')
+    @retry(42, Exception, 0.01, 'pypet.retry')
     def _get_from_queue(self):
         """Gets data from queue"""
         result = None
@@ -238,13 +238,13 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """One can access the lock"""
         return self._lock
 
-    @retry(99, TypeError, 0.01, 'pypet.retry')
+    @retry(42, TypeError, 0.01, 'pypet.retry')
     def acquire_lock(self):
         if not self._is_locked:
             self._lock.acquire()
             self._is_locked = True
 
-    @retry(99, TypeError, 0.01, 'pypet.retry')
+    @retry(42, TypeError, 0.01, 'pypet.retry')
     def release_lock(self):
         if self._is_locked and not self._storage_service.is_open:
             self._lock.release()

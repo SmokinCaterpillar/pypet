@@ -147,12 +147,18 @@ class LoggingTest(TrajectoryComparator):
 
         self.assertEqual(len(file_list), length) # assert that there are as many
         # files as runs plus main.txt and errors and warnings
-
+        total_error_count = 0
+        total_store_count = 0
+        total_info_count = 0
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
             count = text.count('INFO_Test!')
+            total_info_count += count
+            error_count = text.count('ERROR_Test!')
+            total_error_count += error_count
             store_count = text.count('STORE_Test!')
+            total_store_count += store_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -171,7 +177,7 @@ class LoggingTest(TrajectoryComparator):
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 1, '%d < 1 for file %s' % (count, file))
+                    self.assertGreaterEqual(count, 0, '%d < 1 for file %s' % (count, file))
                 else:
                     self.assertEqual(count, 1)
                     if self.mode.wrap_mode == 'QUEUE':
@@ -181,7 +187,9 @@ class LoggingTest(TrajectoryComparator):
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
-        pass
+        self.assertEqual(total_store_count, len(traj))
+        self.assertEqual(total_error_count, 0)
+        self.assertEqual(total_info_count, len(traj))
 
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
@@ -219,12 +227,18 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(len(file_list), length) # assert that there are as many
         # files as runs plus main.txt and errors and warnings
 
+        total_error_count = 0
+        total_store_count = 0
+        total_info_count = 0
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
             count = text.count('INFO_Test!')
+            total_info_count += count
             error_count = text.count('ERROR_Test!')
+            total_error_count += error_count
             store_count = text.count('STORE_Test!')
+            total_store_count += store_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -247,8 +261,8 @@ class LoggingTest(TrajectoryComparator):
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 1)
-                    self.assertGreaterEqual(error_count, 1)
+                    self.assertGreaterEqual(count, 0)
+                    self.assertGreaterEqual(error_count, 0)
                 else:
                     self.assertEqual(count, 1)
                     self.assertEqual(error_count, 1)
@@ -270,6 +284,9 @@ class LoggingTest(TrajectoryComparator):
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
+        self.assertEqual(total_store_count, 2*len(traj))
+        self.assertEqual(total_error_count, 2*len(traj))
+        self.assertEqual(total_info_count, len(traj))
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     # @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
@@ -308,12 +325,19 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(len(file_list), length) # assert that there are as many
         # files as runs plus main.txt and errors and warnings
 
+        total_error_count = 0
+        total_store_count = 0
+        total_info_count = 0
+
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
             count = text.count('INFO_Test!')
+            total_info_count += count
             error_count = text.count('ERROR_Test!')
+            total_error_count += error_count
             store_count = text.count('STORE_Test!')
+            total_store_count += store_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -337,7 +361,7 @@ class LoggingTest(TrajectoryComparator):
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
                     self.assertEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 2)
+                    self.assertGreaterEqual(error_count, 0)
                 else:
                     self.assertEqual(count, 0)
                     self.assertEqual(error_count, 2)
@@ -348,7 +372,7 @@ class LoggingTest(TrajectoryComparator):
             elif 'ERROR' in file:
                 if self.mode.multiproc and self.mode.use_pool:
                     self.assertEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 2)
+                    self.assertGreaterEqual(error_count, 0)
                 else:
                     self.assertEqual(count, 0)
                     self.assertEqual(error_count, 2)
@@ -359,6 +383,9 @@ class LoggingTest(TrajectoryComparator):
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
+        self.assertEqual(total_store_count, 4*len(traj))
+        self.assertEqual(total_error_count, 4*len(traj))
+        self.assertEqual(total_info_count, 0)
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
