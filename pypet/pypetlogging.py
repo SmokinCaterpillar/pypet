@@ -273,20 +273,6 @@ class HasLogger(HasSlots):
         self._logger = logging.getLogger(name)
 
 
-class TrajectoryMock(object):
-    """Helper class that mocks properties of a trajectory.
-
-    The full trajectory is not needed to rename a log file.
-    In order to avoid copying the full trajectory during pickling
-    this class is used.
-
-    """
-    def __init__(self, traj):
-        self.v_environment_name = traj.v_environment_name
-        self.v_name = traj.v_name
-        self.v_crun_ = traj.v_crun_
-
-
 class LoggingManager(object):
     """ Manager taking care of all logging related issues.
 

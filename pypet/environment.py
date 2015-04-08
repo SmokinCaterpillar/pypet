@@ -55,7 +55,7 @@ except ImportError:
 
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-from pypet.pypetlogging import LoggingManager, HasLogger, TrajectoryMock, simple_logging_config
+from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -63,9 +63,30 @@ from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
 from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_classes import TrajectoryMock
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
+
+
+_single_run_kwargs = {}
+"""Global helper variable to pass arguments from the pool initializer"""
+
+
+def _pool_init(kwargs):
+    """Helper function that initialises the pool"""
+    global _single_run_kwargs
+    _configure_logging(kwargs)
+    _single_run_kwargs = kwargs
+
+
+def _single_run_pool(kwargs):
+    """Starts a single run for the pool"""
+    idx = kwargs['idx']
+    kwargs.update(_single_run_kwargs)
+    traj = kwargs['traj']
+    traj._make_single_run(idx)
+    return _single_run(kwargs)
 
 
 def _configure_logging(kwargs):
@@ -103,7 +124,7 @@ def _single_run(kwargs):
 
         runkwargs: The keyword arguments handed to the user's job function (as **kwargs)
 
-        clean_up_after_run: Whether to clean up after the run
+        clean_up_runs: Whether to clean up after the run
 
         continue_path: Path for continue files, `None` if continue is not supported
 
@@ -124,11 +145,9 @@ def _single_run(kwargs):
         result_queue = kwargs['result_queue']
         runargs = kwargs['runargs']
         kwrunparams = kwargs['runkwargs']
-        clean_up_after_run = kwargs['clean_up_runs']
+        clean_up_runs = kwargs['clean_up_runs']
         continue_path = kwargs['continue_path']
         automatic_storing = kwargs['automatic_storing']
-
-        use_pool = result_queue is None
         idx = traj.v_idx
 
         pypet_root_logger.info('\n=========================================\n '
@@ -152,7 +171,7 @@ def _single_run(kwargs):
         traj._store_final(store_data=store_data)
 
         # Make some final adjustments to the single run before termination
-        if clean_up_after_run and not multiproc:
+        if clean_up_runs:
             traj._finalize_run()
 
         pypet_root_logger.info('\n=========================================\n '
@@ -166,7 +185,7 @@ def _single_run(kwargs):
             # Trigger Snapshot
             _trigger_result_snapshot(result, continue_path)
 
-        if not use_pool:
+        if result_queue is not None:
             result_queue.put(result)
         else:
             return result
@@ -832,6 +851,9 @@ class Environment(HasLogger):
             raise ValueError('You cannot set `ncores=0` for auto detection of CPUs if you did not '
                              'installed psutil. Please install psutil or '
                              'set `ncores` manually.')
+
+        if use_pool and check_usage:
+            raise ValueError('You cannot use the cap feature with a pool!')
 
         unused_kwargs = set(kwargs.keys())
 
@@ -1746,26 +1768,46 @@ class Environment(HasLogger):
                                             ncores=self._ncores,
                                             finish=finish)
 
+    def _make_kwargs(self, result_queue, total_runs):
+        """Creates the keyword arguments for the single run handling"""
+        result_dict = {'traj': self._traj,
+                       'logging_manager': self._logging_manager,
+                       'runfunc': self._runfunc,
+                       'total_runs': total_runs,
+                       'multiproc': self._multiproc,
+                       'result_queue': result_queue,
+                       'runargs': self._args,
+                       'runkwargs': self._kwargs,
+                       # We don't need to clean up in case we start a new process
+                       # for each run
+                       'clean_up_runs': (self._clean_up_runs and
+                                          (not self._multiproc or self._use_pool)),
+                       'continue_path': self._continue_path,
+                       'automatic_storing': self._automatic_storing}
+        return result_dict
+
     def _make_iterator(self, result_queue, start_run_idx, total_runs):
-        """ Returns an iterator over all runs for multiprocessing """
-        def _do_iter():
+        """ Returns an iterator over all runs """
+
+        def _make_kwargs_for_single_run(idx,):
+            self._traj._make_single_run(idx)
+            return self._make_kwargs(result_queue, total_runs)
+
+        def _make_kwargs_pool(idx):
+            result_dict = {'idx': idx}
+            return result_dict
+
+        def _do_iter(dict_func):
             total_minus_start = total_runs - start_run_idx
             for n in compat.xrange(start_run_idx, total_runs):
                 if not self._traj._is_completed(n):
-                    result_dict = {'traj': self._traj._make_single_run(n),
-                                     'logging_manager': self._logging_manager,
-                                     'runfunc': self._runfunc,
-                                     'total_runs': total_runs,
-                                     'multiproc': self._multiproc,
-                                     'result_queue': result_queue,
-                                     'runargs': self._args,
-                                     'runkwargs': self._kwargs,
-                                     'clean_up_runs': self._clean_up_runs,
-                                     'continue_path': self._continue_path,
-                                     'automatic_storing': self._automatic_storing}
+                    result_dict = dict_func(n)
                     self._show_progress(n - start_run_idx, total_minus_start)
                     yield result_dict
-        return _do_iter()
+        if self._multiproc and self._use_pool:
+            return _do_iter(_make_kwargs_pool)
+        else:
+            return _do_iter(_make_kwargs_for_single_run)
 
     def _execute_postproc(self, results):
         """ Executes a postprocessing function
@@ -1862,23 +1904,7 @@ class Environment(HasLogger):
                                     comment='If trajectory should be stored automatically in the '
                                             'end.').f_lock()
 
-        for idx, pair in enumerate(self._traj._wildcard_functions.items()):
-            wildcards, wc_function = pair
-            for jdx, wildcard in enumerate(wildcards):
-                config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
-                                (self.v_name, idx, jdx))
-                if not self._traj.f_contains('config.' + config_name):
-                    self._traj.f_add_config(Parameter, config_name, wildcard,
-                                    comment='Wildcard symbol for the wildcard function').f_lock()
-            try:
-                source = inspect.getsource(wc_function)
-                config_name = ('environment.%s.wildcards.function_%d.source' %
-                            (self.v_name, idx))
-                if not self._traj.f_contains('config.' + config_name):
-                    self._traj.f_add_config(Parameter, config_name, source,
-                                comment='Source code of wildcard function').f_lock()
-            except Exception:
-                pass  # We cannot find the source, just leave it
+        self._add_wildcard_config()
 
         if self._automatic_storing:
             self._logger.info('\n************************************************************\n'
@@ -1930,6 +1956,38 @@ class Environment(HasLogger):
 
         return results
 
+    def _add_wildcard_config(self):
+        """Adds config data about the wildcard functions"""
+        for idx, pair in enumerate(self._traj._wildcard_functions.items()):
+            wildcards, wc_function = pair
+            for jdx, wildcard in enumerate(wildcards):
+                config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
+                                (self.v_name, idx, jdx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wildcard,
+                                    comment='Wildcard symbol for the wildcard function').f_lock()
+            if hasattr(wc_function, '__name__'):
+                config_name = ('environment.%s.wildcards.function_%d.name' %
+                                (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wc_function.__name__,
+                                    comment='Nme of wildcard function').f_lock()
+            if wc_function.__doc__:
+                config_name = ('environment.%s.wildcards.function_%d.doc' %
+                                (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wc_function.__doc__,
+                                    comment='Docstring of wildcard function').f_lock()
+            try:
+                source = inspect.getsource(wc_function)
+                config_name = ('environment.%s.wildcards.function_%d.source' %
+                            (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, source,
+                                comment='Source code of wildcard function').f_lock()
+            except Exception:
+                pass  # We cannot find the source, just leave it
+
     def _inner_run_loop(self, results):
         """Performs the inner loop of the run execution"""
         start_run_idx = 0
@@ -1978,8 +2036,7 @@ class Environment(HasLogger):
                     pass
                 else:
                     # Prepare Multiprocessing
-                    lock_with_manager = (self._use_pool or
-                                         self._immediate_postproc or
+                    lock_with_manager = (self._immediate_postproc or
                                          not hasattr(os, 'fork'))
 
                     self._multiproc_wrapper = MultiprocContext(self._traj,
@@ -2010,13 +2067,21 @@ class Environment(HasLogger):
                     if self._use_pool:
                         self._logger.info('Starting Pool')
 
-                        self._logging_manager.trajectory = TrajectoryMock(self._traj)
-                        init_kwargs = dict(logging_manager=self._logging_manager)
-                        mpool = multip.Pool(self._ncores, initializer=_configure_logging,
-                                            initargs=(init_kwargs,))
-                        self._logging_manager.trajectory = self._traj
+                        if not hasattr(os, 'fork') and not self._traj.v_full_copy:
+                            self._logger.warning('Your OS does not support forking. Accordingly,'
+                                                 'since you use a pool, I will set `v_full_copy` '
+                                                 'of your trajectory to `True`.')
+                            self._traj.v_full_copy = True
+                            revoke = True
+                        else:
+                            revoke = False
 
-                        pool_results = mpool.imap(_single_run, iterator)
+                        init_kwargs = self._make_kwargs(result_queue, total_runs)
+                        mpool = multip.Pool(self._ncores, initializer=_pool_init,
+                                            initargs=(init_kwargs,))
+
+                        pool_results = mpool.map(_single_run_pool, iterator,
+                                                 chunksize=2 * self._ncores)
 
                         # Everything is done
                         mpool.close()
@@ -2027,6 +2092,10 @@ class Environment(HasLogger):
 
                         self._logger.info('Pool has joined, will delete it.')
                         del mpool
+
+                        if revoke:
+                            self._logger.warning('Setting `v_full_copy back to `False`')
+                            self._traj.v_full_copy = False
 
                     else:
 
@@ -2143,13 +2212,13 @@ class Environment(HasLogger):
                                             iterator = self._make_iterator(result_queue,
                                                                            start_run_idx,
                                                                            total_runs)
-                            time.sleep(0.001)
 
                         # Get all results from the result queue
                         while not result_queue.empty():
                             result = result_queue.get()
                             results.append(result)
-                            result_queue.task_done()
+                            if hasattr(result_queue, 'task_done'):
+                                result_queue.task_done()
                 finally:
 
                     # Finalize the wrapper

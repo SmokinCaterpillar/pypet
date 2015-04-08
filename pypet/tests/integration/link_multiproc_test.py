@@ -40,7 +40,6 @@ class MultiprocLinkLockTest(LinkEnvironmentTest):
         self.use_pool=True
 
 
-
 class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool', 'links'
