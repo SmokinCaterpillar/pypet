@@ -1245,13 +1245,14 @@ class NaturalNamingInterface(HasLogger):
             act_node = start_node
             last_idx = len(split_names) - 1
             add_link = type_name == LINK
+            link_added = False
             # last_name = start_node.v_crun
             for idx, name in enumerate(split_names):
                 if name not in act_node._children:
                     if idx == last_idx:
-
                         if add_link:
                             new_node = self._create_link(act_node, name, instance)
+                            link_added = True
                         elif group_type_name != type_name:
                             # We are at the end of the chain and we add a leaf node
 
@@ -1279,7 +1280,7 @@ class NaturalNamingInterface(HasLogger):
                     if name in self._root_instance._run_information:
                         self._root_instance._run_parent_groups[act_node.v_full_name] = act_node
                     if self._root_instance._is_run:
-                        if add_link:
+                        if link_added:
                             self._root_instance._new_links[(act_node.v_full_name, name)] = \
                                 (act_node, new_node)
                         else:
@@ -1317,8 +1318,8 @@ class NaturalNamingInterface(HasLogger):
         self._links_count[name] = self._links_count[name] - 1
         if self._links_count[name] < 1:
             del self._links_count[name]
-        if (act_node, name) in self._root_instance._new_links:
-            del self._root_instance[(act_node, name)]
+        if (act_node.v_full_name, name) in self._root_instance._new_links:
+            del self._root_instance._new_links[(act_node.v_full_name, name)]
 
     def _create_link(self, act_node, name, instance):
         """Creates a link and checks if names are appropriate

@@ -23,6 +23,7 @@ import multiprocessing as multip
 import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult, Environment
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
+import pypet.compat as compat
 
 import copy
 
@@ -89,11 +90,105 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_config('make.impossible.promises',1)
 
+
         with self.assertRaises(AttributeError):
             self.traj.markus.peter
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
+
+    def test_deletion(self):
+        self.traj.f_add_result('fff', 444)
+        self.traj.f_add_link('jj', self.traj.results)
+        self.assertEqual(len(self.traj._linked_by), 1)
+        self.traj.f_remove_child('results', recursive=True)
+        self.assertEqual(len(self.traj._linked_by), 0)
+        self.assertEqual(len(self.traj._results), 0)
+
+        self.traj.f_remove_child('parameters', recursive=True)
+
+        self.assertEqual(len(self.traj._parameters), 0)
+
+        self.traj.f_remove_child('config', recursive=True)
+
+        self.assertEqual(len(self.traj._config), 0)
+
+        self.traj.f_adpar('ii.promisess',1)
+        self.traj.f_remove_child('derived_parameters', recursive=True)
+
+        self.assertEqual(len(self.traj._derived_parameters), 0)
+
+        self.assertEqual(len(self.traj._all_groups), 0)
+
+        self.assertEqual(len(self.traj._new_nodes), 0)
+        self.assertEqual(len(self.traj._new_links), 0)
+
+        self.assertEqual(len(self.traj._nn_interface._flat_leaf_storage_dict), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 0)
+        self.assertEqual(len(self.traj._nn_interface._links_count), 0)
+
+    def test_deletion_during_run(self):
+        self.traj._make_single_run(0)
+        self.traj._stored = True
+        self.traj.f_add_result('fff', 444)
+        self.traj.f_add_leaf('jjj', 16)
+        self.traj.f_adpar('jjj.promisess',1)
+
+        self.traj.f_add_link('jj', self.traj.results)
+        self.assertEqual(len(self.traj._linked_by), 1)
+
+        self.assertEqual(len(self.traj._new_nodes), 8)
+        self.assertEqual(len(self.traj._new_links), 1)
+
+        self.assertEqual(len(self.traj._nn_interface._flat_leaf_storage_dict), 13)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves), 26)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 26)
+        self.assertEqual(len(self.traj._nn_interface._links_count), 1)
+
+        self.traj.f_remove_child('jjj')
+        self.assertTrue('jjj' not in self.traj._children)
+        self.assertTrue('jjj' not in self.traj._leaves)
+        for child in compat.listkeys(self.traj._groups):
+            self.traj.f_remove_child(child, recursive=True)
+        self.assertEqual(len(self.traj._children), 0)
+        self.assertEqual(len(self.traj._links), 0)
+        self.assertEqual(len(self.traj._groups), 0)
+        self.assertEqual(len(self.traj._leaves), 0)
+
+
+        self.assertEqual(len(self.traj._new_nodes), 0)
+        self.assertEqual(len(self.traj._new_links), 0)
+
+        self.assertEqual(len(self.traj._nn_interface._flat_leaf_storage_dict), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 0)
+        self.assertEqual(len(self.traj._nn_interface._links_count), 0)
+
+        self.traj.f_add_leaf('hh', 16)
+
+        self.traj.f_add_link('jj.dd', 'hh')
+
+        self.assertEqual(len(self.traj._new_nodes), 2)
+        self.assertEqual(len(self.traj._new_links), 1)
+
+        self.assertEqual(len(self.traj._linked_by), 1)
+
+        self.traj.jj.f_remove_link('dd')
+        self.assertEqual(len(self.traj._new_links), 0)
+        self.assertEqual(len(self.traj._linked_by), 0)
+        self.traj.f_remove_child('jj')
+        self.traj.f_remove_child('hh')
+
+        self.assertEqual(len(self.traj._nn_interface._flat_leaf_storage_dict), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves), 0)
+        self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 0)
+        self.assertEqual(len(self.traj._nn_interface._links_count), 0)
+
+        self.assertEqual(len(self.traj._children), 0)
+        self.assertEqual(len(self.traj._links), 0)
+        self.assertEqual(len(self.traj._groups), 0)
+        self.assertEqual(len(self.traj._leaves), 0)
 
     def test_change_properties_with_environment(self):
         filename = make_temp_dir('dummy.h5')
