@@ -55,7 +55,7 @@ except ImportError:
 
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-from pypet.pypetlogging import LoggingManager, HasLogger, TrajectoryMock, simple_logging_config
+from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService
@@ -90,12 +90,8 @@ def _single_run(kwargs):
     :param kwargs: Dict of arguments
 
         traj: The trajectory containing all parameters set to the corresponding run index.
-        
+
         runfunc: The user's job function
-
-        total_runs: Number of total runs (int)
-
-        multiproc: Whether to use multiprocessing
 
         result_queue: A queue object to store results into in case a pool is used, otherwise None
 
@@ -119,8 +115,6 @@ def _single_run(kwargs):
     try:
         traj = kwargs['traj']
         runfunc = kwargs['runfunc']
-        total_runs = kwargs['total_runs']
-        multiproc = kwargs['multiproc']
         result_queue = kwargs['result_queue']
         runargs = kwargs['runargs']
         kwrunparams = kwargs['runkwargs']
@@ -128,8 +122,8 @@ def _single_run(kwargs):
         continue_path = kwargs['continue_path']
         automatic_storing = kwargs['automatic_storing']
 
-        use_pool = result_queue is None
         idx = traj.v_idx
+        total_runs = len(traj)
 
         pypet_root_logger.info('\n=========================================\n '
                   'Starting single run #%d of %d '
@@ -152,7 +146,7 @@ def _single_run(kwargs):
         traj._store_final(store_data=store_data)
 
         # Make some final adjustments to the single run before termination
-        if clean_up_after_run and not multiproc:
+        if clean_up_after_run:
             traj._finalize_run()
 
         pypet_root_logger.info('\n=========================================\n '
@@ -166,7 +160,7 @@ def _single_run(kwargs):
             # Trigger Snapshot
             _trigger_result_snapshot(result, continue_path)
 
-        if not use_pool:
+        if result_queue is not None:
             result_queue.put(result)
         else:
             return result
@@ -343,7 +337,15 @@ class Environment(HasLogger):
     :param use_pool:
 
         Whether to use a fixed pool of processes or whether to spawn a new process
-        for every run. Use the latter if your data cannot be pickled.
+        for every run. Use the former if you perform many runs (50k and more)
+        which are in terms of memory and runtime inexpensive.
+        Be aware that everything you use must be picklable.
+        Use the latter for fewer runs (50k and less) and which are longer lasting
+        and more expensive runs (in terms of memory consumption).
+        In case your operating system allows forking, your data does not need to be
+        picklable.
+        If you choose ``use_pool=False`` you can also make use of the `cap` values,
+        see below.
 
     :param queue_maxsize:
 
@@ -353,7 +355,7 @@ class Environment(HasLogger):
     :param cpu_cap:
 
         If `multiproc=True` and `use_pool=False` you can specify a maximum cpu utilization between
-        0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current cpu
+        0.0 (excluded) and 100.0 (included) as fraction of maximum capacity. If the current cpu
         usage is above the specified level (averaged across all cores),
         *pypet* will not spawn a new process and wait until
         activity falls below the threshold again. Note that in order to avoid dead-lock at least
@@ -361,7 +363,7 @@ class Environment(HasLogger):
         If the threshold is crossed a warning will be issued. The warning won't be repeated as
         long as the threshold remains crossed.
 
-        For example `cpu_cap=0.7`, `ncores=3`, and currently on average 80 percent of your cpu are
+        For example `cpu_cap=70.0`, `ncores=3`, and currently on average 80 percent of your cpu are
         used. Moreover, let's assume that at the moment only 2 processes are
         computing single runs simultaneously. Due to the usage of 80 percent of your cpu,
         *pypet* will wait until cpu usage drops below (or equal to) 70 percent again
@@ -371,10 +373,10 @@ class Environment(HasLogger):
         combined to determine whether a new process can be spawned. Accordingly, if only one
         of these thresholds is crossed, no new processes will be spawned.
 
-        To disable the cap limits simply set all three values to 1.0.
+        To disable the cap limits simply set all three values to 100.0.
 
         You need the psutil_ package to use this cap feature. If not installed and you
-        choose cap values different from 1.0 a ValueError is thrown.
+        choose cap values different from 100.0 a ValueError is thrown.
 
         .. _psutil: http://psutil.readthedocs.org/
 
@@ -382,7 +384,7 @@ class Environment(HasLogger):
 
         Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
         processes are spawned. Can also be a tuple ``(limit, memory_per_process)``,
-        first value is the cap value (between 0.0 and 1,0),
+        first value is the cap value (between 0.0 and 100.0),
         second one is the estimated memory per process in mega bytes (MB).
         If an estimate is given a new process is not started if
         the threshold would be crossed including the estimate.
@@ -767,9 +769,9 @@ class Environment(HasLogger):
                  ncores=1,
                  use_pool=False,
                  queue_maxsize=-1,
-                 cpu_cap=1.0,
-                 memory_cap=1.0,
-                 swap_cap=1.0,
+                 cpu_cap=100.0,
+                 memory_cap=100.0,
+                 swap_cap=100.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  clean_up_runs=True,
                  immediate_postproc=False,
@@ -815,18 +817,18 @@ class Environment(HasLogger):
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
 
-        if (cpu_cap <= 0.0 or cpu_cap > 1.0 or
-            memory_cap[0] <= 0.0 or memory_cap[0] > 1.0 or
-                swap_cap <= 0.0 or swap_cap > 1.0):
+        if (cpu_cap <= 0.0 or cpu_cap > 100.0 or
+            memory_cap[0] <= 0.0 or memory_cap[0] > 100.0 or
+                swap_cap <= 0.0 or swap_cap > 100.0):
             raise ValueError('Please choose cap values larger than 0.0 '
-                             'and smaller or equal to 1.0.')
+                             'and smaller or equal to 100.0.')
 
-        check_usage = cpu_cap < 1.0 or memory_cap[0] < 1.0 or swap_cap < 1.0
+        check_usage = cpu_cap < 100.0 or memory_cap[0] < 100.0 or swap_cap < 100.0
 
         if check_usage and psutil is None:
             raise ValueError('You cannot enable monitoring without having '
                              'installed psutil. Please install psutil or set '
-                             'cpu_cap, memory_cap, and swap_cap to 1.0')
+                             'cpu_cap, memory_cap, and swap_cap to 100.0')
 
         if ncores == 0 and psutil is None:
             raise ValueError('You cannot set `ncores=0` for auto detection of CPUs if you did not '
@@ -835,7 +837,9 @@ class Environment(HasLogger):
 
         unused_kwargs = set(kwargs.keys())
 
-        self._logging_manager = LoggingManager(log_config=log_config, log_stdout=log_stdout,
+        self._logging_manager = LoggingManager(trajectory=None,
+                                               log_config=log_config,
+                                               log_stdout=log_stdout,
                                                report_progress=report_progress)
         self._logging_manager.check_log_config()
         self._logging_manager.add_null_handler()
@@ -852,9 +856,14 @@ class Environment(HasLogger):
             # Total memory in MB
             self._total_memory = psutil.virtual_memory().total / 1024.0 / 1024.0
             # Estimated memory needed by each process as ratio
-            self._est_per_process = self._memory_cap[1] / self._total_memory
+            self._est_per_process = self._memory_cap[1] / self._total_memory * 100.0
         self._swap_cap = swap_cap
         self._check_usage = check_usage
+        self._last_cpu_check = 0.0
+        self._last_cpu_usage = 0.0
+        if self._check_usage:
+            # For initialisation
+            self._estimate_cpu_utilization()
 
         self._sumatra_project = sumatra_project
         self._sumatra_reason = sumatra_reason
@@ -1135,7 +1144,7 @@ class Environment(HasLogger):
 
         :param remove_all_handlers:
 
-            If `True` all logging handlers are closed and removed.
+            If `True` all logging handlers are removed.
             If you want to keep the handlers set to `False`.
 
         """
@@ -1739,32 +1748,36 @@ class Environment(HasLogger):
         self._logger.info('Initialising the storage for the trajectory.')
         self._traj.f_store(only_init=True)
 
-    def _show_progress(self, n, total_runs, finish=False):
+    def _show_progress(self, n, total_runs):
         """Displays a progressbar"""
-        self._logging_manager.show_progress(n, total_runs,
-                                            multiproc=self._multiproc,
-                                            ncores=self._ncores,
-                                            finish=finish)
+        self._logging_manager.show_progress(n, total_runs)
 
-    def _make_iterator(self, result_queue, start_run_idx, total_runs):
-        """ Returns an iterator over all runs for multiprocessing """
+    def _make_kwargs(self, result_queue=None):
+        """Creates the keyword arguments for the single run handling"""
+        result_dict = {'traj': self._traj,
+                       'logging_manager': self._logging_manager,
+                       'runfunc': self._runfunc,
+                       'result_queue': result_queue,
+                       'runargs': self._args,
+                       'runkwargs': self._kwargs,
+                       'clean_up_runs': self._clean_up_runs,
+                       'continue_path': self._continue_path,
+                       'automatic_storing': self._automatic_storing}
+        if self._multiproc:
+            result_dict['clean_up_runs'] = False
+            if self._use_pool:
+                del result_dict['logging_manager']
+        return result_dict
+
+    def _make_iterator(self, start_run_idx, result_queue=None):
+        """ Returns an iterator over all runs """
+        kwargs = self._make_kwargs(result_queue)
+        total_runs = len(self._traj)
         def _do_iter():
-            total_minus_start = total_runs - start_run_idx
             for n in compat.xrange(start_run_idx, total_runs):
                 if not self._traj._is_completed(n):
-                    result_dict = {'traj': self._traj._make_single_run(n),
-                                     'logging_manager': self._logging_manager,
-                                     'runfunc': self._runfunc,
-                                     'total_runs': total_runs,
-                                     'multiproc': self._multiproc,
-                                     'result_queue': result_queue,
-                                     'runargs': self._args,
-                                     'runkwargs': self._kwargs,
-                                     'clean_up_runs': self._clean_up_runs,
-                                     'continue_path': self._continue_path,
-                                     'automatic_storing': self._automatic_storing}
-                    self._show_progress(n - start_run_idx, total_minus_start)
-                    yield result_dict
+                    self._traj._make_single_run(n)
+                    yield kwargs
         return _do_iter()
 
     def _execute_postproc(self, results):
@@ -1785,18 +1798,20 @@ class Environment(HasLogger):
         start_run_idx = 0
         new_runs = 0
 
+        # Do some finalization
+        self._traj._finalize(load_meta_data=False)
+
         old_traj_length = len(self._traj)
         postproc_res = self._postproc(self._traj, results,
                                       *self._postproc_args, **self._postproc_kwargs)
 
+        if isinstance(postproc_res, dict):
+            self._traj.f_expand(postproc_res)
         new_traj_length = len(self._traj)
 
-        if new_traj_length != old_traj_length or isinstance(postproc_res, dict):
+        if new_traj_length != old_traj_length:
             start_run_idx = old_traj_length
             repeat = True
-
-            if isinstance(postproc_res, dict):
-                self._traj.f_expand(postproc_res)
 
             if self._continuable:
                 self._logger.warning('Continuing a trajectory AND expanding it during runtime is '
@@ -1810,17 +1825,25 @@ class Environment(HasLogger):
 
         return repeat, start_run_idx, new_runs
 
+    def _estimate_cpu_utilization(self):
+        """Estimates the cpu utilization within the last 500ms"""
+        now = time.time()
+        if now - self._last_cpu_check >= 0.5:
+            self._last_cpu_usage = psutil.cpu_percent()
+            self._last_cpu_check = now
+        return self._last_cpu_usage
+
     def _estimate_memory_utilization(self, process_dict):
         """Estimates memory utilization to come if process was started"""
         n_processes = len(process_dict)
-        total_utilization = psutil.virtual_memory().percent / 100.0
+        total_utilization = psutil.virtual_memory().percent
         sum = 0.0
         for proc in compat.itervalues(process_dict):
             try:
                 sum += psutil.Process(proc.pid).memory_percent()
             except psutil.NoSuchProcess:
                 pass
-        curr_all_processes = sum / 100.0
+        curr_all_processes = sum
         missing_utilization = max(0.0, n_processes * self._est_per_process - curr_all_processes)
         estimated_utilization = total_utilization
         estimated_utilization += missing_utilization
@@ -1862,23 +1885,7 @@ class Environment(HasLogger):
                                     comment='If trajectory should be stored automatically in the '
                                             'end.').f_lock()
 
-        for idx, pair in enumerate(self._traj._wildcard_functions.items()):
-            wildcards, wc_function = pair
-            for jdx, wildcard in enumerate(wildcards):
-                config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
-                                (self.v_name, idx, jdx))
-                if not self._traj.f_contains('config.' + config_name):
-                    self._traj.f_add_config(Parameter, config_name, wildcard,
-                                    comment='Wildcard symbol for the wildcard function').f_lock()
-            try:
-                source = inspect.getsource(wc_function)
-                config_name = ('environment.%s.wildcards.function_%d.source' %
-                            (self.v_name, idx))
-                if not self._traj.f_contains('config.' + config_name):
-                    self._traj.f_add_config(Parameter, config_name, source,
-                                comment='Source code of wildcard function').f_lock()
-            except Exception:
-                pass  # We cannot find the source, just leave it
+        self._add_wildcard_config()
 
         if self._automatic_storing:
             self._logger.info('\n************************************************************\n'
@@ -1930,6 +1937,38 @@ class Environment(HasLogger):
 
         return results
 
+    def _add_wildcard_config(self):
+        """Adds config data about the wildcard functions"""
+        for idx, pair in enumerate(self._traj._wildcard_functions.items()):
+            wildcards, wc_function = pair
+            for jdx, wildcard in enumerate(wildcards):
+                config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
+                                (self.v_name, idx, jdx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wildcard,
+                                    comment='Wildcard symbol for the wildcard function').f_lock()
+            if hasattr(wc_function, '__name__'):
+                config_name = ('environment.%s.wildcards.function_%d.name' %
+                                (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wc_function.__name__,
+                                    comment='Nme of wildcard function').f_lock()
+            if wc_function.__doc__:
+                config_name = ('environment.%s.wildcards.function_%d.doc' %
+                                (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, wc_function.__doc__,
+                                    comment='Docstring of wildcard function').f_lock()
+            try:
+                source = inspect.getsource(wc_function)
+                config_name = ('environment.%s.wildcards.function_%d.source' %
+                            (self.v_name, idx))
+                if not self._traj.f_contains('config.' + config_name):
+                    self._traj.f_add_config(Parameter, config_name, source,
+                                comment='Source code of wildcard function').f_lock()
+            except Exception:
+                pass  # We cannot find the source, just leave it
+
     def _inner_run_loop(self, results):
         """Performs the inner loop of the run execution"""
         start_run_idx = 0
@@ -1958,252 +1997,32 @@ class Environment(HasLogger):
         if self._continuable:
             self._trigger_continue_snapshot()
 
+
+        self._logger.info(
+            '\n************************************************************\n'
+            'STARTING runs of trajectory\n`%s`.'
+            '\n************************************************************\n' %
+            self._traj.v_name)
+
         while True:
-            total_runs = len(self._traj)
 
             if self._multiproc:
-
-                manager = multip.Manager()
-
-                if not self._use_pool:
-                    # If we spawn a single process for each run, we need an additional queue
-                    # for the results of `runfunc`
-                    if result_queue is None and not self._immediate_postproc:
-                        result_queue = manager.Queue(maxsize=total_runs)
-                    else:
-                        result_queue = manager.Queue()
-
-                if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
-                    # We assume that storage and loading is multiprocessing safe
-                    pass
-                else:
-                    # Prepare Multiprocessing
-                    lock_with_manager = (self._use_pool or
-                                         self._immediate_postproc or
-                                         not hasattr(os, 'fork'))
-
-                    self._multiproc_wrapper = MultiprocContext(self._traj,
-                                       self._wrap_mode,
-                                       full_copy=None,
-                                       manager=manager,
-                                       lock=None,
-                                       lock_with_manager=lock_with_manager,
-                                       queue=None,
-                                       queue_maxsize=self._queue_maxsize,
-                                       start_queue_process=True,
-                                       log_config=self._logging_manager.log_config,
-                                       log_stdout=self._logging_manager.log_stdout)
-
-                    self._multiproc_wrapper.start()
-
-                try:
-
-                    self._logger.info(
-                        '\n************************************************************\n'
-                        'STARTING runs of trajectory\n`%s`\nin parallel with %d cores.'
-                        '\n************************************************************\n' %
-                        (self._traj.v_name, self._ncores))
-
-                    # Create a generator to generate the tasks for multiprocessing
-                    iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
-
-                    if self._use_pool:
-                        self._logger.info('Starting Pool')
-
-                        self._logging_manager.trajectory = TrajectoryMock(self._traj)
-                        init_kwargs = dict(logging_manager=self._logging_manager)
-                        mpool = multip.Pool(self._ncores, initializer=_configure_logging,
-                                            initargs=(init_kwargs,))
-                        self._logging_manager.trajectory = self._traj
-
-                        pool_results = mpool.imap(_single_run, iterator)
-
-                        # Everything is done
-                        mpool.close()
-                        mpool.join()
-
-                        # We want to consistently return a list of results not an iterator
-                        results.extend([result for result in pool_results])
-
-                        self._logger.info('Pool has joined, will delete it.')
-                        del mpool
-
-                    else:
-
-                        if self._check_usage:
-                            self._logger.info(
-                                'Monitoring usage statistics. I will not spawn new processes '
-                                'if one of the following cap thresholds is crossed, '
-                                'CPU: %.2f, RAM: %.2f, Swap: %.2f.' %
-                                (self._cpu_cap, self._memory_cap[0], self._swap_cap))
-                            psutil.cpu_percent()  # Just for initialisation
-
-                        no_cap = True  # Evaluates if new processes are allowed to be started
-                        # or if cap is reached
-                        signal_cap = True  # If True cap warning is emitted
-                        keep_running = True  # Evaluates to false if trajectory produces
-                        # no more single runs
-                        process_dict = {}  # Dict containing all subprocees
-
-                        while len(process_dict) > 0 or keep_running:
-                            # First check if some processes did finish their job
-                            for pid in compat.listkeys(process_dict):
-                                proc = process_dict[pid]
-
-                                # Delete the terminated processes
-                                if not proc.is_alive():
-                                    proc.join()
-                                    del process_dict[pid]
-                                    del proc
-
-                            # Check if caps are reached.
-                            # Cap is only checked if there is at least one
-                            # process working to prevent deadlock.
-                            if self._check_usage and keep_running:
-                                no_cap = True
-                                if len(process_dict) > 0:
-                                    cpu_usage = psutil.cpu_percent() / 100.0
-                                    memory_usage = self._estimate_memory_utilization(process_dict)
-                                    swap_usage = psutil.swap_memory().percent / 100.0
-                                    if cpu_usage > self._cpu_cap:
-                                        no_cap = False
-                                        if signal_cap:
-                                            self._logger.warning(
-                                                'Could not start next process immediately.'
-                                                'CPU Cap reached, %.2f >= %.2f.' %
-                                                (cpu_usage, self._cpu_cap))
-                                            signal_cap = False
-                                    elif memory_usage > self._memory_cap[0]:
-                                        no_cap = False
-                                        if signal_cap:
-                                            self._logger.warning('Could not start next process '
-                                                                 'immediately. Memory Cap '
-                                                                 'including the estimated memory '
-                                                                 'by each process '
-                                                                 'reached, %.2f >= %.2f.' %
-                                                                 (memory_usage,
-                                                                  self._memory_cap[0]))
-                                            signal_cap = False
-                                    elif swap_usage > self._swap_cap:
-                                        no_cap = False
-                                        if signal_cap:
-                                            self._logger.warning('Could not start next process '
-                                                                 'immediately. Swap Cap reached, '
-                                                                 '%.2f >= %.2f.' %
-                                                                 (swap_usage, self._swap_cap))
-                                            signal_cap = False
-
-                            # If we have less active processes than
-                            # self._ncores and there is still
-                            # a job to do, add another process
-                            if len(process_dict) < self._ncores and keep_running and no_cap:
-                                try:
-                                    task = next(iterator)
-                                    proc = multip.Process(target=_logging_and_single_run,
-                                                          args=(task,))
-                                    proc.start()
-                                    process_dict[proc.pid] = proc
-                                    signal_cap = True
-                                except StopIteration:
-                                    # All simulation runs have been started
-                                    keep_running = False
-                                    if self._postproc is not None and self._immediate_postproc:
-                                        while not result_queue.empty():
-                                            result = result_queue.get()
-                                            results.append(result)
-                                            result_queue.task_done()
-
-                                        self._logger.info(
-                                            '\n==================================='
-                                            '=========================\n'
-                                            'Performing IMMEDIATE POSTPROCESSING. '
-                                            'for trajectory\n`%s`'
-                                            '\n==================================='
-                                            '=========================\n' %
-                                            self._traj.v_name)
-
-                                        # Do some finalization to allow normal post-processing
-                                        self._traj._finalize()
-                                        keep_running, start_run_idx, new_runs = \
-                                            self._execute_postproc(results)
-
-                                        if keep_running:
-                                            expanded_by_postproc = True
-                                            self._logger.info(
-                                                '\n================================'
-                                                '============================\n'
-                                                'IMMEDIATE POSTPROCESSING expanded the '
-                                                'trajectory and added %d new runs'
-                                                '\n================================'
-                                                '============================\n' %
-                                                new_runs
-                                            )
-
-                                            total_runs = len(self._traj)
-                                            iterator = self._make_iterator(result_queue,
-                                                                           start_run_idx,
-                                                                           total_runs)
-                            time.sleep(0.001)
-
-                        # Get all results from the result queue
-                        while not result_queue.empty():
-                            result = result_queue.get()
-                            results.append(result)
-                            result_queue.task_done()
-                finally:
-
-                    # Finalize the wrapper
-                    if self._multiproc_wrapper is not None:
-                        self._multiproc_wrapper.f_finalize()
-                        self._multiproc_wrapper = None
-
-                    # Finalize the result queue
-                    if result_queue is not None:
-                        result_queue = None
-
-                total_runs = len(self._traj)
-                self._show_progress(0, total_runs, finish=True)
-
-                self._logger.info(
-                    '\n************************************************************\n'
-                    'FINISHED all runs of trajectory\n`%s`\nin parallel with %d cores.'
-                    '\n************************************************************\n' %
-                    (self._traj.v_name, self._ncores))
-
+                expanded_by_postproc = self._execute_multiprocessing(start_run_idx, results)
             else:
-                # Single Processing
-                self._logger.info(
-                    '\n************************************************************\n'
-                    'STARTING runs of trajectory\n`%s`.'
-                    '\n************************************************************\n' %
-                    self._traj.v_name)
+                # Create a generator to generate the tasks
+                iterator = self._make_iterator(start_run_idx)
 
-                # Create a generator to generate the tasks for multiprocessing
-                iterator = self._make_iterator(result_queue, start_run_idx, total_runs)
-                # Sequentially run all single runs and append the results to a queue
+                n = start_run_idx
+                total_runs = len(self._traj)
                 for task in iterator:
                     result = _single_run(task)
                     results.append(result)
-
-                total_runs = len(self._traj)
-                self._show_progress(0, total_runs, finish=True)
-
-                self._logger.info(
-                    '\n************************************************************\n'
-                    'FINISHED all runs of trajectory\n`%s`.'
-                    '\n************************************************************\n' %
-                    self._traj.v_name)
-
-            # Do some finalization
-            self._traj._finalize()
+                    self._show_progress(n, total_runs)
+                    n += 1
 
             repeat = False
             if self._postproc is not None:
-                self._logger.info(
-                    '\n============================================================\n'
-                    'Performing POSTPROCESSING for trajectory\n`%s`'
-                    '\n============================================================\n' %
-                    self._traj.v_name)
+                self._logger.info('Performing POSTPROCESSING')
 
                 repeat, start_run_idx, new_runs = self._execute_postproc(results)
 
@@ -2211,11 +2030,17 @@ class Environment(HasLogger):
                 break
             else:
                 expanded_by_postproc = True
-                self._logger.info(
-                    '\n============================================================\n'
-                    '  POSTPROCESSING expanded the trajectory and added %d new runs'
-                    '\n============================================================\n' %
-                    new_runs)
+                self._logger.info('POSTPROCESSING expanded the trajectory and added %d new runs' %
+                                  new_runs)
+
+        # Do some finalization
+        self._traj._finalize()
+
+        self._logger.info(
+                    '\n************************************************************\n'
+                    'FINISHED all runs of trajectory\n`%s`.'
+                    '\n************************************************************\n' %
+                    self._traj.v_name)
 
         if self._continuable and self._delete_continue:
             # We remove all continue files if the simulation was successfully completed
@@ -2227,6 +2052,199 @@ class Environment(HasLogger):
                 self._traj.f_add_config(Parameter, config_name, True,
                                         comment='Added if trajectory was expanded '
                                                 'by postprocessing.')
+
+    def _get_results_from_queue(self, result_queue, results, n, total_runs):
+        """Extract all available results from the queue and returns the increased n"""
+        # Get all results from the result queue
+        while not result_queue.empty():
+            result = result_queue.get()
+            results.append(result)
+            if hasattr(result_queue, 'task_done'):
+                result_queue.task_done()
+            self._show_progress(n, total_runs)
+            n += 1
+        return n
+
+    def _execute_multiprocessing(self, start_run_idx, results):
+        """Performs multiprocessing and signals expansion by postproc"""
+        manager = multip.Manager()
+
+        n = start_run_idx
+        total_runs = len(self._traj)
+        expanded_by_postproc = False
+
+        if not self._use_pool:
+            # If we spawn a single process for each run, we need an additional queue
+            # for the results of `runfunc`
+            if hasattr(os, 'fork'):
+                queue_constructor = multip.Queue
+            else:
+                queue_constructor = manager.Queue
+            if self._immediate_postproc:
+                maxsize = 0
+            else:
+                maxsize = total_runs
+
+            result_queue = queue_constructor(maxsize=maxsize)
+        else:
+            result_queue = None
+
+        if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
+            # We assume that storage and loading is multiprocessing safe
+            pass
+        else:
+            # Prepare Multiprocessing
+            lock_with_manager = (self._use_pool or
+                                 self._immediate_postproc or
+                                 not hasattr(os, 'fork'))
+
+            self._multiproc_wrapper = MultiprocContext(self._traj,
+                               self._wrap_mode,
+                               full_copy=None,
+                               manager=manager,
+                               lock=None,
+                               lock_with_manager=lock_with_manager,
+                               queue=None,
+                               queue_maxsize=self._queue_maxsize,
+                               start_queue_process=True,
+                               log_config=self._logging_manager.log_config,
+                               log_stdout=self._logging_manager.log_stdout)
+
+            self._multiproc_wrapper.start()
+
+        try:
+            # Create a generator to generate the tasks for multiprocessing
+            iterator = self._make_iterator(start_run_idx, result_queue)
+
+            if self._use_pool:
+                self._logger.info('Starting Pool')
+
+                init_kwargs = dict(logging_manager=self._logging_manager)
+                mpool = multip.Pool(self._ncores, initializer=_configure_logging,
+                                    initargs=(init_kwargs,))
+
+                pool_results = mpool.imap_unordered(_single_run, iterator)
+
+                for res in pool_results:
+                    results.append(res)
+                    self._show_progress(n, total_runs)
+                    n += 1
+
+                # Everything is done
+                mpool.close()
+                mpool.join()
+
+                self._logger.info('Pool has joined, will delete it.')
+                del mpool
+
+            else:
+
+                if self._check_usage:
+                    self._logger.info(
+                        'Monitoring usage statistics. I will not spawn new processes '
+                        'if one of the following cap thresholds is crossed, '
+                        'CPU: %.1f %%, RAM: %.1f %%, Swap: %.1f %%.' %
+                        (self._cpu_cap, self._memory_cap[0], self._swap_cap))
+
+                signal_cap = True  # If True cap warning is emitted
+                keep_running = True  # Evaluates to false if trajectory produces
+                # no more single runs
+                process_dict = {}  # Dict containing all subprocees
+
+                while len(process_dict) > 0 or keep_running:
+                    # First check if some processes did finish their job
+                    for pid in compat.listkeys(process_dict):
+                        proc = process_dict[pid]
+
+                        # Delete the terminated processes
+                        if not proc.is_alive():
+                            proc.join()
+                            del process_dict[pid]
+                            del proc
+
+                    # Check if caps are reached.
+                    # Cap is only checked if there is at least one
+                    # process working to prevent deadlock.
+                    no_cap = True
+                    if self._check_usage and len(process_dict) > 0:
+                        cpu_usage = self._estimate_cpu_utilization()
+                        memory_usage = self._estimate_memory_utilization(process_dict)
+                        swap_usage = psutil.swap_memory().percent
+                        if cpu_usage > self._cpu_cap:
+                            no_cap = False
+                            if signal_cap:
+                                self._logger.warning(
+                                    'Could not start next process immediately.'
+                                'CPU Cap reached, %.1f >= %.1f.' %
+                                    (cpu_usage, self._cpu_cap))
+                                signal_cap = False
+                        elif memory_usage > self._memory_cap[0]:
+                            no_cap = False
+                            if signal_cap:
+                                self._logger.warning('Could not start next process '
+                                                     'immediately. Memory Cap '
+                                                     'including the estimated memory '
+                                                     'by each process '
+                                                     'reached, %.1f >= %.1f.' %
+                                                     (memory_usage,
+                                                      self._memory_cap[0]))
+                                signal_cap = False
+                        elif swap_usage > self._swap_cap:
+                            no_cap = False
+                            if signal_cap:
+                                self._logger.warning('Could not start next process '
+                                                     'immediately. Swap Cap reached, '
+                                                     '%.1f >= %.1f.' %
+                                                     (swap_usage, self._swap_cap))
+                                signal_cap = False
+
+                    # If we have less active processes than
+                    # self._ncores and there is still
+                    # a job to do, add another process
+                    if len(process_dict) < self._ncores and keep_running and no_cap:
+                        try:
+                            task = next(iterator)
+                            proc = multip.Process(target=_logging_and_single_run,
+                                                  args=(task,))
+                            proc.start()
+                            process_dict[proc.pid] = proc
+
+                            signal_cap = True
+                        except StopIteration:
+                            # All simulation runs have been started
+                            keep_running = False
+                            if self._postproc is not None and self._immediate_postproc:
+
+                                self._logger.info('Performing IMMEDIATE POSTPROCESSING.')
+                                keep_running, start_run_idx, new_runs = \
+                                    self._execute_postproc(results)
+
+                                if keep_running:
+                                    expanded_by_postproc = True
+                                    self._logger.info('IMMEDIATE POSTPROCESSING expanded '
+                                              'the trajectory and added %d '
+                                              'new runs' % new_runs)
+
+                                    n = start_run_idx
+                                    total_runs = len(self._traj)
+                                    iterator = self._make_iterator(start_run_idx, result_queue)
+                    else:
+                        time.sleep(0.001)
+
+                    # Get all results from the result queue
+                    n = self._get_results_from_queue(result_queue, results, n, total_runs)
+                # Finally get all results from the result queue once more
+                self._get_results_from_queue(result_queue, results, n, total_runs)
+        finally:
+
+            # Finalize the wrapper
+            if self._multiproc_wrapper is not None:
+                self._multiproc_wrapper.f_finalize()
+                self._multiproc_wrapper = None
+
+            # Finalize the result queue
+            del result_queue
+        return expanded_by_postproc
 
 class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
@@ -2345,7 +2363,8 @@ class MultiprocContext(HasLogger):
         self._logging_manager = None
 
         if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
-            self._logging_manager = LoggingManager(log_config=log_config,
+            self._logging_manager = LoggingManager(trajectory=self._traj,
+                                                   log_config=log_config,
                                                    log_stdout=log_stdout)
             self._logging_manager.check_log_config()
 
@@ -2413,12 +2432,10 @@ class MultiprocContext(HasLogger):
         queue_handler = QueueStorageServiceWriter(self._storage_service, self._queue)
 
         # Start the queue process
-        self._logging_manager.trajectory = TrajectoryMock(self._traj)
         self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
                                              args=(dict(queue_handler=queue_handler,
                                                         logging_manager=self._logging_manager),))
         self._queue_process.start()
-        self._logging_manager.trajectory = self._traj
 
         # Replace the storage service of the trajectory by a sender.
         # The sender will put all data onto the queue.

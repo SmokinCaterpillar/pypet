@@ -1261,7 +1261,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self.f_shrink(force=True)
             raise
 
-    def _add_run_info(self, idx, name=None, timestamp=42.0, finish_timestamp=1.337,
+    def _add_run_info(self, idx, name='', timestamp=42.0, finish_timestamp=1.337,
                       runtime='forever and ever', time='>>Maybe time`s gone on strike',
                       completed=0, parameter_summary='Not yet my friend!',
                       short_environment_hexsha='notyet!'):
@@ -1274,7 +1274,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             del self._single_run_ids[idx]
             del self._run_information[old_name]
 
-        if name is None:
+        if name == '':
             name = self.f_wildcard('$', idx)
         # The `_single_run_ids` dict is bidirectional and maps indices to run names and vice versa
         self._single_run_ids[name] = idx
@@ -1307,7 +1307,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not par.f_is_empty():
                 par.f_lock()
 
-    def _finalize(self):
+    def _finalize(self, load_meta_data=True):
         """Final rollback initiated by the environment
 
         Restores the trajectory as root of the tree, and loads meta data from disk.
@@ -1317,10 +1317,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         self._is_run = False
         self.f_set_crun(None)
-        self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
-                    load_derived_parameters=pypetconstants.LOAD_NOTHING,
-                    load_results=pypetconstants.LOAD_NOTHING,
-                    load_other_data=pypetconstants.LOAD_NOTHING)
+        if load_meta_data:
+            self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
+                        load_derived_parameters=pypetconstants.LOAD_NOTHING,
+                        load_results=pypetconstants.LOAD_NOTHING,
+                        load_other_data=pypetconstants.LOAD_NOTHING)
 
     @deprecated('Please use `f_load_skeleton` instead.')
     def f_update_skeleton(self):
@@ -1339,7 +1340,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self.f_load(self.v_name, as_new=False, load_parameters=pypetconstants.LOAD_SKELETON,
                     load_derived_parameters=pypetconstants.LOAD_SKELETON,
                     load_results=pypetconstants.LOAD_SKELETON,
-                    load_other_data=pypetconstants.LOAD_SKELETON)
+                    load_other_data=pypetconstants.LOAD_SKELETON,
+                    with_run_information=False)
 
     @not_in_run
     @kwargs_api_change('load_all', 'load_data')

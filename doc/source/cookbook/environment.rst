@@ -136,12 +136,16 @@ because most of the time the default settings are sufficient.
     process for every run or if you want a fixed pool of processes to carry out your
     computation.
 
-    If you use a pool, all your data and the tasks you compute must be picklable!
-    If you never heard about pickling or object serialization, you might want to take a loot at the
-    pickle_ module.
-
-    Thus, if your simulation data cannot be pickled (which is the case for some BRIAN networks,
-    for instance), choose ``use_pool=False`` and ``continuable=False`` (see below).
+    When to use a fixed pool of processes or when to spawn a new process
+    for every run? Use the former if you perform many runs (50k and more)
+    which are inexpensive in terms of memory and runtime.
+    Be aware that everything you use must be picklable.
+    Use the latter for fewer runs (50k and less) and which are longer lasting
+    and more expensive runs (in terms of memory consumption).
+    In case your operating system allows forking, your data does not need to be
+    picklable.
+    If you choose ``use_pool=False`` you can also make use of the `cap` values,
+    see below.
 
 * ``queue_maxsize``
 
@@ -151,7 +155,7 @@ because most of the time the default settings are sufficient.
 * ``cpu_cap``
 
     If ``multiproc=True`` and ``use_pool=False`` you can specify a maximum CPU utilization between
-    0.0 (excluded) and 1.0 (included) as fraction of maximum capacity. If the current CPU
+    0.0 (excluded) and 100.0 (included) as fraction of maximum capacity. If the current CPU
     usage is above the specified level (averaged across all cores),
     *pypet* will not spawn a new process and wait until
     activity falls below the threshold again. Note that in order to avoid dead-lock at least
@@ -159,7 +163,7 @@ because most of the time the default settings are sufficient.
     If the threshold is crossed a warning will be issued. The warning won't be repeated as
     long as the threshold remains crossed.
 
-    For example let us assume you chose ``cpu_cap=0.7``, ``ncores=3``,
+    For example let us assume you chose ``cpu_cap=70.0``, ``ncores=3``,
     and currently on average 80 percent of your CPU are
     used. Moreover, at the moment only 2 processes are
     computing single runs simultaneously. Due to the usage of 80 percent of your CPU,
@@ -170,16 +174,16 @@ because most of the time the default settings are sufficient.
     combined to determine whether a new process can be spawned. Accordingly, if only one
     of these thresholds is crossed, no new processes will be spawned.
 
-    To disable the cap limits simply set all three values to 1.0.
+    To disable the cap limits simply set all three values to 100.0.
 
     You need the psutil_ package to use this cap feature. If not installed and you
-    choose cap values different from 1.0 a ValueError is thrown.
+    choose cap values different from 100.0 a ValueError is thrown.
 
 * ``memory_cap``
 
     Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
     processes are spawned. Can also be a tuple ``(limit, memory_per_process)``,
-    first value is the cap value (between 0.0 and 1,0),
+    first value is the cap value (between 0.0 and 100.0),
     second one is the estimated memory per process in mega bytes (MB).
     If an estimate is given a new process is not started if
     the threshold would be crossed including the estimate.
@@ -616,26 +620,36 @@ The data is than passed to the subprocess by forking on OS level and not by pick
 However, this only works under **Linux**. If you use **Windows** and choose ``use_pool=False``
 you still need to rely on pickle_ because **Windows** does not support forking of python processes.
 
+Besides, as a general rule of thumb when to use ``use_pool`` or don't:
+Use the former if you perform many runs (50k and more)
+which are in terms of memory and runtime inexpensive.
+Use **no** pool (``use_pool=False``) for fewer runs (50k and less) and which are longer lasting
+and more expensive runs (in terms of memory consumption).
+In case your operating system allows forking, your data does not need to be
+picklable.
+If you choose ``use_pool=False`` you can also make use of the `cap` values,
+see below.
+
 Moreover, if you **enable** multiprocessing and **disable** pool usage,
 besides the maximum number of utilized processors ``ncores``,
 you can specify usage cap levels with ``cpu_cap``, ``memory_cap``,
 and ``swap_cap`` as fractions of the maximum capacity.
-Values must be chosen larger than 0.0 and smaller or equal to 1.0. If any of these thresholds is
+Values must be chosen larger than 0.0 and smaller or equal to 100.0. If any of these thresholds is
 crossed no new processes will be started by *pypet*. For instance, if you want to use 3 cores
-aka ``ncores=3`` and set a memory cap of ``memory_cap=0.9`` and let's assume that currently only
+aka ``ncores=3`` and set a memory cap of ``memory_cap=90.`` and let's assume that currently only
 2 processes are started with currently 95 percent of you RAM are occupied.
 Accordingly, *pypet* will not start the third process until RAM usage drops again below
 (or equal to) 90 percent.
 
 In addition, (only) the ``memory_cap`` argument can alternatively be a tuple with two entries:
- ``(cap, memory_per_process)``. First entry is the cap value between 0.0 and 1.0 and the second
+ ``(cap, memory_per_process)``. First entry is the cap value between 0.0 and 100.0 and the second
  one is the estimated memory per process in mega-bytes (MB). If you specify such an estimate,
  starting a new process is suspended if the threshold would be reached including the estimated
  memory.
 
 Moreover, to prevent dead-lock *pypet* will regardless of the cap values always start at
 least one process.
-To disable the cap levels, simply set all three to 1.0 (which is default, anyway).
+To disable the cap levels, simply set all three to 100.0 (which is default, anyway).
 *pypet* does not check if the processes themselves obey the cap limit. Thus,
 if one of the process that computes your single runs needs more RAM/Swap or CPU power than the cap
 value, this is its very own problem.

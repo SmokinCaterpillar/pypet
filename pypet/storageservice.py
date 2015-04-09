@@ -2413,7 +2413,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         runtable = getattr(self._overview_group, 'runs')
-        rows = [(idx, 'Dummy', '45 BC', 1337.0,
+        rows = [(idx, '', '45 BC', 1337.0,
                  42.0, '2001', 'Test', 'abcd', 0) for idx in range(start, stop)]
         if rows:
             runtable.append(rows)

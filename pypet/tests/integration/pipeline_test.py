@@ -65,7 +65,7 @@ class TestPostProc(TrajectoryComparator):
 
         self.env_kwargs={}
 
-    def make_environment(self, filename, trajname='Test', **kwargs):
+    def make_environment(self, filename, trajname='Test', log=True, **kwargs):
 
         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
         filename = make_temp_dir(filename)
@@ -75,11 +75,16 @@ class TestPostProc(TrajectoryComparator):
         cntfolder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
-
+        if log:
+            log_config = get_log_config()
+        else:
+            log_config = None
         env = Environment(trajectory=trajname,
+                          # log_levels=logging.INFO,
+                          # log_config=None,
+                          log_config=log_config,
                           dynamic_imports=[CustomParameter],
                           filename=filename, log_stdout=False,
-                          log_config=get_log_config(),
                           **self.env_kwargs)
 
         return env, filename, logfolder, cntfolder
@@ -88,7 +93,7 @@ class TestPostProc(TrajectoryComparator):
 
         filename = 'testpostproc.hdf5'
         env1 = self.make_environment(filename, 'k1')[0]
-        env2 = self.make_environment(filename, 'k2')[0]
+        env2 = self.make_environment(filename, 'k2', log=False)[0]
 
         traj1 = env1.v_trajectory
         traj2 = env2.v_trajectory
@@ -133,7 +138,7 @@ class TestPostProc(TrajectoryComparator):
 
         filename = 'testpostprocpipe.hdf5'
         env1 = self.make_environment(filename, 'k1')[0]
-        env2 = self.make_environment(filename, 'k2')[0]
+        env2 = self.make_environment(filename, 'k2', log=False)[0]
 
         traj1 = env1.v_trajectory
         traj2 = env2.v_trajectory
@@ -164,21 +169,21 @@ class TestPostProc(TrajectoryComparator):
 
 
 
-class TestMPPostProc(TestPostProc):
-
-    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
-
-    def setUp(self):
-        self.env_kwargs={'multiproc':True, 'ncores': 3}
-
-
-
-class TestMPImmediatePostProc(TestPostProc):
-
-    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
-
-    def setUp(self):
-        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
+# class TestMPPostProc(TestPostProc):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+#
+#     def setUp(self):
+#         self.env_kwargs={'multiproc':True, 'ncores': 3}
+#
+#
+#
+# class TestMPImmediatePostProc(TestPostProc):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+#
+#     def setUp(self):
+#         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
 
 
 if __name__ == '__main__':

@@ -272,21 +272,6 @@ class HasLogger(HasSlots):
             name = 'pypet.%s' % name
         self._logger = logging.getLogger(name)
 
-
-class TrajectoryMock(object):
-    """Helper class that mocks properties of a trajectory.
-
-    The full trajectory is not needed to rename a log file.
-    In order to avoid copying the full trajectory during pickling
-    this class is used.
-
-    """
-    def __init__(self, traj):
-        self.v_environment_name = traj.v_environment_name
-        self.v_name = traj.v_name
-        self.v_crun_ = traj.v_crun_
-
-
 class LoggingManager(object):
     """ Manager taking care of all logging related issues.
 
@@ -324,7 +309,7 @@ class LoggingManager(object):
             state_dict['log_config'] = True
         return state_dict
 
-    def show_progress(self, n, total_runs, multiproc=False, ncores=1, finish=False):
+    def show_progress(self, n, total_runs):
         """Displays a progressbar"""
         if self.report_progress:
             percentage, logger_name, log_level = self.report_progress
@@ -333,27 +318,16 @@ class LoggingManager(object):
             else:
                 logger = logging.getLogger(logger_name)
 
-            if finish:
-                completed_n = total_runs - 1
-            elif multiproc:
-                completed_n = n - ncores
-            else:
-                completed_n = n - 1
-
             if n == 0:
-                # Reset in the beginning to get a better time estimate
-                progressbar(-1, total_runs, percentage_step=percentage,
-                            logger=None, reset=True)
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
                 self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '
 
-            if completed_n >= 0:
-                fmt_string = self._format_string % (completed_n + 1, total_runs) + '%s'
-                reprint = log_level == 0
-                progressbar(completed_n, total_runs, percentage_step=percentage,
-                            logger=logger, log_level=log_level,
-                            fmt_string=fmt_string, reprint=reprint)
+            fmt_string = self._format_string % (n + 1, total_runs) + '%s'
+            reprint = log_level == 0
+            progressbar(n, total_runs, percentage_step=percentage,
+                        logger=logger, log_level=log_level,
+                        fmt_string=fmt_string, reprint=reprint)
 
     def add_null_handler(self):
         """Adds a NullHandler to the root logger.
@@ -371,7 +345,7 @@ class LoggingManager(object):
 
     @staticmethod
     def tabula_rasa():
-        """Removes all loggers and logging handlers and closes them. """
+        """Removes all loggers and logging handlers. """
         erase_dict = {'disable_existing_loggers': False, 'version': 1}
         dictConfig(erase_dict)
 
@@ -465,11 +439,11 @@ class LoggingManager(object):
         """
         if self.report_progress:
             if self.report_progress is True:
-                self.report_progress = (10, 'pypet', logging.INFO)
-            elif isinstance(self.report_progress, int):
+                self.report_progress = (5, 'pypet', logging.INFO)
+            elif isinstance(self.report_progress, (int, float)):
                 self.report_progress = (self.report_progress, 'pypet', logging.INFO)
             elif isinstance(self.report_progress, compat.base_type):
-                self.report_progress = (10, self.report_progress, logging.INFO)
+                self.report_progress = (5, self.report_progress, logging.INFO)
             elif len(self.report_progress) == 2:
                 self.report_progress = (self.report_progress[0], self.report_progress[1],
                                         logging.INFO)

@@ -34,7 +34,8 @@ def main():
                       comment='Multiprocessing example!',
                       multiproc=True,
                       ncores=4,
-                      use_pool=True,
+                      use_pool=True,  # Our runs are inexpensive we can get rid of overhead
+                      # by using a pool
                       wrap_mode=pypetconstants.WRAP_MODE_LOCK)
 
     # Get the trajectory from the environment

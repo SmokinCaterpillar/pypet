@@ -75,6 +75,7 @@ pypet 0.1b.10
 
 *   Refactored 'QUEUE' wrapping. The user can now decide the maximum size of the Storage Queue.
 
+*   CAP values are now in `%`, so choose values between 0.0 and 100.0
 
 pypet 0.1b.9
 
