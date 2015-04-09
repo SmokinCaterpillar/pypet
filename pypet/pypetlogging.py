@@ -272,7 +272,6 @@ class HasLogger(HasSlots):
             name = 'pypet.%s' % name
         self._logger = logging.getLogger(name)
 
-
 class LoggingManager(object):
     """ Manager taking care of all logging related issues.
 
@@ -346,7 +345,7 @@ class LoggingManager(object):
 
     @staticmethod
     def tabula_rasa():
-        """Removes all loggers and logging handlers and closes them. """
+        """Removes all loggers and logging handlers. """
         erase_dict = {'disable_existing_loggers': False, 'version': 1}
         dictConfig(erase_dict)
 
@@ -440,11 +439,11 @@ class LoggingManager(object):
         """
         if self.report_progress:
             if self.report_progress is True:
-                self.report_progress = (10, 'pypet', logging.INFO)
-            elif isinstance(self.report_progress, int):
+                self.report_progress = (5, 'pypet', logging.INFO)
+            elif isinstance(self.report_progress, (int, float)):
                 self.report_progress = (self.report_progress, 'pypet', logging.INFO)
             elif isinstance(self.report_progress, compat.base_type):
-                self.report_progress = (10, self.report_progress, logging.INFO)
+                self.report_progress = (5, self.report_progress, logging.INFO)
             elif len(self.report_progress) == 2:
                 self.report_progress = (self.report_progress[0], self.report_progress[1],
                                         logging.INFO)

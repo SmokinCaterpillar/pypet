@@ -288,8 +288,17 @@ class TrajectoryComparator(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Deletes all handlers and closes all log-files"""
         root = logging.getLogger()
-        root.handlers = [] # delete all handlers
+        for logger in compat.listvalues(root.manager.loggerDict) + [root]:
+            if hasattr(logger, 'handlers'):
+                handlers = logger.handlers
+                for handler in handlers:
+                    if hasattr(handler, 'flush'):
+                        handler.flush()
+                    if hasattr(handler, 'close'):
+                        handler.close()
+                logger.handlers = []
 
     def tearDown(self):
         if hasattr(self, 'env') and hasattr(self.env, 'f_disable_logging'):
