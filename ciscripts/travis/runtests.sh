@@ -22,7 +22,7 @@ if [[ $GIT_TEST == ON ]]
     then
         echo "Installing Git and Sumatra Test"
         # sudo apt-get install git
-        pip install GitPython
+        pip install GitPython==0.3.6
         if [[ $TRAVIS_PYTHON_VERSION == 2* ]]
             then
                 pip install django==1.5
