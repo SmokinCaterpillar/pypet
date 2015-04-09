@@ -316,7 +316,7 @@ class ContinueTest(TrajectoryComparator):
 
 class ContinueMPTest(ContinueTest):
 
-    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'nopool', 'dill'
+    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'dill'
 
     def make_run_mp(self,env):
         env.f_run(multiply)
@@ -457,36 +457,36 @@ class ContinueMPTest(ContinueTest):
             self.assertTrue(self.trajs[0].crun.z in results)
 
 
-class ContinueMPPoolTest(ContinueMPTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'pool', 'dill'
-
-    def make_environment_mp(self, idx, filename):
-        #self.filename = '../../experiments/tests/HDF5/test.hdf5'
-        self.logfolder = make_temp_dir(os.path.join('experiments',
-                                                      'tests',
-                                                      'Log'))
-        self.cnt_folder = make_temp_dir(os.path.join('experiments',
-                                                      'tests',
-                                                      'cnt'))
-        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
-
-        env = Environment(trajectory=trajname,
-                          dynamic_imports=[CustomParameter],
-                          filename=filename,
-                          file_title=trajname,
-                          log_stdout=False,
-
-                          log_config=get_log_config(),
-                          continuable=True,
-                          continue_folder=self.cnt_folder,
-                          delete_continue=False,
-                          multiproc=True,
-                          use_pool=True,
-                          ncores=4)
-
-        self.envs.append(env)
-        self.trajs.append( env.v_trajectory)
+# class ContinueMPPoolTest(ContinueMPTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'pool', 'dill'
+#
+#     def make_environment_mp(self, idx, filename):
+#         #self.filename = '../../experiments/tests/HDF5/test.hdf5'
+#         self.logfolder = make_temp_dir(os.path.join('experiments',
+#                                                       'tests',
+#                                                       'Log'))
+#         self.cnt_folder = make_temp_dir(os.path.join('experiments',
+#                                                       'tests',
+#                                                       'cnt'))
+#         trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
+#
+#         env = Environment(trajectory=trajname,
+#                           dynamic_imports=[CustomParameter],
+#                           filename=filename,
+#                           file_title=trajname,
+#                           log_stdout=False,
+#
+#                           log_config=get_log_config(),
+#                           continuable=True,
+#                           continue_folder=self.cnt_folder,
+#                           delete_continue=False,
+#                           multiproc=True,
+#                           use_pool=True,
+#                           ncores=4)
+#
+#         self.envs.append(env)
+#         self.trajs.append( env.v_trajectory)
 
 
 if __name__ == '__main__':

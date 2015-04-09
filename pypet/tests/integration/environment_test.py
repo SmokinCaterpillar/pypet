@@ -811,7 +811,7 @@ class ResultSortTest(TrajectoryComparator):
 
         get_root_logger().info(self.env.f_run(multiply))
         traj = self.traj
-        self.assertTrue(len(traj) == len(list(compat.listvalues(self.explore_dict)[0])))
+        self.assertEqual(len(traj), len(list(compat.listvalues(self.explore_dict)[0])))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)

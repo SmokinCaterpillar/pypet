@@ -26,7 +26,7 @@ from pypet.utils.decorators import copydoc
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
     # Temporary directory for the hdf5 files'''
-    remove=True,
+    remove=False,
     # Whether or not to remove the temporary directory after the tests
     actual_tempdir='',
     # Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`

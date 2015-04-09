@@ -310,7 +310,7 @@ class LoggingManager(object):
             state_dict['log_config'] = True
         return state_dict
 
-    def show_progress(self, n, total_runs, multiproc=False, ncores=1, finish=False):
+    def show_progress(self, n, total_runs):
         """Displays a progressbar"""
         if self.report_progress:
             percentage, logger_name, log_level = self.report_progress
@@ -319,27 +319,16 @@ class LoggingManager(object):
             else:
                 logger = logging.getLogger(logger_name)
 
-            if finish:
-                completed_n = total_runs - 1
-            elif multiproc:
-                completed_n = n - ncores
-            else:
-                completed_n = n - 1
-
             if n == 0:
-                # Reset in the beginning to get a better time estimate
-                progressbar(-1, total_runs, percentage_step=percentage,
-                            logger=None, reset=True)
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
                 self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '
 
-            if completed_n >= 0:
-                fmt_string = self._format_string % (completed_n + 1, total_runs) + '%s'
-                reprint = log_level == 0
-                progressbar(completed_n, total_runs, percentage_step=percentage,
-                            logger=logger, log_level=log_level,
-                            fmt_string=fmt_string, reprint=reprint)
+            fmt_string = self._format_string % (n + 1, total_runs) + '%s'
+            reprint = log_level == 0
+            progressbar(n, total_runs, percentage_step=percentage,
+                        logger=logger, log_level=log_level,
+                        fmt_string=fmt_string, reprint=reprint)
 
     def add_null_handler(self):
         """Adds a NullHandler to the root logger.

@@ -129,14 +129,11 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         if self.mode.multiproc:
-            if self.mode.use_pool:
-                length = self.mode.ncores * 2
-            else:
-                length = 2 * len(traj)
+            length = self.mode.ncores * 2
             if self.mode.wrap_mode == 'LOCK':
                 length += 2
             elif self.mode.wrap_mode == 'QUEUE':
-                length += + 4
+                length += 4
             else:
                 raise RuntimeError('You shall not pass!')
         else:
@@ -176,14 +173,11 @@ class LoggingTest(TrajectoryComparator):
             elif 'Queue' in file:
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
-                if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 0, '%d < 1 for file %s' % (count, file))
+                self.assertGreaterEqual(count, 0)
+                if self.mode.wrap_mode == 'QUEUE':
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(count, 1)
-                    if self.mode.wrap_mode == 'QUEUE':
-                        self.assertEqual(store_count, 0)
-                    else:
-                        self.assertEqual(store_count, 1)
+                    self.assertGreaterEqual(store_count, 0)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
@@ -209,10 +203,7 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         if self.mode.multiproc:
-            if self.mode.use_pool:
-                length = self.mode.ncores * 2
-            else:
-                length = 2 * len(traj)
+            length = self.mode.ncores * 2
             if self.mode.wrap_mode == 'LOCK':
                 length += 2
             elif self.mode.wrap_mode == 'QUEUE':
@@ -260,27 +251,19 @@ class LoggingTest(TrajectoryComparator):
             elif 'Queue' in file and 'LOG' in file:
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
-                if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 0)
+                self.assertGreaterEqual(count, 0)
+                self.assertGreaterEqual(error_count, 0)
+                if self.mode.wrap_mode == 'QUEUE':
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(count, 1)
-                    self.assertEqual(error_count, 1)
-                    if self.mode.wrap_mode == 'QUEUE':
-                        self.assertEqual(store_count, 0)
-                    else:
-                        self.assertEqual(store_count, 1)
+                    self.assertGreaterEqual(store_count, 0)
             elif 'ERROR' in file:
-                if self.mode.multiproc and self.mode.use_pool:
-                    self.assertEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 1)
+                self.assertEqual(count, 0)
+                self.assertGreaterEqual(error_count, 1)
+                if self.mode.wrap_mode == 'QUEUE':
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(count, 0)
-                    self.assertEqual(error_count, 1)
-                    if self.mode.wrap_mode == 'QUEUE':
-                        self.assertEqual(store_count, 0)
-                    else:
-                        self.assertEqual(store_count, 1)
+                    self.assertGreaterEqual(store_count, 0)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
@@ -307,10 +290,7 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         if self.mode.multiproc:
-            if self.mode.use_pool:
-                length = self.mode.ncores * 2
-            else:
-                length = 2 * len(traj)
+            length = self.mode.ncores * 2
             if self.mode.wrap_mode == 'LOCK':
                 length += 2
             elif self.mode.wrap_mode == 'QUEUE':
@@ -359,27 +339,19 @@ class LoggingTest(TrajectoryComparator):
             elif 'Queue' in file and 'LOG' in file:
                 self.assertEqual(store_count, 2*len(traj))
             elif 'LOG' in file:
-                if self.mode.multiproc and self.mode.use_pool:
-                    self.assertEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 0)
+                self.assertEqual(count, 0)
+                self.assertGreaterEqual(error_count, 0)
+                if self.mode.wrap_mode == 'QUEUE':
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(count, 0)
-                    self.assertEqual(error_count, 2)
-                    if self.mode.wrap_mode == 'QUEUE':
-                        self.assertEqual(store_count, 0)
-                    else:
-                        self.assertEqual(store_count, 2)
+                    self.assertGreaterEqual(store_count, 2)
             elif 'ERROR' in file:
-                if self.mode.multiproc and self.mode.use_pool:
-                    self.assertEqual(count, 0)
-                    self.assertGreaterEqual(error_count, 0)
+                self.assertEqual(count, 0)
+                self.assertGreaterEqual(error_count, 0)
+                if self.mode.wrap_mode == 'QUEUE':
+                    self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(count, 0)
-                    self.assertEqual(error_count, 2)
-                    if self.mode.wrap_mode == 'QUEUE':
-                        self.assertEqual(store_count, 0)
-                    else:
-                        self.assertEqual(store_count, 2)
+                    self.assertGreaterEqual(store_count, 0)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))

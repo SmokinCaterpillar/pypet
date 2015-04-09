@@ -71,52 +71,52 @@ class MultiprocSortLockTest(ResultSortTest):
         self.use_pool=True
 
 
-class MultiprocNoPoolQueueTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolQueueTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_QUEUE
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=False
-
-
-class MultiprocNoPoolLockTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolLockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCK
-        self.multiproc = True
-        self.ncores = 2
-        self.use_pool=False
+# class MultiprocNoPoolQueueTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolQueueTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_QUEUE
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=False
 
 
-class MultiprocNoPoolSortQueueTest(ResultSortTest):
+# class MultiprocNoPoolLockTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolLockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_LOCK
+#         self.multiproc = True
+#         self.ncores = 2
+#         self.use_pool=False
 
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
 
-    def set_mode(self):
-        super(MultiprocNoPoolSortQueueTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_QUEUE
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=False
+# class MultiprocNoPoolSortQueueTest(ResultSortTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolSortQueueTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_QUEUE
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=False
 
 
-class MultiprocNoPoolSortLockTest(ResultSortTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolSortLockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCK
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=False
+# class MultiprocNoPoolSortLockTest(ResultSortTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolSortLockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_LOCK
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=False
 
 
 @unittest.skipIf(psutil is None, 'Only makes sense if psutil is installed')

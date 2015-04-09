@@ -155,7 +155,7 @@ class BaseParameter(NNLeafNode):
         self._locked = False
 
         # Whether to keep the full range array when pickled or not
-        self._full_copy = False
+        self._full_copy = True
         self._explored = False  # If explored or not
 
     def f_supports(self, data):

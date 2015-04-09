@@ -278,3 +278,7 @@ def get_matching_kwargs(func, kwargs):
         matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
         return matching_kwargs
 
+
+def get_multiproc_pool(pool):
+    """Returns all processes of a pool as a list"""
+    return pool._pool

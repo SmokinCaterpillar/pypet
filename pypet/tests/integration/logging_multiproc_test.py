@@ -5,23 +5,23 @@ from pypet.tests.integration.logging_test import LoggingTest
 from pypet.tests.testutils.ioutils import run_suite, parse_args
 
 
+#
+# class MultiprocNoPoolQueueLoggingTest(LoggingTest):
+#
+#     tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'queue'
+#
+#     def set_mode(self):
+#         # import pypet.tests.testutils.ioutils as io
+#         # io.testParams['log_level'] = 40
+#         # io.testParams['remove'] = False
+#         super(MultiprocNoPoolQueueLoggingTest, self).set_mode()
+#         self.mode.multiproc = True
+#         self.mode.wrap_mode = 'QUEUE'
+#         self.mode.ncores = 3
+#         self.mode.use_pool = False
 
-class MultiprocNoPoolQueueLoggingTest(LoggingTest):
 
-    tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'queue'
-
-    def set_mode(self):
-        # import pypet.tests.testutils.ioutils as io
-        # io.testParams['log_level'] = 40
-        # io.testParams['remove'] = False
-        super(MultiprocNoPoolQueueLoggingTest, self).set_mode()
-        self.mode.multiproc = True
-        self.mode.wrap_mode = 'QUEUE'
-        self.mode.ncores = 3
-        self.mode.use_pool = False
-
-
-class MultiprocPoolLockLoggingTest(LoggingTest):
+class MultiprocLockLoggingTest(LoggingTest):
 
     tags = 'integration', 'environment', 'logging', 'multiproc', 'pool', 'lock'
 
@@ -29,14 +29,14 @@ class MultiprocPoolLockLoggingTest(LoggingTest):
         # import pypet.tests.testutils.ioutils as io
         # io.testParams['log_level'] = 40
         # io.testParams['remove'] = False
-        super(MultiprocPoolLockLoggingTest, self).set_mode()
+        super(MultiprocLockLoggingTest, self).set_mode()
         self.mode.multiproc = True
         self.mode.wrap_mode = 'LOCK'
         self.mode.ncores = 2
         self.mode.use_pool = True
 
 
-class MultiprocPoolQueueLoggingTest(LoggingTest):
+class MultiprocQueueLoggingTest(LoggingTest):
 
     tags = 'integration', 'environment', 'logging', 'multiproc', 'pool', 'queue'
 
@@ -44,26 +44,26 @@ class MultiprocPoolQueueLoggingTest(LoggingTest):
         # import pypet.tests.testutils.ioutils as io
         # io.testParams['log_level'] = 40
         # io.testParams['remove'] = False
-        super(MultiprocPoolQueueLoggingTest, self).set_mode()
+        super(MultiprocQueueLoggingTest, self).set_mode()
         self.mode.multiproc = True
         self.mode.wrap_mode = 'QUEUE'
         self.mode.ncores = 2
         self.mode.use_pool = True
 
 
-class MultiprocNoPoolLockLoggingTest(LoggingTest):
-
-    tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'lock'
-
-    def set_mode(self):
-        # import pypet.tests.testutils.ioutils as io
-        # io.testParams['log_level'] = 40
-        # io.testParams['remove'] = False
-        super(MultiprocNoPoolLockLoggingTest, self).set_mode()
-        self.mode.multiproc = True
-        self.mode.wrap_mode = 'LOCK'
-        self.mode.ncores = 4
-        self.mode.use_pool = False
+# class MultiprocNoPoolLockLoggingTest(LoggingTest):
+#
+#     tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'lock'
+#
+#     def set_mode(self):
+#         # import pypet.tests.testutils.ioutils as io
+#         # io.testParams['log_level'] = 40
+#         # io.testParams['remove'] = False
+#         super(MultiprocNoPoolLockLoggingTest, self).set_mode()
+#         self.mode.multiproc = True
+#         self.mode.wrap_mode = 'LOCK'
+#         self.mode.ncores = 4
+#         self.mode.use_pool = False
 
 
 if __name__ == '__main__':
