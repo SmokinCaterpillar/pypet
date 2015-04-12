@@ -169,21 +169,21 @@ class TestPostProc(TrajectoryComparator):
 
 
 
-# class TestMPPostProc(TestPostProc):
-#
-#     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
-#
-#     def setUp(self):
-#         self.env_kwargs={'multiproc':True, 'ncores': 3}
-#
-#
-#
-# class TestMPImmediatePostProc(TestPostProc):
-#
-#     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
-#
-#     def setUp(self):
-#         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
+class TestMPPostProc(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+
+    def setUp(self):
+        self.env_kwargs={'multiproc':True, 'ncores': 3}
+
+
+
+class TestMPImmediatePostProc(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+
+    def setUp(self):
+        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
 
 
 if __name__ == '__main__':

@@ -316,7 +316,7 @@ class ContinueTest(TrajectoryComparator):
 
 class ContinueMPTest(ContinueTest):
 
-    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'dill'
+    tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'nopool', 'dill'
 
     def make_run_mp(self,env):
         env.f_run(multiply)
@@ -337,7 +337,7 @@ class ContinueMPTest(ContinueTest):
                           filename=filename,
                           file_title=trajname,
                           log_stdout=False,
-
+                          use_pool=False,
                           log_config=get_log_config(),
                           continuable=True,
                           continue_folder=self.cnt_folder,

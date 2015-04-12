@@ -98,14 +98,22 @@ class TrajectoryTest(unittest.TestCase):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
     def test_deletion(self):
-        self.traj.f_add_result('fff', 444)
+        x = []
+        self.traj.f_add_result('fff', x)
+        self.assertEqual(sys.getrefcount(x),3)
+        self.traj.f_get('fff').f_empty()
+        self.assertEqual(sys.getrefcount(x),2)
         self.traj.f_add_link('jj', self.traj.results)
         self.assertEqual(len(self.traj._linked_by), 1)
         self.traj.f_remove_child('results', recursive=True)
         self.assertEqual(len(self.traj._linked_by), 0)
         self.assertEqual(len(self.traj._results), 0)
 
+        p = self.traj.parameters
+
+        self.assertEqual(sys.getrefcount(p),7)
         self.traj.f_remove_child('parameters', recursive=True)
+        self.assertEqual(sys.getrefcount(p),2)
 
         self.assertEqual(len(self.traj._parameters), 0)
 
@@ -128,12 +136,28 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 0)
         self.assertEqual(len(self.traj._nn_interface._links_count), 0)
 
+        x = []
+        z = self.traj.f_add_result('fff', x)
+        self.assertEqual(sys.getrefcount(x),3)
+
+        self.assertEqual(sys.getrefcount(z),8)
+
+        self.traj.f_remove_item('fff')
+
+        self.assertEqual(sys.getrefcount(z),2)
+        del z
+        self.assertEqual(sys.getrefcount(x),2)
+
+
+
+
     def test_deletion_during_run(self):
         self.traj._make_single_run(0)
         self.traj._stored = True
         self.traj.f_add_result('fff', 444)
         self.traj.f_add_leaf('jjj', 16)
         self.traj.f_adpar('jjj.promisess',1)
+
 
         self.traj.f_add_link('jj', self.traj.results)
         self.assertEqual(len(self.traj._linked_by), 1)
@@ -149,6 +173,14 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_remove_child('jjj')
         self.assertTrue('jjj' not in self.traj._children)
         self.assertTrue('jjj' not in self.traj._leaves)
+
+
+        p = self.traj.jjj
+
+        self.assertEqual(sys.getrefcount(p),9)
+        self.traj.dpar.crun.f_remove_child('jjj', recursive=True)
+        self.assertEqual(sys.getrefcount(p),2)
+
         for child in compat.listkeys(self.traj._groups):
             self.traj.f_remove_child(child, recursive=True)
         self.assertEqual(len(self.traj._children), 0)
@@ -165,6 +197,8 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves_runs_sorted), 0)
         self.assertEqual(len(self.traj._nn_interface._links_count), 0)
 
+
+
         self.traj.f_add_leaf('hh', 16)
 
         self.traj.f_add_link('jj.dd', 'hh')
@@ -174,11 +208,18 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(len(self.traj._linked_by), 1)
 
+        z = self.traj.f_get('hh')
+        self.assertEqual(sys.getrefcount(z),12)
         self.traj.jj.f_remove_link('dd')
+        self.assertEqual(sys.getrefcount(z),9)
+
         self.assertEqual(len(self.traj._new_links), 0)
         self.assertEqual(len(self.traj._linked_by), 0)
         self.traj.f_remove_child('jj')
         self.traj.f_remove_child('hh')
+
+        self.assertEqual(sys.getrefcount(z),2)
+
 
         self.assertEqual(len(self.traj._nn_interface._flat_leaf_storage_dict), 0)
         self.assertEqual(len(self.traj._nn_interface._nodes_and_leaves), 0)

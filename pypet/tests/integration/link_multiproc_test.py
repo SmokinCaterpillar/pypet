@@ -40,28 +40,28 @@ class MultiprocLinkLockTest(LinkEnvironmentTest):
         self.use_pool=True
 
 
-# class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
-#
-#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool', 'links'
-#
-#     def set_mode(self):
-#         LinkEnvironmentTest.set_mode(self)
-#         self.mode = pypetconstants.WRAP_MODE_QUEUE
-#         self.multiproc = True
-#         self.ncores = 3
-#         self.use_pool=False
+class MultiprocLinkNoPoolQueueTest(LinkEnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool', 'links'
+
+    def set_mode(self):
+        LinkEnvironmentTest.set_mode(self)
+        self.mode = pypetconstants.WRAP_MODE_QUEUE
+        self.multiproc = True
+        self.ncores = 3
+        self.use_pool=False
 
 
-# class MultiprocLinkNoPoolLockTest(LinkEnvironmentTest):
-#
-#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool', 'links'
-#
-#     def set_mode(self):
-#         LinkEnvironmentTest.set_mode(self)
-#         self.mode = pypetconstants.WRAP_MODE_LOCK
-#         self.multiproc = True
-#         self.ncores = 2
-#         self.use_pool=False
+class MultiprocLinkNoPoolLockTest(LinkEnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool', 'links'
+
+    def set_mode(self):
+        LinkEnvironmentTest.set_mode(self)
+        self.mode = pypetconstants.WRAP_MODE_LOCK
+        self.multiproc = True
+        self.ncores = 2
+        self.use_pool=False
 
 
 if __name__ == '__main__':

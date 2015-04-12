@@ -43,6 +43,4 @@ explored  *DONE*
 
 * Document new maxsize feature *DONE*
 
-* Document new cap feature
-
-* Document use_pool no longer in use
+* Document new cap feature *DONE*
