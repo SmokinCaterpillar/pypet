@@ -4882,7 +4882,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if load_data == pypetconstants.OVERWRITE_DATA:
             if instance.v_is_parameter and instance.v_locked:
-                self._logger.warning('Parameter `%s` is locked, I will skip loading.' %
+                self._logger.debug('Parameter `%s` is locked, I will skip loading.' %
                                      instance.v_full_name)
                 return
             instance.f_empty()
