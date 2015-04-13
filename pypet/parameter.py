@@ -981,7 +981,10 @@ class Parameter(BaseParameter):
         val = self._convert_data(data)
 
         if not self.f_supports(val):
-            raise TypeError('Unsupported data `%s` of type `%s`' % (str(val), str(type(val))))
+            raise TypeError('Unsupported data `%s` of type `%s`. '
+                            'If you passed a tuple, this error might also be caused '
+                            'by heterogeneous data within the '
+                            'tuple.' % (str(val), str(type(val))))
 
         self._data = val
         self._default = self._data
