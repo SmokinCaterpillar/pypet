@@ -1829,8 +1829,12 @@ class Environment(HasLogger):
         """Estimates the cpu utilization within the last 500ms"""
         now = time.time()
         if now - self._last_cpu_check >= 0.5:
-            self._last_cpu_usage = psutil.cpu_percent()
-            self._last_cpu_check = now
+            try:
+                self._last_cpu_usage = psutil.cpu_percent()
+                self._last_cpu_check = now
+            except (psutil.NoSuchProcess, ZeroDivisionError):
+                pass  # psutil sometimes produces ZeroDivisionErrors, has been fixed in newer
+                # Versions but we want to support older as well
         return self._last_cpu_usage
 
     def _estimate_memory_utilization(self, process_dict):
@@ -1841,7 +1845,7 @@ class Environment(HasLogger):
         for proc in compat.itervalues(process_dict):
             try:
                 sum += psutil.Process(proc.pid).memory_percent()
-            except psutil.NoSuchProcess:
+            except (psutil.NoSuchProcess, ZeroDivisionError):
                 pass
         curr_all_processes = sum
         missing_utilization = max(0.0, n_processes * self._est_per_process - curr_all_processes)
