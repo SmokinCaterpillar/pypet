@@ -20,15 +20,7 @@ if [[ $TEST_SUITE == ON ]]
 
 if [[ $GIT_TEST == ON ]]
     then
-        echo "Installing Git and Sumatra Test"
-        # sudo apt-get install git
-        travis_retry pip install GitPython==0.3.6 # Sumatra has a wrong version checking
-        # which thinks GitPython 1.0.0 is lower than 0.3.6 (only checking minor version :(
-        if [[ $TRAVIS_PYTHON_VERSION == 2* ]]
-            then
-                travis_retry pip install django==1.5
-                travis_retry pip install Sumatra
-            fi
+
         mkdir git_sumatra_test
         cp ../../pypet/tests/integration/git_check.py git_sumatra_test
         cd git_sumatra_test
@@ -82,7 +74,6 @@ if [[ $COVERAGE == ON ]]
 
 if [[ $EXAMPLES == ON ]]
     then
-        travis_retry conda install matplotlib
         cd ../../pypet/tests
         python all_examples.py
         cd ../../ciscripts/travis

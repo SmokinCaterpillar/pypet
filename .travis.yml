@@ -33,7 +33,7 @@ before_install:
   - echo "+++++++++++ Installing HDF5 +++++++++++++"
   - travis_retry sudo apt-get install libhdf5-serial-dev
   - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then
       travis_retry wget http://repo.continuum.io/miniconda/Miniconda-3.7.3-Linux-x86_64.sh -O miniconda.sh;
     else
       travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-3.7.3-Linux-x86_64.sh -O miniconda.sh;
@@ -46,7 +46,7 @@ before_install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy matplotlib
   - source activate test-environment
   - pip freeze
 
@@ -69,6 +69,8 @@ install:
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
   - travis_retry pip install dill
+  - echo "+++++++++++ Installing GitPython and Sumatra if needed ++++++++++++"
+  - if [[ $GIT_TEST == ON ]]; then chmod +x ciscripts/travis/install_gitpython.sh; travis_retry ciscripts/travis/install_gitpython.sh; fi
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
@@ -85,6 +87,4 @@ branches:
   only:
     - develop
     - master
-    - python6
-    - hdf5_children_splitting
-    - slots
+
