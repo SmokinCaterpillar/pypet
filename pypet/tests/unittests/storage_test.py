@@ -106,6 +106,20 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('l3' in traj)
         self.assertTrue('l4' not in traj)
 
+    def test_loading_explored_parameters(self):
+
+        filename = make_temp_dir('load_explored.hdf5')
+        traj = Trajectory(filename=filename, overwrite_file=True, add_time=False)
+        traj.par.x = Parameter('x', 42, comment='answer')
+        traj.f_explore({'x':[1,2,3,4]})
+        traj.f_store()
+        name = traj.v_name
+
+        traj = Trajectory(filename=filename, add_time=False)
+        traj.f_load()
+        x = traj.f_get('x')
+        self.assertIs(x, traj._explored_parameters['parameters.x'])
+
     def test_loading_and_storing_empty_containers(self):
         filename = make_temp_dir('empty_containers.hdf5')
         traj = Trajectory(filename=filename)

@@ -1562,6 +1562,7 @@ class NaturalNamingInterface(HasLogger):
 
         if full_name in self._root_instance._explored_parameters:
             instance._explored = True  # Mark this parameter as explored.
+            self._root_instance._explored_parameters[full_name] = instance
 
         self._logger.debug('Added `%s` to trajectory.' % full_name)
 
