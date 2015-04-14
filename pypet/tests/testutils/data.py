@@ -286,8 +286,7 @@ def to_dict_wo_config(traj):
 
 class TrajectoryComparator(unittest.TestCase):
 
-    @classmethod
-    def tearDownClass(cls):
+    def clear_handlers(self):
         """Deletes all handlers and closes all log-files"""
         root = logging.getLogger()
         for logger in compat.listvalues(root.manager.loggerDict) + [root]:
@@ -303,6 +302,7 @@ class TrajectoryComparator(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'env') and hasattr(self.env, 'f_disable_logging'):
             self.env.f_disable_logging()
+        self.clear_handlers()
         remove_data()
 
     def compare_trajectories(self,traj1,traj2):

@@ -351,13 +351,13 @@ class LoggingTest(TrajectoryComparator):
                     self.assertEqual(error_count,0)
                     self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(error_count, 2*len(traj))
-                    self.assertEqual(store_count, 2*len(traj))
+                    self.assertEqual(error_count, 2 * len(traj))
+                    self.assertEqual(store_count, 2 * len(traj))
 
             elif 'Queue' in file and 'ERROR' in file:
-                self.assertEqual(store_count, 2*len(traj))
+                self.assertEqual(store_count, 2 * len(traj))
             elif 'Queue' in file and 'LOG' in file:
-                self.assertEqual(store_count, 2*len(traj))
+                self.assertEqual(store_count, 2 * len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
                     self.assertEqual(count, 0)
