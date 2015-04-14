@@ -79,6 +79,9 @@ pypet 0.1b.10
 
 *   BUG FIX: Links removed during single runs are now no longer stored
 
+*   BUG FIX: `pypet.` is no longer prepended to unpickled logger names. Accordingly,
+    pypet logger names are now fully qualified names like `pypet.trajectory.Trajectory`.
+
 
 pypet 0.1b.9
 

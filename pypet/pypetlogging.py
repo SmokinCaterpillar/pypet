@@ -225,9 +225,9 @@ class HasLogger(HasSlots):
     """Abstract super class that automatically adds a logger to a class.
 
     To add a logger to a sub-class of yours simply call ``myobj._set_logger(name)``.
-    If ``name=None`` the logger name is chosen as follows:
+    If ``name=None`` the logger is chosen as follows:
 
-        ``self._logger = logging.getLogger(type(self).__name__)``
+        ``self._logger = logging.getLogger(self.__class.__.__module__ + '.' + self.__class__.__name__)``
 
     The logger can be accessed via ``myobj._logger``.
 
@@ -267,9 +267,8 @@ class HasLogger(HasSlots):
 
         """
         if name is None:
-            name = 'pypet.%s' % type(self).__name__
-        else:
-            name = 'pypet.%s' % name
+            cls = self.__class__
+            name = '%s.%s' % (cls.__module__, cls.__name__)
         self._logger = logging.getLogger(name)
 
 class LoggingManager(object):
