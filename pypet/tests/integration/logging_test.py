@@ -344,47 +344,47 @@ class LoggingTest(TrajectoryComparator):
                     self.assertEqual(store_count, 0)
                 else:
                     self.assertEqual(count, 0)
-                    self.assertEqual(store_count, 2*len(traj))
+                    self.assertGreaterEqual(store_count, len(traj))
             elif 'ERROR.txt' == file:
                 self.assertEqual(count, 0)
                 if self.mode.multiproc:
                     self.assertEqual(error_count,0)
                     self.assertEqual(store_count, 0)
                 else:
-                    self.assertEqual(error_count, 2 * len(traj))
-                    self.assertEqual(store_count, 2 * len(traj))
+                    self.assertGreaterEqual(error_count, len(traj))
+                    self.assertGreaterEqual(store_count, len(traj))
 
             elif 'Queue' in file and 'ERROR' in file:
-                self.assertEqual(store_count, 2 * len(traj))
+                self.assertGreaterEqual(store_count, len(traj))
             elif 'Queue' in file and 'LOG' in file:
-                self.assertEqual(store_count, 2 * len(traj))
+                self.assertGreaterEqual(store_count, len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
                     self.assertEqual(count, 0)
                     self.assertGreaterEqual(error_count, 0)
                 else:
                     self.assertEqual(count, 0)
-                    self.assertEqual(error_count, 2)
+                    self.assertGreaterEqual(error_count, 1)
                     if self.mode.wrap_mode == 'QUEUE':
                         self.assertEqual(store_count, 0)
                     else:
-                        self.assertEqual(store_count, 2)
+                        self.assertGreaterEqual(store_count, 1)
             elif 'ERROR' in file:
                 if self.mode.multiproc and self.mode.use_pool:
                     self.assertEqual(count, 0)
                     self.assertGreaterEqual(error_count, 0)
                 else:
                     self.assertEqual(count, 0)
-                    self.assertEqual(error_count, 2)
+                    self.assertGreaterEqual(error_count, 1)
                     if self.mode.wrap_mode == 'QUEUE':
                         self.assertEqual(store_count, 0)
                     else:
-                        self.assertEqual(store_count, 2)
+                        self.assertGreaterEqual(store_count, 1)
             else:
                 self.assertTrue(False, 'There`s a file in the log folder that does not '
                                        'belong there: %s' % str(file))
-        self.assertEqual(total_store_count, 4*len(traj))
-        self.assertEqual(total_error_count, 4*len(traj))
+        self.assertGreaterEqual(total_store_count, 2*len(traj))
+        self.assertGreaterEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, 0)
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
