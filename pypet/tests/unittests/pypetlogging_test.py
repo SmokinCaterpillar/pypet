@@ -12,14 +12,16 @@ except ImportError:
     import pickle
 
 from pypet.pypetlogging import LoggingManager
-from pypet.tests.testutils.ioutils import get_log_config
+from pypet.tests.testutils.ioutils import get_log_config, run_suite, parse_args
 from pypet.utils.comparisons import nested_equal
 
 class FakeTraj(object):
     def __init__(self):
         self.v_environment_name = 'env'
         self.v_name = 'traj'
-        self.v_crun_ = 'run'
+
+    def f_wildcard(self, card):
+        return 'Ladida'
 
 
 class LoggingManagerTest(unittest.TestCase):
@@ -32,3 +34,8 @@ class LoggingManagerTest(unittest.TestCase):
         dump = pickle.dumps(manager)
         new_manager = pickle.loads(dump)
         manager.finalize()
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)
