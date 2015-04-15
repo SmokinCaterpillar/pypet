@@ -13,7 +13,7 @@ from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, make_temp_dir,\
     make_trajectory_name,  get_log_config, get_log_path
-from pypet import Environment
+from pypet import Environment, rename_log_file, Trajectory
 
 
 class LogWhenStored(Result):
@@ -287,6 +287,20 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_store_count, 2*len(traj))
         self.assertEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, len(traj))
+
+    def test_file_renaming(self):
+        traj_name = 'test'
+        traj = Trajectory('test', add_time=False)
+        traj.f_add_parameter('x', 42)
+        traj.f_explore({'x': [1,2,3]})
+        rename_string = '$traj_$set_$run'
+        solution_1 = 'test_run_set_ALL_run_ALL'
+        solution_2 = 'test_run_set_00000_run_00000000'
+        renaming_1 = rename_log_file(traj, rename_string)
+        self.assertEqual(renaming_1, solution_1)
+        traj.v_idx = 0
+        renaming_2 = rename_log_file(traj, rename_string)
+        self.assertEqual(renaming_2, solution_2)
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     # @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')

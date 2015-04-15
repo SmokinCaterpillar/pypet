@@ -183,6 +183,9 @@ def rename_log_file(traj, filename, process_name=None):
     :const:`~pypet.pypetconstants.LOG_RUN` ($run) is replaced by the name of the current
     run. If the trajectory is not set to a run 'run_ALL' is used.
 
+    :const:`~pypet.pypetconstants.LOG_SET` ($set) is replaced by the name of the current
+    run set. If the trajectory is not set to a run 'run_set_ALL' is used.
+
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
 
@@ -203,8 +206,11 @@ def rename_log_file(traj, filename, process_name=None):
         traj_name = traj.v_name
         filename = filename.replace(pypetconstants.LOG_TRAJ, traj_name)
     if pypetconstants.LOG_RUN in filename:
-        run_name = traj.v_crun_
+        run_name = traj.f_wildcard('$')
         filename = filename.replace(pypetconstants.LOG_RUN, run_name)
+    if pypetconstants.LOG_SET in filename:
+        set_name = traj.f_wildcard('$set')
+        filename = filename.replace(pypetconstants.LOG_SET, set_name)
     if pypetconstants.LOG_PROC in filename:
         if process_name is None:
             process_name = multip.current_process().name
@@ -270,6 +276,7 @@ class HasLogger(HasSlots):
             cls = self.__class__
             name = '%s.%s' % (cls.__module__, cls.__name__)
         self._logger = logging.getLogger(name)
+
 
 class LoggingManager(object):
     """ Manager taking care of all logging related issues.

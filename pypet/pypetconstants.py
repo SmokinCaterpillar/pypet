@@ -315,6 +315,8 @@ LOG_RUN = '$run'
 """Wildcard replaced by name of current run"""
 LOG_PROC = '$proc'
 """Wildcard replaced by the name of the current process"""
+LOG_SET = '$set'
+"""Wildcard replaced by the name of the current run set"""
 
 DEFAULT_LOGGING = 'DEFAULT'
 """Default logging configuration"""
