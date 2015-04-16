@@ -515,7 +515,10 @@ which are replaced during runtime:
     trajectory.
 
     :const:`~pypet.pypetconstants.LOG_RUN` ($run) is replaced by the name of the current
-    run. If the trajectory is not set to a run 'run_ALL' is used.
+    run.
+
+    :const:`~pypet.pypetconstants.LOG_SET` ($set) is replaced by the name of the current
+    run set.
 
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
