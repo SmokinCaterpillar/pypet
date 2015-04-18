@@ -11,6 +11,7 @@ except ImportError:
     import configparser as cp
 
 import pypet.compat as compat
+from pypet.pypetlogging import use_simple_logging
 
 
 def parse_config(init_func):
@@ -77,7 +78,7 @@ class ConfigInterpreter(object):
                 # Already specified kwargs take precedence over the ini file
                 if key not in self.kwargs:
                     self.kwargs[key] = new_kwargs[key]
-            if 'log_config' not in self.kwargs:
+            if not use_simple_logging(self.kwargs) and 'log_config' not in self.kwargs:
                 self.kwargs['log_config'] = self.config_file
         return self.kwargs
 

@@ -1,3 +1,8 @@
+pypet 0.1b.11
+
+*   If one wants the old logging method `log_config` should not be specified, i.e.
+    setting it to `None` is no longer sufficient`
+
 pypet 0.1b.10
 
 *   New `v_crun_` property simply returning ``'run_ALL'`` if ``v_crun`` is ``None``.

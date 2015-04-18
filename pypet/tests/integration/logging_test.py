@@ -14,6 +14,7 @@ from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, make_temp_dir,\
     make_trajectory_name,  get_log_config, get_log_path
 from pypet import Environment, rename_log_file, Trajectory
+import pypet.pypetlogging
 
 
 class LogWhenStored(Result):
@@ -191,6 +192,43 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_error_count, 0)
         self.assertEqual(total_info_count, len(traj))
 
+    def test_throw_error_when_specifying_config_and_old_method(self):
+        with self.assertRaises(ValueError):
+            self.make_env(log_config=None, logger_names='test')
+
+    def test_disable(self):
+        # if not self.multiproc:
+        #     return
+        self.make_env(log_config=None)
+        traj = self.env.v_traj
+
+        log_path = get_log_path(traj)
+
+        self.assertFalse(os.path.isdir(log_path))
+        self.assertTrue(self.env._logging_manager._sp_config is None)
+        self.assertTrue(self.env._logging_manager._mp_config is None)
+        self.assertTrue(self.env._logging_manager.log_config is None)
+
+        self.add_params(self.traj)
+        self.explore(self.traj)
+
+        self.env.f_run(log_all_levels)
+
+        self.assertFalse(os.path.isdir(log_path))
+        self.assertTrue(self.env._logging_manager._sp_config is None)
+        self.assertTrue(self.env._logging_manager._mp_config is None)
+        self.assertTrue(self.env._logging_manager.log_config is None)
+
+        self.env.f_disable_logging()
+        # pypet_path = os.path.abspath(os.path.dirname(pypet.pypetlogging))
+        # init_path = os.path.join(pypet_path, 'logging')
+        # if os.sep == '\\':
+        #     # Use the windows setting
+        #     # The only differences is the path separator `\`
+        #     log_config = os.path.join(init_path, 'windows_default.ini')
+        # else:
+        #     log_config = os.path.join(init_path, 'default.ini')
+
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_with_errors(self):
@@ -307,7 +345,8 @@ class LoggingTest(TrajectoryComparator):
     def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return
-        self.make_env(logger_names = ('','pypet'), log_level=logging.ERROR, log_config=None,
+        del self.mode.__dict__['log_config']
+        self.make_env(logger_names = ('','pypet'), log_level=logging.ERROR,
                       log_folder=make_temp_dir('logs'))
         self.add_params(self.traj)
         self.explore(self.traj)

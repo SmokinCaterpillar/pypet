@@ -134,6 +134,11 @@ def _change_logging_kwargs(kwargs):
     kwargs['log_config'] = dictionary
 
 
+def use_simple_logging(kwargs):
+    """Checks if simple logging is requested"""
+    return any([x in kwargs for x in ('log_folder', 'logger_names', 'log_levels')])
+
+
 def simple_logging_config(func):
     """Decorator to allow a simple logging configuration.
 
@@ -143,12 +148,12 @@ def simple_logging_config(func):
 
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
-
-        inside = [x in kwargs for x in ('log_folder', 'logger_names', 'log_levels')]
-        if any(inside):
-            if 'log_config' in kwargs and kwargs['log_config'] is not None:
-                raise ValueError('Please set `log_config to `None` if you want to use the simple '
-                                 'way of providing logging configuration.')
+        if use_simple_logging(kwargs):
+            if 'log_config' in kwargs:
+                raise ValueError('Please do not specify `log_config` '
+                                 'if you want to use the simple '
+                                 'way of providing logging configuration '
+                                 '(i.e using `log_folder`, `logger_names` and/or `log_levels`).')
             _change_logging_kwargs(kwargs)
 
         return func(self, *args, **kwargs)
@@ -298,7 +303,7 @@ class LoggingManager(object):
                  report_progress=False):
         self.trajectory = trajectory
         self.log_config = log_config
-        self._sc_config = None
+        self._sp_config = None
         self._mp_config = None
         self.log_stdout = log_stdout
         self.report_progress = report_progress
@@ -479,14 +484,14 @@ class LoggingManager(object):
                 parser = None
 
             if parser is not None:
-                self._sc_config = self._parser_to_string_io(parser)
+                self._sp_config = self._parser_to_string_io(parser)
                 self._mp_config = self._find_multiproc_options(parser)
                 if self._mp_config is not None:
                     self._mp_config = self._parser_to_string_io(self._mp_config)
 
             elif isinstance(self.log_config, dict):
-                self._sc_config = self.log_config
-                self._mp_config = self._find_multiproc_dict(self._sc_config)
+                self._sp_config = self.log_config
+                self._mp_config = self._find_multiproc_dict(self._sp_config)
 
         if self.log_stdout:
             if self.log_stdout is True:
@@ -550,7 +555,7 @@ class LoggingManager(object):
             if multiproc:
                 proc_log_config = self._mp_config
             else:
-                proc_log_config = self._sc_config
+                proc_log_config = self._sp_config
 
             if proc_log_config:
                 if isinstance(proc_log_config, dict):
@@ -574,10 +579,10 @@ class LoggingManager(object):
         for tool in self._tools:
             tool.finalize()
         self._tools = []
-        for config in (self._sc_config, self._mp_config):
+        for config in (self._sp_config, self._mp_config):
             if hasattr(config, 'close'):
                 config.close()
-        self._sc_config = None
+        self._sp_config = None
         self._mp_config = None
         if remove_all_handlers:
             self.tabula_rasa()
