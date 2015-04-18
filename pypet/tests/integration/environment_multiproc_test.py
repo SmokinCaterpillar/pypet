@@ -124,6 +124,8 @@ class CapTest(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool', 'cap'
 
+    cap_count = 0
+
     def setUp(self):
 
         self.multiproc = True
@@ -139,19 +141,27 @@ class CapTest(EnvironmentTest):
 
         random.seed()
 
+        cap_dicts = (dict(cpu_cap=0.1), # Ensure that these are triggered
+                      dict(memory_cap=(0.1, 150.0)),
+                      dict(swap_cap=0.1,))
 
+        cap_dict = cap_dicts[CapTest.cap_count]
         env = Environment(trajectory=self.trajname,filename=self.filename,
-                      file_title=self.trajname, log_folder=self.logfolder,
-                      logger_names=('pypet', 'test'), log_levels='ERROR',
-                      log_stdout=False,
-                      results_per_run=5,
-                      derived_parameters_per_run=5,
-                      multiproc=True,
-                      ncores=3,
-                      cpu_cap=0.001, # Ensure that these are triggered
-                      memory_cap=(0.001, 150.0),
-                      swap_cap=0.001,
-                      use_pool=False)
+                          file_title=self.trajname, log_folder=self.logfolder,
+                          logger_names=('pypet', 'test'), log_levels='ERROR',
+                          log_stdout=False,
+                          results_per_run=5,
+                          derived_parameters_per_run=5,
+                          multiproc=False,
+                          ncores=3,
+                          use_pool=False,
+                          **cap_dict)
+
+        logging.getLogger().error('Using Cap: %s' % str(cap_dict))
+        # Loop through all possible cap configurations
+        # and test one at a time
+        CapTest.cap_count += 1
+        CapTest.cap_count = CapTest.cap_count % len(cap_dicts)
 
         traj = env.v_trajectory
 

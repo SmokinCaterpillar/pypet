@@ -2150,10 +2150,18 @@ class Environment(HasLogger):
                         'CPU: %.1f %%, RAM: %.1f %%, Swap: %.1f %%.' %
                         (self._cpu_cap, self._memory_cap[0], self._swap_cap))
 
-                signal_cap = True  # If True cap warning is emitted
+
                 keep_running = True  # Evaluates to false if trajectory produces
                 # no more single runs
                 process_dict = {}  # Dict containing all subprocees
+
+                # For the cap values, we lazyly evaluate them
+                cpu_usage_func = lambda: self._estimate_cpu_utilization()
+                memory_usage_func = lambda: self._estimate_memory_utilization(process_dict)
+                swap_usage_func = lambda: psutil.swap_memory().percent
+                signal_cap = True  # If True cap warning is emitted
+                max_signals = 10  # Maximum number of warnings, after that warnings are
+                # no longer signaled
 
                 while len(process_dict) > 0 or keep_running:
                     # First check if some processes did finish their job
@@ -2170,37 +2178,33 @@ class Environment(HasLogger):
                     # Cap is only checked if there is at least one
                     # process working to prevent deadlock.
                     no_cap = True
-                    if self._check_usage and len(process_dict) > 0:
-                        cpu_usage = self._estimate_cpu_utilization()
-                        memory_usage = self._estimate_memory_utilization(process_dict)
-                        swap_usage = psutil.swap_memory().percent
-                        if cpu_usage > self._cpu_cap:
-                            no_cap = False
-                            if signal_cap:
-                                self._logger.warning(
-                                    'Could not start next process immediately.'
-                                'CPU Cap reached, %.1f >= %.1f.' %
-                                    (cpu_usage, self._cpu_cap))
-                                signal_cap = False
-                        elif memory_usage > self._memory_cap[0]:
-                            no_cap = False
-                            if signal_cap:
-                                self._logger.warning('Could not start next process '
-                                                     'immediately. Memory Cap '
-                                                     'including the estimated memory '
-                                                     'by each process '
-                                                     'reached, %.1f >= %.1f.' %
-                                                     (memory_usage,
-                                                      self._memory_cap[0]))
-                                signal_cap = False
-                        elif swap_usage > self._swap_cap:
-                            no_cap = False
-                            if signal_cap:
-                                self._logger.warning('Could not start next process '
-                                                     'immediately. Swap Cap reached, '
-                                                     '%.1f >= %.1f.' %
-                                                     (swap_usage, self._swap_cap))
-                                signal_cap = False
+                    if self._check_usage and self._ncores > len(process_dict) > 0:
+                        for cap_name, cap_function, threshold in (
+                                            ('CPU Cap', cpu_usage_func, self._cpu_cap),
+                                            ('Memory Cap', memory_usage_func, self._memory_cap[0]),
+                                            ('Swap Cap', swap_usage_func, self._swap_cap)):
+                            cap_value = cap_function()
+                            if cap_value > threshold:
+                                no_cap = False
+                                if signal_cap:
+                                    if cap_name == 'Memory Cap':
+                                        add_on_str = ' (including estimate)'
+                                    else:
+                                        add_on_str = ''
+                                    self._logger.warning('Could not start next process '
+                                                         'immediately. %s reached, '
+                                                         '%.1f%% >= %.1f%%%s.' %
+                                                         (cap_name, cap_value, threshold,
+                                                          add_on_str))
+                                    signal_cap = False
+                                    max_signals -= 1
+                                    if max_signals == 0:
+                                        self._logger.warning('Maximum number of cap warnings '
+                                                             'reached. I will no longer '
+                                                             'notify about cap violations, '
+                                                             'but cap values are still applied '
+                                                             'silently in background.')
+                                break  # If one cap value is reached we don't
 
                     # If we have less active processes than
                     # self._ncores and there is still
@@ -2213,7 +2217,7 @@ class Environment(HasLogger):
                             proc.start()
                             process_dict[proc.pid] = proc
 
-                            signal_cap = True
+                            signal_cap = max_signals > 0  # Only signal max_signals times
                         except StopIteration:
                             # All simulation runs have been started
                             keep_running = False
