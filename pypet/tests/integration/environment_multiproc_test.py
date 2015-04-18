@@ -144,7 +144,6 @@ class CapTest(EnvironmentTest):
                       file_title=self.trajname, log_folder=self.logfolder,
                       logger_names=('pypet', 'test'), log_levels='ERROR',
                       log_stdout=False,
-                      log_config=None,
                       results_per_run=5,
                       derived_parameters_per_run=5,
                       multiproc=True,
