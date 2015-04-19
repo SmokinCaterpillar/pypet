@@ -2121,7 +2121,7 @@ class Environment(HasLogger):
             iterator = self._make_iterator(start_run_idx, result_queue)
 
             if self._use_pool:
-                self._logger.info('Starting Pool')
+                self._logger.info('Starting Pool with %d processes' % self._ncores)
 
                 init_kwargs = dict(logging_manager=self._logging_manager)
                 mpool = multip.Pool(self._ncores, initializer=_configure_logging,
@@ -2142,6 +2142,9 @@ class Environment(HasLogger):
                 del mpool
 
             else:
+
+                self._logger.info('Starting multiprocessing with at most '
+                                  '%d processes running at the same time.' % self._ncores)
 
                 if self._check_usage:
                     self._logger.info(
@@ -2204,7 +2207,7 @@ class Environment(HasLogger):
                                                              'notify about cap violations, '
                                                              'but cap values are still applied '
                                                              'silently in background.')
-                                break  # If one cap value is reached we don't
+                                break  # If one cap value is reached we can skip the rest
 
                     # If we have less active processes than
                     # self._ncores and there is still
