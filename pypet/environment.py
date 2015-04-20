@@ -67,6 +67,18 @@ from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
 
+# global resources for pool multiprocessing
+pool_queue = None
+pool_lock = None
+
+def _configure_pool(kwargs):
+    """Configures the pool and remembers a global lock and pool"""
+    global pool_lock
+    global pool_queue
+    pool_lock = kwargs.get('lock', None)
+    pool_queue = kwargs.get('queue', None)
+    _configure_logging(kwargs)
+
 
 def _configure_logging(kwargs):
     """Requests the logging manager to configure logging."""
@@ -76,6 +88,16 @@ def _configure_logging(kwargs):
     except Exception as exc:
         sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
         traceback.print_exc()
+
+
+def _pass_resources_and_single_run(kwargs):
+    """Starts a pool single run and passes the global lock and pool"""
+    traj = kwargs['traj']
+    if pool_lock is not None:
+        traj.v_storage_service.lock = pool_lock
+    elif pool_queue is not None:
+        traj.v_storage_service.queue = pool_queue
+    return _single_run(kwargs)
 
 
 def _logging_and_single_run(kwargs):
@@ -2001,7 +2023,6 @@ class Environment(HasLogger):
         if self._continuable:
             self._trigger_continue_snapshot()
 
-
         self._logger.info(
             '\n************************************************************\n'
             'STARTING runs of trajectory\n`%s`.'
@@ -2106,6 +2127,7 @@ class Environment(HasLogger):
                                self._wrap_mode,
                                full_copy=None,
                                manager=manager,
+                               pass_implicit=not self._use_pool,
                                lock=None,
                                lock_with_manager=lock_with_manager,
                                queue=None,
@@ -2123,11 +2145,14 @@ class Environment(HasLogger):
             if self._use_pool:
                 self._logger.info('Starting Pool with %d processes' % self._ncores)
 
-                init_kwargs = dict(logging_manager=self._logging_manager)
-                mpool = multip.Pool(self._ncores, initializer=_configure_logging,
+                init_kwargs = dict(logging_manager=self._logging_manager,
+                                   lock=self._multiproc_wrapper.lock,
+                                   queue=self._multiproc_wrapper.queue)
+
+                mpool = multip.Pool(self._ncores, initializer=_configure_pool,
                                     initargs=(init_kwargs,))
 
-                pool_results = mpool.imap_unordered(_single_run, iterator)
+                pool_results = mpool.imap_unordered(_pass_resources_and_single_run, iterator)
 
                 for res in pool_results:
                     results.append(res)
@@ -2349,6 +2374,7 @@ class MultiprocContext(HasLogger):
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  full_copy=None,
                  manager=None,
+                 pass_implicit=True,
                  lock=None,
                  lock_with_manager=True,
                  queue=None,
@@ -2362,6 +2388,7 @@ class MultiprocContext(HasLogger):
         self._manager = manager
         self._traj = trajectory
         self._storage_service = self._traj.v_storage_service
+        self._pass_implicit = pass_implicit
         self._queue_process = None
         self._lock_wrapper = None
         self._queue_sender = None
@@ -2381,6 +2408,14 @@ class MultiprocContext(HasLogger):
 
         if full_copy is not None:
             self._traj.v_full_copy=full_copy
+
+    @property
+    def lock(self):
+        return self._lock
+
+    @property
+    def queue(self):
+        return self._queue
 
     def __enter__(self):
         self.start()
@@ -2412,7 +2447,7 @@ class MultiprocContext(HasLogger):
                                               pypetconstants.WRAP_MODE_LOCK))
 
     def _prepare_lock(self):
-        """ Replaces the trajectorie's service with a LockWrapper """
+        """ Replaces the trajectory's service with a LockWrapper """
         if self._lock is None:
             if self._lock_with_manager:
                 if self._manager is None:
@@ -2424,12 +2459,16 @@ class MultiprocContext(HasLogger):
 
         # Wrap around the storage service to allow the placement of locks around
         # the storage procedure.
-        lock_wrapper = LockWrapper(self._storage_service, self._lock)
+        if self._pass_implicit:
+            lock = self._lock
+        else:
+            lock = None
+        lock_wrapper = LockWrapper(self._storage_service, lock)
         self._traj.v_storage_service = lock_wrapper
         self._lock_wrapper = lock_wrapper
 
     def _prepare_queue(self):
-        """ Replaces the trajectorie's service with a queue sender and starts the queue process.
+        """ Replaces the trajectory's service with a queue sender and starts the queue process.
 
         """
         # For queue mode we need to have a queue in a block of shared memory.
@@ -2453,7 +2492,11 @@ class MultiprocContext(HasLogger):
         # The writer from above will receive the data from
         # the queue and hand it over to
         # the storage service
-        self._queue_sender = QueueStorageServiceSender(self._queue)
+        if self._pass_implicit:
+            queue = self._queue
+        else:
+            queue = None
+        self._queue_sender = QueueStorageServiceSender(queue)
         self._traj.v_storage_service = self._queue_sender
 
     def f_finalize(self):
@@ -2469,6 +2512,9 @@ class MultiprocContext(HasLogger):
                               'Hang in there for a little while. '
                               'There still might be some data in the queue that '
                               'needs to be stored.')
+            # We might have passed the queue implicitly,
+            # to be sure we add the queue here again
+            self._traj.v_storage_service.queue = self._queue
             self._traj.v_storage_service.send_done()
             self._queue_process.join()
             self._logger.info('The Storage Queue has joined.')

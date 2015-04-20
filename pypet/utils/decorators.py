@@ -201,7 +201,8 @@ def retry(n, errors, wait=0.0, logger_name=None):
             while True:
                 try:
                     result = func(*args, **kwargs)
-                    if retries:
+                    if retries and logger_name:
+                        logger = logging.getLogger(logger_name)
                         logger.error('Retry of `%s` successful' % func.__name__)
                     return result
                 except errors:
@@ -211,8 +212,10 @@ def retry(n, errors, wait=0.0, logger_name=None):
 
                     if logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.exception('I could not execute `%s`, '
-                                         'starting next try. ' % func.__name__)
+                        logger.exception('I could not execute `%s` with args %s and kwargs %s, '
+                                         'starting next try. ' % (func.__name__,
+                                                                  str(args),
+                                                                  str(kwargs)))
                     if wait:
                         time.sleep(wait)
         return new_func

@@ -72,20 +72,15 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     """
 
-    def __init__(self, storage_queue):
-        self._queue = storage_queue
+    def __init__(self, storage_queue=None):
+        self.queue = storage_queue
         self._set_logger()
         self._pickle_queue = True
-
-    @property
-    def queue(self):
-        """One can access the queue"""
-        return self._queue
 
     def __getstate__(self):
         result = super(QueueStorageServiceSender, self).__getstate__()
         if not self._pickle_queue:
-            result['_queue'] = None
+            result['queue'] = None
         return result
 
     def load(self, *args, **kwargs):
@@ -100,7 +95,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         while True:
             try:
                 self._pickle_queue = False
-                self._queue.put(to_put, block=True, timeout=1.42)
+                self.queue.put(to_put, block=True, timeout=1.42)
                 break
             except queue.Full:
                 pass  # This is ok, we just keep waiting until space is available
@@ -120,7 +115,7 @@ class QueueStorageServiceWriter(HasLogger):
 
     def __init__(self, storage_service, storage_queue):
         self._storage_service = storage_service
-        self._queue = storage_queue
+        self.queue = storage_queue
         self._trajectory_name = ''
         self._set_logger()
 
@@ -143,8 +138,8 @@ class QueueStorageServiceWriter(HasLogger):
         result = None
         while True:
             try:
-                result = self._queue.get(block=True, timeout=1.42)
-                self._queue.task_done()
+                result = self.queue.get(block=True, timeout=1.42)
+                self.queue.task_done()
                 break
             except queue.Empty:
                 pass  # This is ok, we just wait for input
@@ -208,9 +203,9 @@ class LockWrapper(MultiprocWrapper, HasLogger):
 
     """
 
-    def __init__(self, storage_service, lock):
+    def __init__(self, storage_service, lock=None):
         self._storage_service = storage_service
-        self._lock = lock
+        self.lock = lock
         self._set_logger()
         self._is_locked = False
 
@@ -233,21 +228,16 @@ class LockWrapper(MultiprocWrapper, HasLogger):
         """Usually storage services are not supposed to be multiprocessing safe"""
         return True
 
-    @property
-    def lock(self):
-        """One can access the lock"""
-        return self._lock
-
     @retry(9, TypeError, 0.01, 'pypet.retry')
     def acquire_lock(self):
         if not self._is_locked:
-            self._lock.acquire()
+            self.lock.acquire()
             self._is_locked = True
 
     @retry(9, TypeError, 0.01, 'pypet.retry')
     def release_lock(self):
         if self._is_locked and not self._storage_service.is_open:
-            self._lock.release()
+            self.lock.release()
             self._is_locked = False
 
     def store(self, *args, **kwargs):
@@ -256,11 +246,11 @@ class LockWrapper(MultiprocWrapper, HasLogger):
             self.acquire_lock()
             return self._storage_service.store(*args, **kwargs)
         finally:
-            if self._lock is not None:
+            if self.lock is not None:
                 try:
                     self.release_lock()
                 except RuntimeError:
-                    self._logger.error('Could not release lock `%s`!' % str(self._lock))
+                    self._logger.error('Could not release lock `%s`!' % str(self.lock))
 
     def __del__(self):
         """In order to prevent a dead-lock in case of error,
@@ -272,14 +262,14 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def load(self, *args, **kwargs):
         """Acquires a lock before loading and releases it afterwards."""
         try:
-            self._lock.acquire()
+            self.lock.acquire()
             return self._storage_service.load(*args, **kwargs)
         finally:
-            if self._lock is not None:
+            if self.lock is not None:
                 try:
-                    self._lock.release()
+                    self.lock.release()
                 except RuntimeError:
-                    self._logger.error('Could not release lock `%s`!' % str(self._lock))
+                    self._logger.error('Could not release lock `%s`!' % str(self.lock))
 
 
 class StorageService(object):

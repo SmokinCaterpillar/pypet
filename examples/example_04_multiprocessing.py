@@ -36,7 +36,7 @@ def main():
                       ncores=4,
                       use_pool=True,  # Our runs are inexpensive we can get rid of overhead
                       # by using a pool
-                      wrap_mode=pypetconstants.WRAP_MODE_LOCK)
+                      wrap_mode=pypetconstants.WRAP_MODE_QUEUE)
 
     # Get the trajectory from the environment
     traj = env.v_trajectory
