@@ -284,7 +284,6 @@ def to_dict_wo_config(traj):
             else:
                 res_dict.update(child.f_to_dict(fast_access=False))
 
-
         return res_dict
 
 

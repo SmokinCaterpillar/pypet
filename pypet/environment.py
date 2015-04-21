@@ -2099,12 +2099,15 @@ class Environment(HasLogger):
             # We assume that storage and loading is multiprocessing safe
             pass
         else:
+            use_manager = (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
+                           self._immediate_postproc)
+
             self._multiproc_wrapper = MultiprocContext(self._traj,
                                self._wrap_mode,
                                full_copy=None,
                                manager=None,
+                               use_manager=use_manager,
                                lock=None,
-                               lock_with_manager=self._immediate_postproc ,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
                                start_queue_process=True,
@@ -2318,18 +2321,19 @@ class MultiprocContext(HasLogger):
         if you already have instantiated one.
         Leave ``None`` if you want the wrapper to create one.
 
+    :param use_manager:
+
+        If your lock and queue should be created with a manager or if wrapping should be
+        created from the multiprocessing module directly.
+         For instance, ``multiprocessing.Lock()`` or via a manager
+        ``multiprocessing.Manager().Lock()`` (if you specified a manager, this manager will be
+        used). The former is usually faster whereas the latter is more flexible and can
+        be used in an environment where fork is not available, for instance.
+
     :param lock:
 
         You can pass a multiprocessing lock here, if you already have instantiated one.
         Leave ``None`` if you want the wrapper to create one in case of ``'LOCK'`` wrapping.
-
-    :param lock_with_manager:
-
-        In case you use ``'LOCK'`` wrapping if a lock should be created from the multiprocessing
-        module directly ``multiprocessing.Lock()`` or via a manager
-        ``multiprocessing.Manager().Lock()`` (if you specified a manager, this manager will be
-        used). The former is usually faster whereas the latter is more flexible and can
-        be used with a pool of processes, for instance.
 
     :param queue:
 
@@ -2356,8 +2360,8 @@ class MultiprocContext(HasLogger):
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  full_copy=None,
                  manager=None,
+                 use_manager=True,
                  lock=None,
-                 lock_with_manager=True,
                  queue=None,
                  queue_maxsize=0,
                  start_queue_process=True,
@@ -2376,7 +2380,7 @@ class MultiprocContext(HasLogger):
         self._queue = queue
         self._queue_maxsize = queue_maxsize
         self._lock = lock
-        self._lock_with_manager = lock_with_manager
+        self._use_manager = use_manager
         self._start_queue_process = start_queue_process
         self._logging_manager = None
 
@@ -2437,7 +2441,7 @@ class MultiprocContext(HasLogger):
     def _prepare_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """
         if self._lock is None:
-            if self._lock_with_manager:
+            if self._use_manager:
                 if self._manager is None:
                     self._manager = multip.Manager()
                 # We need a lock that is shared by all processes.
@@ -2456,9 +2460,12 @@ class MultiprocContext(HasLogger):
 
         """
         if self._queue is None:
-            if self._manager is None:
-                self._manager = multip.Manager()
-            self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
+            if self._use_manager:
+                if self._manager is None:
+                    self._manager = multip.Manager()
+                self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
+            else:
+                self._queue = multip.Queue(maxsize=self._queue_maxsize)
 
         self._logger.info('Starting the Storage Queue!')
         # Wrap a queue writer around the storage service

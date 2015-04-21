@@ -141,7 +141,8 @@ class QueueStorageServiceWriter(HasLogger):
         while True:
             try:
                 result = self.queue.get(block=True, timeout=1.42)
-                self.queue.task_done()
+                if hasattr(self.queue, 'task_done'):
+                    self.queue.task_done()
                 break
             except queue.Empty:
                 pass  # This is ok, we just wait for input
