@@ -42,10 +42,13 @@ print('Appended path `%s`' % pypetpath)
 
 from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR, parse_args
 
+
 if __name__ == '__main__':
     opt_dict = parse_args()
     tests_include = set(('TestMPImmediatePostProc',
                     'MultiprocLinkNoPoolLockTest', 'MultiprocLinkNoPoolQueueTest',
+                    'MultiprocNoPoolSortManagerLockTest',
+                    'MultiprocPoolSortManagerQueueTest',
                     'MultiprocLinkQueueTest', 'CapTest'))
     pred = lambda class_name, test_name, tags: (class_name in tests_include or
                                                  'multiproc' not in tags)

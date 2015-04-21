@@ -20,12 +20,12 @@ except ImportError:
     psutil = None
 
 
-class MultiprocQueueTest(TestOtherHDF5Settings2):
+class MultiprocPoolQueueTest(TestOtherHDF5Settings2):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool'
 
     def set_mode(self):
-        super(MultiprocQueueTest, self).set_mode()
+        super(MultiprocPoolQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 4
@@ -47,24 +47,24 @@ class MultiprocLockTest(EnvironmentTest):
         self.use_pool=True
 
 
-class MultiprocSortQueueTest(ResultSortTest):
+class MultiprocPoolSortQueueTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool',
 
     def set_mode(self):
-        super(MultiprocSortQueueTest, self).set_mode()
+        super(MultiprocPoolSortQueueTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_QUEUE
         self.multiproc = True
         self.ncores = 3
         self.use_pool=True
 
 
-class MultiprocSortLockTest(ResultSortTest):
+class MultiprocPoolSortLockTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',
 
     def set_mode(self):
-        super(MultiprocSortLockTest, self).set_mode()
+        super(MultiprocPoolSortLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 4

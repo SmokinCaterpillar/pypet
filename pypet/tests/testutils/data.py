@@ -263,7 +263,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         rootlogger.info('<<<<<<Finished Simple Calculations')
 
-        return 42
+        # let's see if the traj can also always be returned
+        return 42, traj
 
 
 def to_dict_wo_config(traj):

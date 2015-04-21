@@ -41,6 +41,8 @@ def main():
         # The multiprocessing context manager wraps the storage service of the trajectory
         # and passes the wrapped service to the trajectory.
         # Also restores the original storage service in the end.
+        # Moreover, wee need to use the `MANAGER_LOCK` wrapping because the locks
+        # are pickled and send to the pool for all function executions
 
         # Start a pool of processes manipulating the trajectory
         iterable = (traj for x in range(20))

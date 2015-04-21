@@ -67,17 +67,24 @@ from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
 
-# global resources for pool multiprocessing
-pool_queue = None
-pool_lock = None
+
+def _pool_single_run(kwargs):
+    """Starts a pool single run and passes the storage service"""
+    traj = kwargs['traj']
+    traj.v_storage_service = _pool_single_run.storage_service
+    return _single_run(kwargs)
+
 
 def _configure_pool(kwargs):
-    """Configures the pool and remembers a global lock and pool"""
-    global pool_lock
-    global pool_queue
-    pool_lock = kwargs.get('lock', None)
-    pool_queue = kwargs.get('queue', None)
+    """Configures the pool and keeps the storage service"""
+    _pool_single_run.storage_service = kwargs['storage_service']
     _configure_logging(kwargs)
+
+
+def _process_single_run(kwargs):
+    """Wrapper function that first configures logging and starts a single run afterwards."""
+    _configure_logging(kwargs)
+    return _single_run(kwargs)
 
 
 def _configure_logging(kwargs):
@@ -88,23 +95,6 @@ def _configure_logging(kwargs):
     except Exception as exc:
         sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
         traceback.print_exc()
-
-
-def _pass_resources_and_single_run(kwargs):
-    """Starts a pool single run and passes the global lock and pool"""
-    traj = kwargs['traj']
-    if pool_lock is not None:
-        traj.v_storage_service.lock = pool_lock
-    elif pool_queue is not None:
-        traj.v_storage_service.queue = pool_queue
-    return _single_run(kwargs)
-
-
-def _logging_and_single_run(kwargs):
-    """Wrapper function that first configures logging and starts a single run afterwards."""
-    _configure_logging(kwargs)
-    return _single_run(kwargs)
-
 
 def _single_run(kwargs):
     """ Performs a single run of the experiment.
@@ -2016,7 +2006,6 @@ class Environment(HasLogger):
                                                 'postprocessing, only added if '
                                                 'postprocessing was used at all.')
 
-        result_queue = None  # Queue for results of `runfunc` in case of multiproc without pool
         self._storage_service = self._traj.v_storage_service
         self._multiproc_wrapper = None
 
@@ -2084,16 +2073,12 @@ class Environment(HasLogger):
         while not result_queue.empty():
             result = result_queue.get()
             results.append(result)
-            if hasattr(result_queue, 'task_done'):
-                result_queue.task_done()
             self._show_progress(n, total_runs)
             n += 1
         return n
 
     def _execute_multiprocessing(self, start_run_idx, results):
         """Performs multiprocessing and signals expansion by postproc"""
-        manager = multip.Manager()
-
         n = start_run_idx
         total_runs = len(self._traj)
         expanded_by_postproc = False
@@ -2101,16 +2086,12 @@ class Environment(HasLogger):
         if not self._use_pool:
             # If we spawn a single process for each run, we need an additional queue
             # for the results of `runfunc`
-            if hasattr(os, 'fork'):
-                queue_constructor = multip.Queue
-            else:
-                queue_constructor = manager.Queue
             if self._immediate_postproc:
                 maxsize = 0
             else:
                 maxsize = total_runs
 
-            result_queue = queue_constructor(maxsize=maxsize)
+            result_queue = multip.Queue(maxsize=maxsize)
         else:
             result_queue = None
 
@@ -2118,18 +2099,12 @@ class Environment(HasLogger):
             # We assume that storage and loading is multiprocessing safe
             pass
         else:
-            # Prepare Multiprocessing
-            lock_with_manager = (self._use_pool or
-                                 self._immediate_postproc or
-                                 not hasattr(os, 'fork'))
-
             self._multiproc_wrapper = MultiprocContext(self._traj,
                                self._wrap_mode,
                                full_copy=None,
-                               manager=manager,
-                               pass_implicit=not self._use_pool,
+                               manager=None,
                                lock=None,
-                               lock_with_manager=lock_with_manager,
+                               lock_with_manager=self._immediate_postproc ,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
                                start_queue_process=True,
@@ -2145,14 +2120,17 @@ class Environment(HasLogger):
             if self._use_pool:
                 self._logger.info('Starting Pool with %d processes' % self._ncores)
 
+                # We don't want to pickle the storage service
+                pool_service = self._traj.v_storage_service
+                self.traj.v_storage_service = None
+
                 init_kwargs = dict(logging_manager=self._logging_manager,
-                                   lock=self._multiproc_wrapper.lock,
-                                   queue=self._multiproc_wrapper.queue)
+                                   storage_servie=pool_service)
 
                 mpool = multip.Pool(self._ncores, initializer=_configure_pool,
                                     initargs=(init_kwargs,))
 
-                pool_results = mpool.imap_unordered(_pass_resources_and_single_run, iterator)
+                pool_results = mpool.imap_unordered(_pool_single_run, iterator)
 
                 for res in pool_results:
                     results.append(res)
@@ -2162,6 +2140,9 @@ class Environment(HasLogger):
                 # Everything is done
                 mpool.close()
                 mpool.join()
+
+                # Restore the storage service
+                self._traj.v_storage_service = pool_service
 
                 self._logger.info('Pool has joined, will delete it.')
                 del mpool
@@ -2183,7 +2164,7 @@ class Environment(HasLogger):
                 # no more single runs
                 process_dict = {}  # Dict containing all subprocees
 
-                # For the cap values, we lazyly evaluate them
+                # For the cap values, we lazily evaluate them
                 cpu_usage_func = lambda: self._estimate_cpu_utilization()
                 memory_usage_func = lambda: self._estimate_memory_utilization(process_dict)
                 swap_usage_func = lambda: psutil.swap_memory().percent
@@ -2240,7 +2221,7 @@ class Environment(HasLogger):
                     if len(process_dict) < self._ncores and keep_running and no_cap:
                         try:
                             task = next(iterator)
-                            proc = multip.Process(target=_logging_and_single_run,
+                            proc = multip.Process(target=_process_single_run,
                                                   args=(task,))
                             proc.start()
                             process_dict[proc.pid] = proc
@@ -2281,6 +2262,7 @@ class Environment(HasLogger):
             # Finalize the result queue
             del result_queue
         return expanded_by_postproc
+
 
 class MultiprocContext(HasLogger):
     """ A lightweight environment that allows the usage of multiprocessing.
@@ -2374,7 +2356,6 @@ class MultiprocContext(HasLogger):
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  full_copy=None,
                  manager=None,
-                 pass_implicit=True,
                  lock=None,
                  lock_with_manager=True,
                  queue=None,
@@ -2388,10 +2369,9 @@ class MultiprocContext(HasLogger):
         self._manager = manager
         self._traj = trajectory
         self._storage_service = self._traj.v_storage_service
-        self._pass_implicit = pass_implicit
         self._queue_process = None
         self._lock_wrapper = None
-        self._queue_sender = None
+        self._queue_wrapper = None
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._queue_maxsize = queue_maxsize
@@ -2410,12 +2390,20 @@ class MultiprocContext(HasLogger):
             self._traj.v_full_copy=full_copy
 
     @property
-    def lock(self):
+    def v_lock(self):
         return self._lock
 
     @property
-    def queue(self):
+    def v_queue(self):
         return self._queue
+
+    @property
+    def v_queue_wrapper(self):
+        return self._queue_wrapper
+
+    @property
+    def v_lock_wrapper(self):
+        return self._lock_wrapper
 
     def __enter__(self):
         self.start()
@@ -2442,7 +2430,7 @@ class MultiprocContext(HasLogger):
             self._prepare_lock()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                           'not supported, use `%s` or `%s`.'
+                                           'not supported, use %s` or `%s`.'
                                            % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
                                               pypetconstants.WRAP_MODE_LOCK))
 
@@ -2459,11 +2447,7 @@ class MultiprocContext(HasLogger):
 
         # Wrap around the storage service to allow the placement of locks around
         # the storage procedure.
-        if self._pass_implicit:
-            lock = self._lock
-        else:
-            lock = None
-        lock_wrapper = LockWrapper(self._storage_service, lock)
+        lock_wrapper = LockWrapper(self._storage_service, self._lock)
         self._traj.v_storage_service = lock_wrapper
         self._lock_wrapper = lock_wrapper
 
@@ -2471,7 +2455,6 @@ class MultiprocContext(HasLogger):
         """ Replaces the trajectory's service with a queue sender and starts the queue process.
 
         """
-        # For queue mode we need to have a queue in a block of shared memory.
         if self._queue is None:
             if self._manager is None:
                 self._manager = multip.Manager()
@@ -2492,12 +2475,8 @@ class MultiprocContext(HasLogger):
         # The writer from above will receive the data from
         # the queue and hand it over to
         # the storage service
-        if self._pass_implicit:
-            queue = self._queue
-        else:
-            queue = None
-        self._queue_sender = QueueStorageServiceSender(queue)
-        self._traj.v_storage_service = self._queue_sender
+        self._queue_wrapper = QueueStorageServiceSender(self._queue)
+        self._traj.v_storage_service = self._queue_wrapper
 
     def f_finalize(self):
         """ Restores the original storage service.
@@ -2507,7 +2486,8 @@ class MultiprocContext(HasLogger):
         Automatically called when used as context manager.
 
         """
-        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE and self._queue_process is not None:
+        if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE and
+                    self._queue_process is not None):
             self._logger.info('The Storage Queue will no longer accept new data. '
                               'Hang in there for a little while. '
                               'There still might be some data in the queue that '
@@ -2525,7 +2505,7 @@ class MultiprocContext(HasLogger):
         self._manager = None
         self._queue_process = None
         self._queue = None
-        self._queue_sender = None
+        self._queue_wrapper = None
         self._lock = None
         self._lock_wrapper = None
 

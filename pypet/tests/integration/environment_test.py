@@ -327,6 +327,57 @@ class EnvironmentTest(TrajectoryComparator):
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 30.0, 'Size is %sMB > 30MB' % str(size_in_mb))
 
+    def test_mp_run(self):
+        if not self.multiproc:
+            # Test makes only sens with multiprocessing
+            return
+        self.traj.f_add_parameter('TEST', 'test_run')
+        self.traj.hdf5.purge_duplicate_comments = False
+        ###Explore
+        self.explore(self.traj)
+
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+
+        mp_traj = self.traj
+
+        self.multiproc = False
+
+        ### Make a new single core run
+        self.setUp()
+
+        self.traj.f_add_parameter('TEST', 'test_run')
+        self.traj.hdf5.purge_duplicate_comments = False
+        ###Explore
+        self.explore(self.traj)
+
+        self.make_run()
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj, newtraj)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+
+        self.compare_trajectories(mp_traj, self.traj)
+        self.multiproc = True
+
+
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
         ###Explore

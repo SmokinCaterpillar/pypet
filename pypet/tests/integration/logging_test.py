@@ -151,6 +151,7 @@ class LoggingTest(TrajectoryComparator):
         total_error_count = 0
         total_store_count = 0
         total_info_count = 0
+        total_retry_count = 0
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
@@ -160,6 +161,8 @@ class LoggingTest(TrajectoryComparator):
             total_error_count += error_count
             store_count = text.count('STORE_Test!')
             total_store_count += store_count
+            retry_count = text.count('Retry')
+            total_retry_count += retry_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -191,6 +194,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_store_count, len(traj))
         self.assertEqual(total_error_count, 0)
         self.assertEqual(total_info_count, len(traj))
+        self.assertLess(total_retry_count, len(traj))
 
     def test_throw_error_when_specifying_config_and_old_method(self):
         with self.assertRaises(ValueError):
@@ -268,6 +272,7 @@ class LoggingTest(TrajectoryComparator):
         total_error_count = 0
         total_store_count = 0
         total_info_count = 0
+        total_retry_count = 0
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
@@ -277,6 +282,8 @@ class LoggingTest(TrajectoryComparator):
             total_error_count += error_count
             store_count = text.count('STORE_Test!')
             total_store_count += store_count
+            retry_count = text.count('Retry')
+            total_retry_count += retry_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -325,6 +332,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_store_count, 2*len(traj))
         self.assertEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, len(traj))
+        self.assertLess(total_retry_count, len(traj))
 
     def test_file_renaming(self):
         traj_name = 'test'
@@ -381,6 +389,7 @@ class LoggingTest(TrajectoryComparator):
         total_error_count = 0
         total_store_count = 0
         total_info_count = 0
+        total_retry_count = 0
 
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
@@ -391,6 +400,8 @@ class LoggingTest(TrajectoryComparator):
             total_error_count += error_count
             store_count = text.count('STORE_Test!')
             total_store_count += store_count
+            retry_count = text.count('Retry')
+            total_retry_count += retry_count
             if 'LOG.txt' == file:
                 if self.mode.multiproc:
                     self.assertEqual(count,0)
@@ -439,6 +450,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertGreaterEqual(total_store_count, 2*len(traj))
         self.assertGreaterEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, 0)
+        self.assertLess(total_retry_count, len(traj))
 
     #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):

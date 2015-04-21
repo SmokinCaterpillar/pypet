@@ -74,12 +74,12 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def __init__(self, storage_queue=None):
         self.queue = storage_queue
+        self.pickle_queue = True
         self._set_logger()
-        self._pickle_queue = True
 
     def __getstate__(self):
         result = super(QueueStorageServiceSender, self).__getstate__()
-        if not self._pickle_queue:
+        if not self.pickle_queue:
             result['queue'] = None
         return result
 
@@ -91,24 +91,26 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _put_on_queue(self, to_put):
         """Puts data on queue"""
-        old_pickle = self._pickle_queue
+        self.pickle_queue = False
         while True:
             try:
-                self._pickle_queue = False
                 self.queue.put(to_put, block=True, timeout=1.42)
                 break
             except queue.Full:
                 pass  # This is ok, we just keep waiting until space is available
-            finally:
-                self._pickle_queue = old_pickle
 
     def store(self, *args, **kwargs):
-        """Puts data to store on queue."""
+        """Puts data to store on queue.
+
+        Note that the queue will no longer be pickled if the Sender is pickled.
+
+        """
         self._put_on_queue(('STORE', args, kwargs))
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
         self._put_on_queue(('DONE', [], {}))
+
 
 class QueueStorageServiceWriter(HasLogger):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
