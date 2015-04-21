@@ -32,7 +32,7 @@ class MultiprocPoolQueueTest(TestOtherHDF5Settings2):
         self.use_pool=True
 
 
-class MultiprocLockTest(EnvironmentTest):
+class MultiprocPoolLockTest(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',
 
@@ -40,7 +40,7 @@ class MultiprocLockTest(EnvironmentTest):
     #     super(MultiprocLockTest, self).test_run()
 
     def set_mode(self):
-        super(MultiprocLockTest, self).set_mode()
+        super(MultiprocPoolLockTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
         self.ncores = 4

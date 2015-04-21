@@ -13,6 +13,7 @@ from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, 
 from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
 from pypet.utils.helpful_functions import flatten_dictionary
+from pypet.storageservice import LockWrapper
 
 __author__ = 'Robert Meyer'
 
@@ -264,6 +265,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
         rootlogger.info('<<<<<<Finished Simple Calculations')
 
         # let's see if the traj can also always be returned
+        if isinstance(traj.v_storage_service, LockWrapper):
+            traj.v_storage_service.pickle_lock = False
         return 42, traj
 
 

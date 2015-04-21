@@ -208,8 +208,15 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def __init__(self, storage_service, lock=None):
         self._storage_service = storage_service
         self.lock = lock
-        self._set_logger()
         self._is_locked = False
+        self.pickle_lock = True
+        self._set_logger()
+
+    def __getstate__(self):
+        result = super(LockWrapper, self).__getstate__()
+        if not self.pickle_lock:
+            result['lock'] = None
+        return result
 
     def __repr__(self):
         return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
