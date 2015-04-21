@@ -458,7 +458,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         return self._storage_service
 
     @v_storage_service.setter
-    @not_in_run
     def v_storage_service(self, service):
         """Sets the storage service"""
         self._storage_service = service

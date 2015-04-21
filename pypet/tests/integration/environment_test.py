@@ -327,10 +327,7 @@ class EnvironmentTest(TrajectoryComparator):
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
         self.assertTrue(size_in_mb < 30.0, 'Size is %sMB > 30MB' % str(size_in_mb))
 
-    def test_mp_run(self):
-        if not self.multiproc:
-            # Test makes only sens with multiprocessing
-            return
+    def test_two_runs(self):
         self.traj.f_add_parameter('TEST', 'test_run')
         self.traj.hdf5.purge_duplicate_comments = False
         ###Explore
@@ -351,6 +348,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         mp_traj = self.traj
 
+        old_multiproc = self.multiproc
         self.multiproc = False
 
         ### Make a new single core run
@@ -375,7 +373,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
 
         self.compare_trajectories(mp_traj, self.traj)
-        self.multiproc = True
+        self.multiproc = old_multiproc
 
 
     def test_run(self):

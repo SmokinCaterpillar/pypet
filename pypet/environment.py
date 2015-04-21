@@ -2122,10 +2122,10 @@ class Environment(HasLogger):
 
                 # We don't want to pickle the storage service
                 pool_service = self._traj.v_storage_service
-                self.traj.v_storage_service = None
+                self._traj.v_storage_service = None
 
                 init_kwargs = dict(logging_manager=self._logging_manager,
-                                   storage_servie=pool_service)
+                                   storage_service=pool_service)
 
                 mpool = multip.Pool(self._ncores, initializer=_configure_pool,
                                     initargs=(init_kwargs,))
