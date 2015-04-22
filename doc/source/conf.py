@@ -98,12 +98,31 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+# try:
+#     import sphinx_rtd_theme
+#
+#     html_theme = "sphinx_rtd_theme"
+#
+#     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+# except ImportError:
+html_theme = 'agogo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+css_gradient = '''background: rgb(23,49,119); /* Old browsers */
+background: -moz-linear-gradient(top, rgba(23,49,119,1) 0%, rgba(32,124,202,1) 65%, rgba(41,137,216,1) 82%, rgba(125,185,232,1) 100%); /* FF3.6+ */
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(23,49,119,1)), color-stop(65%,rgba(32,124,202,1)), color-stop(82%,rgba(41,137,216,1)), color-stop(100%,rgba(125,185,232,1))); /* Chrome,Safari4+ */
+background: -webkit-linear-gradient(top, rgba(23,49,119,1) 0%,rgba(32,124,202,1) 65%,rgba(41,137,216,1) 82%,rgba(125,185,232,1) 100%); /* Chrome10+,Safari5.1+ */
+background: -o-linear-gradient(top, rgba(23,49,119,1) 0%,rgba(32,124,202,1) 65%,rgba(41,137,216,1) 82%,rgba(125,185,232,1) 100%); /* Opera 11.10+ */
+background: -ms-linear-gradient(top, rgba(23,49,119,1) 0%,rgba(32,124,202,1) 65%,rgba(41,137,216,1) 82%,rgba(125,185,232,1) 100%); /* IE10+ */
+background: linear-gradient(to bottom, rgba(23,49,119,1) 0%,rgba(32,124,202,1) 65%,rgba(41,137,216,1) 82%,rgba(125,185,232,1) 100%); /* W3C */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#173177', endColorstr='#7db9e8',GradientType=0 ); /* IE6-9 */'''
+
+html_theme_options = {'documentwidth': '55em',
+                      'pagewidth': '75em',
+                      'nosidebar': False,
+                      'headerbg': css_gradient}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
