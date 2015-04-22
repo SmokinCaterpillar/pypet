@@ -110,8 +110,8 @@ class HasSlots(object):
 
     def __setstate__(self, state):
         """Recalls state for items with slots"""
-        for key, value in state.items():
-            setattr(self, key, value)
+        for key in state:
+            setattr(self, key, state[key])
 
     def __dir__(self):
         """Includes all slots in the `dir` method"""

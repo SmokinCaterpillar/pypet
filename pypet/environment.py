@@ -188,7 +188,12 @@ def _queue_handling(kwargs):
     _configure_logging(kwargs)
     # Main job, make the listener to the queue start receiving message for writing to disk.
     queue_handler=kwargs['queue_handler']
+    # import cProfile as profile
+    # profiler = profile.Profile()
+    # profiler.enable()
     queue_handler.run()
+    # profiler.disable()
+    # profiler.dump_stats('./queue.profile2')
 
 
 def _trigger_result_snapshot(result, continue_path):

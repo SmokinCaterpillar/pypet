@@ -34,6 +34,7 @@ def main():
                       comment='Multiprocessing example!',
                       multiproc=True,
                       ncores=4,
+                      queue_maxsize=0,
                       use_pool=True,  # Our runs are inexpensive we can get rid of overhead
                       # by using a pool
                       wrap_mode=pypetconstants.WRAP_MODE_QUEUE)
@@ -46,7 +47,7 @@ def main():
     traj.f_add_parameter('y', 1.0, comment='I am the second dimension!')
 
     # Explore the parameters with a cartesian product, but we want to explore a bit more
-    traj.f_explore(cartesian_product({'x':[float(x) for x in range(12)],
+    traj.f_explore(cartesian_product({'x':[float(x) for x in range(20)],
                                       'y':[float(y) for y in range(12)]}))
 
     # Run the simulation

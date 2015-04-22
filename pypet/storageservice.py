@@ -92,12 +92,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     def _put_on_queue(self, to_put):
         """Puts data on queue"""
         self.pickle_queue = False
-        while True:
-            try:
-                self.queue.put(to_put, block=True, timeout=1.42)
-                break
-            except queue.Full:
-                pass  # This is ok, we just keep waiting until space is available
+        self.queue.put(to_put, block=True)
 
     def store(self, *args, **kwargs):
         """Puts data to store on queue.
@@ -137,15 +132,9 @@ class QueueStorageServiceWriter(HasLogger):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _get_from_queue(self):
         """Gets data from queue"""
-        result = None
-        while True:
-            try:
-                result = self.queue.get(block=True, timeout=1.42)
-                if hasattr(self.queue, 'task_done'):
-                    self.queue.task_done()
-                break
-            except queue.Empty:
-                pass  # This is ok, we just wait for input
+        result = self.queue.get(block=True)
+        if hasattr(self.queue, 'task_done'):
+            self.queue.task_done()
         return result
 
     def _handle_data(self, msg, args, kwargs):
@@ -1193,11 +1182,7 @@ class HDF5StorageService(StorageService, HasLogger):
         opened = True
         try:
 
-            self._srvc_extract_file_information(kwargs)
-
-            args = list(args)
-
-            opened = self._srvc_opening_routine('r')
+            opened = self._srvc_opening_routine('r', kwargs=kwargs)
 
             if msg == pypetconstants.TRAJECTORY:
                 self._trj_load_trajectory(stuff_to_load, *args, **kwargs)
@@ -1536,11 +1521,7 @@ class HDF5StorageService(StorageService, HasLogger):
         opened = True
         try:
 
-            self._srvc_extract_file_information(kwargs)
-
-            args = list(args)
-
-            opened = self._srvc_opening_routine('a', msg)
+            opened = self._srvc_opening_routine('a', msg, kwargs)
 
             if msg == pypetconstants.MERGE:
                 self._trj_merge_trajectories(*args, **kwargs)
@@ -1687,7 +1668,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             self.store(msg, item, *args, **kwargs)
 
-    def _srvc_opening_routine(self, mode, msg=None):
+    def _srvc_opening_routine(self, mode, msg=None, kwargs=()):
         """Opens an hdf5 file for reading or writing
 
         The file is only opened if it has not been opened before (i.e. `self._hdf5file is None`).
@@ -1707,6 +1688,10 @@ class HDF5StorageService(StorageService, HasLogger):
             Message provided to `load` or `store`. Only considered to check if a trajectory
             was stored before.
 
+        :param kwargs:
+
+            Arguments to extract file information from
+
         :return:
 
             `True` if file is opened
@@ -1715,6 +1700,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         self._mode = mode
+        self._srvc_extract_file_information(kwargs)
+
         if not self.is_open:
 
             if 'a' in mode:
