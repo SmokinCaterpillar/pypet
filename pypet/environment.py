@@ -75,9 +75,23 @@ def _pool_single_run(kwargs):
     return _single_run(kwargs)
 
 
+def _frozen_pool_single_run(idx):
+    """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
+    kwargs = _frozen_pool_single_run.kwargs
+    traj = kwargs['traj']
+    traj._make_single_run(idx)
+    return _single_run(kwargs)
+
+
 def _configure_pool(kwargs):
     """Configures the pool and keeps the storage service"""
     _pool_single_run.storage_service = kwargs['storage_service']
+    _configure_logging(kwargs)
+
+
+def _configure_frozen_pool(kwargs):
+    """Configures the frozen pool and keeps all kwargs"""
+    _frozen_pool_single_run.kwargs = kwargs
     _configure_logging(kwargs)
 
 
@@ -96,6 +110,7 @@ def _configure_logging(kwargs):
         sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
         traceback.print_exc()
 
+
 def _single_run(kwargs):
     """ Performs a single run of the experiment.
 
@@ -104,8 +119,6 @@ def _single_run(kwargs):
         traj: The trajectory containing all parameters set to the corresponding run index.
 
         runfunc: The user's job function
-
-        result_queue: A queue object to store results into in case a pool is used, otherwise None
 
         runargs: The arguments handed to the user's job function (as *args)
 
@@ -117,6 +130,8 @@ def _single_run(kwargs):
 
         automatic_storing: Whether or not the data should be automatically stored
 
+        result_queue: A queue object to store results into in case a pool is used, otherwise None
+
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
@@ -127,12 +142,14 @@ def _single_run(kwargs):
     try:
         traj = kwargs['traj']
         runfunc = kwargs['runfunc']
-        result_queue = kwargs['result_queue']
         runargs = kwargs['runargs']
         kwrunparams = kwargs['runkwargs']
         clean_up_after_run = kwargs['clean_up_runs']
         continue_path = kwargs['continue_path']
         automatic_storing = kwargs['automatic_storing']
+
+        # result queue is optional
+        result_queue = kwargs.get('result_queue', None)
 
         idx = traj.v_idx
         total_runs = len(traj)
@@ -363,6 +380,13 @@ class Environment(HasLogger):
         picklable.
         If you choose ``use_pool=False`` you can also make use of the `cap` values,
         see below.
+
+    :param freeze_pool_input:
+
+        Can be set to ``True`` if the run function as well as all additional arguments
+        are immutable. This will prevent the trajectory from getting pickled again and again.
+        Thus, the run function, the trajectory as well as all arguments are passed to the pool
+        at initialisation.
 
     :param queue_maxsize:
 
@@ -785,6 +809,7 @@ class Environment(HasLogger):
                  multiproc=False,
                  ncores=1,
                  use_pool=False,
+                 freeze_pool_input=False,
                  queue_maxsize=-1,
                  cpu_cap=100.0,
                  memory_cap=100.0,
@@ -1018,6 +1043,7 @@ class Environment(HasLogger):
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
+        self._freeze_pool_input = freeze_pool_input
         self._multiproc_wrapper = None # The wrapper Service
 
         self._do_single_runs = do_single_runs
@@ -1039,7 +1065,14 @@ class Environment(HasLogger):
                                                 'spawning individual processes for '
                                                 'each run.').f_lock()
 
-                if not self._traj.f_get('config.environment.%s.use_pool' % self.v_name).f_get():
+                if self._use_pool:
+                    config_name = 'environment.%s.freeze_pool_input' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._freeze_pool_input,
+                                        comment='If inputs to each run are static and '
+                                                'are not mutated during each run, '
+                                                'can speed up pool running.').f_lock()
+
+                else:
                     config_name = 'environment.%s.cpu_cap' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._cpu_cap,
                                             comment='Maximum cpu usage beyond '
@@ -1769,30 +1802,38 @@ class Environment(HasLogger):
         """Displays a progressbar"""
         self._logging_manager.show_progress(n, total_runs)
 
-    def _make_kwargs(self, result_queue=None):
+    def _make_kwargs(self, **kwargs):
         """Creates the keyword arguments for the single run handling"""
         result_dict = {'traj': self._traj,
                        'logging_manager': self._logging_manager,
                        'runfunc': self._runfunc,
-                       'result_queue': result_queue,
                        'runargs': self._args,
                        'runkwargs': self._kwargs,
                        'clean_up_runs': self._clean_up_runs,
                        'continue_path': self._continue_path,
                        'automatic_storing': self._automatic_storing}
+        result_dict.update(kwargs)
         if self._multiproc:
-            result_dict['clean_up_runs'] = False
             if self._use_pool:
-                del result_dict['logging_manager']
+                if not self._freeze_pool_input:
+                    result_dict['clean_up_runs'] = False
+                    del result_dict['logging_manager']
+            else:
+                result_dict['clean_up_runs'] = False
         return result_dict
 
-    def _make_iterator(self, start_run_idx, result_queue=None):
-        """ Returns an iterator over all runs """
-        kwargs = self._make_kwargs(result_queue)
+    def _make_index_iterator(self, start_run_idx):
+        """Returns an iterator over the run indices that are not completed"""
         total_runs = len(self._traj)
+        return (n for n in compat.xrange(start_run_idx, total_runs)
+                    if not self._traj._is_completed(n))
+
+    def _make_iterator(self, start_run_idx, **kwargs):
+        """ Returns an iterator over all runs and yields the keyword arguments """
+        kwargs = self._make_kwargs(**kwargs)
+
         def _do_iter():
-            for n in compat.xrange(start_run_idx, total_runs):
-                if not self._traj._is_completed(n):
+            for n in self._make_index_iterator(start_run_idx):
                     self._traj._make_single_run(n)
                     yield kwargs
         return _do_iter()
@@ -2088,18 +2129,6 @@ class Environment(HasLogger):
         total_runs = len(self._traj)
         expanded_by_postproc = False
 
-        if not self._use_pool:
-            # If we spawn a single process for each run, we need an additional queue
-            # for the results of `runfunc`
-            if self._immediate_postproc:
-                maxsize = 0
-            else:
-                maxsize = total_runs
-
-            result_queue = multip.Queue(maxsize=maxsize)
-        else:
-            result_queue = None
-
         if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
             # We assume that storage and loading is multiprocessing safe
             pass
@@ -2122,23 +2151,37 @@ class Environment(HasLogger):
             self._multiproc_wrapper.start()
 
         try:
-            # Create a generator to generate the tasks for multiprocessing
-            iterator = self._make_iterator(start_run_idx, result_queue)
 
             if self._use_pool:
                 self._logger.info('Starting Pool with %d processes' % self._ncores)
 
-                # We don't want to pickle the storage service
-                pool_service = self._traj.v_storage_service
-                self._traj.v_storage_service = None
+                if self._freeze_pool_input:
+                    self._logger.info('Freezing pool input')
 
-                init_kwargs = dict(logging_manager=self._logging_manager,
-                                   storage_service=pool_service)
+                    pool_full_copy = self._traj.v_full_copy
+                    if not pool_full_copy:
+                        # For the frozen input we need to pickle the full trajectory
+                        self._traj.v_full_copy = True
 
-                mpool = multip.Pool(self._ncores, initializer=_configure_pool,
+                    init_kwargs = self._make_kwargs()
+                    initializer = _configure_frozen_pool
+                    iterator = self._make_index_iterator(start_run_idx)
+                    target = _frozen_pool_single_run
+                else:
+                    # We don't want to pickle the storage service
+                    pool_service = self._traj.v_storage_service
+                    self._traj.v_storage_service = None
+
+                    init_kwargs = dict(logging_manager=self._logging_manager,
+                                       storage_service=pool_service)
+                    initializer = _configure_pool
+                    iterator = self._make_iterator(start_run_idx)
+                    target = _pool_single_run
+
+                mpool = multip.Pool(self._ncores, initializer=initializer,
                                     initargs=(init_kwargs,))
 
-                pool_results = mpool.imap_unordered(_pool_single_run, iterator)
+                pool_results = mpool.imap_unordered(target, iterator)
 
                 for res in pool_results:
                     results.append(res)
@@ -2149,13 +2192,27 @@ class Environment(HasLogger):
                 mpool.close()
                 mpool.join()
 
-                # Restore the storage service
-                self._traj.v_storage_service = pool_service
+                if self._freeze_pool_input:
+                    if not pool_full_copy:
+                        self._traj.v_full_copy = pool_full_copy
+                else:
+                    self._traj.v_storage_service = pool_service
 
                 self._logger.info('Pool has joined, will delete it.')
                 del mpool
 
             else:
+                # If we spawn a single process for each run, we need an additional queue
+                # for the results of `runfunc`
+                if self._immediate_postproc:
+                    maxsize = 0
+                else:
+                    maxsize = total_runs
+
+                result_queue = multip.Queue(maxsize=maxsize)
+
+                # Create a generator to generate the tasks for multiprocessing
+                iterator = self._make_iterator(start_run_idx, result_queue=result_queue)
 
                 self._logger.info('Starting multiprocessing with at most '
                                   '%d processes running at the same time.' % self._ncores)
@@ -2252,14 +2309,19 @@ class Environment(HasLogger):
 
                                     n = start_run_idx
                                     total_runs = len(self._traj)
-                                    iterator = self._make_iterator(start_run_idx, result_queue)
+                                    iterator = self._make_iterator(start_run_idx,
+                                                                   result_queue=result_queue)
                     else:
                         time.sleep(0.001)
 
                     # Get all results from the result queue
                     n = self._get_results_from_queue(result_queue, results, n, total_runs)
-                # Finally get all results from the result queue once more
+
+                # Finally get all results from the result queue once more and finalize the queue
                 self._get_results_from_queue(result_queue, results, n, total_runs)
+                result_queue.close()
+                result_queue.join_thread()
+                del result_queue
         finally:
 
             # Finalize the wrapper
@@ -2267,8 +2329,6 @@ class Environment(HasLogger):
                 self._multiproc_wrapper.f_finalize()
                 self._multiproc_wrapper = None
 
-            # Finalize the result queue
-            del result_queue
         return expanded_by_postproc
 
 
@@ -2330,9 +2390,12 @@ class MultiprocContext(HasLogger):
 
         If your lock and queue should be created with a manager or if wrapping should be
         created from the multiprocessing module directly.
-         For instance, ``multiprocessing.Lock()`` or via a manager
-        ``multiprocessing.Manager().Lock()`` (if you specified a manager, this manager will be
-        used). The former is usually faster whereas the latter is more flexible and can
+
+        For example: ``multiprocessing.Lock()`` or via a manager
+        ``multiprocessing.Manager().Lock()``
+        (if you specified a manager, this manager will be used).
+
+        The former is usually faster whereas the latter is more flexible and can
         be used in an environment where fork is not available, for instance.
 
     :param lock:
@@ -2511,6 +2574,10 @@ class MultiprocContext(HasLogger):
             self._queue_process.join()
             if hasattr(self._queue, 'join'):
                 self._queue.join()
+            if hasattr(self._queue, 'close'):
+                self._queue.close()
+            if hasattr(self._queue, 'join_thread'):
+                self._queue.join_thread()
             self._logger.info('The Storage Queue has joined.')
 
         if self._manager is not None:

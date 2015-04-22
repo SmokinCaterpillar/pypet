@@ -5,6 +5,7 @@ from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT
 
 tests_include=set(('MultiprocNoPoolLockTest',
                    'MultiprocPoolSortQueueTest',
+                   'MultiprocFrozenPoolSortQueueTest',
                    'MultiprocLinkLockTest',
                    'CapTest',
                    'MultiprocStorageLockTest',
@@ -13,6 +14,7 @@ big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 tests_include=set(('MultiprocNoPoolQueueTest',
                    'MultiprocPoolSortLockTest',
+                   'MultiprocFrozenPoolSortLockTest',
                    'MultiprocLinkNoPoolLockTest',
                    'TestMPPostProc',
                    'ContinueMPPoolTest',
@@ -20,6 +22,7 @@ tests_include=set(('MultiprocNoPoolQueueTest',
 big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set(('MultiprocPoolLockTest',
+                   'MultiprocFrozenPoolLockTest',
                    'MultiprocNoPoolSortQueueTest',
                    'MultiprocLinkNoPoolQueueTest',
                    'TestMPImmediatePostProc',
@@ -28,6 +31,7 @@ tests_include=set(('MultiprocPoolLockTest',
 big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set(('MultiprocPoolQueueTest',
+                   'MultiprocFrozenPoolQueueTest',
                    'MultiprocNoPoolSortLockTest',
                    'MultiprocLinkQueueTest',
                    'ContinueMPTest',

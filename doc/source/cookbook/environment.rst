@@ -147,6 +147,13 @@ because most of the time the default settings are sufficient.
     If you choose ``use_pool=False`` you can also make use of the `cap` values,
     see below.
 
+* ``freeze_pool_input``
+
+    Can be set to ``True`` if the run function as well as all additional arguments
+    are immutable. This will prevent the trajectory from getting pickled again and again.
+    Thus, the run function, the trajectory as well as all arguments are passed to the pool
+    at initialisation.
+
 * ``queue_maxsize``
 
     Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
@@ -630,8 +637,13 @@ Use **no** pool (``use_pool=False``) for fewer runs (50k and less) and which are
 and more expensive runs (in terms of memory consumption).
 In case your operating system allows forking, your data does not need to be
 picklable.
-If you choose ``use_pool=False`` you can also make use of the `cap` values,
-see below.
+Furthermore, if your trajectory contains many parameters and
+you want to avoid that your trajectory
+gets pickled over and over again you can set ``freeze_pool_input=True``.
+The trajectory, the run function as well as the
+all additional function arguments are passed to the multiprocessing pool at
+initialization. Be aware that the run function as well as the the additional arguments must be
+immutable, otherwise your individual runs are no longer independent.
 
 Moreover, if you **enable** multiprocessing and **disable** pool usage,
 besides the maximum number of utilized processors ``ncores``,
@@ -645,10 +657,10 @@ Accordingly, *pypet* will not start the third process until RAM usage drops agai
 (or equal to) 90 percent.
 
 In addition, (only) the ``memory_cap`` argument can alternatively be a tuple with two entries:
- ``(cap, memory_per_process)``. First entry is the cap value between 0.0 and 100.0 and the second
- one is the estimated memory per process in mega-bytes (MB). If you specify such an estimate,
- starting a new process is suspended if the threshold would be reached including the estimated
- memory.
+``(cap, memory_per_process)``. First entry is the cap value between 0.0 and 100.0 and the second
+one is the estimated memory per process in mega-bytes (MB). If you specify such an estimate,
+starting a new process is suspended if the threshold would be reached including the estimated
+memory.
 
 Moreover, to prevent dead-lock *pypet* will regardless of the cap values always start at
 least one process.

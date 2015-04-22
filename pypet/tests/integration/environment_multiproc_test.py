@@ -118,6 +118,60 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
         self.ncores = 3
         self.use_pool=False
 
+class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool', 'freeze_input'
+
+    def set_mode(self):
+        super(MultiprocFrozenPoolQueueTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_QUEUE
+        self.multiproc = True
+        self.freeze_pool_input = True
+        self.ncores = 4
+        self.use_pool=True
+
+
+class MultiprocFrozenPoolLockTest(EnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'freeze_input'
+
+    # def test_run(self):
+    #     super(MultiprocLockTest, self).test_run()
+
+    def set_mode(self):
+        super(MultiprocFrozenPoolLockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_LOCK
+        self.multiproc = True
+        self.freeze_pool_input = True
+        self.ncores = 4
+        self.use_pool=True
+
+
+class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool', 'freeze_input'
+
+    def set_mode(self):
+        super(MultiprocFrozenPoolSortQueueTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_QUEUE
+        self.multiproc = True
+        self.freeze_pool_input = True
+        self.ncores = 3
+        self.use_pool=True
+
+
+class MultiprocFrozenPoolSortLockTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'freeze_input'
+
+    def set_mode(self):
+        super(MultiprocFrozenPoolSortLockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_LOCK
+        self.freeze_pool_input = True
+        self.multiproc = True
+        self.ncores = 4
+        self.use_pool=True
+
 
 @unittest.skipIf(psutil is None, 'Only makes sense if psutil is installed')
 class CapTest(EnvironmentTest):

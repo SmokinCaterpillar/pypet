@@ -91,6 +91,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.multiproc = False
         self.ncores = 1
         self.use_pool=True
+        self.freeze_pool_input=False
         self.pandas_format='fixed'
         self.pandas_append=False
         self.complib = 'zlib'
@@ -217,6 +218,7 @@ class EnvironmentTest(TrajectoryComparator):
                           ncores=self.ncores,
                           wrap_mode=self.mode,
                           use_pool=self.use_pool,
+                          freeze_pool_input=self.freeze_pool_input,
                           fletcher32=self.fletcher32,
                           complevel=self.complevel,
                           complib=self.complib,
@@ -742,6 +744,7 @@ class ResultSortTest(TrajectoryComparator):
         self.ncores = 1
         self.use_pool=True
         self.log_stdout=False
+        self.freeze_pool_input=False
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -757,12 +760,12 @@ class ResultSortTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-
                           log_config=get_log_config(),
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
-                          use_pool=self.use_pool)
+                          use_pool=self.use_pool,
+                          freeze_pool_input=self.freeze_pool_input,)
 
         traj = env.v_trajectory
 

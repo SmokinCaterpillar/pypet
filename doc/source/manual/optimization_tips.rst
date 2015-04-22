@@ -50,3 +50,25 @@ the result instead of storing it into the trajectory directly.
 As a consequence, you can collect these single values later on during the
 post-processing phase and store all of them together into a single result.
 This has also been done for the estimated firing rate in the :ref:`tutorial`.
+
+
+-------------------------
+Many and Fast Single Runs
+-------------------------
+
+In case you perform many single runs and milliseconds matter, use a pool in
+combination with a queue (see :ref:`more-on-multiprocessing`).
+Moreover, to avoid re-pickling of unnecessary data of your trajectory,
+store and remove all data that is not needed during single runs.
+
+For instance, if you don't really need config data during the runs, use the following
+**before** calling the environment's :func:`~pypet.environment.Environment.f_run` function:
+
+.. code-block:: python
+
+    traj.f_store()
+    traj.config.f_remove(recursive=True)
+
+
+This may save a couple of milliseconds each run because
+the config data no longer needs to be pickled and send over the queue for storage.

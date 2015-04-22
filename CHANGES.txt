@@ -1,7 +1,14 @@
 pypet 0.1b.11
 
-*   If one wants the old logging method `log_config` should not be specified, i.e.
+*   If one wants the old logging method, `log_config` should not be specified, i.e.
     setting it to `None` is no longer sufficient`
+
+*   BUG FIX: Connection loss between the queue manager and the pool/processes has been resolved.
+    This caused a minor slowing down of multiprocessing using a queue.
+
+*   New ``freeze_pool_input`` functionality for faster starting of single runs if using
+    a pool.
+
 
 pypet 0.1b.10
 
