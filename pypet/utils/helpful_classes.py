@@ -6,10 +6,12 @@ import hashlib
 import pypet.compat as compat
 from collections import deque
 
+
 class Universe(object):
     """Contains everything"""
     def __contains__(self, item):
         return True
+
 
 class IteratorChain(object):
     """Helper class that chains arbitrary generators and iterators and iterables.

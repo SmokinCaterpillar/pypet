@@ -2470,7 +2470,7 @@ class MultiprocContext(HasLogger):
                     self._manager = multip.Manager()
                 self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
             else:
-                self._queue = multip.Queue(maxsize=self._queue_maxsize)
+                self._queue = multip.JoinableQueue(maxsize=self._queue_maxsize)
 
         self._logger.info('Starting the Storage Queue!')
         # Wrap a queue writer around the storage service
@@ -2509,6 +2509,8 @@ class MultiprocContext(HasLogger):
             self._traj.v_storage_service.queue = self._queue
             self._traj.v_storage_service.send_done()
             self._queue_process.join()
+            if hasattr(self._queue, 'join'):
+                self._queue.join()
             self._logger.info('The Storage Queue has joined.')
 
         if self._manager is not None:
