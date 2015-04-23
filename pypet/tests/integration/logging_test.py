@@ -226,12 +226,7 @@ class LoggingTest(TrajectoryComparator):
         self.env.f_disable_logging()
         # pypet_path = os.path.abspath(os.path.dirname(pypet.pypetlogging))
         # init_path = os.path.join(pypet_path, 'logging')
-        # if os.sep == '\\':
-        #     # Use the windows setting
-        #     # The only differences is the path separator `\`
-        #     log_config = os.path.join(init_path, 'windows_default.ini')
-        # else:
-        #     log_config = os.path.join(init_path, 'default.ini')
+        # log_config = os.path.join(init_path, 'default.ini')
 
 
     # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')

@@ -64,10 +64,7 @@ def prepare_log_config():
     init_path = os.path.join(pypet_path, 'logging')
 
     if conf == 'test':
-        if os.sep == '\\':
-            conf_file = os.path.join(init_path, 'windows_test.ini')
-        else:
-            conf_file = os.path.join(init_path, 'test.ini')
+        conf_file = os.path.join(init_path, 'test.ini')
         conf_parser = handle_config_file(conf_file)
         conf = conf_parser
 
