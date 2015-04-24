@@ -56,8 +56,8 @@ This has also been done for the estimated firing rate in the :ref:`tutorial`.
 Many and Fast Single Runs
 -------------------------
 
-In case you perform many single runs and milliseconds matter, use a pool in
-combination with a queue (see :ref:`more-on-multiprocessing`).
+In case you perform many single runs and milliseconds matter, use a pool (``use_pool=True``) in
+combination with a queue (``wrap_mode='QUEUE'``, see :ref:`more-on-multiprocessing`).
 Moreover, to avoid re-pickling of unnecessary data of your trajectory,
 store and remove all data that is not needed during single runs.
 
@@ -72,3 +72,10 @@ For instance, if you don't really need config data during the runs, use the foll
 
 This may save a couple of milliseconds each run because
 the config data no longer needs to be pickled and send over the queue for storage.
+
+Moreover, you can further avoid unnecessary pickling for the pool by setting
+``freeze_pool_input=True``.
+Accordingly, the trajectory, your target function, and all additional arguments are passed
+to each pool process at initialisation and not for each run individually. However,
+in order to use this feature, you must make sure that neither your target function nor the
+additional arguments are mutated over the course of your runs.
