@@ -100,7 +100,7 @@ If you do not want to browse to your installation folder, you can also download 
 :download:`all_tests.py <../../../pypet/tests/all_tests.py>` script.
 
 Running all tests can take up to 20 minutes and might temporarily take up to
-1 GB of disk space. The test suite encompasses more than **600** tests
+1 GB of disk space. The test suite encompasses more than **700** tests
 and has a code coverage of about **90%**!
 
 *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
