@@ -463,12 +463,7 @@ class LoggingManager(object):
             if self.log_config == pypetconstants.DEFAULT_LOGGING:
                 pypet_path = os.path.abspath(os.path.dirname(__file__))
                 init_path = os.path.join(pypet_path, 'logging')
-                if os.sep == '\\':
-                    # Use the windows setting
-                    # The only differences is the path separator `\`
-                    self.log_config = os.path.join(init_path, 'windows_default.ini')
-                else:
-                    self.log_config = os.path.join(init_path, 'default.ini')
+                self.log_config = os.path.join(init_path, 'default.ini')
 
             if isinstance(self.log_config, compat.base_type):
                 if not os.path.isfile(self.log_config):

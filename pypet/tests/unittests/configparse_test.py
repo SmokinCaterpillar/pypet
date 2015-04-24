@@ -17,13 +17,7 @@ class ConfigParseTest(TrajectoryComparator):
 
         pypet_path = os.path.abspath(os.path.dirname(pypet.environment.__file__))
         init_path = os.path.join(pypet_path, 'logging')
-        if os.sep == '\\':
-            # Use the windows setting
-            # The only differences is the path separator `\`
-            self.config_file = os.path.join(init_path, 'windows_env_config_test.ini')
-        else:
-            self.config_file = os.path.join(init_path, 'env_config_test.ini')
-
+        self.config_file = os.path.join(init_path, 'env_config_test.ini')
         self.parser = handle_config_file(self.config_file)
 
 
