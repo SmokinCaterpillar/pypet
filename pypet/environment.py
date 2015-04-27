@@ -191,6 +191,7 @@ def _single_run(kwargs):
 
         if result_queue is not None:
             result_queue.put(result)
+            result_queue.close()
         else:
             return result
 
