@@ -26,7 +26,7 @@ from pypet.utils.decorators import copydoc
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
     # Temporary directory for the hdf5 files'''
-    remove=False,
+    remove=True,
     # Whether or not to remove the temporary directory after the tests
     actual_tempdir='',
     # Actual temp dir, maybe in tests folder or in `tempfile.gettempdir()`
@@ -80,6 +80,7 @@ def _rename_filename(filename):
     temp_folder = make_temp_dir('logs')
     filename = filename.replace('$temp', '')
     filename = os.path.join(temp_folder, filename)
+    filename = os.path.normpath(filename)
     if generic_log_folder is None:
         generic_log_folder = os.path.dirname(filename)
     return filename

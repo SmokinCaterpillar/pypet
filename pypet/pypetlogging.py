@@ -122,7 +122,9 @@ def _change_logging_kwargs(kwargs):
     for prefix in ('', 'multiproc_'):
         for handler_dict in dictionary[prefix + 'handlers'].values():
             if 'filename' in handler_dict:
-                handler_dict['filename'] = os.path.join(log_folder, handler_dict['filename'])
+                filename = os.path.join(log_folder, handler_dict['filename'])
+                filename = os.path.normpath(filename)
+                handler_dict['filename'] = filename
         dictionary[prefix + 'loggers'] = {}
         logger_dict = dictionary[prefix + 'loggers']
         for idx, logger_name in enumerate(logger_names):
@@ -469,8 +471,6 @@ class LoggingManager(object):
                 if not os.path.isfile(self.log_config):
                     raise ValueError('Could not find the logger init file '
                                      '`%s`.' % self.log_config)
-
-            if isinstance(self.log_config, compat.base_type):
                 parser = NoInterpolationParser()
                 parser.read(self.log_config)
             elif isinstance(self.log_config, cp.RawConfigParser):
