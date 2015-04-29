@@ -271,12 +271,16 @@ def get_matching_kwargs(func, kwargs):
     """Takes a function and keyword arguments and returns the ones that can be passed."""
     if inspect.isclass(func):
         func = func.__init__
-    argspec = inspect.getargspec(func)
-    if argspec.keywords is not None:
-        return kwargs.copy()
-    else:
-        matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
-        return matching_kwargs
+    try:
+        argspec = inspect.getargspec(func)
+        if argspec.keywords is not None:
+            return kwargs.copy()
+        else:
+            matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
+            return matching_kwargs
+    except TypeError:
+        # Class has no init function
+        return {}
 
 
 def get_multiproc_pool(pool):

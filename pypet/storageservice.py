@@ -314,6 +314,10 @@ class LazyStorageService(StorageService):
     Ignores all storage and loading requests and simply executes `pass` instead.
 
     """
+    def __init__(*args, **kwargs):
+        """Swallows all arguments for easier debugging"""
+        pass
+
     def load(self, *args, **kwargs):
         """Nope, I won't care, dude!"""
         pass
