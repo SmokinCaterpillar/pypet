@@ -106,7 +106,6 @@ class BrianParameter(Parameter):
                 storage_mode == BrianParameter.FLOAT_MODE)
         self._storage_mode = storage_mode
 
-
     def f_supports(self, data):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
@@ -147,13 +146,11 @@ class BrianParameter(Parameter):
                 store_dict['data' + BrianParameter.IDENTIFIER] = ObjectTable(
                     data={'data': [valstr]})
 
-
                 if self.f_has_range():
                     valstr_list = []
                     for val in self._explored_range:
                         valstr = val.in_best_unit(python_code=True)
                         valstr_list.append(valstr)
-
 
                     store_dict['explored_data' + BrianParameter.IDENTIFIER] = \
                         ObjectTable(data={'data': valstr_list})
@@ -170,7 +167,6 @@ class BrianParameter(Parameter):
                         value = float(val)
                         value_list.append(value)
 
-
                     store_dict['explored_data' + BrianParameter.IDENTIFIER] = \
                         ObjectTable(data={'value': value_list})
 
@@ -182,7 +178,6 @@ class BrianParameter(Parameter):
             return store_dict
         else:
             return super(BrianParameter, self)._store()
-
 
     def _load(self, load_dict):
         if self.v_locked:
@@ -357,7 +352,6 @@ class BrianResult(Result):
         else:
             return super(BrianResult, self)._supports(data)
 
-
     def _store(self):
         store_dict = {}
         for key in self._data:
@@ -383,7 +377,6 @@ class BrianResult(Result):
                 store_dict[key] = val
 
         return store_dict
-
 
     def _load(self, load_dict):
 
@@ -705,7 +698,6 @@ class BrianMonitorResult(Result):
 
         super(BrianMonitorResult, self).__init__(full_name, *args, **kwargs)
 
-
     def _store(self):
         store_dict = super(BrianMonitorResult, self)._store()
 
@@ -782,8 +774,6 @@ class BrianMonitorResult(Result):
         else:
             super(BrianMonitorResult, self).f_set_single(name, item)
 
-
-    
     def _extract_monitor_data(self, monitor):
 
         if self._monitor_type is not None:
@@ -830,7 +820,6 @@ class BrianMonitorResult(Result):
         self.f_set(delay=monitor.delay)
         self.f_set(nspikes=monitor.nspikes)
 
-
     def _extract_van_rossum_metric(self, monitor):
 
         self.f_set(source=str(monitor.source))
@@ -840,8 +829,6 @@ class BrianMonitorResult(Result):
         #self.f_set(timestep = monitor.timestep)
 
         self.f_set(distance=monitor.distance)
-
-
 
     def _extract_isi_hist_monitor(self, monitor):
 
@@ -876,7 +863,6 @@ class BrianMonitorResult(Result):
         self.f_set(delay=monitor.delay)
         self.f_set(nspikes=monitor.nspikes)
         self.f_set(spiketimes_unit='second')
-
 
         if self._storage_mode == BrianMonitorResult.TABLE_MODE:
             spike_dict = {}
@@ -935,10 +921,6 @@ class BrianMonitorResult(Result):
             raise RuntimeError('You shall not pass!')
 
     def _extract_spike_monitor(self, monitor):
-        
-        #assert isinstance(monitor, SpikeMonitor)
-
-
         self.f_set(source=str(monitor.source))
 
         self.f_set(record=monitor.record)
@@ -947,9 +929,7 @@ class BrianMonitorResult(Result):
 
         self.f_set(spiketimes_unit='second')
 
-
         self.f_set(delay=monitor.delay)
-
 
         if self._storage_mode == BrianMonitorResult.TABLE_MODE:
             spike_dict = {}
@@ -1010,9 +990,6 @@ class BrianMonitorResult(Result):
         self.f_set(source=str(monitor.source))
         self.f_set(delay=monitor.delay)
 
-
-
-
     def _extract_multi_state_monitor(self, monitors):
 
         self.f_set(vars=monitors.vars)
@@ -1042,7 +1019,6 @@ class BrianMonitorResult(Result):
             if len(monitors.times) > 0:
                 self.f_set(**{varname + '_values': monitor.values})
             self.f_set(**{varname + '_unit': repr(monitor.unit)})
-
 
     def _extract_state_monitor(self, monitor):
 
