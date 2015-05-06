@@ -693,7 +693,7 @@ class HDF5StorageService(StorageService, HasLogger):
     }
     ''' Mapping from object type to storage flag'''
 
-    # Python native data should alwys be stored as an ARRAY
+    # Python native data should always be stored as an ARRAY
     for item in pypetconstants.PARAMETER_SUPPORTED_DATA:
         TYPE_FLAG_MAPPING[item] = ARRAY
 

@@ -228,7 +228,6 @@ class BrianParameter(Parameter):
                     self._explored_range = tuple(explore_list)
                     self._explored = True
 
-
         except KeyError:
             super(BrianParameter, self)._load(load_dict)
 
