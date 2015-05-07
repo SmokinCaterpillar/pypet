@@ -75,6 +75,12 @@ install:
 build: false
 
 
+branches:
+  only:
+    - master
+    - production
+
+
 test_script:
     - cd ciscripts\\appveyor
     # Full test suite
