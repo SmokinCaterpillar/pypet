@@ -2267,9 +2267,12 @@ class Environment(HasLogger):
                                     else:
                                         add_on_str = ''
                                     self._logger.warning('Could not start next process '
-                                                         'immediately. %s reached, '
+                                                         'immediately (currently running '
+                                                         '%d processes). '
+                                                         '%s reached, '
                                                          '%.1f%% >= %.1f%%%s.' %
-                                                         (cap_name, cap_value, threshold,
+                                                         (len(process_dict), cap_name,
+                                                          cap_value, threshold,
                                                           add_on_str))
                                     signal_cap = False
                                     max_signals -= 1
