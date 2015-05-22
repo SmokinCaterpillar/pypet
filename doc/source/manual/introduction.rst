@@ -85,7 +85,7 @@ Getting Started
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_ and
+Python 2.6, 2.7, 3.3, or 3.4 [#pythonversion]_, and
 
 * numpy_ >= 1.6.1
 
