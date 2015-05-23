@@ -2263,12 +2263,12 @@ class Environment(HasLogger):
                                 no_cap = False
                                 if signal_cap:
                                     if cap_name == 'Memory Cap':
-                                        add_on_str = ' (including estimate)'
+                                        add_on_str = ' [including estimate]'
                                     else:
                                         add_on_str = ''
                                     self._logger.warning('Could not start next process '
-                                                         'immediately (currently running '
-                                                         '%d processes). '
+                                                         'immediately [currently running '
+                                                         '%d process(es)]. '
                                                          '%s reached, '
                                                          '%.1f%% >= %.1f%%%s.' %
                                                          (len(process_dict), cap_name,
