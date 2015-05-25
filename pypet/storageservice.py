@@ -261,12 +261,12 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def load(self, *args, **kwargs):
         """Acquires a lock before loading and releases it afterwards."""
         try:
-            self.lock.acquire()
+            self.acquire_lock()
             return self._storage_service.load(*args, **kwargs)
         finally:
             if self.lock is not None:
                 try:
-                    self.lock.release()
+                    self.release_lock()
                 except RuntimeError:
                     self._logger.error('Could not release lock `%s`!' % str(self.lock))
 

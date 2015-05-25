@@ -2,6 +2,8 @@ pypet 0.1b.12
 
 *   Renaming of the MultiprocContext's `start` function to `f_start`
 
+*   BUG FIX: Correct lock acquiring for multiprocessing with StorageContextManager
+
 
 pypet 0.1b.11
 
