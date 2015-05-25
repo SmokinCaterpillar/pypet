@@ -2149,7 +2149,7 @@ class Environment(HasLogger):
                                log_config=self._logging_manager.log_config,
                                log_stdout=self._logging_manager.log_stdout)
 
-            self._multiproc_wrapper.start()
+            self._multiproc_wrapper.f_start()
 
         try:
 
@@ -2482,13 +2482,13 @@ class MultiprocContext(HasLogger):
         return self._lock_wrapper
 
     def __enter__(self):
-        self.start()
+        self.f_start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.f_finalize()
 
-    def start(self):
+    def f_start(self):
         """Starts the multiprocess wrapping.
 
         Automatically called when used as context manager.

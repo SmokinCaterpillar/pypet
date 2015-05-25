@@ -1,3 +1,8 @@
+pypet 0.1b.12
+
+*   Renaming of the MultiprocContext's `start` function to `f_start`
+
+
 pypet 0.1b.11
 
 *   If one wants the old logging method, `log_config` should not be specified, i.e.
