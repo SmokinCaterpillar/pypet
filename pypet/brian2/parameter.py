@@ -132,11 +132,9 @@ class Brian2Parameter(Parameter):
                 values = [float(self._data)]
                 #print("Got single")
 
-            store_dict['data' + Brian2Parameter.IDENTIFIER] = {
-                'is_array' + Brian2Parameter.IDENTIFIER: is_array,
-                'unit' + Brian2Parameter.IDENTIFIER: unitstr,
-                'object_table' + Brian2Parameter.IDENTIFIER: ObjectTable(data={'value': values})
-            }
+            store_dict['data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': [values],
+                                                                                'unit': [unitstr],
+                                                                                'is_array': [is_array]})
 
             #print("store_dict: "+str(store_dict))
 
@@ -171,12 +169,17 @@ class Brian2Parameter(Parameter):
             # Recreate the brain units from the vale as float and unit as string:
             #print(data_table)
 
-            value = data_table['object_table']['value'].tolist() if data_table['is_array'] else data_table['object_table']['value'][0]
-            unit = eval(data_table['unit'])
+            #value = data_table['object_table']['value'].tolist() if data_table['is_array'] else data_table['object_table']['value'][0]
+            value = data_table['value'][0]
+            unit = eval(data_table['unit'][0])
+            is_array = data_table['is_array'][0]
             #print("value:"+str(value))
             #print("unit:"+str(unit))
             #print("value*unit:"+str(value * unit))
-            self._data = value * unit
+            if is_array:
+                self._data = value * unit
+            else:
+                self._data = value[0] * unit
 
             #print(self._data)
 
