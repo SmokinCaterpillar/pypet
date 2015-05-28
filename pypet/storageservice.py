@@ -112,13 +112,15 @@ class PipeStorageServiceSender(MultiprocWrapper):
     def __init__(self, storage_connection=None, lock=None):
         self.conn = storage_connection
         self.lock = lock
+        self.pickle_pipe = True
         self._is_locked = False
 
     def __getstate__(self):
         # result = super(PipeStorageServiceSender, self).__getstate__()
         result = self.__dict__.copy()
-        result['conn'] = None
-        result['lock'] = None
+        if not self._pickle_data:
+            result['conn'] = None
+            result['lock'] = None
         return result
 
     def load(self, *args, **kwargs):
@@ -129,6 +131,7 @@ class PipeStorageServiceSender(MultiprocWrapper):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _put_on_pipe(self, to_put):
         """Puts data on queue"""
+        self.pickle_pipe = False
         self.acquire_lock()
         self.conn.send(to_put)
         self.conn.recv()  # wait for signal that message was received
