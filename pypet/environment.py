@@ -853,14 +853,10 @@ class Environment(HasLogger):
             raise ValueError('You CANNOT perform immediate post-processing if you DO '
                              'use a pool.')
 
-        if wrap_mode == pypetconstants.WRAP_MODE_QUEUE and immediate_postproc:
+        if wrap_mode != pypetconstants.WRAP_MODE_LOCK and immediate_postproc:
             raise ValueError(
-                'You CANNOT perform immediate post-processing if you DO use wrap mode '
-                '`QUEUE`.')
-
-        if (wrap_mode == pypetconstants.WRAP_MODE_PIPE and multiproc and use_pool
-            and not freeze_pool_input):
-            raise ValueError('You can only use the PIPE wrapping with frozen pool input.')
+                'You CANNOT perform immediate post-processing if you DO NOT use wrap mode '
+                '`LOCK`.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -2164,11 +2160,7 @@ class Environment(HasLogger):
                 if self._freeze_pool_input:
                     self._logger.info('Freezing pool input')
 
-                    pool_full_copy = self._traj.v_full_copy
-                    if not pool_full_copy:
-                        # For the frozen input we need to pickle the full trajectory
-                        self._traj.v_full_copy = True
-
+                    self._traj.f_restore_default()
                     init_kwargs = self._make_kwargs()
                     initializer = _configure_frozen_pool
                     iterator = self._make_index_iterator(start_run_idx)
@@ -2198,10 +2190,7 @@ class Environment(HasLogger):
                 mpool.close()
                 mpool.join()
 
-                if self._freeze_pool_input:
-                    if not pool_full_copy:
-                        self._traj.v_full_copy = pool_full_copy
-                else:
+                if not self._freeze_pool_input:
                     self._traj.v_storage_service = pool_service
 
                 self._logger.info('Pool has joined, will delete it.')

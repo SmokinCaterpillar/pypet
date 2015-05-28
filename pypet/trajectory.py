@@ -311,7 +311,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._auto_run_prepend = True
 
-        self._full_copy = True
+        self._full_copy = False
 
         self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
@@ -390,8 +390,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         result = super(Trajectory, self).__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
-        # Accordingly, we need to store the length in the helper variable
-        # `_length_during_nfc`.
         if not self.v_full_copy and self.v_crun is not None:
             runname = self._single_run_ids[self.v_idx]
             result['_run_information'] = {runname: self._run_information[runname]}
@@ -563,11 +561,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @not_in_run
     def v_full_copy(self, val):
         """ Sets full copy mode of trajectory and (!) ALL explored parameters!"""
-        if val != self._full_copy:
-            self._full_copy = val
-            for param in compat.itervalues(self._explored_parameters):
-                if param is not None:
-                    param.v_full_copy = val
+        self._full_copy = bool(val)
+        for param in compat.itervalues(self._explored_parameters):
+            if param is not None:
+                param.v_full_copy = bool(val)
 
     @property
     def v_with_links(self):

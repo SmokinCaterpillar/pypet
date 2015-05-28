@@ -4,6 +4,8 @@ pypet 0.1b.12
 
 *   BUG FIX: Correct lock acquiring for multiprocessing with StorageContextManager
 
+*   BUG FIX: `v_full_copy` is now `False` by default
+
 
 pypet 0.1b.11
 
