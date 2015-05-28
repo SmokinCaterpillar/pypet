@@ -118,7 +118,7 @@ class PipeStorageServiceSender(MultiprocWrapper):
     def __getstate__(self):
         # result = super(PipeStorageServiceSender, self).__getstate__()
         result = self.__dict__.copy()
-        if not self._pickle_data:
+        if not self.pickle_pipe:
             result['conn'] = None
             result['lock'] = None
         return result
