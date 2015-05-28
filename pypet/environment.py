@@ -58,7 +58,8 @@ import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
-    QueueStorageServiceWriter, LockWrapper, LazyStorageService
+    QueueStorageServiceWriter, LockWrapper, LazyStorageService, PipeStorageServiceSender, \
+    PipeStorageServiceWriter
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
@@ -857,6 +858,10 @@ class Environment(HasLogger):
                 'You CANNOT perform immediate post-processing if you DO use wrap mode '
                 '`QUEUE`.')
 
+        if (wrap_mode == pypetconstants.WRAP_MODE_PIPE and multiproc and use_pool
+            and not freeze_pool_input):
+            raise ValueError('You can only use the PIPE wrapping with frozen pool input.')
+
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
 
@@ -1105,11 +1110,12 @@ class Environment(HasLogger):
                                                 ' or LOCK or NONE'
                                                 ' for thread/process safe storing').f_lock()
 
-                if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+                if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
+                                self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
                     config_name = 'environment.%s.queue_maxsize' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._queue_maxsize,
-                                        comment='Maximum size of Storage Queue in case of '
-                                                'multiprocessing and QUEUE wrapping').f_lock()
+                                        comment='Maximum size of Storage Queue/Pipe in case of '
+                                                'multiprocessing and QUEUE/PIPE wrapping').f_lock()
 
             config_name = 'environment.%s.clean_up_runs' % self._name
             self._traj.f_add_config(Parameter, config_name, self._clean_up_runs,
@@ -2145,7 +2151,6 @@ class Environment(HasLogger):
                                lock=None,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
-                               start_queue_process=True,
                                log_config=self._logging_manager.log_config,
                                log_stdout=self._logging_manager.log_stdout)
 
@@ -2436,7 +2441,6 @@ class MultiprocContext(HasLogger):
                  lock=None,
                  queue=None,
                  queue_maxsize=0,
-                 start_queue_process=True,
                  log_config=None,
                  log_stdout=False):
 
@@ -2446,17 +2450,20 @@ class MultiprocContext(HasLogger):
         self._traj = trajectory
         self._storage_service = self._traj.v_storage_service
         self._queue_process = None
+        self._pipe_process = None
         self._lock_wrapper = None
         self._queue_wrapper = None
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._queue_maxsize = queue_maxsize
+        self._pipe = queue
+        self._max_buffer_size = queue_maxsize
         self._lock = lock
         self._use_manager = use_manager
-        self._start_queue_process = start_queue_process
         self._logging_manager = None
 
-        if self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE:
+        if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
+                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
             self._logging_manager = LoggingManager(trajectory=self._traj,
                                                    log_config=log_config,
                                                    log_stdout=log_stdout)
@@ -2474,12 +2481,20 @@ class MultiprocContext(HasLogger):
         return self._queue
 
     @property
+    def v_pipe(self):
+        return self._pipe
+
+    @property
     def v_queue_wrapper(self):
         return self._queue_wrapper
 
     @property
     def v_lock_wrapper(self):
         return self._lock_wrapper
+
+    @property
+    def v_pipe_wrapper(self):
+        return self._pipe_wrapper
 
     def __enter__(self):
         self.f_start()
@@ -2504,6 +2519,8 @@ class MultiprocContext(HasLogger):
             self._prepare_queue()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCK:
             self._prepare_lock()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_PIPE:
+            self._prepare_pipe()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                            'not supported, use %s` or `%s`.'
@@ -2526,6 +2543,34 @@ class MultiprocContext(HasLogger):
         lock_wrapper = LockWrapper(self._storage_service, self._lock)
         self._traj.v_storage_service = lock_wrapper
         self._lock_wrapper = lock_wrapper
+
+    def _prepare_pipe(self):
+        """ Replaces the trajectory's service with a queue sender and starts the queue process.
+
+        """
+        if self._pipe is None:
+            self._pipe = multip.Pipe(True)
+        if self._lock is None:
+            self._lock = multip.Lock()
+
+        self._logger.info('Starting the Storage Pipe!')
+        # Wrap a queue writer around the storage service
+        pipe_handler = PipeStorageServiceWriter(self._storage_service, self._pipe[0],
+                                                max_buffer_size=self._max_buffer_size)
+
+        # Start the queue process
+        self._pipe_process = multip.Process(name='PipeProcess', target=_queue_handling,
+                                             args=(dict(queue_handler=pipe_handler,
+                                                        logging_manager=self._logging_manager),))
+        self._pipe_process.start()
+
+        # Replace the storage service of the trajectory by a sender.
+        # The sender will put all data onto the pipe.
+        # The writer from above will receive the data from
+        # the pipe and hand it over to
+        # the storage service
+        self._pipe_wrapper = PipeStorageServiceSender(self._pipe[1], self._lock)
+        self._traj.v_storage_service = self._pipe_wrapper
 
     def _prepare_queue(self):
         """ Replaces the trajectory's service with a queue sender and starts the queue process.
@@ -2584,6 +2629,18 @@ class MultiprocContext(HasLogger):
                 self._queue.join_thread()
             self._logger.info('The Storage Queue has joined.')
 
+        if (self._wrap_mode == pypetconstants.WRAP_MODE_PIPE and
+                    self._pipe_process is not None):
+            self._logger.info('The Storage Pipe will no longer accept new data. '
+                              'Hang in there for a little while. '
+                              'There still might be some data in the pipe that '
+                              'needs to be stored.')
+            self._traj.v_storage_service.conn = self._pipe[1]
+            self._traj.v_storage_service.send_done()
+            self._pipe_process.join()
+            self._pipe[1].close()
+            self._pipe[0].close()
+
         if self._manager is not None:
             self._manager.shutdown()
 
@@ -2593,5 +2650,8 @@ class MultiprocContext(HasLogger):
         self._queue_wrapper = None
         self._lock = None
         self._lock_wrapper = None
+        self._pipe = None
+        self._pipe_process = None
+        self._pipe_wrapper = None
 
         self._traj._storage_service = self._storage_service

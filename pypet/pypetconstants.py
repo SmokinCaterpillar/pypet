@@ -154,6 +154,8 @@ WRAP_MODE_LOCK = 'LOCK'
 """ Lock multiprocessing mode """
 WRAP_MODE_NONE = 'NONE'
 """ No multiprocessing wrapping for the storage service"""
+WRAP_MODE_PIPE = 'PIPE'
+"""Pipe multiprocessing mode"""
 
 
 ############ Loading Constants ###########################

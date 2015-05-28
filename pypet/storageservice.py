@@ -14,6 +14,7 @@ import warnings
 import time
 import hashlib
 import itertools as itools
+from collections import deque
 
 try:
     import queue
@@ -107,12 +108,60 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._put_on_queue(('DONE', [], {}))
 
 
-class QueueStorageServiceWriter(HasLogger):
-    """Wrapper class that listens to the queue and stores queue items via the storage service."""
+class PipeStorageServiceSender(MultiprocWrapper):
+    def __init__(self, storage_connection=None, lock=None):
+        self.conn = storage_connection
+        self.lock = lock
+        self._is_locked = False
 
-    def __init__(self, storage_service, storage_queue):
+    def __getstate__(self):
+        # result = super(PipeStorageServiceSender, self).__getstate__()
+        result = self.__dict__.copy()
+        result['conn'] = None
+        result['lock'] = None
+        return result
+
+    def load(self, *args, **kwargs):
+        raise NotImplementedError('Pipe wrapping does not support loading. If you want to '
+                                  'load data in a multiprocessing environment, use the Lock '
+                                  'wrapping.')
+
+    @retry(9, Exception, 0.01, 'pypet.retry')
+    def _put_on_pipe(self, to_put):
+        """Puts data on queue"""
+        self.acquire_lock()
+        self.conn.send(to_put)
+        self.conn.recv()  # wait for signal that message was received
+        self.release_lock()
+
+    def store(self, *args, **kwargs):
+        """Puts data to store on queue.
+
+        Note that the queue will no longer be pickled if the Sender is pickled.
+
+        """
+        self._put_on_pipe(('STORE', args, kwargs))
+
+    def send_done(self):
+        """Signals the writer that it can stop listening to the queue"""
+        self._put_on_pipe(('DONE', [], {}))
+
+    def acquire_lock(self):
+        if not self._is_locked:
+            self.lock.acquire()
+            self._is_locked = True
+
+    def release_lock(self):
+        if self._is_locked:
+            self.lock.release()
+            self._is_locked = False
+
+
+class StorageServiceDataHandler(HasLogger):
+    """Class that can store data via a storage service, needs to be sub-classed to receive data"""
+
+    def __init__(self, storage_service):
         self._storage_service = storage_service
-        self.queue = storage_queue
         self._trajectory_name = ''
         self._set_logger()
 
@@ -128,14 +177,6 @@ class QueueStorageServiceWriter(HasLogger):
     def _close_file(self):
         self._storage_service.store(pypetconstants.CLOSE_FILE, None)
         self._logger.info('Closed the hdf5 file.')
-
-    @retry(9, Exception, 0.01, 'pypet.retry')
-    def _get_from_queue(self):
-        """Gets data from queue"""
-        result = self.queue.get(block=True)
-        if hasattr(self.queue, 'task_done'):
-            self.queue.task_done()
-        return result
 
     def _handle_data(self, msg, args, kwargs):
         """Handles data and returns `True` or `False` if everything is done."""
@@ -177,7 +218,7 @@ class QueueStorageServiceWriter(HasLogger):
         """Starts listening to the queue."""
         try:
             while True:
-                msg, args, kwargs = self._get_from_queue()
+                msg, args, kwargs = self._receive_data()
                 stop = self._handle_data(msg, args, kwargs)
                 if stop:
                     break
@@ -185,6 +226,49 @@ class QueueStorageServiceWriter(HasLogger):
             if self._storage_service.is_open:
                 self._close_file()
             self._trajectory_name = ''
+
+    def _receive_data(self):
+        raise NotImplementedError('Implement this!')
+
+
+class QueueStorageServiceWriter(StorageServiceDataHandler):
+    """Wrapper class that listens to the queue and stores queue items via the storage service."""
+
+    def __init__(self, storage_service, storage_queue):
+        super(QueueStorageServiceWriter, self).__init__(storage_service)
+        self.queue = storage_queue
+
+    @retry(9, Exception, 0.01, 'pypet.retry')
+    def _receive_data(self):
+        """Gets data from queue"""
+        result = self.queue.get(block=True)
+        if hasattr(self.queue, 'task_done'):
+            self.queue.task_done()
+        return result
+
+
+class PipeStorageServiceWriter(StorageServiceDataHandler):
+    """Wrapper class that listens to the queue and stores queue items via the storage service."""
+
+    def __init__(self, storage_service, storage_connection, max_buffer_size=10):
+        super(PipeStorageServiceWriter, self).__init__(storage_service)
+        self.conn = storage_connection
+        if max_buffer_size == 0:
+            # no maximum buffer size
+            max_buffer_size = float('inf')
+        self.max_size = max_buffer_size
+        self._buffer = deque()
+        self._set_logger()
+
+    @retry(9, Exception, 0.01, 'pypet.retry')
+    def _receive_data(self):
+        """Gets data from pipe"""
+        while True:
+            while len(self._buffer) < self.max_size and self.conn.poll():
+                self._buffer.append(self.conn.recv())
+                self.conn.send(True)  # signal to other end that data was received
+            if len(self._buffer) > 0:
+                return self._buffer.popleft()
 
 
 class LockWrapper(MultiprocWrapper, HasLogger):
@@ -1619,8 +1703,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.' + attr_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj config, '
-                                     'using default value `%s`.' %
+                self._logger.debug('Could not find `%s` in traj config, '
+                                     'using (default) value `%s`.' %
                                      (attr_name, str(getattr(self, attr_name))))
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
@@ -1630,8 +1714,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.overview.' + table_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj config, '
-                                     'using default value `%s`.' %
+                self._logger.debug('Could not find `%s` in traj config, '
+                                     'using (default) value `%s`.' %
                                      (table_name, str(getattr(self, attr_name))))
 
         for attr_name, name in HDF5StorageService.PR_ATTR_NAME_MAPPING.items():
@@ -1639,8 +1723,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.' + name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.warning('Could not find `%s` in traj config, '
-                                     'using default value `%s`.' %
+                self._logger.debug('Could not find `%s` in traj config, '
+                                     'using (default) value `%s`.' %
                                      (name, str(getattr(self, attr_name))))
 
         if ((not self._overview_results_summary or

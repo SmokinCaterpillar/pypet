@@ -4,6 +4,7 @@ __author__ = 'Robert Meyer'
 from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR, parse_args
 
 tests_include=set(('MultiprocNoPoolLockTest',
+                   'MultiprocNoPoolPipeTest',
                    'MultiprocPoolSortQueueTest',
                    'MultiprocFrozenPoolSortQueueTest',
                    'MultiprocLinkLockTest',
@@ -14,6 +15,7 @@ big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 tests_include=set(('MultiprocNoPoolQueueTest',
                    'MultiprocPoolSortLockTest',
+                   'MultiprocPoolSortPipeTest',
                    'MultiprocFrozenPoolSortLockTest',
                    'MultiprocLinkNoPoolLockTest',
                    'TestMPPostProc',
@@ -23,6 +25,7 @@ big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 tests_include=set(('MultiprocPoolLockTest',
                    'MultiprocFrozenPoolLockTest',
+                   'MultiprocFrozenPoolPipeTest',
                    'MultiprocNoPoolSortQueueTest',
                    'MultiprocLinkNoPoolQueueTest',
                    'TestMPImmediatePostProc',
@@ -32,6 +35,7 @@ big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 tests_include=set(('MultiprocPoolQueueTest',
                    'MultiprocFrozenPoolQueueTest',
+                   'MultiprocFrozenPoolSortPipeTest',
                    'MultiprocNoPoolSortLockTest',
                    'MultiprocLinkQueueTest',
                    'ContinueMPTest',

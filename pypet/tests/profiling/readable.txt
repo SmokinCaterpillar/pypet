@@ -1,0 +1,549 @@
+Tue Apr 21 23:14:19 2015    ./queue.profile
+
+         1222159 function calls (1219416 primitive calls) in 6.859 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002    6.859    6.859 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:187(run)
+      241    0.001    0.000    4.315    0.018 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/utils/decorators.py:198(new_func)
+      241    0.002    0.000    4.314    0.018 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:137(_receive_data)
+      482    0.005    0.000    4.309    0.009 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/managers.py:746(_callmethod)
+      483    3.316    0.007    4.107    0.009 {method 'recv' of '_multiprocessing.Connection' objects}
+      241    0.001    0.000    4.077    0.017 <string>:1(get)
+      482    0.007    0.000    2.537    0.005 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:1225(store)
+      241    0.005    0.000    2.525    0.010 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:151(_handle_data)
+      240    0.040    0.000    2.467    0.010 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3064(_srn_store_single_run)
+      240    0.003    0.000    1.633    0.007 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:2724(_tree_store_sub_branch)
+      240    0.018    0.000    1.628    0.007 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:2973(_tree_store_nodes_dfs)
+      240    0.010    0.000    0.759    0.003 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:4022(_prm_store_parameter_or_result)
+      726    0.018    0.000    0.731    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:206(__init__)
+    13920    0.039    0.000    0.645    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/pypetlogging.py:261(__setstate__)
+   247453    0.166    0.000    0.644    0.000 {setattr}
+      241    0.004    0.000    0.590    0.002 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3443(_all_add_or_modify_row)
+     3371    0.053    0.000    0.580    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:360(_g__setattr)
+      482    0.002    0.000    0.534    0.001 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/utils/ptcompat.py:154(create_group)
+      482    0.004    0.000    0.533    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:924(create_group)
+    27360    0.137    0.000    0.526    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/slots.py:111(__setstate__)
+      484    0.005    0.000    0.524    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:210(__init__)
+      240    0.005    0.000    0.466    0.002 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:4493(_prm_write_into_array)
+    19821    0.015    0.000    0.460    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:725(flush)
+    19821    0.446    0.000    0.446    0.000 {method '_g_flush' of 'tables.hdf5extension.Leaf' objects}
+     3119    0.016    0.000    0.405    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:2963(flush)
+     3371    0.178    0.000    0.334    0.000 {method '_g_setattr' of 'tables.hdf5extension.AttributeSet' objects}
+      485    0.009    0.000    0.329    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:243(_g_post_init_hook)
+     1442    0.006    0.000    0.305    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2702(flush)
+     1442    0.087    0.000    0.295    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:481(flush_nodes)
+     1203    0.007    0.000    0.279    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:417(__setattr__)
+      240    0.007    0.000    0.265    0.001 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3962(_prm_add_meta_info)
+      240    0.001    0.000    0.234    0.001 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/utils/ptcompat.py:161(create_array)
+      241    0.001    0.000    0.234    0.001 <string>:1(task_done)
+      240    0.003    0.000    0.233    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:1076(create_array)
+      242    0.002    0.000    0.220    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:231(__init__)
+      240    0.004    0.000    0.215    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/array.py:130(__init__)
+     2641    0.010    0.000    0.201    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:795(__getattr__)
+      483    0.197    0.000    0.197    0.000 {method 'send' of '_multiprocessing.Connection' objects}
+    11281    0.014    0.000    0.194    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/pypetlogging.py:273(_set_logger)
+      720    0.013    0.000    0.193    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3783(_grp_store_group)
+    11281    0.011    0.000    0.178    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1560(getLogger)
+     3129    0.010    0.000    0.167    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:353(from_dtype)
+    11281    0.033    0.000    0.167    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1018(getLogger)
+7518/7457    0.012    0.000    0.153    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:1557(_get_node)
+     8233    0.035    0.000    0.152    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:395(cache_node)
+     2159    0.013    0.000    0.152    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:667(_f_get_child)
+    52800    0.125    0.000    0.147    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:2747(__setattr__)
+      240    0.145    0.001    0.145    0.001 {method 'update' of 'tables.tableextension.Row' objects}
+     3143    0.017    0.000    0.142    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:408(from_kind)
+7510/7449    0.018    0.000    0.142    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:408(get_node)
+      240    0.004    0.000    0.119    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3262(_all_set_attributes_to_recall_natives)
+     3609    0.015    0.000    0.118    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:397(_g_check_has_child)
+      482    0.003    0.000    0.118    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1150(info)
+      240    0.007    0.000    0.116    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3896(_prm_meta_add_summary)
+      480    0.001    0.000    0.116    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3257(_all_set_attr)
+      482    0.003    0.000    0.113    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1260(_log)
+      722    0.018    0.000    0.105    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:505(_g_refnode)
+     3609    0.104    0.000    0.104    0.000 {method '_g_get_objinfo' of 'tables.hdf5extension.Group' objects}
+     3157    0.042    0.000    0.098    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:492(__init__)
+     8291    0.023    0.000    0.098    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:61(issysattrname)
+    14072    0.019    0.000    0.096    0.000 {hasattr}
+     2186    0.018    0.000    0.093    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:598(__init__)
+2500/2414    0.007    0.000    0.091    0.000 {getattr}
+5785/5784    0.011    0.000    0.087    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:240(newfget)
+     8234    0.054    0.000    0.084    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:382(register_node)
+     4155    0.006    0.000    0.083    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:193(_g_getnode)
+      242    0.002    0.000    0.081    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:297(_g_post_init_hook)
+      727    0.003    0.000    0.075    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:167(_v_attrs)
+      482    0.002    0.000    0.074    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1281(handle)
+   110619    0.069    0.000    0.074    0.000 {isinstance}
+      727    0.018    0.000    0.073    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:200(__init__)
+     2474    0.016    0.000    0.073    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/fromnumeric.py:2251(prod)
+      482    0.004    0.000    0.072    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1313(callHandlers)
+      726    0.007    0.000    0.070    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:354(_g_set_location)
+     1442    0.053    0.000    0.070    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:140(items)
+      961    0.044    0.000    0.069    0.000 {next}
+      482    0.002    0.000    0.068    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:744(handle)
+      240    0.003    0.000    0.067    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/array.py:189(_g_create)
+    11281    0.011    0.000    0.066    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:211(_acquireLock)
+    12245    0.045    0.000    0.060    0.000 /home/robert/Programme/anaconda/lib/python2.7/threading.py:147(acquire)
+      482    0.002    0.000    0.058    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:941(emit)
+     2714    0.057    0.000    0.057    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+     2474    0.002    0.000    0.057    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/_methods.py:34(_prod)
+      482    0.004    0.000    0.056    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:847(emit)
+      240    0.034    0.000    0.053    0.000 {method '_create_array' of 'tables.hdf5extension.Array' objects}
+    13440    0.042    0.000    0.052    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/annotations.py:93(__setattr__)
+      963    0.003    0.000    0.052    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:381(from_type)
+    11281    0.015    0.000    0.050    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:220(_releaseLock)
+     1443    0.008    0.000    0.047    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:429(__contains__)
+      241    0.001    0.000    0.045    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1402(where)
+      241    0.012    0.000    0.045    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1512(_where)
+      786    0.009    0.000    0.044    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:282(__getattr__)
+      483    0.008    0.000    0.040    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:349(_g_add_children_names)
+    74577    0.040    0.000    0.040    0.000 {method 'startswith' of 'str' objects}
+    12245    0.030    0.000    0.038    0.000 /home/robert/Programme/anaconda/lib/python2.7/threading.py:187(release)
+      482    0.035    0.000    0.035    0.000 {method '_g_create' of 'tables.hdf5extension.Group' objects}
+   727/54    0.003    0.000    0.033    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:292(__del__)
+   485/42    0.002    0.000    0.033    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:274(__del__)
+      482    0.001    0.000    0.033    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:721(format)
+      480    0.011    0.000    0.032    0.000 /home/robert/Programme/anaconda/lib/python2.7/collections.py:38(__init__)
+   702/29    0.002    0.000    0.032    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:453(drop_node)
+   727/54    0.002    0.000    0.032    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:447(drop_from_cache)
+      482    0.005    0.000    0.032    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:458(format)
+     3157    0.025    0.000    0.030    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:115(_normalize_shape)
+      482    0.002    0.000    0.030    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1247(makeRecord)
+      482    0.016    0.000    0.028    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:243(__init__)
+    13060    0.027    0.000    0.027    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:813(__setattr__)
+    27600    0.019    0.000    0.027    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/compat.py:36(iteritems)
+     7004    0.027    0.000    0.027    0.000 {numpy.core.multiarray.array}
+      482    0.005    0.000    0.024    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:411(formatTime)
+     3157    0.013    0.000    0.023    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:138(_normalize_default)
+      731    0.002    0.000    0.023    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:657(__init__)
+     1925    0.009    0.000    0.022    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/path.py:69(check_name_validity)
+      480    0.003    0.000    0.020    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3434(_all_kill_iterator)
+        1    0.000    0.000    0.018    0.018 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:133(_close_file)
+      784    0.018    0.000    0.018    0.000 {method '_g_getattr' of 'tables.hdf5extension.AttributeSet' objects}
+      482    0.001    0.000    0.018    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:1794(_srvc_closing_routine)
+      482    0.002    0.000    0.018    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:836(flush)
+     9411    0.017    0.000    0.017    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:81(__contains__)
+      240    0.009    0.000    0.017    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1757(iterrows)
+      480    0.006    0.000    0.017    0.000 /home/robert/Programme/anaconda/lib/python2.7/_abcoll.py:545(update)
+      483    0.016    0.000    0.016    0.000 {method '_g_list_group' of 'tables.hdf5extension.Group' objects}
+     5779    0.016    0.000    0.016    0.000 {method 'match' of '_sre.SRE_Pattern' objects}
+     8263    0.014    0.000    0.014    0.000 {method 'pop' of 'tables.lrucacheextension.NodeCache' objects}
+     2161    0.010    0.000    0.014    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/path.py:122(join_path)
+      469    0.000    0.000    0.014    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:887(_f_close)
+     1203    0.007    0.000    0.013    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:54(split_type)
+      483    0.002    0.000    0.013    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:158(_g_getparent)
+      486    0.001    0.000    0.013    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:876(_g_close)
+      480    0.001    0.000    0.013    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:181(flavor_of)
+      728    0.003    0.000    0.013    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:481(_f_close)
+    70062    0.012    0.000    0.012    0.000 {method 'append' of 'list' objects}
+      239    0.005    0.000    0.012    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1188(_required_expr_vars)
+      7/5    0.000    0.000    0.012    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:1117(_g_load_child)
+      240    0.003    0.000    0.012    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3121(_srn_summarize_explored_parameters)
+      241    0.011    0.000    0.012    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3560(_all_insert_into_row)
+        1    0.000    0.000    0.011    0.011 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:564(close)
+        1    0.000    0.000    0.011    0.011 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2711(close)
+      482    0.010    0.000    0.010    0.000 {method 'flush' of 'file' objects}
+        2    0.000    0.000    0.010    0.005 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:702(__init__)
+      482    0.010    0.000    0.010    0.000 {time.strftime}
+      480    0.001    0.000    0.010    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:355(_is_numpy)
+      960    0.005    0.000    0.010    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3720(_ann_store_annotations)
+        2    0.000    0.000    0.009    0.005 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1036(_g_open)
+      482    0.003    0.000    0.009    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:1682(_srvc_opening_routine)
+        1    0.009    0.009    0.009    0.009 {method '_close_file' of 'tables.hdf5extension.File' objects}
+      482    0.009    0.000    0.009    0.000 {time.localtime}
+    15014    0.009    0.000    0.009    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:69(__getitem__)
+      479    0.002    0.000    0.008    0.000 {method '_iter' of 'tables.tableextension.Row' objects}
+    24490    0.008    0.000    0.008    0.000 /home/robert/Programme/anaconda/lib/python2.7/threading.py:64(_note)
+    27843    0.008    0.000    0.008    0.000 {method 'iteritems' of 'dict' objects}
+     2403    0.008    0.000    0.008    0.000 {method 'items' of 'dict' objects}
+      239    0.001    0.000    0.008    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1327(_compile_condition)
+     8924    0.008    0.000    0.008    0.000 {method 'sort' of 'list' objects}
+      239    0.005    0.000    0.008    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:437(call_on_recarr)
+      727    0.004    0.000    0.008    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:98(__setitem__)
+     3360    0.007    0.000    0.007    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:2355(__setattr__)
+    11763    0.007    0.000    0.007    0.000 {method 'acquire' of 'thread.lock' objects}
+      241    0.005    0.000    0.007    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3568(_all_extract_insert_dict)
+      964    0.002    0.000    0.007    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:701(acquire)
+        2    0.006    0.003    0.006    0.003 {posix.fsync}
+      483    0.006    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/filters.py:245(_pack)
+      722    0.001    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:885(_get_or_create_path)
+      480    0.001    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:954(_get_container)
+      482    0.004    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1226(findCaller)
+      727    0.003    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:1569(get_node)
+      239    0.001    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/fromnumeric.py:1730(sometrue)
+      480    0.001    0.000    0.006    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:168(array_as_internal)
+      242    0.002    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:360(_calc_nrowsinbuf)
+    25456    0.005    0.000    0.005    0.000 {thread.get_ident}
+      240    0.001    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:615(__init__)
+      727    0.002    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:438(_g_del_location)
+      480    0.001    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:111(array_of_flavor2)
+      480    0.005    0.000    0.005    0.000 {numpy.core.multiarray.empty}
+      964    0.001    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:708(release)
+      727    0.005    0.000    0.005    0.000 {map}
+      480    0.003    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/abc.py:128(__instancecheck__)
+      242    0.001    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:737(_f_close)
+     5050    0.005    0.000    0.005    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:341(_g_check_open)
+      240    0.002    0.000    0.004    0.000 {sorted}
+      481    0.002    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:396(_process_range)
+      239    0.001    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3420(_getshape)
+      960    0.003    0.000    0.004    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/annotations.py:85(f_is_empty)
+  486/481    0.002    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/abc.py:148(__subclasscheck__)
+      480    0.001    0.000    0.004    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:279(f_val_to_str)
+        1    0.000    0.000    0.004    0.004 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:128(_open_file)
+      480    0.001    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:366(conv_to_numpy)
+      239    0.001    0.000    0.004    0.000 {method 'any' of 'numpy.ndarray' objects}
+      727    0.004    0.000    0.004    0.000 {method '_g_list_attr' of 'tables.hdf5extension.AttributeSet' objects}
+      960    0.004    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/collections.py:54(__setitem__)
+     1442    0.004    0.000    0.004    0.000 {method '_flush_file' of 'tables.hdf5extension.File' objects}
+      482    0.003    0.000    0.004    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:962(_all_get_filters)
+      239    0.002    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1294(_get_condition_key)
+      482    0.001    0.000    0.004    0.000 /home/robert/Programme/anaconda/lib/python2.7/posixpath.py:104(splitext)
+      723    0.001    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/path.py:179(isvisiblename)
+10189/10188    0.003    0.000    0.003    0.000 {len}
+        1    0.000    0.000    0.003    0.003 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3163(_all_store_param_or_result_table_entry)
+     1446    0.003    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/misc/proxydict.py:42(__setitem__)
+     1925    0.002    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2155(_check_writable)
+      744    0.003    0.000    0.003    0.000 {method 'clear' of 'dict' objects}
+      241    0.001    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:415(_process_range_read)
+      239    0.000    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/_methods.py:37(_any)
+     1452    0.003    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:70(__contains__)
+        2    0.001    0.000    0.003    0.002 {method '_get_info' of 'tables.tableextension.Table' objects}
+      722    0.002    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1353(isEnabledFor)
+      239    0.000    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3400(_gettable)
+     1925    0.002    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2175(is_undo_enabled)
+     2898    0.003    0.000    0.003    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/misc/proxydict.py:25(__init__)
+      480    0.001    0.000    0.003    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3138(<lambda>)
+    11763    0.003    0.000    0.003    0.000 {method 'release' of 'thread.lock' objects}
+        1    0.000    0.000    0.002    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:387(__init__)
+        1    0.000    0.000    0.002    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:493(open)
+      727    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:262(__new__)
+      240    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/array.py:112(_getrowsize)
+     2176    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:593(<lambda>)
+        1    0.000    0.000    0.002    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/_past.py:33(oldfunc)
+     4094    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2136(_check_open)
+      482    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/genericpath.py:85(_splitext)
+        1    0.000    0.000    0.002    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:222(open_file)
+      726    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:848(_g_check_group)
+        1    0.000    0.000    0.002    0.002 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:755(__init__)
+      481    0.002    0.000    0.002    0.000 {tables.utilsextension.get_indices}
+      489    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/path.py:154(split_path)
+      480    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:385(_conv_python_to_numpy)
+     2670    0.002    0.000    0.002    0.000 {method 'endswith' of 'str' objects}
+      482    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/posixpath.py:119(basename)
+     1956    0.002    0.000    0.002    0.000 {method 'rfind' of 'str' objects}
+      239    0.000    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/numeric.py:394(asarray)
+      240    0.001    0.000    0.002    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3871(_prm_extract_missing_flags)
+      724    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:147(<lambda>)
+      482    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:154(getLevelName)
+      722    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:882(_g_check_name)
+      722    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1339(getEffectiveLevel)
+      727    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:267(__init__)
+      485    0.002    0.000    0.002    0.000 {method '_g_close_group' of 'tables.hdf5extension.Group' objects}
+      482    0.001    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:452(usesTime)
+      996    0.002    0.000    0.002    0.000 {method 'split' of 'str' objects}
+      239    0.002    0.000    0.002    0.000 {tables.utilsextension.get_nested_field}
+      480    0.001    0.000    0.002    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:1181(f_get)
+     3157    0.002    0.000    0.002    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:135(<genexpr>)
+      482    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:1837(_srvc_extract_file_information)
+       14    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:108(from_atom)
+      240    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:2303(_store)
+      245    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/filters.py:275(__init__)
+      240    0.001    0.000    0.001    0.000 {_hashlib.openssl_sha1}
+      240    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1138(debug)
+     1925    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2148(_iswritable)
+      960    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:955(_overview_group)
+      242    0.001    0.000    0.001    0.000 {method '_g_close' of 'tables.hdf5extension.Leaf' objects}
+      963    0.001    0.000    0.001    0.000 {divmod}
+      239    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:347(with_replaced_vars)
+      481    0.001    0.000    0.001    0.000 {repr}
+     1440    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/collections.py:73(__iter__)
+      482    0.001    0.000    0.001    0.000 {method 'write' of 'file' objects}
+      482    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:82(<lambda>)
+      720    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/compat.py:34(iterkeys)
+      964    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:605(filter)
+      482    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:318(getMessage)
+        1    0.000    0.000    0.001    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:868(_g_close_descendents)
+        1    0.000    0.000    0.001    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:530(close_subtree)
+      723    0.001    0.000    0.001    0.000 {method 'insert' of 'list' objects}
+        1    0.000    0.000    0.001    0.001 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/managers.py:737(_connect)
+     1444    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/compat.py:29(tobytes)
+      480    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/flavor.py:348(_is_python)
+     1925    0.001    0.000    0.001    0.000 {method '__contains__' of 'frozenset' objects}
+      240    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:2130(f_is_empty)
+     1203    0.001    0.000    0.001    0.000 {method 'groups' of '_sre.SRE_Match' objects}
+        4    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:499(_close_nodes)
+        4    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:2032(__contains__)
+      240    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/numeric.py:464(asanyarray)
+     3157    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:501(<genexpr>)
+      484    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/threading.py:1152(currentThread)
+        1    0.000    0.000    0.001    0.001 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:161(Client)
+      240    0.001    0.000    0.001    0.000 {method 'hexdigest' of '_hashlib.HASH' objects}
+        2    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:406(__init__)
+        1    0.001    0.001    0.001    0.001 {method '_g_new' of 'tables.hdf5extension.File' objects}
+      769    0.001    0.000    0.001    0.000 {built-in method __new__ of type object at 0x7f06008b7d00}
+      960    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/annotations.py:49(_dict)
+      960    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:156(v_is_leaf)
+      239    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:426(get)
+     1239    0.001    0.000    0.001    0.000 {method 'get' of 'dict' objects}
+     1235    0.001    0.000    0.001    0.000 {method 'pop' of 'list' objects}
+      960    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:349(signal_update)
+      482    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:194(v_location)
+      498    0.001    0.000    0.001    0.000 {method 'update' of 'dict' objects}
+     1203    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:130(v_comment)
+     1440    0.001    0.000    0.001    0.000 {method '_flush_buffered_rows' of 'tables.tableextension.Row' objects}
+      484    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/threading.py:967(name)
+        1    0.000    0.000    0.001    0.001 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:387(compile_condition)
+      702    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:48(remove)
+      485    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:850(is_open)
+     2213    0.001    0.000    0.001    0.000 {method 'pop' of 'dict' objects}
+      242    0.001    0.000    0.001    0.000 {method '_g_new' of 'tables.hdf5extension.Leaf' objects}
+      485    0.001    0.000    0.001    0.000 {method '_g_new' of 'tables.hdf5extension.Node' objects}
+       14    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:564(_get_init_args)
+      482    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:177(_checkfilters)
+      960    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/annotations.py:195(v_annotations)
+        1    0.000    0.000    0.001    0.001 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3690(_all_create_or_get_groups)
+     1441    0.001    0.000    0.001    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:189(v_name)
+       14    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:196(__init__)
+      483    0.001    0.000    0.001    0.000 {method 'index' of 'list' objects}
+        1    0.000    0.000    0.001    0.001 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/utils/ptcompat.py:171(get_child)
+      239    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:611(getType)
+      482    0.001    0.000    0.001    0.000 {method 'find' of 'str' objects}
+      240    0.000    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:2761(_mark_columns_as_dirty)
+      240    0.001    0.000    0.001    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:481(_g_fix_byteorder_data)
+      483    0.000    0.000    0.000    0.000 {sys._getframe}
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/compat.py:40(listvalues)
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:234(f_get_class_name)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:534(NumExpr)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/inspect.py:804(getargspec)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:869(_g_post_init_hook)
+      240    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+      480    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/trajectory.py:474(v_idx)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:425(answer_challenge)
+      482    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:2008(_data)
+      483    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/process.py:161(name)
+      484    0.000    0.000    0.000    0.000 {time.time}
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/copy.py:66(copy)
+      727    0.000    0.000    0.000    0.000 {method '_g_new' of 'tables.hdf5extension.AttributeSet' objects}
+        3    0.000    0.000    0.000    0.000 {method 'recv_bytes' of '_multiprocessing.Connection' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:293(SocketClient)
+      480    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/trajectory.py:515(v_crun)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:481(precompile)
+      480    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:792(f_is_empty)
+      240    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:332(__init__)
+      483    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/process.py:59(current_process)
+      722    0.000    0.000    0.000    0.000 {method 'iterkeys' of 'dict' objects}
+      481    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:180(v_full_name)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:309(_g_get_child_leaf_class)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:581(flush)
+      480    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:213(v_branch)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:844(__get_root_group)
+        2    0.000    0.000    0.000    0.000 {method '_g_get_lchild_attr' of 'tables.hdf5extension.Group' objects}
+      480    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:436(f_lock)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/socket.py:223(meth)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:716(_settitle)
+      482    0.000    0.000    0.000    0.000 {posix.getpid}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:187(_g_settitle)
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:294(v_is_parameter)
+        1    0.000    0.000    0.000    0.000 {method 'connect' of '_socket.socket' objects}
+      241    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:175(v_is_root)
+      118    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:640(_f_walk)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:1095(_cache_description_data)
+      240    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:479(<lambda>)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/inspect.py:744(getargs)
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:141(v_depth)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:219(stringToExpression)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3023(_f_close)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:729(_setfilters)
+      242    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/leaf.py:188(_getmaindim)
+      8/2    0.000    0.000    0.000    0.000 {issubclass}
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/copy.py:306(_reconstruct)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:187(_g_setfilters)
+      482    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/posixpath.py:51(normcase)
+      240    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/trajectory.py:465(v_is_run)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:2203(_save_buffered_rows)
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/trajectory.py:3018(v_environment_hexsha)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:1075(__init__)
+       14    0.000    0.000    0.000    0.000 {method '__reduce_ex__' of 'object' objects}
+        1    0.000    0.000    0.000    0.000 {tables.utilsextension.read_f_attr}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/group.py:291(_g_get_child_group_class)
+      241    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+      727    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:636(_g_close)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:412(deliver_challenge)
+        9    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:58(__iter__)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:562(_g_set_path_names)
+        2    0.000    0.000    0.000    0.000 {method '_g_get_gchild_attr' of 'tables.hdf5extension.Group' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/managers.py:97(dispatch)
+      240    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/naturalnaming.py:315(_store_flags)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:112(remove)
+      242    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/node.py:462(_g_post_init_hook)
+        2    0.000    0.000    0.000    0.000 {compile}
+        1    0.000    0.000    0.000    0.000 {method '_append_records' of 'tables.tableextension.Table' objects}
+       52    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:572(<genexpr>)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/hmac.py:125(new)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:593(row)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/inspect.py:142(isfunction)
+      3/1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:137(typeCompileAst)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/hmac.py:30(__init__)
+      3/1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:140(check_file_access)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/filters.py:195(_unpack)
+        4    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:960(_get_type_col_names)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3121(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/fromnumeric.py:1748(alltrue)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:102(allOf)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:343(optimizeTemporariesAllocation)
+        1    0.000    0.000    0.000    0.000 {eval}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3299(_g_close)
+       28    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:192(pop)
+        2    0.000    0.000    0.000    0.000 {tables.utilsextension.which_lib_version}
+        1    0.000    0.000    0.000    0.000 <expr>:1(<module>)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:364(__init__)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:320(prefix)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/atom.py:482(<lambda>)
+        1    0.000    0.000    0.000    0.000 {method '_close_append' of 'tables.tableextension.Table' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:283(_get_idx_expr)
+       28    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3182(_g_col)
+        3    0.000    0.000    0.000    0.000 {method '_g_open' of 'tables.hdf5extension.Group' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:82(func)
+        8    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:26(__exit__)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1064(_fixupParents)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:542(_g_set_nested_names_descr)
+    72/36    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:96(postorderWalk)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/socket.py:185(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:167(_get_idx_expr_recurse)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:969(_get_enum_map)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:462(getContext)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:322(collapseDuplicateSubtrees)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:305(assignLeafRegisters)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:630(_v_wdflts)
+       36    0.000    0.000    0.000    0.000 {range}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:113(_index_pathname_of)
+        1    0.000    0.000    0.000    0.000 {method 'all' of 'numpy.ndarray' objects}
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3439(__init__)
+        1    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:340(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numpy/core/_methods.py:40(_all)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:417(compileThreeAddrForm)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/inspect.py:67(ismethod)
+      3/1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:108(expressionToAST)
+        5    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:155(iterkeys)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:441(toString)
+       14    0.000    0.000    0.000    0.000 <string>:8(__new__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:559(shutdown)
+        1    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/parameter.py:2060(f_val_to_str)
+        1    0.000    0.000    0.000    0.000 {_warnings.warn}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:434(quadrupleToString)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/genericpath.py:26(isfile)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:444(detect_number_of_cores)
+        4    0.000    0.000    0.000    0.000 {posix.access}
+        3    0.000    0.000    0.000    0.000 {posix.stat}
+        6    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:59(__init__)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/copy_reg.py:92(__newobj__)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/genericpath.py:15(exists)
+      9/3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:80(__hash__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:47(__init__)
+        6    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:83(add)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:167(operation)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:259(getInputOrder)
+        5    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:1120(__init__)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:444(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:67(newfunc)
+        8    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:20(__enter__)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/hmac.py:109(digest)
+        1    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/utils/ptcompat.py:155(get_node)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:373(_get_variable_names)
+        6    0.000    0.000    0.000    0.000 {method '__subclasses__' of 'type' objects}
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/inspect.py:209(iscode)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:98(address_type)
+        8    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:16(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:81(_get_indexable_cmp)
+      9/3    0.000    0.000    0.000    0.000 {hash}
+        6    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_weakrefset.py:52(_commit_removals)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:102(isConstant)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:316(assignBranchRegisters)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/hmac.py:100(_current)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:286(getConstants)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:405(convertASTtoThreeAddrForm)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/socket.py:192(close)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/posixpath.py:89(split)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:362(__init__)
+        4    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+      6/2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:119(sigPerms)
+        8    0.000    0.000    0.000    0.000 {method 'update' of '_hashlib.HASH' objects}
+        3    0.000    0.000    0.000    0.000 {method 'encode' of 'unicode' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:382(setRegisterNumbersForTemporaries)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:120(get_handlers_by_name)
+       51    0.000    0.000    0.000    0.000 {method 'isupper' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/attributeset.py:265(_f_list)
+        2    0.000    0.000    0.000    0.000 {posix.sysconf}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:393(__init__)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3782(close)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:375(setOrderedRegisterNumbers)
+       10    0.000    0.000    0.000    0.000 {method 'remove' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:478(__init__)
+        3    0.000    0.000    0.000    0.000 {method 'send_bytes' of '_multiprocessing.Connection' objects}
+        1    0.000    0.000    0.000    0.000 {posix.urandom}
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:189(__init__)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:421(nToChr)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:95(allConstantNodes)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:71(set_new_context)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/file.py:108(add)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/hmac.py:83(update)
+       14    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:575(join_paths)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/connection.py:73(_init_timeout)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/description.py:571(get_cols_in_order)
+        6    0.000    0.000    0.000    0.000 {chr}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/UserDict.py:4(__init__)
+        2    0.000    0.000    0.000    0.000 {method 'fileno' of 'tables.hdf5extension.File' objects}
+        8    0.000    0.000    0.000    0.000 {method 'count' of 'str' objects}
+        6    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/_abcoll.py:98(__subclasshook__)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:146(<genexpr>)
+        4    0.000    0.000    0.000    0.000 {method 'digest' of '_hashlib.HASH' objects}
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:529(<genexpr>)
+        3    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:93(typecode)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:110(is_indexed_boolean)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:183(_checkLevel)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:107(_index_name_of)
+        2    0.000    0.000    0.000    0.000 {zip}
+        4    0.000    0.000    0.000    0.000 {_hashlib.openssl_md5}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:350(<genexpr>)
+        4    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:969(append)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:255(isReduction)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/logging/__init__.py:585(__init__)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/stat.py:49(S_ISREG)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:613(<lambda>)
+       14    0.000    0.000    0.000    0.000 {id}
+        1    0.000    0.000    0.000    0.000 {method 'setblocking' of '_socket.socket' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/UserDict.py:17(__len__)
+       16    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 {method 'append' of 'tables.tableextension.Row' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/utils.py:431(__setitem__)
+        4    0.000    0.000    0.000    0.000 {method 'translate' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:101(get_cmp)
+        1    0.000    0.000    0.000    0.000 {method '_get_file_id' of 'tables.hdf5extension.File' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/utils.py:61(set_vml_num_threads)
+        2    0.000    0.000    0.000    0.000 {iter}
+        2    0.000    0.000    0.000    0.000 /media/data/PYTHON_WORKSPACE/pypet-project/pypet/storageservice.py:3670(_all_cut_string)
+        1    0.000    0.000    0.000    0.000 {posix.dup}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:222(_tables)
+        2    0.000    0.000    0.000    0.000 {method 'itervalues' of 'dict' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/multiprocessing/util.py:72(debug)
+        1    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/expressions.py:69(get_current_context)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:348(<genexpr>)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/conditions.py:193(fix_invert)
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/weakref.py:61(_commit_removals)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/pandas/io/pytables.py:572(is_open)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/stat.py:24(S_IFMT)
+        1    0.000    0.000    0.000    0.000 {method 'intersection' of 'set' objects}
+        2    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+        2    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/numexpr/necompiler.py:90(key)
+        1    0.000    0.000    0.000    0.000 /home/robert/Programme/anaconda/lib/python2.7/site-packages/tables/table.py:3386(dtype)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        1    0.000    0.000    0.000    0.000 {method 'fileno' of '_socket.socket' objects}
+        1    0.000    0.000    0.000    0.000 {method '_open_append' of 'tables.tableextension.Table' objects}
+        2    0.000    0.000    0.000    0.000 {method 'copy' of '_hashlib.HASH' objects}
+        1    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+
+
