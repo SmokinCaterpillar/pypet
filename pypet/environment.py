@@ -2160,7 +2160,11 @@ class Environment(HasLogger):
                 if self._freeze_pool_input:
                     self._logger.info('Freezing pool input')
 
-                    self._traj.f_restore_default()
+                    # To work under windows we must allow the full-copy now!
+                    # Because windows does not support forking!
+                    pool_full_copy = self._traj.v_full_copy
+                    self._traj.v_full_copy = True
+
                     init_kwargs = self._make_kwargs()
                     initializer = _configure_frozen_pool
                     iterator = self._make_index_iterator(start_run_idx)
@@ -2191,8 +2195,11 @@ class Environment(HasLogger):
                     mpool.close()
                     mpool.join()
                 finally:
-                    if not self._freeze_pool_input:
+                    if self._freeze_pool_input:
+                        self._traj.v_full_copy = pool_full_copy
+                    else:
                         self._traj.v_storage_service = pool_service
+
 
                 self._logger.info('Pool has joined, will delete it.')
                 del mpool

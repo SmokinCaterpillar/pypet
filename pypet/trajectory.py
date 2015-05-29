@@ -390,10 +390,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         result = super(Trajectory, self).__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
-        if not self.v_full_copy and self.v_crun is not None:
-            runname = self._single_run_ids[self.v_idx]
+        if not self.v_full_copy:
+            if self.v_crun is not None:
+                idx = self.v_idx
+            else:
+                idx = 0
+            runname = self._single_run_ids[idx]
             result['_run_information'] = {runname: self._run_information[runname]}
-            result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
+            result['_single_run_ids'] = {idx: runname, runname: idx}
         result['_wildcard_cache'] = {}
         return result
 
