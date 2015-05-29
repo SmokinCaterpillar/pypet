@@ -47,6 +47,7 @@ if __name__ == '__main__':
     opt_dict = parse_args()
     tests_include = set(('TestMPImmediatePostProc',
                     'MultiprocFrozenPoolSortQueueTest',
+                    'MultiprocFrozenPoolSortPipeTest',
                     'MultiprocLinkNoPoolLockTest',
                     'MultiprocLinkNoPoolQueueTest',
                     'MultiprocLinkQueueTest',

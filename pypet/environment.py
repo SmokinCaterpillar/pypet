@@ -2176,22 +2176,23 @@ class Environment(HasLogger):
                     iterator = self._make_iterator(start_run_idx)
                     target = _pool_single_run
 
-                mpool = multip.Pool(self._ncores, initializer=initializer,
-                                    initargs=(init_kwargs,))
+                try:
+                    mpool = multip.Pool(self._ncores, initializer=initializer,
+                                        initargs=(init_kwargs,))
 
-                pool_results = mpool.imap_unordered(target, iterator)
+                    pool_results = mpool.imap_unordered(target, iterator)
 
-                for res in pool_results:
-                    results.append(res)
-                    self._show_progress(n, total_runs)
-                    n += 1
+                    for res in pool_results:
+                        results.append(res)
+                        self._show_progress(n, total_runs)
+                        n += 1
 
-                # Everything is done
-                mpool.close()
-                mpool.join()
-
-                if not self._freeze_pool_input:
-                    self._traj.v_storage_service = pool_service
+                    # Everything is done
+                    mpool.close()
+                    mpool.join()
+                finally:
+                    if not self._freeze_pool_input:
+                        self._traj.v_storage_service = pool_service
 
                 self._logger.info('Pool has joined, will delete it.')
                 del mpool

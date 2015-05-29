@@ -47,19 +47,19 @@ class MultiprocPoolLockTest(EnvironmentTest):
         self.use_pool=True
 
 
-class MultiprocPoolPipeTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool',
-
-    # def test_run(self):
-    #     super(MultiprocLockTest, self).test_run()
-
-    def set_mode(self):
-        super(MultiprocPoolPipeTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_PIPE
-        self.multiproc = True
-        self.ncores = 4
-        self.use_pool=True
+# class MultiprocPoolPipeTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool',
+#
+#     # def test_run(self):
+#     #     super(MultiprocLockTest, self).test_run()
+#
+#     def set_mode(self):
+#         super(MultiprocPoolPipeTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_PIPE
+#         self.multiproc = True
+#         self.ncores = 4
+#         self.use_pool=True
 
 
 class MultiprocPoolSortQueueTest(ResultSortTest):
@@ -122,16 +122,16 @@ class MultiprocNoPoolLockTest(EnvironmentTest):
         self.use_pool=False
 
 
-class MultiprocNoPoolPipeTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolPipeTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_PIPE
-        self.multiproc = True
-        self.ncores = 2
-        self.use_pool=False
+# class MultiprocNoPoolPipeTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolPipeTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_PIPE
+#         self.multiproc = True
+#         self.ncores = 2
+#         self.use_pool=False
 
 
 class MultiprocNoPoolSortQueueTest(ResultSortTest):

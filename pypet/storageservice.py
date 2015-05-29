@@ -13,6 +13,7 @@ import os
 import warnings
 import time
 import hashlib
+import sys
 import itertools as itools
 from collections import deque
 
@@ -20,6 +21,11 @@ try:
     import queue
 except ImportError:
     import Queue as queue
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import numpy as np
 from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
 
@@ -133,9 +139,35 @@ class PipeStorageServiceSender(MultiprocWrapper):
         """Puts data on queue"""
         self.pickle_pipe = False
         self.acquire_lock()
-        self.conn.send(to_put)
-        self.conn.recv()  # wait for signal that message was received
+        self._send_chunks(to_put)
         self.release_lock()
+
+    def _make_chunk_iterator(self, to_chunk, chunksize):
+        return (to_chunk[i:i + chunksize] for i in range(0, len(to_chunk), chunksize))
+
+    def _send_chunks(self, to_put):
+        put_dump = pickle.dumps(to_put)
+        data_size = sys.getsizeof(put_dump)
+        nchunks = data_size / 20000000.   # chunks with size 20 MB
+        chunksize = int(len(put_dump) / nchunks)
+        chunk_iterator = self._make_chunk_iterator(put_dump, chunksize)
+        for chunk in chunk_iterator:
+            # print('S: sending False')
+            self.conn.send(False)
+            # print('S: sent False')
+            # print('S: sending chunk')
+            self.conn.send_bytes(chunk)
+            # print('S: sent chunk %s' % chunk[0:10])
+            # print('S: recv signal')
+            self.conn.recv() # wait for signal that message was received
+            # print('S: read signal')
+        # print('S: sending True')
+        self.conn.send(True)
+        # print('S: sent True')
+        # print('S: recving last signal')
+        self.conn.recv() # wait for signal that message was received
+        # print('S: read last signal')
+        # print('S; DONE SENDING data')
 
     def store(self, *args, **kwargs):
         """Puts data to store on queue.
@@ -263,13 +295,34 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
         self._buffer = deque()
         self._set_logger()
 
+    def _read_chunks(self):
+        chunks = []
+        stop = False
+        while not stop:
+            # print('W: recving stop')
+            stop = self.conn.recv()
+            # print('W: read stop = %s' % str(stop))
+            if not stop:
+                # print('W: recving chunk')
+                chunk = self.conn.recv_bytes()
+                chunks.append(chunk)
+                # print('W: read chunk')
+            # print('W: sending True')
+            self.conn.send(True)
+            # print('W: sent True')
+        # print('W: reconstructing data')
+        to_load = b''.join(chunks)
+        del chunks  # free unnecassary memeory
+        data = pickle.loads(to_load)
+        # print('W: DATA complete %s' % str(data))
+        return data
+
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _receive_data(self):
         """Gets data from pipe"""
         while True:
             while len(self._buffer) < self.max_size and self.conn.poll():
-                self._buffer.append(self.conn.recv())
-                self.conn.send(True)  # signal to other end that data was received
+                self._buffer.append(self._read_chunks())
             if len(self._buffer) > 0:
                 return self._buffer.popleft()
 
