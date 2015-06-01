@@ -6,6 +6,9 @@ pypet 0.1b.12
 
 *   BUG FIX: `v_full_copy` is now `False` by default
 
+*   BUG FIX: `v_full_copy` is no longer automatically set to `True` when using
+    `freeze_pool_input`.
+
 
 pypet 0.1b.11
 

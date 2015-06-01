@@ -94,6 +94,9 @@ def _configure_frozen_pool(kwargs):
     """Configures the frozen pool and keeps all kwargs"""
     _frozen_pool_single_run.kwargs = kwargs
     _configure_logging(kwargs)
+    # Reset full copy to it's old value
+    traj = kwargs['traj']
+    traj.v_full_copy = kwargs['full_copy']
 
 
 def _process_single_run(kwargs):
@@ -1818,7 +1821,12 @@ class Environment(HasLogger):
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool:
-                if not self._freeze_pool_input:
+                if self._freeze_pool_input:
+                    # Remember the full copy setting for the frozen input to
+                    # change this back once the trajectory is received by
+                    # each process
+                    result_dict['full_copy'] = self.v_traj.v_full_copy
+                else:
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
             else:
@@ -2160,12 +2168,13 @@ class Environment(HasLogger):
                 if self._freeze_pool_input:
                     self._logger.info('Freezing pool input')
 
+                    init_kwargs = self._make_kwargs()
+
                     # To work under windows we must allow the full-copy now!
                     # Because windows does not support forking!
                     pool_full_copy = self._traj.v_full_copy
                     self._traj.v_full_copy = True
 
-                    init_kwargs = self._make_kwargs()
                     initializer = _configure_frozen_pool
                     iterator = self._make_index_iterator(start_run_idx)
                     target = _frozen_pool_single_run
