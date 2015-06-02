@@ -295,6 +295,7 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
         self._buffer = deque()
         self._set_logger()
 
+    @property
     def _read_chunks(self):
         chunks = []
         stop = False
@@ -312,9 +313,14 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
             # print('W: sent True')
         # print('W: reconstructing data')
         to_load = b''.join(chunks)
-        del chunks  # free unnecassary memeory
-        data = pickle.loads(to_load)
-        # print('W: DATA complete %s' % str(data))
+        del chunks  # free unnecessary memory
+        try:
+            data = pickle.loads(to_load)
+        except Exception:
+            # We don't want to crash the storage service if reconstruction
+            # due to errors fails
+            self._logger.exception('Could not reconstruct pickled data.')
+            data = None
         return data
 
     @retry(9, Exception, 0.01, 'pypet.retry')
@@ -322,7 +328,9 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
         """Gets data from pipe"""
         while True:
             while len(self._buffer) < self.max_size and self.conn.poll():
-                self._buffer.append(self._read_chunks())
+                data = self._read_chunks()
+                if data is not None:
+                    self._buffer.append(self._read_chunks)
             if len(self._buffer) > 0:
                 return self._buffer.popleft()
 
