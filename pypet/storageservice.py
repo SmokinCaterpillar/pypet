@@ -295,7 +295,6 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
         self._buffer = deque()
         self._set_logger()
 
-    @property
     def _read_chunks(self):
         chunks = []
         stop = False
@@ -330,7 +329,7 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
             while len(self._buffer) < self.max_size and self.conn.poll():
                 data = self._read_chunks()
                 if data is not None:
-                    self._buffer.append(self._read_chunks)
+                    self._buffer.append(data)
             if len(self._buffer) > 0:
                 return self._buffer.popleft()
 
