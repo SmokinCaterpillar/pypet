@@ -6,7 +6,7 @@ python:
 
 env:
   matrix:
-    - NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+    #- NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
     - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
 
 
@@ -60,7 +60,7 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - travis_retry pip install --pre Brian2
+  - travis_retry pip install --pre brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"

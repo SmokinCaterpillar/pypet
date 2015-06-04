@@ -10,10 +10,10 @@ if [[ $TEST_SUITE == ON ]]
                 # try with many files, i.e. do not remove data after every test
                 # but only for one particular setting of the test matrix python = 2.7 and newest
                 # packages
-                echo "Running test suite and keeping all files"
+                echo "Running henri test suite and keeping all files"
                 python ../../pypet/tests/all_henri_tests.py -k
             else
-                echo "Running test suite"
+                echo "Running henri test suite"
                 python ../../pypet/tests/all_henri_tests.py
             fi
     fi
