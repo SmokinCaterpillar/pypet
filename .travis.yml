@@ -17,11 +17,7 @@ matrix:
     - python: 3.4
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF
-    - python: 2.7
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
-    - python: 3.4
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
+      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=OFF
 
 
 # Install dependencies for PyTables
@@ -64,7 +60,7 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then travis_retry pip install brian; fi
+  - travis_retry pip install --pre brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
@@ -87,6 +83,5 @@ script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
 
 branches:
   only:
-    - develop
-    - master
+    - brian2
 
