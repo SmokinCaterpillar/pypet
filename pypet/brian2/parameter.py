@@ -4,6 +4,7 @@ __author__ = 'Henri Bunting'
 import brian2.numpy_ as np
 from pypet.parameter import Parameter, ObjectTable
 from brian2.units.fundamentalunits import Quantity, get_unit_fast
+from pypet.utils.helpful_classes import HashArray
 #from brian2.units.fundamentalunits import is_dimensionless, get_dimensions
 #from brian2.core.variables import get_value_with_unit
 
@@ -115,6 +116,121 @@ class Brian2Parameter(Parameter):
         return True
 
     def _store(self):
+        """Creates a storage dictionary for the storage service.
+
+        If the data is not a numpy array, a numpy matrix, or a tuple, the
+        :func:`~pypet.parameter.Parmater._store` method of the parent class is called.
+
+        Otherwise the array is put into the dictionary with the key 'data__rr__'.
+
+        Each array of the exploration range is stored as a separate entry named
+        'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array. Note if an array
+        is used more than once in an exploration range (for example, due to cartesian product
+        exploration), the array is stored only once.
+        Moreover, an :class:`~pypet.parameter.ObjectTable` containing the references
+        is stored under the name 'explored_data__rr__' in order to recall
+        the order of the arrays later on.
+
+        """
+        if not type(self._data) in [np.ndarray, tuple, np.matrix]:
+            return super(Brian2Parameter, self)._store()
+        else:
+            store_dict = {'data' + Brian2Parameter.IDENTIFIER: self._data}
+
+            if self.f_has_range():
+                # Supports smart storage by hashable arrays
+                # Keys are the hashable arrays or tuples and values are the indices
+                smart_dict = {}
+
+                store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = ObjectTable(columns=['idx'], index=list(range(len(self))))
+
+                count = 0
+                for idx, elem in enumerate(self._explored_range):
+
+                    # First we need to distinguish between tuples and array and extract a
+                    # hashable part of the array
+                    if isinstance(elem, np.ndarray):
+                        # You cannot hash numpy arrays themselves, but if they are read only
+                        # you can hash array.data
+                        hash_elem = HashArray(elem)
+                    else:
+                        hash_elem = elem
+
+                    # Check if we have used the array before,
+                    # i.e. element can be found in the dictionary
+                    if hash_elem in smart_dict:
+                        name_idx = smart_dict[hash_elem]
+                        add = False
+                    else:
+                        name_idx = count
+                        add = True
+
+                    name = self._build_name(name_idx)
+                    # Store the reference to the array
+                    store_dict['explored_data' + Brian2Parameter.IDENTIFIER]['idx'][idx] = \
+                        name_idx
+
+                    # Only if the array was not encountered before,
+                    # store the array and remember the index
+                    if add:
+                        store_dict[name] = elem
+                        smart_dict[hash_elem] = name_idx
+                        count += 1
+
+            self._locked = True
+
+            return store_dict
+
+    def _load(self, load_dict):
+        """Reconstructs the data and exploration array.
+
+        Checks if it can find the array identifier in the `load_dict`, i.e. '__rr__'.
+        If not calls :class:`~pypet.parameter.Parameter._load` of the parent class.
+
+        If the parameter is explored, the exploration range of arrays is reconstructed
+        as it was stored in :func:`~pypet.parameter.ArrayParameter._store`.
+
+        """
+        if self.v_locked:
+            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+
+        try:
+            self._data = load_dict['data' + Brian2Parameter.IDENTIFIER]
+
+            if 'explored_data' + Brian2Parameter.IDENTIFIER in load_dict:
+                explore_table = load_dict['explored_data' + Brian2Parameter.IDENTIFIER]
+
+                idx = explore_table['idx']
+
+                explore_list = []
+
+                # Recall the arrays in the order stored in the ObjectTable 'explored_data__rr__'
+                for name_idx in idx:
+                    arrayname = self._build_name(name_idx)
+                    explore_list.append(load_dict[arrayname])
+
+                self._explored_range = tuple([self._convert_data(x) for x in explore_list])
+                self._explored = True
+
+        except KeyError:
+            super(Brian2Parameter, self)._load(load_dict)
+
+        self._default = self._data
+        self._locked = True
+
+    @staticmethod
+    def _build_name(name_idx):
+        """Formats a name for storage
+
+        :return:
+
+            'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array
+
+        """
+        return 'xa%s%08d' % (Brian2Parameter.IDENTIFIER, name_idx)
+
+    '''
+    def _store(self):
         #print("--- store START---")
         if isinstance(self._data, Quantity):
             store_dict = {}
@@ -145,9 +261,9 @@ class Brian2Parameter(Parameter):
                     #print("store value:", value)
                     value_list.append(value)
 
-                store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = \
-                    ObjectTable(data={'value': value_list})
+                store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': value_list})
 
+            print(store_dict)
 
             self._locked = True
 
@@ -201,4 +317,4 @@ class Brian2Parameter(Parameter):
         self._default = self._data
         self._locked = True
         #print("--- load ENDB ---")
-
+    '''
