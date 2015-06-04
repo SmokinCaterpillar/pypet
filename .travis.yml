@@ -60,7 +60,7 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - travis_retry pip install --pre brian2
+  - travis_retry pip install --pre Brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
