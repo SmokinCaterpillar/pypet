@@ -1,6 +1,6 @@
-* Write tests for lock acquisition and test data
+* Write tests for lock acquisition and test data *DONE*
 
 
 * Document new pipe feature
 
-* Write more tests for wrapping mode
+* Write more tests for wrapping mode *DONE*

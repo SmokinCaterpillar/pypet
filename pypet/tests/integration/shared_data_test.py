@@ -32,6 +32,15 @@ def copy_one_entry_from_giant_matrices(traj):
     traj.f_add_result('dummy.dummy', 42)
 
 
+def load_from_shared_storage(traj):
+    with StorageContextManager(traj) as cm:
+        if 'x' in traj:
+            raise RuntimeError()
+        traj.v_auto_load = True
+        x= traj.dpar.x
+    traj.f_add_result('loaded.x', x, comment='loaded  x')
+
+
 def write_into_shared_storage(traj):
     traj.f_add_result('ggg', 42)
     traj.f_add_derived_parameter('huuu', 46)
@@ -104,6 +113,30 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.shuffle=True
         self.fletcher32 = False
         self.encoding = 'utf8'
+
+    def test_loading_run(self):
+
+        self.traj.f_add_parameter('y', 12)
+        self.traj.f_explore({'y':[12,3,3,4]})
+
+        self.traj.f_add_parameter('TEST', 'test_run')
+        self.traj.f_add_derived_parameter('x', 42)
+        self.traj.f_store()
+        self.traj.dpar.f_remove_child('x')
+
+        self.env.f_run(load_from_shared_storage)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.compare_trajectories(self.traj, newtraj)
 
     def explore(self, traj, trials=3):
         self.explored ={'Normal.trial': range(trials),
