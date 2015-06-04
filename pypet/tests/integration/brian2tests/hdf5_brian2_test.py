@@ -1,4 +1,4 @@
-__author__ = 'henri'
+__author__ = 'Henri Bunting'
 
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_log_config, parse_args, run_suite
@@ -13,7 +13,7 @@ class Brian2hdf5Test(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'hdf5', 'henri'
 
-    def hdf5_store_load_test(self):
+    def test_hdf5_store_load(self):
         traj_name = make_trajectory_name(self)
         file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
         env = Environment(trajectory=traj_name, filename=file_name, log_config=get_log_config(),
