@@ -15,7 +15,11 @@ import time
 import hashlib
 import sys
 import itertools as itools
-from thread import error as ThreadError
+try:
+    from thread import error as ThreadError
+except ImportError:
+    # Python 3 Syntax
+    from threading import ThreadError
 from collections import deque
 
 try:
