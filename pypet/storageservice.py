@@ -150,6 +150,7 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
         self.lock = lock
         self.pickle_pipe = True
         self.is_locked = False
+        self._set_logger()
 
     def __getstate__(self):
         # result = super(PipeStorageServiceSender, self).__getstate__()
