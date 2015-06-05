@@ -15,6 +15,7 @@ import time
 import hashlib
 import sys
 import itertools as itools
+from thread import error as ThreadError
 from collections import deque
 
 try:
@@ -114,12 +115,37 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._put_on_queue(('DONE', [], {}))
 
 
-class PipeStorageServiceSender(MultiprocWrapper):
+class LockAcquisition(HasLogger):
+    """Abstract class to allow lock acquisition and release.
+
+    Assumes that implementing classes have a ``lock``, ``is_locked`` and
+    ``is_open`` attribute.
+
+    Requires a ``_logger`` for error messaging.
+
+    """
+    @retry(9, TypeError, 0.01, 'pypet.retry')
+    def acquire_lock(self):
+        if not self.is_locked:
+            self.is_locked = self.lock.acquire()
+
+    @retry(9, TypeError, 0.01, 'pypet.retry')
+    def release_lock(self):
+        if self.is_locked and not self.is_open:
+            try:
+                self.lock.release()
+            except (ValueError, ThreadError):
+                self._logger.exception('Could not release lock, '
+                                       'probably has been released already!')
+            self.is_locked = False
+
+
+class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
     def __init__(self, storage_connection=None, lock=None):
         self.conn = storage_connection
         self.lock = lock
         self.pickle_pipe = True
-        self._is_locked = False
+        self.is_locked = False
 
     def __getstate__(self):
         # result = super(PipeStorageServiceSender, self).__getstate__()
@@ -180,16 +206,6 @@ class PipeStorageServiceSender(MultiprocWrapper):
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
         self._put_on_pipe(('DONE', [], {}))
-
-    def acquire_lock(self):
-        if not self._is_locked:
-            self.lock.acquire()
-            self._is_locked = True
-
-    def release_lock(self):
-        if self._is_locked:
-            self.lock.release()
-            self._is_locked = False
 
 
 class StorageServiceDataHandler(HasLogger):
@@ -334,7 +350,7 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
                 return self._buffer.popleft()
 
 
-class LockWrapper(MultiprocWrapper, HasLogger):
+class LockWrapper(MultiprocWrapper, LockAcquisition):
     """For multiprocessing in :const:`~pypet.pypetconstants.WRAP_MODE_LOCK` mode,
     augments a storage service with a lock.
 
@@ -345,7 +361,7 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def __init__(self, storage_service, lock=None):
         self._storage_service = storage_service
         self.lock = lock
-        self._is_locked = False
+        self.is_locked = False
         self.pickle_lock = True
         self._set_logger()
 
@@ -373,18 +389,6 @@ class LockWrapper(MultiprocWrapper, HasLogger):
     def multiproc_safe(self):
         """Usually storage services are not supposed to be multiprocessing safe"""
         return True
-
-    @retry(9, TypeError, 0.01, 'pypet.retry')
-    def acquire_lock(self):
-        if not self._is_locked:
-            self.lock.acquire()
-            self._is_locked = True
-
-    @retry(9, TypeError, 0.01, 'pypet.retry')
-    def release_lock(self):
-        if self._is_locked and not self._storage_service.is_open:
-            self.lock.release()
-            self._is_locked = False
 
     def store(self, *args, **kwargs):
         """Acquires a lock before storage and releases it afterwards."""
