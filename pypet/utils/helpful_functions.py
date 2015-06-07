@@ -106,7 +106,7 @@ class _Progressbar(object):
                 total_seconds = ((time_delta.microseconds +
                                     (time_delta.seconds +
                                      time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
-            remaining_seconds = int((self._total - self._start_index) *
+            remaining_seconds = int((self._total - self._start_index - 1.0) *
                                     total_seconds / float(index - self._start_index) -
                                     total_seconds)
             remaining_delta = datetime.timedelta(seconds=remaining_seconds)

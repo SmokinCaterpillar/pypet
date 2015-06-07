@@ -47,7 +47,7 @@ def main():
 
     # Explore the parameters with a cartesian product, but we want to explore a bit more
     traj.f_explore(cartesian_product({'x':[float(x) for x in range(20)],
-                                      'y':[float(y) for y in range(12)]}))
+                                      'y':[float(y) for y in range(20)]}))
 
     # Run the simulation
     env.f_run(multiply)

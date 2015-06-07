@@ -331,7 +331,7 @@ class LoggingManager(object):
             else:
                 logger = logging.getLogger(logger_name)
 
-            if n == 0:
+            if n == -1:
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
                 self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '

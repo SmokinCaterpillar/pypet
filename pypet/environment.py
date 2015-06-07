@@ -2085,6 +2085,8 @@ class Environment(HasLogger):
 
                 n = start_run_idx
                 total_runs = len(self._traj)
+                # Signal start of progress calculation
+                self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
                     results.append(result)
@@ -2195,6 +2197,8 @@ class Environment(HasLogger):
 
                     pool_results = mpool.imap_unordered(target, iterator)
 
+                    # Signal start of progress calculation
+                    self._show_progress(n - 1, total_runs)
                     for res in pool_results:
                         results.append(res)
                         self._show_progress(n, total_runs)
@@ -2248,6 +2252,9 @@ class Environment(HasLogger):
                 signal_cap = True  # If True cap warning is emitted
                 max_signals = 10  # Maximum number of warnings, after that warnings are
                 # no longer signaled
+
+                # Signal start of progress calculation
+                self._show_progress(n - 1, total_runs)
 
                 while len(process_dict) > 0 or keep_running:
                     # First check if some processes did finish their job
