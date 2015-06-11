@@ -9,6 +9,9 @@ pypet 0.1b.12
 *   BUG FIX: `v_full_copy` is no longer automatically set to `True` when using
     `freeze_pool_input`.
 
+*   New `consecutive_merge` parameter for `f_merge` to allow faster merging of several
+    trajectories.
+
 
 pypet 0.1b.11
 

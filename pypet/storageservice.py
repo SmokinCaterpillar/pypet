@@ -1399,6 +1399,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     List containing all parameters that were enlarged due to merging
 
+                :param old_length:
+
+                    Old length of trajectory before merge
+
             * :const:`pypet.pypetconstants.MERGE` ('MERGE')
 
                 Note that before merging within HDF5 file, the storage service will be called
@@ -2101,7 +2105,7 @@ class HDF5StorageService(StorageService, HasLogger):
             ptcompat.remove_node(self._hdf5file,
                                  where='/', name=other_trajectory_name, recursive=True)
 
-    def _trj_prepare_merge(self, traj, changed_parameters):
+    def _trj_prepare_merge(self, traj, changed_parameters, old_length):
         """Prepares a trajectory for merging.
 
         This function will already store extended parameters.
@@ -2124,7 +2128,10 @@ class HDF5StorageService(StorageService, HasLogger):
         for param_name in changed_parameters:
             param = traj.f_get(param_name)
 
-            self._prm_store_parameter_or_result(param, store_data=pypetconstants.OVERWRITE_DATA)
+            try:
+                self._all_delete_parameter_or_result_or_group(param)
+            except pt.NoSuchNodeError:
+                pass  # We are fine and the node did not exist in the first place
 
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group, 'runs')
@@ -2133,10 +2140,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Extract parameter summary and if necessary create new explored parameter tables
         # in the result groups
-        for run_name in traj.f_get_run_names():
+        for idx in range(old_length, len(traj)):
+            run_name = traj.f_idx_to_run(idx)
             run_info = traj.f_get_run_information(run_name)
             run_info['name'] = run_name
-            idx = run_info['idx']
 
             traj._set_explored_parameters_to_idx(idx)
 

@@ -1,5 +1,6 @@
 * Write tests for lock acquisition and test data *DONE*
 
+* Document consecutive merge
 
 * Document new pipe feature
 
