@@ -1637,10 +1637,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     **kwargs)
 
-    def _make_reversed_wildcards(self):
+    def _make_reversed_wildcards(self, old_length=-1):
         """Creates a full mapping from all wildcard translations to the corresponding wildcards"""
+        if len(self._reversed_wildcards) > 0:
+            # We already created reversed wildcards, so we don't need to do all of them
+            # again
+            start = old_length
+        else:
+            start = -1
         for wildcards, func in self._wildcard_functions.items():
-            for irun in range(len(self._reversed_wildcards) - 1, len(self)):
+            for irun in range(start, len(self)):
                 translated_name = func(irun)
                 if not translated_name in self._reversed_wildcards:
                     self._reversed_wildcards[translated_name] = ([], wildcards)
@@ -1798,7 +1804,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._check_if_both_have_same_parameters(other_trajectory, ignore_data, consecutive_merge)
 
         # Create a full mapping set for renaming
-        self._make_reversed_wildcards()
+        self._make_reversed_wildcards(old_length=old_len)
         other_trajectory._make_reversed_wildcards()
 
         # BACKUP if merge is possible
