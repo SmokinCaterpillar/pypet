@@ -706,7 +706,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
             raise ValueError('Timings %s are strictly increasing' % str(timings))
         r, alpha = pearsonr(range(len(timings)), timings)
         logging.error('R and Alpha of consecutive merge test %s' % str((r,alpha)))
-        if alpha < 0.01 and r > 0:
+        if alpha < 0.001 and r > 0:
             raise ValueError( 'R and Alpha of consecutive merge test %s\n' % str((r,alpha)),
                 'Timings %s are lineary increasing' % str(timings))
 
