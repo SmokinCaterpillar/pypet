@@ -1659,10 +1659,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 delete_other_trajectory=False,
                 keep_info=True,
                 keep_other_trajectory_info=True,
-                merge_config=True):
+                merge_config=True,
+                backup=True):
         """Can be used to merge several `other_trajectories` into your current one.
 
-        Does NOT backup your date before the merge, please do this manually!
+        IMPORTANT `backup=True` only backs up the current trajectory not any of
+        the `other_trajectories`. If you need a backup of these, do it manually.
 
         Parameters as for :func:`~pypet.trajectory.Trajectory.f_merge`.
 
@@ -1670,6 +1672,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         other_length = len(other_trajectories)
         self._logger.info('Merging %d trajectories into the current one.' % other_length)
         self.f_load_skeleton()
+
+        if backup:
+            self.f_backup()
+
         for idx, other in enumerate(other_trajectories):
             self.f_merge(other, ignore_data=ignore_data,
                          move_data=move_data,
