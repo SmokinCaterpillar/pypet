@@ -66,7 +66,7 @@ if [[ $GIT_TEST == ON ]]
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --source=pypet --include=*/pypet/brian2 ./pypet/tests/henri_coverage_run.py
+        coverage run --parallel-mode --source=pypet --include=*/pypet/brian2/* ./pypet/tests/henri_coverage_run.py
         coverage combine
         coveralls --verbose
         cd ciscripts/travis
