@@ -168,245 +168,58 @@ class Brian2Parameter(Parameter):
             self._logger.debug("Brian2Parameter._store Unknown type: "+str(type(self._data)))
             print("--- store ENDB ---")
             return super(Brian2Parameter, self)._store()
+        store_dict = {}
 
-        valuelist=[]
-        unitlist=[]
-        isarraylist=[]
-        for value in self._data if isinstance(self._data, list) else [self._data]:
-            try:
-                unit = get_unit_fast(value)
-            except TypeError:
-                unit = 1
-            value = value / unit
-            isarray = isinstance(value, list) and type(value.tolist()) is list
+        unit = get_unit_fast(self._data)
+        unitstr = repr(unit)
+        value = self._data/unit
+        store_dict['data' + Brian2Parameter.IDENTIFIER] = ObjectTable(
+            data={'value': [value], 'unit': [unitstr]})
 
-            #print("self._data value: ",value, " unit:", unit)
-
-            valuelist.append(value)
-            unitlist.append(unit)
-            isarraylist.append(isarray)
-
-        #print("valuelist:"+str(valuelist)+" unitlist:"+str(unitlist)+" isarraylist:"+str(isarraylist))
-
-        data_table = ObjectTable(data={'value': valuelist, 'unit': unitlist, 'is_array': isarraylist})
-        #print("Brian2Parameter._store data_table: "+str(data_table))
-        #self._logger.debug("Brian2Parameter._store store_dict: "+str(store_dict))
-
-        if self.f_has_range():
-            explored_valuelist=[]
-            explored_unitlist=[]
-            explored_isarraylist=[]
-
-            #print("_explored_range:"+str(self._explored_range))
-
-            for value in self._explored_range if isinstance(self._explored_range, list) else [self._explored_range]:
-                for subvalue in value:
-                    explored_unit = get_unit_fast(subvalue)
-                    explored_subvalue = subvalue / unit
-                    print("self._explored_range subvalue: ",explored_subvalue, " unit:", explored_unit)
-                    explored_isarray = isinstance(value, list) and type(subvalue.tolist()) is list
-
-
-                    explored_valuelist.append(explored_subvalue)
-                    explored_unitlist.append(explored_unit)
-                    explored_isarraylist.append(explored_isarray)
-            '''
-            if type(self._explored_range.tolist()) is list:
-                explored_is_array = True
-                #values = [float(listvalue) for listvalue in value.tolist()]
-                self._logger.debug("Brian2Parameter._store _explored_range got a list")
-            else:
-                explored_is_array = False
-                #values = [float(value)]
-                self._logger.debug("Brian2Parameter._store _explored_range got a single value")
-            '''
-
-            #value_list = [val.tolist() for val in (self._explored_range/get_unit_fast(self._data[0]))]
-            '''
-            for val in self._explored_range:
-                print("prefloated val:", val)
-                print("prefloated val store_dict:", ObjectTable(data={'value': [val], 'unit': [unitstr], 'is_array': [is_array]}))
-                #value = float(val)
-                #print("store value:", value)
-                #value_list.append(self._create_objecttable_from_value(val))
-                value_list.append(val)
-            '''
-
-            #print("store value_list:", explored_valuelist)
-            explored_table = ObjectTable(data={'value': explored_valuelist, 'unit': explored_unitlist, 'is_array': explored_isarraylist})
-            #print("Brian2Parameter._store data_table: "+str(explored_table))
-
-            self._locked = True
-
-            #print("explored_table",explored_table)
-            #print("--- store ENDA ---")
-            store_dict = {'data' + Brian2Parameter.IDENTIFIER : data_table, 'explored_data' + Brian2Parameter.IDENTIFIER : explored_table}
-        else:
-            store_dict = {'data' + Brian2Parameter.IDENTIFIER : data_table}
-
-        print("store_dict:"+str(store_dict))
-        return store_dict
-        '''
         if self.f_has_range():
             value_list = []
             for val in self._explored_range:
-                value = float(val)
+                value = val/unit
                 value_list.append(value)
 
-            store_dict['explored_data' + BrianParameter.IDENTIFIER] = \
+            store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = \
                 ObjectTable(data={'value': value_list})
-        '''
 
-        '''
-        if type(self._data) in [Quantity, list]:
+        self._locked = True
 
-
-            #print( "store self._data:", self._data.tolist() )
-            #print( "store self._data type:", type(self._data.tolist()) )
-
-
-
-
-
-        else:
-            self._logger.debug("Brian2Parameter._store Unknown type: "+str(type(self._data)))
-            print("--- store ENDB ---")
-            return super(Brian2Parameter, self)._store()
-        '''
+        return store_dict
 
     def _load(self, load_dict):
-        #print("--- load START ---")
-        #print("load_dict:"+str(load_dict))
         if self.v_locked:
-            #print("--- load ENDA ---")
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
         try:
             data_table = load_dict['data' + Brian2Parameter.IDENTIFIER]
 
+
             # Recreate the brain units from the vale as float and unit as string:
-            #print("data_table:"+str(data_table))
-            self._data = [value * unit for value, unit, is_array in zip(data_table['value'], data_table['unit'], data_table['is_array'])]
-            if 'explored_data' + Brian2Parameter.IDENTIFIER in load_dict:
-                explored_table = load_dict['data' + Brian2Parameter.IDENTIFIER]
-                self._explored_range = tuple([value * unit for value, unit, is_array in zip(explored_table['value'], explored_table['unit'], explored_table['is_array'])])
-                self._explored = True
-
-            #print data
-            #print(555+"aaaAAAaaa")
-
-
-
-
-
-
-            '''
-        valuelist=[]
-        unitlist=[]
-        isarraylist=[]
-        for value in self._data if isinstance(self._data, list) else [self._data]:
-            unit = get_unit_fast(value)
-            value = value / unit
-            isarray = type(value.tolist()) is list
-
-            print("self._data value: ",value, " unit:", unit)
-
-            valuelist.append(value)
-            unitlist.append(unit)
-            isarraylist.append(isarray)
-
-        print("valuelist:"+str(valuelist)+" unitlist:"+str(unitlist)+" isarraylist:"+str(isarraylist))
-
-        data_table = ObjectTable(data={'value': valuelist, 'unit': unitlist, 'is_array': isarraylist})
-        print("Brian2Parameter._store data_table: "+str(data_table))
-        #self._logger.debug("Brian2Parameter._store store_dict: "+str(store_dict))
-
-        if self.f_has_range():
-            explored_valuelist=[]
-            explored_unitlist=[]
-            explored_isarraylist=[]
-
-            print("_explored_range:"+str(self._explored_range))
-
-            for value in self._explored_range if isinstance(self._explored_range, list) else [self._explored_range]:
-                for subvalue in value:
-                    explored_unit = get_unit_fast(subvalue)
-                    explored_subvalue = subvalue / unit
-                    explored_isarray = type(subvalue.tolist()) is list
-
-                    print("self._explored_range subvalue: ",explored_subvalue, " unit:", explored_unit)
-
-                    explored_valuelist.append(explored_subvalue)
-                    explored_unitlist.append(explored_unit)
-                    explored_isarraylist.append(explored_isarray)
-
-
-
-
-
-
-
-
-            '' '
-            #value = data_table['object_table']['value'].tolist() if data_table['is_array'] else data_table['object_table']['value'][0]
-            value = data_table['value'][0]
             unit = eval(data_table['unit'][0])
-            is_array = data_table['is_array'][0]
-            print("value:"+str(value))
-            print("unit:"+str(unit))
-            print("value*unit:"+str(value * unit))
-            if is_array:
-                self._data = value * unit
-            else:
-                self._data = value[0] * unit
-
-            print("self._data:"+str(self._data))
+            value = data_table['value'][0]
+            self._data = value * unit
 
             if 'explored_data' + Brian2Parameter.IDENTIFIER in load_dict:
                 explore_table = load_dict['explored_data' + Brian2Parameter.IDENTIFIER]
-                print("explore_table:"+str(explore_table))
 
-                value_list = explore_table['value'][0]
-                explored_is_array = explore_table['is_array'][0]
-                print("! _load explore_list value_list",value_list, "explored_is_array", explored_is_array)
-                if explored_is_array:
-                    print("! _load explore_list array value",value,"unit",unit)
-                    explore_list = [value * unit for value in value_list]
-                else:
-                    print("! _load explore_list single value",value,"unit",unit)
-                    explore_list = value * unit
-
-                print("! _load explore_list explore_list",explore_list)
-                '' '
-                #quantities = [value * unit for value in value_col]
-                #explore_list.append(quantities)
-                print("! _load explore_list array .append(",quantities,")")
-                print("! _load explore_list .append(",quantities,")")
+                value_col = explore_table['value']
                 explore_list = []
                 for value in value_col:
-                    if explored_is_array:
-                        print("! _load explore_list array value",value,"unit",unit)
-                        quantities = [value * unit for value in value_col]
-                        print("! _load explore_list array .append(",quantities,")")
-                        explore_list.append(quantities)
-                    else:
-                        print("! _load explore_list single value",value,"unit",unit)
-                        #brian_quantity = value * unit
-                        print("! _load explore_list single .append(",brian_quantity,")")
-                        #explore_list.append(brian_quantity)
-                '' '
+                    brian_quantity = value * unit
+                    explore_list.append(brian_quantity)
+
                 self._explored_range = tuple(explore_list)
-                print("! _load self._explored_range = explore_list", self._explored_range, explore_list)
                 self._explored = True
-                '''
+
 
         except KeyError:
-            print("KeyError")
             super(Brian2Parameter, self)._load(load_dict)
 
         self._default = self._data
         self._locked = True
-        print("--- load ENDB ---")
     '''
     def _store(self):
         """Creates a storage dictionary for the storage service.

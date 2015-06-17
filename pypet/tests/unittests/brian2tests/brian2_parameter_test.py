@@ -34,11 +34,12 @@ class Brian2ParameterTest(ParameterTest):
         if not hasattr(self,'data'):
             self.data = {}
 
-        self.data['mV1'] = [42.0*mV, 3*mV, 4*mV]
-        self.data['ampere1'] = [1*mA]
-        #self.data['msecond17'] = 16*ms
+        self.data['mV1'] = 42.0*mV
+        self.data['ampere1'] = 1*mA
+        self.data['integer'] = 16
         #self.data['kHz05'] = 0.5*kHz
-        self.data['b2a'] = [np.array([1., 2.]) * mV]
+        self.data['nested_array'] = np.array([[6.,7.,8.],[9.,10.,11.]]) * ms
+        self.data['b2a'] = np.array([1., 2.]) * mV
 
         super(Brian2ParameterTest, self).setUp()
 
@@ -71,8 +72,6 @@ class Brian2ParameterTest(ParameterTest):
 
         print("explore self.param:"+str(self.param))
 
-    pass
-
 class Brian2ParameterSupportsTest(Brian2ParameterTest):
 
     tags = 'unittest', 'brian2', 'parameter', 'supports', 'henri'
@@ -89,11 +88,12 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
 
     def setUp(self):
         self.data = {}
-        #self.data['brian2_array_a'] = np.array([1., 2.]) * mV
-        #self.data['brian2_array_b'] = [np.array([3., 3., 4.]) * mV]
-        self.data['brian2_array_c'] = [np.array([5.]) * mV, np.array([7., 8.]) * mV]
-        #self.data['brian2_mixedtype_array_a'] = [np.array([9., 10.]) * mV, np.array([11., 12.]) * ms]
-        #self.data['brian2_mixedtype_array_b'] = [np.array([13., 14.]) * mV, 15. * mV]
+        self.data['brian2_single_a'] = 1. * mV
+        self.data['brian2_array_b'] = np.array([3., 3., 4.]) * mV
+        self.data['brian2_array_c'] = np.array([5.]) * mV
+        self.data['brian2_array_d'] = np.array([[6.,7.,8.],[9.,10.,11.]]) * ms
+        #self.data['brian2_mixedtype_array_a'] = np.array([9., 10.]) * mV
+        #self.data['brian2_mixedtype_array_b'] = np.array([13., 14.]) * mV
 
         self.location = 'MyName.Is.myParam'
         self.make_params()
