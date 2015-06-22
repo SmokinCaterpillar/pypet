@@ -57,7 +57,8 @@ Many and Fast Single Runs
 -------------------------
 
 In case you perform many single runs and milliseconds matter, use a pool (``use_pool=True``) in
-combination with a queue (``wrap_mode='QUEUE'``, see :ref:`more-on-multiprocessing`).
+combination with a queue (``wrap_mode='QUEUE'``, see :ref:`more-on-multiprocessing`) or the even
+faster - but potentially unreliable - method of using a shared pipe (``wrape_mode='PIPE'``).
 Moreover, to avoid re-pickling of unnecessary data of your trajectory,
 store and remove all data that is not needed during single runs.
 

@@ -676,7 +676,7 @@ Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage s
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
 classes for the HDF5 storage service to allow safe data storage.
 There are two different modes that are supported. You can choose between them via setting
-``wrap_mode``. You can select between ``'QUEUE'`` and ``'LOCK'`` wrapping. If you
+``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, and ``'PIPE'`` wrapping. If you
 have your own service that is already thread safe you can also choose ``'NONE'`` to skip wrapping.
 
 If you chose the ``'QUEUE'`` mode, there will be an additional process spawned that is the only
@@ -702,6 +702,11 @@ possibility to load data and that your data
 does not need to be send over a queue over and over again. Yet, your simulations might take longer
 since processes have to wait often for each other to release locks.
 
+``'PIPE'`` wrapping is a rather experimental mode where all processes feed their data into
+a shared `multiprocessing pipe`_. This can be much faster than a queue. However, no
+data integrity checks are made. So there's no guarantee that all you data is really saved.
+Use this if you go for many runs that just produce small results, and use it carefully.
+
 Finally, there also exist a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
@@ -712,6 +717,8 @@ multiprocessing. You can find an example here: :ref:`example-16`.
 .. _pickle: http://docs.python.org/2/library/pickle.html
 
 .. _psutil: http://psutil.readthedocs.org/
+
+.. _multiprocessing pipe: https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Pipe
 
 .. _more-on-git:
 

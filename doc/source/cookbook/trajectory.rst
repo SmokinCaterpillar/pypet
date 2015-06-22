@@ -1055,6 +1055,9 @@ merged trajectory runs from 0 to N1+N2-1.
 
 Also checkout the example in :ref:`example-03`.
 
+Moreover, if you need to merge several trajectories take a look at the faster
+:func:`~pypet.trajectory.Trajectory.f_merge_many` function.
+
 
 .. _more-on-single-runs:
 
