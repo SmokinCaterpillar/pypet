@@ -65,6 +65,9 @@ class Brian2ParameterTest(ParameterTest):
         for key, val in self.explore_dict.items():
             self.assertTrue(self.param[key].f_supports(val))
 
+    def test_values_of_same_type(self):
+        self.param[self.explore_dict.items()[0][0]]._values_of_same_type(11, 99*mV)
+
 
 class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
 
