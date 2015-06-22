@@ -59,6 +59,12 @@ class Brian2ParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
             self.assertTrue(self.param[key].v_explored and self.param[key].f_has_range())
 
+    def test_supports(self):
+        for key, val in self.data.items():
+            self.assertTrue(self.param[key].f_supports(val))
+        for key, val in self.explore_dict.items():
+            self.assertTrue(self.param[key].f_supports(val))
+
 
 class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
 

@@ -69,7 +69,6 @@ class Brian2Parameter(Parameter):
     def _store(self):
 
         if type(self._data) not in [Quantity, list]:
-            self._logger.debug("Brian2Parameter._store unknown type: "+str(type(self._data)))
             return super(Brian2Parameter, self)._store()
         else:
             store_dict = {}
