@@ -90,7 +90,7 @@ function UpdateConda ($python_home) {
 function main () {
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     UpdateConda $env:PYTHON
-    InstallCondaPackages $env:PYTHON "numpy scipy=0.14.0 matplotlib pip numexpr cython pytables pandas"
+    InstallCondaPackages $env:PYTHON "numpy scipy=0.14.0 matplotlib pip numexpr cython pytables=3.1.1 pandas"
 }
 
 main
