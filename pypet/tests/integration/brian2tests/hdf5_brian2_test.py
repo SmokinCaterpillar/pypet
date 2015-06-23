@@ -13,6 +13,7 @@ from pypet.storageservice import HDF5StorageService, StorageService
 import os
 
 
+
 class Brian2hdf5Test(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'hdf5', 'henri'
