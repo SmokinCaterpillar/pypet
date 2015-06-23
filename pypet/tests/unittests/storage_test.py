@@ -106,6 +106,21 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('l3' in traj)
         self.assertTrue('l4' not in traj)
 
+    def test_file_size_many_params(self):
+        filename = make_temp_dir('filesize.hdf5')
+        traj = Trajectory(filename=filename, overwrite_file=True, add_time=False)
+        npars = 700
+        traj.f_store()
+        for irun in range(npars):
+            par = traj.f_add_parameter('test.test%d' % irun, 42+irun, comment='duh!')
+            traj.f_store_item(par)
+
+
+        size =  os.path.getsize(filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
+
     def test_loading_explored_parameters(self):
 
         filename = make_temp_dir('load_explored.hdf5')

@@ -6,7 +6,8 @@ pip install GitPython==0.3.6 # Sumatra has a wrong version checking
 # which thinks GitPython 1.0.0 is lower than 0.3.6 (only checking minor version :(
 if [[ $TRAVIS_PYTHON_VERSION == 2* ]]
     then
-        pip install django==1.4.9 #maybe this works now with newer django versions
+        pip install django==1.5 #maybe this works now with newer django versions
+        pip istall django-tagging==0.3.6
         pip install Sumatra
 #        git clone https://github.com/open-research/sumatra.git
 #        cd sumatra
