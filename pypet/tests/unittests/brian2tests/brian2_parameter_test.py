@@ -14,7 +14,7 @@ from pypet.parameter import PickleParameter, ArrayParameter, SparseParameter
 from brian2.units.stdunits import mV, mA, kHz, ms
 from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest
 from pypet.tests.testutils.ioutils import parse_args, run_suite
-from pypet.brian2.parameter import Brian2Parameter
+from pypet.brian2.parameter import Brian2Parameter, Brian2Result
 from pypet.utils.explore import cartesian_product
 
 import logging
@@ -66,7 +66,9 @@ class Brian2ParameterTest(ParameterTest):
             self.assertTrue(self.param[key].f_supports(val))
 
     def test_values_of_same_type(self):
-        self.param[self.explore_dict.items()[0][0]]._values_of_same_type(11, 99*mV)
+        for key in self.param:
+            self.assertFalse(self.param[key]._values_of_same_type(11, 99*mV))
+            break
 
 
 class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
@@ -171,6 +173,31 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
             self.assertEqual(param.v_location, self.location)
 
 
+class Brian2ResultTest(ResultTest):
+
+    tags = 'unittest', 'brian2', 'result', 'henri'
+
+    def make_constructor(self):
+        self.Constructor = Brian2Result
+
+    def test_illegal_naming(self):
+        for res in self.results.values():
+            data_dict = {'val'+Brian2Result.IDENTIFIER:42}
+            with self.assertRaises(AttributeError):
+                res.f_set(**data_dict)
+
+
+    def setUp(self):
+
+        if not hasattr(self,'data'):
+            self.data = {}
+
+        self.data['mV1'] = 1*mV
+        self.data['ampere1'] = 1*mA
+        self.data['msecond17'] = 16*ms
+        self.data['kHz05'] = 0.5*kHz
+
+        super(Brian2ResultTest, self).setUp()
 
 
 
