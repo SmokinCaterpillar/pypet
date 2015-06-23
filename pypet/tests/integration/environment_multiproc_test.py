@@ -32,19 +32,19 @@ class MultiprocPoolQueueTest(TestOtherHDF5Settings2):
         self.use_pool=True
 
 
-class MultiprocPoolLockTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',
-
-    # def test_run(self):
-    #     super(MultiprocLockTest, self).test_run()
-
-    def set_mode(self):
-        super(MultiprocPoolLockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCK
-        self.multiproc = True
-        self.ncores = 4
-        self.use_pool=True
+# class MultiprocPoolLockTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',
+#
+#     # def test_run(self):
+#     #     super(MultiprocLockTest, self).test_run()
+#
+#     def set_mode(self):
+#         super(MultiprocPoolLockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_LOCK
+#         self.multiproc = True
+#         self.ncores = 4
+#         self.use_pool=True
 
 
 # class MultiprocPoolPipeTest(EnvironmentTest):
@@ -98,16 +98,16 @@ class MultiprocPoolSortPipeTest(ResultSortTest):
         self.use_pool=True
 
 
-class MultiprocNoPoolQueueTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolQueueTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_QUEUE
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=False
+# class MultiprocNoPoolQueueTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolQueueTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_QUEUE
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=False
 
 
 class MultiprocNoPoolLockTest(EnvironmentTest):
@@ -183,20 +183,20 @@ class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
         self.use_pool=True
 
 
-class MultiprocFrozenPoolLockTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'freeze_input'
-
-    # def test_run(self):
-    #     super(MultiprocLockTest, self).test_run()
-
-    def set_mode(self):
-        super(MultiprocFrozenPoolLockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCK
-        self.multiproc = True
-        self.freeze_pool_input = True
-        self.ncores = 4
-        self.use_pool=True
+# class MultiprocFrozenPoolLockTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'freeze_input'
+#
+#     # def test_run(self):
+#     #     super(MultiprocLockTest, self).test_run()
+#
+#     def set_mode(self):
+#         super(MultiprocFrozenPoolLockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_LOCK
+#         self.multiproc = True
+#         self.freeze_pool_input = True
+#         self.ncores = 4
+#         self.use_pool=True
 
 
 def new_multiply(traj):
