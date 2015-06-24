@@ -58,7 +58,9 @@ class Brian2hdf5Test(TrajectoryComparator):
         traj.f_add_result('brian2.single.millivolts', 10*mvolt, comment='single value')
         traj.f_add_result('brian2.array.millivolts', [11, 12]*mvolt, comment='array')
         traj.f_add_result('mV1', 42.0*mV)
-        traj.f_add_result('ampere1', 1*mA)
+        # results can hold much more than a single data item:
+        traj.f_add_result('ampere1', 1*mA, 44, test=300*mV, test2=[1,2,3],
+                          test3=np.array([1,2,3])*mA, comment='Result keeping track of many things')
         traj.f_add_result('integer', 16)
         traj.f_add_result('kHz05', 0.5*kHz)
         traj.f_add_result('nested_array', np.array([[6.,7.,8.],[9.,10.,11.]]) * ms)
