@@ -31,21 +31,24 @@ class Brian2Parameter(Parameter):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        elif isinstance(data, list):
-            for value in data:
-                if not self.f_supports(value):
-                    return False
-            return True
+        # Is not needed either, parameters do not allow for lists
+        # elif isinstance(data, list):
+        #     for value in data:
+        #         if not self.f_supports(value):
+        #             return False
+        #     return True
         elif super(Brian2Parameter, self).f_supports(data):
             return True
         return False
 
     def _values_of_same_type(self, val1, val2):
 
-        if isinstance(val2, list) and not isinstance(val1, list):
-            return self._values_of_same_type([val1], val2)
-        if isinstance(val1, list) and not isinstance(val2, list):
-            return self._values_of_same_type(val1, [val2])
+        ### This does not work, if one is a list and the other is not they
+        #  are not of the same type
+        # if isinstance(val2, list) and not isinstance(val1, list):
+        #     return self._values_of_same_type([val1], val2)
+        # if isinstance(val1, list) and not isinstance(val2, list):
+        #     return self._values_of_same_type(val1, [val2])
 
         if isinstance(val1, Quantity):
             try:
@@ -136,21 +139,23 @@ class Brian2Result(Result):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        elif isinstance(data, list):
-            for value in data:
-                if not self._supports(value):
-                    return False
-            return True
+        # results do not check lists, sometimes to expensive
+        # elif isinstance(data, list):
+        #     for value in data:
+        #         if not self._supports(value):
+        #             return False
+        #     return True
         elif super(Brian2Result, self)._supports(data):
             return True
         return False
 
     def _values_of_same_type(self, val1, val2):
 
-        if isinstance(val2, list) and not isinstance(val1, list):
-            return self._values_of_same_type([val1], val2)
-        if isinstance(val1, list) and not isinstance(val2, list):
-            return self._values_of_same_type(val1, [val2])
+        # What do you have about these lists all the time :-)
+        # if isinstance(val2, list) and not isinstance(val1, list):
+        #     return self._values_of_same_type([val1], val2)
+        # if isinstance(val1, list) and not isinstance(val2, list):
+        #     return self._values_of_same_type(val1, [val2])
 
         if isinstance(val1, Quantity):
             try:
