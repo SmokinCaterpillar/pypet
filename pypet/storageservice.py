@@ -922,7 +922,10 @@ class HDF5StorageService(StorageService, HasLogger):
         elif filename is None:
             filename = 'Experiments.hdf5'
 
-        head, tail = os.path.split(filename)
+        if os.path.isdir(filename):
+            head, tail = (filename, '')
+        else:
+            head, tail = os.path.split(filename)
         if not head:
             # If the filename contains no path information,
             # we put it into the current working directory
