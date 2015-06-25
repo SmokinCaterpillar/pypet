@@ -16,6 +16,7 @@ big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 tests_include=set((#'MultiprocNoPoolQueueTest',
                    'MultiprocPoolQueueTest',
+                   'MultiprocFrozenPoolPipeTest',
                    'MultiprocPoolSortLockTest',
                    'MultiprocPoolSortPipeTest',
                    'MultiprocFrozenPoolSortLockTest',
@@ -26,7 +27,6 @@ tests_include=set((#'MultiprocNoPoolQueueTest',
 big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocFrozenPoolLockTest',
-                   'MultiprocFrozenPoolPipeTest',
                    'MultiprocNoPoolSortQueueTest',
                    'MultiprocLinkNoPoolQueueTest',
                    'MultiprocPoolSortPipeTest',

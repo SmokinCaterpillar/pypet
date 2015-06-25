@@ -82,6 +82,19 @@ def add_large_data(traj):
     traj.f_add_result('m4ny', *array_list)
 
 
+class SimpleEnvironmentTest(TrajectoryComparator):
+
+    tags = 'integration', 'hdf5', 'environment', 'quick'
+
+    def test_make_default_file_when_giving_directory_without_slash(self):
+        filename = make_temp_dir('test.hdf5')
+        head, tail = os.path.split(filename)
+        env = Environment(filename=head)
+        the_file_name = env.v_traj.v_name + '.hdf5'
+        head, tail = os.path.split(env.v_traj.v_storage_service.filename)
+        self.assertEqual(tail, the_file_name)
+
+
 class EnvironmentTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'

@@ -22,9 +22,9 @@ from pypet import HasLogger
 from pypet.pypetlogging import LoggingManager, rename_log_file
 from pypet.utils.decorators import copydoc
 
-import pypet.utils.ptcompat as ptcompat
-hdf5version = ptcompat.hdf5_version
-print('HDF5 Version: %s' % str(hdf5version))
+#import pypet.utils.ptcompat as ptcompat
+#hdf5version = ptcompat.hdf5_version
+#print('HDF5 Version: %s' % str(hdf5version))
 
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
