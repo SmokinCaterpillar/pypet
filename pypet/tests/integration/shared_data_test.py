@@ -177,7 +177,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         traj.f_add_result(SharedResult, 'tabs.t1', SharedTable()).create_shared_data(description={'idx': pt.IntCol(), 'run_name': pt.StringCol(30)},
                         expectedrows=length)
 
-        traj.f_add_result(SharedResult, 'tabs.t2', SharedTable()).create_shared_data(description={'run_name': pt.StringCol(3000)})
+        traj.f_add_result(SharedResult, 'tabs.t2', SharedTable()).create_shared_data(description={'run_name': pt.StringCol(300)})
 
         traj.f_add_result(SharedResult, 'pandas.df', SharedPandasFrame())
 
