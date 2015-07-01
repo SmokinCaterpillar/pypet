@@ -43,13 +43,6 @@ class Brian2Parameter(Parameter):
 
     def _values_of_same_type(self, val1, val2):
 
-        ### This does not work, if one is a list and the other is not they
-        #  are not of the same type
-        # if isinstance(val2, list) and not isinstance(val1, list):
-        #     return self._values_of_same_type([val1], val2)
-        # if isinstance(val1, list) and not isinstance(val2, list):
-        #     return self._values_of_same_type(val1, [val2])
-
         if isinstance(val1, Quantity):
             try:
                 if not val1.has_same_dimensions(val2):
@@ -119,7 +112,7 @@ class Brian2Parameter(Parameter):
 class Brian2Result(Result):
 
     IDENTIFIER = Brian2Parameter.IDENTIFIER
-    ''' Identifier String to label brian data '''
+    ''' Identifier String to label brian result '''
 
     __slots__ = ('_storage_mode',)
 
@@ -139,23 +132,11 @@ class Brian2Result(Result):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        # results do not check lists, sometimes to expensive
-        # elif isinstance(data, list):
-        #     for value in data:
-        #         if not self._supports(value):
-        #             return False
-        #     return True
         elif super(Brian2Result, self)._supports(data):
             return True
         return False
 
     def _values_of_same_type(self, val1, val2):
-
-        # What do you have about these lists all the time :-)
-        # if isinstance(val2, list) and not isinstance(val1, list):
-        #     return self._values_of_same_type([val1], val2)
-        # if isinstance(val1, list) and not isinstance(val2, list):
-        #     return self._values_of_same_type(val1, [val2])
 
         if isinstance(val1, Quantity):
             try:
@@ -178,25 +159,33 @@ class Brian2Result(Result):
 
     def _store(self):
 
-        if type(self._data) not in [Quantity, list]:
-            return super(Brian2Result, self)._store()
-        else:
-            store_dict = {}
+        store_dict = {}
 
-            unit = get_unit_fast(self._data)
-            value = self._data/unit
-            store_dict['data' + Brian2Result.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
+        for key in self._data:
+            val = self._data[key]
+            if isinstance(val, Quantity):
+                unit = get_unit_fast(val)
+                value = val/unit
+                store_dict[key + Brian2Result.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
 
-            return store_dict
+            else:
+                store_dict[key] = val
+
+        return store_dict
+
+
 
     def _load(self, load_dict):
 
-        try:
-            data_table = load_dict['data' + Brian2Result.IDENTIFIER]
+        for key in load_dict:
+            if Brian2Result.IDENTIFIER in key:
+                data_table = load_dict[key]
 
-            unit = eval(data_table['unit'][0])
-            value = data_table['value'][0]
-            self._data = value * unit
+                new_key = key.split(Brian2Result.IDENTIFIER)[0]
 
-        except KeyError:
-            super(Brian2Result, self)._load(load_dict)
+                # Recreate the brain units from the vale as float and unit as string:
+                unit = eval(data_table['unit'][0])
+                value = data_table['value'][0]
+                self._data[new_key] = value * unit
+            else:
+                self._data[key] = load_dict[key]

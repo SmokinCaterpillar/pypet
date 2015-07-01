@@ -62,9 +62,6 @@ class Brian2ParameterTest(ParameterTest):
     def test_supports(self):
         for key, val in self.data.items():
             self.assertTrue(self.param[key].f_supports(val))
-        # This test does not make sense
-        # for key, val in self.explore_dict.items():
-        #     self.assertTrue(self.param[key].f_supports(val))
 
     def test_values_of_same_type(self):
         for key in self.param:
@@ -197,7 +194,6 @@ class Brian2ResultTest(ResultTest):
         self.data['msecond17'] = 16*ms
         self.data['kHz05'] = 0.5*kHz
 
-        # added by Robert to check if arrays and normal data work as well
         self.data['mV_array'] = np.ones(20) * mV
         self.data['integer'] = 444
 
