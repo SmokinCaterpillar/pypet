@@ -1994,6 +1994,10 @@ class Environment(HasLogger):
         if conf_list:
             self._traj.f_store_items(conf_list)
 
+        if hasattr(self._traj.v_storage_service, 'finalize'):
+            # Finalize the storage service if this is supported
+            self._traj.v_storage_service.finalize()
+
         # Final check if traj was successfully completed
         self._traj.f_load(load_all=pypetconstants.LOAD_NOTHING)
         all_completed = True
@@ -2107,7 +2111,7 @@ class Environment(HasLogger):
                                   new_runs)
 
         # Do some finalization
-        self._traj._finalize()
+        self._traj._finalize(load_meta_data=False)
 
         self._logger.info(
                     '\n************************************************************\n'
