@@ -9,15 +9,17 @@ try:
     from brian import clear
 
     from pypet.brian.parameter import BrianMonitorResult
+    from pypet.tests.unittests.briantests.run_a_brian_network import run_network
 except ImportError as exc:
     print('Import Error: %s' % str(exc))
     brian = None
 
 from pypet.tests.testutils.ioutils import unittest
 from pypet.tests.unittests.parameter_test import ResultTest
-from pypet.tests.unittests.briantests.run_a_brian_network import run_network
+
 import pypet.utils.comparisons as comp
 from pypet.tests.testutils.ioutils import run_suite, parse_args
+
 
 @unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianMonitorTest(ResultTest):
