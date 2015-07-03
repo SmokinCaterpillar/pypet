@@ -8,13 +8,20 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-from pypet.brian.parameter import BrianParameter, BrianResult
+try:
+    import brian
+    from pypet.brian.parameter import BrianParameter, BrianResult
+    from brian.stdunits import mV, mA, kHz,ms
+except ImportError as exc:
+    print('Import Error: %s' % str(exc))
+    brian = None
+
 from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest
-from brian.stdunits import mV, mA, kHz,ms
 from pypet.utils.explore import cartesian_product
 from pypet.tests.testutils.ioutils import parse_args, run_suite
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianParameterTest(ParameterTest):
 
     tags = 'unittest', 'brian', 'parameter'
@@ -55,6 +62,7 @@ class BrianParameterTest(ParameterTest):
             self.assertTrue(self.param[key].v_explored and self.param[key].f_has_range())
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianParameterStringModeTest(BrianParameterTest):
 
     tags = 'unittest', 'brian', 'parameter', 'string_mode'
@@ -66,6 +74,7 @@ class BrianParameterStringModeTest(BrianParameterTest):
             self.param[key].v_storage_mode = BrianParameter.STRING_MODE
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianResultTest(ResultTest):
 
     tags = 'unittest', 'brian', 'result'
@@ -93,6 +102,7 @@ class BrianResultTest(ResultTest):
         super(BrianResultTest, self).setUp()
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianResultStringModeTest(BrianResultTest):
 
     tags = 'unittest', 'brian', 'result', 'string_mode'

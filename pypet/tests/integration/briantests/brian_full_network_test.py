@@ -2,13 +2,20 @@ __author__ = 'Robert Meyer'
 
 from pypet.tests.testutils.ioutils import make_temp_dir, run_suite,  \
     get_root_logger, parse_args, get_log_config
+from pypet.tests.testutils.ioutils import unittest
 
-from brian import *
+try:
+    import brian
+    from brian import *
+    from pypet.brian.parameter import BrianParameter, BrianMonitorResult
+except ImportError as exc:
+    print('Import Error: %s' % str(exc))
+    brian = None
 
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.trajectory import Trajectory
 from pypet.environment import Environment
-from pypet.brian.parameter import BrianParameter, BrianMonitorResult
+
 import logging
 from pypet.utils.explore import cartesian_product
 import time
@@ -110,6 +117,8 @@ def run_net(traj):
     traj.f_add_result('RecentStateMonitorwMean', MRecentStatewMean)
     traj.f_add_result('VanRossumMetric', VanRossum)
 
+
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianFullNetworkTest(TrajectoryComparator):
 
     tags = 'brian', 'integration'  # Test tags
@@ -172,6 +181,7 @@ class BrianFullNetworkTest(TrajectoryComparator):
         self.compare_trajectories(self.traj, traj2)
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianFullNetworkMPTest(BrianFullNetworkTest):
 
     tags = 'brian', 'multiproc', 'integration'  # Test tags
