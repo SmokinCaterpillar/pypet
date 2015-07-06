@@ -63,11 +63,8 @@ class Brian2ParameterTest(ParameterTest):
         for key, val in self.data.items():
             self.assertTrue(self.param[key].f_supports(val))
 
-    def test_values_not_of_same_type(self):
-        make this prettierer, do not break, instead get the first item from the dict
-        for key in self.param:
-            self.assertFalse(self.param[key]._values_of_same_type(11, 99*mV))
-            break
+    def test_false_on_values_not_of_same_type(self):
+        self.assertFalse(self.param[self.param.keys()[0]]._values_of_same_type(11, 99*mV))
 
 
 class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
