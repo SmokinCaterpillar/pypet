@@ -75,7 +75,7 @@ To utilize the continuing of crashed trajectories you need
 
 Automatic Sumatra records are supported for
 
-* Sumatra >= 0.6.0
+* Sumatra >= 0.7.1
 
 
 ========================
