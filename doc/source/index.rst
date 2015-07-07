@@ -11,8 +11,8 @@ Welcome to *pypet*'s documentation
    :target: https://travis-ci.org/SmokinCaterpillar/pypet
 .. image:: https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true
    :target: https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master
-.. image:: https://coveralls.io/repos/SmokinCaterpillar/pypet/badge.png?branch=master
-   :target: https://coveralls.io/r/SmokinCaterpillar/pypet?branch=master
+.. image:: https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master
+   :target: https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
