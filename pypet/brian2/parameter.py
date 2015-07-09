@@ -11,6 +11,7 @@ from pypet.utils.helpful_classes import HashArray
 #from brian2.core.variables import get_value_with_unit
 
 from brian2.monitors import SpikeMonitor
+from brian2.monitors import StateMonitor
 
 import pypet.pypetexceptions as pex
 
@@ -171,7 +172,6 @@ class Brian2Result(Result):
         return store_dict
 
 
-
     def _load(self, load_dict):
 
         for key in load_dict:
@@ -274,7 +274,7 @@ class Brian2MonitorResult(Result):
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         """
 
-        if type(item) in [SpikeMonitor]:
+        if type(item) in [SpikeMonitor, StateMonitor]:
 
             if self.v_stored:
                 self._logger.warning('You are changing an already stored result. If '
@@ -284,8 +284,6 @@ class Brian2MonitorResult(Result):
             self._extract_monitor_data(item)
         else:
             super(Brian2MonitorResult, self).f_set_single(name, item)
-
-        #super(Brian2MonitorResult, self).f_set_single(name, item)
 
     def _extract_monitor_data(self, monitor):
 
@@ -298,6 +296,9 @@ class Brian2MonitorResult(Result):
 
         if isinstance(monitor, SpikeMonitor):
             self._extract_spike_monitor(monitor)
+
+        elif isinstance(monitor, StateMonitor):
+            self._extract_state_monitor(monitor)
 
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
@@ -331,6 +332,77 @@ class Brian2MonitorResult(Result):
 
         '''
 
+
+    def _extract_state_monitor(self, monitor):
+
+        self.f_set(vars=monitor.record_variables)
+
+        times=list(monitor.t_)
+        if len(times) > 0:
+            self.f_set(times=times)
+            self.f_set(times_unit='second')
+
+        ### Store recorded values ###
+        for idx, varname in enumerate(monitor.record_variables):
+            print "idx:"+str(idx)+" varname:"+str(varname)
+            #monitor = monitors.monitors[varname]
+            if idx == 0:
+                self.f_set(record=monitor.record)
+
+                self.f_set(when=monitor.when)
+
+                #self.f_set(timestep=monitor.timestep)
+                print "monitor.source:"+str(monitor.source)
+
+                self.f_set(source=str(monitor.source))
+                #self.f_set(source=ObjectTable(data={'value': [monitor.source]}))
+            '''
+            if np.mean(monitor.mean) != 0.0:
+                self.f_set(**{varname + '_mean': monitor.mean})
+                self.f_set(**{varname + '_var': monitor.var})
+            '''
+            #print "varname:"+str(varname)
+            #print "monitor.w:"+str(monitor.w)
+            #print "monitor[0]:"+str(monitor[idx])
+            #print len(monitor)
+            #print monitor[0:len(monitor)]
+            #print "monitor[:].v:"+str(monitor[0])
+            #print monitor[idx]
+            #monitor_value = False
+            #eval('monitor_value = monitor.'+str(varname), dict(), {"monitor":monitor, "monitor_value":monitor_value})
+            #print monitor_value
+
+            print monitor.recorded_variables
+            print monitor.indices
+            print type(monitor[idx])
+            if len(monitor.t_) > 0:
+                self.f_set(**{varname + '_values': monitor[idx]})
+            #self.f_set(**{varname + '_unit': repr(monitor.unit)})
+
+    '''
+    def _extract_state_monitor(self, monitor):
+
+        self.f_set(varname=monitor.varname)
+        self.f_set(unit=repr(monitor.unit))
+
+
+        self.f_set(record=monitor.record)
+
+        self.f_set(when=monitor.when)
+
+        self.f_set(timestep=monitor.timestep)
+
+        self.f_set(source=str(monitor.P))
+        self.f_set(times_unit='second')
+
+        if np.mean(monitor.mean) != 0.0:
+            self.f_set(mean=monitor.mean)
+            self.f_set(var=monitor.var)
+        if len(monitor.times) > 0:
+            self.f_set(times=monitor.times)
+            self.f_set(values=monitor.values)
+    '''
+
     @staticmethod
     def _get_format_string(monitor):
         digits = len(str(len(monitor.source)))
@@ -357,48 +429,6 @@ class Brian2MonitorResult(Result):
         for neuron_num in neurons:
             spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].astype(np.float64).tolist()
 
-        #for spike_num in range(0,monitor.):
-        #    print spike_num
-
-        #print dataframe[0].tolist()
-        '''
-        neurons = list()
-        for neuron in monitor.i:
-            if neuron not in neurons:
-                #print type(neuron), neuron.astype('int32'),
-                #neuron_as_int = neuron.astype(np.int32)
-                #print type(neuron_as_int)
-                neurons.append(neuron)
-                #print dataframe[dataframe[0] == neuron][1].tolist()
-                times_by_neuron[neuron.astype(np.int32)] = dataframe[dataframe[0] == neuron][1].tolist()
-        '''
-        '''
-        for neuron, time in zipped:
-            #print frame[0], frame[1]
-            #print neuron, time
-            times_by_neuron[neuron].append(time)
-        print times_by_neuron
-
-        #print zipped
-        print "neurons:"+str(neurons)
-        print "neurons:"+str(neurons[3])
-        #print "neurons:"+str(neurons.astype(np.int32))
-        #print list(zipped)
-        #print set(zipped)
-        #print list(set(zipped))
-        #print sorted(list(set(zipped)))
-        '''
-
-        '''
-        times_by_neuron = dict()
-
-        for neuron, time in zipped:
-            #print frame[0], frame[1]
-            print neuron, time
-            times_by_neuron[neuron]=list()
-        print times_by_neuron
-        '''
-
         if self._storage_mode == Brian2MonitorResult.TABLE_MODE:
             spike_dict = {}
 
@@ -420,38 +450,6 @@ class Brian2MonitorResult(Result):
             self.f_set(spikes=spikeframe)
             self.f_set(neurons_with_spikes=neurons)
             self.f_set(htype="tablemode")
-
-
-            '''
-            nounit_list = [np.float64(time) for time in monitor.t_]
-            print("nounit_list:"+str(nounit_list)+"\n\n\n")
-            print("neuron at 0:"+str(list(monitor.i)[0])+"\n\n\n")
-            print("neuron at 1:"+str(list(monitor.i)[1])+"\n\n\n")
-            print("neuron list:"+str(list(monitor.i))+"\n\n\n")
-            print("neuron list comprehension:"+str([neuron for neuron in list(monitor.i)])+"\n\n\n")
-
-
-            spike_dict['spiketimes'] = nounit_list
-            spike_dict['neuron'] = [neuron for neuron in list(monitor.i)]
-            print("spike_dict['neuron']:"+str(spike_dict['neuron'])+"\n\n\n")
-            '''
-            '''
-            if len(monitor.spikes) > 0:
-                zip_lists = list(zip(*monitor.spikes))
-                time_list = zip_lists[1]
-
-                nounit_list = [np.float64(time) for time in time_list]
-
-                spike_dict['spiketimes'] = nounit_list
-                spike_dict['neuron'] = list(zip_lists[0])
-
-                spiked_neurons = sorted(list(set(spike_dict['neuron'])))
-                if spiked_neurons:
-                    self.f_set(neurons_with_spikes=spiked_neurons)
-
-                    spikeframe = pd.DataFrame(data=spike_dict)
-                    self.f_set(spikes=spikeframe)
-            '''
 
         elif self._storage_mode == Brian2MonitorResult.ARRAY_MODE:
             print "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
