@@ -50,7 +50,7 @@ class Brian2MonitorTest(ResultTest):
 
             self.assertTrue('%0' in res.format_string and 'd' in res.format_string)
 
-            dataframe = pd.DataFrame(data=zip(monitor.i, monitor.t_))
+            dataframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
             neurons = [spike_num for spike_num in range(0, len(monitor.count))]
             spikes_by_neuron = dict()
             for neuron_num in neurons:

@@ -341,7 +341,7 @@ class Brian2MonitorResult(Result):
 
         self.f_set(spiketimes_unit='second')
 
-        dataframe = pd.DataFrame(data=zip(monitor.i, monitor.t_))
+        dataframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
         neurons = [spike_num for spike_num in range(0, len(monitor.count))]
         spikes_by_neuron = dict()
         for neuron_num in neurons:
@@ -349,7 +349,7 @@ class Brian2MonitorResult(Result):
 
         if self._storage_mode == Brian2MonitorResult.TABLE_MODE:
 
-            spikeframe = pd.DataFrame(data=zip(monitor.i, monitor.t_))
+            spikeframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
             spikeframe.columns=['neuron', 'spiketimes']
             #spikeframe['neuron']=spikeframe['neuron']
             spikeframe['neuron']=spikeframe['neuron'].astype(np.int32)
