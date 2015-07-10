@@ -3,6 +3,7 @@ __author__ = 'Robert Meyer'
 import logging
 import itertools as itools
 import os
+import platform
 import sys
 if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
@@ -114,7 +115,7 @@ class LoggingTest(TrajectoryComparator):
     def explore(self, traj):
         traj.f_explore({'p1': range(7)})
 
-    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_normal(self):
         # if not self.multiproc:
         #     return
@@ -229,7 +230,7 @@ class LoggingTest(TrajectoryComparator):
         # log_config = os.path.join(init_path, 'default.ini')
 
 
-    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_with_errors(self):
          # if not self.multiproc:
         #     return
@@ -343,8 +344,9 @@ class LoggingTest(TrajectoryComparator):
         renaming_2 = rename_log_file(traj, rename_string)
         self.assertEqual(renaming_2, solution_2)
 
-    #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+
     # @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return
@@ -447,7 +449,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_info_count, 0)
         self.assertLess(total_retry_count, len(traj))
 
-    #@unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_dir(filename)
