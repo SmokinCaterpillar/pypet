@@ -12,7 +12,7 @@ try:
     import pypet.brian
     from pypet.brian import *
 except ImportError as exc:
-    print('Import Error: %s' % str(exc))
+    #print('Import Error: %s' % str(exc))
     brian = None
 
 from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite

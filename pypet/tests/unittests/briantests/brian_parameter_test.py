@@ -13,7 +13,7 @@ try:
     from pypet.brian.parameter import BrianParameter, BrianResult
     from brian.stdunits import mV, mA, kHz,ms
 except ImportError as exc:
-    print('Import Error: %s' % str(exc))
+    #print('Import Error: %s' % str(exc))
     brian = None
 
 from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest

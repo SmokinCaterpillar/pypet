@@ -11,7 +11,7 @@ try:
     from pypet.brian.parameter import BrianMonitorResult
     from pypet.tests.unittests.briantests.run_a_brian_network import run_network
 except ImportError as exc:
-    print('Import Error: %s' % str(exc))
+    #print('Import Error: %s' % str(exc))
     brian = None
 
 from pypet.tests.testutils.ioutils import unittest

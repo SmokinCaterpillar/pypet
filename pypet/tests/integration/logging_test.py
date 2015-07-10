@@ -370,7 +370,7 @@ class LoggingTest(TrajectoryComparator):
             if self.mode.wrap_mode == 'LOCK':
                 length += 2
             elif self.mode.wrap_mode == 'QUEUE':
-                length += + 4
+                length += 4
             else:
                 raise RuntimeError('You shall not pass!')
         else:

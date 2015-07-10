@@ -9,7 +9,7 @@ try:
     from brian import *
     from pypet.brian.parameter import BrianParameter, BrianMonitorResult
 except ImportError as exc:
-    print('Import Error: %s' % str(exc))
+    #print('Import Error: %s' % str(exc))
     brian = None
 
 from pypet.tests.testutils.data import TrajectoryComparator
