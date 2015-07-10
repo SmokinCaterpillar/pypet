@@ -1,6 +1,7 @@
 __author__ = 'Henri Bunting'
 
 from pypet.brian2.parameter import Brian2MonitorResult
+from pypet.parameter import ObjectTable
 from pypet.tests.unittests.parameter_test import ResultTest
 from pypet.tests.unittests.brian2tests.run_a_brian2_network import run_network
 import pypet.utils.comparisons as comp
@@ -19,12 +20,6 @@ class Brian2MonitorTest(ResultTest):
         Brian2MonitorResult.monitors = run_network()
         pass
 
-    '''
-    @classmethod
-    def tearDownClass(cls):
-        reload(brian2)
-    '''
-
     def setUp(self):
         self.monitors = Brian2MonitorResult.monitors
         self.make_results()
@@ -32,25 +27,19 @@ class Brian2MonitorTest(ResultTest):
 
 
     def check_spike_monitor(self, res, monitor):
-        #self.assertTrue(comp.nested_equal(monitor.delay, res.delay))
         self.assertTrue(comp.nested_equal(monitor.num_spikes, res.num_spikes))
         self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
-
 
         self.assertEqual('second', res.spiketimes_unit)
 
         if res.v_storage_mode == Brian2MonitorResult.TABLE_MODE:
             spike_frame = res.spikes
-            spiked_list=sorted(list(set(spike_frame['neuron'].to_dict().values())))
+            spiked_list = sorted(list(set(spike_frame['neuron'].to_dict().values())))
             self.assertEqual(spiked_list, res.neurons_with_spikes)
-            #print "restype:"+str(res.htype)
-            #print "monitortype:"+str(monitor.htype)
-            print res.spikes
+
             for idx, val_tuple in enumerate(zip(monitor.i, monitor.t_)):
-                #print "idx:" +str(idx) + " val_tuple:"+str(val_tuple)
                 neuron = val_tuple[0]
                 time = val_tuple[1]
-                vals = val_tuple[2:]
 
                 self.assertEqual(neuron, spike_frame['neuron'][idx])
 
@@ -61,31 +50,21 @@ class Brian2MonitorTest(ResultTest):
 
             self.assertTrue('%0' in res.format_string and 'd' in res.format_string)
 
-            zipped = zip(monitor.i, monitor.t_)
-            dataframe = pd.DataFrame(data=zipped)
-            #print dataframe[dataframe[0] == 3][1].tolist()
+            dataframe = pd.DataFrame(data=zip(monitor.i, monitor.t_))
             neurons = [spike_num for spike_num in range(0, len(monitor.count))]
             spikes_by_neuron = dict()
             for neuron_num in neurons:
                 spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].tolist()
-            #print "a times:"+str(spikes_by_neuron[8])
-            #print "a res[spiketimes_08]:"+str(res['spiketimes_08'])
 
             spiked_set=set()
             for item_name in res:
-
-                #print "b name:"+str(item_name)
 
                 if item_name.startswith('spiketimes') and not item_name.endswith('unit'):
                     neuron_id = int(item_name.split('_')[-1])
                     spiked_set.add(neuron_id)
 
-                    #times = monitor.spiketimes[neuron_id]
                     times = spikes_by_neuron[neuron_id]
-                    #print "b#:"+str(neuron_id)
-                    #print "b times:"+str(times)
-                    #print "b res["+str(item_name)+"]:"+str(res[item_name])
-                    self.assertTrue(comp.nested_equal(times,res[item_name]))
+                    self.assertTrue(comp.nested_equal(times, res[item_name]))
 
             spiked_list = sorted(list(spiked_set))
             self.assertEqual(spiked_list, res.neurons_with_spikes)
@@ -94,73 +73,21 @@ class Brian2MonitorTest(ResultTest):
 
 
     def check_state_monitor(self, res, monitor):
-        print "res.vars:"+str(res.vars)
-        print "monitor.variables:"+str(monitor.record_variables)
-
         self.assertEqual(monitor.record_variables, res.vars)
 
-        times=list(monitor.t_)
+        times=np.array(monitor.t_)
         if len(times)>0:
             self.assertEqual('second', res.times_unit)
             self.assertTrue(comp.nested_equal(times, res.times))
 
 
-
-
         for idx, varname in enumerate(monitor.record_variables):
-            print "idx:"+str(idx)
-            print "varname:"+str(varname)
-            #mon = monitor.monitors[varname]
-            print "res.record:"+str(res.record)
-            print "monitor.w:"+str(monitor.w)
-            print "monitor.record:"+str(monitor.record)
-            print "monitor.indices:"+str(monitor.indices)
-            #print "res.timestep:"+str(res.timestep)
-            #print "mon.timestep:"+str(monitor.timestep)
-            print "res.source type:", type(res.source), "value:", res.source
-            print "monitor.source type:", type(monitor.source), "value:", monitor.source
-
             self.assertTrue(comp.nested_equal(monitor.record, res.record))
-
             self.assertTrue(comp.nested_equal(monitor.when, res.when))
-
-            #self.assertEqual(monitor.timestep, res.timestep)
-            #self.assertTrue(comp.nested_equal(monitor.source, res.source))
             self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
 
-            if hasattr(res, varname+'_mean'):
-                self.assertTrue(comp.nested_equal(monitor.mean, res.f_get(varname+'_mean')))
-                self.assertTrue(comp.nested_equal(monitor.var, res.f_get(varname+'_var')))
-            print "res.values:"+str(res.f_get(varname+'_values'))
-            print "monitor[:].v:"+str(monitor[:].v)
-            if len(monitor.t_) > 0:
-                self.assertTrue(comp.nested_equal(monitor[idx], res.f_get(varname+'_values')))
+            self.assertTrue(comp.nested_equal(ObjectTable(data=getattr(monitor, varname)), res.f_get(varname+'_values')))
 
-            self.assertTrue(comp.nested_equal(repr(monitor.unit), res.f_get(varname+'_unit')))
-
-    '''
-    def check_state_monitor(self, res, monitor):
-
-        self.assertEqual('second', res.times_unit)
-        #print "monitor.varname:"+str(monitor.varname)
-        print "res.varname:"+str(res.varname)
-        self.assertEqual(monitor.varname, res.varname)
-        self.assertEqual(repr(monitor.unit), res.unit)
-        self.assertTrue(comp.nested_equal(monitor.record, res.record))
-
-        self.assertTrue(comp.nested_equal(monitor.when, res.when))
-
-        self.assertEqual(monitor.timestep, res.timestep)
-        self.assertTrue(comp.nested_equal(str(monitor.P), res.source))
-
-        if hasattr(res, 'mean'):
-            self.assertTrue(comp.nested_equal(monitor.mean, res.mean))
-            self.assertTrue(comp.nested_equal(monitor.var, res.var))
-
-        if len(monitor.times) > 0:
-            self.assertTrue(comp.nested_equal(monitor.times, res.times))
-            self.assertTrue(comp.nested_equal(monitor.values, res.values))
-    '''
 
 
     def test_failing_adding_another_monitor_or_changing_the_mode(self):
@@ -182,8 +109,7 @@ class Brian2MonitorTest(ResultTest):
 
 
             if isinstance(monitor, SpikeMonitor):
-                #self.check_spike_monitor(res, monitor)
-                pass
+                self.check_spike_monitor(res, monitor)
 
             elif isinstance(monitor, StateMonitor):
                 self.check_state_monitor(res, monitor)
