@@ -210,7 +210,17 @@ class Brian2MonitorResult(Result):
         super(Brian2MonitorResult, self).__init__(full_name, *args, **kwargs)
 
     def _store(self):
-        store_dict = super(Brian2MonitorResult, self)._store()
+        store_dict = {}
+
+        for key in self._data:
+            val = self._data[key]
+            if isinstance(val, Quantity):
+                unit = get_unit_fast(val)
+                value = val/unit
+                store_dict[key + Brian2Result.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
+
+            else:
+                store_dict[key] = val
 
         if self._monitor_type is not None:
             store_dict['monitor_type'] = self._monitor_type
@@ -225,7 +235,19 @@ class Brian2MonitorResult(Result):
         if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
             self._storage_mode = load_dict.pop('storage_mode')
 
-        super(Brian2MonitorResult, self)._load(load_dict)
+
+        for key in load_dict:
+            if Brian2Result.IDENTIFIER in key:
+                data_table = load_dict[key]
+
+                new_key = key.split(Brian2Result.IDENTIFIER)[0]
+
+                # Recreate the brain units from the vale as float and unit as string:
+                unit = eval(data_table['unit'][0])
+                value = data_table['value'][0]
+                self._data[new_key] = value * unit
+            else:
+                self._data[key] = load_dict[key]
 
     @property
     def v_storage_mode(self):
@@ -274,6 +296,7 @@ class Brian2MonitorResult(Result):
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         """
 
+        #self._logger.error("Brian2MonitorResult f_set_single name:"+str(name)+" item:"+str(item))
         if type(item) in [SpikeMonitor, StateMonitor]:
 
             if self.v_stored:
@@ -284,6 +307,14 @@ class Brian2MonitorResult(Result):
             self._extract_monitor_data(item)
         else:
             super(Brian2MonitorResult, self).f_set_single(name, item)
+
+    def _supports(self, data):
+        """ Simply checks if data is supported """
+        if isinstance(data, Quantity):
+            return True
+        elif super(Brian2MonitorResult, self)._supports(data):
+            return True
+        return False
 
     def _extract_monitor_data(self, monitor):
 
@@ -345,7 +376,7 @@ class Brian2MonitorResult(Result):
         neurons = [spike_num for spike_num in range(0, len(monitor.count))]
         spikes_by_neuron = dict()
         for neuron_num in neurons:
-            spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].astype(np.float64).tolist()
+            spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].astype(np.float32).tolist()
 
         if self._storage_mode == Brian2MonitorResult.TABLE_MODE:
 

@@ -3,7 +3,7 @@ __author__ = 'Henri Bunting'
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_log_config, parse_args, run_suite
 from pypet import Environment, load_trajectory
-from pypet.brian2.parameter import Brian2Parameter, Brian2Result
+from pypet.brian2.parameter import Brian2Parameter, Brian2Result, Brian2MonitorResult
 from brian2.units.stdunits import mvolt, mV, mA, ms, kHz
 import numpy as np
 from brian2.units.fundamentalunits import Quantity
@@ -16,9 +16,9 @@ import os
 
 class Brian2hdf5Test(TrajectoryComparator):
 
-    tags = 'integration', 'brian2', 'parameter', 'hdf5', 'henri'
+    tags = 'integration', 'brian2', 'parameter', 'monitor', 'hdf5', 'henri'
 
-
+    '''
     def test_hdf5_store_load_parameter(self):
         traj_name = make_trajectory_name(self)
         file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
@@ -48,7 +48,7 @@ class Brian2hdf5Test(TrajectoryComparator):
         traj2 = load_trajectory(filename=file_name, name=traj_name, dynamic_imports=[Brian2Parameter],
                                 load_data=2)
         self.compare_trajectories(traj, traj2)
-
+    '''
 
 
     def test_hdf5_store_load_result(self):
@@ -75,8 +75,37 @@ class Brian2hdf5Test(TrajectoryComparator):
 
         traj2 = load_trajectory(filename=file_name, name=traj_name, dynamic_imports=[Brian2Result], load_data=2)
 
-        traj._logger.error('traj :'+str(traj))
-        traj._logger.error('traj2:'+str(traj2))
+        self.compare_trajectories(traj, traj2)
+
+
+    def test_hdf5_store_load_monitorresult(self):
+        traj_name = make_trajectory_name(self)
+        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
+        env = Environment(trajectory=traj_name, filename=file_name, log_config=get_log_config(),
+                            dynamic_imports=[Brian2MonitorResult], add_time=False, storage_service=HDF5StorageService)
+        traj = env.v_trajectory
+        traj.v_standard_result = Brian2MonitorResult
+        traj.f_add_result('brian2.single.millivolts_single_a', 10*mvolt, comment='single value a')
+
+        traj.f_add_result('brian2.single.millivolts_single_c', 11*mvolt, comment='single value b')
+
+        traj.f_add_result('brian2.array.millivolts_array_a', [11, 12]*mvolt, comment='array')
+        traj.f_add_result('mV1', 42.0*mV)
+        # results can hold much more than a single data item:
+        traj.f_add_result('ampere1', 1*mA, 44, test=300*mV, test2=[1,2,3],
+                          test3=np.array([1,2,3])*mA, comment='Result keeping track of many things')
+        traj.f_add_result('integer', 16)
+        traj.f_add_result('kHz05', 0.5*kHz)
+        traj.f_add_result('nested_array', np.array([[6.,7.,8.],[9.,10.,11.]]) * ms)
+        traj.f_add_result('b2a', np.array([1., 2.]) * mV)
+
+
+        traj.f_store()
+
+        traj2 = load_trajectory(filename=file_name, name=traj_name, dynamic_imports=[Brian2MonitorResult], load_data=2)
+
+        #traj._logger.error('traj :'+str(traj))
+        #traj._logger.error('traj2:'+str(traj2))
         self.compare_trajectories(traj, traj2)
 
 
