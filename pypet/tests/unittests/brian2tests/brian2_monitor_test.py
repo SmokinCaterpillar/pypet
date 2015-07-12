@@ -77,7 +77,6 @@ class Brian2MonitorTest(ResultTest):
 
         times=np.array(monitor.t_)
         if len(times)>0:
-            self.assertEqual('second', res.times_unit)
             self.assertTrue(comp.nested_equal(times, res.times))
 
 
@@ -86,7 +85,7 @@ class Brian2MonitorTest(ResultTest):
             self.assertTrue(comp.nested_equal(monitor.when, res.when))
             self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
 
-            self.assertTrue(comp.nested_equal(ObjectTable(data=getattr(monitor, varname)), res.f_get(varname+'_values')))
+            self.assertTrue(comp.nested_equal(getattr(monitor, varname), res.f_get(varname+'_values')))
 
 
 

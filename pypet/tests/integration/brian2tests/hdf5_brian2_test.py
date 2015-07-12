@@ -18,7 +18,6 @@ class Brian2hdf5Test(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'monitor', 'hdf5', 'henri'
 
-    '''
     def test_hdf5_store_load_parameter(self):
         traj_name = make_trajectory_name(self)
         file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
@@ -48,7 +47,6 @@ class Brian2hdf5Test(TrajectoryComparator):
         traj2 = load_trajectory(filename=file_name, name=traj_name, dynamic_imports=[Brian2Parameter],
                                 load_data=2)
         self.compare_trajectories(traj, traj2)
-    '''
 
 
     def test_hdf5_store_load_result(self):

@@ -164,32 +164,39 @@ class Brian2Result(Result):
             if isinstance(val, Quantity):
                 unit = get_unit_fast(val)
                 value = val/unit
-                store_dict[key + Brian2Result.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
+                # Potentially the results are very big in contrast to small parameters
+                # Accordingly, an ObjectTable might not be the best choice after all for a result
+                if not value.shape:
+                    # Convert 0-dimensional arrays to regular numpy floats
+                    value = np.float(value)
+                store_dict[key + Brian2Result.IDENTIFIER + 'value'] = value
+                store_dict[key + Brian2Result.IDENTIFIER + 'unit'] = repr(unit)
 
             else:
                 store_dict[key] = val
 
         return store_dict
 
-
     def _load(self, load_dict):
 
         for key in load_dict:
             if Brian2Result.IDENTIFIER in key:
-                data_table = load_dict[key]
 
                 new_key = key.split(Brian2Result.IDENTIFIER)[0]
 
+                if new_key in self._data:
+                    # We already extracted the unit/value pair
+                    continue
+
                 # Recreate the brain units from the vale as float and unit as string:
-                unit = eval(data_table['unit'][0])
-                value = data_table['value'][0]
+                unit = eval(load_dict[new_key + Brian2Result.IDENTIFIER + 'unit'])
+                value = load_dict[new_key + Brian2Result.IDENTIFIER +'value']
                 self._data[new_key] = value * unit
             else:
                 self._data[key] = load_dict[key]
 
 
-
-class Brian2MonitorResult(Result):
+class Brian2MonitorResult(Brian2Result):
 
     TABLE_MODE = 'TABLE'
     '''Table storage mode for SpikeMonitor and StateSpikeMonitor'''
@@ -210,17 +217,7 @@ class Brian2MonitorResult(Result):
         super(Brian2MonitorResult, self).__init__(full_name, *args, **kwargs)
 
     def _store(self):
-        store_dict = {}
-
-        for key in self._data:
-            val = self._data[key]
-            if isinstance(val, Quantity):
-                unit = get_unit_fast(val)
-                value = val/unit
-                store_dict[key + Brian2Result.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
-
-            else:
-                store_dict[key] = val
+        store_dict = super(Brian2MonitorResult, self)._store()
 
         if self._monitor_type is not None:
             store_dict['monitor_type'] = self._monitor_type
@@ -235,19 +232,7 @@ class Brian2MonitorResult(Result):
         if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
             self._storage_mode = load_dict.pop('storage_mode')
 
-
-        for key in load_dict:
-            if Brian2Result.IDENTIFIER in key:
-                data_table = load_dict[key]
-
-                new_key = key.split(Brian2Result.IDENTIFIER)[0]
-
-                # Recreate the brain units from the vale as float and unit as string:
-                unit = eval(data_table['unit'][0])
-                value = data_table['value'][0]
-                self._data[new_key] = value * unit
-            else:
-                self._data[key] = load_dict[key]
+        super(Brian2MonitorResult, self)._load(load_dict)
 
     @property
     def v_storage_mode(self):
@@ -286,8 +271,10 @@ class Brian2MonitorResult(Result):
         if self._monitor_type is not None:
             raise TypeError('Cannot change the storage mode if you already extracted a monitor.')
 
-        assert (storage_mode == Brian2MonitorResult.ARRAY_MODE or
-                storage_mode == Brian2MonitorResult.TABLE_MODE)
+        if (storage_mode != Brian2MonitorResult.ARRAY_MODE and
+                storage_mode != Brian2MonitorResult.TABLE_MODE):
+            raise ValueError('Your storage mode %s is not understood.' % str(storage_mode))
+
         self._storage_mode = storage_mode
 
     def f_set_single(self, name, item):
@@ -308,14 +295,6 @@ class Brian2MonitorResult(Result):
         else:
             super(Brian2MonitorResult, self).f_set_single(name, item)
 
-    def _supports(self, data):
-        """ Simply checks if data is supported """
-        if isinstance(data, Quantity):
-            return True
-        elif super(Brian2MonitorResult, self)._supports(data):
-            return True
-        return False
-
     def _extract_monitor_data(self, monitor):
 
         if self._monitor_type is not None:
@@ -323,7 +302,6 @@ class Brian2MonitorResult(Result):
                              ' Please use a new empty result for a new monitor.')
 
         self._monitor_type = monitor.__class__.__name__
-
 
         if isinstance(monitor, SpikeMonitor):
             self._extract_spike_monitor(monitor)
@@ -337,31 +315,30 @@ class Brian2MonitorResult(Result):
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
 
-
     def _extract_state_monitor(self, monitor):
 
         self.f_set(vars=monitor.record_variables)
 
-        times=np.array(monitor.t_)
+        times=np.array(monitor.t)
         if len(times) > 0:
+            # We can handle brian quantities, there's no need to transfer them!
             self.f_set(times=times)
-            self.f_set(times_unit='second')
 
-        ### Store recorded values ###
-        for idx, varname in enumerate(monitor.record_variables):
-            if idx == 0:
-                self.f_set(record=monitor.record)
-                self.f_set(when=monitor.when)
-                self.f_set(source=str(monitor.source))
+            ### Store recorded values ###
+            for idx, varname in enumerate(monitor.record_variables):
+                if idx == 0:
+                    self.f_set(record=monitor.record)
+                    self.f_set(when=monitor.when)
+                    self.f_set(source=str(monitor.source))
 
-            self.f_set(**{varname + '_values': ObjectTable(data=getattr(monitor, varname))})
+                val = getattr(monitor, varname)
+                self.f_set(**{varname + '_values' : val})
 
     @staticmethod
     def _get_format_string(monitor):
         digits = len(str(len(monitor.source)))
         format_string = '%0' + str(digits) + 'd'
         return format_string
-
 
     def _extract_spike_monitor(self, monitor):
         self.f_set(source=str(monitor.source))
@@ -372,40 +349,39 @@ class Brian2MonitorResult(Result):
 
         self.f_set(spiketimes_unit='second')
 
-        dataframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
-        neurons = [spike_num for spike_num in range(0, len(monitor.count))]
-        spikes_by_neuron = dict()
-        for neuron_num in neurons:
-            spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].astype(np.float32).tolist()
-
+        neurons_list = [x.tolist() for x in monitor.i]
+        neurons_with_spikes = sorted(set(neurons_list))
+        self.f_set(neurons_with_spikes=neurons_with_spikes)
         if self._storage_mode == Brian2MonitorResult.TABLE_MODE:
 
-            spikeframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
-            spikeframe.columns=['neuron', 'spiketimes']
+            times_list = [x.tolist() for x in monitor.t_]
+            spikeframe = pd.DataFrame(data={'neuron':neurons_list,
+                                            'spiketimes':times_list})
             #spikeframe['neuron']=spikeframe['neuron']
-            spikeframe['neuron']=spikeframe['neuron'].astype(np.int32)
+            #spikeframe['neuron']=spikeframe['neuron'].astype(np.int32)
             #spikeframe['spiketimes']=spikeframe['spiketimes'].astype(np.float64)
 
             self.f_set(spikes=spikeframe)
-            self.f_set(neurons_with_spikes=neurons)
 
         elif self._storage_mode == Brian2MonitorResult.ARRAY_MODE:
             format_string = self._get_format_string(monitor)
             self.f_set(format_string=format_string)
 
-            spiked_neurons = set()
+            spikes_dict = {}
+            for idx, time in zip(*monitor.it):
+                idx = np.int(idx)
+                time = np.float(time)
+                try:
+                    spikes_dict[idx].append(time)
+                except KeyError:
+                    spikes_dict[idx] = [time]
 
-            for neuron in neurons:
-                if len(spikes_by_neuron[neuron]) > 0:
-
-                    spiked_neurons.add(neuron)
-
-                    key = 'spiketimes_' + format_string % neuron
-                    self.f_set(**{key: spikes_by_neuron[neuron]})
-
-            spiked_neurons = sorted(list(spiked_neurons))
-            if spiked_neurons:
-                self.f_set(neurons_with_spikes=spiked_neurons)
+            result_dict = {}
+            for idx in spikes_dict:
+                key = 'spiketimes_' + format_string % idx
+                result_dict[key] = []
+            if result_dict:
+                self.f_set(**result_dict)
 
         else:
             raise RuntimeError('You shall not pass!')
