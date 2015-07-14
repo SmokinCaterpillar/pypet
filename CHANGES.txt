@@ -12,6 +12,8 @@ pypet 0.1b.12
 *   New `consecutive_merge` parameter for `f_merge` to allow faster merging of several
     trajectories.
 
+*   New `f_merge_many` function to merge many trajectories at once.
+
 
 pypet 0.1b.11
 
