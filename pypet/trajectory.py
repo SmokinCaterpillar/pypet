@@ -1704,7 +1704,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 keep_info=True,
                 keep_other_trajectory_info=True,
                 merge_config=True,
-                consecutive_merge=False):
+                consecutive_merge=False,
+                slow_merge=False):
         """Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. This means both need to have the same
@@ -1781,6 +1782,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             in your current trajectory and load them before the consecutive merging.
             Also avoid specifying a `trial_parameter` and set `backup=False`
             to avoid quadratic complexity in case of consecutive merges.
+
+        :param slow_merge:
+            Enforces a slow merging. This means all data is loaded one after the other to
+            memory and stored to disk. Otherwise it is tried to directly copy the data
+            from one file into another without explicitly loading the data.
 
         If you cannot directly merge trajectories within one HDF5 file, a slow merging process
         is used. Results are loaded, stored, and emptied again one after the other. Might take
@@ -1869,38 +1875,45 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                     changed_parameters=changed_parameters,
                                     old_length=old_len)
 
-        try:
-            # Merge the single run derived parameters and all results
-            # within the same hdf5 file based on `renamed_dict`
-            self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
-                                        other_trajectory_name=other_trajectory.v_name,
-                                        rename_dict=rename_dict, move_nodes=move_data,
-                                        delete_trajectory=delete_other_trajectory)
+        if not slow_merge:
+            try:
+                # Merge the single run derived parameters and all results
+                # within the same hdf5 file based on `renamed_dict`
+                try:
+                    # try to get the other file
+                    other_filename = other_trajectory.v_storage_service.filename
+                except AttributeError:
+                    self._logger.warning('Could not determine the filename of the other '
+                                         'trajectory, I will assume it`s in the same file.')
+                    other_filename = None
+                self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
+                                            other_trajectory_name=other_trajectory.v_name,
+                                            rename_dict=rename_dict, move_nodes=move_data,
+                                            delete_trajectory=delete_other_trajectory,
+                                            other_filename=other_filename)
 
+            except pex.NoSuchServiceError:
+                # If the storage service does not support merge we end up here
+                self._logger.warning('My storage service does not support merging of trajectories, '
+                                     'I will use the f_load mechanism of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
+            except ValueError as exc:
+                # If both trajectories are stored in separate files we end up here
+                self._logger.warning(repr(exc))
 
-        except pex.NoSuchServiceError:
-            # If the storage service does not support merge we end up here
-            self._logger.warning('My storage service does not support merging of trajectories, '
-                                 'I will use the f_load mechanism of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
+                self._logger.warning('Could not perfom fast merging. '
+                                     'I will use the `f_load` method of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
+        if slow_merge:
             self._merge_slowly(other_trajectory, rename_dict)
-
-        except ValueError as exc:
-            # If both trajectories are stored in separate files we end up here
-            self._logger.warning(repr(exc))
-
-            self._logger.warning('Could not perfom fast merging. '
-                                 'I will use the `f_load` method of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
-
-            self._merge_slowly(other_trajectory, rename_dict)
-
 
         # We will merge the git commits and other config data
         if merge_config:

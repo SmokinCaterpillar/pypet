@@ -207,8 +207,6 @@ class MergeTest(TrajectoryComparator):
                                          'merge4.hdf5'))]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
-
-
     def test_merge_basic_with_separate_files_only_adding_more_trials(self):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
@@ -223,6 +221,21 @@ class MergeTest(TrajectoryComparator):
                                          'HDF5',
                                          'merge4.hdf5'))]
         self.merge_basic_only_adding_more_trials(True)
+
+    def test_merge_basic_with_separate_files_only_adding_more_trials_slow_merge(self):
+        self.filenames = [make_temp_dir(os.path.join('experiments',
+                                         'tests',
+                                         'HDF5',
+                                         'merge2.hdf5')),
+                          make_temp_dir(os.path.join('experiments',
+                                         'tests',
+                                         'HDF5',
+                                         'merge3.hdf5')),
+                          make_temp_dir(os.path.join('experiments',
+                                         'tests',
+                                         'HDF5',
+                                         'merge4.hdf5'))]
+        self.merge_basic_only_adding_more_trials(True, slow_merge=True)
 
     def test_merge_basic_within_same_file_only_adding_more_trials_copy_nodes_test_backup(self):
         self.filenames = [make_temp_dir(os.path.join('experiments',
@@ -239,7 +252,8 @@ class MergeTest(TrajectoryComparator):
         self.merge_basic_only_adding_more_trials(False, True)
 
 
-    def merge_basic_only_adding_more_trials(self, copy_nodes, delete_traj=False):
+    def merge_basic_only_adding_more_trials(self, copy_nodes=False, delete_traj=False,
+                                            slow_merge=False):
 
         self.envs=[]
         self.trajs = []
@@ -286,7 +300,8 @@ class MergeTest(TrajectoryComparator):
 
         merged_traj.f_merge(self.trajs[1], move_data=not copy_nodes,
                             delete_other_trajectory=delete_traj,
-                            trial_parameter='trial')
+                            trial_parameter='trial',
+                            slow_merge=slow_merge)
 
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,
@@ -346,7 +361,7 @@ class MergeTest(TrajectoryComparator):
 
         self.compare_trajectories(merged_traj,self.trajs[2])
 
-    def basic_and_skipping_duplicates_which_leads_to_one_remaining(self):
+    def basic_and_skipping_duplicates_which_leads_to_one_remaining(self, slow_merge=False):
 
         self.envs=[]
         self.trajs = []
@@ -403,7 +418,8 @@ class MergeTest(TrajectoryComparator):
                             delete_other_trajectory=False,
                             remove_duplicates=True,
                             ignore_data=('results.Ignore.Me', 'parameters.Ignore.Me',
-                            'derived_parameters.Ignore.Me'))
+                            'derived_parameters.Ignore.Me'),
+                            slow_merge=slow_merge)
         merged_traj.f_load_skeleton()
         merged_traj.f_load(load_parameters=pypetconstants.UPDATE_DATA,
                            load_derived_parameters=pypetconstants.UPDATE_DATA,

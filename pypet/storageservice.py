@@ -2063,7 +2063,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
 
     def _trj_merge_trajectories(self, other_trajectory_name, rename_dict, move_nodes=False,
-                                delete_trajectory=False):
+                                delete_trajectory=False, other_filename=None):
         """Merges another trajectory into the current trajectory (as in self._trajectory_name).
 
         :param other_trajectory_name: Name of other trajectory
@@ -2072,9 +2072,19 @@ class HDF5StorageService(StorageService, HasLogger):
         :param delete_trajectory: Whether to delete the other trajectory
 
         """
-        if not ('/' + other_trajectory_name) in self._hdf5file:
+        if other_filename is None or other_filename == self.filename:
+            other_filename = self.filename
+            other_file = self._hdf5file
+            other_is_different = False
+        else:
+            other_file = ptcompat.open_file(filename=other_filename, mode='r+')
+            other_is_different = True
+
+        if not ('/' + other_trajectory_name) in other_file:
             raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
-                             'be found in my file.')
+                             'be found in file: %s.' % (self._trajectory_name,
+                                                        other_trajectory_name,
+                                                        other_filename))
 
         for old_name in rename_dict:
             new_name = rename_dict[old_name]
@@ -2084,29 +2094,36 @@ class HDF5StorageService(StorageService, HasLogger):
             old_location = '/' + other_trajectory_name + '/' + '/'.join(split_name)
 
             split_name = new_name.split('.')
-            new_location = '/' + self._trajectory_name + '/' + '/'.join(split_name)
+            new_parent_location = '/' + self._trajectory_name + '/' + '/'.join(split_name[:-1])
+
+            new_short_name = split_name[-1]
 
             # Get the data from the other trajectory
-            old_group = ptcompat.get_node(self._hdf5file, old_location)
+            old_node = ptcompat.get_node(other_file, old_location)
 
-            for node in old_group:
-                # Now move or copy the data
-                if move_nodes:
-                    ptcompat.move_node(self._hdf5file,
-                                       where=old_location, newparent=new_location,
-                                       name=node._v_name, createparents=True)
+            # Now move or copy the data
+            if move_nodes:
+                ptcompat.move_node(self._hdf5file,
+                                   where=old_node, newparent=new_parent_location,
+                                   newname=new_short_name, createparents=True)
+            else:
+                if other_is_different:
+                    new_parent_or_loc, _ = self._all_create_or_get_groups(new_parent_location)
                 else:
-                    ptcompat.copy_node(self._hdf5file,
-                                       where=old_location, newparent=new_location,
-                                       name=node._v_name, createparents=True,
-                                       recursive=True)
+                    new_parent_or_loc = new_parent_location
+                ptcompat.copy_node(self._hdf5file,
+                                   where=old_node, newparent=new_parent_or_loc,
+                                   newname=new_short_name, createparents=True,
+                                   recursive=True)
 
-            # And finally copy the attributes of leaf nodes
-            old_group._v_attrs._f_copy(where=ptcompat.get_node(self._hdf5file, new_location))
 
         if delete_trajectory:
-            ptcompat.remove_node(self._hdf5file,
+            ptcompat.remove_node(other_file,
                                  where='/', name=other_trajectory_name, recursive=True)
+
+        if other_is_different:
+            other_file.flush()
+            other_file.close()
 
     def _trj_prepare_merge(self, traj, changed_parameters, old_length):
         """Prepares a trajectory for merging.

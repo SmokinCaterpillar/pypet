@@ -1,3 +1,9 @@
+pypet 0.1b.13
+
+*   ENH: Pypet can now apply fast merging if trajectories reside in different files.
+    If one still wants to apply slow merging, one can set `slow_merge=True`.
+
+
 pypet 0.1b.12
 
 *   Renaming of the MultiprocContext's `start` function to `f_start`
