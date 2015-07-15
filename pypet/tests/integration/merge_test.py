@@ -211,15 +211,15 @@ class MergeTest(TrajectoryComparator):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge2.hdf5')),
+                                         'merge2trials.hdf5')),
                           make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge3.hdf5')),
+                                         'merge3trials.hdf5')),
                           make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge4.hdf5'))]
+                                         'merge4trials.hdf5'))]
         self.merge_basic_only_adding_more_trials(True)
 
     def test_merge_basic_with_separate_files_only_adding_more_trials_slow_merge(self):
