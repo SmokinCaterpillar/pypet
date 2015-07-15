@@ -93,7 +93,7 @@ Python 2.6, 2.7, 3.3, or 3.4 [#pythonversion]_, and
 
 * tables_ >= 2.3.1
 
-* pandas_ >= 0.12.0 [#pandasversion]_
+* pandas_ >= 0.14.1
 
 * HDF5_ >= 1.8.9
 
@@ -128,17 +128,6 @@ Automatic sumatra records are supported for
 .. [#pythonversion]
 
     *pypet* might also work under Python 3.0-3.2 but has not been tested.
-
-.. [#pandasversion]
-
-    Preferably use pandas 0.14.1 or higher or 0.12.0 since there are some
-    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
-    *pypet* works under 0.13.x but not all features are fully supported.
-    For instance, these upcasting issues may prevent you from storing
-    Trajectories containing ArrayParameters to disk.
-    These unwanted upcastings did not happen in previous pandas versions and will be, or more
-    precisely, have already been removed in the next pandas version.
-    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
 
 -------
