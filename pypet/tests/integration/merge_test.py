@@ -189,22 +189,22 @@ class MergeTest(TrajectoryComparator):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge1.hdf5')), 0, 0]
+                                         'merge1_one_remaining.hdf5')), 0, 0]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
     def test_basic_within_separate_file_and_skipping_duplicates_which_leads_to_one_reamianing(self):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge2.hdf5')),
+                                         'merge2_one_remaining.hdf5')),
                           make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge3.hdf5')),
+                                         'merge3_one_remaining.hdf5')),
                           make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge4.hdf5'))]
+                                         'merge4_one_remaining.hdf5'))]
         self. basic_and_skipping_duplicates_which_leads_to_one_remaining()
 
     def test_merge_basic_with_separate_files_only_adding_more_trials(self):
@@ -241,14 +241,14 @@ class MergeTest(TrajectoryComparator):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge1.hdf5')), 0, 0]
+                                         'merge1_more_trials.hdf5')), 0, 0]
         self.merge_basic_only_adding_more_trials_with_backup(True)
 
     def test_merge_basic_within_same_file_only_adding_more_trials_delete_other_trajectory(self):
         self.filenames = [make_temp_dir(os.path.join('experiments',
                                          'tests',
                                          'HDF5',
-                                         'merge1.hdf5')), 0, 0]
+                                         'merge1_more_trials.hdf5')), 0, 0]
         self.merge_basic_only_adding_more_trials(False, True)
 
 
