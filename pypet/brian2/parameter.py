@@ -10,8 +10,7 @@ from pypet.utils.helpful_classes import HashArray
 #from brian2.units.fundamentalunits import is_dimensionless, get_dimensions
 #from brian2.core.variables import get_value_with_unit
 
-from brian2.monitors import SpikeMonitor
-from brian2.monitors import StateMonitor
+from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
 
 import pypet.pypetexceptions as pex
 
@@ -284,7 +283,7 @@ class Brian2MonitorResult(Brian2Result):
         """
 
         #self._logger.error("Brian2MonitorResult f_set_single name:"+str(name)+" item:"+str(item))
-        if type(item) in [SpikeMonitor, StateMonitor]:
+        if type(item) in [SpikeMonitor, StateMonitor, PopulationRateMonitor]:
 
             if self.v_stored:
                 self._logger.warning('You are changing an already stored result. If '
@@ -309,8 +308,8 @@ class Brian2MonitorResult(Brian2Result):
         elif isinstance(monitor, StateMonitor):
             self._extract_state_monitor(monitor)
 
-        #elif isinstance(monitor, PopulationRateMonitor):
-        #    self._extract_population_rate_monitor(monitor)
+        elif isinstance(monitor, PopulationRateMonitor):
+            self._extract_population_rate_monitor(monitor)
 
         else:
             raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
@@ -386,3 +385,15 @@ class Brian2MonitorResult(Brian2Result):
         else:
             raise RuntimeError('You shall not pass!')
 
+
+    def _extract_population_rate_monitor(self, monitor):
+        assert isinstance(monitor, PopulationRateMonitor)
+
+
+        self.f_set(source=str(monitor.source))
+        self.f_set(times_unit='second', rate_unit='Hz')
+        self.f_set(times=np.array(monitor.t))
+        #print monitor.rate
+        self.f_set(rate=np.array(monitor.rate))
+        #self.f_set(delay=monitor.delay)
+        #self.f_set(bin=monitor._bin)

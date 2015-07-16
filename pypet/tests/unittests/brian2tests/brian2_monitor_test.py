@@ -7,6 +7,7 @@ from pypet.tests.unittests.brian2tests.run_a_brian2_network import run_network
 import pypet.utils.comparisons as comp
 from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.statemonitor import StateMonitor
+from brian2.monitors.ratemonitor import PopulationRateMonitor
 import numpy as np
 import pandas as pd
 
@@ -87,6 +88,15 @@ class Brian2MonitorTest(ResultTest):
 
             self.assertTrue(comp.nested_equal(getattr(monitor, varname), res.f_get(varname+'_values')))
 
+    def check_population_rate_monitor(self, res, monitor):
+        self.assertEqual(str(monitor.source),res.source)
+        #self.assertTrue(comp.nested_equal(monitor._bin,res.bin))
+        self.assertTrue(comp.nested_equal('second',res.times_unit))
+        self.assertTrue(comp.nested_equal('Hz',res.rate_unit))
+        self.assertTrue(comp.nested_equal(np.array(monitor.rate),res.rate))
+        self.assertTrue(comp.nested_equal(np.array(monitor.t),res.times))
+        #self.assertTrue(comp.nested_equal(monitor.delay,res.delay))
+
 
 
     def test_failing_adding_another_monitor_or_changing_the_mode(self):
@@ -113,32 +123,11 @@ class Brian2MonitorTest(ResultTest):
             elif isinstance(monitor, StateMonitor):
                 self.check_state_monitor(res, monitor)
 
-            else:
-                raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
-
-            '''
-            elif isinstance(monitor, VanRossumMetric):
-                self.check_van_rossum_metric(res, monitor)
-
-            elif isinstance(monitor, PopulationSpikeCounter):
-                self.check_population_spike_counter(res, monitor)
-
-            elif isinstance(monitor, StateSpikeMonitor):
-                self.check_state_spike_monitor(res, monitor)
-
             elif  isinstance(monitor, PopulationRateMonitor):
                 self.check_population_rate_monitor(res, monitor)
 
-
-            elif isinstance(monitor, ISIHistogramMonitor):
-                self.check_isi_hist_monitor(res, monitor)
-
-            elif isinstance(monitor, SpikeCounter):
-                self.check_spike_counter(res, monitor)
-
-            elif isinstance(monitor,StateMonitor):
-                self.check_state_monitor(res, monitor)
-            '''
+            else:
+                raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
 
 
 

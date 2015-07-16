@@ -41,23 +41,10 @@ def run_network():
     #run(25*msecond,report='text') # we discard the first spikes
 
     MSpike=SpikeMonitor(neuron) # record Vr and w at spike times
-    #MPopSpike =PopulationSpikeCounter(neuron, delay = 1*ms)
-    #MPopRate = PopulationRateMonitor(neuron,bin=5*ms)
-    #MStateV = StateMonitor(neuron,'vm',record=[1,2,3])
-    #MStatewMean = StateMonitor(neuron,'w',record=False)
-
-    #MRecentStateV = RecentStateMonitor(neuron,'vm',record=[1,2,3],duration=10*ms)
-    #MRecentStatewMean = RecentStateMonitor(neuron,'w',duration=10*ms,record=False)
-
-    #MCounts = SpikeCounter(neuron)
-
-    #MStateSpike = StateSpikeMonitor(neuron,('w','vm'))
+    MPopRate = PopulationRateMonitor(neuron)
 
     MMultiState = StateMonitor(neuron, ['w','vm'], record=[6,7,8,9])
 
-    #ISIHist = ISIHistogramMonitor(neuron,[0,0.0001,0.0002], delay = 1*ms)
-
-    #VanRossum = VanRossumMetric(neuron, tau=5*msecond)
 
     run(10*msecond,report='text')
 
@@ -65,17 +52,7 @@ def run_network():
     monitor_dict['SpikeMonitor']=MSpike
     monitor_dict['SpikeMonitorAr']=MSpike
     monitor_dict['MultiState']=MMultiState
-    #monitor_dict['PopulationSpikeCounter']=MPopSpike
-    #monitor_dict['PopulationRateMonitor']=MPopRate
-    #monitor_dict['StateMonitorV']=MStateV
-    #monitor_dict['StateMonitorwMean']=MStatewMean
-    #monitor_dict['Counts']=MCounts
-    #monitor_dict['StateSpikevmw']=MStateSpike
-    #monitor_dict['StateSpikevmwAr']=MStateSpike
-    #monitor_dict['ISIHistogrammMonitor']=ISIHist
-    #monitor_dict['RecentStateMonitorV']=MRecentStateV
-    #monitor_dict['RecentStateMonitorwMean']=MRecentStatewMean
-    #monitor_dict['VanRossumMetric']=VanRossum
+    monitor_dict['PopulationRateMonitor']=MPopRate
 
     return monitor_dict
 
