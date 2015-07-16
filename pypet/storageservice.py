@@ -1873,8 +1873,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if 'a' in mode:
                 (path, filename) = os.path.split(self._filename)
-                if not os.path.exists(path):
+
+                try:
                     os.makedirs(path)
+                except OSError as exc:
+                    # Directories already exist
+                    if exc.errno != 17:
+                        raise
 
                 self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
                                            complevel=self._complevel, fletcher32=self._fletcher32)

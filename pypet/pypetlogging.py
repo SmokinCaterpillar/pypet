@@ -171,8 +171,12 @@ def try_make_dirs(filename):
     """
     try:
         dirname = os.path.dirname(filename)
-        if not os.path.isdir(dirname):
+        try:
             os.makedirs(dirname)
+        except OSError as exc:
+            # Directories already exist
+            if exc.errno != 17:
+                raise
     except Exception as exc:
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
                          'filename `%s` because of: %s' % (filename, repr(exc)))

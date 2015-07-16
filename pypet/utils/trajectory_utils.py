@@ -5,16 +5,17 @@ from pypet.trajectory import load_trajectory
 
 
 def merge_all_in_folder(folder, ext='.hdf5',
+                        dynamic_imports=None,
                         storage_service=None,
+                        force=False,
                         ignore_data=(),
                         move_data=False,
                         delete_other_files=False,
                         keep_info=True,
                         keep_other_trajectory_info=True,
                         merge_config=True,
-                        backup=True,
-                        force=False):
-    """ Merges all files in a given folder.
+                        backup=True):
+    """Merges all files in a given folder.
 
     IMPORTANT: Does not check if there are more than 1 trajectory in a file. Always
     uses the last trajectory in file and ignores the other ones.
@@ -25,7 +26,8 @@ def merge_all_in_folder(folder, ext='.hdf5',
 
     :param folder: folder (not recursive) where to look for files
     :param ext: only files with the given extension are used
-    :param storage_service: storage service to use, leave `None` to use the default one.
+    :param dynamic_imports: Dynamic imports for loading
+    :param storage_service: storage service to use, leave `None` to use the default one
     :param force: If loading should be forced.
     :param delete_other_files: Deletes files of merged trajectories
 
@@ -48,8 +50,12 @@ def merge_all_in_folder(folder, ext='.hdf5',
     # Open all trajectories
     trajs = []
     for full_file in all_files:
-        traj = load_trajectory(index=-1, storage_service=storage_service,
-                               filename=full_file, load_data=0, force=force)
+        traj = load_trajectory(index=-1,
+                               storage_service=storage_service,
+                               filename=full_file,
+                               load_data=0,
+                               force=force,
+                               dynamic_imports=dynamic_imports)
         trajs.append(traj)
 
     # Merge all trajectories

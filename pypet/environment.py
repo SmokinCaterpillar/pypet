@@ -1022,8 +1022,12 @@ class Environment(HasLogger):
                 continue_folder = os.path.join(os.getcwd(), 'continue')
             continue_path = os.path.join(continue_folder, self._traj.v_name)
 
-            if not os.path.isdir(continue_path):
+            try:
                 os.makedirs(continue_path)
+            except OSError as exc:
+                # Directories already exist
+                if exc.errno != 17:
+                    raise
         else:
             continue_path = None
 
