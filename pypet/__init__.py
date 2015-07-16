@@ -28,6 +28,7 @@ from pypet.shareddata import SharedArray, SharedCArray, SharedEArray,\
     SharedVLArray, SharedPandasFrame, SharedTable, SharedResult,\
     StorageContextManager, make_ordinary_result, make_shared_result
 from pypet.slots import HasSlots
+from pypet.utils.trajectory_utils import merge_all_in_folder
 
 
 __all__ = [
@@ -79,5 +80,6 @@ __all__ = [
     make_ordinary_result.__name__,
     make_shared_result.__name__,
     progressbar.__name__,
-    find_unique_points.__name__
+    find_unique_points.__name__,
+    merge_all_in_folder.__name__,
 ]

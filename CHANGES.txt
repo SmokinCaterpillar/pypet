@@ -3,6 +3,8 @@ pypet 0.1b.13
 *   ENH: Pypet can now apply fast merging if trajectories reside in different files.
     If one still wants to apply slow merging, one can set `slow_merge=True`.
 
+*   ENH: New `merge_all_in_folder` function
+
 
 pypet 0.1b.12
 
@@ -19,6 +21,9 @@ pypet 0.1b.12
     trajectories.
 
 *   New `f_merge_many` function to merge many trajectories at once.
+
+*   New experimental ``'PIPE'`` wrapping which is even faster (but more unreliable)
+    than ``'QUEUE'``.
 
 
 pypet 0.1b.11

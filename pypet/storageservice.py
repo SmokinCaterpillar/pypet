@@ -2080,50 +2080,53 @@ class HDF5StorageService(StorageService, HasLogger):
             other_file = ptcompat.open_file(filename=other_filename, mode='r+')
             other_is_different = True
 
-        if not ('/' + other_trajectory_name) in other_file:
-            raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
-                             'be found in file: %s.' % (self._trajectory_name,
-                                                        other_trajectory_name,
-                                                        other_filename))
+        try:
+            if not ('/' + other_trajectory_name) in other_file:
+                raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
+                                 'be found in file: %s.' % (self._trajectory_name,
+                                                            other_trajectory_name,
+                                                            other_filename))
+            for old_name in rename_dict:
+                new_name = rename_dict[old_name]
 
-        for old_name in rename_dict:
-            new_name = rename_dict[old_name]
+                # Iterate over all items that need to be merged
+                split_name = old_name.split('.')
+                old_location = '/' + other_trajectory_name + '/' + '/'.join(split_name)
 
-            # Iterate over all items that need to be merged
-            split_name = old_name.split('.')
-            old_location = '/' + other_trajectory_name + '/' + '/'.join(split_name)
+                split_name = new_name.split('.')
+                new_parent_location = '/' + self._trajectory_name + '/' + '/'.join(split_name[:-1])
 
-            split_name = new_name.split('.')
-            new_parent_location = '/' + self._trajectory_name + '/' + '/'.join(split_name[:-1])
+                new_short_name = split_name[-1]
 
-            new_short_name = split_name[-1]
+                # Get the data from the other trajectory
+                old_node = ptcompat.get_node(other_file, old_location)
 
-            # Get the data from the other trajectory
-            old_node = ptcompat.get_node(other_file, old_location)
-
-            # Now move or copy the data
-            if move_nodes:
-                ptcompat.move_node(self._hdf5file,
-                                   where=old_node, newparent=new_parent_location,
-                                   newname=new_short_name, createparents=True)
-            else:
-                if other_is_different:
-                    new_parent_or_loc, _ = self._all_create_or_get_groups(new_parent_location)
+                # Now move or copy the data
+                if move_nodes:
+                    ptcompat.move_node(self._hdf5file,
+                                       where=old_node, newparent=new_parent_location,
+                                       newname=new_short_name, createparents=True)
                 else:
-                    new_parent_or_loc = new_parent_location
-                ptcompat.copy_node(self._hdf5file,
-                                   where=old_node, newparent=new_parent_or_loc,
-                                   newname=new_short_name, createparents=True,
-                                   recursive=True)
+                    if other_is_different:
+                        new_parent_dot_location = '.'.join(split_name[:-1])
+                        new_parent_or_loc, _ = self._all_create_or_get_groups(new_parent_dot_location)
+                        create_parents = False
+                    else:
+                        new_parent_or_loc = new_parent_location
+                        create_parents = True
+                    ptcompat.copy_node(self._hdf5file,
+                                       where=old_node, newparent=new_parent_or_loc,
+                                       newname=new_short_name, createparents=create_parents,
+                                       recursive=True)
 
 
-        if delete_trajectory:
-            ptcompat.remove_node(other_file,
-                                 where='/', name=other_trajectory_name, recursive=True)
-
-        if other_is_different:
-            other_file.flush()
-            other_file.close()
+            if delete_trajectory:
+                ptcompat.remove_node(other_file,
+                                     where='/', name=other_trajectory_name, recursive=True)
+        finally:
+            if other_is_different:
+                other_file.flush()
+                other_file.close()
 
     def _trj_prepare_merge(self, traj, changed_parameters, old_length):
         """Prepares a trajectory for merging.

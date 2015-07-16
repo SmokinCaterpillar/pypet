@@ -1886,15 +1886,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     self._logger.warning('Could not determine the filename of the other '
                                          'trajectory, I will assume it`s in the same file.')
                     other_filename = None
-                self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
+                self._storage_service.store(pypetconstants.MERGE, 'FAST MERGE', trajectory_name=self.v_name,
                                             other_trajectory_name=other_trajectory.v_name,
                                             rename_dict=rename_dict, move_nodes=move_data,
                                             delete_trajectory=delete_other_trajectory,
                                             other_filename=other_filename)
 
-            except pex.NoSuchServiceError:
+            except pex.NoSuchServiceError as exc:
                 # If the storage service does not support merge we end up here
-                self._logger.warning('My storage service does not support merging of trajectories, '
+                self._logger.exception('My storage service does not support merging of trajectories, '
                                      'I will use the f_load mechanism of the other trajectory and '
                                      'store the results slowly item by item. '
                                      'Note that thereby the other '
@@ -1903,9 +1903,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             except ValueError as exc:
                 # If both trajectories are stored in separate files we end up here
-                self._logger.warning(repr(exc))
-
-                self._logger.warning('Could not perfom fast merging. '
+                self._logger.exception('Could not perfom fast merging. '
                                      'I will use the `f_load` method of the other trajectory and '
                                      'store the results slowly item by item. '
                                      'Note that thereby the other '
@@ -2306,7 +2304,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if other_instance.f_is_empty():
                 # To suppress warnings if nothing needs to be loaded
                 with self._nn_interface._disable_logger:
-                    other_trajectory.f_load_items(other_instance)
+                    other_trajectory.f_load_item(other_instance)
 
             if not self.f_contains(new_key):
                 class_name = other_instance.f_get_class_name()

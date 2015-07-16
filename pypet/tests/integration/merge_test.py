@@ -16,6 +16,7 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_traject
 from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integration.environment_test import ResultSortTest, my_set_func, my_run_func
+from pypet import merge_all_in_folder
 
 
 class MergeTest(TrajectoryComparator):
@@ -297,6 +298,8 @@ class MergeTest(TrajectoryComparator):
 
         ##f_merge without destroying the original trajectory
         merged_traj = self.trajs[0]
+
+        self.trajs[1].f_remove_child('results', recursive=True)
 
         merged_traj.f_merge(self.trajs[1], move_data=not copy_nodes,
                             delete_other_trajectory=delete_traj,
@@ -680,8 +683,10 @@ class TestConsecutiveMerges(TrajectoryComparator):
 
         self.trajname = make_trajectory_name(self)
 
-    def _make_env(self, idx):
-       return Environment(trajectory=self.trajname+str(idx),filename=self.filename,
+    def _make_env(self, idx, filename=None):
+        if filename is None:
+           filename = self.filename
+        return Environment(trajectory=self.trajname+str(idx),filename=filename,
                           file_title=self.trajname,
                           log_stdout=False,
                           log_config=get_log_config(),
@@ -730,6 +735,32 @@ class TestConsecutiveMerges(TrajectoryComparator):
         merge_traj.f_load(load_data=2)
         self.check_if_z_is_correct(merge_traj)
 
+    def test_merge_all_in_folder(self):
+
+        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5', 'subfolder',
+                                                    'test.hdf5'))
+
+        path, _ = os.path.split(self.filename)
+
+        ntrajs = 4
+        total_len = 0
+        for irun in range(ntrajs):
+            new_filename = os.path.join(path, 'test%d.hdf5' % irun)
+            self.envs.append(self._make_env(irun, filename=new_filename))
+            self.trajs.append(self.envs[-1].v_traj)
+            self.trajs[-1].f_add_parameter('x',0)
+            self.trajs[-1].f_add_parameter('y',0)
+            self.explore(self.trajs[-1])
+            total_len += len(self.trajs[-1])
+
+        for irun in range(ntrajs):
+            self.envs[irun].f_run(multiply)
+
+        merge_traj = merge_all_in_folder(path, delete_other_files=True)
+        merge_traj.f_load(load_data=2)
+
+        self.assertEqual(len(merge_traj), total_len)
+        self.check_if_z_is_correct(merge_traj)
 
     def test_merge_many(self):
 
