@@ -5,6 +5,8 @@ pypet 0.1b.13
 
 *   ENH: New `merge_all_in_folder` function
 
+*   ENH: New very lazy adding node.
+
 
 pypet 0.1b.12
 

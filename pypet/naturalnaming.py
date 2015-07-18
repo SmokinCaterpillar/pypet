@@ -2744,6 +2744,17 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         else:
             return True
 
+    def __setitem__(self, key, value):
+        split_key = key.split('.')
+        last_key = split_key.pop()
+        current = self
+        for key_ in split_key:
+            current = getattr(current, key_)
+        if self.v_root.v_lazy_adding or self.v_root.v_very_lazy_adding:
+            setattr(current, last_key, value)
+        else:
+            getattr(current, last_key)
+
     def __setattr__(self, key, value):
         if key.startswith('_'):
             # We set a private attribute
@@ -2773,7 +2784,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             except:
                 value._set_details(old_name)
                 raise
-        elif self.v_root.v_lazy_adding:
+        elif self.v_root.v_lazy_adding or self.v_root.v_very_lazy_adding:
             if value is new_group:
                 self.f_add_group(key)
             else:
@@ -2790,18 +2801,31 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         Per default the item is returned and fast access is applied.
 
         """
-        return self.__getattr__(item)
-
-    def __getattr__(self, name):
-        if isinstance(name, compat.base_type) and name.startswith('_'):
-            raise AttributeError('Trajectory node does not contain `%s`' % name)
-
-        return self._nn_interface._get(self, name,
+        return self._nn_interface._get(self, item,
                                        fast_access=self.v_root.v_fast_access,
                                        shortcuts=self.v_root.v_shortcuts,
                                        max_depth=self.v_root.v_max_depth,
                                        auto_load=self.v_root.v_auto_load,
                                        with_links=self.v_root.v_with_links)
+
+    def __getattr__(self, name):
+        if isinstance(name, compat.base_type) and name.startswith('_'):
+            raise AttributeError('Trajectory node does not contain `%s`' % name)
+        very_lazy = self.v_root.v_very_lazy_adding
+        try:
+            return self._nn_interface._get(self, name,
+                                       fast_access=self.v_root.v_fast_access,
+                                       shortcuts=self.v_root.v_shortcuts and 
+                                                 not very_lazy,
+                                       max_depth=self.v_root.v_max_depth,
+                                       auto_load=self.v_root.v_auto_load and 
+                                                 not very_lazy,
+                                       with_links=self.v_root.v_with_links)
+        except AttributeError:
+            if very_lazy:
+                return self.f_add_group(name)
+            else:
+                raise
 
     @property
     def v_root(self):

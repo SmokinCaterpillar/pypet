@@ -55,6 +55,20 @@ traj.im_new = new_group
 # And `im_new` is a new group node:
 print(traj.im_new)
 
+# For those very lazy folks, there is a mode that produces missing group
+# nodes on the fly
+traj.v_very_lazy_adding = True
+traj.iam.super.lazy.k = 42
+# Which adds the groups `im`, `super` and `lazy` on the fly.
+print('A new group:')
+print(traj.iam.super.lazy)
+# However, as long as the this is turned on, you cannot load data on the fly from disk
+# or use short cuts:
+traj.super.k = 42
+# actually creates a new `super` group below `traj` and does not
+# access `traj.iam.super`.
+print('Group 1 Memory ID:' + str(id(traj.super)) + ', Group 2 Memory ID:' + str(id(traj.iam.super)))
+traj.v_very_lazy_adding = False
 
 # Finally, there's one more thing. Using this notation we can also add links.
 # Simply use the `=` assignment with objects that already exist in your trajectory:

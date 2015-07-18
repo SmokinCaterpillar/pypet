@@ -97,6 +97,24 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
 
+    def test_very_lazy_adding(self):
+        self.traj.v_very_lazy_adding = True
+        self.traj.Iam.very.very.new = 4
+        self.traj.Iam.new = 5
+        self.traj.v_very_lazy_adding = False
+        self.assertEqual(self.traj.new, 5)
+        self.assertEqual(self.traj.very.new, 4)
+
+    def test_very_lazy_setitem(self):
+        self.traj.v_very_lazy_adding = True
+        self.traj['r_1.very.very.new'] = 4
+        self.traj.r_1.new = 5
+        with self.assertRaises(AttributeError):
+            self.traj['mistake.mistak']
+        self.traj.v_very_lazy_adding = False
+        self.assertEqual(self.traj.run_00000001.new, 5)
+        self.assertEqual(self.traj['very.new'], 4)
+
     def test_deletion(self):
         x = []
         self.traj.f_add_result('fff', x)
