@@ -312,7 +312,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._auto_run_prepend = True
 
-        self._full_copy = True
+        self._full_copy = False
 
         self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
@@ -391,12 +391,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         result = super(Trajectory, self).__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
-        # Accordingly, we need to store the length in the helper variable
-        # `_length_during_nfc`.
-        if not self.v_full_copy and self.v_crun is not None:
-            runname = self._single_run_ids[self.v_idx]
+        if not self.v_full_copy:
+            if self.v_crun is not None:
+                idx = self.v_idx
+            else:
+                idx = 0
+            runname = self._single_run_ids[idx]
             result['_run_information'] = {runname: self._run_information[runname]}
-            result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
+            result['_single_run_ids'] = {idx: runname, runname: idx}
         result['_wildcard_cache'] = {}
         return result
 
@@ -579,11 +581,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @not_in_run
     def v_full_copy(self, val):
         """ Sets full copy mode of trajectory and (!) ALL explored parameters!"""
-        if val != self._full_copy:
-            self._full_copy = val
-            for param in compat.itervalues(self._explored_parameters):
-                if param is not None:
-                    param.v_full_copy = val
+        self._full_copy = bool(val)
+        for param in compat.itervalues(self._explored_parameters):
+            if param is not None:
+                param.v_full_copy = bool(val)
 
     @property
     def v_with_links(self):
@@ -1545,14 +1546,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 param.f_unlock()
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
-                                            ignore_data):
+                                            ignore_data, consecutive_merge):
         """ Checks if two trajectories live in the same space and can be merged. """
 
         if not isinstance(other_trajectory, Trajectory):
             raise TypeError('Can only merge trajectories, the other trajectory'
                             ' is of type `%s`.' % str(type(other_trajectory)))
 
-        if self._stored:
+        if self._stored and not consecutive_merge:
             self.f_load_skeleton()
         if other_trajectory._stored:
             other_trajectory.f_load_skeleton()
@@ -1652,14 +1653,59 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     **kwargs)
 
-    def _make_reversed_wildcards(self):
+    def _make_reversed_wildcards(self, old_length=-1):
         """Creates a full mapping from all wildcard translations to the corresponding wildcards"""
+        if len(self._reversed_wildcards) > 0:
+            # We already created reversed wildcards, so we don't need to do all of them
+            # again
+            start = old_length
+        else:
+            start = -1
         for wildcards, func in self._wildcard_functions.items():
-            for irun in range(-1, len(self)):
+            for irun in range(start, len(self)):
                 translated_name = func(irun)
                 if not translated_name in self._reversed_wildcards:
                     self._reversed_wildcards[translated_name] = ([], wildcards)
                 self._reversed_wildcards[translated_name][0].append(irun)
+
+    @not_in_run
+    def f_merge_many(self, other_trajectories,
+                ignore_data=(),
+                move_data=False,
+                delete_other_trajectory=False,
+                keep_info=True,
+                keep_other_trajectory_info=True,
+                merge_config=True,
+                backup=True):
+        """Can be used to merge several `other_trajectories` into your current one.
+
+        IMPORTANT `backup=True` only backs up the current trajectory not any of
+        the `other_trajectories`. If you need a backup of these, do it manually.
+
+        Parameters as for :func:`~pypet.trajectory.Trajectory.f_merge`.
+
+        """
+        other_length = len(other_trajectories)
+        self._logger.info('Merging %d trajectories into the current one.' % other_length)
+        self.f_load_skeleton()
+
+        if backup:
+            self.f_backup()
+
+        for idx, other in enumerate(other_trajectories):
+            self.f_merge(other, ignore_data=ignore_data,
+                         move_data=move_data,
+                         delete_other_trajectory=delete_other_trajectory,
+                         keep_info=keep_info,
+                         keep_other_trajectory_info=keep_other_trajectory_info,
+                         merge_config=merge_config,
+                         backup=False,
+                         consecutive_merge=True)
+            self._logger.log(21,'Merged %d out of %d' % (idx + 1, other_length))
+        self._logger.info('Storing data to disk')
+        self._reversed_wildcards = {}
+        self.f_store()
+        self._logger.info('Finished final storage')
 
     @not_in_run
     @kwargs_api_change('backup_filename', 'backup')
@@ -1673,7 +1719,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 delete_other_trajectory=False,
                 keep_info=True,
                 keep_other_trajectory_info=True,
-                merge_config=True):
+                merge_config=True,
+                consecutive_merge=False,
+                slow_merge=False):
         """Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. This means both need to have the same
@@ -1742,6 +1790,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             in case you want to keep all the information. Setting of `keep_other_trajectory_info`
             is irrelevant in case `keep_info=False`.
 
+        :param consecutive_merge:
+            Can be set to `True` if you are about to merge several trajectories into the current
+            one within a loop to avoid quadratic complexity.
+            But remember to store your trajectory manually after
+            all merges. Also make sure that all parameters and derived parameters are available
+            in your current trajectory and load them before the consecutive merging.
+            Also avoid specifying a `trial_parameter` and set `backup=False`
+            to avoid quadratic complexity in case of consecutive merges.
+
+        :param slow_merge:
+            Enforces a slow merging. This means all data is loaded one after the other to
+            memory and stored to disk. Otherwise it is tried to directly copy the data
+            from one file into another without explicitly loading the data.
+
         If you cannot directly merge trajectories within one HDF5 file, a slow merging process
         is used. Results are loaded, stored, and emptied again one after the other. Might take
         some time!
@@ -1752,16 +1814,25 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         of single runs are copied, so you don't have to worry about these.
 
         """
+        if consecutive_merge and trial_parameter is not None:
+            self._logger.warning('If you do a consecutive merge and specify a trial parameter, '
+                                 'your merging will still suffer from quadratic time complexity!')
+        if consecutive_merge and backup:
+            self._logger.warning('If you do a consecutive merge and backup, '
+                                 'your merging will still suffer from quadratic time complexity!')
+
         # Keep the timestamp of the merge
         timestamp = time.time()
         original_ignore_data = set(ignore_data)
         ignore_data = original_ignore_data.copy()
 
+        old_len = len(self)
+
         # Check if trajectories can be merged
-        self._check_if_both_have_same_parameters(other_trajectory, ignore_data)
+        self._check_if_both_have_same_parameters(other_trajectory, ignore_data, consecutive_merge)
 
         # Create a full mapping set for renaming
-        self._make_reversed_wildcards()
+        self._make_reversed_wildcards(old_length=old_len)
         other_trajectory._make_reversed_wildcards()
 
         # BACKUP if merge is possible
@@ -1783,9 +1854,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if len(used_runs) == 0:
             raise ValueError('Your merge discards all runs of the other trajectory, maybe you '
                              'try to merge a trajectory with itself?')
-
-
-
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
@@ -1820,40 +1888,46 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._logger.info('Updating Trajectory information and changed parameters in storage')
         self._storage_service.store(pypetconstants.PREPARE_MERGE, self,
                                     trajectory_name=self.v_name,
-                                    changed_parameters=changed_parameters)
+                                    changed_parameters=changed_parameters,
+                                    old_length=old_len)
 
-        try:
-            # Merge the single run derived parameters and all results
-            # within the same hdf5 file based on `renamed_dict`
-            self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
-                                        other_trajectory_name=other_trajectory.v_name,
-                                        rename_dict=rename_dict, move_nodes=move_data,
-                                        delete_trajectory=delete_other_trajectory)
+        if not slow_merge:
+            try:
+                # Merge the single run derived parameters and all results
+                # within the same hdf5 file based on `renamed_dict`
+                try:
+                    # try to get the other file
+                    other_filename = other_trajectory.v_storage_service.filename
+                except AttributeError:
+                    self._logger.warning('Could not determine the filename of the other '
+                                         'trajectory, I will assume it`s in the same file.')
+                    other_filename = None
+                self._storage_service.store(pypetconstants.MERGE, 'FAST MERGE', trajectory_name=self.v_name,
+                                            other_trajectory_name=other_trajectory.v_name,
+                                            rename_dict=rename_dict, move_nodes=move_data,
+                                            delete_trajectory=delete_other_trajectory,
+                                            other_filename=other_filename)
 
+            except pex.NoSuchServiceError as exc:
+                # If the storage service does not support merge we end up here
+                self._logger.exception('My storage service does not support merging of trajectories, '
+                                     'I will use the f_load mechanism of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
+            except ValueError as exc:
+                # If both trajectories are stored in separate files we end up here
+                self._logger.exception('Could not perfom fast merging. '
+                                     'I will use the `f_load` method of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
-        except pex.NoSuchServiceError:
-            # If the storage service does not support merge we end up here
-            self._logger.warning('My storage service does not support merging of trajectories, '
-                                 'I will use the f_load mechanism of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
-
+        if slow_merge:
             self._merge_slowly(other_trajectory, rename_dict)
-
-        except ValueError as exc:
-            # If both trajectories are stored in separate files we end up here
-            self._logger.warning(repr(exc))
-
-            self._logger.warning('Could not perfom fast merging. '
-                                 'I will use the `f_load` method of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
-
-            self._merge_slowly(other_trajectory, rename_dict)
-
 
         # We will merge the git commits and other config data
         if merge_config:
@@ -1945,10 +2019,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                       comment='Comment of other trajectory')
 
         # Write out the merged data to disk
-        self._logger.info('Writing merged data to disk')
-        self.f_store(store_data=pypetconstants.STORE_DATA)
-
-        self._reversed_wildcards = {}
+        if not consecutive_merge:
+            self._logger.info('Writing merged data to disk')
+            self.f_store(store_data=pypetconstants.STORE_DATA)
+            self._reversed_wildcards = {}
         other_trajectory._reversed_wildcards = {}
 
         self._logger.info('Finished Merging!')
@@ -2246,7 +2320,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if other_instance.f_is_empty():
                 # To suppress warnings if nothing needs to be loaded
                 with self._nn_interface._disable_logger:
-                    other_trajectory.f_load_items(other_instance)
+                    other_trajectory.f_load_item(other_instance)
 
             if not self.f_contains(new_key):
                 class_name = other_instance.f_get_class_name()
