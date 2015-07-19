@@ -2748,12 +2748,21 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         split_key = key.split('.')
         last_key = split_key.pop()
         current = self
+        lazy = self.v_root.v_lazy_adding
         for key_ in split_key:
-            current = getattr(current, key_)
-        if self.v_root.v_lazy_adding or self.v_root.v_very_lazy_adding:
-            setattr(current, last_key, value)
-        else:
-            getattr(current, last_key)
+            try:
+                current = self._nn_interface._get(current, key_,
+                                       fast_access=self.v_root.v_fast_access,
+                                       shortcuts=self.v_root.v_shortcuts and not lazy,
+                                       max_depth=self.v_root.v_max_depth,
+                                       auto_load=self.v_root.v_auto_load and not lazy,
+                                       with_links=self.v_root.v_with_links and not lazy)
+            except AttributeError:
+                if lazy:
+                    current = current.f_add_group(key_)
+                else:
+                    raise
+        setattr(current, last_key, value)
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
@@ -2784,7 +2793,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             except:
                 value._set_details(old_name)
                 raise
-        elif self.v_root.v_lazy_adding or self.v_root.v_very_lazy_adding:
+        elif self.v_root.v_lazy_adding:
             if value is new_group:
                 self.f_add_group(key)
             else:
@@ -2811,21 +2820,13 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
     def __getattr__(self, name):
         if isinstance(name, compat.base_type) and name.startswith('_'):
             raise AttributeError('Trajectory node does not contain `%s`' % name)
-        very_lazy = self.v_root.v_very_lazy_adding
-        try:
-            return self._nn_interface._get(self, name,
-                                       fast_access=self.v_root.v_fast_access,
-                                       shortcuts=self.v_root.v_shortcuts and 
-                                                 not very_lazy,
-                                       max_depth=self.v_root.v_max_depth,
-                                       auto_load=self.v_root.v_auto_load and 
-                                                 not very_lazy,
-                                       with_links=self.v_root.v_with_links)
-        except AttributeError:
-            if very_lazy:
-                return self.f_add_group(name)
-            else:
-                raise
+
+        return self._nn_interface._get(self, name,
+                                   fast_access=self.v_root.v_fast_access,
+                                   shortcuts=self.v_root.v_shortcuts,
+                                   max_depth=self.v_root.v_max_depth,
+                                   auto_load=self.v_root.v_auto_load,
+                                   with_links=self.v_root.v_with_links)
 
     @property
     def v_root(self):

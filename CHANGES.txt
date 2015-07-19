@@ -5,8 +5,8 @@ pypet 0.1b.13
 
 *   ENH: New `merge_all_in_folder` function
 
-*   ENH: New very lazy adding node.
-
+*   ENH: One can now add groups on the fly via `traj['new_group.on.the.fly'] = 42`
+    in case lazy adding is turned on.
 
 pypet 0.1b.12
 

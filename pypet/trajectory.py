@@ -294,7 +294,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._auto_load = False
         self._with_links = True
         self._lazy_adding = False
-        self._very_lazy_adding = False
 
         self._expansion_not_stored = False
 
@@ -561,21 +560,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_lazy_adding(self, val):
         """Sets lazy adding"""
         self._lazy_adding = bool(val)
-
-    @property
-    def v_very_lazy_adding(self):
-        """ Allows lazy adding and also adds missing groups on the fly.
-
-        Shortcuts and auto loading no longer work as long as this option is turned on.
-
-        :return:
-        """
-        return self._very_lazy_adding
-
-    @v_very_lazy_adding.setter
-    def v_very_lazy_adding(self, val):
-        """Sets very lazy adding"""
-        self._very_lazy_adding = bool(val)
 
     @v_full_copy.setter
     @not_in_run
