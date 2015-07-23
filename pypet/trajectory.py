@@ -2409,14 +2409,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             # Extract the ranges of both trial parameters
             if my_trial_parameter.f_has_range():
-                my_trial_list = my_trial_parameter.f_get_range()
+                my_trial_list = my_trial_parameter.f_get_range(copy=False)
             else:
                 # If we only have a single trial, we need to make a range of length 1
                 # This is probably a very exceptional case
                 my_trial_list = [my_trial_parameter.f_get()]
 
             if other_trial_parameter.f_has_range():
-                other_trial_list = other_trial_parameter.f_get_range()
+                other_trial_list = other_trial_parameter.f_get_range(copy=False)
             else:
                 other_trial_list = [other_trial_parameter.f_get()]
 
@@ -2557,7 +2557,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 # In case we do not use all runs we need to filter the ranges of the
                 # parameters of the other trajectory
                 if other_param.f_has_range():
-                    other_range = (x for jdx, x in enumerate(other_param.f_get_range())
+                    other_range = (x for jdx, x in enumerate(other_param.f_get_range(copy=False))
                                                              if jdx in used_runs)
                 else:
                     other_range = (other_param.f_get() for _ in compat.xrange(adding_length))
@@ -2880,7 +2880,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                 (name, str(type(param))))
 
             if param.f_has_range():
-                iter_list.append(iter(param.f_get_range()))
+                iter_list.append(iter(param.f_get_range(copy=False)))
             else:
                 iter_list.append(itools.repeat(param.f_get(), len(self)))
 

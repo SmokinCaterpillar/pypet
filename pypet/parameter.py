@@ -470,7 +470,6 @@ class BaseParameter(NNLeafNode):
         """
         return self.f_get_range().__getitem__(idx)
 
-
     def f_get(self):
         """Returns the current data value of the parameter and locks the parameter.
 
@@ -516,13 +515,17 @@ class BaseParameter(NNLeafNode):
         """
         return self.f_get_range()
 
-    def f_get_range(self):
+    def f_get_range(self, copy=True):
         """Returns an iterable to iterate over the values of the exploration range.
 
         Note that the returned values should be either a copy of the exploration range
-        or the array must be immutable, for example a python tuple.
+        unless explicetly requested otherwise.
 
-        :return: Immutable sequence
+        :param copy:
+
+            If range should be copied to avoid tempering with data.
+
+        :return: Iterable
 
         :raises: TypeError if the parameter is not explored
 
@@ -635,7 +638,6 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError('Implement this!')
 
-
     def _shrink(self):
         """If a parameter is explored, i.e. it has a range, the whole exploration range is deleted.
 
@@ -653,7 +655,6 @@ class BaseParameter(NNLeafNode):
 
         """
         raise NotImplementedError("Should have implemented this.")
-
 
     def f_empty(self):
         """Erases all data in the parameter.
@@ -760,7 +761,7 @@ class Parameter(BaseParameter):
         # but it is necessary to keep a reference to it to restore the original value
         # after exploration
 
-        self._explored_range = tuple()  # Tuple that will changed later on if parameter is explored
+        self._explored_range = []  # List that will changed later on if parameter is explored
         self._set_logger()
 
         if data is not None:
@@ -845,7 +846,7 @@ class Parameter(BaseParameter):
         # If we don't need a full copy of the Parameter (because a single process needs
         # only access to a single point in the parameter space) we can delete the rest
         if not self._full_copy:
-            result['_explored_range'] = tuple()
+            result['_explored_range'] = []
 
         return result
 
@@ -1015,8 +1016,12 @@ class Parameter(BaseParameter):
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._default
 
-    def f_get_range(self):
-        """Returns a python tuple containing the exploration range.
+    def f_get_range(self, copy=True):
+        """Returns a python iterable containing the exploration range.
+
+        :param copy:
+
+            If the range should be copied before handed over to avoid tempering with data
 
         Example usage:
 
@@ -1031,6 +1036,8 @@ class Parameter(BaseParameter):
         if not self.f_has_range():
             raise TypeError('Your parameter `%s` is not array, so cannot return array.' %
                             self.v_full_name)
+        elif copy:
+            return self._explored_range[:]
         else:
             return self._explored_range
 
@@ -1065,9 +1072,9 @@ class Parameter(BaseParameter):
             raise TypeError('Your Parameter %s is already explored, cannot _explore it further!' %
                             self._name)
 
-        data_tuple = self._data_sanity_checks(explore_iterable)
+        data_list = self._data_sanity_checks(explore_iterable)
 
-        self._explored_range = data_tuple
+        self._explored_range = data_list
         self._explored = True
         self.f_lock()
 
@@ -1091,7 +1098,7 @@ class Parameter(BaseParameter):
          >>> param._explore([3.0,2.0,1.0])
          >>> param._expand([42.0, 43.42])
          >>> param.f_get_range()
-         >>> (3.0, 2.0, 1.0, 42.0, 43.42)
+         >>> [3.0, 2.0, 1.0, 42.0, 43.42]
 
         :raises TypeError, ParameterLockedException
 
@@ -1103,11 +1110,10 @@ class Parameter(BaseParameter):
             raise TypeError('Your Parameter `%s` is not an array and can therefore '
                             'not be expanded.' % self._name)
 
-        data_tuple = self._data_sanity_checks(explore_iterable)
+        data_list = self._data_sanity_checks(explore_iterable)
 
-        self._explored_range = self._explored_range + data_tuple
+        self._explored_range.extend(data_list)
         self.f_lock()
-
 
     def _data_sanity_checks(self, explore_iterable):
         """Checks if data values are  valid.
@@ -1116,7 +1122,7 @@ class Parameter(BaseParameter):
         type as the default value.
 
         """
-        data_tuple = []
+        data_list = []
 
         for val in explore_iterable:
             newval = self._convert_data(val)
@@ -1130,13 +1136,12 @@ class Parameter(BaseParameter):
                     'new type is %s vs old type %s.' %
                     (self.v_full_name, str(type(newval)), str(type(self._default))))
 
-            data_tuple.append(newval)
+            data_list.append(newval)
 
-        if len(data_tuple) == 0:
+        if len(data_list) == 0:
             raise ValueError('Cannot explore an empty list!')
 
-        return tuple(data_tuple)
-
+        return data_list
 
     def _store(self):
         """Returns a dictionary of formatted data understood by the storage service.
@@ -1172,8 +1177,8 @@ class Parameter(BaseParameter):
         self._default = self._data
 
         if 'explored_data' in load_dict:
-            self._explored_range = tuple([self._convert_data(x)
-                                          for x in load_dict['explored_data']['data'].tolist()])
+            self._explored_range = [self._convert_data(x)
+                                          for x in load_dict['explored_data']['data'].tolist()]
             self._explored = True
 
         self._locked = True
@@ -1200,7 +1205,7 @@ class Parameter(BaseParameter):
             raise TypeError('Cannot shrink empty Parameter.')
 
         del self._explored_range
-        self._explored_range = {}
+        self._explored_range = []
         self._explored = False
 
     @copydoc(BaseParameter.f_empty)
@@ -1317,7 +1322,6 @@ class ArrayParameter(Parameter):
         """
         return 'xa%s%08d' % (ArrayParameter.IDENTIFIER, name_idx)
 
-
     def _load(self, load_dict):
         """Reconstructs the data and exploration array.
 
@@ -1346,7 +1350,7 @@ class ArrayParameter(Parameter):
                     arrayname = self._build_name(name_idx)
                     explore_list.append(load_dict[arrayname])
 
-                self._explored_range = tuple([self._convert_data(x) for x in explore_list])
+                self._explored_range = [self._convert_data(x) for x in explore_list]
                 self._explored = True
 
         except KeyError:
@@ -1704,7 +1708,7 @@ class SparseParameter(ArrayParameter):
                     matrix = self._reconstruct_matrix(data_list)
                     explore_list.append(matrix)
 
-                self._explored_range = tuple(explore_list)
+                self._explored_range = explore_list
                 self._explored = True
 
         except KeyError:
@@ -1864,7 +1868,7 @@ class PickleParameter(Parameter):
                 loaded = pickle.loads(load_dict[arrayname])
                 explore_list.append(loaded)
 
-            self._explored_range = tuple(explore_list)
+            self._explored_range = explore_list
             self._explored = True
 
         self._default = self._data

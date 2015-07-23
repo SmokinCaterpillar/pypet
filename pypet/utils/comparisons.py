@@ -99,7 +99,7 @@ def parameters_equal(a, b):
         if a.f_get_range_length() != b.f_get_range_length():
             return False
 
-        for myitem, bitem in zip(a.f_get_range(), b.f_get_range()):
+        for myitem, bitem in zip(a.f_get_range(copy=False), b.f_get_range(copy=False)):
             if not a._values_of_same_type(myitem, bitem):
                 return False
             if not a._equal_values(myitem, bitem):

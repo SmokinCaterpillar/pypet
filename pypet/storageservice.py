@@ -3811,7 +3811,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if 'range' in colnames:
             third_length = pypetconstants.HDF5_STRCOL_MAX_RANGE_LENGTH // 3 + 10
-            item_range = itools.islice(item.f_get_range(), 0, third_length)
+            item_range = itools.islice(item.f_get_range(copy=False), 0, third_length)
             range_string = ', '.join([repr(x) for x in item_range])
             insert_dict['range'] = self._all_cut_string(
                 compat.tobytes(range_string),
@@ -3821,7 +3821,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # To allow backwards compatibility
         if 'array' in colnames:
             third_length = pypetconstants.HDF5_STRCOL_MAX_RANGE_LENGTH // 3 + 10
-            item_range = itools.islice(item.f_get_range(), 0, third_length)
+            item_range = itools.islice(item.f_get_range(copy=False), 0, third_length)
             range_string = ', '.join([repr(x) for x in item_range])
             insert_dict['array'] = self._all_cut_string(
                 compat.tobytes(range_string),
