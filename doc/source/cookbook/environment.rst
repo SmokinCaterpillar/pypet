@@ -952,11 +952,14 @@ You can also specify the additional arguments and keyword arguments using
 The argument list ``args`` and keyword dictionary ``kwargs`` are directly handed over to the
 ``myjobfunc`` during runtime.
 
-The :func:`~pypet.environment.Environment.f_run` will return a list of tuples.
+The :func:`~pypet.environment.Environment.f_run` will return a list of tuples of length **3**.
 Whereas the first tuple entry is the index of the corresponding run and the second entry
-of the tuple is the result returned by your run function
-(for the example above this would simply always be
-the string ``'fortytwo'``, i.e. ``((0, 'fortytwo'), (1, 'fortytwo'),...)``).
+of the tuple is the result returned by your run function, and the third entry is a dictionary
+with additional run information like runtime etc. The structure is equivalent to
+the dictionary returned by :func:`~pypet.trajectory.Trajectory.f_get_run_information`.
+For the example above this would simply always be
+the string ``'fortytwo'``, i.e.
+``((0, 'fortytwo', {'name': ...}), (1, 'fortytwo', {'name': ...}),...)``.
 In case you use multiprocessing these tuples are **not** in the order
 of the run indices but in the order of their finishing time!
 

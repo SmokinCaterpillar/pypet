@@ -2164,7 +2164,7 @@ class HDF5StorageService(StorageService, HasLogger):
         # Increase the run table by the number of new runs
         run_table = getattr(self._overview_group, 'runs')
         actual_rows = run_table.nrows
-        self._all_fill_run_table_with_dummys(actual_rows, len(traj))
+        self._trj_fill_run_table(traj, actual_rows, len(traj))
 
         # Extract parameter summary and if necessary create new explored parameter tables
         # in the result groups
@@ -2585,21 +2585,50 @@ class HDF5StorageService(StorageService, HasLogger):
 
     #################################### Storing a Trajectory ####################################
 
-    def _all_fill_run_table_with_dummys(self, start, stop):
-        """Fills the `run` overview table with dummy information.
+    def _trj_fill_run_table(self, traj, start, stop):
+        """Fills the `run` overview table with information.
 
-        The table is later on filled by the single runs with the real information.
-        `start` specifies how large the table is when calling this function.
-
-        The table might not be emtpy because a trajectory is enlarged due to expanding.
+        Will also update new information.
 
         """
+
+        def _make_row(info_dict):
+            row = (info_dict['idx'],
+                   info_dict['name'],
+                   info_dict['time'],
+                   info_dict['timestamp'],
+                   info_dict['finish_timestamp'],
+                   info_dict['runtime'],
+                   info_dict['parameter_summary'],
+                   info_dict['short_environment_hexsha'],
+                   info_dict['completed'])
+            return row
+
         runtable = getattr(self._overview_group, 'runs')
-        rows = [(idx, '', '45 BC', 1337.0,
-                 42.0, '2001', 'Test', 'abcd', 0) for idx in range(start, stop)]
+
+        rows = []
+        updated_run_information = traj._updated_run_information
+        for idx in compat.xrange(start, stop):
+            info_dict = traj.f_get_run_information(idx, copy=False)
+            rows.append(_make_row(info_dict))
+            updated_run_information.discard(idx)
+
         if rows:
             runtable.append(rows)
             runtable.flush()
+
+        # Store all runs that are updated and that have not been stored yet
+        rows = []
+        indices = []
+        for idx in updated_run_information:
+            info_dict = traj.f_get_run_information(idx, copy=False)
+            rows.append(_make_row(info_dict))
+            indices.append(idx)
+
+        if rows:
+            ptcompat.modify_coordinates(runtable, indices, rows)
+
+        traj._updated_run_information = set()
 
     def _trj_store_meta_data(self, traj):
         """ Stores general information about the trajectory in the hdf5file.
@@ -2692,7 +2721,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Fill table with dummy entries starting from the current table size
         actual_rows = runtable.nrows
-        self._all_fill_run_table_with_dummys(actual_rows, len(traj))
+        self._trj_fill_run_table(traj, actual_rows, len(traj))
 
         # Store the annotations and comment of the trajectory node
         self._grp_store_group(traj, store_data=pypetconstants.STORE_DATA,
@@ -3245,7 +3274,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
     ######################## Storing a Single Run ##########################################
 
-    def _srn_store_single_run(self, traj, store_final=False,
+    def _srn_store_single_run(self, traj,
                               recursive=True,
                               store_data=pypetconstants.STORE_DATA,
                               max_depth=None):
@@ -3274,33 +3303,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                             recursive=recursive,
                                             max_depth=max_depth - parent_group.v_depth - 1,
                                             hdf5_group=None)
-
-        if store_final:
-            self._logger.info('Finishing Storage of single run `%s`.' % traj.v_crun)
-            idx = traj.v_idx
-
-            # For better readability and if desired add the explored parameters to the results
-            # Also collect some summary information about the explored parameters
-            # So we can add this to the `run` table
-            run_summary = self._srn_summarize_explored_parameters(compat.listvalues(
-                                                            traj._explored_parameters))
-
-            # Finally, add the real run information to the `run` table
-            runtable = getattr(self._overview_group, 'runs')
-
-            # If the table is not large enough already (maybe because the trajectory got expanded
-            # We have to manually increase it here
-            actual_rows = runtable.nrows
-            if idx + 1 > actual_rows:
-                self._all_fill_run_table_with_dummys(actual_rows, idx + 1)
-
-            insert_dict = self._all_extract_insert_dict(traj, runtable.colnames)
-            insert_dict['parameter_summary'] = run_summary
-            insert_dict['completed'] = 1
-
-            self._hdf5file.flush()
-            self._all_add_or_modify_row(traj, insert_dict, runtable,
-                                        index=idx, flags=(HDF5StorageService.MODIFY_ROW,))
 
     def _srn_summarize_explored_parameters(self, paramlist):
         """Summarizes the parameter settings.
@@ -3802,11 +3804,11 @@ class HDF5StorageService(StorageService, HasLogger):
             insert_dict['idx'] = item.v_idx
 
         if 'time' in colnames:
-            time_ = item._time if not item._is_run else item._time_run
+            time_ = item._time
             insert_dict['time'] = compat.tobytes(time_)
 
         if 'timestamp' in colnames:
-            timestamp = item._timestamp if not item._is_run else item._timestamp_run
+            timestamp = item._timestamp
             insert_dict['timestamp'] = timestamp
 
         if 'range' in colnames:
@@ -3837,17 +3839,17 @@ class HDF5StorageService(StorageService, HasLogger):
         if 'finish_timestamp' in colnames:
             insert_dict['finish_timestamp'] = item._finish_timestamp_run
 
-        if 'runtime' in colnames:
-            runtime = item._runtime_run
-            if len(runtime) > pypetconstants.HDF5_STRCOL_MAX_RUNTIME_LENGTH:
-                # If string is too long we cut the microseconds
-                runtime = runtime.split('.')[0]
+        # if 'runtime' in colnames:
+        #     runtime = item._runtime_run
+        #     if len(runtime) > pypetconstants.HDF5_STRCOL_MAX_RUNTIME_LENGTH:
+        #         # If string is too long we cut the microseconds
+        #         runtime = runtime.split('.')[0]
+        #
+        #     insert_dict['runtime'] = compat.tobytes(runtime)
 
-            insert_dict['runtime'] = compat.tobytes(runtime)
-
-        if 'short_environment_hexsha' in colnames:
-            insert_dict['short_environment_hexsha'] = compat.tobytes(
-                item.v_environment_hexsha[0:7])
+        # if 'short_environment_hexsha' in colnames:
+        #     insert_dict['short_environment_hexsha'] = compat.tobytes(
+        #         item.v_environment_hexsha[0:7])
 
         return insert_dict
 

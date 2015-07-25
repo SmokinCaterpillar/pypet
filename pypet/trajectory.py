@@ -286,6 +286,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # like time of creation, whether they have been completed and so on.
         # Check function 'f_get_run_information' for a description
 
+        self._updated_run_information = set() # Set of updated run information which
+        # needs to be updated in case the trajectory is stored.
+
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access = True
         self._shortcuts = True
@@ -398,6 +401,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             runname = self._single_run_ids[idx]
             result['_run_information'] = {runname: self._run_information[runname]}
             result['_single_run_ids'] = {idx: runname, runname: idx}
+            result['_updated_run_information'] = set()
+
         result['_wildcard_cache'] = {}
         return result
 
@@ -1260,6 +1265,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if len(self._explored_parameters) == 0:
                 self.f_shrink(force=True)
             raise
+
+    def _update_run_information(self, run_information_dict):
+        """Overwrites the run information of a particular run"""
+        idx = run_information_dict['idx']
+        name = run_information_dict['name']
+        # copy data so that user can temper with the original dict
+        self._run_information[name] = run_information_dict.copy()
+        self._updated_run_information.add(idx)
 
     def _add_run_info(self, idx, name='', timestamp=42.0, finish_timestamp=1.337,
                       runtime='forever and ever', time='>>Maybe time`s gone on strike',
@@ -2696,9 +2709,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         if self._is_run:
-            self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+            if self._new_nodes or self._new_links:
+                self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                         trajectory_name=self.v_name,
-                                        store_final=False,
                                         recursive=not only_init,
                                         store_data=store_data,
                                         max_depth=max_depth)
@@ -2752,7 +2765,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._new_links = OrderedDict()
         self.f_set_crun(idx)
         self._is_run = True
-        self._set_start_time()
         return self
 
     def f_get_run_names(self, sort=True):
@@ -2912,21 +2924,72 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._single_run_ids[name_or_idx]
 
-    def _set_start_time(self):
+    def _set_start(self):
         """ Sets the start timestamp and formatted time to the current time. """
         init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
         self._timestamp_run = init_time
         self._time_run = formatted_time
+        run_info_dict = self._run_information[self.v_crun]
+        run_info_dict['timestamp'] = self._timestamp_run
+        run_info_dict['time'] = self._time_run
+        run_info_dict['short_environment_hexsha'] = self._environment_hexsha[0:7]
 
-    def _set_finish_time(self):
+    def _summarize_explored_parameters(self):
+        """Summarizes the parameter settings.
+
+        :param run_name: Name of the single run
+
+        :param paramlist: List of explored parameters
+
+        :param add_table: Whether to add the overview table
+
+        :param create_run_group:
+
+            If a group with the particular name should be created if it does not exist.
+            Might be necessary when trajectories are merged.
+
+        """
+
+        runsummary = ''
+        for idx, expparam in enumerate(compat.itervalues(self._explored_parameters)):
+
+            # Create the run summary for the `run` overview
+            if idx > 0:
+                runsummary += ',   '
+
+            valstr = expparam.f_val_to_str()
+
+            if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH - 3]
+                valstr += '...'
+
+            if expparam.v_name in runsummary:
+                param_name = expparam.v_full_name
+            else:
+                param_name = expparam.v_name
+
+            runsummary = runsummary + param_name + ': ' + valstr
+
+        return runsummary
+
+    def _set_finish(self):
         """ Sets the finish time and computes the runtime in human readable format """
+
+        run_summary = self._summarize_explored_parameters()
+
         self._finish_timestamp_run = time.time()
 
         findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp_run)
         startdatetime = datetime.datetime.fromtimestamp(self._timestamp_run)
 
         self._runtime_run = str(findatetime - startdatetime)
+
+        run_info_dict = self._run_information[self.v_crun]
+        run_info_dict['parameter_summary'] = run_summary
+        run_info_dict['completed'] = 1
+        run_info_dict['finish_timestamp'] = self._finish_timestamp_run
+        run_info_dict['runtime'] = self._runtime_run
 
     def _construct_instance(self, constructor, full_name, *args, **kwargs):
         """ Creates a new node. Checks if the new node needs to know the trajectory.
@@ -3338,17 +3401,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
-
-    def _store_final(self, store_data=pypetconstants.STORE_NOTHING):
-        """Signals the storage service that single run is completed
-
-        :param do_store_data: If all data should be stored as in `f_store`.
-
-        """
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_name,
-                                    store_final=True,
-                                    store_data=store_data)
 
     def f_store_item(self, item, *args, **kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.Trajectory.f_store_items`."""

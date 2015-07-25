@@ -1,7 +1,1 @@
-* Write tests for lock acquisition and test data *DONE*
-
-* Document consecutive merge *DONE*
-
-* Document new pipe feature *DONE*
-
-* Write more tests for wrapping mode *DONE*
+* Add docu about new result tuple

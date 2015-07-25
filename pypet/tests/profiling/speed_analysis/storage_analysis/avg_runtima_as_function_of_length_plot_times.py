@@ -69,9 +69,9 @@ def get_runtime(length):
             for irun in range(100):
                 traj._make_single_run(irun+len(traj)/2)
                 # Measure start time
-                traj._set_start_time()
+                traj._set_start()
                 traj.f_ares('$set.$', 42, comment='A result')
-                traj._set_finish_time()
+                traj._set_finish()
                 traj._store_final(store_data=2)
                 traj._finalize_run()
             print('STARTING_to_PLOT')

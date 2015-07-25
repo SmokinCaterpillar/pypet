@@ -139,7 +139,8 @@ def _single_run(kwargs):
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
-        Returns a tuple of run index and result: ``(traj.v_idx, result)``
+        Returns a tuple of run index, result and detailed information:
+        ``(traj.v_idx, result, run_information)``
 
     """
     pypet_root_logger = logging.getLogger('pypet')
@@ -163,20 +164,17 @@ def _single_run(kwargs):
                   '\n=========================================\n' % (idx, total_runs))
 
         # Measure start time
-        traj._set_start_time()
+        traj._set_start()
 
         # Run the job function of the user
         result = runfunc(traj, *runargs, **kwrunparams)
 
         # Measure time of finishing
-        traj._set_finish_time()
+        traj._set_finish()
 
         # And store some meta data and all other data if desired
         if automatic_storing:
-            store_data = pypetconstants.STORE_DATA
-        else:
-            store_data = pypetconstants.STORE_NOTHING
-        traj._store_final(store_data=store_data)
+            traj.f_store()
 
         # Make some final adjustments to the single run before termination
         if clean_up_after_run:
@@ -187,7 +185,7 @@ def _single_run(kwargs):
                   '\n=========================================\n' % (idx, total_runs))
 
         # Add the index to the result
-        result = (traj.v_idx, result)
+        result = (traj.v_idx, result, traj.f_get_run_information(traj.v_idx, copy=False))
 
         if continue_path is not None:
             # Trigger Snapshot
@@ -1507,8 +1505,12 @@ class Environment(HasLogger):
 
             List of the individual results returned by `runfunc`.
 
-            Returns a LIST OF TUPLES, where first entry is the run idx and second entry
-            is the actual result. In case of multiprocessing these are not necessarily
+            Returns a **LIST OF TUPLES**, where first entry is the run idx and second entry
+            is the actual result, and the third entry is a dictionary with additional run
+            information like the runtime and name of the run.
+            The structure is equivalent to the dictionary returned by
+            :func:`~pypet.trajectory.Trajectory.f_get_run_information`.
+            In case of multiprocessing these are not necessarily
             ordered according to their run index, but ordered according to their finishing time.
 
             Does not contain results stored in the trajectory!
@@ -1676,11 +1678,11 @@ class Environment(HasLogger):
 
         # Unpack the trajectory
         self._traj.v_full_copy = continue_dict['full_copy']
-        # Load meta data
-        self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
-                          load_derived_parameters=pypetconstants.LOAD_NOTHING,
-                          load_results=pypetconstants.LOAD_NOTHING,
-                          load_other_data=pypetconstants.LOAD_NOTHING)
+        # # Load meta data
+        # self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
+        #                   load_derived_parameters=pypetconstants.LOAD_NOTHING,
+        #                   load_results=pypetconstants.LOAD_NOTHING,
+        #                   load_other_data=pypetconstants.LOAD_NOTHING)
 
         # Now we have to reconstruct previous results
         result_tuple_list = []
@@ -2097,6 +2099,7 @@ class Environment(HasLogger):
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
+                    self._traj._update_run_information(result[2])
                     results.append(result)
                     self._show_progress(n, total_runs)
                     n += 1
@@ -2139,6 +2142,7 @@ class Environment(HasLogger):
         # Get all results from the result queue
         while not result_queue.empty():
             result = result_queue.get()
+            self._traj._update_run_information(result[2])
             results.append(result)
             self._show_progress(n, total_runs)
             n += 1
@@ -2207,8 +2211,9 @@ class Environment(HasLogger):
 
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
-                    for res in pool_results:
-                        results.append(res)
+                    for result in pool_results:
+                        results.append(result)
+                        self._traj._update_run_information(result[2])
                         self._show_progress(n, total_runs)
                         n += 1
 

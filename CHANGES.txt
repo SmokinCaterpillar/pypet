@@ -11,6 +11,11 @@ pypet 0.1b.13
 *   The range is now a list that is by default copied upon request. To avoid
     quadratic complexity with multiple calls to `f_expand`.
 
+*   ENH: Meta data of single runs is no longer stored during the
+    single run to avoid overhead and guarantee faster runs
+
+*   `f_run` now returns a list of tuples with three entries, 1) idx, 2) result, 3) run information
+
 
 pypet 0.1b.12
 
