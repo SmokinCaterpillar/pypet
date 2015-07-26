@@ -672,14 +672,10 @@ So here comes our post processing function.
 This function will be automatically called when all single runs are completed.
 The post-processing function has to take at least two arguments.
 First one is the trajectory, second one is the list of results.
-This list actually contains **three-dimensional** tuples. First entry of the tuple is the index
-of the run as an integer, second entry is the result returned by our job-function
-``run_neuron`` in the corresponding run, and the third contains a dictionary with additional
-information about the run. This encompasses information like the name of the run, the runtime, etc.
-The structure is equivalent to the dictionary returned by
-:func:`~pypet.trajectory.Trajectory.f_get_run_information`.
-Be aware that since we use multiprocessing,
-the list of tuples is not ordered according to the run indices, but according to the time the
+This list actually contains two-dimensional tuples. First entry of the tuple is the index
+of the run as an integer, and second entry is the result returned by our job-function
+``run_neuron`` in the corresponding run. Be aware that since we use multiprocessing,
+the list is not ordered according to the run indices, but according to the time the
 single runs did actually finish.
 
 .. code-block:: python
@@ -693,9 +689,8 @@ single runs did actually finish.
 
         :param result_list:
 
-            List of tuples, where first entry is the run index, second is the actual
-            result of the corresponding run, and the third is a dictionary containing
-            meta information about the run (like name and runtime etc.).
+            List of tuples, where first entry is the run index and second is the actual
+            result of the corresponding run.
 
         :return:
         """

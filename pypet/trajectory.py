@@ -251,12 +251,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._timestamp = init_time
         self._time = formatted_time
 
-        # Times related to single runs
-        self._runtime_run = None
-        self._timestamp_run = None
-        self._time_run = None
-        self._finish_timestamp_run = None
-
         if add_time:
             self._name = name + '_' + str(formatted_time)
         else:
@@ -712,52 +706,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             yield run_name
 
         self.f_set_crun(None)
-
-    def _remove_incomplete_runs(self, start_timestamp, run_indices):
-        """Requests the storage service to delete incomplete runs.
-
-        Called by the environment if you resume a crashed trajectory to allow
-        re-running of non-completed runs.
-
-        :param finished_runs:
-
-            Number of actually finished runs
-
-        :param nruns:
-
-            Number of runs that were supposed to be executed with this environment
-
-        :param snapshot_traj:
-
-            The trajectory that was part of the snapshot, we need it to make sure, that
-            we do not remove anything that was already part of the snapshot.
-
-        :return
-
-            List of indices that were completed
-
-        """
-        self._logger.info('Removing incomplete runs.')
-
-        index_set = set(run_indices)
-
-        # First check if the completed runs are also finished runs (i.e. are part of the snapshot)
-        # If not remove these
-        for run_name in self._run_information:
-            info_dict = self._run_information[run_name]
-            completed = info_dict['completed']
-            timestamp = info_dict['timestamp']
-            idx = info_dict['idx']
-            name = info_dict['name']
-            if completed and timestamp >= start_timestamp and idx not in index_set:
-                self._run_information[name]['completed'] = 0
-
-        cleaned_run_indices = []
-        for index in run_indices:
-            if self.f_is_completed(index):
-                cleaned_run_indices.append(index)
-
-        return cleaned_run_indices
 
     @not_in_run
     def f_shrink(self, force=False):
@@ -1270,8 +1218,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """Overwrites the run information of a particular run"""
         idx = run_information_dict['idx']
         name = run_information_dict['name']
-        # copy data so that user can temper with the original dict
-        self._run_information[name] = run_information_dict.copy()
+        self._run_information[name] = run_information_dict
         self._updated_run_information.add(idx)
 
     def _add_run_info(self, idx, name='', timestamp=42.0, finish_timestamp=1.337,
@@ -1320,21 +1267,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not par.f_is_empty():
                 par.f_lock()
 
-    def _finalize(self, load_meta_data=True):
+    def _finalize(self, store_meta_data=True):
         """Final rollback initiated by the environment
 
-        Restores the trajectory as root of the tree, and loads meta data from disk.
+        Restores the trajectory as root of the tree, and stores meta data to disk.
         This updates the trajectory's information about single runs, i.e. if they've been
         completed, when they were started, etc.
 
         """
         self._is_run = False
         self.f_set_crun(None)
-        if load_meta_data:
-            self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
-                        load_derived_parameters=pypetconstants.LOAD_NOTHING,
-                        load_results=pypetconstants.LOAD_NOTHING,
-                        load_other_data=pypetconstants.LOAD_NOTHING)
+        if store_meta_data:
+            self.f_store(only_init=True)
 
     @deprecated('Please use `f_load_skeleton` instead.')
     def f_update_skeleton(self):
@@ -2928,11 +2872,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """ Sets the start timestamp and formatted time to the current time. """
         init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp_run = init_time
-        self._time_run = formatted_time
         run_info_dict = self._run_information[self.v_crun]
-        run_info_dict['timestamp'] = self._timestamp_run
-        run_info_dict['time'] = self._time_run
+        run_info_dict['timestamp'] = init_time
+        run_info_dict['time'] = formatted_time
         run_info_dict['short_environment_hexsha'] = self._environment_hexsha[0:7]
 
     def _summarize_explored_parameters(self):
@@ -2976,20 +2918,23 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def _set_finish(self):
         """ Sets the finish time and computes the runtime in human readable format """
 
+        run_info_dict = self._run_information[self.v_crun]
+        timestamp_run = run_info_dict['timestamp']
+
         run_summary = self._summarize_explored_parameters()
 
-        self._finish_timestamp_run = time.time()
+        finish_timestamp_run = time.time()
 
-        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp_run)
-        startdatetime = datetime.datetime.fromtimestamp(self._timestamp_run)
+        findatetime = datetime.datetime.fromtimestamp(finish_timestamp_run)
+        startdatetime = datetime.datetime.fromtimestamp(timestamp_run)
 
-        self._runtime_run = str(findatetime - startdatetime)
+        runtime_run = str(findatetime - startdatetime)
 
-        run_info_dict = self._run_information[self.v_crun]
+
         run_info_dict['parameter_summary'] = run_summary
         run_info_dict['completed'] = 1
-        run_info_dict['finish_timestamp'] = self._finish_timestamp_run
-        run_info_dict['runtime'] = self._runtime_run
+        run_info_dict['finish_timestamp'] = finish_timestamp_run
+        run_info_dict['runtime'] = runtime_run
 
     def _construct_instance(self, constructor, full_name, *args, **kwargs):
         """ Creates a new node. Checks if the new node needs to know the trajectory.

@@ -139,8 +139,8 @@ def _single_run(kwargs):
     :return:
 
         Results computed by the user's job function which are not stored into the trajectory.
-        Returns a tuple of run index, result and detailed information:
-        ``(traj.v_idx, result, run_information)``
+        Returns a nested tuple of run index and result and run information:
+        ``((traj.v_idx, result), run_information_dict)``
 
     """
     pypet_root_logger = logging.getLogger('pypet')
@@ -184,8 +184,9 @@ def _single_run(kwargs):
                   'Finished single run #%d of %d '
                   '\n=========================================\n' % (idx, total_runs))
 
-        # Add the index to the result
-        result = (traj.v_idx, result, traj.f_get_run_information(traj.v_idx, copy=False))
+        # Add the index to the result and the run information
+        result = ((traj.v_idx, result),
+                  traj.f_get_run_information(traj.v_idx, copy=False))
 
         if continue_path is not None:
             # Trigger Snapshot
@@ -223,17 +224,14 @@ def _trigger_result_snapshot(result, continue_path):
     :param continue_path: Path to continue folder
 
     """
-    dump_dict = {}
-    timestamp = time.time()
+    timestamp = result[1]['finish_timestamp']
     timestamp_str = repr(timestamp).replace('.', '_')
     filename = 'result_%s' % timestamp_str
     extension = '.ncnt'
     dump_filename = os.path.join(continue_path, filename + extension)
-    dump_dict['result'] = result
-    dump_dict['timestamp'] = timestamp
 
     dump_file = open(dump_filename, 'wb')
-    dill.dump(dump_dict, dump_file, protocol=2)
+    dill.dump(result, dump_file, protocol=2)
     dump_file.flush()
     dump_file.close()
 
@@ -858,6 +856,11 @@ class Environment(HasLogger):
             raise ValueError(
                 'You CANNOT perform immediate post-processing if you DO NOT use wrap mode '
                 '`LOCK`.')
+
+        if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_PIPE) and
+            continuable):
+            raise ValueError('Continuing trajectories does NOT work with `QUEUE` or `PIPE` '
+                             'wrap mode.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -1505,12 +1508,8 @@ class Environment(HasLogger):
 
             List of the individual results returned by `runfunc`.
 
-            Returns a **LIST OF TUPLES**, where first entry is the run idx and second entry
-            is the actual result, and the third entry is a dictionary with additional run
-            information like the runtime and name of the run.
-            The structure is equivalent to the dictionary returned by
-            :func:`~pypet.trajectory.Trajectory.f_get_run_information`.
-            In case of multiprocessing these are not necessarily
+            Returns a LIST OF TUPLES, where first entry is the run idx and second entry
+            is the actual result. In case of multiprocessing these are not necessarily
             ordered according to their run index, but ordered according to their finishing time.
 
             Does not contain results stored in the trajectory!
@@ -1678,14 +1677,14 @@ class Environment(HasLogger):
 
         # Unpack the trajectory
         self._traj.v_full_copy = continue_dict['full_copy']
-        # # Load meta data
-        # self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
-        #                   load_derived_parameters=pypetconstants.LOAD_NOTHING,
-        #                   load_results=pypetconstants.LOAD_NOTHING,
-        #                   load_other_data=pypetconstants.LOAD_NOTHING)
+        # Load meta data
+        self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
+                          load_derived_parameters=pypetconstants.LOAD_NOTHING,
+                          load_results=pypetconstants.LOAD_NOTHING,
+                          load_other_data=pypetconstants.LOAD_NOTHING)
 
         # Now we have to reconstruct previous results
-        result_tuple_list = []
+        result_list = []
         full_filename_list = []
         for filename in os.listdir(self._continue_path):
             _, ext = os.path.splitext(filename)
@@ -1695,27 +1694,24 @@ class Environment(HasLogger):
 
             full_filename = os.path.join(self._continue_path, filename)
             cnt_file = open(full_filename, 'rb')
-            result_dict = dill.load(cnt_file)
+            result_list.append(dill.load(cnt_file))
             cnt_file.close()
-            result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
             full_filename_list.append(full_filename)
 
-        # Sort according to counter
-        result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
-        result_list = [x[1] for x in result_tuple_list]
-
-        run_indices = [result[0] for result in result_list]
-        # Remove incomplete runs and check which result snapshots need to be removed
-        cleaned_run_indices = self._traj._remove_incomplete_runs(old_start_timestamp, run_indices)
-        cleaned_run_indices_set = set(cleaned_run_indices)
-
         new_result_list = []
-        for idx, result_tuple in enumerate(result_list):
-            index = result_tuple[0]
-            if index in cleaned_run_indices_set:
-                new_result_list.append(result_tuple)
-            else:
-                os.remove(full_filename_list[idx])
+        result_indices = []
+        for result_tuple in result_list:
+            run_information = result_tuple[1]
+            self._traj._update_run_information(run_information)
+            new_result_list.append(result_tuple[0])
+            result_indices.append(result_tuple[0][0])
+
+        result_indices = set(result_indices)
+
+        for idx in range(len(self._traj)):
+            if idx not in result_indices:
+                info_dict = self._traj.f_get_run_information(idx, copy=False)
+                info_dict['completed'] = 0
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name = 'environment.%s.continued' % self.v_name
@@ -1874,7 +1870,7 @@ class Environment(HasLogger):
         new_runs = 0
 
         # Do some finalization
-        self._traj._finalize(load_meta_data=False)
+        self._traj._finalize(store_meta_data=True)
 
         old_traj_length = len(self._traj)
         postproc_res = self._postproc(self._traj, results,
@@ -2004,8 +2000,6 @@ class Environment(HasLogger):
             # Finalize the storage service if this is supported
             self._traj.v_storage_service.finalize()
 
-        # Final check if traj was successfully completed
-        self._traj.f_load(load_all=pypetconstants.LOAD_NOTHING)
         all_completed = True
         for run_name in self._traj.f_get_run_names():
             if not self._traj._is_completed(run_name):
@@ -2099,8 +2093,8 @@ class Environment(HasLogger):
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
-                    self._traj._update_run_information(result[2])
-                    results.append(result)
+                    self._traj._update_run_information(result[1])
+                    results.append(result[0])
                     self._show_progress(n, total_runs)
                     n += 1
 
@@ -2118,7 +2112,7 @@ class Environment(HasLogger):
                                   new_runs)
 
         # Do some finalization
-        self._traj._finalize(load_meta_data=False)
+        self._traj._finalize(store_meta_data=True)
 
         self._logger.info(
                     '\n************************************************************\n'
@@ -2142,8 +2136,8 @@ class Environment(HasLogger):
         # Get all results from the result queue
         while not result_queue.empty():
             result = result_queue.get()
-            self._traj._update_run_information(result[2])
-            results.append(result)
+            self._traj._update_run_information(result[1])
+            results.append(result[0])
             self._show_progress(n, total_runs)
             n += 1
         return n
@@ -2212,8 +2206,8 @@ class Environment(HasLogger):
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
                     for result in pool_results:
-                        results.append(result)
-                        self._traj._update_run_information(result[2])
+                        self._traj._update_run_information(result[1])
+                        results.append(result[0])
                         self._show_progress(n, total_runs)
                         n += 1
 

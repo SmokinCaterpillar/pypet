@@ -111,13 +111,13 @@ class ContinueTest(TrajectoryComparator):
                 continue
 
             cnt_file = open(os.path.join(continue_folder, filename), 'rb')
-            result_dict = dill.load(cnt_file)
+            result = dill.load(cnt_file)
             cnt_file.close()
-            result_tuple_list.append((result_dict['timestamp'], result_dict['result']))
+            result_tuple_list.append((result))
 
         # Sort according to counter
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
-        timestamp_list = [x[0] for x in result_tuple_list]
+        timestamp_list = [x[1]['finish_timestamp'] for x in result_tuple_list]
 
         timestamp_list = timestamp_list[-nresults:]
 
@@ -401,7 +401,8 @@ class ContinueMPTest(ContinueTest):
         self.compare_trajectories(self.trajs[-1],self.trajs[1])
 
         for run_name in self.trajs[-1].f_iter_runs():
-            self.assertTrue(self.trajs[-1].crun.z in results)
+            z = self.trajs[-1].crun.z
+            self.assertTrue(z in results, '%s not in %s' % (z, results))
 
         self.assertTrue(len(self.trajs[-1])== len(results))
 

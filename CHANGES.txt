@@ -14,7 +14,8 @@ pypet 0.1b.13
 *   ENH: Meta data of single runs is no longer stored during the
     single run to avoid overhead and guarantee faster runs
 
-*   `f_run` now returns a list of tuples with three entries, 1) idx, 2) result, 3) run information
+*   For more stability continuing is no longer supported for the
+    ``'QUEUE'`` and ``'PIPE'`` wrap modes.
 
 
 pypet 0.1b.12
