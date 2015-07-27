@@ -253,10 +253,10 @@ class TrajectoryTest(unittest.TestCase):
         filename = make_temp_dir('dummy.h5')
         with Environment(trajectory=self.traj,
                         log_config=get_log_config(), filename=filename,
-                         lazy_adding=True, v_auto_load=True, with_links=False) as env:
+                        lazy_adding=True, v_auto_load=False, with_links=False) as env:
 
             self.assertTrue(self.traj.v_lazy_adding)
-            self.assertTrue(self.traj.v_auto_load)
+            self.assertFalse(self.traj.v_auto_load)
             self.assertFalse(self.traj.v_with_links)
 
 
@@ -1151,6 +1151,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
+        self.traj.f_set_crun(3)
         srun = self.traj._make_single_run(3)
 
         srun.f_add_result('sdffds',42)
