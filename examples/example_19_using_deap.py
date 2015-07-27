@@ -18,7 +18,6 @@ the network may take a few seconds.
 __author__ = 'Robert Meyer'
 
 import random
-import time
 
 from deap import base
 from deap import creator
@@ -34,8 +33,6 @@ def eval_one_max(traj, individual):
     return fitness,
 
 def main():
-
-    st=time.time()
 
     env = Environment(overwrite_file=True, multiproc=True, ncores=4, log_level=50,
                       log_stdout=False, wrap_mode='QUEUE')
@@ -134,7 +131,6 @@ def main():
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
-    print time.time() - st
 
 if __name__ == "__main__":
     main()

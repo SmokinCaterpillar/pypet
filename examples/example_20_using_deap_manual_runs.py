@@ -20,17 +20,11 @@ __author__ = 'Robert Meyer'
 import random
 import os
 import itertools as itools
-import time
 import multiprocessing as multip
 
 from deap import base
 from deap import creator
 from deap import tools
-
-import logging
-logging.basicConfig()
-
-multip.log_to_stderr(0)
 
 
 from pypet import Trajectory, cartesian_product, manual_run, MultiprocContext
@@ -48,8 +42,6 @@ def eval_wrapper(the_tuple):
     return eval_one_max(*the_tuple)
 
 def main():
-
-    st = time.time()
 
     filename = os.path.join('experiments', 'example_20.hdf5')
     traj = Trajectory('onemax', filename=filename, overwrite_file=True)
@@ -167,7 +159,6 @@ def main():
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
-    print time.time() - st
 
 
 
