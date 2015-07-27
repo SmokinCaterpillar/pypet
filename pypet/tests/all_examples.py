@@ -27,6 +27,7 @@ if system == 'Windows':
     # Appveyor is too slow for this example, so we skip it
     to_skip.add('13')
     to_skip.add('19')
+    to_skip.add('20')
 
 if len(to_skip) == 0:
     print ('----- I will run all tests -----')
@@ -85,7 +86,7 @@ def main():
     os.chdir(os.path.join('..','..','examples'))
     sys.path.append(os.getcwd())
     simple_examples = glob.glob('*.py')
-    assert len(simple_examples) == 15 + 1
+    assert len(simple_examples) == 17 + 1
 
     for simple_example in simple_examples:
         if simple_example == '__init__':

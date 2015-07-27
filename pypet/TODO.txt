@@ -5,3 +5,5 @@
 * Doc manual runs
 
 * Write tests for manual runs
+
+* Add examples to docu
