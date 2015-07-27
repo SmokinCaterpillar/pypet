@@ -8,6 +8,30 @@ import logging
 import time
 
 
+def manual_run(turn_into_run=True, automatic_storing=True, store_meta_data=True, clean_up=True):
+    """Can be used to decorate a function as a manual run function.
+
+    This can be helpful if you want the run functionality without using an environment.
+
+    """
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(traj, *args, **kwargs):
+            do_wrap = not traj._run_by_environment
+            if do_wrap:
+                traj.f_start_run(turn_into_run=turn_into_run)
+            result = func(traj, *args, **kwargs)
+            if do_wrap:
+                traj.f_finalize_run(automatic_storing=automatic_storing,
+                                  store_meta_data=store_meta_data,
+                                  clean_up=clean_up,)
+            return result
+
+        return new_func
+
+    return wrapper
+
+
 def deprecated(msg=''):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
@@ -203,19 +227,24 @@ def retry(n, errors, wait=0.0, logger_name=None):
                     result = func(*args, **kwargs)
                     if retries and logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.error('Retry of `%s` successful' % func.__name__)
+                        logger.debug('Retry of `%s` successful' % func.__name__)
                     return result
                 except errors:
                     if retries >= n:
+                        if logger_name:
+                            logger = logging.getLogger(logger_name)
+                            logger.exception('I could not execute `%s` with args %s and kwargs %s, '
+                                             'starting next try. ' % (func.__name__,
+                                                                      str(args),
+                                                                      str(kwargs)))
                         raise
-                    retries += 1
-
-                    if logger_name:
+                    elif logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.exception('I could not execute `%s` with args %s and kwargs %s, '
+                        logger.debug('I could not execute `%s` with args %s and kwargs %s, '
                                          'starting next try. ' % (func.__name__,
                                                                   str(args),
                                                                   str(kwargs)))
+                    retries += 1
                     if wait:
                         time.sleep(wait)
         return new_func

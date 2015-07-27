@@ -17,6 +17,10 @@ pypet 0.1b.13
 *   For more stability continuing is no longer supported for the
     ``'QUEUE'`` and ``'PIPE'`` wrap modes.
 
+*   Queue retries are now logged in debug mode.
+
+*   One can now choose what `f_iter_runs` should return.
+
 
 pypet 0.1b.12
 

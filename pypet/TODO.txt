@@ -1,1 +1,7 @@
-* Add docu about new result tuple
+* Add docu about new map feature
+
+* Write more tests for new feature
+
+* Doc manual runs
+
+* Write tests for manual runs

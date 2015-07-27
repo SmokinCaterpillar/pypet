@@ -26,6 +26,7 @@ if brian is None:
 if system == 'Windows':
     # Appveyor is too slow for this example, so we skip it
     to_skip.add('13')
+    to_skip.add('19')
 
 if len(to_skip) == 0:
     print ('----- I will run all tests -----')

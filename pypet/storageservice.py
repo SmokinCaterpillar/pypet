@@ -15,6 +15,7 @@ import time
 import hashlib
 import sys
 import itertools as itools
+
 try:
     from thread import error as ThreadError
 except ImportError:
@@ -89,6 +90,14 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self.pickle_queue = True
         self._set_logger()
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls(storage_queue=None)
+        result.pickle_queue = self.pickle_queue
+        result.queue = self.queue  # do not copy queue
+        memo[id(self)] = result
+        return result
+
     def __getstate__(self):
         result = super(QueueStorageServiceSender, self).__getstate__()
         if not self.pickle_queue:
@@ -103,8 +112,12 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _put_on_queue(self, to_put):
         """Puts data on queue"""
+        old = self.pickle_queue
         self.pickle_queue = False
-        self.queue.put(to_put, block=True)
+        try:
+            self.queue.put(to_put, block=True)
+        finally:
+            self.pickle_queue = old
 
     def store(self, *args, **kwargs):
         """Puts data to store on queue.
@@ -369,6 +382,15 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
         self.is_locked = False
         self.pickle_lock = True
         self._set_logger()
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls(self._storage_service, memo, lock=None)  # do not copy service
+        result.is_locked = self.is_locked
+        result.pickle_lock = self.pickle_lock
+        result.lock = self.lock  # do not copy lock
+        memo[id(self)] = result
+        return result
 
     def __getstate__(self):
         result = super(LockWrapper, self).__getstate__()

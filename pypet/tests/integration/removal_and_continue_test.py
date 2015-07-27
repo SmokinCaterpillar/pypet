@@ -101,7 +101,7 @@ class ContinueTest(TrajectoryComparator):
         hdf5_file.flush()
         hdf5_file.close()
 
-    def _remove_nresults(self, nresults, continue_folder):
+    def _remove_nresults(self, traj, nresults, continue_folder):
 
         result_tuple_list = []
         for filename in os.listdir(continue_folder):
@@ -118,6 +118,9 @@ class ContinueTest(TrajectoryComparator):
         # Sort according to counter
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
         timestamp_list = [x[1]['finish_timestamp'] for x in result_tuple_list]
+        name_list = [x[1]['name']  for x in result_tuple_list]
+        for name in name_list:
+            traj.f_get_run_information(name, copy=False)['completed'] = 0
 
         timestamp_list = timestamp_list[-nresults:]
 
@@ -153,11 +156,12 @@ class ContinueTest(TrajectoryComparator):
 
         traj_name = self.trajs[0].v_name
         continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
-        self._remove_nresults(3, continue_folder)
+
         self.make_environment(0, self.filenames[0])
         self.envs[-1].f_continue(trajectory_name = traj_name)
 
         self.trajs[-1]=self.envs[-1].v_trajectory
+        self._remove_nresults(self.trajs[-1], 3, continue_folder)
 
         for irun in range(len(self.filenames)+1):
             self.trajs[irun].f_load_skeleton()
@@ -383,12 +387,13 @@ class ContinueMPTest(ContinueTest):
 
         traj_name = self.trajs[0].v_name
         continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
-        self._remove_nresults(3, continue_folder)
+
         self.make_environment(0, self.filenames[0])
         results = self.envs[-1].f_continue(trajectory_name = traj_name)
         results = [result[1] for result in results]
 
         self.trajs[-1]=self.envs[-1].v_trajectory
+        self._remove_nresults(self.trajs[-1], 3, continue_folder)
 
 
         for irun in range(len(self.filenames)+1):
@@ -438,12 +443,12 @@ class ContinueMPTest(ContinueTest):
 
         traj_name = self.trajs[0].v_name
         continue_folder = os.path.join(self.cnt_folder, self.trajs[0].v_name)
-        self._remove_nresults(3, continue_folder)
         self.make_environment(0, self.filenames[0])
         results = self.envs[-1].f_continue(trajectory_name = traj_name)
         results = [result[1] for result in results]
 
         self.trajs[-1]=self.envs[-1].v_trajectory
+        self._remove_nresults(self.trajs[-1], 3, continue_folder)
 
         for irun in range(len(self.filenames)+1):
             self.trajs[irun].f_load_skeleton()

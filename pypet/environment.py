@@ -81,7 +81,7 @@ def _frozen_pool_single_run(idx):
     """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
     kwargs = _frozen_pool_single_run.kwargs
     traj = kwargs['traj']
-    traj._make_single_run(idx)
+    traj.f_set_crun(idx)
     return _single_run(kwargs)
 
 
@@ -165,21 +165,15 @@ def _single_run(kwargs):
                   '\n=========================================\n' % (idx, total_runs))
 
         # Measure start time
-        traj._set_start()
+        traj.f_start_run(turn_into_run=True)
 
         # Run the job function of the user
         result = runfunc(traj, *runargs, **kwrunparams)
 
         # Measure time of finishing
-        traj._set_finish()
-
-        # And store some meta data and all other data if desired
-        if automatic_storing:
-            traj.f_store()
-
-        # Make some final adjustments to the single run before termination
-        if clean_up_after_run:
-            traj._finalize_run()
+        traj.f_finalize_run(automatic_storing=automatic_storing,
+                          store_meta_data=False,
+                          clean_up=clean_up_after_run)
 
         pypet_root_logger.info('\n=========================================\n '
                   'Finished single run #%d of %d '
@@ -894,6 +888,8 @@ class Environment(HasLogger):
         self._logging_manager.add_null_handler()
         self._set_logger()
 
+        self._map_arguments = False
+
         # Helper attributes defined later on
         self._start_timestamp = None
         self._finish_timestamp = None
@@ -1062,6 +1058,33 @@ class Environment(HasLogger):
         self._clean_up_runs = clean_up_runs
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
+        # Notify that in case of lazy debuggin we won't record anythin
+        if lazy_debug and is_debug():
+            self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
+
+        # Current run index to avoid quadratic runtime complexity in case of re-running
+        self._current_idx = 0
+
+        self._trajectory_name = self._traj.v_name
+        for kwarg in list(unused_kwargs):
+            try:
+                val = kwargs[kwarg]
+                self._traj.f_set_properties(**{kwarg: val})
+                self._logger.info('Set trajectory property `%s` to `%s`.' % (kwarg, str(val)))
+                unused_kwargs.remove(kwarg)
+            except AttributeError:
+                pass
+        if len(unused_kwargs) > 0:
+            raise ValueError('You passed keyword arguments to the environment that you '
+                                 'did not use. The following keyword arguments were ignored: '
+                                 '`%s`' % str(unused_kwargs))
+
+        # Add all config data to the environment
+        self._add_config()
+
+        self._logger.info('Environment initialized.')
+
+    def _add_config(self):
         # Add config data to the trajectory
         if self._do_single_runs:
             # Only add parameters if we actually want single runs to be performed
@@ -1168,26 +1191,6 @@ class Environment(HasLogger):
 
         self._traj.config.environment.v_comment = 'Settings for the different environments ' \
                                                   'used to run the experiments'
-
-        # Notify that in case of lazy debuggin we won't record anythin
-        if lazy_debug and is_debug():
-            self._logger.warning('Using the LazyStorageService, nothing will be saved to disk.')
-
-        self._trajectory_name = self._traj.v_name
-        for kwarg in list(unused_kwargs):
-            try:
-                val = kwargs[kwarg]
-                self._traj.f_set_properties(**{kwarg: val})
-                self._logger.info('Set trajectory property `%s` to `%s`.' % (kwarg, str(val)))
-                unused_kwargs.remove(kwarg)
-            except AttributeError:
-                pass
-        if len(unused_kwargs) > 0:
-            raise ValueError('You passed keyword arguments to the environment that you '
-                                 'did not use. The following keyword arguments were ignored: '
-                                 '`%s`' % str(unused_kwargs))
-
-        self._logger.info('Environment initialized.')
 
     def __repr__(self):
         """String representation of environment"""
@@ -1323,6 +1326,11 @@ class Environment(HasLogger):
     def v_traj(self):
         """ Equivalent to env.v_trajectory"""
         return self.v_trajectory
+
+    @property
+    def v_current_idx(self):
+        """The current run index that is the next one to be executed"""
+        return self._current_idx
 
     @property
     @deprecated('No longer supported, please don`t use it anymore.')
@@ -1492,6 +1500,13 @@ class Environment(HasLogger):
 
         """
         self._user_pipeline = True
+        self._map_arguments = False
+        return self._execute_runs(pipeline)
+
+    def f_pipeline_map(self, pipeline):
+        """Creates a pipeline with iterable arguments"""
+        self._user_pipeline = True
+        self._map_arguments = True
         return self._execute_runs(pipeline)
 
     def f_run(self, runfunc, *args, **kwargs):
@@ -1527,6 +1542,23 @@ class Environment(HasLogger):
                                  (self._postproc, self._postproc_args, self._postproc_kwargs))
 
         self._user_pipeline = False
+        self._map_arguments = False
+        return self._execute_runs(pipeline)
+
+    def f_run_map(self, runfunc, *iter_args, **iter_kwargs):
+        """Calls runfunc with different args and kwargs each time.
+
+        Similar to `f_run` but all `args` and `kwargs` need to be iterators or generators
+        that return new arguments for each run.
+
+        """
+        if len(iter_args) == 0 and len(iter_kwargs):
+            raise ValueError('Use `f_run` if you don`t have any other arguments.')
+        pipeline = lambda traj: ((runfunc, iter_args, iter_kwargs),
+                                 (self._postproc, self._postproc_args, self._postproc_kwargs))
+
+        self._user_pipeline = False
+        self._map_arguments = True
 
         return self._execute_runs(pipeline)
 
@@ -1544,6 +1576,7 @@ class Environment(HasLogger):
         dump_dict['trajectory'] = self._traj
         dump_dict['args'] = self._args
         dump_dict['kwargs'] = self._kwargs
+        dump_dict['map_arguments'] = self._map_arguments
         dump_dict['runfunc'] = self._runfunc
         dump_dict['postproc'] = self._postproc
         dump_dict['postproc_args'] = self._postproc_args
@@ -1663,6 +1696,8 @@ class Environment(HasLogger):
 
         # User's job function
         self._runfunc = continue_dict['runfunc']
+        # If we have map conditions
+        self._map_arguments = continue_dict['map_arguments']
         # Arguments to the user's job function
         self._args = continue_dict['args']
         # Keyword arguments to the user's job function
@@ -1700,19 +1735,18 @@ class Environment(HasLogger):
             full_filename_list.append(full_filename)
 
         new_result_list = []
-        result_indices = []
         for result_tuple in result_list:
             run_information = result_tuple[1]
             self._traj._update_run_information(run_information)
             new_result_list.append(result_tuple[0])
-            result_indices.append(result_tuple[0][0])
 
-        result_indices = set(result_indices)
-
-        for idx in range(len(self._traj)):
-            if idx not in result_indices:
-                info_dict = self._traj.f_get_run_information(idx, copy=False)
-                info_dict['completed'] = 0
+        if self._map_arguments:
+            # bring the iterators in the correct state
+            for idx in range(len(new_result_list)):
+                for arg in self._args:
+                    next(arg)
+                for elem in compat.itervalues(self._kwargs):
+                    next(elem)
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name = 'environment.%s.continued' % self.v_name
@@ -1839,16 +1873,33 @@ class Environment(HasLogger):
     def _make_index_iterator(self, start_run_idx):
         """Returns an iterator over the run indices that are not completed"""
         total_runs = len(self._traj)
-        return (n for n in compat.xrange(start_run_idx, total_runs)
-                    if not self._traj._is_completed(n))
+        for n in compat.xrange(start_run_idx, total_runs):
+            self._current_idx = n + 1
+            if not self._traj._is_completed(n):
+                self._traj.f_set_crun(n)
+                yield n
 
     def _make_iterator(self, start_run_idx, **kwargs):
         """ Returns an iterator over all runs and yields the keyword arguments """
         kwargs = self._make_kwargs(**kwargs)
 
         def _do_iter():
-            for n in self._make_index_iterator(start_run_idx):
-                    self._traj._make_single_run(n)
+            if self._map_arguments:
+
+                self._args = tuple(iter(arg) for arg in self._args)
+                for key in compat.listkeys(self._kwargs):
+                    self._kwargs[key] = iter(self._kwargs[key])
+
+                for n in self._make_index_iterator(start_run_idx):
+                    iter_args = tuple(next(x) for x in self._args)
+                    iter_kwargs = {}
+                    for key in self._kwargs:
+                        iter_kwargs[key] = next(self._kwargs[key])
+                    kwargs['runargs'] = iter_args
+                    kwargs['runkwargs'] = iter_kwargs
+                    yield kwargs
+            else:
+                for n in self._make_index_iterator(start_run_idx):
                     yield kwargs
         return _do_iter()
 
@@ -1877,8 +1928,24 @@ class Environment(HasLogger):
         postproc_res = self._postproc(self._traj, results,
                                       *self._postproc_args, **self._postproc_kwargs)
 
-        if isinstance(postproc_res, dict):
+        if postproc_res is None:
+            pass
+        elif isinstance(postproc_res, dict):
             self._traj.f_expand(postproc_res)
+        elif isinstance(postproc_res, tuple):
+            expand_dict = postproc_res[0]
+            if len(postproc_res) > 1:
+                self._args = postproc_res[1]
+            if len(postproc_res) > 2:
+                self._kwargs = postproc_res[2]
+            if len(postproc_res) > 3:
+                self._postproc_args = postproc_res[3]
+            if len(postproc_res) > 4:
+                self._postproc_kwargs = postproc_res[4]
+            self._traj.f_expand(expand_dict)
+        else:
+            self._logger.error('Your postproc result `%s` was not understood.' % str(postproc_res))
+
         new_traj_length = len(self._traj)
 
         if new_traj_length != old_traj_length:
@@ -1943,6 +2010,10 @@ class Environment(HasLogger):
         """
         self._start_timestamp = time.time()
 
+        if self._map_arguments and self._freeze_pool_input:
+            raise ValueError('You cannot use `iter_args` or `iter_kwargs` in combination '
+                             'with a frozen pool.')
+
         if self._sumatra_project is not None:
             self._prepare_sumatra()
 
@@ -1953,7 +2024,11 @@ class Environment(HasLogger):
             results = self._prepare_continue()
 
         if self._runfunc is not None:
-            self._inner_run_loop(results)
+            self._traj._run_by_environment = True
+            try:
+                self._inner_run_loop(results)
+            finally:
+                self._traj._run_by_environment = False
 
         config_name = 'environment.%s.automatic_storing' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
@@ -2049,7 +2124,7 @@ class Environment(HasLogger):
 
     def _inner_run_loop(self, results):
         """Performs the inner loop of the run execution"""
-        start_run_idx = 0
+        start_run_idx = self._current_idx
         expanded_by_postproc = False
 
         config_name = 'environment.%s.start_timestamp' % self.v_name
@@ -2168,7 +2243,6 @@ class Environment(HasLogger):
                                log_stdout=self._logging_manager.log_stdout)
 
             self._multiproc_wrapper.f_start()
-
         try:
 
             if self._use_pool:
@@ -2201,7 +2275,6 @@ class Environment(HasLogger):
                 try:
                     mpool = multip.Pool(self._ncores, initializer=initializer,
                                         initargs=(init_kwargs,))
-
                     pool_results = mpool.imap_unordered(target, iterator)
 
                     # Signal start of progress calculation

@@ -12,7 +12,6 @@ import time
 import hashlib
 import itertools as itools
 import inspect
-import copy as cp
 import sys
 from copy import deepcopy
 import numpy as np
@@ -40,7 +39,7 @@ from pypet.parameter import BaseParameter, Parameter, Result
 import pypet.storageservice as storage
 import pypet.utils.dynamicimports as dynamicimports
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
-    kwargs_mutual_exclusive
+    kwargs_mutual_exclusive, manual_run
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 
@@ -87,6 +86,7 @@ def load_trajectory(name=None,
 
 
 def make_run_name(idx):
+    """Creates a run name based on ``idx``"""
     if idx >= 0:
         return pypetconstants.FORMATTED_RUN_NAME % idx
     else:
@@ -94,6 +94,7 @@ def make_run_name(idx):
 
 
 def make_set_name(idx):
+    """Creates a run set name based on ``idx``"""
     GROUPSIZE = 1000
     set_idx = idx // GROUPSIZE
     if set_idx >= 0:
@@ -307,6 +308,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._standard_leaf = Result
 
         self._auto_run_prepend = True
+
+        self._run_started = False  # For manually using a trajectory
+        self._run_by_environment = False  # To disable manual running of experiment
 
         self._full_copy = False
 
@@ -667,8 +671,22 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._set_explored_parameters_to_idx(self.v_idx)
 
     @not_in_run
-    def f_iter_runs(self):
+    def f_iter_runs(self, start=0, stop=None, step=1, yields='name'):
         """Makes the trajectory iterate over all runs.
+
+        :param start: Start index of run
+
+        :param stop: Stop index, leave ``None`` for length of trajectory
+
+        :param step: Stepsize
+
+        :param yields:
+
+            What should be yielded: ``'name'`` of run, ``idx`` of run
+            or ``'self'`` to simply return the trajectory container.
+
+            You can also pick ``'copy'`` to get **deep** copies of your trajectory,
+            might lead to lots of overhead.
 
         Note that after a full iteration, the trajectory is set back to normal.
 
@@ -700,10 +718,24 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
 
         """
-        for run_name in self.f_get_run_names(sort=True):
-            self.f_set_crun(run_name)
-
-            yield run_name
+        if stop is None:
+            stop =len(self)
+        elif stop > len(self):
+            raise ValueError('Stop cannot be larger than the trajectory lenght.')
+        yields = yields.lower()
+        if yields == 'name':
+            yield_func = lambda x: self.f_idx_to_run(x)
+        elif yields == 'idx':
+            yield_func = lambda x: x
+        elif yields == 'self':
+            yield_func = lambda x: self
+        elif yields == 'copy':
+            yield_func = lambda x: deepcopy(self)
+        else:
+            raise ValueError('Please choose yields among: `name`, `idx`, or `self`.')
+        for idx in compat.xrange(start, stop, step):
+            self.f_set_crun(idx)
+            yield yield_func(idx)
 
         self.f_set_crun(None)
 
@@ -1007,6 +1039,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             ValueError: If not all explored parameter ranges are of the same length
 
         """
+        if len(self._explored_parameters) == 0:
+            self._logger.info('Your trajectory has not been explored, yet. '
+                              'I will call `f_explore` instead.')
+            return self.f_explore(build_dict)
 
         enlarge_set = set([self.f_get(key).v_full_name
                            for key in build_dict.keys()])
@@ -1184,6 +1220,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 if not act_param.v_is_leaf or not act_param.v_is_parameter:
                     raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
+                act_param.f_unlock()
+
                 act_param._explore(builditerable)
                 added_explored_parameters.append(act_param)
 
@@ -1224,7 +1262,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def _add_run_info(self, idx, name='', timestamp=42.0, finish_timestamp=1.337,
                       runtime='forever and ever', time='>>Maybe time`s gone on strike',
                       completed=0, parameter_summary='Not yet my friend!',
-                      short_environment_hexsha='notyet!'):
+                      short_environment_hexsha='N/A'):
         """Adds a new run to the `_run_information` dict."""
 
         if idx in self._single_run_ids:
@@ -2707,7 +2745,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._is_run = False # to be able to use f_set_crun
         self._new_nodes = OrderedDict()
         self._new_links = OrderedDict()
-        self.f_set_crun(idx)
         self._is_run = True
         return self
 
@@ -2776,7 +2813,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         if name_or_idx is None:
             if copy:
-                return cp.deepcopy(self._run_information)
+                return deepcopy(self._run_information)
             else:
                 return self._run_information
         try:
@@ -2868,6 +2905,80 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._single_run_ids[name_or_idx]
 
+    def f_start_run(self, run_name_or_idx=None, turn_into_run=True):
+        """ Can be used to manually allow running of an experiment without using an environment.
+
+        :param run_name_or_idx:
+
+            Can manually set a trajectory to a particular run. If `None` the current run
+            the trajectory is set to is used.
+
+        :param turn_into_run:
+
+            Turns the trajectory into a run, i.e. reduces functionality but makes storing
+            more efficient.
+
+        """
+        if self._run_started:
+            return self
+
+        if run_name_or_idx is None:
+            if self.v_idx == -1:
+                raise ValueError('Cannot start run if trajectory is not set to a particular run')
+        else:
+            self.f_set_crun(run_name_or_idx)
+
+        self._run_started = True
+
+        if turn_into_run:
+            self._make_single_run(self.v_idx)
+
+        self._set_start()
+
+        return self
+
+    def f_finalize_run(self, automatic_storing=True,
+                     store_meta_data=True, clean_up=True):
+        """ Can be called to finish a run if manually started.
+
+        Does not reset the index of the run,
+        i.e. ``f_restore_default`` should be called manually if desired.
+
+        :param automatic_storing:
+
+            If `traj.f_store()`` should be called
+
+        :param store_meta_data:
+
+            If meta data like the runtime should be stored
+
+        :param clean_up:
+
+            If data added during the run should be cleaned up.
+            Only works if ``turn_into_run`` was set to ``True``.
+
+        """
+        if not self._run_started:
+            return self
+
+        self._set_finish()
+
+        if automatic_storing:
+            self.f_store()
+
+        if clean_up and self._is_run:
+            self._finalize_run()
+
+        self._is_run = False
+        self._run_started = False
+
+        self._updated_run_information.add(self.v_idx)
+
+        if store_meta_data:
+            self.f_store(store_data=pypetconstants.STORE_NOTHING)
+
+        return self
+
     def _set_start(self):
         """ Sets the start timestamp and formatted time to the current time. """
         init_time = time.time()
@@ -2875,7 +2986,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         run_info_dict = self._run_information[self.v_crun]
         run_info_dict['timestamp'] = init_time
         run_info_dict['time'] = formatted_time
-        run_info_dict['short_environment_hexsha'] = self._environment_hexsha[0:7]
+        if self._environment_hexsha is not None:
+            run_info_dict['short_environment_hexsha'] = self._environment_hexsha[0:7]
 
     def _summarize_explored_parameters(self):
         """Summarizes the parameter settings.
@@ -2929,7 +3041,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         startdatetime = datetime.datetime.fromtimestamp(timestamp_run)
 
         runtime_run = str(findatetime - startdatetime)
-
 
         run_info_dict['parameter_summary'] = run_summary
         run_info_dict['completed'] = 1

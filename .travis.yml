@@ -71,8 +71,8 @@ install:
   - travis_retry pip install dill
   - echo "+++++++++++ Installing GitPython and Sumatra if needed ++++++++++++"
   - if [[ $GIT_TEST == ON ]]; then chmod +x ciscripts/travis/install_gitpython.sh; travis_retry ciscripts/travis/install_gitpython.sh; fi
-  - echo "+++++++++++ Installing matplotlib if needed ++++++++++++"
-  - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; fi
+  - echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
+  - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; travis_retry pip install deap; fi
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
@@ -89,5 +89,4 @@ branches:
   only:
     - develop
     - master
-    - run_store_feature
 
