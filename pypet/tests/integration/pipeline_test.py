@@ -16,8 +16,8 @@ class Multiply(object):
     def __init__(self):
         self.var=42
 
-    def __call__(self, traj, i):
-        z = traj.x * traj.y + i
+    def __call__(self, traj, i, w=0):
+        z = traj.x * traj.y + i + w
         zres = traj.f_add_result('z', z)
         g=traj.res.f_add_group('I.link.to.$')
         g.f_add_link('z', zres)
@@ -43,6 +43,31 @@ def postproc(traj, results, idx):
         return {'x':[1,2], 'y':[1,2]}
     if len(results) <= 6 and len(traj) == 6:
         traj.f_expand({'x':[2,3], 'y':[0,1]})
+
+def postproc_with_iter_args(traj, results, idx):
+    get_root_logger().info(idx)
+
+    traj.f_load_skeleton()
+
+    if len(results) <= 4 and len(traj) == 4:
+        assert idx == 42
+        return {'x':[1,2], 'y':[1,2]}, ([5,6],), {'w':[7,8]}, (43,)
+    if len(results) <= 6 and len(traj) == 6:
+        assert idx == 43
+        traj.f_expand({'x':[2,3], 'y':[0,1]})
+        return {}, ([7,8],), {'w':[9,10]}
+
+def mypipelin_with_iter_args(traj):
+
+    traj.f_add_parameter('x', 1, comment='1st')
+    traj.f_add_parameter('y', 1, comment='1st')
+
+    exp_dict = {'x':[1, 2, 3, 4],
+                     'y':[1, 2, 3, 4]}
+
+    traj.f_explore(exp_dict)
+
+    return (Multiply(), ([22,23,24,25],), {'w': [5,6,7,8] }), (postproc_with_iter_args, (42,))
 
 def mypipeline(traj):
 
@@ -133,6 +158,50 @@ class TestPostProc(TrajectoryComparator):
         env1.f_disable_logging()
         env2.f_disable_logging()
 
+    def test_postprocessing_iter_args(self):
+
+        filename = 'testpostproc.hdf5'
+        env1 = self.make_environment(filename, 'k1')[0]
+        env2 = self.make_environment(filename, 'k2', log=False)[0]
+
+        traj1 = env1.v_trajectory
+        traj2 = env2.v_trajectory
+
+        trajs = [traj1, traj2]
+
+        traj1.f_add_result('test.run_00000000.f', 555)
+        traj2.f_add_result('test.run_00000000.f', 555)
+        traj1.f_add_link('linking', traj1.f_get('f'))
+        traj2.f_add_link('linking', traj2.f_get('f'))
+
+        for traj in trajs:
+            traj.f_add_parameter('x', 1, comment='1st')
+            traj.f_add_parameter('y', 1, comment='2nd')
+
+        exp_dict2 = {'x':[1, 2, 3, 4, 1, 2, 2, 3],
+                     'y':[1, 2, 3, 4, 1, 2, 0, 1]}
+
+        traj2.f_explore(exp_dict2)
+
+        exp_dict1 = {'x':[1, 2, 3, 4],
+                     'y':[1, 2, 3, 4]}
+
+        traj1.f_explore(exp_dict1)
+
+        env2.f_run_map(Multiply(), [22,23,24,25,5,6,7,8], w=[5,6,7,8,7,8,9,10])
+
+        env1.f_add_postprocessing(postproc_with_iter_args, 42)
+
+        env1.f_run_map(Multiply(), [22,23,24,25], w=[5,6,7,8])
+
+        traj1.f_load(load_data=2)
+        traj2.f_load(load_data=2)
+
+        self.compare_trajectories(traj1, traj2)
+
+        env1.f_disable_logging()
+        env2.f_disable_logging()
+
 
     def test_pipeline(self):
 
@@ -158,6 +227,39 @@ class TestPostProc(TrajectoryComparator):
         env1.f_pipeline(pipeline=mypipeline)
 
         env2.f_run(Multiply(), 22)
+
+        traj1.f_load(load_data=2)
+        traj2.f_load(load_data=2)
+
+        self.compare_trajectories(traj1, traj2)
+
+        env1.f_disable_logging()
+        env2.f_disable_logging()
+
+    def test_pipeline_with_iter_args(self):
+
+        filename = 'testpostprocpipe.hdf5'
+        env1 = self.make_environment(filename, 'k1')[0]
+        env2 = self.make_environment(filename, 'k2', log=False)[0]
+
+        traj1 = env1.v_trajectory
+        traj2 = env2.v_trajectory
+
+        trajs = [traj1, traj2]
+
+
+        traj2.f_add_parameter('x', 1, comment='1st')
+        traj2.f_add_parameter('y', 1, comment='1st')
+
+        exp_dict2 = {'x':[1, 2, 3, 4, 1, 2, 2, 3],
+                     'y':[1, 2, 3, 4, 1, 2, 0, 1]}
+
+        traj2.f_explore(exp_dict2)
+
+
+        env1.f_pipeline_map(pipeline=mypipelin_with_iter_args)
+
+        env2.f_run_map(Multiply(), [22,23,24,25,5,6,7,8], w=[5,6,7,8,7,8,9,10])
 
         traj1.f_load(load_data=2)
         traj2.f_load(load_data=2)

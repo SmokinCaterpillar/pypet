@@ -642,12 +642,13 @@ class NaturalNamingInterface(HasLogger):
                 if non_empties and item.f_is_empty():
                     continue
 
-            # Explored Parameters cannot be deleted, this would break the underlying hdf5 file
-            # structure
-            if (msg == pypetconstants.DELETE and
-                        item.v_full_name in self._root_instance._explored_parameters):
-                raise TypeError('You cannot remove an explored parameter of a trajectory stored '
-                                'into an hdf5 file.')
+            # # Explored Parameters cannot be deleted, this would break the underlying hdf5 file
+            # # structure
+            # if (msg == pypetconstants.DELETE and
+            #             item.v_full_name in self._root_instance._explored_parameters and
+            #             len(self._root_instance._explored_parameters) == 1):
+            #     raise TypeError('You cannot the last explored parameter of a trajectory stored '
+            #                     'into an hdf5 file.')
 
             item_list.append(item_tuple)
 

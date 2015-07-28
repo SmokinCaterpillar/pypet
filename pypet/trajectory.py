@@ -1131,7 +1131,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 try:
                     self.f_delete_item(param)
                 except Exception:
-                    pass
+                    self._logger.exception('Could not delete expanded parameter `%s` '
+                                           'from disk.' % param.v_full_name)
 
     @not_in_run
     def f_explore(self, build_dict):

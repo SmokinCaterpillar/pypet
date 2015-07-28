@@ -1931,7 +1931,8 @@ class Environment(HasLogger):
         if postproc_res is None:
             pass
         elif isinstance(postproc_res, dict):
-            self._traj.f_expand(postproc_res)
+            if postproc_res:
+                self._traj.f_expand(postproc_res)
         elif isinstance(postproc_res, tuple):
             expand_dict = postproc_res[0]
             if len(postproc_res) > 1:
@@ -1942,7 +1943,8 @@ class Environment(HasLogger):
                 self._postproc_args = postproc_res[3]
             if len(postproc_res) > 4:
                 self._postproc_kwargs = postproc_res[4]
-            self._traj.f_expand(expand_dict)
+            if expand_dict:
+                self._traj.f_expand(expand_dict)
         else:
             self._logger.error('Your postproc result `%s` was not understood.' % str(postproc_res))
 

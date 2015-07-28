@@ -10,7 +10,7 @@ from pypet.trajectory import Trajectory, load_trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import pypetconstants, Result
+from pypet import pypetconstants, Result, manual_run
 
 import pypet.pypetexceptions as pex
 
@@ -31,7 +31,7 @@ import tables as pt
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_dir,  make_trajectory_name,\
      get_root_logger, parse_args, get_log_config, get_log_path
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
-    simple_calculations, TrajectoryComparator
+    simple_calculations, TrajectoryComparator, multiply_args, multiply_with_storing
 
 
 def add_one_particular_item(traj, store_full):
@@ -468,7 +468,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
     def test_expand_after_reload(self):
 
@@ -514,6 +514,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.expanded['csr_mat'][1]=self.expanded['csr_mat'][1].tocsr()
 
         self.traj.f_expand(cartesian_product(self.expanded))
+        self.traj.f_store()
 
 
     ################## Overview TESTS #############################
@@ -813,12 +814,56 @@ class ResultSortTest(TrajectoryComparator):
         self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12]}
         traj.f_expand(self.expand_dict)
 
+    def test_if_results_are_sorted_correctly_manual_runs(self):
+        ###Explore
+        self.explore(self.traj)
+        self.traj.f_store(only_init=True)
+        man_multiply = manual_run()(multiply_with_storing)
+        for idx in self.traj.f_iter_runs(yields='idx'):
+            self.assertTrue(isinstance(idx, int))
+            man_multiply(self.traj)
+        traj = self.traj
+        traj.f_store()
+        self.assertTrue(len(traj), 5)
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_if_results_are_sorted_correctly_using_map(self):
+        ###Explore
+        self.explore(self.traj)
+
+        args1=[10*x for x in range(len(self.traj))]
+        args2=[100*x for x in range(len(self.traj))]
+        args3=list(range(len(self.traj)))
+
+        self.env.f_run_map(multiply_args, args1, arg2=args2, arg3=args3)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct_map(traj, args1, args2, args3)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.assertEqual(len(traj), 5)
+        self.compare_trajectories(self.traj,newtraj)
 
     def test_if_results_are_sorted_correctly(self):
 
         ###Explore
         self.explore(self.traj)
-
 
         self.env.f_run(multiply)
         traj = self.traj
@@ -938,6 +983,12 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    def check_if_z_is_correct_map(self,traj, args1, args2, args3):
+        for x, arg1, arg2, arg3 in zip(range(len(traj)), args1, args2, args3):
+            traj.v_idx=x
+            self.assertTrue(traj.crun.z==traj.x*traj.y+arg1+arg2+arg3,' z != x*y: %s != %s * %s' %
+                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
+        traj.v_idx=-1
 
     def check_if_z_is_correct(self,traj):
         for x in range(len(traj)):

@@ -137,6 +137,14 @@ def multiply(traj):
     traj.f_add_result('z',z)
     return z
 
+def multiply_with_storing(traj):
+    rootlogger = get_root_logger()
+    z=traj.x*traj.y
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
+    traj.f_add_result('z',z)
+    traj.f_store()
+    return z
+
 
 def multiply_args(traj, arg1=0, arg2=0, arg3=0):
     rootlogger = get_root_logger()
