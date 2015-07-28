@@ -265,11 +265,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._config = {}  # Contains all config parameters
         self._all_groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
-        self._new_nodes = OrderedDict() # Contains all elements added during a
+        self._new_nodes = OrderedDict()  # Contains all elements added during a
         # particular single run with full names as keys and a (parent, child) pair as value
-        self._new_links = OrderedDict() # Contains all new added links during a single run
+        self._new_links = OrderedDict()  # Contains all new added links during a single run
         self._other_leaves = {}  # Contains ALL other user added leaves
-        self._linked_by = {} #Contains all nodes that are linked to
+        self._linked_by = {}  # Contains all nodes that are linked to
 
         self._changed_default_parameters = {}  # Needed for paremeter presetting
 
@@ -1133,6 +1133,121 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 except Exception:
                     self._logger.exception('Could not delete expanded parameter `%s` '
                                            'from disk.' % param.v_full_name)
+
+    @not_in_run
+    def f_copy_tree(self, node,
+                          copy_data=pypetconstants.LOAD_DATA,
+                          copy_annotations=True,
+                          copy_leaves=True):
+        """Pass a ``node`` to insert the full tree to the trajectory.
+
+        Considers all links in the given node!
+
+        :param node: The node to insert
+        :param copy_data:  How to copy data, equivalent to ``load_data`` for ``f_load``.
+        :param copy_annotations: If annotations should be deep copied
+        :param copy_leaves: If leaves should be copied or simply referred to by both trees.
+
+        :return: The corresponding (new) node in the tree.
+
+        """
+
+        def _copy_skeleton(node_in, node_out):
+            """Copies the skeleton of from `node_out` to `node_in`"""
+            if node_in.f_is_empty() and not node_out.f_is_empty():
+                node_in._load(node_out._store())
+            if node_in.v_annotations.f_is_empty():
+                if copy_annotations:
+                    new_annotations = deepcopy(node_out.v_annotations)
+                else:
+                    new_annotations = node_out.v_annotations
+                node_in.v_annotations = new_annotations
+            if node_in.v_comment == '':
+                node_in.v_comment = node_out.v_comment
+
+        def _add_leaf(leaf):
+            """Adds a leaf to the trajectory"""
+            leaf_full_name = leaf.v_full_name
+            try:
+                found_leaf = self.f_get(leaf_full_name,
+                                        with_links=False,
+                                        shortcuts=False,
+                                        auto_load=False)
+                if not copy_leaves and copy_data == pypetconstants.OVERWRITE_DATA:
+                    self.f_remove_item(found_leaf)
+                    found_leaf = None
+            except AttributeError:
+                found_leaf = None
+            if found_leaf is not None:
+                new_leaf = found_leaf
+                if copy_data == pypetconstants.OVERWRITE_DATA:
+                    new_leaf.f_empty()
+                    new_leaf.v_annotations.f_empty()
+                    new_leaf.v_comment = ''
+                _copy_skeleton(new_leaf, leaf)
+            else:
+                if copy_leaves:
+                    new_leaf = self.f_add_leaf(leaf)
+                else:
+                    new_leaf = self.f_add_leaf(leaf_full_name)
+                    _copy_skeleton(new_leaf, leaf)
+            return new_leaf
+
+        def _add_group(group):
+            """Adds a new group to the trajectory"""
+            group_full_name = group.v_full_name
+            try:
+                if group.v_is_root:
+                    found_group = self
+                else:
+                    found_group = self.f_get(group_full_name,
+                                             with_links=False,
+                                             shortcuts=False,
+                                             auto_load=False)
+            except AttributeError:
+                found_group = None
+
+            if found_group is None:
+                new_group = found_group
+                if copy_data == pypetconstants.OVERWRITE_DATA:
+                    new_group.v_annotations.f_empty()
+                    new_group.v_comment = ''
+            else:
+                new_group = self.f_add_group(group_full_name)
+            _copy_skeleton(new_group, group)
+
+        if copy_data == pypetconstants.LOAD_NOTHING:
+            return None
+        elif node.v_is_leaf:
+            return _add_leaf(node)
+        elif node.v_is_node:
+            other_root = node.v_root
+            if other_root is self:
+                raise RuntimeError('You cannot copy a given tree to itself!')
+            result = _add_group(node)
+            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=True)
+            for child in nodes_iterator:
+                if child.v_is_leaf:
+                    _add_leaf(child)
+                else:
+                    _add_group(child)
+            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=True,
+                                               predicate=lambda x: x.v_is_group)
+            for current in itools.chain([node], nodes_iterator):
+                links = current._links
+                if links:
+                    mine = self.f_get(current.v_fullname, with_links=False,
+                                      shortcuts=False, auto_load=False)
+                    my_link_set = set(mine._links.keys())
+                    other_link_set = set(current._links.keys())
+                    new_links = other_link_set - my_link_set
+                    for link in new_links:
+                        where_full_name = current._links[link]
+                        mine.f_add_link(link, where_full_name)
+
+            return result
+        else:
+            raise RuntimeError('You shall not pass!')
 
     @not_in_run
     def f_explore(self, build_dict):

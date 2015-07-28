@@ -100,7 +100,7 @@ SHORTCUT_SET = set(['dpar', 'par', 'conf', 'res'])
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
 class _NEW_GROUP(object): pass
-new_group = _NEW_GROUP() # Dummy for lazy adding of new group nodes
+new_group = _NEW_GROUP()  # Dummy for lazy adding of new group nodes
 
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
@@ -1744,7 +1744,6 @@ class NaturalNamingInterface(HasLogger):
             groups = ((cdp1, y[0], y[1]) for y in compat.iteritems(node._groups))
             iterator = itools.chain(groups, leaves)
         return iterator
-
 
     @staticmethod
     def _recursive_traversal_bfs(node, linked_by=None,

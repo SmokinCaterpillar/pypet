@@ -398,7 +398,7 @@ class ContinueMPTest(ContinueTest):
                                     load_results=pypetconstants.OVERWRITE_DATA,
                                     load_other_data=pypetconstants.OVERWRITE_DATA)
 
-        self.compare_trajectories(self.trajs[-1],self.trajs[1])
+        self.compare_trajectories(self.trajs[1],self.trajs[0])
 
         for run_name in self.trajs[0].f_iter_runs():
             z = (self.trajs[0].v_idx, self.trajs[0].crun.z)
