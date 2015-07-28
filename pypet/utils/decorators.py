@@ -8,7 +8,7 @@ import logging
 import time
 
 
-def manual_run(turn_into_run=True, automatic_storing=True, store_meta_data=True, clean_up=True):
+def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
     """Can be used to decorate a function as a manual run function.
 
     This can be helpful if you want the run functionality without using an environment.
@@ -22,8 +22,7 @@ def manual_run(turn_into_run=True, automatic_storing=True, store_meta_data=True,
                 traj.f_start_run(turn_into_run=turn_into_run)
             result = func(traj, *args, **kwargs)
             if do_wrap:
-                traj.f_finalize_run(automatic_storing=automatic_storing,
-                                  store_meta_data=store_meta_data,
+                traj.f_finalize_run(store_meta_data=store_meta_data,
                                   clean_up=clean_up,)
             return result
 

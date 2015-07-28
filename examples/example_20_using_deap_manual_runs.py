@@ -21,6 +21,11 @@ import random
 import os
 import itertools as itools
 import multiprocessing as multip
+try:
+    from itertools import izip
+except ImportError:
+    # For Python 3
+    izip = zip
 
 from deap import base
 from deap import creator
@@ -29,13 +34,14 @@ from deap import tools
 
 from pypet import Trajectory, cartesian_product, manual_run, MultiprocContext
 
-@manual_run(store_meta_data=True, automatic_storing=True)
+@manual_run(store_meta_data=True)
 def eval_one_max(traj, individual):
     """The fitness function"""
     #print traj.v_storage_service.queue
     traj.f_add_result('$set.$.individual', list(individual))
     fitness = sum(individual)
     traj.f_add_result('$set.$.fitness', fitness)
+    traj.f_store()
     return fitness,
 
 def eval_wrapper(the_tuple):
@@ -59,7 +65,7 @@ def main():
     traj.f_add_parameter('tournsize', 3)
 
     traj.f_add_parameter('seed', 42)
-    traj.f_store()
+    traj.f_store(only_init=True)
 
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -98,7 +104,7 @@ def main():
         mc = MultiprocContext(traj, wrap_mode='QUEUE')
         mc.f_start()
         #print traj.v_storage_service.queue
-        zip_iterable = itools.izip(traj.f_iter_runs(start_idx, yields='self'), eval_pop)
+        zip_iterable = izip(traj.f_iter_runs(start_idx, yields='self'), eval_pop)
         #print next(zip_iterable)
 
         fitnesses = toolbox.map(eval_wrapper, zip_iterable)
@@ -158,6 +164,8 @@ def main():
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+
+    traj.f_store()
 
 
 

@@ -293,8 +293,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._with_links = True
         self._lazy_adding = False
 
-        self._expansion_not_stored = False
-
         self._environment_hexsha = None
         self._environment_name = None
 
@@ -1097,9 +1095,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self._add_run_info(irun)
             self._test_run_addition(length)
 
-            # We need to update the explored parameters:
-            if self._stored:
-                self._expansion_not_stored = True
+            # We need to update the explored parameters in case they were stored:
+            self._remove_exploration()
+
         except Exception:
             if old_ranges is not None:
                 # Try to restore the original parameter exploration
@@ -1126,14 +1124,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             raise RuntimeError('Your renaming function does not return an appropriate value for '
                                '`-1`. `%s` is actual an already given run name.' % dummy)
 
-    def _store_expansion(self):
+    def _remove_exploration(self):
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
         for param in compat.itervalues(self._explored_parameters):
-            try:
-                self.f_store_item(param, store_data=pypetconstants.OVERWRITE_DATA)
-            except Exception:
-                pass  # We end up here if the parameter was not stored to disk, yet
-            self.f_store_item(param)
+            if param._stored:
+                try:
+                    self.f_delete_item(param)
+                except Exception:
+                    pass
 
     @not_in_run
     def f_explore(self, build_dict):
@@ -2698,11 +2696,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         store_data=store_data,
                                         max_depth=max_depth)
         else:
-
-            if self._stored and self._expansion_not_stored:
-                self._store_expansion()
-                self._expansion_not_stored = False
-
             self._storage_service.store(pypetconstants.TRAJECTORY, self,
                                         trajectory_name=self.v_name,
                                         only_init=only_init,
@@ -2937,16 +2930,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         return self
 
-    def f_finalize_run(self, automatic_storing=True,
-                     store_meta_data=True, clean_up=True):
+    def f_finalize_run(self, store_meta_data=True, clean_up=True):
         """ Can be called to finish a run if manually started.
 
-        Does not reset the index of the run,
+        Does NOT reset the index of the run,
         i.e. ``f_restore_default`` should be called manually if desired.
 
-        :param automatic_storing:
-
-            If `traj.f_store()`` should be called
+        Does NOT store any data (except meta data) so you have to call
+        ``f_store`` manually before to avoid data loss.
 
         :param store_meta_data:
 
@@ -2962,9 +2953,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return self
 
         self._set_finish()
-
-        if automatic_storing:
-            self.f_store()
 
         if clean_up and self._is_run:
             self._finalize_run()

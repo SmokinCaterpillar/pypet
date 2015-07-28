@@ -170,9 +170,12 @@ def _single_run(kwargs):
         # Run the job function of the user
         result = runfunc(traj, *runargs, **kwrunparams)
 
+        # Store data if desired
+        if automatic_storing:
+            traj.f_store()
+
         # Measure time of finishing
-        traj.f_finalize_run(automatic_storing=automatic_storing,
-                          store_meta_data=False,
+        traj.f_finalize_run(store_meta_data=False,
                           clean_up=clean_up_after_run)
 
         pypet_root_logger.info('\n=========================================\n '
@@ -1329,8 +1332,16 @@ class Environment(HasLogger):
 
     @property
     def v_current_idx(self):
-        """The current run index that is the next one to be executed"""
+        """The current run index that is the next one to be executed.
+
+        Can be set manually to make the environment consider old non-completed ones.
+
+        """
         return self._current_idx
+
+    @v_current_idx.setter
+    def v_current_idx(self, idx):
+        self._current_idx = idx
 
     @property
     @deprecated('No longer supported, please don`t use it anymore.')
@@ -1576,7 +1587,6 @@ class Environment(HasLogger):
         dump_dict['trajectory'] = self._traj
         dump_dict['args'] = self._args
         dump_dict['kwargs'] = self._kwargs
-        dump_dict['map_arguments'] = self._map_arguments
         dump_dict['runfunc'] = self._runfunc
         dump_dict['postproc'] = self._postproc
         dump_dict['postproc_args'] = self._postproc_args
@@ -1696,8 +1706,6 @@ class Environment(HasLogger):
 
         # User's job function
         self._runfunc = continue_dict['runfunc']
-        # If we have map conditions
-        self._map_arguments = continue_dict['map_arguments']
         # Arguments to the user's job function
         self._args = continue_dict['args']
         # Keyword arguments to the user's job function
@@ -1739,14 +1747,6 @@ class Environment(HasLogger):
             run_information = result_tuple[1]
             self._traj._update_run_information(run_information)
             new_result_list.append(result_tuple[0])
-
-        if self._map_arguments:
-            # bring the iterators in the correct state
-            for idx in range(len(new_result_list)):
-                for arg in self._args:
-                    next(arg)
-                for elem in compat.itervalues(self._kwargs):
-                    next(elem)
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name = 'environment.%s.continued' % self.v_name
@@ -2011,8 +2011,12 @@ class Environment(HasLogger):
         self._start_timestamp = time.time()
 
         if self._map_arguments and self._freeze_pool_input:
-            raise ValueError('You cannot use `iter_args` or `iter_kwargs` in combination '
-                             'with a frozen pool.')
+            raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
+                             'with frozen pool input.')
+
+        if self._map_arguments and self._continuable:
+            raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
+                             'with continuing option.')
 
         if self._sumatra_project is not None:
             self._prepare_sumatra()

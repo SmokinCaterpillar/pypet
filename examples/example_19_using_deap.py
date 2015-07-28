@@ -30,18 +30,21 @@ def eval_one_max(traj, individual):
     traj.f_add_result('$set.$.individual', list(individual))
     fitness = sum(individual)
     traj.f_add_result('$set.$.fitness', fitness)
+    traj.f_store()
     return fitness,
 
 def main():
 
-    env = Environment(overwrite_file=True, multiproc=True, ncores=4, log_level=50,
-                      log_stdout=False, wrap_mode='QUEUE')
+    env = Environment(trajectory='deap', add_time=False,
+        overwrite_file=True, multiproc=True, ncores=4, log_level=50,
+                      log_stdout=False, wrap_mode='QUEUE',
+                      use_pool=True, automatic_storing=False)
     traj = env.v_traj
 
     traj.f_add_parameter('popsize', 100)
     traj.f_add_parameter('CXPB', 0.5)
     traj.f_add_parameter('MUTPB', 0.2)
-    traj.f_add_parameter('NGEN', 20)
+    traj.f_add_parameter('NGEN', 25)
 
     traj.f_add_parameter('generation', 0)
     traj.f_add_parameter('ind_idx', 0)
@@ -68,7 +71,8 @@ def main():
     toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, indpb=traj.indpb)
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
-    toolbox.register("evaluate", lambda pop: env.f_run_map(eval_one_max, pop))
+    toolbox.register("evaluate", eval_one_max)
+    toolbox.register("map", env.f_run_map)
 
     random.seed(traj.seed)
 
@@ -76,6 +80,7 @@ def main():
     CXPB, MUTPB, NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
 
     print("Start of evolution")
+    times = []
     for g in range(traj.NGEN):
         print("-- Generation %i --" % g)
 
@@ -83,8 +88,8 @@ def main():
         traj.f_expand(cartesian_product({'generation': [g], 'ind_idx': range(len(eval_pop))}))
 
         start_idx = env.v_current_idx
-        fitnesses = toolbox.evaluate(eval_pop)#env.f_run_map(eval_one_max, eval_pop)
-        traj.res.f_remove()
+        fitnesses = toolbox.map(toolbox.evaluate, eval_pop)
+        # env.f_run_map(eval_one_max, eval_pop)
 
         for idx, fitness in fitnesses:
             pop_idx = idx - start_idx
@@ -131,6 +136,9 @@ def main():
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+
+    traj.f_store()
+
 
 if __name__ == "__main__":
     main()

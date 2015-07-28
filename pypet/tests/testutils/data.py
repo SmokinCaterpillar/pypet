@@ -138,6 +138,15 @@ def multiply(traj):
     return z
 
 
+def multiply_args(traj, arg1=0, arg2=0, arg3=0):
+    rootlogger = get_root_logger()
+    z=traj.x*traj.y + arg1 + arg2 + arg3
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y) +
+                    '+'+str(arg1)+'+'+str(arg2)+'+'+str(arg3))
+    traj.f_add_result('z',z)
+    return z
+
+
 def simple_calculations(traj, arg1, simple_kwarg):
         rootlogger = get_root_logger()
 
