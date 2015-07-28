@@ -855,8 +855,8 @@ class StorageTest(TrajectoryComparator):
         #     # We cannot delete something containing an explored parameter
         #     traj.f_delete_item('par', recursive=True)
 
-        with self.assertRaises(TypeError):
-            traj.f_delete_item('ggg')
+        # with self.assertRaises(TypeError):
+        #     traj.f_delete_item('ggg')
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',
