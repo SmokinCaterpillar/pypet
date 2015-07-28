@@ -1559,18 +1559,18 @@ class Environment(HasLogger):
     def f_run_map(self, runfunc, *iter_args, **iter_kwargs):
         """Calls runfunc with different args and kwargs each time.
 
-        Similar to `f_run` but all `args` and `kwargs` need to be iterators or generators
-        that return new arguments for each run.
+        Similar to `:func:`~pypet.environment.Environment.f_run`
+        but all ``iter_args`` and ``iter_kwargs`` need to be iterables,
+        iterators, or generators that return new arguments for each run.
 
         """
-        if len(iter_args) == 0 and len(iter_kwargs):
+        if len(iter_args) == 0 and len(iter_kwargs) == 0:
             raise ValueError('Use `f_run` if you don`t have any other arguments.')
         pipeline = lambda traj: ((runfunc, iter_args, iter_kwargs),
                                  (self._postproc, self._postproc_args, self._postproc_kwargs))
 
         self._user_pipeline = False
         self._map_arguments = True
-
         return self._execute_runs(pipeline)
 
     def _trigger_continue_snapshot(self):

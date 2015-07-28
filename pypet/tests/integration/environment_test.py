@@ -390,6 +390,16 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(mp_traj, self.traj)
         self.multiproc = old_multiproc
 
+    def test_map_errors(self):
+        env1 = Environment(continuable=True)
+        with self.assertRaises(ValueError):
+            env1.f_run_map(multiply_args, [1], [2], [3])
+        env2 = Environment(multiproc=True, use_pool=True, freeze_pool_input=True)
+        with self.assertRaises(ValueError):
+            env2.f_run_map(multiply_args, [1], [2], [3])
+        env2 = Environment()
+        with self.assertRaises(ValueError):
+            env2.f_run_map(multiply_args)
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -913,6 +923,7 @@ class ResultSortTest(TrajectoryComparator):
         self.assertTrue(traj.v_crun is None)
         self.assertTrue(traj.v_crun_ == pypetconstants.RUN_NAME_DUMMY)
         self.assertTrue(newtraj.v_idx == idx)
+
 
 
     def test_expand(self):
