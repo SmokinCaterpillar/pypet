@@ -1161,6 +1161,85 @@ class TrajectoryTest(unittest.TestCase):
         # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
 
+class TrajectoryCopyTreeTest(unittest.TestCase):
+
+    tags = 'unittest', 'trajectory', 'tree_copy'
+
+    def test_copy_tree_simple(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
+        traj1.f_copy_tree(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+    def test_not_copy_leaves(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
+        traj1.f_copy_tree(traj2, copy_leaves=False)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is traj2.f_get('another'))
+
+    def test_copy_tree_annotations(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.hi.v_annotations['test'] = 'ddd'
+
+        traj2 = Trajectory()
+
+        traj2.v_lazy_adding = True
+        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.hi.v_annotations['test'] = 'jjj'
+        traj2.hi.name.v_annotations['test'] = 'lll'
+
+        traj1.f_copy_tree(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertEqual(traj1.hi.v_annotations['test'], 'ddd')
+        self.assertEqual(traj1.name.v_annotations['test'], 'lll')
+
+        traj1.f_copy_tree(traj2, copy_data=pypetconstants.OVERWRITE_DATA)
+        self.assertEqual(traj1.hi.v_annotations['test'], 'jjj')
+
+    def test_copy_nothing(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj1.f_copy_tree(traj2, copy_data=pypetconstants.LOAD_NOTHING)
+
+        self.assertTrue('another' not in traj1)
+
+    def test_copy_skeleton(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2['and.moreover'] = 43, 'Another'
+        traj1.f_copy_tree(traj2, copy_data=pypetconstants.LOAD_SKELETON)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue('moreover' in traj1)
+        self.assertTrue(traj1.f_get('another').f_is_empty())
+        self.assertTrue(traj1.f_get('moreover').f_is_empty())
+
+
 class TrajectoryFindTest(unittest.TestCase):
 
     tags = 'unittest', 'trajectory', 'search'

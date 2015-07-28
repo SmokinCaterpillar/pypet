@@ -1154,14 +1154,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         def _copy_skeleton(node_in, node_out):
             """Copies the skeleton of from `node_out` to `node_in`"""
-            if node_in.f_is_empty() and not node_out.f_is_empty():
-                node_in._load(node_out._store())
             if node_in.v_annotations.f_is_empty():
                 if copy_annotations:
                     new_annotations = deepcopy(node_out.v_annotations)
                 else:
                     new_annotations = node_out.v_annotations
-                node_in.v_annotations = new_annotations
+                node_in._annotations = new_annotations
             if node_in.v_comment == '':
                 node_in.v_comment = node_out.v_comment
 
@@ -1184,13 +1182,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     new_leaf.f_empty()
                     new_leaf.v_annotations.f_empty()
                     new_leaf.v_comment = ''
+                    new_leaf._load(leaf._store())
                 _copy_skeleton(new_leaf, leaf)
             else:
                 if copy_leaves:
-                    new_leaf = self.f_add_leaf(leaf)
-                else:
                     new_leaf = self.f_add_leaf(leaf_full_name)
                     _copy_skeleton(new_leaf, leaf)
+                    if copy_data in (pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA):
+                        new_leaf._load(leaf._store())
+                else:
+                    new_leaf = self.f_add_leaf(leaf)
             return new_leaf
 
         def _add_group(group):
@@ -1207,7 +1208,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             except AttributeError:
                 found_group = None
 
-            if found_group is None:
+            if found_group is not None:
                 new_group = found_group
                 if copy_data == pypetconstants.OVERWRITE_DATA:
                     new_group.v_annotations.f_empty()
@@ -1220,7 +1221,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return None
         elif node.v_is_leaf:
             return _add_leaf(node)
-        elif node.v_is_node:
+        elif node.v_is_group:
             other_root = node.v_root
             if other_root is self:
                 raise RuntimeError('You cannot copy a given tree to itself!')
