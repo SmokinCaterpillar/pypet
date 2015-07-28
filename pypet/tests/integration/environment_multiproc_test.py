@@ -217,7 +217,7 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
         self.ncores = 3
         self.use_pool=True
 
-    @unittest.skip
+    @unittest.skip('Cannot be run with frozen pool')
     def test_if_results_are_sorted_correctly_using_map(self):
         # sub-classed because it cannot be run by a frozen pool
         pass
@@ -272,7 +272,7 @@ class MultiprocFrozenPoolSortLockTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=True
 
-    @unittest.skip
+    @unittest.skip('Cannot be run with frozen pool')
     def test_if_results_are_sorted_correctly_using_map(self):
         # sub-classed because it cannot be run by a frozen pool
         pass
@@ -290,7 +290,7 @@ class MultiprocFrozenPoolSortPipeTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=True
 
-    @unittest.skip
+    @unittest.skip('Cannot be run with frozen pool')
     def test_if_results_are_sorted_correctly_using_map(self):
         # sub-classed because it cannot be run by a frozen pool
         pass

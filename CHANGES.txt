@@ -21,6 +21,8 @@ pypet 0.1b.13
 
 *   One can now choose what `f_iter_runs` should return.
 
+*   New `f_run_map` and `f_pipeline_map` functionality for iterable arguments.
+
 
 pypet 0.1b.12
 

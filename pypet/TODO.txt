@@ -1,4 +1,4 @@
-* Add docu about new map feature
+* Add docu about new map feature *DONE*
 
 * Write more tests for new map feature *DONE*
 

@@ -936,7 +936,7 @@ and optionally other positional and keyword arguments of your choice.
 .. code-block:: python
 
     def myjobfunc(traj, *args, **kwargs)
-        #Do some sophisticated simulations with your trajectory
+        # Do some sophisticated simulations with your trajectory
         ...
         return 'fortytwo'
 
@@ -959,6 +959,29 @@ For the example above this would simply always be
 the string ``'fortytwo'``, i.e. ``((0, 'fortytwo'), (1, 'fortytwo'),...)``.
 In case you use multiprocessing these tuples are **not** in the order
 of the run indices but in the order of their finishing time!
+
+
+using :func:`~pypet.environment.Environment.f_run` all ``args`` and ``kwargs`` are supposed to
+be static, that is all of them are passed to every function call.
+If you need to pass different values to each function call of your job function use
+:func:`~pypet.environment.Environment.f_run_map`, where each entry in ``args`` and
+``kwargs`` needs to be an iterable (list, tuple, iterator, generator etc.). Hence,
+the contents of each iterable are passed one after the other to your job function.
+For instance, assuming besides the trajectory your job function takes
+3 arguments (here passed as 2 positional and 1 keyword argument):
+
+.. code-block:: python
+
+    def myjobfunc(traj, arg1, arg2, arg3):
+        # do stuff
+
+        ...
+
+    env.f_run(myjobfunc, range(5), ['a','b','c','d','e'], arg3=[5,4,3,2,1])
+
+Thus, the first run of your job function will be started with the arguments
+``0`` (from ``range``) ``'a'`` (from the list) and ``arg3=5`` (from the other list).
+Accordingly the second run gets passed ``1, 'b', arg3=4``.
 
 
 .. _more-about-postproc:
@@ -1019,9 +1042,28 @@ called again. Likewise, you could potentially expand again, and after the next e
 post-processing will be executed again (and again, and again, and again, I guess you get it).
 Thus, you can use post-processing for an adaptive search within your parameter space.
 
-**IMPORTANT**: All changes you apply to your trajectory, like setting auto-loading or changing fast
+**IMPORTANT**: All changes you apply to your trajectory,
+like setting auto-loading or changing fast
 access, are propagated to the new single runs. So try to undo all changes before finishing
 the post-processing if you plan to trigger new single runs.
+
+Moreover, your post-processing function can return more than a dictionary,
+it can return up to five elements.
+
+    1. dictionary for further exploration
+
+    2. New ``args`` tuple that is passed to subsequent calls to your job function.
+    Potentially these have to be iterables in case you used
+    :func:`~pypet.environment.Environment.f_run_map`.
+
+    3. New ``kwargs`` dictionary that is passed as keyword arguments to
+    subsequent calls to your job function.
+    Potentially these have to be iterables in case you used
+    :func:`~pypet.environment.Environment.f_run_map`.
+
+    4. New ``args`` for the next call to your post-proc function
+
+    5. New ``kwargs`` for the next call to your post-proc function.
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
