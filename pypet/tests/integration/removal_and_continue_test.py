@@ -86,19 +86,18 @@ class ContinueTest(TrajectoryComparator):
 
         traj.f_explore(self.explored)
 
-
-    def _remove_nresults_from_traj(self, nresults):
-
-        hdf5_file = tables.openFile(self.filenames[0], mode='a')
-        runtable = hdf5_file.getNode('/'+self.trajs[0].v_name +'/overview/runs')
-
-        for row in runtable.iterrows(0, nresults, 1):
-            row['completed'] = 0
-            row.update()
-
-        runtable.flush()
-        hdf5_file.flush()
-        hdf5_file.close()
+    # def _remove_nresults_from_traj(self, nresults):
+    #
+    #     hdf5_file = tables.openFile(self.filenames[0], mode='a')
+    #     runtable = hdf5_file.getNode('/'+self.trajs[0].v_name +'/overview/runs')
+    #
+    #     for row in runtable.iterrows(0, nresults, 1):
+    #         row['completed'] = 0
+    #         row.update()
+    #
+    #     runtable.flush()
+    #     hdf5_file.flush()
+    #     hdf5_file.close()
 
     def _remove_nresults(self, traj, nresults, continue_folder):
 
@@ -114,23 +113,40 @@ class ContinueTest(TrajectoryComparator):
             cnt_file.close()
             result_tuple_list.append((result))
 
-        # Sort according to counter
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
         timestamp_list = [x[1]['finish_timestamp'] for x in result_tuple_list]
-        name_list = [x[1]['name']  for x in result_tuple_list]
-        for name in name_list:
-            run_dict = traj.f_get_run_information(name, copy=False)
-            run_dict['completed'] = 0
-            idx = run_dict['idx']
-            traj._updated_run_information.add(idx)
-        traj.f_store(only_init=True)
-
         timestamp_list = timestamp_list[-nresults:]
+
 
         for timestamp in timestamp_list:
             filename = os.path.join(continue_folder, 'result_%s.rcnt' % repr(timestamp).replace('.','_'))
             os.remove(filename)
 
+        result_tuple_list = []
+        for filename in os.listdir(continue_folder):
+            _, ext = os.path.splitext(filename)
+
+            if ext != '.rcnt':
+                continue
+
+            cnt_file = open(os.path.join(continue_folder, filename), 'rb')
+            result = dill.load(cnt_file)
+            cnt_file.close()
+            result_tuple_list.append((result))
+
+        name_set = set([x[1]['name']  for x in result_tuple_list])
+        removed = 0
+        for run_name in traj.f_iter_runs():
+            if run_name not in name_set:
+                run_dict = traj.f_get_run_information(run_name, copy=False)
+                run_dict['completed'] = 0
+                idx = run_dict['idx']
+                traj._updated_run_information.add(idx)
+                removed += 1
+
+        self.assertGreaterEqual(removed, nresults)
+        logging.getLogger().error('Removed %s runs for continuing' % removed)
+        traj.f_store(only_init=True)
 
     def test_continueing(self):
         self.filenames = [make_temp_dir('test_continuing.hdf5'), 0]
