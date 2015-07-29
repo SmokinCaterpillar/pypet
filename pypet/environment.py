@@ -63,7 +63,7 @@ from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, 
     PipeStorageServiceWriter
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
-from pypet.utils.decorators import deprecated, kwargs_api_change
+from pypet.utils.decorators import deprecated, kwargs_api_change, retry
 from pypet.utils.helpful_functions import is_debug
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
@@ -215,6 +215,21 @@ def _queue_handling(kwargs):
     # profiler.dump_stats('./queue.profile2')
 
 
+@retry(9, OSError, 0.01, 'pypet.retry')
+def _write_snaphsot_file(data, filename):
+    """Writes data to disk and checks if this was succesfull.
+
+    Raises OSError in case this did not work.
+
+    """
+    dump_file = open(filename, 'wb')
+    dill.dump(data, dump_file, protocol=2)
+    dump_file.flush()
+    dump_file.close()
+    if not os.path.isfile(filename):
+        raise OSError('File `%s` not created' % filename)
+
+
 def _trigger_result_snapshot(result, continue_path):
     """ Triggers a snapshot of the results for continuing
 
@@ -228,10 +243,7 @@ def _trigger_result_snapshot(result, continue_path):
     extension = '.ncnt'
     dump_filename = os.path.join(continue_path, filename + extension)
 
-    dump_file = open(dump_filename, 'wb')
-    dill.dump(result, dump_file, protocol=2)
-    dump_file.flush()
-    dump_file.close()
+    _write_snaphsot_file(result, dump_filename)
 
     # We rename the file to be certain that the trajectory did not crash during taking
     # the snapshot!
