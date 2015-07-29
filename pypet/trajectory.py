@@ -1222,9 +1222,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         Considers all links in the given node!
 
         :param node: The node to insert
-        :param copy_data:  How to copy data, equivalent to ``load_data`` for ``f_load``.
+
+        :param copy_data:
+
+            How to copy data, equivalent to ``load_data`` for ``f_load``.
+            If you choose ``copy_leaves=False`` setting ``copy_data=pypetconstants.LOAD_SKELETON``
+            has no effect, because the leaves are passed as a whole no matter if they
+            contain data or not.
+
         :param copy_annotations: If annotations should be **deep** copied
-        :param copy_leaves: If leaves should be **deep** copied or simply referred to by both trees.
+
+        :param copy_leaves:
+
+            If leaves should be **deep** copied or simply referred to by both trees.
+
         :param with_links: If links should be ignored or followed and copied as well
 
         :return: The corresponding (new) node in the tree.
