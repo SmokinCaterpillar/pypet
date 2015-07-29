@@ -13,9 +13,9 @@ import os
 import warnings
 import time
 import hashlib
-import sys
-import gc
+import copy as cp
 import itertools as itools
+import sys
 
 try:
     from thread import error as ThreadError
@@ -456,14 +456,16 @@ class ReferenceWrapper(MultiprocWrapper, HasLogger):
     Only stores all data when signalled to do so.
 
     """
-    def __init__(self, storage_service):
-        self._storage_service = storage_service
-        self._data = []
+    def __init__(self):
+        self._data = {}
         self._set_logger()
 
     def store(self, msg, stuff_to_store, *args, **kwargs):
         """Simply keeps a reference to the stored data """
-        self._data.append((msg, stuff_to_store, args, kwargs))
+        trajectory_name = kwargs['trajectory_name']
+        if trajectory_name not in self._data:
+            self._data[trajectory_name] = []
+        self._data[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
 
     def load(self, *args, **kwargs):
         raise NotImplementedError('Queue wrapping does not support loading. If you want to '
@@ -471,15 +473,18 @@ class ReferenceWrapper(MultiprocWrapper, HasLogger):
                                   'wrapping.')
 
     def free_references(self):
-        self._data = []
+        self._data = {}
 
-    def store_references(self):
+    def store_references(self, storage_service):
         """Stores all references via the given storage service.
 
         Frees references afterwards.
 
         """
-        self._storage_service.store(pypetconstants.LIST, self._data)
+        for trajectory_name in self._data:
+            storage_service.store(pypetconstants.LIST,
+                                  self._data[trajectory_name],
+                                  trajectory_name=trajectory_name)
         self.free_references()
 
 

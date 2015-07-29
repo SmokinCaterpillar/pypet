@@ -2360,6 +2360,14 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         else:
             self._nn_interface = None
 
+    def __copy__(self):
+        """Shallow copy includes copy of full tree but not leave nodes"""
+        root_copy = self.v_root.__copy__()
+        return root_copy.f_get(self.v_full_name,
+                               auto_load=False,
+                               shortcuts=False,
+                               with_links=False)
+
     def __repr__(self):
         return '<%s>' % self.__str__()
 

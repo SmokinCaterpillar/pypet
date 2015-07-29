@@ -1172,7 +1172,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_tree(traj2)
+        traj1.f_copy_from(traj2)
 
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
@@ -1185,7 +1185,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_tree(traj2, copy_leaves=False)
+        traj1.f_copy_from(traj2, copy_leaves=False)
 
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
@@ -1204,13 +1204,13 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2.hi.v_annotations['test'] = 'jjj'
         traj2.hi.name.v_annotations['test'] = 'lll'
 
-        traj1.f_copy_tree(traj2)
+        traj1.f_copy_from(traj2)
 
         self.assertTrue('another' in traj1)
         self.assertEqual(traj1.hi.v_annotations['test'], 'ddd')
         self.assertEqual(traj1.name.v_annotations['test'], 'lll')
 
-        traj1.f_copy_tree(traj2, copy_data=pypetconstants.OVERWRITE_DATA)
+        traj1.f_copy_from(traj2, copy_data=pypetconstants.OVERWRITE_DATA)
         self.assertEqual(traj1.hi.v_annotations['test'], 'jjj')
 
     def test_copy_nothing(self):
@@ -1220,7 +1220,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_tree(traj2, copy_data=pypetconstants.LOAD_NOTHING)
+        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_NOTHING)
 
         self.assertTrue('another' not in traj1)
 
@@ -1232,7 +1232,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2.v_lazy_adding = True
         traj2['hi.my.name.is.another'] = 43, 'Another'
         traj2['and.moreover'] = 43, 'Another'
-        traj1.f_copy_tree(traj2, copy_data=pypetconstants.LOAD_SKELETON)
+        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_SKELETON)
 
         self.assertTrue('another' in traj1)
         self.assertTrue('moreover' in traj1)

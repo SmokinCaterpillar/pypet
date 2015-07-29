@@ -23,6 +23,8 @@ pypet 0.1b.13
 
 *   New `f_run_map` and `f_pipeline_map` functionality for iterable arguments.
 
+*   New wrap mode ``'LOCAL'`` to ensure data is only stored by the main program
+
 
 pypet 0.1b.12
 

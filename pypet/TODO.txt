@@ -9,3 +9,9 @@
 * Add examples to docu
 
 * Better document examples
+
+* DOc new wrapper
+
+* Test new wrapper  *DONE*
+
+* more test for copying

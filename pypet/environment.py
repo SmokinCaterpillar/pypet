@@ -20,6 +20,7 @@ try:
 except ImportError as exc:
     main = None  # We can end up here in an interactive IPython console
 import os
+import gc
 import sys
 import logging
 import shutil
@@ -153,6 +154,7 @@ def _single_run(kwargs):
         clean_up_after_run = kwargs['clean_up_runs']
         continue_path = kwargs['continue_path']
         automatic_storing = kwargs['automatic_storing']
+        wrap_mode = kwargs['wrap_mode']
 
         # result queue is optional
         result_queue = kwargs.get('result_queue', None)
@@ -183,8 +185,13 @@ def _single_run(kwargs):
                   '\n=========================================\n' % (idx, total_runs))
 
         # Add the index to the result and the run information
-        result = ((traj.v_idx, result),
-                  traj.f_get_run_information(traj.v_idx, copy=False))
+        if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+            result = ((traj.v_idx, result),
+                       traj.f_get_run_information(traj.v_idx, copy=False),
+                       traj.v_storage_service)
+        else:
+            result = ((traj.v_idx, result),
+                       traj.f_get_run_information(traj.v_idx, copy=False))
 
         if continue_path is not None:
             # Trigger Snapshot
@@ -438,7 +445,7 @@ class Environment(HasLogger):
          If multiproc is ``True``, specifies how storage to disk is handled via
          the storage service.
 
-         There are two options:
+         There are four options:
 
          :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
@@ -456,8 +463,31 @@ class Environment(HasLogger):
              waiting until the lock is released.
              Yet, single runs do not need to be pickled before storage!
 
+         :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
+
+            Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
+            but data corruption may occur.
+
+         :const:`~pypet.pypetconstant.WRAP_MODE_LOCAL` ('LOCAL')
+
+            Data is not stored during the single runs but after they completed.
+            Storing is only performed in the main process.
+
+            Note that removing data during a single run has no longer an effect on memory
+            whatsoever, because there are references kept for all data
+            that is supposed to be stored.
+
+            To avoid memory overflows you can tell *pypet* to call ``gc.collect()``
+            every once in the while, see below.
+
          If you don't want wrapping at all use
          :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
+
+    :param gc_interval:
+
+        Interval (in runs) with which ``gc_collect()`` should be called in case of the
+        ``'LOCAL'`` wrapping. Leave ``0`` for never, ``1`` for after every run ``2`` for
+        after every second run, and so on.
 
     :param clean_up_runs:
 
@@ -1862,7 +1892,8 @@ class Environment(HasLogger):
                        'runkwargs': self._kwargs,
                        'clean_up_runs': self._clean_up_runs,
                        'continue_path': self._continue_path,
-                       'automatic_storing': self._automatic_storing}
+                       'automatic_storing': self._automatic_storing,
+                       'wrap_mode': self._wrap_mode}
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool:
@@ -2226,11 +2257,20 @@ class Environment(HasLogger):
         # Get all results from the result queue
         while not result_queue.empty():
             result = result_queue.get()
+            self._check_and_store_reference_wrapping(n, result)
             self._traj._update_run_information(result[1])
             results.append(result[0])
             self._show_progress(n, total_runs)
             n += 1
         return n
+
+    def _check_and_store_reference_wrapping(self, n, result):
+        if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+            reference_service = result[2]
+            reference_service.store_references(self._storage_service)
+            if self._gc_interval > 0 and n % self._gc_interval == 0:
+                collected = gc.collect()
+                self._logger.debug('Garbage Collection: Collected %d items.' % collected)
 
     def _execute_multiprocessing(self, start_run_idx, results):
         """Performs multiprocessing and signals expansion by postproc"""
@@ -2294,6 +2334,7 @@ class Environment(HasLogger):
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
                     for result in pool_results:
+                        self._check_and_store_reference_wrapping(n, result)
                         self._traj._update_run_information(result[1])
                         results.append(result[0])
                         self._show_progress(n, total_runs)
@@ -2639,11 +2680,15 @@ class MultiprocContext(HasLogger):
             self._prepare_local()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                           'not supported, use %s` or `%s`.'
+                                           'not supported, use %s`, `%s` or `%s`, or `%s`.'
                                            % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
-                                              pypetconstants.WRAP_MODE_LOCK))
+                                              pypetconstants.WRAP_MODE_LOCK,
+                                              pypetconstants.WRAP_MODE_PIPE,
+                                              pypetconstants.WRAP_MODE_LOCAL))
     def _prepare_local(self):
-        reference_wrapper = ReferenceWrapper(self._storage_service)
+        reference_wrapper = ReferenceWrapper()
+        self._traj.v_storage_service = reference_wrapper
+        self._reference_wrapper = reference_wrapper
 
     def _prepare_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """
@@ -2768,6 +2813,7 @@ class MultiprocContext(HasLogger):
         self._queue_wrapper = None
         self._lock = None
         self._lock_wrapper = None
+        self._reference_wrapper = None
         self._pipe = None
         self._pipe_process = None
         self._pipe_wrapper = None

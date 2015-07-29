@@ -231,16 +231,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def __init__(self, name='my_trajectory', add_time=True, comment='',
                  dynamic_imports=None, wildcard_functions=None,
                  storage_service=None, **kwargs):
+
         # This is true during the actual runs:
         self._is_run = False
+
+        super(Trajectory, self).__init__()
 
         # Helper variable: During a multiprocessing single run, the trajectory is usually
         # pickled without all the parameter exploration ranges and all run information
         # As a consequence, __len__ would return 1, so we need to store the length in this
         # helper variable to return the correct length during single runs.
         self._length = 1
-
-        super(Trajectory, self).__init__()
 
         self._set_logger()
 
@@ -1134,19 +1135,97 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     self._logger.exception('Could not delete expanded parameter `%s` '
                                            'from disk.' % param.v_full_name)
 
+    def __copy__(self):
+        """Shallow copy means copying the whole tree except leave nodes"""
+        new_traj = Trajectory()
+
+        new_traj._length = self._length
+
+        new_traj._timestamp = self._timestamp
+        new_traj._time = self._time
+
+        new_traj._single_run_ids = self._single_run_ids
+
+        new_traj._run_information = self._run_information
+
+        new_traj._updated_run_information = self._update_run_information
+
+        new_traj._fast_access = self._fast_access
+        new_traj._shortcuts = self._shortcuts
+        new_traj._iter_recursive = self._iter_recursive
+        new_traj._max_depth = self._max_depth
+        new_traj._auto_load = self._auto_load
+        new_traj._with_links = self._with_links
+        new_traj._lazy_adding = self._lazy_adding
+
+        new_traj._environment_hexsha = self._environment_hexsha
+        new_traj._environment_name = self._environment_name
+
+        # Index of a trajectory is -1, if the trajectory should behave like a single run
+        # and blind out other single run results, this can be changed via 'v_crun'.
+        new_traj._idx = self._idx
+        new_traj._crun = self._crun
+
+        new_traj._standard_parameter = self._standard_parameter
+        new_traj._standard_result = self._standard_result
+        new_traj._standard_leaf = self._standard_leaf
+
+        new_traj._auto_run_prepend = self._auto_run_prepend
+
+        new_traj._run_started = self._run_started # For manually using a trajectory
+        new_traj._run_by_environment = self._run_by_environment  # To disable manual running of experiment
+
+        new_traj._full_copy = self._full_copy
+
+        new_traj._dynamic_imports = self._dynamic_imports
+
+        new_traj._wildcard_functions = self._wildcard_functions
+        new_traj._wildcard_keys = self._wildcard_keys
+        new_traj._reversed_wildcards = self._reversed_wildcards
+
+        new_traj._comment = self._comment
+
+        new_traj._storage_service = self._storage_service
+
+        new_traj.f_copy_from(self, copy_annotations=False,
+                                   copy_leaves=False,
+                                   with_links=True)
+
+        new_traj._is_run = self._is_run
+
+        # Copy references to new nodes and leaves
+        for my_dict, new_dict in ((self._new_nodes, new_traj._new_nodes),
+                                 (self._new_links, new_traj._new_links)):
+            for key in my_dict:
+                value = my_dict[key]
+                parent, child = value
+                if parent is self:
+                    new_parent = new_traj
+                else:
+                    new_parent = new_traj.f_get(parent.v_full_name,
+                                            shortcuts=False,
+                                            with_links=False,
+                                            auto_load=False)
+                new_child = new_parent._children[key[1]]
+                new_dict[key] = (new_parent, new_child)
+
+        return new_traj
+
     @not_in_run
-    def f_copy_tree(self, node,
+    def f_copy_from(self, node,
                           copy_data=pypetconstants.LOAD_DATA,
                           copy_annotations=True,
-                          copy_leaves=True):
+                          copy_leaves=True,
+                          with_links=True):
         """Pass a ``node`` to insert the full tree to the trajectory.
 
         Considers all links in the given node!
 
         :param node: The node to insert
         :param copy_data:  How to copy data, equivalent to ``load_data`` for ``f_load``.
-        :param copy_annotations: If annotations should be deep copied
-        :param copy_leaves: If leaves should be copied or simply referred to by both trees.
+        :param copy_annotations: If annotations should be **deep** copied
+        :param copy_leaves: If leaves should be **deep** copied or simply referred to by both trees.
+        :param with_links: If links should be ignored or followed and copied as well
 
         :return: The corresponding (new) node in the tree.
 
@@ -1183,7 +1262,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     new_leaf.v_annotations.f_empty()
                     new_leaf.v_comment = ''
                     new_leaf._load(leaf._store())
-                _copy_skeleton(new_leaf, leaf)
+                    _copy_skeleton(new_leaf, leaf)
             else:
                 if copy_leaves:
                     new_leaf = self.f_add_leaf(leaf_full_name)
@@ -1213,9 +1292,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 if copy_data == pypetconstants.OVERWRITE_DATA:
                     new_group.v_annotations.f_empty()
                     new_group.v_comment = ''
+                    _copy_skeleton(new_group, group)
             else:
                 new_group = self.f_add_group(group_full_name)
-            _copy_skeleton(new_group, group)
+                _copy_skeleton(new_group, group)
 
         if copy_data == pypetconstants.LOAD_NOTHING:
             return None
@@ -1226,24 +1306,27 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if other_root is self:
                 raise RuntimeError('You cannot copy a given tree to itself!')
             result = _add_group(node)
-            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=True)
+            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=with_links)
+            has_links = []
+            if node._links:
+                has_links.append(node)
             for child in nodes_iterator:
                 if child.v_is_leaf:
                     _add_leaf(child)
                 else:
                     _add_group(child)
-            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=True,
-                                               predicate=lambda x: x.v_is_group)
-            for current in itools.chain([node], nodes_iterator):
-                links = current._links
-                if links:
-                    mine = self.f_get(current.v_fullname, with_links=False,
+                    if child._links:
+                        has_links.append(child)
+
+            if with_links:
+                for current in has_links:
+                    mine = self.f_get(current.v_full_name, with_links=False,
                                       shortcuts=False, auto_load=False)
                     my_link_set = set(mine._links.keys())
                     other_link_set = set(current._links.keys())
                     new_links = other_link_set - my_link_set
                     for link in new_links:
-                        where_full_name = current._links[link]
+                        where_full_name = current._links[link].v_full_name
                         mine.f_add_link(link, where_full_name)
 
             return result

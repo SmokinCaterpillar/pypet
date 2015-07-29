@@ -86,6 +86,18 @@ class MultiprocPoolSortLockTest(ResultSortTest):
         self.use_pool=True
 
 
+class MultiprocPoolSortLocalTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'pool',
+
+    def set_mode(self):
+        super(MultiprocPoolSortLocalTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_LOCAL
+        self.multiproc = True
+        self.ncores = 4
+        self.use_pool=True
+
+
 class MultiprocPoolSortPipeTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool',
@@ -108,6 +120,21 @@ class MultiprocPoolSortPipeTest(ResultSortTest):
 #         self.multiproc = True
 #         self.ncores = 3
 #         self.use_pool=False
+
+
+class MultiprocNoPoolSortLocalTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'nopool',
+
+    def set_mode(self):
+        super(MultiprocNoPoolSortLocalTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_LOCAL
+        self.multiproc = True
+        self.ncores = 2
+        self.use_pool=False
+
+    # def test_if_results_are_sorted_correctly(self):
+    #     return super(MultiprocNoPoolSortLocalTest, self).test_if_results_are_sorted_correctly()
 
 
 class MultiprocNoPoolLockTest(EnvironmentTest):
@@ -257,6 +284,23 @@ class MultiprocFrozenPoolPipeTest(EnvironmentTest):
         self.multiproc = True
         self.freeze_pool_input = True
         self.ncores = 4
+        self.use_pool=True
+
+
+class MultiprocFrozenPoolLocalTest(EnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'pool', 'freeze_input'
+
+    # def test_run(self):
+    #     super(MultiprocLockTest, self).test_run()
+
+    def set_mode(self):
+        super(MultiprocFrozenPoolLocalTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_LOCAL
+        self.multiproc = True
+        self.freeze_pool_input = True
+        self.ncores = 4
+        self.gc_interval = 3
         self.use_pool=True
 
 

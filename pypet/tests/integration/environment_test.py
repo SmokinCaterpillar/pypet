@@ -102,6 +102,7 @@ class EnvironmentTest(TrajectoryComparator):
     def set_mode(self):
         self.mode = 'LOCK'
         self.multiproc = False
+        self.gc_interval = 0
         self.ncores = 1
         self.use_pool=True
         self.freeze_pool_input=False
@@ -231,6 +232,7 @@ class EnvironmentTest(TrajectoryComparator):
                           ncores=self.ncores,
                           wrap_mode=self.mode,
                           use_pool=self.use_pool,
+                          gc_interval=self.gc_interval,
                           freeze_pool_input=self.freeze_pool_input,
                           fletcher32=self.fletcher32,
                           complevel=self.complevel,
@@ -376,7 +378,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        # newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
@@ -1002,12 +1004,16 @@ class ResultSortTest(TrajectoryComparator):
         traj.v_idx=-1
 
     def check_if_z_is_correct(self,traj):
+        traj.v_shortcuts=False
         for x in range(len(traj)):
             traj.v_idx=x
-
-            self.assertTrue(traj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
+            z = traj.res.runs.crun.z
+            x = traj.par.x
+            y = traj.par.y
+            self.assertTrue(z==x*y,' z != x*y: %s != %s * %s' %
+                                                  (str(z),str(x),str(y)))
         traj.v_idx=-1
+        traj.v_shortcuts=True
 
 
 # def test_runfunc(traj, list_that_changes):

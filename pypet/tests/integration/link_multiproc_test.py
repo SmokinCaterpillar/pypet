@@ -25,6 +25,18 @@ class MultiprocLinkQueueTest(LinkEnvironmentTest):
         self.use_pool=True
 
 
+class MultiprocLinkLocalTest(LinkEnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'pool', 'links'
+
+    def set_mode(self):
+        LinkEnvironmentTest.set_mode(self)
+        self.mode = pypetconstants.WRAP_MODE_LOCAL
+        self.multiproc = True
+        self.log_stdout = True
+        self.use_pool=True
+
+
 class MultiprocLinkLockTest(LinkEnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'links'
