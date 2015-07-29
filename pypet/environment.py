@@ -162,6 +162,10 @@ def _single_run(kwargs):
         idx = traj.v_idx
         total_runs = len(traj)
 
+        if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+            # Free references from previous runs
+            traj.v_storage_service.free_references()
+
         pypet_root_logger.info('\n=========================================\n '
                   'Starting single run #%d of %d '
                   '\n=========================================\n' % (idx, total_runs))
@@ -2270,7 +2274,7 @@ class Environment(HasLogger):
             reference_service.store_references(self._storage_service)
             if self._gc_interval > 0 and n % self._gc_interval == 0:
                 collected = gc.collect()
-                self._logger.debug('Garbage Collection: Collected %d items.' % collected)
+                self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
 
     def _execute_multiprocessing(self, start_run_idx, results):
         """Performs multiprocessing and signals expansion by postproc"""

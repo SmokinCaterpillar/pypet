@@ -1,7 +1,6 @@
 __author__ = 'Robert Meyer'
 
 
-
 import numpy as np
 
 import sys
