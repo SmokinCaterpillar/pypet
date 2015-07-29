@@ -24,7 +24,7 @@ from pypet import pypetconstants, BaseResult, Environment
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
 import pypet.compat as compat
 
-import copy
+import copy as cp
 
 import pypet.storageservice as stsv
 
@@ -1042,7 +1042,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(peterpaul in self.traj)
 
-        peterpaulcopy = copy.deepcopy(peterpaul)
+        peterpaulcopy = cp.deepcopy(peterpaul)
 
         self.assertFalse(peterpaulcopy in self.traj)
 
@@ -1193,14 +1193,16 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
     def test_copy_tree_annotations(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.res['ha.my3.name3.is3.res'] = 555, 55, 5
         traj1.hi.v_annotations['test'] = 'ddd'
 
         traj2 = Trajectory()
 
         traj2.v_lazy_adding = True
-        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
         traj2.hi.v_annotations['test'] = 'jjj'
+        traj2.res['ha.my3.name3.is3.res'] = 555, 55, 7
         traj2.hi.name.v_annotations['test'] = 'lll'
 
         traj1.f_copy_from(traj2)
@@ -1216,10 +1218,10 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
     def test_copy_nothing(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
-        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
         traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_NOTHING)
 
         self.assertTrue('another' not in traj1)
@@ -1227,10 +1229,10 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
     def test_copy_skeleton(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
-        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
         traj2['and.moreover'] = 43, 'Another'
         traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_SKELETON)
 
@@ -1242,10 +1244,10 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
     def test_copy_links(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
-        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
@@ -1259,10 +1261,10 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
     def test_not_copy_from_node(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
-        traj2['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi.my.name.is.another'] = 43, 'Another'
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
@@ -1275,6 +1277,49 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj1.f_copy_from(traj2.ands, copy_data=pypetconstants.LOAD_SKELETON, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
+    def test_shallow_copy(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.another'] = 43, 'Another'
+        traj1['ands.moreover'] = 43, 'Another'
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+        traj1._make_single_run(0)
+
+        traj1.f_add_result('ggg.hhh.result', 42)
+        traj1.f_add_result('lll.res32', 32, 33)
+        traj1.f_add_link('ff', traj1.res32)
+
+        traj2 = cp.copy(traj1)
+
+        self.assertTrue(traj2.res32 is traj1.res32)
+        self.assertTrue(traj2.parameter is traj1.parameter)
+
+        self.assertEqual(len(list(traj1.f_iter_nodes())), len(list(traj2.f_iter_nodes())))
+        self.assertEqual(len(traj1.new_nodes), len(traj2._new_nodes))
+        self.assertEqual(len(traj1.new_links), len(traj2._new_links))
+
+    def test_overwrite_leaves(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.res['hi.my.name.is.resr'] = 42, 'resr'
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2.res['hi.my.name.is.resr'] = 43, 'resr'
+        traj2['ands.moreover'] = 43, 'Another'
+        traj2.ands.test = traj2.name
+
+        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_DATA)
+        self.assertEqual(traj1.name.resr.resr, 42)
+
+        traj1.f_copy_from(traj2.resr, copy_data=pypetconstants.OVERWRITE_DATA)
+        self.assertEqual(traj1.name.resr.resr, 43)
+
+        self.assertTrue(traj1.name.resr is not traj2.name.resr)
 
 class TrajectoryFindTest(unittest.TestCase):
 
@@ -1360,8 +1405,16 @@ class SingleRunTest(unittest.TestCase):
         traj.v_fast_access=True
 
         self.traj = traj
+        self.traj.v_idx = 1
         self.n = 1
-        self.single_run = self.traj._make_single_run(self.n)
+        self.single_run = self.traj.__copy__()._make_single_run(self.n)
+
+    def test_different_dir(self):
+        traj_dir = dir(self.traj)
+
+        run_dir = dir(self.single_run)
+
+        self.assertGreater(len(traj_dir), len(run_dir))
 
     def test_if_single_run_can_be_pickled(self):
 

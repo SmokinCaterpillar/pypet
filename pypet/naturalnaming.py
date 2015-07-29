@@ -2159,6 +2159,8 @@ class NaturalNamingInterface(HasLogger):
         if node.v_is_root:
             # We want to add `parameters`, `config`, `derived_parameters` and `results`
             # on the fly if they don't exist
+            if len(split_name) == 1 and split_name[0] == '':
+                return node
             key = split_name[0]
             _, key = self._translate_shortcut(key)
             if key in SUBTREE_MAPPING and key not in node._children:

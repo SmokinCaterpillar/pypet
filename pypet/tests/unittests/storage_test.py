@@ -858,6 +858,32 @@ class StorageTest(TrajectoryComparator):
         # with self.assertRaises(TypeError):
         #     traj.f_delete_item('ggg')
 
+    def test_delete_links(self):
+        traj = Trajectory(name='TestDelete',
+                          filename=make_temp_dir('testpartiallydel.hdf5'))
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_add_link('x.y', res)
+        traj.f_add_link('x.g.h', res)
+
+        traj.f_store()
+
+        traj.f_remove_child('x', recursive=True)
+        traj.f_load()
+
+        self.assertEqual(traj.x.y.a, traj.test.a)
+        self.assertEqual(traj.x.g.h.a, traj.test.a)
+
+        traj.f_delete_link('x.y', remove_from_trajectory=True)
+        traj.f_delete_link((traj.x.g, 'h'), remove_from_trajectory=True)
+
+        traj.f_load()
+
+        with self.assertRaises(AttributeError):
+            traj.x.g.h
+
+
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',
                           filename=make_temp_dir('testpartiallydel.hdf5'))

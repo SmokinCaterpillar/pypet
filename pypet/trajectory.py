@@ -684,8 +684,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             What should be yielded: ``'name'`` of run, ``idx`` of run
             or ``'self'`` to simply return the trajectory container.
 
-            You can also pick ``'copy'`` to get **deep** copies of your trajectory,
-            might lead to lots of overhead.
+            You can also pick ``'copy'`` to get **shallow** copies (ie the tree is copied but
+            no leave nodes) of your trajectory,
+            might lead to some of overhead.
 
         Note that after a full iteration, the trajectory is set back to normal.
 
@@ -729,7 +730,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         elif yields == 'self':
             yield_func = lambda x: self
         elif yields == 'copy':
-            yield_func = lambda x: deepcopy(self)
+            yield_func = lambda x: self.__copy__()
         else:
             raise ValueError('Please choose yields among: `name`, `idx`, or `self`.')
         for idx in compat.xrange(start, stop, step):
@@ -1230,6 +1231,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             has no effect, because the leaves are passed as a whole no matter if they
             contain data or not.
 
+            Does not overwrite locked parameters!
+
         :param copy_annotations: If annotations should be **deep** copied
 
         :param copy_leaves:
@@ -1268,7 +1271,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 found_leaf = None
             if found_leaf is not None:
                 new_leaf = found_leaf
-                if copy_data == pypetconstants.OVERWRITE_DATA:
+                if (copy_data == pypetconstants.OVERWRITE_DATA and
+                        (not new_leaf.v_is_parameter or not new_leaf.v_locked)):
                     new_leaf.f_empty()
                     new_leaf.v_annotations.f_empty()
                     new_leaf.v_comment = ''
@@ -1288,10 +1292,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             """Adds a new group to the trajectory"""
             group_full_name = group.v_full_name
             try:
-                if group.v_is_root:
-                    found_group = self
-                else:
-                    found_group = self.f_get(group_full_name,
+                found_group = self.f_get(group_full_name,
                                              with_links=False,
                                              shortcuts=False,
                                              auto_load=False)

@@ -921,6 +921,35 @@ class ResultSortTest(TrajectoryComparator):
             self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
                                                   (str(newtraj.crun.z),str(traj.x),str(traj.y)))
 
+        for idx, traj in enumerate(self.traj.f_iter_runs(yields='self')):
+            run_name = traj.f_idx_to_run(idx)
+            self.assertTrue(traj is self.traj)
+            newtraj.v_as_run=run_name
+            self.traj.v_as_run == run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(traj.v_crun == run_name)
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+
+        for idx, traj in enumerate(self.traj.f_iter_runs(yields='copy')):
+            run_name = traj.f_idx_to_run(idx)
+            self.assertTrue(traj is not self.traj)
+            newtraj.v_as_run=run_name
+            self.traj.v_as_run == run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(traj.v_crun == run_name)
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+
+        traj = self.traj
         self.assertTrue(traj.v_idx == -1)
         self.assertTrue(traj.v_crun is None)
         self.assertTrue(traj.v_crun_ == pypetconstants.RUN_NAME_DUMMY)
