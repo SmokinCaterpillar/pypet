@@ -14,6 +14,7 @@ import warnings
 import time
 import hashlib
 import sys
+import gc
 import itertools as itools
 
 try:
@@ -447,6 +448,39 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
                     self.release_lock()
                 except RuntimeError:
                     self._logger.error('Could not release lock `%s`!' % str(self.lock))
+
+
+class ReferenceWrapper(MultiprocWrapper, HasLogger):
+    """Wrapper that just keeps references to data to be stored.
+
+    Only stores all data when signalled to do so.
+
+    """
+    def __init__(self, storage_service):
+        self._storage_service = storage_service
+        self._data = []
+        self._set_logger()
+
+    def store(self, msg, stuff_to_store, *args, **kwargs):
+        """Simply keeps a reference to the stored data """
+        self._data.append((msg, stuff_to_store, args, kwargs))
+
+    def load(self, *args, **kwargs):
+        raise NotImplementedError('Queue wrapping does not support loading. If you want to '
+                                  'load data in a multiprocessing environment, use the Lock '
+                                  'wrapping.')
+
+    def free_references(self):
+        self._data = []
+
+    def store_references(self):
+        """Stores all references via the given storage service.
+
+        Frees references afterwards.
+
+        """
+        self._storage_service.store(pypetconstants.LIST, self._data)
+        self.free_references()
 
 
 class StorageService(object):

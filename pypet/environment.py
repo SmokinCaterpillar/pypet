@@ -60,7 +60,7 @@ from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService, PipeStorageServiceSender, \
-    PipeStorageServiceWriter
+    PipeStorageServiceWriter, ReferenceWrapper
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
@@ -814,6 +814,7 @@ class Environment(HasLogger):
                  memory_cap=100.0,
                  swap_cap=100.0,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 gc_interval=0,
                  clean_up_runs=True,
                  immediate_postproc=False,
                  continuable=False,
@@ -1054,6 +1055,7 @@ class Environment(HasLogger):
         # Whether to use a pool of processes
         self._use_pool = use_pool
         self._freeze_pool_input = freeze_pool_input
+        self._gc_interval = gc_interval
         self._multiproc_wrapper = None # The wrapper Service
 
         self._do_single_runs = do_single_runs
@@ -1147,6 +1149,12 @@ class Environment(HasLogger):
                     self._traj.f_add_config(Parameter, config_name, self._queue_maxsize,
                                         comment='Maximum size of Storage Queue/Pipe in case of '
                                                 'multiprocessing and QUEUE/PIPE wrapping').f_lock()
+                if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+                    config_name = 'environment.%s.gc_interval' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._gc_interval,
+                                        comment='Intervals with which ``gc.collect()`` '
+                                                'is called.').f_lock()
+
 
             config_name = 'environment.%s.clean_up_runs' % self._name
             self._traj.f_add_config(Parameter, config_name, self._clean_up_runs,
@@ -2553,6 +2561,7 @@ class MultiprocContext(HasLogger):
         self._pipe_process = None
         self._lock_wrapper = None
         self._queue_wrapper = None
+        self._reference_wrapper = None
         self._wrap_mode = wrap_mode
         self._queue = queue
         self._queue_maxsize = queue_maxsize
@@ -2563,7 +2572,8 @@ class MultiprocContext(HasLogger):
         self._logging_manager = None
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
-                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
+                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
+                            self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL):
             self._logging_manager = LoggingManager(trajectory=self._traj,
                                                    log_config=log_config,
                                                    log_stdout=log_stdout)
@@ -2587,6 +2597,10 @@ class MultiprocContext(HasLogger):
     @property
     def v_queue_wrapper(self):
         return self._queue_wrapper
+
+    @property
+    def v_reference_wrapper(self):
+        return self._reference_wrapper
 
     @property
     def v_lock_wrapper(self):
@@ -2621,11 +2635,15 @@ class MultiprocContext(HasLogger):
             self._prepare_lock()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_PIPE:
             self._prepare_pipe()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+            self._prepare_local()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                            'not supported, use %s` or `%s`.'
                                            % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
                                               pypetconstants.WRAP_MODE_LOCK))
+    def _prepare_local(self):
+        reference_wrapper = ReferenceWrapper(self._storage_service)
 
     def _prepare_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """

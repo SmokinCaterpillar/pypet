@@ -109,8 +109,16 @@ class ContinueTest(TrajectoryComparator):
                 continue
 
             cnt_file = open(os.path.join(continue_folder, filename), 'rb')
-            result = dill.load(cnt_file)
-            cnt_file.close()
+            try:
+                result = dill.load(cnt_file)
+                cnt_file.close()
+            except Exception:
+                # delete broken files
+                logging.getLogger().exception('Could not open continue snapshot '
+                                              'file `%s`.' % filename)
+                cnt_file.close()
+                os.remove(filename)
+
             result_tuple_list.append((result))
 
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])

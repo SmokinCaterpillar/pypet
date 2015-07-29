@@ -156,6 +156,8 @@ WRAP_MODE_NONE = 'NONE'
 """ No multiprocessing wrapping for the storage service"""
 WRAP_MODE_PIPE = 'PIPE'
 """Pipe multiprocessing mode"""
+WRAP_MODE_LOCAL = 'LOCAL'
+"""Data is only stored on the local machine"""
 
 
 ############ Loading Constants ###########################
