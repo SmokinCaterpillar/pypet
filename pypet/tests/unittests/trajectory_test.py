@@ -1300,8 +1300,8 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         self.assertTrue(traj2.parameter is traj1.parameter)
 
         self.assertEqual(len(list(traj1.f_iter_nodes())), len(list(traj2.f_iter_nodes())))
-        self.assertEqual(len(traj1.new_nodes), len(traj2._new_nodes))
-        self.assertEqual(len(traj1.new_links), len(traj2._new_links))
+        self.assertEqual(len(traj1._new_nodes), len(traj2._new_nodes))
+        self.assertEqual(len(traj1._new_links), len(traj2._new_links))
 
     def test_overwrite_leaves(self):
         traj1 = Trajectory()
