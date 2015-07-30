@@ -162,16 +162,14 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
     def __init__(self, storage_connection=None, lock=None):
         self.conn = storage_connection
         self.lock = lock
-        self.pickle_pipe = True
         self.is_locked = False
         self._set_logger()
 
     def __getstate__(self):
         # result = super(PipeStorageServiceSender, self).__getstate__()
         result = self.__dict__.copy()
-        if not self.pickle_pipe:
-            result['conn'] = None
-            result['lock'] = None
+        result['conn'] = None
+        result['lock'] = None
         return result
 
     def load(self, *args, **kwargs):
@@ -182,14 +180,9 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _put_on_pipe(self, to_put):
         """Puts data on queue"""
-        old_pickle = self.pickle_pipe
-        self.pickle_pipe = False
-        try:
-            self.acquire_lock()
-            self._send_chunks(to_put)
-            self.release_lock()
-        finally:
-            self.pickle_pipe = old_pickle
+        self.acquire_lock()
+        self._send_chunks(to_put)
+        self.release_lock()
 
     def _make_chunk_iterator(self, to_chunk, chunksize):
         return (to_chunk[i:i + chunksize] for i in range(0, len(to_chunk), chunksize))

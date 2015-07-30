@@ -27,6 +27,8 @@ pypet 0.1b.13
 
 *   Immediate post-processing is now supported by all wrap modes.
 
+*   PIPE wrapping is no longer supported under Windows
+
 
 pypet 0.1b.12
 

@@ -201,30 +201,54 @@ because most of the time the default settings are sufficient.
 
 * ``wrap_mode``
 
-     If ``multiproc`` is ``True``, specifies how storage to disk is handled via
-     the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
-     needs to be wrapped with a helper class to allow the interaction with multiple processes.
+    If ``multiproc`` is ``True``, specifies how storage to disk is handled via
+    the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
+    needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
-     There are two options:
+    There are four options:
 
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
-     Another process for storing the trajectory is spawned. The sub processes
-     running the individual single runs will add their results to a
-     multiprocessing queue that is handled by an additional process.
+        Another process for storing the trajectory is spawned. The sub processes
+        running the individual single runs will add their results to a
+        multiprocessing queue that is handled by an additional process.
 
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_LOCK`: ('LOCK')
 
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_LOCK`: ('LOCK')
+        Each individual process takes care about storage by itself. Before
+        carrying out the storage, a lock is placed to prevent the other processes
+        to store data.
 
-     Each individual process takes care about storage by itself. Before
-     carrying out the storage, a lock is placed to prevent the other processes
-     to store data.
+    :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
 
-     If you don't want wrapping at all use
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
+        Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
+        but data corruption may occur, does not work under Windows
+        (since it relies on forking).
 
-     If you have no clue what I am talking about, you might want to take a look at multiprocessing_
-     in python to learn more about locks, queues and thread safety and so forth.
+    :const:`~pypet.pypetconstant.WRAP_MODE_LOCAL` ('LOCAL')
+
+        Data is not stored during the single runs but after they completed.
+        Storing is only performed locally in the main process.
+
+        Note that removing data during a single run has no longer an effect on memory
+        whatsoever, because there are references kept for all data
+        that is supposed to be stored.
+
+        To avoid memory overflows in the main process
+        you can tell *pypet* to call ``gc.collect()``
+        every once in the while, see below.
+
+    If you don't want wrapping at all use
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
+
+    If you have no clue what I am talking about, you might want to take a look at multiprocessing_
+    in python to learn more about locks, queues and thread safety and so forth.
+
+* ``param gc_interval``
+
+    Interval (in runs) with which ``gc_collect()`` should be called in case of the
+    ``'LOCAL'`` wrapping. Leave ``0`` for never, ``1`` for after every run ``2`` for
+    after every second run, and so on.
 
 * ``clean_up_runs``
 
@@ -706,6 +730,7 @@ since processes have to wait often for each other to release locks.
 a shared `multiprocessing pipe`_. This can be much faster than a queue. However, no
 data integrity checks are made. So there's no guarantee that all you data is really saved.
 Use this if you go for many runs that just produce small results, and use it carefully.
+Since this mode relies on forking of processes, it cannot be used under Windows.
 
 Finally, there also exist a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a

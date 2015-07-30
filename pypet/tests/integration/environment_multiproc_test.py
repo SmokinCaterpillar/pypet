@@ -12,6 +12,7 @@ from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajecto
      parse_args, get_log_config, unittest
 from pypet.tests.testutils.data import create_param_dict, add_params
 import pypet.compat as compat
+import platform
 import sys
 
 try:
@@ -98,6 +99,7 @@ class MultiprocPoolSortLocalTest(ResultSortTest):
         self.use_pool=True
 
 
+@unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class MultiprocPoolSortPipeTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool',
@@ -185,9 +187,10 @@ class MultiprocNoPoolSortLockTest(ResultSortTest):
         self.use_pool=False
 
 
+@unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class MultiprocNoPoolSortPipeTest(ResultSortTest):
 
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'nopool',
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'nopool',
 
     def set_mode(self):
         super(MultiprocNoPoolSortPipeTest, self).set_mode()
@@ -271,6 +274,7 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
         self.compare_trajectories(self.traj,newtraj)
 
 
+@unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class MultiprocFrozenPoolPipeTest(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool', 'freeze_input'
@@ -322,6 +326,7 @@ class MultiprocFrozenPoolSortLockTest(ResultSortTest):
         pass
 
 
+@unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class MultiprocFrozenPoolSortPipeTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pipe', 'pool', 'freeze_input'

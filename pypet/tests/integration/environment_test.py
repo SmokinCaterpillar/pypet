@@ -857,13 +857,22 @@ class ResultSortTest(TrajectoryComparator):
         args2=[100*x for x in range(len(self.traj))]
         args3=list(range(len(self.traj)))
 
-        self.env.f_run_map(multiply_args, args1, arg2=args2, arg3=args3)
+        results = self.env.f_run_map(multiply_args, args1, arg2=args2, arg3=args3)
+        self.assertEqual(len(results), len(self.traj))
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
         self.check_if_z_is_correct_map(traj, args1, args2, args3)
+
+        for res in results:
+            self.assertEqual(len(res), 2)
+            self.assertTrue(isinstance(res[0], int))
+            self.assertTrue(isinstance(res[1], int))
+            idx = res[0]
+            self.assertEqual(self.traj.res.runs[idx].z, res[1])
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
@@ -877,13 +886,23 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.assertEqual(len(results), len(self.traj))
+
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
         self.check_if_z_is_correct(traj)
+
+        for res in results:
+            self.assertEqual(len(res), 2)
+            self.assertTrue(isinstance(res[0], int))
+            self.assertTrue(isinstance(res[1], int))
+            idx = res[0]
+            self.assertEqual(self.traj.res.runs[idx].z, res[1])
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()

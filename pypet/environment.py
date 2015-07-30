@@ -470,7 +470,8 @@ class Environment(HasLogger):
          :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
 
             Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
-            but data corruption may occur.
+            but data corruption may occur, does not work under Windows
+            (since it relies on forking).
 
          :const:`~pypet.pypetconstant.WRAP_MODE_LOCAL` ('LOCAL')
 
