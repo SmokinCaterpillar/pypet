@@ -2,8 +2,9 @@ __author__ = 'Robert Meyer'
 
 import os
 import logging
+import platform
 
-
+from pypet.tests.testutils.ioutils import unittest
 from pypet.trajectory import Trajectory
 from pypet.environment import Environment
 from pypet.parameter import Parameter
@@ -285,14 +286,12 @@ class TestPostProc(TrajectoryComparator):
         env2.f_disable_logging()
 
 
-
 class TestMPPostProc(TestPostProc):
 
     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 3}
-
 
 
 class TestMPImmediatePostProcLock(TestPostProc):
@@ -302,6 +301,7 @@ class TestMPImmediatePostProcLock(TestPostProc):
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
 
+
 class TestMPImmediatePostProcQueue(TestPostProc):
 
     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'queue'
@@ -309,6 +309,7 @@ class TestMPImmediatePostProcQueue(TestPostProc):
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
                          'wrap_mode': 'QUEUE'}
+
 
 class TestMPImmediatePostProcLocal(TestPostProc):
 
@@ -319,6 +320,7 @@ class TestMPImmediatePostProcLocal(TestPostProc):
                          'wrap_mode': 'LOCAL'}
 
 
+@unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class TestMPImmediatePostProcPipe(TestPostProc):
 
     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'pipe'
