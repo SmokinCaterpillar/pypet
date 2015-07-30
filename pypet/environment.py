@@ -518,8 +518,7 @@ class Environment(HasLogger):
         long run to finish to start post-processing.
 
         In case you use immediate postprocessing, the storage service of your trajectory is still
-        multiprocessing safe. Moreover, internally the lock securing the
-        storage service will be supervised by a multiprocessing manager.
+        multiprocessing safe (except when using the wrap_mode ``'LOCAL'``).
         Accordingly, you could even use multiprocessing in your immediate post-processing phase
         if you dare, like use a multiprocessing pool_, for instance.
 
@@ -884,11 +883,6 @@ class Environment(HasLogger):
         if use_pool and immediate_postproc:
             raise ValueError('You CANNOT perform immediate post-processing if you DO '
                              'use a pool.')
-
-        if wrap_mode != pypetconstants.WRAP_MODE_LOCK and immediate_postproc:
-            raise ValueError(
-                'You CANNOT perform immediate post-processing if you DO NOT use wrap mode '
-                '`LOCK`.')
 
         if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_PIPE) and
             continuable):
@@ -1439,11 +1433,10 @@ class Environment(HasLogger):
         If you want to use multiprocessing in your post-processing you can still
         manually wrap the storage service with the :class:`~pypet.environment.MultiprocessWrapper`.
 
-        Nonetheless, in case you use **immediate** post-processing, the storage service is still
-        multiprocessing safe. In fact, it has to be because some single runs are still being
-        executed and write data to your HDF5 file. Accordingly, you can
-        also use multiprocessing during the immediate post-processing without having
-        to use the :class:`~pypet.environment.MultiprocessWrapper`.
+        In case you use **immediate** postprocessing, the storage service of your trajectory
+        is still multiprocessing safe (except when using the wrap_mode ``'LOCAL'``).
+        Accordingly, you could even use multiprocessing in your immediate post-processing phase
+        if you dare, like use a multiprocessing pool_, for instance.
 
         You can easily check in your post-processing function if the storage service is
         multiprocessing safe via the ``multiproc_safe`` attribute, i.e.
@@ -2002,7 +1995,7 @@ class Environment(HasLogger):
                                      'NOT supported properly, there is no guarantee that this '
                                      'works!')
 
-                self._traj.f_store(only_init=True)
+            self._traj.f_store(only_init=True)
 
             new_traj_length = len(self._traj)
             new_runs = new_traj_length - old_traj_length
@@ -2459,9 +2452,16 @@ class Environment(HasLogger):
                             keep_running = False
                             if self._postproc is not None and self._immediate_postproc:
 
-                                self._logger.info('Performing IMMEDIATE POSTPROCESSING.')
-                                keep_running, start_run_idx, new_runs = \
-                                    self._execute_postproc(results)
+                                if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+                                    reference_service = self._traj._storage_service
+                                    self._traj.v_storage_service = self._storage_service
+                                try:
+                                    self._logger.info('Performing IMMEDIATE POSTPROCESSING.')
+                                    keep_running, start_run_idx, new_runs = \
+                                        self._execute_postproc(results)
+                                finally:
+                                    if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+                                        self._traj._storage_service = reference_service
 
                                 if keep_running:
                                     expanded_by_postproc = True

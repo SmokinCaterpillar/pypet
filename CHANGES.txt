@@ -25,6 +25,8 @@ pypet 0.1b.13
 
 *   New wrap mode ``'LOCAL'`` to ensure data is only stored by the main program
 
+*   Immediate post-processing is now supported by all wrap modes.
+
 
 pypet 0.1b.12
 

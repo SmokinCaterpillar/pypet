@@ -4,11 +4,14 @@ import os
 import logging
 
 
+from pypet.trajectory import Trajectory
 from pypet.environment import Environment
 from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir,  \
     get_root_logger, parse_args, get_log_config
 from pypet.tests.testutils.data import TrajectoryComparator
+from pypet.storageservice import LockWrapper, ReferenceWrapper, QueueStorageServiceSender, \
+    PipeStorageServiceSender
 
 
 class Multiply(object):
@@ -37,7 +40,15 @@ class CustomParameter(Parameter):
 def postproc(traj, results, idx):
     get_root_logger().info(idx)
 
-    traj.f_load_skeleton()
+    if isinstance(traj.v_storage_service, (LockWrapper, ReferenceWrapper)):
+        traj.f_load_skeleton()
+
+    if isinstance(traj.v_storage_service, (QueueStorageServiceSender, PipeStorageServiceSender)):
+        try:
+            traj.f_load()
+            raise RuntimeError('Should not load')
+        except NotImplementedError:
+            pass
 
     if len(results) <= 4 and len(traj) == 4:
         return {'x':[1,2], 'y':[1,2]}
@@ -47,7 +58,8 @@ def postproc(traj, results, idx):
 def postproc_with_iter_args(traj, results, idx):
     get_root_logger().info(idx)
 
-    traj.f_load_skeleton()
+    if isinstance(traj.v_storage_service, (LockWrapper, ReferenceWrapper)):
+        traj.f_load_skeleton()
 
     if len(results) <= 4 and len(traj) == 4:
         assert idx == 42
@@ -206,7 +218,7 @@ class TestPostProc(TrajectoryComparator):
     def test_pipeline(self):
 
         filename = 'testpostprocpipe.hdf5'
-        env1 = self.make_environment(filename, 'k1')[0]
+        env1, filename, _, _ = self.make_environment(filename, 'k1')
         env2 = self.make_environment(filename, 'k2', log=False)[0]
 
         traj1 = env1.v_trajectory
@@ -227,6 +239,9 @@ class TestPostProc(TrajectoryComparator):
         env1.f_pipeline(pipeline=mypipeline)
 
         env2.f_run(Multiply(), 22)
+
+        traj_name = traj1.v_name
+        traj1 = Trajectory(traj_name, add_time=False, filename=filename)
 
         traj1.f_load(load_data=2)
         traj2.f_load(load_data=2)
@@ -280,12 +295,37 @@ class TestMPPostProc(TestPostProc):
 
 
 
-class TestMPImmediatePostProc(TestPostProc):
+class TestMPImmediatePostProcLock(TestPostProc):
 
-    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'lock'
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
+
+class TestMPImmediatePostProcQueue(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'queue'
+
+    def setUp(self):
+        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
+                         'wrap_mode': 'QUEUE'}
+
+class TestMPImmediatePostProcLocal(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'local'
+
+    def setUp(self):
+        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
+                         'wrap_mode': 'LOCAL'}
+
+
+class TestMPImmediatePostProcPipe(TestPostProc):
+
+    tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'pipe'
+
+    def setUp(self):
+        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
+                         'wrap_mode': 'PIPE'}
 
 
 if __name__ == '__main__':

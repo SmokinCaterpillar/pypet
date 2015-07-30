@@ -2670,7 +2670,7 @@ class HDF5StorageService(StorageService, HasLogger):
         rows = []
         updated_run_information = traj._updated_run_information
         for idx in compat.xrange(start, stop):
-            info_dict = traj.f_get_run_information(idx, copy=False)
+            info_dict = traj._run_information[traj._single_run_ids[idx]]
             rows.append(_make_row(info_dict))
             updated_run_information.discard(idx)
 
@@ -2782,7 +2782,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         # Fill table with dummy entries starting from the current table size
         actual_rows = runtable.nrows
-        self._trj_fill_run_table(traj, actual_rows, len(traj))
+        self._trj_fill_run_table(traj, actual_rows, len(traj._run_information))
+        # stop != len(traj) to allow immediate post-proc with QUEUE wrapping
 
         # Store the annotations and comment of the trajectory node
         self._grp_store_group(traj, store_data=pypetconstants.STORE_DATA,
