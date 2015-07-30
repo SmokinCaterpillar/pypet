@@ -74,6 +74,14 @@ class MultiprocWrapper(object):
     def store(self, *args, **kwargs):
         raise NotImplementedError('Implement this!')
 
+    # def __deepcopy__(self, memo):
+    #     """Cannot be copied at all"""
+    #     return self
+    #
+    # def __copy__(self):
+    #     """Cannot be copied at all"""
+    #     return self
+
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
     """ For multiprocessing with :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
@@ -90,14 +98,6 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self.queue = storage_queue
         self.pickle_queue = True
         self._set_logger()
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls(storage_queue=None)
-        result.pickle_queue = self.pickle_queue
-        result.queue = self.queue  # do not copy queue
-        memo[id(self)] = result
-        return result
 
     def __getstate__(self):
         result = super(QueueStorageServiceSender, self).__getstate__()
@@ -182,10 +182,14 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
     @retry(9, Exception, 0.01, 'pypet.retry')
     def _put_on_pipe(self, to_put):
         """Puts data on queue"""
+        old_pickle = self.pickle_pipe
         self.pickle_pipe = False
-        self.acquire_lock()
-        self._send_chunks(to_put)
-        self.release_lock()
+        try:
+            self.acquire_lock()
+            self._send_chunks(to_put)
+            self.release_lock()
+        finally:
+            self.pickle_pipe = old_pickle
 
     def _make_chunk_iterator(self, to_chunk, chunksize):
         return (to_chunk[i:i + chunksize] for i in range(0, len(to_chunk), chunksize))
@@ -383,15 +387,6 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
         self.is_locked = False
         self.pickle_lock = True
         self._set_logger()
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls(self._storage_service, memo, lock=None)  # do not copy service
-        result.is_locked = self.is_locked
-        result.pickle_lock = self.pickle_lock
-        result.lock = self.lock  # do not copy lock
-        memo[id(self)] = result
-        return result
 
     def __getstate__(self):
         result = super(LockWrapper, self).__getstate__()

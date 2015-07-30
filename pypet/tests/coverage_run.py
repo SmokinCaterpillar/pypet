@@ -45,7 +45,7 @@ from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT
 
 if __name__ == '__main__':
     opt_dict = parse_args()
-    tests_include = set(('TestMPImmediatePostProc',
+    tests_include = set(('TestMPImmediatePostProcLock',
                     'MultiprocFrozenPoolSortQueueTest',
                     'MultiprocFrozenPoolSortPipeTest',
                     'MultiprocLinkNoPoolLockTest',

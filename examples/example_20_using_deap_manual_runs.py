@@ -158,17 +158,12 @@ def main():
     pool.close()
     pool.join()
 
-
-
     print("-- End of (successful) evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
     traj.f_store()
-
-
-
 
 
 if __name__ == "__main__":

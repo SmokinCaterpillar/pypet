@@ -44,7 +44,7 @@ def main():
     traj.f_add_parameter('popsize', 100)
     traj.f_add_parameter('CXPB', 0.5)
     traj.f_add_parameter('MUTPB', 0.2)
-    traj.f_add_parameter('NGEN', 25)
+    traj.f_add_parameter('NGEN', 20)
 
     traj.f_add_parameter('generation', 0)
     traj.f_add_parameter('ind_idx', 0)
