@@ -228,7 +228,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     """
 
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
-    def __init__(self, name='my_trajectory', add_time=True, comment='',
+    def __init__(self, name='my_trajectory', add_time=False, comment='',
                  dynamic_imports=None, wildcard_functions=None,
                  storage_service=None, **kwargs):
 

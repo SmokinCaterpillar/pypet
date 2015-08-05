@@ -29,6 +29,8 @@ pypet 0.1b.13
 
 *   PIPE wrapping is no longer supported under Windows
 
+*   The `add_time` parameter of the trajectory is by default now `False`
+
 
 pypet 0.1b.12
 

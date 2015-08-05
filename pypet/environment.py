@@ -831,7 +831,7 @@ class Environment(HasLogger):
     @kwargs_api_change('pandas_append')
     @simple_logging_config
     def __init__(self, trajectory='trajectory',
-                 add_time=True,
+                 add_time=False,
                  comment='',
                  dynamic_imports=None,
                  wildcard_functions=None,
