@@ -137,7 +137,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_loading_and_storing_empty_containers(self):
         filename = make_temp_dir('empty_containers.hdf5')
-        traj = Trajectory(filename=filename)
+        traj = Trajectory(filename=filename, add_time=True)
 
         # traj.f_add_parameter('empty.dict', {})
         # traj.f_add_parameter('empty.list', [])
@@ -190,7 +190,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_new_assignment_method(self):
         filename = make_temp_dir('newassignment.hdf5')
-        traj = Trajectory(filename=filename)
+        traj = Trajectory(filename=filename, add_time=True)
 
         traj.v_lazy_adding = True
         comment = 'A number'
@@ -350,7 +350,7 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_shortenings_of_names(self):
-        traj = Trajectory(filename=make_temp_dir('testshortening.hdf5'))
+        traj = Trajectory(filename=make_temp_dir('testshortening.hdf5'), add_time=True)
         traj.f_aconf('g', 444)
         self.assertTrue(isinstance(traj.f_get('g'), Parameter))
         self.assertTrue(traj.conf.g == 444)
@@ -370,7 +370,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_storage_service_errors(self):
 
-        traj = Trajectory(filename=make_temp_dir('testnoservice.hdf5'))
+        traj = Trajectory(filename=make_temp_dir('testnoservice.hdf5'), add_time=True)
 
         traj_name = traj.v_name
 
@@ -493,7 +493,7 @@ class StorageTest(TrajectoryComparator):
 
         env = Environment(trajectory='Testmigrate', filename=filename,
 
-                          log_config=get_log_config())
+                          log_config=get_log_config(), add_time=True)
 
         traj = env.v_trajectory
         for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
@@ -525,7 +525,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('overwrite.hdf5')
 
         env = Environment(trajectory='testoverwrite', filename=filename,
-                          log_config=get_log_config())
+                          log_config=get_log_config(), overwrite_file=True)
 
         traj = env.v_traj
 
@@ -565,7 +565,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_migrations(self):
 
-        traj = Trajectory(name='Testmigrate', filename=make_temp_dir('migrate.hdf5'))
+        traj = Trajectory(name='Testmigrate', filename=make_temp_dir('migrate.hdf5'),
+                          add_time=True)
 
         traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
         traj.f_add_derived_parameter('ffa', 42)
@@ -587,7 +588,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_wildcard_search(self):
 
-        traj = Trajectory(name='Testwildcard', filename=make_temp_dir('wilcard.hdf5'))
+        traj = Trajectory(name='Testwildcard', filename=make_temp_dir('wilcard.hdf5'),
+                          add_time=True)
 
         traj.f_add_parameter('expl', 2)
         traj.f_explore({'expl':[1,2,3,4]})
@@ -636,7 +638,8 @@ class StorageTest(TrajectoryComparator):
         get_root_logger().info('Done with wildcard test')
 
     def test_store_and_load_large_dictionary(self):
-        traj = Trajectory(name='Testlargedict', filename=make_temp_dir('large_dict.hdf5'))
+        traj = Trajectory(name='Testlargedict', filename=make_temp_dir('large_dict.hdf5'),
+                          add_time=True)
 
         large_dict = {}
 
@@ -655,7 +658,8 @@ class StorageTest(TrajectoryComparator):
 
         traj_name = traj.v_name
 
-        traj2 = Trajectory(filename=make_temp_dir('large_dict.hdf5'))
+        traj2 = Trajectory(filename=make_temp_dir('large_dict.hdf5'),
+                           add_time=True)
 
         traj2.f_load(name=traj_name, load_data=2)
 
@@ -665,7 +669,8 @@ class StorageTest(TrajectoryComparator):
     def test_auto_load(self):
 
 
-        traj = Trajectory(name='Testautoload', filename=make_temp_dir('autoload.hdf5'))
+        traj = Trajectory(name='Testautoload', filename=make_temp_dir('autoload.hdf5'),
+                          add_time=True)
 
         traj.v_auto_load = True
 
@@ -698,7 +703,8 @@ class StorageTest(TrajectoryComparator):
     def test_get_default(self):
 
 
-        traj = Trajectory(name='Testgetdefault', filename=make_temp_dir('autoload.hdf5'))
+        traj = Trajectory(name='Testgetdefault', filename=make_temp_dir('autoload.hdf5'),
+                          add_time=True)
 
         traj.v_auto_load = True
 
@@ -727,7 +733,8 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_version_mismatch(self):
-        traj = Trajectory(name='TestVERSION', filename=make_temp_dir('testversionmismatch.hdf5'))
+        traj = Trajectory(name='TestVERSION', filename=make_temp_dir('testversionmismatch.hdf5'),
+                          add_time=True)
 
         traj.f_add_parameter('group1.test',42)
 
@@ -763,7 +770,8 @@ class StorageTest(TrajectoryComparator):
     def test_no_run_information_loading(self):
         filename = make_temp_dir('testnoruninfo.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=filename)
+                          filename=filename,
+                          add_time=True)
 
         length = 100000
         traj.v_lazy_adding = True
@@ -779,7 +787,8 @@ class StorageTest(TrajectoryComparator):
     def test_delete_whole_subtrees(self):
         filename = make_temp_dir('testdeltree.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=filename, large_overview_tables=True)
+                          filename=filename, large_overview_tables=True,
+                          add_time=True)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
         dpar = traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
@@ -860,7 +869,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_delete_links(self):
         traj = Trajectory(name='TestDelete',
-                          filename=make_temp_dir('testpartiallydel.hdf5'))
+                          filename=make_temp_dir('testpartiallydel.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -886,7 +896,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',
-                          filename=make_temp_dir('testpartiallydel.hdf5'))
+                          filename=make_temp_dir('testpartiallydel.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -921,7 +932,7 @@ class StorageTest(TrajectoryComparator):
 
             env = Environment(trajectory='test', filename=filename,
                               dynamically_imported_classes=[],
-                              log_config=get_log_config())
+                              log_config=get_log_config(), add_time=True)
 
         with warnings.catch_warnings(record=True) as w:
             traj = Trajectory(dynamically_imported_classes=[])
@@ -935,7 +946,8 @@ class StorageTest(TrajectoryComparator):
         env.f_disable_logging()
 
     def test_overwrite_stuff(self):
-        traj = Trajectory(name='TestOverwrite', filename=make_temp_dir('testowrite.hdf5'))
+        traj = Trajectory(name='TestOverwrite', filename=make_temp_dir('testowrite.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -967,7 +979,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_loading_as_new(self):
         filename = make_temp_dir('asnew.h5')
-        traj = Trajectory(name='TestPartial', filename=filename)
+        traj = Trajectory(name='TestPartial', filename=filename, add_time=True)
 
         traj.f_add_parameter('x', 3)
         traj.f_add_parameter('y', 2)
@@ -994,7 +1006,8 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_partial_loading(self):
-        traj = Trajectory(name='TestPartial', filename=make_temp_dir('testpartially.hdf5'))
+        traj = Trajectory(name='TestPartial', filename=make_temp_dir('testpartially.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -1081,7 +1094,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_store_items_and_groups(self):
 
-        traj = Trajectory(name='testtraj', filename=make_temp_dir('teststoreitems.hdf5'))
+        traj = Trajectory(name='testtraj', filename=make_temp_dir('teststoreitems.hdf5'),
+                          add_time=True)
 
         traj.f_store()
 

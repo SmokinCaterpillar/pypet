@@ -101,7 +101,7 @@ class TestPostProc(TrajectoryComparator):
 
     def setUp(self):
 
-        self.env_kwargs={}
+        self.env_kwargs={'add_time': True}
 
     def make_environment(self, filename, trajname='Test', log=True, **kwargs):
 
@@ -291,7 +291,7 @@ class TestMPPostProc(TestPostProc):
     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc'
 
     def setUp(self):
-        self.env_kwargs={'multiproc':True, 'ncores': 3}
+        self.env_kwargs={'multiproc':True, 'ncores': 3, 'add_time': True}
 
 
 class TestMPImmediatePostProcLock(TestPostProc):
@@ -299,7 +299,8 @@ class TestMPImmediatePostProcLock(TestPostProc):
     tags = 'integration', 'hdf5', 'environment', 'postproc', 'multiproc', 'lock'
 
     def setUp(self):
-        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True}
+        self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
+                         'add_time': True}
 
 
 class TestMPImmediatePostProcQueue(TestPostProc):
@@ -308,7 +309,7 @@ class TestMPImmediatePostProcQueue(TestPostProc):
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
-                         'wrap_mode': 'QUEUE'}
+                         'wrap_mode': 'QUEUE', 'add_time': True}
 
 
 class TestMPImmediatePostProcLocal(TestPostProc):
@@ -317,7 +318,7 @@ class TestMPImmediatePostProcLocal(TestPostProc):
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
-                         'wrap_mode': 'LOCAL'}
+                         'wrap_mode': 'LOCAL', 'add_time': True}
 
 
 @unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
@@ -327,7 +328,7 @@ class TestMPImmediatePostProcPipe(TestPostProc):
 
     def setUp(self):
         self.env_kwargs={'multiproc':True, 'ncores': 2, 'immediate_postproc' : True,
-                         'wrap_mode': 'PIPE'}
+                         'wrap_mode': 'PIPE', 'add_time': True}
 
 
 if __name__ == '__main__':
