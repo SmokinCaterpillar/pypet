@@ -199,6 +199,15 @@ because most of the time the default settings are sufficient.
 
     Analogous to ``cpu_cap`` but the swap memory is considered.
 
+* ``niceness``
+
+    If you are running on a UNIX based system or you have psutil_ (under Windows) installed,
+    you can choose a niceness value to prioritize the child processes executing the
+    single runs in case you use multiprocessing.
+    Under Linux these usually range from 0 (highest priority)
+    to 19 (lowest priority). For Windows values check the psutil_ homepage.
+    Leave ``None`` if you don't care about niceness.
+
 * ``wrap_mode``
 
     If ``multiproc`` is ``True``, specifies how storage to disk is handled via
@@ -695,6 +704,13 @@ value, this is its very own problem.
 The process will **not** be terminated by *pypet*. The process will only cause *pypet* to not start
 new processes until the utilization falls below the threshold again.
 In order to use this cap feature, you need the psutil_ package.
+
+In addition to the cap values, you can also choose the ``niceness`` of your multiprocessing
+processes. If your operating system supports ``nice`` (Linux, MacOS) natively, this feature
+works even without the psutil_ package. Priority values under Linux usually range from 0 (highest)
+to 19 (lowest), for Windows values see the psutil_ documentation.
+Low priority processes will be given less CPU time, so they are *nice* to other processes.
+Nicing works with ``use_pool`` as well. Leave ``None`` if you don't care about niceness.
 
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper

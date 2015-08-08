@@ -23,7 +23,12 @@ except ImportError:
 
 def check_nice(nice):
     """Checks if nice is available`"""
-    return nice if hasattr(os, 'nice') else None
+    if hasattr(os, 'nice'):
+        return nice
+    elif psutil is not None:
+        return 32 * nice
+    else:
+        return None
 
 
 class MultiprocPoolQueueTest(TestOtherHDF5Settings2):

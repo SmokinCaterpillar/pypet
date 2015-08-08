@@ -20,6 +20,11 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 import scipy.sparse as spsp
 import random
 import pypet.compat as compat
@@ -263,7 +268,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj = traj
         self.env = env
 
-    @unittest.skipIf(not hasattr(os, 'nice'), 'Niceness not supported under non Unix.')
+    @unittest.skipIf(not hasattr(os, 'nice') and psutil is None, 'Niceness not supported under non Unix.')
     def test_niceness(self):
         ###Explore
         self.explore(self.traj)

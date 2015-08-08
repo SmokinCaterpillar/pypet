@@ -89,4 +89,5 @@ branches:
   only:
     - develop
     - master
+    - scoop_feature
 

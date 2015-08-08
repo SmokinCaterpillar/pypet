@@ -124,8 +124,12 @@ def _configure_niceness(kwargs):
     """Sets niceness of a process"""
     niceness = kwargs['niceness']
     if niceness is not None:
-        current = os.nice(0)
-        os.nice(niceness-current)
+        try:
+            current = os.nice(0)
+            os.nice(niceness-current)
+        except AttributeError:
+            # Fall back on psutil under Windows
+            psutil.Process().nice(niceness)
 
 
 def _single_run(kwargs):
@@ -440,8 +444,6 @@ class Environment(HasLogger):
         You need the psutil_ package to use this cap feature. If not installed and you
         choose cap values different from 100.0 a ValueError is thrown.
 
-        .. _psutil: http://psutil.readthedocs.org/
-
     :param memory_cap:
 
         Cap value of RAM usage. If more RAM than the threshold is currently in use, no new
@@ -454,6 +456,15 @@ class Environment(HasLogger):
     :param swap_cap:
 
         Analogous to `cpu_cap` but the swap memory is considered.
+
+    :param niceness:
+
+        If you are running on a UNIX based system or you have psutil_ (under Windows) installed,
+        you can choose a niceness value to prioritize the child processes executing the
+        single runs in case you use multiprocessing.
+        Under Linux these usually range from 0 (highest priority)
+        to 19 (lowest priority). For Windows values check the psutil_ homepage.
+        Leave ``None`` if you don't care about niceness.
 
     :param wrap_mode:
 
@@ -833,6 +844,8 @@ class Environment(HasLogger):
     (you can leave the prefix ``v_``, i.e. ``with_links`` works, too).
     Thus, you can change the settings of the trajectory immediately.
 
+    .. _psutil: http://psutil.readthedocs.org/
+
     """
 
     @parse_config
@@ -902,9 +915,10 @@ class Environment(HasLogger):
             raise ValueError('Continuing trajectories does NOT work with `QUEUE` or `PIPE` '
                              'wrap mode.')
 
-        if niceness is not None and not hasattr(os, 'nice'):
+        if niceness is not None and not hasattr(os, 'nice') and psutil is None:
             raise ValueError('You cannot set `niceness` if your operating system does not '
-                             'support the `nice` operation.')
+                             'support the `nice` operation. Alternatively you can install '
+                             '`psutil`.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -2344,7 +2358,7 @@ class Environment(HasLogger):
 
                     init_kwargs = dict(logging_manager=self._logging_manager,
                                        storage_service=pool_service,
-                                       niceness=self._nicensess)
+                                       niceness=self._niceness)
                     initializer = _configure_pool
                     iterator = self._make_iterator(start_run_idx)
                     target = _pool_single_run
