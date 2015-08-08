@@ -15,3 +15,5 @@
 * Test new wrapper  *DONE*
 
 * more test for copying
+
+* Doc new niceness feature

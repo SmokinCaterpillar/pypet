@@ -21,6 +21,11 @@ except ImportError:
     psutil = None
 
 
+def check_nice(nice):
+    """Checks if nice is available`"""
+    return nice if hasattr(os, 'nice') else None
+
+
 class MultiprocPoolQueueTest(TestOtherHDF5Settings2):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'queue', 'pool'
@@ -31,6 +36,7 @@ class MultiprocPoolQueueTest(TestOtherHDF5Settings2):
         self.multiproc = True
         self.ncores = 4
         self.use_pool=True
+        self.niceness = check_nice(4)
 
 
 # class MultiprocPoolLockTest(EnvironmentTest):
@@ -149,6 +155,7 @@ class MultiprocNoPoolLockTest(EnvironmentTest):
         self.multiproc = True
         self.ncores = 2
         self.use_pool=False
+        self.niceness = check_nice(17)
 
 
 # class MultiprocNoPoolPipeTest(EnvironmentTest):
@@ -210,6 +217,7 @@ class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
         self.multiproc = True
         self.freeze_pool_input = True
         self.ncores = 4
+        self.niceness = check_nice(1)
         self.use_pool=True
 
 
@@ -289,6 +297,7 @@ class MultiprocFrozenPoolPipeTest(EnvironmentTest):
         self.freeze_pool_input = True
         self.ncores = 4
         self.use_pool=True
+        self.niceness = check_nice(10)
 
 
 class MultiprocFrozenPoolLocalTest(EnvironmentTest):
@@ -305,6 +314,7 @@ class MultiprocFrozenPoolLocalTest(EnvironmentTest):
         self.freeze_pool_input = True
         self.ncores = 4
         self.gc_interval = 3
+        self.niceness = check_nice(1)
         self.use_pool=True
 
 
@@ -381,6 +391,7 @@ class CapTest(EnvironmentTest):
                           multiproc=True,
                           ncores=4,
                           use_pool=False,
+                          niceness = check_nice(11),
                           **cap_dict)
 
         logging.getLogger('test').error('Using Cap: %s' % str(cap_dict))

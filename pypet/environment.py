@@ -89,12 +89,14 @@ def _frozen_pool_single_run(idx):
 def _configure_pool(kwargs):
     """Configures the pool and keeps the storage service"""
     _pool_single_run.storage_service = kwargs['storage_service']
+    _configure_niceness(kwargs)
     _configure_logging(kwargs)
 
 
 def _configure_frozen_pool(kwargs):
     """Configures the frozen pool and keeps all kwargs"""
     _frozen_pool_single_run.kwargs = kwargs
+    _configure_niceness(kwargs)
     _configure_logging(kwargs)
     # Reset full copy to it's old value
     traj = kwargs['traj']
@@ -103,6 +105,7 @@ def _configure_frozen_pool(kwargs):
 
 def _process_single_run(kwargs):
     """Wrapper function that first configures logging and starts a single run afterwards."""
+    _configure_niceness(kwargs)
     _configure_logging(kwargs)
     return _single_run(kwargs)
 
@@ -115,6 +118,14 @@ def _configure_logging(kwargs):
     except Exception as exc:
         sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
         traceback.print_exc()
+
+
+def _configure_niceness(kwargs):
+    """Sets niceness of a process"""
+    niceness = kwargs['niceness']
+    if niceness is not None:
+        current = os.nice(0)
+        os.nice(niceness-current)
 
 
 def _single_run(kwargs):
@@ -847,6 +858,7 @@ class Environment(HasLogger):
                  cpu_cap=100.0,
                  memory_cap=100.0,
                  swap_cap=100.0,
+                 niceness=None,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
                  gc_interval=0,
                  clean_up_runs=True,
@@ -889,6 +901,10 @@ class Environment(HasLogger):
             continuable):
             raise ValueError('Continuing trajectories does NOT work with `QUEUE` or `PIPE` '
                              'wrap mode.')
+
+        if niceness is not None and not hasattr(os, 'nice'):
+            raise ValueError('You cannot set `niceness` if your operating system does not '
+                             'support the `nice` operation.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -942,6 +958,7 @@ class Environment(HasLogger):
         if self._check_usage:
             # For initialisation
             self._estimate_cpu_utilization()
+        self._niceness = niceness
 
         self._sumatra_project = sumatra_project
         self._sumatra_reason = sumatra_reason
@@ -1132,6 +1149,11 @@ class Environment(HasLogger):
                                         comment='Whether to use a pool of processes or '
                                                 'spawning individual processes for '
                                                 'each run.').f_lock()
+
+                if self._niceness is not None:
+                    config_name = 'environment.%s.niceness' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._niceness,
+                                        comment='Niceness value of child processes.').f_lock()
 
                 if self._use_pool:
                     config_name = 'environment.%s.freeze_pool_input' % self.v_name
@@ -1891,7 +1913,8 @@ class Environment(HasLogger):
                        'clean_up_runs': self._clean_up_runs,
                        'continue_path': self._continue_path,
                        'automatic_storing': self._automatic_storing,
-                       'wrap_mode': self._wrap_mode}
+                       'wrap_mode': self._wrap_mode,
+                       'niceness': self._niceness}
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool:
@@ -1903,6 +1926,7 @@ class Environment(HasLogger):
                 else:
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
+                    del result_dict['niceness']
             else:
                 result_dict['clean_up_runs'] = False
         return result_dict
@@ -2319,7 +2343,8 @@ class Environment(HasLogger):
                     self._traj.v_storage_service = None
 
                     init_kwargs = dict(logging_manager=self._logging_manager,
-                                       storage_service=pool_service)
+                                       storage_service=pool_service,
+                                       niceness=self._nicensess)
                     initializer = _configure_pool
                     iterator = self._make_iterator(start_run_idx)
                     target = _pool_single_run

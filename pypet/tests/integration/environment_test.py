@@ -70,6 +70,11 @@ class FullStorageTest(TrajectoryComparator):
             self.assertTrue('hi' in traj)
 
 
+def test_niceness(traj):
+    if traj.multiproc:
+        assert traj.niceness == os.nice(0)
+
+
 def add_large_data(traj):
     np_array = np.random.rand(100,1000,10)
     traj.f_add_result('l4rge', np_array)
@@ -115,6 +120,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.encoding = 'utf8'
         self.log_stdout=False
         self.wildcard_functions = None
+        self.niceness = None
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -240,7 +246,8 @@ class EnvironmentTest(TrajectoryComparator):
                           shuffle=self.shuffle,
                           pandas_append=self.pandas_append,
                           pandas_format=self.pandas_format,
-                          encoding=self.encoding)
+                          encoding=self.encoding,
+                          niceness=self.niceness)
 
         traj = env.v_trajectory
 
@@ -255,6 +262,15 @@ class EnvironmentTest(TrajectoryComparator):
         #remember the trajectory and the environment
         self.traj = traj
         self.env = env
+
+    @unittest.skipIf(not hasattr(os, 'nice'), 'Niceness not supported under non Unix.')
+    def test_niceness(self):
+        ###Explore
+        self.explore(self.traj)
+
+        self.env.f_run(test_niceness)
+
+        self.assertTrue(self.traj.f_is_completed())
 
     def test_file_overwriting(self):
         self.traj.f_store()
