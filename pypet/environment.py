@@ -126,7 +126,12 @@ def _process_single_run(kwargs):
 def _scoop_single_run(kwargs):
     """Wrapper function for scoop, that does not configure logging"""
     try:
-        _configure_niceness(kwargs)
+        pid = kwargs['main_pid']
+        scoop.logger.warn('%s != %s' % (os.getpid(), pid))
+        if pid != os.getpid():
+            # Hack to not reconfigure logging and niceness if scoop uses origin
+            _configure_niceness(kwargs)
+            _configure_logging(kwargs)
         return _single_run(kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
@@ -1994,6 +1999,8 @@ class Environment(HasLogger):
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
                     del result_dict['niceness']
+            if self._use_scoop:
+                result_dict['main_pid'] = os.getpid()
             else:
                 result_dict['clean_up_runs'] = False
         return result_dict
