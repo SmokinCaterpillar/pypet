@@ -51,6 +51,10 @@ class MultiprocPoolQueueLoggingTest(LoggingTest):
         self.mode.use_pool = True
 
 
+    def test_logfile_old_way_disabling_mp_log(self):
+        return super(MultiprocPoolQueueLoggingTest, self).test_logfile_old_way_disabling_mp_log()
+
+
 class MultiprocNoPoolLockLoggingTest(LoggingTest):
 
     tags = 'integration', 'environment', 'logging', 'multiproc', 'nopool', 'lock'

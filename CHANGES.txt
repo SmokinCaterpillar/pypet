@@ -31,6 +31,12 @@ pypet 0.1b.13
 
 *   The `add_time` parameter of the trajectory is by default now `False`
 
+*   New `niceness` feature to prioritize child processes
+
+*   New `scoop` feature to allow multiprocessing with the scoop package.
+
+*   Passing `log_multiproc=False` to an environment disables multiprocess logging.
+
 
 pypet 0.1b.12
 

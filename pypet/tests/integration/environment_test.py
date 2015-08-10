@@ -77,7 +77,10 @@ class FullStorageTest(TrajectoryComparator):
 
 def test_niceness(traj):
     if traj.multiproc:
-        assert traj.niceness == os.nice(0)
+        if hasattr(os, 'nice'):
+            assert traj.niceness == os.nice(0)
+        else:
+            assert traj.niceness == psutil.Process().nice()
 
 
 def add_large_data(traj):
@@ -112,9 +115,10 @@ class EnvironmentTest(TrajectoryComparator):
     def set_mode(self):
         self.mode = 'LOCK'
         self.multiproc = False
-        self.gc_interval = 0
+        self.gc_interval = None
         self.ncores = 1
         self.use_pool=True
+        self.use_scoop=False
         self.freeze_pool_input=False
         self.pandas_format='fixed'
         self.pandas_append=False
@@ -126,6 +130,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.log_stdout=False
         self.wildcard_functions = None
         self.niceness = None
+        self.log_config = True
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -235,7 +240,7 @@ class EnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_config=get_log_config(),
+                          log_config=get_log_config() if self.log_config else None,
                           results_per_run=5,
                           wildcard_functions=self.wildcard_functions,
                           derived_parameters_per_run=5,
@@ -252,7 +257,8 @@ class EnvironmentTest(TrajectoryComparator):
                           pandas_append=self.pandas_append,
                           pandas_format=self.pandas_format,
                           encoding=self.encoding,
-                          niceness=self.niceness)
+                          niceness=self.niceness,
+                          use_scoop=self.use_scoop)
 
         traj = env.v_trajectory
 
@@ -348,6 +354,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.explore_large(self.traj)
         self.make_run_large_data()
 
+        self.assertTrue(self.traj.f_is_completed())
+
         # Check if printing and repr work
         get_root_logger().info(str(self.env))
         get_root_logger().info(repr(self.env))
@@ -431,6 +439,8 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
+        self.assertTrue(self.traj.f_is_completed())
+
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -444,6 +454,8 @@ class EnvironmentTest(TrajectoryComparator):
 
     def test_just_one_run(self):
         self.make_run()
+        self.assertTrue(self.traj.f_is_completed())
+
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -467,6 +479,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
+        self.assertTrue(self.traj.f_is_completed())
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_update_skeleton()
@@ -792,6 +805,8 @@ class ResultSortTest(TrajectoryComparator):
         self.use_pool=True
         self.log_stdout=False
         self.freeze_pool_input=False
+        self.use_scoop = False
+        self.log_config = True
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -800,18 +815,19 @@ class ResultSortTest(TrajectoryComparator):
     def setUp(self):
         self.set_mode()
 
-        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','test.hdf5'))
+        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','sort_tests.hdf5'))
 
         self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_config=get_log_config(),
+                          log_config=get_log_config() if self.log_config else None,
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
                           use_pool=self.use_pool,
+                          use_scoop=self.use_scoop,
                           freeze_pool_input=self.freeze_pool_input,)
 
         traj = env.v_trajectory

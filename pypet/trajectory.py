@@ -13,8 +13,8 @@ import hashlib
 import itertools as itools
 import inspect
 import sys
-from copy import deepcopy
-import numpy as np
+import copy as cp
+
 if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
 else:
@@ -232,6 +232,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                  dynamic_imports=None, wildcard_functions=None,
                  storage_service=None, **kwargs):
 
+        copy_traj = kwargs.pop('_copy_traj', False)  # True if trajectory is copied
+
         # This is true during the actual runs:
         self._is_run = False
 
@@ -243,20 +245,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # helper variable to return the correct length during single runs.
         self._length = 1
 
-        self._set_logger()
+        if not copy_traj:
+            self._set_logger()
+
+            init_time = time.time()
+            formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+            self._timestamp = init_time
+            self._time = formatted_time
+
+            if add_time:
+                self._name = name + '_' + str(formatted_time)
+            else:
+                self._name = name
 
         self._version = VERSION
         self._python = '.'.join([str(x) for x in sys.version_info[0:3]])
-
-        init_time = time.time()
-        formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp = init_time
-        self._time = formatted_time
-
-        if add_time:
-            self._name = name + '_' + str(formatted_time)
-        else:
-            self._name = name
 
         self._parameters = {}  # Contains all parameters
         self._derived_parameters = {}  # Contains all derived parameters
@@ -313,46 +316,47 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         self._full_copy = False
 
-        self._dynamic_imports = ['pypet.parameter.PickleParameter']
+        if not copy_traj:
+            self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
-        if not dynamic_imports is None:
-            self.f_add_to_dynamic_imports(dynamic_imports)
+            if not dynamic_imports is None:
+                self.f_add_to_dynamic_imports(dynamic_imports)
 
-        faulty_names = self._nn_interface._check_names([name])
+            faulty_names = self._nn_interface._check_names([name])
 
-        if '.' in name:
-            faulty_names += ' colons >>.<< are not allowed in trajectory names,'
+            if '.' in name:
+                faulty_names += ' colons >>.<< are not allowed in trajectory names,'
 
-        if faulty_names:
-            raise ValueError('Your Trajectory %s f_contains the following not admissible names: '
-                             '%s please choose other names.'
-                             % (name, faulty_names))
+            if faulty_names:
+                raise ValueError('Your Trajectory %s f_contains the following not admissible names: '
+                                 '%s please choose other names.'
+                                 % (name, faulty_names))
 
-        internal_wildcard_functions = {('$', 'crun'): make_run_name,
-                                       ('$set', 'crunset'): make_set_name}
-        if wildcard_functions:
-            internal_wildcard_functions.update(wildcard_functions)
+            internal_wildcard_functions = {('$', 'crun'): make_run_name,
+                                           ('$set', 'crunset'): make_set_name}
+            if wildcard_functions:
+                internal_wildcard_functions.update(wildcard_functions)
 
-        self._wildcard_functions = {}
-        self._wildcard_cache = {}
-        self._wildcard_keys = {}
-        self._reversed_wildcards = {} # Only needed for merging
+            self._wildcard_functions = {}
+            self._wildcard_cache = {}
+            self._wildcard_keys = {}
+            self._reversed_wildcards = {} # Only needed for merging
 
-        self.f_add_wildcard_functions(internal_wildcard_functions)
+            self.f_add_wildcard_functions(internal_wildcard_functions)
 
-        # Per Definition the length is set to be 1. Even with an empty trajectory
-        # in principle you could make a single run
-        self._add_run_info(0)
-        self._test_run_addition(1)
+            # Per Definition the length is set to be 1. Even with an empty trajectory
+            # in principle you could make a single run
+            self._add_run_info(0)
+            self._test_run_addition(1)
 
-        self._comment = ''
-        self.v_comment = comment
+            self._comment = ''
+            self.v_comment = comment
 
-        self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
-                                                               trajectory=self, **kwargs)
-        if len(unused_kwargs) > 0:
-            raise ValueError('The following keyword arguments were not used: `%s`' %
-                             str(unused_kwargs))
+            self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
+                                                                   trajectory=self, **kwargs)
+            if len(unused_kwargs) > 0:
+                raise ValueError('The following keyword arguments were not used: `%s`' %
+                                 str(unused_kwargs))
 
     def f_get_wildcards(self):
         """Returns a list of all defined wildcards"""
@@ -372,7 +376,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     raise ValueError('Your wildcard `%s` is used twice1' % wildcard)
                 self._wildcard_keys[wildcard] = wildcards
             self._wildcard_functions[wildcards] = function
-            self._logger.info('Added wildcard function `%s`.' % str(wildcards))
+            self._logger.debug('Added wildcard function `%s`.' % str(wildcards))
 
     def f_wildcard(self, wildcard='$', run_idx=None):
         """#TODO"""
@@ -685,7 +689,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             or ``'self'`` to simply return the trajectory container.
 
             You can also pick ``'copy'`` to get **shallow** copies (ie the tree is copied but
-            no leave nodes) of your trajectory,
+            no leave nodes except explored ones.) of your trajectory,
             might lead to some of overhead.
 
         Note that after a full iteration, the trajectory is set back to normal.
@@ -1065,7 +1069,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for param_name in self._explored_parameters:
                 old_ranges[param_name] = self._explored_parameters[param_name].f_get_range()
             try:
-                old_ranges = deepcopy(old_ranges)
+                old_ranges = cp.deepcopy(old_ranges)
             except Exception:
                 self._logger.error('Cannot deepcopy old parameter ranges, if '
                                      'something fails during `f_expand` I cannot revert the '
@@ -1137,10 +1141,59 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                            'from disk.' % param.v_full_name)
 
     def __copy__(self):
+        """Shallow copy, i.e copy all groups but no annotations and leaves except explored ones."""
+        return self.f_copy(copy_annotations=False,
+                           copy_leaves=False,
+                           copy_explored=True,
+                           use_copy_module=True,
+                           with_links=True)
+
+    def f_copy(self, copy_data=pypetconstants.LOAD_DATA,
+                      copy_annotations=True,
+                      copy_leaves=True,
+                      copy_explored=False,
+                      use_copy_module=True,
+                      with_links=True):
+        """Returns a copy of a trajectory.
+
+        :param node: The node to insert
+
+        :param copy_data:
+
+            How to copy data, equivalent to ``load_data`` for ``f_load``.
+            If you choose ``copy_leaves=False`` setting ``copy_data=pypetconstants.LOAD_SKELETON``
+            has no effect, because the leaves are passed as a whole no matter if they
+            contain data or not.
+
+            Does not overwrite locked parameters!
+
+        :param copy_annotations: If annotations should be **deep** copied
+
+        :param copy_leaves:
+
+            If leaves should be **deep** copied or simply referred to by both trees.
+            **Deep** copying is established using the leaves ``_load`` and
+            ``_store`` functionality.
+
+        :param copy_explored:
+
+            If ``copy_leaves`` is ``False`` explored parameters are still copied.
+
+        :param use_copy_module:
+
+            If ``True`` leaves are copied using ``copy.deepcopy`` otherwise the
+            `store/load` functionality of leaves is used.
+
+        :param with_links: If links should be ignored or followed and copied as well
+
+        :return: The corresponding (new) node in the tree.
+
+        """
         """Shallow copy means copying the whole tree except leave nodes"""
-        new_traj = Trajectory()
+        new_traj = Trajectory(_copy_traj=True)
 
         new_traj._length = self._length
+        new_traj._name = self._name
 
         new_traj._timestamp = self._timestamp
         new_traj._time = self._time
@@ -1149,7 +1202,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         new_traj._run_information = self._run_information
 
-        new_traj._updated_run_information = self._update_run_information
+        new_traj._updated_run_information = self._updated_run_information
 
         new_traj._fast_access = self._fast_access
         new_traj._shortcuts = self._shortcuts
@@ -1183,14 +1236,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         new_traj._wildcard_functions = self._wildcard_functions
         new_traj._wildcard_keys = self._wildcard_keys
         new_traj._reversed_wildcards = self._reversed_wildcards
+        new_traj._wildcard_cache = self._wildcard_cache
 
         new_traj._comment = self._comment
 
+        new_traj._stored = self._stored
+
         new_traj._storage_service = self._storage_service
 
-        new_traj.f_copy_from(self, copy_annotations=False,
-                                   copy_leaves=False,
-                                   with_links=True)
+        new_traj.f_copy_from(self, copy_data=copy_data,
+                                   copy_annotations=copy_annotations,
+                                   copy_leaves=copy_leaves,
+                                   copy_explored=copy_explored,
+                                   use_copy_module=use_copy_module,
+                                   with_links=with_links)
 
         new_traj._is_run = self._is_run
 
@@ -1217,6 +1276,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                           copy_data=pypetconstants.LOAD_DATA,
                           copy_annotations=True,
                           copy_leaves=True,
+                          copy_explored=False,
+                          use_copy_module=True,
                           with_links=True):
         """Pass a ``node`` to insert the full tree to the trajectory.
 
@@ -1238,6 +1299,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :param copy_leaves:
 
             If leaves should be **deep** copied or simply referred to by both trees.
+            **Deep** copying is established using the leaves ``_load`` and
+            ``_store`` functionality.
+
+        :param copy_explored:
+
+            If ``copy_leaves`` is ``False`` explored parameters are still copied.
+
+        :param use_copy_module:
+
+            If ``True`` leaves are copied using ``copy.deepcopy`` otherwise the
+            `store/load` functionality of leaves is used.
 
         :param with_links: If links should be ignored or followed and copied as well
 
@@ -1249,7 +1321,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             """Copies the skeleton of from `node_out` to `node_in`"""
             if node_in.v_annotations.f_is_empty():
                 if copy_annotations:
-                    new_annotations = deepcopy(node_out.v_annotations)
+                    new_annotations = cp.deepcopy(node_out.v_annotations)
                 else:
                     new_annotations = node_out.v_annotations
                 node_in._annotations = new_annotations
@@ -1273,19 +1345,32 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 new_leaf = found_leaf
                 if (copy_data == pypetconstants.OVERWRITE_DATA and
                         (not new_leaf.v_is_parameter or not new_leaf.v_locked)):
-                    new_leaf.f_empty()
-                    new_leaf.v_annotations.f_empty()
-                    new_leaf.v_comment = ''
-                    new_leaf._load(leaf._store())
-                    _copy_skeleton(new_leaf, leaf)
-            else:
-                if copy_leaves:
-                    new_leaf = self.f_add_leaf(leaf_full_name)
-                    _copy_skeleton(new_leaf, leaf)
-                    if copy_data in (pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA):
+                    if use_copy_module:
+                        self.f_remove_item(found_leaf)
+                        self.f_add_leaf(cp.deepcopy(leaf))
+                    else:
+                        new_leaf.f_empty()
+                        new_leaf.v_annotations.f_empty()
+                        new_leaf.v_comment = ''
                         new_leaf._load(leaf._store())
+                        _copy_skeleton(new_leaf, leaf)
+                    if leaf.v_is_parameter and leaf.v_explored:
+                        new_leaf._explored = True
+                        self._explored_parameters[new_leaf.v_full_name] = new_leaf
+            else:
+                if copy_leaves or (copy_explored and leaf.v_is_parameter and leaf.v_explored):
+                    if use_copy_module:
+                        new_leaf = self.f_add_leaf(cp.deepcopy(leaf))
+                    else:
+                        new_leaf = self.f_add_leaf(leaf.__class__, leaf_full_name)
+                        _copy_skeleton(new_leaf, leaf)
+                        if copy_data in (pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA):
+                            new_leaf._load(leaf._store())
                 else:
                     new_leaf = self.f_add_leaf(leaf)
+                if leaf.v_is_parameter and leaf.v_explored:
+                    new_leaf._explored = True
+                    self._explored_parameters[new_leaf.v_full_name] = new_leaf
             return new_leaf
 
         def _add_group(group):
@@ -3018,7 +3103,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         if name_or_idx is None:
             if copy:
-                return deepcopy(self._run_information)
+                return cp.deepcopy(self._run_information)
             else:
                 return self._run_information
         try:

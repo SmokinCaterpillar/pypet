@@ -16,6 +16,7 @@ import hashlib
 import copy as cp
 import itertools as itools
 import sys
+import gc
 
 try:
     from thread import error as ThreadError
@@ -227,9 +228,11 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
 class StorageServiceDataHandler(HasLogger):
     """Class that can store data via a storage service, needs to be sub-classed to receive data"""
 
-    def __init__(self, storage_service):
+    def __init__(self, storage_service, gc_interval=None):
         self._storage_service = storage_service
         self._trajectory_name = ''
+        self.gc_interval = gc_interval
+        self.operation_counter = 0
         self._set_logger()
 
     def __repr__(self):
@@ -244,6 +247,12 @@ class StorageServiceDataHandler(HasLogger):
     def _close_file(self):
         self._storage_service.store(pypetconstants.CLOSE_FILE, None)
         self._logger.info('Closed the hdf5 file.')
+
+    def _check_and_collect_garbage(self):
+        if self.gc_interval and self.operation_counter % self.gc_interval == 0:
+            collected = gc.collect()
+            self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
+        self.operation_counter += 1
 
     def _handle_data(self, msg, args, kwargs):
         """Handles data and returns `True` or `False` if everything is done."""
@@ -270,6 +279,7 @@ class StorageServiceDataHandler(HasLogger):
                     self._open_file()
                 self._storage_service.store(store_msg, stuff_to_store, *args, **kwargs)
                 self._storage_service.store(pypetconstants.FLUSH, None)
+                self._check_and_collect_garbage()
             else:
                 raise RuntimeError('You queued something that was not '
                                    'intended to be queued. I did not understand message '
@@ -301,8 +311,8 @@ class StorageServiceDataHandler(HasLogger):
 class QueueStorageServiceWriter(StorageServiceDataHandler):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
 
-    def __init__(self, storage_service, storage_queue):
-        super(QueueStorageServiceWriter, self).__init__(storage_service)
+    def __init__(self, storage_service, storage_queue, gc_interval=None):
+        super(QueueStorageServiceWriter, self).__init__(storage_service, gc_interval=gc_interval)
         self.queue = storage_queue
 
     @retry(9, Exception, 0.01, 'pypet.retry')
@@ -317,8 +327,8 @@ class QueueStorageServiceWriter(StorageServiceDataHandler):
 class PipeStorageServiceWriter(StorageServiceDataHandler):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
 
-    def __init__(self, storage_service, storage_connection, max_buffer_size=10):
-        super(PipeStorageServiceWriter, self).__init__(storage_service)
+    def __init__(self, storage_service, storage_connection, max_buffer_size=10, gc_interval=None):
+        super(PipeStorageServiceWriter, self).__init__(storage_service, gc_interval=gc_interval)
         self.conn = storage_connection
         if max_buffer_size == 0:
             # no maximum buffer size
@@ -438,22 +448,17 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
                     self._logger.error('Could not release lock `%s`!' % str(self.lock))
 
 
-class ReferenceWrapper(MultiprocWrapper, HasLogger):
-    """Wrapper that just keeps references to data to be stored.
-
-    Only stores all data when signalled to do so.
-
-    """
+class ReferenceWrapper(MultiprocWrapper):
+    """Wrapper that just keeps references to data to be stored."""
     def __init__(self):
-        self._data = {}
-        self._set_logger()
+        self.references = {}
 
     def store(self, msg, stuff_to_store, *args, **kwargs):
         """Simply keeps a reference to the stored data """
         trajectory_name = kwargs['trajectory_name']
-        if trajectory_name not in self._data:
-            self._data[trajectory_name] = []
-        self._data[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
+        if trajectory_name not in self.references:
+            self.references[trajectory_name] = []
+        self.references[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
 
     def load(self, *args, **kwargs):
         raise NotImplementedError('Queue wrapping does not support loading. If you want to '
@@ -461,19 +466,30 @@ class ReferenceWrapper(MultiprocWrapper, HasLogger):
                                   'wrapping.')
 
     def free_references(self):
-        self._data = {}
+        self.references = {}
 
-    def store_references(self, storage_service):
-        """Stores all references via the given storage service.
 
-        Frees references afterwards.
+class ReferenceStore(HasLogger):
+    """Class that can store references"""
+    def __init__(self, storage_service, gc_interval=None):
+        self._storage_service = storage_service
+        self.gc_interval = gc_interval
+        self.operation_counter = 0
+        self._set_logger()
 
-        """
-        for trajectory_name in self._data:
-            storage_service.store(pypetconstants.LIST,
-                                  self._data[trajectory_name],
+    def _check_and_collect_garbage(self):
+        if self.gc_interval and self.operation_counter % self.gc_interval == 0:
+            collected = gc.collect()
+            self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
+        self.operation_counter += 1
+
+    def store_references(self, references):
+        """Stores references to disk and may collect garbage."""
+        for trajectory_name in references:
+            self._storage_service.store(pypetconstants.LIST,
+                                  references[trajectory_name],
                                   trajectory_name=trajectory_name)
-        self.free_references()
+        self._check_and_collect_garbage()
 
 
 class StorageService(object):
@@ -3331,7 +3347,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data != pypetconstants.STORE_NOTHING:
-            self._logger.info('Storing Data of single run `%s`.' % traj.v_crun)
+            self._logger.debug('Storing Data of single run `%s`.' % traj.v_crun)
             if max_depth is None:
                 max_depth = float('inf')
             for name_pair in traj._new_nodes:

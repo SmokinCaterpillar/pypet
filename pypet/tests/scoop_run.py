@@ -1,0 +1,23 @@
+__author__ = 'robert'
+
+try:
+    import pypet
+except ImportError:
+    import sys
+    sys.path.append('/media/data/PYTHON_WORKSPACE/pypet-project')
+
+from pypet.tests.testutils.ioutils import discover_tests, parse_args, run_suite
+from pypet.tests.integration.environment_scoop_test import ScoopFuturesWrapper
+
+tests_include=set(('MultiprocSCOOPSortLocalTest',  'MultiprocSCOOPLocalTest'))
+scoop_suite = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
+
+
+
+if __name__ == '__main__':
+    wrapper = ScoopFuturesWrapper()
+    mock = wrapper.check_mock()
+    if mock:
+        raise RuntimeError('Not running in SCOOP mode!')
+    opt_dict = parse_args()
+    run_suite(suite=scoop_suite, **opt_dict)

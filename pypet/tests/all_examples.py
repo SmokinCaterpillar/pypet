@@ -20,6 +20,7 @@ system = platform.system()
 print('*** Running under %s ***' % str(system))
 
 to_skip = set()
+to_skip.add('21')
 if brian is None:
     to_skip.add('07')
     to_skip.add('11')
@@ -86,7 +87,7 @@ def main():
     os.chdir(os.path.join('..','..','examples'))
     sys.path.append(os.getcwd())
     simple_examples = glob.glob('*.py')
-    assert len(simple_examples) == 17 + 1
+    assert len(simple_examples) == 18 + 1
 
     for simple_example in simple_examples:
         if simple_example == '__init__':

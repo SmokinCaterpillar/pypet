@@ -14,6 +14,10 @@
 
 * Test new wrapper  *DONE*
 
-* more test for copying
+* more test for copying *DONE*
 
-* Doc new niceness feature
+* Doc new niceness feature  *DONE*
+
+* Doc new scoop feature
+
+* Add gc.collect to queue and pipe feature *DONE*

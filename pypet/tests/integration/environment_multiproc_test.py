@@ -13,7 +13,7 @@ from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajecto
 from pypet.tests.testutils.data import create_param_dict, add_params
 import pypet.compat as compat
 import platform
-import sys
+
 
 try:
     import psutil
@@ -145,6 +145,7 @@ class MultiprocNoPoolSortLocalTest(ResultSortTest):
         self.multiproc = True
         self.ncores = 2
         self.use_pool=False
+        self.gc_interval = 2
 
     # def test_if_results_are_sorted_correctly(self):
     #     return super(MultiprocNoPoolSortLocalTest, self).test_if_results_are_sorted_correctly()
@@ -224,6 +225,7 @@ class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
         self.ncores = 4
         self.niceness = check_nice(1)
         self.use_pool=True
+        self.gc_interval = 2
 
 
 # class MultiprocFrozenPoolLockTest(EnvironmentTest):
@@ -259,6 +261,7 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
         self.freeze_pool_input = True
         self.ncores = 3
         self.use_pool=True
+        self.gc_interval = 2
 
     @unittest.skip('Cannot be run with frozen pool')
     def test_if_results_are_sorted_correctly_using_map(self):
@@ -353,6 +356,7 @@ class MultiprocFrozenPoolSortPipeTest(ResultSortTest):
         self.multiproc = True
         self.ncores = 4
         self.use_pool=True
+        self.gc_interval = 3
 
     @unittest.skip('Cannot be run with frozen pool')
     def test_if_results_are_sorted_correctly_using_map(self):

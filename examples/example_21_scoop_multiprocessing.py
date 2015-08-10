@@ -3,40 +3,45 @@ __author__ = 'Robert Meyer'
 import os # For path names being viable under Windows and Linux
 import logging
 
+import sys
+sys.path.append('/media/data/PYTHON_WORKSPACE/pypet-project')
+
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
+import scoop
 
 
 # Let's reuse the simple multiplication example
 def multiply(traj):
     """Sophisticated simulation of multiplication"""
+    # scoop.logger.warn('HERE' + str(traj.v_idx))
     z=traj.x*traj.y
     traj.f_add_result('z',z=z, comment='I am the product of two reals!')
+    # scoop.logger.warn('THERE' + str(traj.v_idx))
 
 
 def main():
     """Main function to protect the *entry point* of the program.
 
-    If you want to use multiprocessing under Windows you need to wrap your
+    If you want to use multiprocessing with SCOOP you need to wrap your
     main code creating an environment into a function. Otherwise
     the newly started child processes will re-execute the code and throw
-    errors (also see https://docs.python.org/2/library/multiprocessing.html#windows).
+    errors (also see http://scoop.readthedocs.org/en/latest/usage.html#pitfalls).
 
     """
 
     # Create an environment that handles running.
     # Let's enable multiprocessing with 2 workers.
-    filename = os.path.join('hdf5', 'example_04.hdf5')
-    env = Environment(trajectory='Example_04_MP',
+    filename = os.path.join('hdf5', 'example_21.hdf5')
+    env = Environment(trajectory='Example_21_SCOOP',
                       filename=filename,
-                      file_title='Example_04_MP',
+                      file_title='Example_21_SCOOP',
                       log_stdout=True,
-                      comment='Multiprocessing example!',
+                      comment='Multiprocessing example using SCOOP!',
                       multiproc=True,
-                      ncores=4,
-                      use_pool=True,  # Our runs are inexpensive we can get rid of overhead
-                      # by using a pool
-                      wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
+                      log_multiproc=False,  # with scoop better disable multiprocess logging
+                      use_scoop=True, # Yes we want SCOOP!
+                      wrap_mode=pypetconstants.WRAP_MODE_LOCAL,  # SCOOP only works with 'LOCAL',
                       overwrite_file=True)
 
     # Get the trajectory from the environment
@@ -50,8 +55,14 @@ def main():
     traj.f_explore(cartesian_product({'x':[float(x) for x in range(20)],
                                       'y':[float(y) for y in range(20)]}))
 
+
     # Run the simulation
     env.f_run(multiply)
+
+    assert traj.f_is_completed()
+
+    scoop.logger.warn('HERE')
+    print('HERE')
 
     # Finally disable logging and close all log-files
     env.f_disable_logging()

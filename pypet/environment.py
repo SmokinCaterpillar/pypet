@@ -20,7 +20,6 @@ try:
 except ImportError as exc:
     main = None  # We can end up here in an interactive IPython console
 import os
-import gc
 import sys
 import logging
 import shutil
@@ -51,6 +50,12 @@ except ImportError:
     psutil = None
 
 try:
+    import scoop
+    from scoop import futures
+except ImportError:
+    scoop = None
+
+try:
     import git
 except ImportError:
     git = None
@@ -61,7 +66,7 @@ from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, \
     QueueStorageServiceWriter, LockWrapper, LazyStorageService, PipeStorageServiceSender, \
-    PipeStorageServiceWriter, ReferenceWrapper
+    PipeStorageServiceWriter, ReferenceWrapper, ReferenceStore
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
@@ -73,16 +78,24 @@ from pypet.parameter import Parameter
 
 def _pool_single_run(kwargs):
     """Starts a pool single run and passes the storage service"""
+    wrap_mode = kwargs['wrap_mode']
     traj = kwargs['traj']
     traj.v_storage_service = _pool_single_run.storage_service
+    if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+        # Free references from previous runs
+        traj.v_storage_service.free_references()
     return _single_run(kwargs)
 
 
 def _frozen_pool_single_run(idx):
     """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
     kwargs = _frozen_pool_single_run.kwargs
+    wrap_mode = kwargs['wrap_mode']
     traj = kwargs['traj']
     traj.f_set_crun(idx)
+    if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+        # Free references from previous runs
+        traj.v_storage_service.free_references()
     return _single_run(kwargs)
 
 
@@ -177,10 +190,6 @@ def _single_run(kwargs):
         idx = traj.v_idx
         total_runs = len(traj)
 
-        if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
-            # Free references from previous runs
-            traj.v_storage_service.free_references()
-
         pypet_root_logger.info('\n=========================================\n '
                   'Starting single run #%d of %d '
                   '\n=========================================\n' % (idx, total_runs))
@@ -207,7 +216,7 @@ def _single_run(kwargs):
         if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             result = ((traj.v_idx, result),
                        traj.f_get_run_information(traj.v_idx, copy=False),
-                       traj.v_storage_service)
+                       traj.v_storage_service.references)
         else:
             result = ((traj.v_idx, result),
                        traj.f_get_run_information(traj.v_idx, copy=False))
@@ -339,6 +348,8 @@ class Environment(HasLogger):
         For example:
 
         ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
+
+        You can further disable multiprocess logging via setting ``log_multiproc=False``.
 
     :param log_stdout:
 
@@ -489,7 +500,7 @@ class Environment(HasLogger):
              waiting until the lock is released.
              Yet, single runs do not need to be pickled before storage!
 
-         :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
+         :const:`~pypet.pypetconstants.WRAP_MODE_PIPE`: ('PIPE)
 
             Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
             but data corruption may occur, does not work under Windows
@@ -504,17 +515,25 @@ class Environment(HasLogger):
             whatsoever, because there are references kept for all data
             that is supposed to be stored.
 
-            To avoid memory overflows you can tell *pypet* to call ``gc.collect()``
-            every once in the while, see below.
-
          If you don't want wrapping at all use
          :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
 
     :param gc_interval:
 
-        Interval (in runs) with which ``gc_collect()`` should be called in case of the
-        ``'LOCAL'`` wrapping. Leave ``0`` for never, ``1`` for after every run ``2`` for
-        after every second run, and so on.
+        Interval (in runs or storage operations) with which ``gc.collect()``
+        should be called in case of the ``'LOCAL'``, ``'QUEUE'``, or ``'PIPE'`` wrapping.
+        Leave ``None`` for never.
+
+        In case of ``'LOCAL'`` wrapping ``1`` means after every run ``2``
+        after every second run, and so on. In case of ``'QUEUE'`` or ``'PIPE''`` wrapping
+        ``1`` means after every store operation,
+        ``2`` after every second store operation, and so on.
+        Only calls ``gc.collect()`` in the main (if ``'LOCAL'`` wrapping)
+        or the queue/pipe process. If you need to garbage collect data within your single runs,
+        you need to manually call ``gc.collect()``.
+
+        Usually, there is no need to set this parameter since the Python garbage collection
+        works quite nicely and schedules collection automatically.
 
     :param clean_up_runs:
 
@@ -865,6 +884,7 @@ class Environment(HasLogger):
                  report_progress = (5, 'pypet', logging.INFO),
                  multiproc=False,
                  ncores=1,
+                 use_scoop=False,
                  use_pool=False,
                  freeze_pool_input=False,
                  queue_maxsize=-1,
@@ -873,7 +893,7 @@ class Environment(HasLogger):
                  swap_cap=100.0,
                  niceness=None,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
-                 gc_interval=0,
+                 gc_interval=None,
                  clean_up_runs=True,
                  immediate_postproc=False,
                  continuable=False,
@@ -906,14 +926,25 @@ class Environment(HasLogger):
         if sumatra_label is not None and '.' in sumatra_label:
             raise ValueError('Your sumatra label is not allowed to contain dots.')
 
-        if use_pool and immediate_postproc:
+        if (use_pool or use_scoop) and immediate_postproc:
             raise ValueError('You CANNOT perform immediate post-processing if you DO '
-                             'use a pool.')
+                             'use a pool or scoop.')
+
+        if use_pool and use_scoop:
+            raise ValueError('You can either `use_pool` or `use_scoop` or none of both, '
+                             'but not both together')
+
+        if use_scoop and scoop is None:
+            raise ValueError('Cannot use `scoop` because it is not installed.')
 
         if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_PIPE) and
             continuable):
             raise ValueError('Continuing trajectories does NOT work with `QUEUE` or `PIPE` '
                              'wrap mode.')
+
+        if use_scoop and wrap_mode not in (pypetconstants.WRAP_MODE_LOCAL,
+                                           pypetconstants.WRAP_MODE_NONE):
+            raise ValueError('SCOOP mode only works with `LOCAL` wrap mode!')
 
         if niceness is not None and not hasattr(os, 'nice') and psutil is None:
             raise ValueError('You cannot set `niceness` if your operating system does not '
@@ -950,6 +981,11 @@ class Environment(HasLogger):
         self._logging_manager.check_log_config()
         self._logging_manager.add_null_handler()
         self._set_logger()
+
+        if use_scoop and self._logging_manager.mp_config is not None:
+            self._logger.warning('There may arise problems if you use multiprocess logging '
+                                 'and SCOOP. Consider setting `log_multiproc=False` if you '
+                                 'run into problems.')
 
         self._map_arguments = False
 
@@ -1114,6 +1150,7 @@ class Environment(HasLogger):
         self._wrap_mode = wrap_mode
         # Whether to use a pool of processes
         self._use_pool = use_pool
+        self._use_scoop = use_scoop
         self._freeze_pool_input = freeze_pool_input
         self._gc_interval = gc_interval
         self._multiproc_wrapper = None # The wrapper Service
@@ -1164,6 +1201,11 @@ class Environment(HasLogger):
                                                 'spawning individual processes for '
                                                 'each run.').f_lock()
 
+                config_name = 'environment.%s.use_scoop' % self.v_name
+                self._traj.f_add_config(Parameter, config_name, self._use_scoop,
+                                        comment='Whether to use scoop to launch single '
+                                                'runs').f_lock()
+
                 if self._niceness is not None:
                     config_name = 'environment.%s.niceness' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._niceness,
@@ -1176,6 +1218,8 @@ class Environment(HasLogger):
                                                 'are not mutated during each run, '
                                                 'can speed up pool running.').f_lock()
 
+                elif self._use_scoop:
+                    pass
                 else:
                     config_name = 'environment.%s.cpu_cap' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._cpu_cap,
@@ -1214,7 +1258,10 @@ class Environment(HasLogger):
                     self._traj.f_add_config(Parameter, config_name, self._queue_maxsize,
                                         comment='Maximum size of Storage Queue/Pipe in case of '
                                                 'multiprocessing and QUEUE/PIPE wrapping').f_lock()
-                if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+                if (self._gc_interval and
+                        (self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL or
+                            self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
+                                self._wrap_mode == pypetconstants.WRAP_MODE_PIPE)):
                     config_name = 'environment.%s.gc_interval' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._gc_interval,
                                         comment='Intervals with which ``gc.collect()`` '
@@ -1954,7 +2001,7 @@ class Environment(HasLogger):
                 self._traj.f_set_crun(n)
                 yield n
 
-    def _make_iterator(self, start_run_idx, **kwargs):
+    def _make_iterator(self, start_run_idx, copy_data=False, **kwargs):
         """ Returns an iterator over all runs and yields the keyword arguments """
         kwargs = self._make_kwargs(**kwargs)
 
@@ -1972,10 +2019,20 @@ class Environment(HasLogger):
                         iter_kwargs[key] = next(self._kwargs[key])
                     kwargs['runargs'] = iter_args
                     kwargs['runkwargs'] = iter_kwargs
-                    yield kwargs
+                    if copy_data:
+                        copied_kwargs = kwargs.copy()
+                        copied_kwargs['traj'] = self._traj.__copy__()
+                        yield copied_kwargs
+                    else:
+                        yield kwargs
             else:
                 for n in self._make_index_iterator(start_run_idx):
-                    yield kwargs
+                    if copy_data:
+                        copied_kwargs = kwargs.copy()
+                        copied_kwargs['traj'] = self._traj.__copy__()
+                        yield copied_kwargs
+                    else:
+                        yield kwargs
         return _do_iter()
 
     def _execute_postproc(self, results):
@@ -2293,20 +2350,17 @@ class Environment(HasLogger):
         # Get all results from the result queue
         while not result_queue.empty():
             result = result_queue.get()
-            self._check_and_store_reference_wrapping(n, result)
+            self._check_and_store_references(result)
             self._traj._update_run_information(result[1])
             results.append(result[0])
             self._show_progress(n, total_runs)
             n += 1
         return n
 
-    def _check_and_store_reference_wrapping(self, n, result):
+    def _check_and_store_references(self, result):
+        """Checks if reference wrapping and stores references."""
         if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
-            reference_service = result[2]
-            reference_service.store_references(self._storage_service)
-            if self._gc_interval > 0 and n % self._gc_interval == 0:
-                collected = gc.collect()
-                self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
+            self._multiproc_wrapper.f_store_references(result[2])
 
     def _execute_multiprocessing(self, start_run_idx, results):
         """Performs multiprocessing and signals expansion by postproc"""
@@ -2329,6 +2383,7 @@ class Environment(HasLogger):
                                lock=None,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
+                               gc_interval=self._gc_interval,
                                log_config=self._logging_manager.log_config,
                                log_stdout=self._logging_manager.log_stdout)
 
@@ -2336,6 +2391,7 @@ class Environment(HasLogger):
         try:
 
             if self._use_pool:
+
                 self._logger.info('Starting Pool with %d processes' % self._ncores)
 
                 if self._freeze_pool_input:
@@ -2371,7 +2427,7 @@ class Environment(HasLogger):
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
                     for result in pool_results:
-                        self._check_and_store_reference_wrapping(n, result)
+                        self._check_and_store_references(result)
                         self._traj._update_run_information(result[1])
                         results.append(result[0])
                         self._show_progress(n, total_runs)
@@ -2389,7 +2445,22 @@ class Environment(HasLogger):
 
                 self._logger.info('Pool has joined, will delete it.')
                 del mpool
+            elif self._use_scoop:
+                self._logger.info('Starting SCOOP jobs')
 
+                iterator = self._make_iterator(start_run_idx, copy_data=True)
+                target = _process_single_run
+
+                scoop_results = futures.map_as_completed(target, iterator)
+
+                # Signal start of progress calculation
+                self._show_progress(n - 1, total_runs)
+                for result in scoop_results:
+                    self._check_and_store_references(result)
+                    self._traj._update_run_information(result[1])
+                    results.append(result[0])
+                    self._show_progress(n, total_runs)
+                    n += 1
             else:
                 # If we spawn a single process for each run, we need an additional queue
                 # for the results of `runfunc`
@@ -2554,7 +2625,7 @@ class MultiprocContext(HasLogger):
 
     :param wrap_mode:
 
-        There are two options:
+        There are four options:
 
          :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
@@ -2571,6 +2642,23 @@ class MultiprocContext(HasLogger):
              to store data. Accordingly, sometimes this leads to a lot of processes
              waiting until the lock is released.
              Yet, data does not need to be pickled before storage!
+
+         :const:`~pypet.pypetconstants.WRAP_MODE_PIPE`: ('PIPE)
+
+            Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
+            but data corruption may occur, does not work under Windows
+            (since it relies on forking).
+
+         :const:`~pypet.pypetconstant.WRAP_MODE_LOCAL` ('LOCAL')
+
+            Data is not stored in spawned child processes, but data needs to be
+            retunred manually in terms of *references* dictionaries (the ``reference`` property
+            of the ``ReferenceWrapper`` class)..
+            Storing is only performed in the main process.
+
+            Note that removing data during a single run has no longer an effect on memory
+            whatsoever, because there are references kept for all data
+            that is supposed to be stored.
 
     :param full_copy:
 
@@ -2614,6 +2702,20 @@ class MultiprocContext(HasLogger):
 
         Maximum size of queue if created new. 0 means infinite.
 
+    :param gc_interval:
+
+        Interval (in runs or storage operations) with which ``gc.collect()``
+        should be called in case of the ``'LOCAL'``, ``'QUEUE'``, or ``'PIPE'`` wrapping.
+        Leave ``None`` for never.
+
+        ``1`` means after every storing, ``2`` after every second storing, and so on.
+        Only calls ``gc.collect()`` in the main (if ``'LOCAL'`` wrapping)
+        or the queue/pipe process. If you need to garbage collect data within your single runs,
+        you need to manually call ``gc.collect()``.
+
+        Usually, there is no need to set this parameter since the Python garbage collection
+        works quite nicely and schedules collection automatically.
+
     :param log_config:
 
         Path to logging config file or dictionary to configure logging for the
@@ -2634,6 +2736,7 @@ class MultiprocContext(HasLogger):
                  lock=None,
                  queue=None,
                  queue_maxsize=0,
+                 gc_interval=None,
                  log_config=None,
                  log_stdout=False):
 
@@ -2655,6 +2758,7 @@ class MultiprocContext(HasLogger):
         self._lock = lock
         self._use_manager = use_manager
         self._logging_manager = None
+        self._gc_interval = gc_interval
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                         self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
@@ -2702,6 +2806,21 @@ class MultiprocContext(HasLogger):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.f_finalize()
 
+    def f_store_references(self, references):
+        """In case of reference wrapping, stores data.
+
+        :param references: References dictionary from a ReferenceWrapper.
+
+        :param gc_collect: If ``gc.collect`` should be called.
+
+        :param n:
+
+            Alternatively if ``gc_interval`` is set, a current index can be passed.
+            Data is stored in case ``n % gc_interval == 0``.
+
+        """
+        self._reference_store.store_references(references)
+
     def f_start(self):
         """Starts the multiprocess wrapping.
 
@@ -2729,10 +2848,12 @@ class MultiprocContext(HasLogger):
                                               pypetconstants.WRAP_MODE_LOCK,
                                               pypetconstants.WRAP_MODE_PIPE,
                                               pypetconstants.WRAP_MODE_LOCAL))
+
     def _prepare_local(self):
         reference_wrapper = ReferenceWrapper()
         self._traj.v_storage_service = reference_wrapper
         self._reference_wrapper = reference_wrapper
+        self._reference_store = ReferenceStore(self._storage_service, self._gc_interval)
 
     def _prepare_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """
@@ -2793,7 +2914,8 @@ class MultiprocContext(HasLogger):
 
         self._logger.info('Starting the Storage Queue!')
         # Wrap a queue writer around the storage service
-        queue_handler = QueueStorageServiceWriter(self._storage_service, self._queue)
+        queue_handler = QueueStorageServiceWriter(self._storage_service, self._queue,
+                                                  self._gc_interval)
 
         # Start the queue process
         self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,

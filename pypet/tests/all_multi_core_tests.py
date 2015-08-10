@@ -13,7 +13,8 @@ tests_include=set(('MultiprocNoPoolLockTest',
                    'MultiprocStorageLockTest',
                    'MultiprocNoPoolQueueLoggingTest',
                    'MultiprocFrozenPoolLocalTest',
-                   'TestMPImmediatePostProcQueue'))
+                   'TestMPImmediatePostProcQueue',
+                   'MultiprocSCOOPLocalTest'))
 big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocNoPoolQueueTest',
@@ -27,7 +28,8 @@ tests_include=set((#'MultiprocNoPoolQueueTest',
                    'ContinueMPPoolTest',
                    'MultiprocPoolLockLoggingTest',
                    'MultiprocNoPoolSortLocalTest',
-                   'TestMPImmediatePostProcLocal'))
+                   'TestMPImmediatePostProcLocal',
+                   'MultiprocSCOOPSortLocalTest'))
 big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocFrozenPoolLockTest',

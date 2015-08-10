@@ -96,6 +96,8 @@ because most of the time the default settings are sufficient.
 
     ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
 
+    You can further disable multiprocess logging via setting ``log_multiproc=False``.
+
 * ``log_stdout``
 
     Whether the output of ``stdout`` and ``stderr`` should be recorded into the log files.
@@ -243,10 +245,6 @@ because most of the time the default settings are sufficient.
         whatsoever, because there are references kept for all data
         that is supposed to be stored.
 
-        To avoid memory overflows in the main process
-        you can tell *pypet* to call ``gc.collect()``
-        every once in the while, see below.
-
     If you don't want wrapping at all use
     :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
 
@@ -255,9 +253,20 @@ because most of the time the default settings are sufficient.
 
 * ``param gc_interval``
 
-    Interval (in runs) with which ``gc_collect()`` should be called in case of the
-    ``'LOCAL'`` wrapping. Leave ``0`` for never, ``1`` for after every run ``2`` for
-    after every second run, and so on.
+    Interval (in runs or storage operations) with which ``gc.collect()``
+    should be called in case of the ``'LOCAL'``, ``'QUEUE'``, or ``'PIPE'`` wrapping.
+    Leave ``None`` for never.
+
+    In case of ``'LOCAL'`` wrapping ``1`` means after every run ``2``
+    after every second run, and so on. In case of ``'QUEUE'`` or ``'PIPE''`` wrapping
+    ``1`` means after every store operation,
+    ``2`` after every second store operation, and so on.
+    Only calls ``gc.collect()`` in the main (if ``'LOCAL'`` wrapping)
+    or the queue/pipe process. If you need to garbage collect data within your single runs,
+    you need to manually call ``gc.collect()``.
+
+    Usually, there is no need to set this parameter since the Python garbage collection
+    works quite nicely and schedules collection automatically.
 
 * ``clean_up_runs``
 
@@ -527,6 +536,7 @@ You can tweak the standard logging settings via passing the following arguments 
 `log_folder` specifies a folder where all log-files are stored. `logger_names` is a list
 of logger names to which the standard settings apply. `log_levels` is a list of levels
 with which the specified loggers should be logged.
+You can further disable multiprocess logging via setting ``log_multiproc=False``.
 
 .. code-block:: python
 
@@ -537,7 +547,10 @@ with which the specified loggers should be logged.
                      log_folder = './logs/',
                      logger_nmes = ('pypet', 'MyCustomLogger'),
                      log_levels=(logging.ERROR, logging.INFO),
-                     log_stdout=True)
+                     log_stdout=True,
+                     log_multiproc=False,
+                     multiproc=True,
+                     ncores=4)
 
 
 

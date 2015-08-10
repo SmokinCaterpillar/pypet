@@ -1160,6 +1160,9 @@ class TrajectoryTest(unittest.TestCase):
         # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
 
+class CustomParam(Parameter):
+    pass
+
 class TrajectoryCopyTreeTest(unittest.TestCase):
 
     tags = 'unittest', 'trajectory', 'tree_copy'
@@ -1168,6 +1171,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
         traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2.par['hi.my.name.is.another'] = 43, 'Another'
@@ -1176,6 +1180,21 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
         self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+    def test_copy_custom_parameter(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+
+        traj2 = Trajectory()
+        traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
+        traj1.f_copy_from(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+        self.assertTrue(traj1.f_get('another').__class__ is CustomParam)
 
     def test_not_copy_leaves(self):
         traj1 = Trajectory()
@@ -1277,6 +1296,52 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj1.f_copy_from(traj2.ands, copy_data=pypetconstants.LOAD_SKELETON, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
+    def test_copy_explored(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi.my.name.is.parameter2'] = 44, 'A second parameter'
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.another'] = 43, 'Another'
+        traj1['ands.moreover'] = 43, 'Another'
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True)
+
+        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertTrue(traj2.f_get('parameter').f_has_range())
+
+
+        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=True)
+
+        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertFalse(traj2.f_get('parameter').f_has_range())
+
+
+        traj1.v_full_copy = True
+
+        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=True)
+
+        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertTrue(traj2.f_get('parameter').f_has_range())
+
     def test_shallow_copy(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
@@ -1295,6 +1360,15 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj1.f_add_link('ff', traj1.res32)
 
         traj2 = cp.copy(traj1)
+
+        self.assertEqual(set(traj1.__dict__.keys()), set(traj2.__dict__.keys()))
+        for key in traj1.__dict__:
+            val1 = traj1.__dict__[key]
+            val2 = traj2.__dict__[key]
+            if hasattr(val1, 'keys'):
+                self.assertEqual(set(val1.keys()), set(val2.keys()))
+            else:
+                self.assertEqual(val1, val2)
 
         self.assertTrue(traj2.res32 is traj1.res32)
         self.assertTrue(traj2.parameter is traj1.parameter)

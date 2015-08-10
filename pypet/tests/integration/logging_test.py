@@ -210,8 +210,8 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         self.assertFalse(os.path.isdir(log_path))
-        self.assertTrue(self.env._logging_manager._sp_config is None)
-        self.assertTrue(self.env._logging_manager._mp_config is None)
+        self.assertTrue(self.env._logging_manager.sp_config is None)
+        self.assertTrue(self.env._logging_manager.mp_config is None)
         self.assertTrue(self.env._logging_manager.log_config is None)
 
         self.add_params(self.traj)
@@ -220,8 +220,8 @@ class LoggingTest(TrajectoryComparator):
         self.env.f_run(log_all_levels)
 
         self.assertFalse(os.path.isdir(log_path))
-        self.assertTrue(self.env._logging_manager._sp_config is None)
-        self.assertTrue(self.env._logging_manager._mp_config is None)
+        self.assertTrue(self.env._logging_manager.sp_config is None)
+        self.assertTrue(self.env._logging_manager.mp_config is None)
         self.assertTrue(self.env._logging_manager.log_config is None)
 
         self.env.f_disable_logging()
@@ -448,6 +448,98 @@ class LoggingTest(TrajectoryComparator):
         self.assertGreaterEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, 0)
         self.assertLess(total_retry_count, len(traj))
+
+    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    def test_logfile_old_way_disabling_mp_log(self):
+         # if not self.multiproc:
+        #     return
+        del self.mode.__dict__['log_config']
+        self.make_env(logger_names = ('','pypet'), log_level=logging.ERROR,
+                      log_folder=make_temp_dir('logs'), log_multiproc=False)
+        self.add_params(self.traj)
+        self.explore(self.traj)
+
+        self.env.f_run(log_all_levels)
+        if self.mode.multiproc:
+            logging.getLogger('pypet.test').error('ttt')
+        self.env.f_disable_logging()
+
+        traj = self.env.v_traj
+        log_path = get_log_path(traj)
+
+        # if self.mode.multiproc:
+        length = 2
+
+        file_list = [file for file in os.listdir(log_path)]
+
+        self.assertEqual(len(file_list), length) # assert that there are as many
+        # files as runs plus main.txt and errors and warnings
+
+        # total_error_count = 0
+        # total_store_count = 0
+        # total_info_count = 0
+        # total_retry_count = 0
+        #
+        # for file in file_list:
+        #     with open(os.path.join(log_path, file), mode='r') as fh:
+        #         text = fh.read()
+        #     count = text.count('INFO_Test!')
+        #     total_info_count += count
+        #     error_count = text.count('ERROR_Test!')
+        #     total_error_count += error_count
+        #     store_count = text.count('STORE_Test!')
+        #     total_store_count += store_count
+        #     retry_count = text.count('Retry')
+        #     total_retry_count += retry_count
+        #     if 'LOG.txt' == file:
+        #         if self.mode.multiproc:
+        #             self.assertEqual(count,0)
+        #             self.assertEqual(store_count, 0)
+        #         else:
+        #             self.assertEqual(count, 0)
+        #             self.assertGreaterEqual(store_count, len(traj))
+        #     elif 'ERROR.txt' == file:
+        #         self.assertEqual(count, 0)
+        #         if self.mode.multiproc:
+        #             self.assertEqual(error_count,0)
+        #             self.assertEqual(store_count, 0)
+        #         else:
+        #             self.assertGreaterEqual(error_count, len(traj))
+        #             self.assertGreaterEqual(store_count, len(traj))
+        #
+        #     elif 'Queue' in file and 'ERROR' in file:
+        #         self.assertGreaterEqual(store_count, len(traj))
+        #     elif 'Queue' in file and 'LOG' in file:
+        #         self.assertGreaterEqual(store_count, len(traj))
+        #     elif 'LOG' in file:
+        #         if self.mode.multiproc and self.mode.use_pool:
+        #             self.assertEqual(count, 0)
+        #             self.assertGreaterEqual(error_count, 0)
+        #         else:
+        #             self.assertEqual(count, 0)
+        #             self.assertGreaterEqual(error_count, 1)
+        #             if self.mode.wrap_mode == 'QUEUE':
+        #                 self.assertEqual(store_count, 0)
+        #             else:
+        #                 self.assertGreaterEqual(store_count, 1)
+        #     elif 'ERROR' in file:
+        #         if self.mode.multiproc and self.mode.use_pool:
+        #             self.assertEqual(count, 0)
+        #             self.assertGreaterEqual(error_count, 0)
+        #         else:
+        #             self.assertEqual(count, 0)
+        #             self.assertGreaterEqual(error_count, 1)
+        #             if self.mode.wrap_mode == 'QUEUE':
+        #                 self.assertEqual(store_count, 0)
+        #             else:
+        #                 self.assertGreaterEqual(store_count, 1)
+        #     else:
+        #         self.assertTrue(False, 'There`s a file in the log folder that does not '
+        #                                'belong there: %s' % str(file))
+        # self.assertGreaterEqual(total_store_count, 2*len(traj))
+        # self.assertGreaterEqual(total_error_count, 2*len(traj))
+        # self.assertEqual(total_info_count, 0)
+        # self.assertLess(total_retry_count, len(traj))
 
     @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
