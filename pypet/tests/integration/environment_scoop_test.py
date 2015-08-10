@@ -59,7 +59,12 @@ scoop.futures = ScoopFuturesWrapper()
 
 import pypet.environment
 # Reload to replace futures
-reload(pypet.environment)
+try:
+    reload(pypet.environment)
+except NameError:
+    # Python 3
+    import importlib
+    importlib.reload(pypet.environment)
 
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice
