@@ -78,9 +78,14 @@ class FullStorageTest(TrajectoryComparator):
 def test_niceness(traj):
     if traj.multiproc:
         if hasattr(os, 'nice'):
-            assert traj.niceness == os.nice(0)
+            trajnice = traj.niceness
+            osnice = os.nice(0)
         else:
-            assert traj.niceness == psutil.Process().nice()
+            trajnice = traj.niceness
+            osnice = psutil.Process().nice()
+        if trajnice != osnice:
+            raise RuntimeError('traj niceness != os niceness; '
+                               '%s != %s' % (str(trajnice, str(osnice))))
 
 
 def add_large_data(traj):
