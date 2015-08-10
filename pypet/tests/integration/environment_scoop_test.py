@@ -8,6 +8,11 @@ try:
 except ImportError:
     scoop = None
 
+    class Dummy(object):
+        pass
+
+    original_futures = Dummy()
+
 def identity(x):
     return x
 
@@ -75,7 +80,6 @@ class MultiprocSCOOPLocalTest(EnvironmentTest):
         self.niceness = check_nice(1)
         self.use_pool=False
         self.use_scoop=True
-        self.log_config=False
 
     # def test_run(self):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
@@ -93,4 +97,3 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
-        self.log_config=False

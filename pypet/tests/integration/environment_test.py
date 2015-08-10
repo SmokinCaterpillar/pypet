@@ -135,7 +135,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.log_stdout=False
         self.wildcard_functions = None
         self.niceness = None
-        self.log_config = True
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -245,7 +244,7 @@ class EnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_config=get_log_config() if self.log_config else None,
+                          log_config=get_log_config(),
                           results_per_run=5,
                           wildcard_functions=self.wildcard_functions,
                           derived_parameters_per_run=5,
@@ -427,15 +426,18 @@ class EnvironmentTest(TrajectoryComparator):
         self.multiproc = old_multiproc
 
     def test_map_errors(self):
-        env1 = Environment(continuable=True)
+        tmp = make_temp_dir('cont')
+        env1 = Environment(continuable=True, continue_folder=tmp,
+                           log_config=None, filename=self.filename)
         with self.assertRaises(ValueError):
             env1.f_run_map(multiply_args, [1], [2], [3])
-        env2 = Environment(multiproc=True, use_pool=True, freeze_pool_input=True)
+        env2 = Environment(multiproc=True, use_pool=True, freeze_pool_input=True,
+                           filename=self.filename, log_config=None)
         with self.assertRaises(ValueError):
             env2.f_run_map(multiply_args, [1], [2], [3])
-        env2 = Environment()
+        env3 = Environment(log_config=None, filename=self.filename)
         with self.assertRaises(ValueError):
-            env2.f_run_map(multiply_args)
+            env3.f_run_map(multiply_args)
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')

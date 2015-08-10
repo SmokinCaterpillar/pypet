@@ -26,7 +26,7 @@ def check_nice(nice):
     if hasattr(os, 'nice'):
         return nice
     elif psutil is not None:
-        return 32 * nice
+        return psuitl.ABOVE_NORMAL_PRIORITY_CLASS
     else:
         return None
 

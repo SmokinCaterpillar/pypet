@@ -39,7 +39,6 @@ def main():
                       log_stdout=True,
                       comment='Multiprocessing example using SCOOP!',
                       multiproc=True,
-                      log_multiproc=True,  # with scoop better disable multiprocess logging
                       use_scoop=True, # Yes we want SCOOP!
                       wrap_mode=pypetconstants.WRAP_MODE_LOCAL,  # SCOOP only works with 'LOCAL',
                       overwrite_file=True)
