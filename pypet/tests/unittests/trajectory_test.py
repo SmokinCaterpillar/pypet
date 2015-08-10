@@ -1229,37 +1229,6 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         self.assertTrue('another' in traj1)
         self.assertEqual(traj1.hi.v_annotations['test'], 'ddd')
 
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.OVERWRITE_DATA)
-
-        self.assertEqual(traj1.hi.v_annotations['test'], 'jjj')
-        self.assertEqual(traj1.name.v_annotations['test'], 'lll')
-
-    def test_copy_nothing(self):
-        traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_NOTHING)
-
-        self.assertTrue('another' not in traj1)
-
-    def test_copy_skeleton(self):
-        traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj2['and.moreover'] = 43, 'Another'
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_SKELETON)
-
-        self.assertTrue('another' in traj1)
-        self.assertTrue('moreover' in traj1)
-        self.assertTrue(traj1.f_get('another').f_is_empty())
-        self.assertTrue(traj1.f_get('moreover').f_is_empty())
-
     def test_copy_links(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
@@ -1270,11 +1239,11 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_SKELETON, with_links=False)
+        traj1.f_copy_from(traj2, with_links=False)
         with self.assertRaises(AttributeError):
             traj1.ands.test
 
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_SKELETON, with_links=True)
+        traj1.f_copy_from(traj2, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
     def test_not_copy_from_node(self):
@@ -1287,13 +1256,13 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2.ands, copy_data=pypetconstants.LOAD_DATA, with_links=False)
+        traj1.f_copy_from(traj2.ands, with_links=False)
         with self.assertRaises(AttributeError):
             traj1.ands.test
 
         self.assertEqual(traj1.moreover[1], 'Another')
 
-        traj1.f_copy_from(traj2.ands, copy_data=pypetconstants.LOAD_SKELETON, with_links=True)
+        traj1.f_copy_from(traj2.ands, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
     def test_copy_explored(self):
@@ -1308,7 +1277,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
 
         traj1.f_explore({'parameter':[1,2,3,4]})
 
-        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True)
+        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=False)
 
         self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
         self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
@@ -1387,11 +1356,8 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2, copy_data=pypetconstants.LOAD_DATA)
+        traj1.f_copy_from(traj2)
         self.assertEqual(traj1.name.resr.resr, 42)
-
-        traj1.f_copy_from(traj2.resr, copy_data=pypetconstants.OVERWRITE_DATA)
-        self.assertEqual(traj1.name.resr.resr, 43)
 
         self.assertTrue(traj1.name.resr is not traj2.name.resr)
 

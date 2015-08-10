@@ -1148,24 +1148,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                            use_copy_module=True,
                            with_links=True)
 
-    def f_copy(self, copy_data=pypetconstants.LOAD_DATA,
-                      copy_annotations=True,
-                      copy_leaves=True,
-                      copy_explored=False,
-                      use_copy_module=True,
-                      with_links=True):
+    def f_copy(self, copy_annotations=True,
+                     copy_leaves=True,
+                     copy_explored=False,
+                     use_copy_module=True,
+                     with_links=True):
         """Returns a copy of a trajectory.
 
         :param node: The node to insert
-
-        :param copy_data:
-
-            How to copy data, equivalent to ``load_data`` for ``f_load``.
-            If you choose ``copy_leaves=False`` setting ``copy_data=pypetconstants.LOAD_SKELETON``
-            has no effect, because the leaves are passed as a whole no matter if they
-            contain data or not.
-
-            Does not overwrite locked parameters!
 
         :param copy_annotations: If annotations should be **deep** copied
 
@@ -1189,7 +1179,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         :return: The corresponding (new) node in the tree.
 
         """
-        """Shallow copy means copying the whole tree except leave nodes"""
         new_traj = Trajectory(_copy_traj=True)
 
         new_traj._length = self._length
@@ -1244,8 +1233,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         new_traj._storage_service = self._storage_service
 
-        new_traj.f_copy_from(self, copy_data=copy_data,
-                                   copy_annotations=copy_annotations,
+        new_traj.f_copy_from(self, copy_annotations=copy_annotations,
                                    copy_leaves=copy_leaves,
                                    copy_explored=copy_explored,
                                    use_copy_module=use_copy_module,
@@ -1273,7 +1261,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     @not_in_run
     def f_copy_from(self, node,
-                          copy_data=pypetconstants.LOAD_DATA,
                           copy_annotations=True,
                           copy_leaves=True,
                           copy_explored=False,
@@ -1282,17 +1269,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """Pass a ``node`` to insert the full tree to the trajectory.
 
         Considers all links in the given node!
+        Ignored nodes already found in the current trajectory.
 
         :param node: The node to insert
-
-        :param copy_data:
-
-            How to copy data, equivalent to ``load_data`` for ``f_load``.
-            If you choose ``copy_leaves=False`` setting ``copy_data=pypetconstants.LOAD_SKELETON``
-            has no effect, because the leaves are passed as a whole no matter if they
-            contain data or not.
-
-            Does not overwrite locked parameters!
 
         :param copy_annotations: If annotations should be **deep** copied
 
@@ -1319,14 +1298,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         def _copy_skeleton(node_in, node_out):
             """Copies the skeleton of from `node_out` to `node_in`"""
-            if node_in.v_annotations.f_is_empty():
-                if copy_annotations:
-                    new_annotations = cp.deepcopy(node_out.v_annotations)
-                else:
-                    new_annotations = node_out.v_annotations
-                node_in._annotations = new_annotations
-            if node_in.v_comment == '':
-                node_in.v_comment = node_out.v_comment
+            if copy_annotations:
+                new_annotations = cp.deepcopy(node_out.v_annotations)
+            else:
+                new_annotations = node_out.v_annotations
+            node_in._annotations = new_annotations
+            node_in.v_comment = node_out.v_comment
 
         def _add_leaf(leaf):
             """Adds a leaf to the trajectory"""
@@ -1336,41 +1313,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         with_links=False,
                                         shortcuts=False,
                                         auto_load=False)
-                if not copy_leaves and copy_data == pypetconstants.OVERWRITE_DATA:
-                    self.f_remove_item(found_leaf)
-                    found_leaf = None
+                return found_leaf
             except AttributeError:
-                found_leaf = None
-            if found_leaf is not None:
-                new_leaf = found_leaf
-                if (copy_data == pypetconstants.OVERWRITE_DATA and
-                        (not new_leaf.v_is_parameter or not new_leaf.v_locked)):
-                    if use_copy_module:
-                        self.f_remove_item(found_leaf)
-                        self.f_add_leaf(cp.deepcopy(leaf))
-                    else:
-                        new_leaf.f_empty()
-                        new_leaf.v_annotations.f_empty()
-                        new_leaf.v_comment = ''
-                        new_leaf._load(leaf._store())
-                        _copy_skeleton(new_leaf, leaf)
-                    if leaf.v_is_parameter and leaf.v_explored:
-                        new_leaf._explored = True
-                        self._explored_parameters[new_leaf.v_full_name] = new_leaf
-            else:
-                if copy_leaves or (copy_explored and leaf.v_is_parameter and leaf.v_explored):
-                    if use_copy_module:
-                        new_leaf = self.f_add_leaf(cp.deepcopy(leaf))
-                    else:
-                        new_leaf = self.f_add_leaf(leaf.__class__, leaf_full_name)
-                        _copy_skeleton(new_leaf, leaf)
-                        if copy_data in (pypetconstants.LOAD_DATA, pypetconstants.OVERWRITE_DATA):
-                            new_leaf._load(leaf._store())
+                pass
+            if copy_leaves or (copy_explored and leaf.v_is_parameter and leaf.v_explored):
+                if use_copy_module:
+                    new_leaf = self.f_add_leaf(cp.deepcopy(leaf))
                 else:
-                    new_leaf = self.f_add_leaf(leaf)
-                if leaf.v_is_parameter and leaf.v_explored:
-                    new_leaf._explored = True
-                    self._explored_parameters[new_leaf.v_full_name] = new_leaf
+                    new_leaf = self.f_add_leaf(leaf.__class__, leaf_full_name)
+                    _copy_skeleton(new_leaf, leaf)
+                    new_leaf._load(leaf._store())
+            else:
+                new_leaf = self.f_add_leaf(leaf)
+            if leaf.v_is_parameter and leaf.v_explored:
+                new_leaf._explored = True
+                self._explored_parameters[new_leaf.v_full_name] = new_leaf
             return new_leaf
 
         def _add_group(group):
@@ -1381,22 +1338,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                              with_links=False,
                                              shortcuts=False,
                                              auto_load=False)
+                return found_group
             except AttributeError:
-                found_group = None
+                pass
+            new_group = self.f_add_group(group_full_name)
+            _copy_skeleton(new_group, group)
+            return new_group
 
-            if found_group is not None:
-                new_group = found_group
-                if copy_data == pypetconstants.OVERWRITE_DATA:
-                    new_group.v_annotations.f_empty()
-                    new_group.v_comment = ''
-                    _copy_skeleton(new_group, group)
-            else:
-                new_group = self.f_add_group(group_full_name)
-                _copy_skeleton(new_group, group)
-
-        if copy_data == pypetconstants.LOAD_NOTHING:
-            return None
-        elif node.v_is_leaf:
+        if node.v_is_leaf:
             return _add_leaf(node)
         elif node.v_is_group:
             other_root = node.v_root
