@@ -210,8 +210,8 @@ class LoggingTest(TrajectoryComparator):
         log_path = get_log_path(traj)
 
         self.assertFalse(os.path.isdir(log_path))
-        self.assertTrue(self.env._logging_manager.sp_config is None)
-        self.assertTrue(self.env._logging_manager.mp_config is None)
+        self.assertTrue(self.env._logging_manager._sp_config is None)
+        self.assertTrue(self.env._logging_manager._mp_config is None)
         self.assertTrue(self.env._logging_manager.log_config is None)
 
         self.add_params(self.traj)
@@ -220,8 +220,8 @@ class LoggingTest(TrajectoryComparator):
         self.env.f_run(log_all_levels)
 
         self.assertFalse(os.path.isdir(log_path))
-        self.assertTrue(self.env._logging_manager.sp_config is None)
-        self.assertTrue(self.env._logging_manager.mp_config is None)
+        self.assertTrue(self.env._logging_manager._sp_config is None)
+        self.assertTrue(self.env._logging_manager._mp_config is None)
         self.assertTrue(self.env._logging_manager.log_config is None)
 
         self.env.f_disable_logging()

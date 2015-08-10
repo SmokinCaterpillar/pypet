@@ -36,7 +36,7 @@ class ConfigParseTest(TrajectoryComparator):
         self.assertTrue(traj.testconfig)
 
         self.assertTrue(env._logging_manager.log_config is not None)
-        self.assertTrue(env._logging_manager.sp_config is not None)
+        self.assertTrue(env._logging_manager._sp_config is not None)
 
         env.f_disable_logging()
 

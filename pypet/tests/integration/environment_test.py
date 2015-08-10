@@ -85,7 +85,7 @@ def test_niceness(traj):
             osnice = psutil.Process().nice()
         if trajnice != osnice:
             raise RuntimeError('traj niceness != os niceness; '
-                               '%s != %s' % (str(trajnice, str(osnice))))
+                               '%s != %s' % (str(trajnice), str(osnice)))
 
 
 def add_large_data(traj):

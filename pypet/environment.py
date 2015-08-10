@@ -123,6 +123,16 @@ def _process_single_run(kwargs):
     return _single_run(kwargs)
 
 
+def _scoop_single_run(kwargs):
+    """Wrapper function for scoop, that does not configure logging"""
+    try:
+        _configure_niceness(kwargs)
+        return _single_run(kwargs)
+    except Exception:
+        scoop.logger.exception('ERROR occurred during a single run!')
+        raise
+
+
 def _configure_logging(kwargs):
     """Requests the logging manager to configure logging."""
     try:
@@ -981,11 +991,6 @@ class Environment(HasLogger):
         self._logging_manager.check_log_config()
         self._logging_manager.add_null_handler()
         self._set_logger()
-
-        if use_scoop and self._logging_manager.mp_config is not None:
-            self._logger.warning('There may arise problems if you use multiprocess logging '
-                                 'and SCOOP. Consider setting `log_multiproc=False` if you '
-                                 'run into problems.')
 
         self._map_arguments = False
 
@@ -1990,6 +1995,8 @@ class Environment(HasLogger):
                     del result_dict['niceness']
             else:
                 result_dict['clean_up_runs'] = False
+            if self._use_scoop:
+                del result_dict['logging_manager']
         return result_dict
 
     def _make_index_iterator(self, start_run_idx):
@@ -2449,7 +2456,7 @@ class Environment(HasLogger):
                 self._logger.info('Starting SCOOP jobs')
 
                 iterator = self._make_iterator(start_run_idx, copy_data=True)
-                target = _process_single_run
+                target = _scoop_single_run
 
                 scoop_results = futures.map_as_completed(target, iterator)
 

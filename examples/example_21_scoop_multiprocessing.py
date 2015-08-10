@@ -39,7 +39,7 @@ def main():
                       log_stdout=True,
                       comment='Multiprocessing example using SCOOP!',
                       multiproc=True,
-                      log_multiproc=False,  # with scoop better disable multiprocess logging
+                      log_multiproc=True,  # with scoop better disable multiprocess logging
                       use_scoop=True, # Yes we want SCOOP!
                       wrap_mode=pypetconstants.WRAP_MODE_LOCAL,  # SCOOP only works with 'LOCAL',
                       overwrite_file=True)
@@ -60,9 +60,6 @@ def main():
     env.f_run(multiply)
 
     assert traj.f_is_completed()
-
-    scoop.logger.warn('HERE')
-    print('HERE')
 
     # Finally disable logging and close all log-files
     env.f_disable_logging()

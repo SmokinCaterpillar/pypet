@@ -318,8 +318,8 @@ class LoggingManager(object):
                  report_progress=False):
         self.trajectory = trajectory
         self.log_config = log_config
-        self.sp_config = None
-        self.mp_config = None
+        self._sp_config = None
+        self._mp_config = None
         self.log_stdout = log_stdout
         self.report_progress = report_progress
         self._tools = []
@@ -492,14 +492,14 @@ class LoggingManager(object):
                 parser = None
 
             if parser is not None:
-                self.sp_config = self._parser_to_string_io(parser)
-                self.mp_config = self._find_multiproc_options(parser)
-                if self.mp_config is not None:
-                    self.mp_config = self._parser_to_string_io(self.mp_config)
+                self._sp_config = self._parser_to_string_io(parser)
+                self._mp_config = self._find_multiproc_options(parser)
+                if self._mp_config is not None:
+                    self._mp_config = self._parser_to_string_io(self._mp_config)
 
             elif isinstance(self.log_config, dict):
-                self.sp_config = self.log_config
-                self.mp_config = self._find_multiproc_dict(self.sp_config)
+                self._sp_config = self.log_config
+                self._mp_config = self._find_multiproc_dict(self._sp_config)
 
         if self.log_stdout:
             if self.log_stdout is True:
@@ -561,9 +561,9 @@ class LoggingManager(object):
 
         if self.log_config:
             if multiproc:
-                proc_log_config = self.mp_config
+                proc_log_config = self._mp_config
             else:
-                proc_log_config = self.sp_config
+                proc_log_config = self._sp_config
 
             if proc_log_config:
                 if isinstance(proc_log_config, dict):
@@ -587,11 +587,11 @@ class LoggingManager(object):
         for tool in self._tools:
             tool.finalize()
         self._tools = []
-        for config in (self.sp_config, self.mp_config):
+        for config in (self._sp_config, self._mp_config):
             if hasattr(config, 'close'):
                 config.close()
-        self.sp_config = None
-        self.mp_config = None
+        self._sp_config = None
+        self._mp_config = None
         if remove_all_handlers:
             self.tabula_rasa()
 

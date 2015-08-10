@@ -20,9 +20,9 @@ if [[ $TEST_SUITE == ON ]]
 
 if [[ $SCOOP == ON ]]
     then
-        echo "Running SCOOP test with SCOOP"
+        echo "Running SCOOP tests with SCOOP"
         python -m scoop ../../pypet/tests/scoop_run.py
-        echo "SCOOP TESTS complete"
+        echo "SCOOP tests complete"
     fi
 
 if [[ $GIT_TEST == ON ]]
