@@ -338,10 +338,10 @@ class LoggingTest(TrajectoryComparator):
         rename_string = '$traj_$set_$run'
         solution_1 = 'test_run_set_ALL_run_ALL'
         solution_2 = 'test_run_set_00000_run_00000000'
-        renaming_1 = rename_log_file(traj, rename_string)
+        renaming_1 = rename_log_file(rename_string, traj)
         self.assertEqual(renaming_1, solution_1)
         traj.v_idx = 0
-        renaming_2 = rename_log_file(traj, rename_string)
+        renaming_2 = rename_log_file(rename_string, traj)
         self.assertEqual(renaming_2, solution_2)
 
 

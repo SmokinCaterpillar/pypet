@@ -56,7 +56,7 @@ def get_log_config():
 
 def get_log_path(traj, process_name=None):
     """Returns the path to the log files based on trajectory name etc."""
-    return rename_log_file(traj, generic_log_folder, process_name=process_name)
+    return rename_log_file(generic_log_folder, trajectory=traj, process_name=process_name)
 
 
 def prepare_log_config():

@@ -8,11 +8,6 @@ try:
 except ImportError:
     scoop = None
 
-    class Dummy(object):
-        pass
-
-    original_futures = Dummy()
-
 def identity(x):
     return x
 
@@ -30,7 +25,6 @@ class ScoopFuturesWrapper(object):
         except Exception:
             if self.signal:
                 print('Not started in SCOOP mode, I will MOCK scoop futures!')
-            scoop.futures = ScoopFuturesWrapper()
             mock = True
         if self.signal:
             self.signal = False
@@ -54,7 +48,8 @@ class ScoopFuturesWrapper(object):
         setattr(original_futures, key, value)
 
 
-scoop.futures = ScoopFuturesWrapper()
+if scoop is not None:
+    scoop.futures = ScoopFuturesWrapper()
 
 
 import pypet.environment
@@ -69,8 +64,11 @@ except NameError:
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice
 import pypet.pypetconstants as pypetconstants
+from pypet.tests.testutils.ioutils import parse_args, run_suite
+from pypet.tests.testutils.data import unittest
 
 
+@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocSCOOPLocalTest(EnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop'
@@ -89,7 +87,7 @@ class MultiprocSCOOPLocalTest(EnvironmentTest):
     # def test_run(self):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
 
-
+@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocSCOOPSortLocalTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'pool', 'freeze_input'
@@ -102,3 +100,8 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
+
+
+if __name__ == '__main__':
+    opt_args = parse_args()
+    run_suite(**opt_args)

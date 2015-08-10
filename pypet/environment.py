@@ -137,6 +137,8 @@ def _configure_logging(kwargs):
     """Requests the logging manager to configure logging."""
     try:
         logging_manager = kwargs['logging_manager']
+        if 'traj' in kwargs:
+            logging_manager.extract_replacements(kwargs['traj'])
         logging_manager.make_logging_handlers_and_tools(multiproc=True)
     except Exception as exc:
         sys.stderr.write('Could not configure logging system because of: %s' % repr(exc))
@@ -984,8 +986,7 @@ class Environment(HasLogger):
 
         unused_kwargs = set(kwargs.keys())
 
-        self._logging_manager = LoggingManager(trajectory=None,
-                                               log_config=log_config,
+        self._logging_manager = LoggingManager(log_config=log_config,
                                                log_stdout=log_stdout,
                                                report_progress=report_progress)
         self._logging_manager.check_log_config()
@@ -1083,7 +1084,7 @@ class Environment(HasLogger):
         self._traj._environment_hexsha = self._hexsha
         self._traj._environment_name = self._name
 
-        self._logging_manager.trajectory = self._traj
+        self._logging_manager.extract_replacements(self._traj)
         self._logging_manager.remove_null_handler()
         self._logging_manager.make_logging_handlers_and_tools()
 
@@ -1995,8 +1996,6 @@ class Environment(HasLogger):
                     del result_dict['niceness']
             else:
                 result_dict['clean_up_runs'] = False
-            if self._use_scoop:
-                del result_dict['logging_manager']
         return result_dict
 
     def _make_index_iterator(self, start_run_idx):
@@ -2768,11 +2767,10 @@ class MultiprocContext(HasLogger):
         self._gc_interval = gc_interval
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
-                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
-                            self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL):
-            self._logging_manager = LoggingManager(trajectory=self._traj,
-                                                   log_config=log_config,
+                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
+            self._logging_manager = LoggingManager(log_config=log_config,
                                                    log_stdout=log_stdout)
+            self._logging_manager.extract_replacements(self._traj)
             self._logging_manager.check_log_config()
 
         if full_copy is not None:

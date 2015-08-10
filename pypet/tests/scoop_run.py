@@ -6,6 +6,8 @@ except ImportError:
     import sys
     sys.path.append('/media/data/PYTHON_WORKSPACE/pypet-project')
 
+import scoop
+
 from pypet.tests.testutils.ioutils import discover_tests, parse_args, run_suite
 from pypet.tests.integration.environment_scoop_test import ScoopFuturesWrapper
 

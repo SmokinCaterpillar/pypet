@@ -21,7 +21,7 @@ if [[ $TEST_SUITE == ON ]]
 if [[ $SCOOP == ON ]]
     then
         echo "Running SCOOP tests with SCOOP"
-        python -m scoop ../../pypet/tests/scoop_run.py
+        python -m scoop -n 4 ../../pypet/tests/scoop_run.py
         echo "SCOOP tests complete"
     fi
 
@@ -88,7 +88,7 @@ if [[ $EXAMPLES == ON ]]
             then
                 cd ../../examples
                 echo "Running SCOOP example"
-                python -m scoop example_21_scoop_multiprocessing.py
+                python -m scoop -n 3 example_21_scoop_multiprocessing.py
                 echo "SCOOP example succesfull"
                 cd ../ciscripts/travis
             fi

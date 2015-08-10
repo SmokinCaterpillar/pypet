@@ -191,7 +191,21 @@ def try_make_dirs(filename):
                          'filename `%s` because of: %s' % (filename, repr(exc)))
 
 
-def rename_log_file(traj, filename, process_name=None):
+def get_strings(args):
+    """Returns all valid python strings inside a given argument string."""
+    string_list = []
+    for elem in ast.walk(ast.parse(args)):
+        if isinstance(elem, ast.Str):
+            string_list.append(elem.s)
+    return string_list
+
+
+def rename_log_file(filename, trajectory=None,
+                    env_name=None,
+                    traj_name=None,
+                    set_name=None,
+                    run_name=None,
+                    process_name=None):
     """ Renames a given `filename` with valid wildcard placements.
 
     :const:`~pypet.pypetconstants.LOG_ENV` ($env) is replaces by the name of the
@@ -209,8 +223,12 @@ def rename_log_file(traj, filename, process_name=None):
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
 
-    :param traj:  A trajectory container
     :param filename:  A filename string
+    :param traj:  A trajectory container, leave `None` if you provide all the parameters below
+    :param env_name: Name of environemnt, leave `None` to get it from `traj`
+    :param traj_name: Name of trajectory, leave `None` to get it from `traj`
+    :param set_name: Name of run set, leave `None` to get it from `traj`
+    :param run_name: Name of run, leave `None` to get it from `traj`
     :param process_name:
 
         The name of the desired process. If `None` the name of the current process is
@@ -220,31 +238,26 @@ def rename_log_file(traj, filename, process_name=None):
 
     """
     if pypetconstants.LOG_ENV in filename:
-        env_name = traj.v_environment_name
+        if env_name is None:
+            env_name = trajectory.v_environment_name
         filename = filename.replace(pypetconstants.LOG_ENV, env_name)
     if pypetconstants.LOG_TRAJ in filename:
-        traj_name = traj.v_name
+        if traj_name is None:
+            traj_name = trajectory.v_name
         filename = filename.replace(pypetconstants.LOG_TRAJ, traj_name)
     if pypetconstants.LOG_RUN in filename:
-        run_name = traj.f_wildcard('$')
+        if run_name is None:
+            run_name = trajectory.f_wildcard('$')
         filename = filename.replace(pypetconstants.LOG_RUN, run_name)
     if pypetconstants.LOG_SET in filename:
-        set_name = traj.f_wildcard('$set')
+        if set_name is None:
+            set_name = trajectory.f_wildcard('$set')
         filename = filename.replace(pypetconstants.LOG_SET, set_name)
     if pypetconstants.LOG_PROC in filename:
         if process_name is None:
             process_name = multip.current_process().name
         filename = filename.replace(pypetconstants.LOG_PROC, process_name)
     return filename
-
-
-def get_strings(args):
-    """Returns all valid python strings inside a given argument string."""
-    string_list = []
-    for elem in ast.walk(ast.parse(args)):
-        if isinstance(elem, ast.Str):
-            string_list.append(elem.s)
-    return string_list
 
 
 class HasLogger(HasSlots):
@@ -314,9 +327,8 @@ class LoggingManager(object):
         How to report progress.
 
     """
-    def __init__(self, trajectory=None, log_config=None, log_stdout=False,
+    def __init__(self, log_config=None, log_stdout=False,
                  report_progress=False):
-        self.trajectory = trajectory
         self.log_config = log_config
         self._sp_config = None
         self._mp_config = None
@@ -325,7 +337,19 @@ class LoggingManager(object):
         self._tools = []
         self._null_handler = NullHandler()
         self._format_string = 'PROGRESS: Finished %d/%d runs '
+
+        self.env_name = None
+        self.traj_name = None
+        self.set_name = None
+        self.run_name = None
         # Format string for the progressbar
+
+    def extract_replacements(self, trajectory):
+        """Extracts the wildcards and file replacements from the `trajectory`"""
+        self.env_name = trajectory.v_environment_name
+        self.traj_name = trajectory.v_name
+        self.set_name =  trajectory.f_wildcard('$set')
+        self.run_name = trajectory.f_wildcard('$')
 
     def __getstate__(self):
         """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
@@ -520,7 +544,11 @@ class LoggingManager(object):
         parser = NoInterpolationParser()
         parser.readfp(log_config)
 
-        rename_func = lambda string: rename_log_file(self.trajectory, string)
+        rename_func = lambda string: rename_log_file(string,
+                                                     env_name=self.env_name,
+                                                     traj_name=self.traj_name,
+                                                     set_name=self.set_name,
+                                                     run_name=self.run_name)
 
         sections = parser.sections()
         for section in sections:
@@ -541,7 +569,11 @@ class LoggingManager(object):
         for key in log_config.keys():
             if key == 'filename':
                 filename = log_config[key]
-                filename = rename_log_file(self.trajectory, filename)
+                filename = rename_log_file(filename,
+                                           env_name=self.env_name,
+                                           traj_name=self.traj_name,
+                                           set_name=self.set_name,
+                                           run_name=self.run_name)
                 new_dict[key] = filename
                 try_make_dirs(filename)
             elif isinstance(log_config[key], dict):
