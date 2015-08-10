@@ -16,6 +16,10 @@ if [[ $TEST_SUITE == ON ]]
                 echo "Running test suite"
                 python ../../pypet/tests/all_tests.py
             fi
+    fi
+
+if [[ $SCOOP == ON ]]
+    then
         echo "Running SCOOP test with SCOOP"
         python -m scoop ../../pypet/tests/scoop_run.py
         echo "SCOOP TESTS complete"
@@ -79,9 +83,13 @@ if [[ $EXAMPLES == ON ]]
     then
         cd ../../pypet/tests
         python all_examples.py
-        cd ../../examples
-        echo "Running SCOOP example"
-        python -m scoop example_21_scoop_multiprocessing.py
-        echo "SCOOP example succesfull"
-        cd ../ciscripts/travis
+        cd ../../ciscripts/travis
+        if [[ $SCOOP == ON ]]
+            then
+                cd ../../examples
+                echo "Running SCOOP example"
+                python -m scoop example_21_scoop_multiprocessing.py
+                echo "SCOOP example succesfull"
+                cd ../ciscripts/travis
+            fi
     fi

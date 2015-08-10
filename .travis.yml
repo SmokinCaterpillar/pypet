@@ -6,22 +6,22 @@ python:
 
 env:
   matrix:
-    - NEWEST=FALSE PANDAS_VERSION=0.14.1 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
-    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+    - NEWEST=FALSE PANDAS_VERSION=0.14.1 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
 
 
 matrix:
   include:
     - python: 3.3
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.4
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF
+      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
     - python: 3.4
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
 
 
 # Install dependencies for PyTables
@@ -73,8 +73,8 @@ install:
   - if [[ $GIT_TEST == ON ]]; then chmod +x ciscripts/travis/install_gitpython.sh; travis_retry ciscripts/travis/install_gitpython.sh; fi
   - echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
   - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; travis_retry pip install deap; fi
-  - echo "++++++++++++ Installing SCOOP +++++++++++++++++++++++++"
-  - travis_retry pip install scoop
+  - echo "++++++++++++ Installing SCOOP if needed +++++++++++++++++++++++++"
+  - if [[ $SCOOP == ON]]; then travis_retry pip install https://pypi.python.org/packages/source/s/scoop/scoop-0.7.1.release.tar.gz; fi
   #Temporal solution to travis issue #155
   - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
   - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
