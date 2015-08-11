@@ -84,6 +84,11 @@ class MultiprocSCOOPLocalTest(EnvironmentTest):
         self.use_pool=False
         self.use_scoop=True
 
+
+    @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
+    def test_niceness(self):
+        pass
+
     # def test_run(self):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
 
