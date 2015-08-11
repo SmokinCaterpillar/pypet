@@ -1141,7 +1141,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                            'from disk.' % param.v_full_name)
 
     def __copy__(self):
-        """Shallow copy, i.e copy all groups but no annotations and leaves except explored ones."""
+        """Shallow copy, i.e copy all groups but no annotations and leaves except explored ones.
+
+        Note that if you `use_copy_module` setting `v_full_copy` is important regarding how
+        explored parameters are copied.
+
+        """
         return self.f_copy(copy_annotations=False,
                            copy_leaves=False,
                            copy_explored=True,
@@ -1154,6 +1159,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                      use_copy_module=True,
                      with_links=True):
         """Returns a copy of a trajectory.
+
+        Note that if you `use_copy_module` setting `v_full_copy` is important regarding how
+        explored parameters are copied.
 
         :param node: The node to insert
 
@@ -1188,9 +1196,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         new_traj._time = self._time
 
         new_traj._single_run_ids = self._single_run_ids
-
         new_traj._run_information = self._run_information
-
         new_traj._updated_run_information = self._updated_run_information
 
         new_traj._fast_access = self._fast_access

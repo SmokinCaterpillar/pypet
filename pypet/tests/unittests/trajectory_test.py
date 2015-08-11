@@ -21,6 +21,7 @@ import warnings
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult, Environment
+from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
 import pypet.compat as compat
 
@@ -1163,7 +1164,8 @@ class TrajectoryTest(unittest.TestCase):
 class CustomParam(Parameter):
     pass
 
-class TrajectoryCopyTreeTest(unittest.TestCase):
+
+class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'tree_copy'
 
@@ -1311,6 +1313,29 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
 
         self.assertTrue(traj2.f_get('parameter').f_has_range())
 
+
+    def test_shallow_copy_not_full_copy(self):
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.v_lazy_adding = True
+        traj1['hi.my.name.is.another'] = 43, 'Another'
+        traj1['ands.moreover'] = 43, 'Another'
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+        traj1.v_full_copy = False
+
+        traj1.f_add_result('ggg.hhh.result', 42)
+        traj1.f_add_result('lll.res32', 32, 33)
+        traj1.f_add_link('ff', traj1.res32)
+
+        traj2 = cp.copy(traj1)
+        self.assertFalse(traj2.f_get('parameter').f_has_range())
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+
     def test_shallow_copy(self):
         traj1 = Trajectory()
         traj1.v_lazy_adding = True
@@ -1322,11 +1347,16 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
 
         traj1.f_explore({'parameter':[1,2,3,4]})
 
-        traj1._make_single_run()
+        traj1.v_full_copy = True
 
-        traj1.f_add_result('ggg.hhh.result', 42)
-        traj1.f_add_result('lll.res32', 32, 33)
-        traj1.f_add_link('ff', traj1.res32)
+        for irun in range(4):
+            traj1.f_start_run(irun, True)
+
+            traj1.f_add_result('ggg.hhh.result', 42)
+            traj1.f_add_result('lll.res32', 32, 33)
+            traj1.f_add_link('res.runs.crun.ff', traj1.crun.res32)
+
+            traj1.f_finalize_run(store_meta_data=False, clean_up=False)
 
         traj2 = cp.copy(traj1)
 
@@ -1339,12 +1369,14 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
             else:
                 self.assertEqual(val1, val2)
 
-        self.assertTrue(traj2.res32 is traj1.res32)
+        self.assertTrue(traj1.r_0.res32 is traj2.r_0.res32)
         self.assertTrue(traj2.parameter is traj1.parameter)
 
         self.assertEqual(len(list(traj1.f_iter_nodes())), len(list(traj2.f_iter_nodes())))
         self.assertEqual(len(traj1._new_nodes), len(traj2._new_nodes))
         self.assertEqual(len(traj1._new_links), len(traj2._new_links))
+
+        self.compare_trajectories(traj1, traj2)
 
     def test_overwrite_leaves(self):
         traj1 = Trajectory()

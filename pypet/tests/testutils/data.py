@@ -181,7 +181,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
-        my_dict['__LONG'] = compat.long_type(4266666666666)
+        my_dict['__LONG'] = compat.long_type(4266)
         my_dict['__UNICODE'] = u'sdfdsf'
         my_dict['__BYTES'] = b'zweiundvierzig'
         my_dict['__NUMPY_UNICODE'] = np.array([u'$%&ddss'])
