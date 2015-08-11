@@ -90,12 +90,8 @@ def _pool_single_run(kwargs):
 def _frozen_pool_single_run(idx):
     """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
     kwargs = _frozen_pool_single_run.kwargs
-    wrap_mode = kwargs['wrap_mode']
     traj = kwargs['traj']
     traj.f_set_crun(idx)
-    if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
-        # Free references from previous runs
-        traj.v_storage_service.free_references()
     return _single_run(kwargs)
 
 
@@ -234,6 +230,7 @@ def _single_run(kwargs):
             result = ((traj.v_idx, result),
                        traj.f_get_run_information(traj.v_idx, copy=False),
                        traj.v_storage_service.references)
+            traj.v_storage_service.free_references()
         else:
             result = ((traj.v_idx, result),
                        traj.f_get_run_information(traj.v_idx, copy=False))
