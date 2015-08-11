@@ -14,8 +14,8 @@ import traceback
 
 
 ADDRESS = '130.149.250.16'
-USER = 'rmeyer'
-PASSWORD = 'sshvice87'
+USER = 'user'
+PASSWORD = '12345'
 WORKING_DIR = '/home/' + USER + '/python/saga-test'
 
 
