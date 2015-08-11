@@ -39,6 +39,10 @@ pypet 0.1b.13
 
 *   Parameters and Results can nest data in HDF5 themselves using dot notation.
 
+*   SparseParameter is no longer backwards compatible
+
+*   Removed BrianDurationParameter
+
 
 pypet 0.1b.12
 

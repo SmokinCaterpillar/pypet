@@ -535,7 +535,7 @@ class LazyStorageService(StorageService):
     Ignores all storage and loading requests and simply executes `pass` instead.
 
     """
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Swallows all arguments for easier debugging"""
         pass
 
@@ -1232,46 +1232,46 @@ class HDF5StorageService(StorageService, HasLogger):
             table_name = HDF5StorageService.NAME_TABLE_MAPPING[attr_name]
             value = getattr(self, attr_name)
             _set_config('hdf5.overview.' + table_name,
-                                    value,
-                                    comment='Whether or not to have an overview '
-                                            'table with that name')
+                         value,
+                         comment='Whether or not to have an overview '
+                                 'table with that name')
 
         _set_config('hdf5.purge_duplicate_comments',
-                                self._purge_duplicate_comments,
-                                comment='Whether comments of results and'
-                                        ' derived parameters should only'
-                                        ' be stored for the very first instance.'
-                                        ' Works only if the summary tables are'
-                                        ' active.')
+                    self._purge_duplicate_comments,
+                    comment='Whether comments of results and'
+                            ' derived parameters should only'
+                            ' be stored for the very first instance.'
+                            ' Works only if the summary tables are'
+                            ' active.')
 
         _set_config('hdf5.results_per_run', self._results_per_run,
-                                comment='Expected number of results per run,'
-                                        ' a good guess can increase storage performance')
+                    comment='Expected number of results per run,'
+                            ' a good guess can increase storage performance')
 
         _set_config('hdf5.derived_parameters_per_run',
-                                self._derived_parameters_per_run,
-                                comment='Expected number of derived parameters per run,'
-                                        ' a good guess can increase storage performance')
+                    self._derived_parameters_per_run,
+                    comment='Expected number of derived parameters per run,'
+                            ' a good guess can increase storage performance')
 
         _set_config('hdf5.complevel', self._complevel,
-                                comment='Compression Level (0 no compression '
-                                        'to 9 highest compression)')
+                    comment='Compression Level (0 no compression '
+                            'to 9 highest compression)')
 
         _set_config('hdf5.complib', self._complib,
-                                comment='Compression Algorithm')
+                    comment='Compression Algorithm')
 
         _set_config('hdf5.encoding', self._encoding,
-                                comment='Encoding for unicode characters')
+                    comment='Encoding for unicode characters')
 
         _set_config('hdf5.fletcher32', self._fletcher32,
-                                comment='Whether to use fletcher 32 checksum')
+                    comment='Whether to use fletcher 32 checksum')
 
         _set_config('hdf5.shuffle', self._shuffle,
-                                comment='Whether to use shuffle filtering.')
+                    comment='Whether to use shuffle filtering.')
 
         _set_config('hdf5.pandas_format', self._pandas_format,
-                                comment='''How to store pandas data frames, either'''
-                                        ''' 'fixed' ('f') or 'table' ('t').''')
+                    comment='''How to store pandas data frames, either'''
+                            ''' 'fixed' ('f') or 'table' ('t').''')
 
         if trajectory.f_contains('config.hdf5', shortcuts=False):
             if trajectory.config.hdf5.v_comment == '':
@@ -1955,7 +1955,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._hdf5file.title = self._file_title
 
                 if self._trajectory_name is not None:
-                    if not ('/' + self._trajectory_name) in self._hdf5file:
+                    if not '/' + self._trajectory_name in self._hdf5file:
                         # If we want to store individual items we we have to check if the
                         # trajectory has been stored before
                         if not msg == pypetconstants.TRAJECTORY:
@@ -1989,7 +1989,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     nodelist = ptcompat.list_nodes(self._hdf5file, where='/')
 
                     if (self._trajectory_index >= len(nodelist) or
-                                self._trajectory_index < -len(nodelist)):
+                            self._trajectory_index < -len(nodelist)):
                         raise ValueError('Trajectory No. %d does not exists, there are only '
                                          '%d trajectories in %s.'
                                          % (self._trajectory_index, len(nodelist), self._filename))
@@ -1999,7 +1999,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 elif not self._trajectory_name is None:
                     # Otherwise pick the trajectory group by name
-                    if not ('/' + self._trajectory_name) in self._hdf5file:
+                    if not '/' + self._trajectory_name in self._hdf5file:
                         raise ValueError('File %s does not contain trajectory %s.'
                                          % (self._filename, self._trajectory_name))
 
@@ -2029,8 +2029,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if (not self._keep_open and
-            closing and
-            self.is_open):
+                closing and
+                    self.is_open):
 
             f_fd = self._hdf5file.fileno()
             self._hdf5file.flush()
@@ -2106,7 +2106,7 @@ class HDF5StorageService(StorageService, HasLogger):
         backup_hdf5file = ptcompat.open_file(filename=backup_filename,
                                              mode='a', title=backup_filename)
 
-        if ('/' + self._trajectory_name) in backup_hdf5file:
+        if '/' + self._trajectory_name in backup_hdf5file:
             raise ValueError('I cannot backup  `%s` into file `%s`, there is already a '
                              'trajectory with that name.' % (traj.v_name, backup_filename))
 
@@ -2154,7 +2154,7 @@ class HDF5StorageService(StorageService, HasLogger):
             other_is_different = True
 
         try:
-            if not ('/' + other_trajectory_name) in other_file:
+            if not '/' + other_trajectory_name in other_file:
                 raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
                                  'be found in file: %s.' % (self._trajectory_name,
                                                             other_trajectory_name,
@@ -2182,7 +2182,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 else:
                     if other_is_different:
                         new_parent_dot_location = '.'.join(split_name[:-1])
-                        new_parent_or_loc, _ = self._all_create_or_get_groups(new_parent_dot_location)
+                        new_parent_or_loc, _ = self._all_create_or_get_groups(
+                            new_parent_dot_location)
                         create_parents = False
                     else:
                         new_parent_or_loc = new_parent_location
@@ -2244,7 +2245,7 @@ class HDF5StorageService(StorageService, HasLogger):
             traj._set_explored_parameters_to_idx(idx)
 
             run_summary = self._srn_summarize_explored_parameters(compat.listvalues(
-                                                            traj._explored_parameters))
+                                                                    traj._explored_parameters))
 
             run_info['parameter_summary'] = run_summary
 
@@ -2315,8 +2316,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         # Some validity checks, if `as_new` is used correctly
-        if (as_new and (load_derived_parameters != pypetconstants.LOAD_NOTHING or load_results !=
-            pypetconstants.LOAD_NOTHING or
+        if (as_new and (load_derived_parameters != pypetconstants.LOAD_NOTHING or
+                                load_results != pypetconstants.LOAD_NOTHING or
                                 load_other_data != pypetconstants.LOAD_NOTHING)):
             raise ValueError('You cannot load a trajectory as new and load the derived '
                              'parameters and results. Only parameters are allowed.')
@@ -2343,9 +2344,9 @@ class HDF5StorageService(StorageService, HasLogger):
         self._trj_load_meta_data(traj, load_data, as_new, with_run_information, force)
 
         if (load_parameters != pypetconstants.LOAD_NOTHING or
-                    load_derived_parameters != pypetconstants.LOAD_NOTHING or
-                    load_results != pypetconstants.LOAD_NOTHING or
-                    load_other_data != pypetconstants.LOAD_NOTHING):
+                load_derived_parameters != pypetconstants.LOAD_NOTHING or
+                load_results != pypetconstants.LOAD_NOTHING or
+                load_other_data != pypetconstants.LOAD_NOTHING):
             self._logger.info('Loading trajectory `%s`.' % traj.v_name)
         else:
             self._logger.info('Checked meta data of trajectory `%s`.' % traj.v_name)
@@ -2404,7 +2405,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                      _trajectory=traj, _as_new=as_new,
                                      _hdf5_group=self._trajectory_group)
 
-    def _trj_load_meta_data(self, traj,  load_data, as_new, with_run_information, force):
+    def _trj_load_meta_data(self, traj, load_data, as_new, with_run_information, force):
         """Loads meta information about the trajectory
 
         Checks if the version number does not differ from current pypet version
@@ -2498,7 +2499,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 setattr(self, attr_name, conversion_function(row[name_in_row]))
             except IndexError as exc:
                 self._logger.error('Using default hdf5 setting, '
-                                       'could not extract `%s` hdf5 setting because of: %s' %
+                                   'could not extract `%s` hdf5 setting because of: %s' %
                                         (name_in_row, repr(exc)))
 
         if 'hdf5_settings' in self._overview_group:
@@ -2522,9 +2523,8 @@ class HDF5StorageService(StorageService, HasLogger):
             for attr_name, table_name in self.NAME_TABLE_MAPPING.items():
                 _extract_meta_data(attr_name, hdf5_row, table_name, bool)
         else:
-            self._logger.warning(
-                    'Could not find `hdf5_settings` overview table. I will use the '
-                    'standard settings (for `complib`, `complevel` etc.) instead.')
+            self._logger.warning('Could not find `hdf5_settings` overview table. I will use the '
+                                 'standard settings (for `complib`, `complevel` etc.) instead.')
 
     def _tree_load_sub_branch(self, traj_node, branch_name,
                               load_data=pypetconstants.LOAD_DATA,
@@ -2957,10 +2957,10 @@ class HDF5StorageService(StorageService, HasLogger):
         # Store the trajectory for the first time if necessary:
         if self._trajectory_group is None:
             self._trajectory_group = ptcompat.create_group(self._hdf5file,
-                                                          where='/',
-                                                          name=self._trajectory_name,
-                                                          title=self._trajectory_name,
-                                                          filters = self._all_get_filters())
+                                                           where='/',
+                                                           name=self._trajectory_name,
+                                                           title=self._trajectory_name,
+                                                           filters=self._all_get_filters())
         traj._stored = True
 
         # Store meta information
@@ -3021,9 +3021,9 @@ class HDF5StorageService(StorageService, HasLogger):
             recursively all children and children's children below 'group3'.
 
         :param store_data: How data should be stored
-        
+
         :param with_links: If links should be stored
-        
+
         :param recursive:
 
             If the rest of the tree should be recursively stored
@@ -3031,7 +3031,7 @@ class HDF5StorageService(StorageService, HasLogger):
         :param max_depth:
 
             Maximum depth to store
-            
+
         :param hdf5_group:
 
             HDF5 node in the file corresponding to `traj_node`
@@ -3060,11 +3060,13 @@ class HDF5StorageService(StorageService, HasLogger):
                                      (traj_node.v_name, hdf5_location))
 
                 if traj_node.v_is_leaf:
-                    self._logger.error('Cannot store `%s` the parental hdf5 node with path `%s` does '
-                                       'not exist on disk! The child you want to store is a leaf node,'
-                                       'that cannot be stored without the parental node existing on '
-                                       'disk.' %
-                                       (traj_node.v_name, hdf5_location))
+                    self._logger.error('Cannot store `%s` the parental hdf5 '
+                                       'node with path `%s` does '
+                                       'not exist on disk! The child '
+                                       'you want to store is a leaf node,'
+                                       'that cannot be stored without '
+                                       'the parental node existing on '
+                                       'disk.' % (traj_node.v_name, hdf5_location))
                     raise
                 else:
                     self._logger.debug('I will try to store the path from trajectory root to '
@@ -3208,7 +3210,7 @@ class HDF5StorageService(StorageService, HasLogger):
                             loading_list.append((traj_group, new_depth, new_hdf5_group))
 
     def _tree_load_link(self, new_traj_node, load_data, traj, as_new, hdf5_soft_link):
-        """Loads a link
+        """ Loads a link
         
         :param new_traj_node: Node in traj containing link 
         :param load_data: How to load data in the linked node

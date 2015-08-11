@@ -30,7 +30,6 @@ __author__ = 'Robert Meyer'
 from brian import Network, clear, reinit
 from brian.units import second
 
-from pypet.brian.parameter import BrianDurationParameter
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
 
@@ -459,11 +458,6 @@ class NetworkRunner(NetworkComponent):
 
         for durations in durations_list:
             for duration_param in durations.f_iter_leaves(with_links=False):
-
-                if isinstance(duration_param, BrianDurationParameter):
-                    self._logger.warning('BrianDurationParameters are deprecated. '
-                                         'Please use a normal BrianParameter and '
-                                         'specify the order in `v_annotations.order`!')
 
                 if 'order' in duration_param.v_annotations:
                     order = duration_param.v_annotations.order
