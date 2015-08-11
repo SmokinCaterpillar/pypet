@@ -88,7 +88,6 @@ class ParameterTest(TrajectoryComparator):
                 with self.assertRaises(TypeError):
                     param._explore([12,33])
 
-
     def test_deprecated_methods_that_have_new_names(self):
         for param in self.param.values():
             with warnings.catch_warnings(record=True) as warnings_list:
@@ -620,8 +619,6 @@ class SparseParameterTest(ParameterTest):
         self.param = {}
         for key, val in self.data.items():
             self.param[key] = SparseParameter(self.location+'.'+key, val, comment=key)
-
-
 
     def explore(self):
 

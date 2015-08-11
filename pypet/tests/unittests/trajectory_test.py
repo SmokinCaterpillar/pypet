@@ -169,7 +169,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
     def test_deletion_during_run(self):
-        self.traj._make_single_run(0)
+        self.traj._make_single_run()
         self.traj._stored = True
         self.traj.f_add_result('fff', 444)
         self.traj.f_add_leaf('jjj', 16)
@@ -1151,7 +1151,7 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
         self.traj.f_set_crun(3)
-        srun = self.traj._make_single_run(3)
+        srun = self.traj._make_single_run()
 
         srun.f_add_result('sdffds',42)
 
@@ -1322,7 +1322,7 @@ class TrajectoryCopyTreeTest(unittest.TestCase):
 
         traj1.f_explore({'parameter':[1,2,3,4]})
 
-        traj1._make_single_run(0)
+        traj1._make_single_run()
 
         traj1.f_add_result('ggg.hhh.result', 42)
         traj1.f_add_result('lll.res32', 32, 33)
@@ -1445,9 +1445,10 @@ class SingleRunTest(unittest.TestCase):
         traj.v_fast_access=True
 
         self.traj = traj
-        self.traj.v_idx = 1
         self.n = 1
-        self.single_run = self.traj.__copy__()._make_single_run(self.n)
+        self.traj.v_idx = self.n
+
+        self.single_run = self.traj.__copy__()._make_single_run()
 
     def test_different_dir(self):
         traj_dir = dir(self.traj)
@@ -1533,7 +1534,7 @@ class SingleRunQueueTest(unittest.TestCase):
 
         self.traj = traj
         self.n = 1
-        self.single_run = self.traj._make_single_run(self.n)
+        self.single_run = self.traj._make_single_run()
 
 
     def test_queue(self):

@@ -2979,7 +2979,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if param is not None:
                 param._set_parameter_access(idx)
 
-    def _make_single_run(self, idx):
+    def _make_single_run(self):
         """ Modifies the trajectory for single runs executed by the environment """
         self._is_run = False # to be able to use f_set_crun
         self._new_nodes = OrderedDict()
@@ -3170,7 +3170,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._run_started = True
 
         if turn_into_run:
-            self._make_single_run(self.v_idx)
+            self._make_single_run()
 
         self._set_start()
 

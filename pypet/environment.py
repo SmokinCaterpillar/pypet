@@ -219,7 +219,7 @@ def _single_run(kwargs):
 
         # Measure time of finishing
         traj.f_finalize_run(store_meta_data=False,
-                          clean_up=clean_up_after_run)
+                            clean_up=clean_up_after_run)
 
         pypet_root_logger.info('\n=========================================\n '
                   'Finished single run #%d of %d '
@@ -1996,7 +1996,7 @@ class Environment(HasLogger):
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
                     del result_dict['niceness']
-            if self._use_scoop:
+            elif self._use_scoop:
                 result_dict['main_pid'] = os.getpid()
             else:
                 result_dict['clean_up_runs'] = False
