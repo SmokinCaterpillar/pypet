@@ -13,10 +13,10 @@ import os
 import traceback
 
 
-ADDRESS = '130.149.250.16'
-USER = 'user'
-PASSWORD = '12345'
-WORKING_DIR = '/home/' + USER + '/python/saga-test'
+ADDRESS = '12345.fake.street'  # Address of your server
+USER = 'user'  # Username
+PASSWORD = '12345'  # That's amazing I got the same combination on my luggage!
+WORKING_DIR = '/myhome/'  # Your working directory
 
 
 def upload_file(filename, session):
