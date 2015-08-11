@@ -1158,7 +1158,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                      copy_explored=False,
                      use_copy_module=True,
                      with_links=True):
-        """Returns a copy of a trajectory.
+        """Returns a *shallow* copy of a trajectory.
 
         Note that if you `use_copy_module` setting `v_full_copy` is important regarding how
         explored parameters are copied.

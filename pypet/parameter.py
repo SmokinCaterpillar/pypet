@@ -1624,6 +1624,13 @@ class SparseParameter(ArrayParameter):
                                                          name_idx // 200, name, name_idx)
                                                                         for name in name_list])
 
+    def _build_names_old(self, name_idx, is_dia):
+        """ONLY for backwards compatibility"""
+        name_list = self._get_name_list(is_dia)
+        return tuple(['xspm%s%s%s%08d' % (SparseParameter.IDENTIFIER, name,
+                                          SparseParameter.IDENTIFIER, name_idx)
+                                                            for name in name_list])
+
     @staticmethod
     def _reconstruct_matrix(data_list):
         """Reconstructs a matrix from a list containing sparse matrix extracted properties
@@ -1692,8 +1699,13 @@ class SparseParameter(ArrayParameter):
                 for irun, name_id in enumerate(idx_col):
                     is_dia = dia_col[irun]
 
-                    name_list = self._build_names(name_id, is_dia)
-                    data_list = [load_dict[name] for name in name_list]
+                    # To make everything work with the old format we have the try catch block
+                    try:
+                        name_list = self._build_names(name_id, is_dia)
+                        data_list = [load_dict[name] for name in name_list]
+                    except KeyError:
+                        name_list = self._build_names_old(name_id, is_dia)
+                        data_list = [load_dict[name] for name in name_list]
 
                     matrix = self._reconstruct_matrix(data_list)
                     explore_list.append(matrix)
