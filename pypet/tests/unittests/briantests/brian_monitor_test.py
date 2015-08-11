@@ -36,6 +36,10 @@ class BrianMonitorTest(ResultTest):
         clear(True, True)
         reload(brian)
 
+    def make_constructor(self):
+        self.dynamic_imports = [BrianMonitorResult]
+        self.Constructor = BrianMonitorResult
+
     def setUp(self):
         self.monitors = BrianMonitorResult.monitors
         self.make_results()

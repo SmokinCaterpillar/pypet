@@ -37,6 +37,8 @@ pypet 0.1b.13
 
 *   Passing `log_multiproc=False` to an environment disables multiprocess logging.
 
+*   Parameters and Results can nest data in HDF5 themselves using dot notation.
+
 
 pypet 0.1b.12
 

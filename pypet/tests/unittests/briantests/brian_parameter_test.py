@@ -38,6 +38,8 @@ class BrianParameterTest(ParameterTest):
 
         super(BrianParameterTest,self).setUp()
 
+        self.dynamic_imports = [BrianParameter, BrianResult]
+
 
     def make_params(self):
         self.param = {}
@@ -81,6 +83,7 @@ class BrianResultTest(ResultTest):
 
     def make_constructor(self):
         self.Constructor=BrianResult
+        self.dynamic_imports=[BrianResult]
 
     def test_illegal_naming(self):
         for res in self.results.values():

@@ -308,6 +308,8 @@ DATATYPE_TABLE = 'DATATYPE_TABLE'
 SHARED_DATA = 'SHARED_DATA_'
 """ An HDF5 data object for direct interaction """
 
+NESTED_GROUP = 'NESTED_GROUP'
+""" An HDF5 group containing nested data """
 
 ############# LOGGING ############
 

@@ -9,6 +9,7 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult, BaseParameter
+from pypet.trajectory import Trajectory
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
@@ -19,10 +20,11 @@ from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-from pypet.tests.testutils.ioutils import run_suite, parse_args
+from pypet.tests.testutils.ioutils import run_suite, parse_args, make_temp_dir
+from pypet.tests.testutils.data import TrajectoryComparator
 
 
-class ParameterTest(unittest.TestCase):
+class ParameterTest(TrajectoryComparator):
 
     tags = 'unittest', 'parameter'
 
@@ -46,8 +48,22 @@ class ParameterTest(unittest.TestCase):
                 with self.assertRaises(TypeError):
                     param._equal_values(ChainMap(),ChainMap())
 
+    def test_store_load_with_hdf5(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + '.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
 
+        for param in self.param.values():
+            traj.f_add_parameter(param)
 
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
 
     def test_type_error_for_exploring_if_range_does_not_match(self):
 
@@ -202,6 +218,8 @@ class ParameterTest(unittest.TestCase):
         self.data['npint'] = np.array([1,2,3])
 
         self.location = 'MyName.Is.myParam'
+
+        self.dynamic_imports = []
 
 
         self.make_params()
@@ -494,6 +512,10 @@ class ArrayParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
+    def test_store_load_with_hdf5(self):
+        return super(ArrayParameterTest, self).test_store_load_with_hdf5()
+
+
 
 
 class PickleParameterTest(ParameterTest):
@@ -501,7 +523,6 @@ class PickleParameterTest(ParameterTest):
     tags = 'unittest', 'parameter', 'pickle'
 
     def setUp(self):
-
 
         if not hasattr(self,'data'):
             self.data={}
@@ -656,13 +677,14 @@ class SparseParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
-class ResultTest(unittest.TestCase):
+class ResultTest(TrajectoryComparator):
 
     tags = 'unittest', 'result'
 
     def make_results(self):
         self.results= {}
-        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',**self.data)
+        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',
+                                                                 **self.data)
         self.results['test.res.args']=self.Constructor('test.res.args')
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
@@ -704,6 +726,7 @@ class ResultTest(unittest.TestCase):
 
     def make_constructor(self):
         self.Constructor=Result
+        self.dynamic_imports = [Result]
 
     def test_warning(self):
         for res in self.results.values():
@@ -805,17 +828,19 @@ class ResultTest(unittest.TestCase):
         self.data['integer'] = 42
         self.data['float'] = 42.424242
         self.data['string'] = 'TestString! 66'
-        self.data['long'] = compat.long_type(44444444444444444444444)
-        self.data['numpy_array'] = np.array([[3232.3,232323.0,323232323232.32323232],[4,4]])
+        self.data['long'] = compat.long_type(444444444444444444)
+        self.data['numpy_array'] = np.array([[3232.3,323232323232.32323232],[4.,4.]])
         self.data['tuple'] = (444,444,443)
         self.data['list'] = ['3','4','666']
         self.data['dict'] = {'a':'b','c':42, 'd': (1,2,3)}
         self.data['object_table'] = ObjectTable(data={'characters':['Luke', 'Han', 'Spock'],
                                     'Random_Values' :[42,43,44],
-                                    'Arrays': [np.array([1,2]),np.array([3.4]), np.array([5,5])]})
+                                    'Arrays': [np.array([1,2]),np.array([3, 4]), np.array([5,5])]})
         self.data['pandas_frame'] = pd.DataFrame(data={'characters':['Luke', 'Han', 'Spock'],
                                     'Random_Values' :[42,43,44],
                                     'Doubles': [1.2,3.4,5.6]})
+
+        self.data['nested_data.hui.buh.integer'] = 42
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
@@ -836,6 +861,24 @@ class ResultTest(unittest.TestCase):
 
         self.make_constructor()
         self.make_results()
+
+
+    def test_store_load_with_hdf5(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + '.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
+
+        for res in self.results.values():
+            traj.f_add_result(res)
+
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
 
 
     def test_rename(self):
@@ -971,6 +1014,7 @@ class PickleResultTest(ResultTest):
 
     def make_constructor(self):
         self.Constructor=PickleResult
+        self.dynamic_imports = [PickleResult]
 
     def test_reject_outer_data_structure(self):
         # Since it pickles everything, it does accept all sorts of objects
@@ -1002,6 +1046,7 @@ class SparseResultTest(ResultTest):
 
     def make_constructor(self):
         self.Constructor=SparseResult
+        self.dynamic_imports = [SparseResult]
 
     def setUp(self):
 

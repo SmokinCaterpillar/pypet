@@ -39,11 +39,6 @@ matrix:
 # Install dependencies for PyTables
 # command to install dependencies
 before_install:
-#  - travis_retry sudo apt-get update
-#  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
-#  - travis_retry sudo apt-get install gfortran libopenblas-dev liblapack-dev
-#  - echo "+++++++++++ Installing HDF5 +++++++++++++"
-#  - travis_retry sudo apt-get install libhdf5-serial-dev
   - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then
       travis_retry wget http://repo.continuum.io/miniconda/Miniconda-3.7.3-Linux-x86_64.sh -O miniconda.sh;
@@ -87,9 +82,6 @@ install:
   - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; travis_retry pip install deap; fi
   - echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
   - travis_retry pip install https://pypi.python.org/packages/source/s/scoop/scoop-0.7.1.release.tar.gz
-  #Temporal solution to travis issue #155
-#  - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
-#  - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
   - echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
   - if [[ $COVERAGE == OFF ]]; then travis_retry python setup.py install; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
@@ -104,4 +96,5 @@ branches:
     - develop
     - master
     - scoop_feature
+    - nested_storage
 
