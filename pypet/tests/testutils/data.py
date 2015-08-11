@@ -27,6 +27,7 @@ def create_param_dict(param_dict):
     param_dict['Numpy_2D'] = {}
     param_dict['Numpy_3D'] = {}
     param_dict['Tuples'] ={}
+    param_dict['Lists'] ={}
     param_dict['Pickle']={}
 
     normal_dict = param_dict['Normal']
@@ -41,7 +42,7 @@ def create_param_dict(param_dict):
     numpy_dict['string'] = np.array(['Uno', 'Dos', 'Tres'])
     numpy_dict['int'] = np.array([1,2,3,4])
     numpy_dict['double'] = np.array([1.0,2.0,3.0,4.0])
-    numpy_dict['bool'] = np.array([True,False, True])
+    numpy_dict['bool'] = np.array([True, False, True])
 
     param_dict['Numpy_2D']['double'] = np.matrix([[1.0,2.0],[3.0,4.0]])
     param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
@@ -74,12 +75,18 @@ def create_param_dict(param_dict):
     param_dict['Sparse']['csr_mat'] = spsparse_csr
     param_dict['Sparse']['dia_mat'] = spsparse_dia
 
+    param_dict['Tuples']['empty'] = ()
     param_dict['Tuples']['int'] = (1,2,3)
     param_dict['Tuples']['float'] = (44.4,42.1,3.)
     param_dict['Tuples']['str'] = ('1','2wei','dr3i')
 
-    param_dict['Pickle']['list']= ['b','h', 53, (),0]
-    param_dict['Pickle']['list']= ['b','h', 42, (),1]
+    param_dict['Lists']['lempty'] = []
+    param_dict['Lists']['lint'] = [1,2,3]
+    param_dict['Lists']['lfloat'] = [44.4,42.1,3.]
+    param_dict['Lists']['lstr'] = ['1','2wei','dr3i']
+
+    param_dict['Pickle']['list']= ['b','h', 53, (), 0]
+    param_dict['Pickle']['list']= ['b','h', 42, (), 1]
     param_dict['Pickle']['list']= ['b',[444,43], 44, (),2]
 
 
@@ -89,7 +96,8 @@ def add_params(traj,param_dict):
     flat_dict = flatten_dictionary(param_dict,'.')
 
     for key, val in flat_dict.items():
-        if isinstance(val, (np.ndarray,tuple)):
+        if isinstance(val, (np.ndarray, tuple)) or (isinstance(val, list) and
+                                                        (len(val) < 4 or val[3] != ())):
             traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
         elif isinstance(val, (str,bool,float)+compat.int_types):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')

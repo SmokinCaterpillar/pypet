@@ -215,6 +215,8 @@ class ParameterTest(TrajectoryComparator):
         self.data['npbool']= np.array([True,False, True])
         self.data['npstr'] = np.array(['Uno', 'Dos', 'Tres'])
         self.data['npint'] = np.array([1,2,3])
+        self.data['alist'] = [1,2,3,4]
+        self.data['atuple'] = (1,2,3,4)
 
         self.location = 'MyName.Is.myParam'
 
@@ -272,7 +274,7 @@ class ParameterTest(TrajectoryComparator):
         self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
-                           'val0':[1,2,3]})
+                           'val0':[1,2,3], 'alist':[[1,2,3,4],[3,4,5,6]]})
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
@@ -471,17 +473,14 @@ class ArrayParameterTest(ParameterTest):
         if not hasattr(self,'data'):
             self.data= {}
 
+        self.data['myemptytuple'] = ()
+        self.data['myemptylist'] = []
 
         self.data['myinttuple'] = (1,2,3)
         self.data['mydoubletuple'] = (42.0,43.7,33.3)
         self.data['mystringtuple'] = ('Eins','zwei','dr3i')
 
         super(ArrayParameterTest,self).setUp()
-
-        ## For the rest of the checkings, lists are converted to tuples:
-        for key, val in self.data.items():
-            if isinstance(val, list):
-                self.data[key] = tuple(val)
 
 
     def make_params(self):
@@ -499,7 +498,9 @@ class ArrayParameterTest(ParameterTest):
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
-                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]} ,(('npstr','val0'),'myinttuple'))
+                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)],
+                            'alist':[[1,2,3,4],['wooot']]} ,
+                                            (('npstr','val0'),'myinttuple', 'alist'))
 
         ### Convert the explored stuff into numpy arrays
         #for idx, val in enumerate(self.explore_dict['myinttuple']):

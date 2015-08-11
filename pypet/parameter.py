@@ -697,7 +697,7 @@ class Parameter(BaseParameter):
     * numpy natives, arrays and matrices of type
       np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
 
-    * python homogeneous non-nested tuples
+    * python homogeneous non-nested tuples and lists
 
     Note that for larger numpy arrays it is recommended to use the
     :class:`~pypet.parameter.ArrayParameter`.
@@ -890,7 +890,7 @@ class Parameter(BaseParameter):
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
         dtype = type(data)
-        if dtype is tuple:
+        if dtype is tuple or dtype is list:
 
             # Parameters cannot handle empty tuples
             if len(data) == 0:
@@ -963,7 +963,6 @@ class Parameter(BaseParameter):
 
         return True
 
-
     @copydoc(BaseParameter.f_set)
     def f_set(self, data):
 
@@ -979,34 +978,14 @@ class Parameter(BaseParameter):
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
-        val = self._convert_data(data)
-
-        if not self.f_supports(val):
+        if not self.f_supports(data):
             raise TypeError('Unsupported data `%s` of type `%s`. '
-                            'If you passed a tuple, this error might also be caused '
+                            'If you passed a tuple or list, this error might also be caused '
                             'by heterogeneous data within the '
-                            'tuple.' % (str(val), str(type(val))))
+                            'tuple or list.' % (str(data), str(type(data))))
 
-        self._data = val
+        self._data = data
         self._default = self._data
-
-
-    def _convert_data(self, val):
-        """Converts data to be handled by the parameter.
-
-        The only operation so far is to set numpy arrays immutable.
-        All other data items are simply returned without modification.
-
-        :param val: the data value to convert
-
-        :return: the converted data
-
-        """
-        if isinstance(val, np.ndarray):
-            val.flags.writeable = False
-            return val
-
-        return val
 
     @copydoc(BaseParameter.f_get_default)
     def f_get_default(self):
@@ -1125,18 +1104,17 @@ class Parameter(BaseParameter):
         data_list = []
 
         for val in explore_iterable:
-            newval = self._convert_data(val)
 
-            if not self.f_supports(newval):
-                raise TypeError('%s is of not supported type %s.' % (repr(val), str(type(newval))))
+            if not self.f_supports(val):
+                raise TypeError('%s is of not supported type %s.' % (repr(val), str(type(val))))
 
-            if not self._values_of_same_type(newval, self._default):
+            if not self._values_of_same_type(val, self._default):
                 raise TypeError(
                     'Data of `%s` is not of the same type as the original entry value, '
                     'new type is %s vs old type %s.' %
-                    (self.v_full_name, str(type(newval)), str(type(self._default))))
+                    (self.v_full_name, str(type(val)), str(type(self._default))))
 
-            data_list.append(newval)
+            data_list.append(val)
 
         if len(data_list) == 0:
             raise ValueError('Cannot explore an empty list!')
@@ -1173,12 +1151,11 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
-        self._data = self._convert_data(load_dict['data']['data'][0])
+        self._data = load_dict['data']['data'][0]
         self._default = self._data
 
         if 'explored_data' in load_dict:
-            self._explored_range = [self._convert_data(x)
-                                          for x in load_dict['explored_data']['data'].tolist()]
+            self._explored_range = [x for x in load_dict['explored_data']['data'].tolist()]
             self._explored = True
 
         self._locked = True
@@ -1261,7 +1238,7 @@ class ArrayParameter(Parameter):
         the order of the arrays later on.
 
         """
-        if not type(self._data) in [np.ndarray, tuple, np.matrix]:
+        if not type(self._data) in (np.ndarray, tuple, np.matrix, list):
             return super(ArrayParameter, self)._store()
         else:
             store_dict = {'data' + ArrayParameter.IDENTIFIER: self._data}
@@ -1283,6 +1260,8 @@ class ArrayParameter(Parameter):
                         # You cannot hash numpy arrays themselves, but if they are read only
                         # you can hash array.data
                         hash_elem = HashArray(elem)
+                    elif isinstance(elem, list):
+                        hash_elem = tuple(elem)
                     else:
                         hash_elem = elem
 
@@ -1351,7 +1330,7 @@ class ArrayParameter(Parameter):
                     arrayname = self._build_name(name_idx)
                     explore_list.append(load_dict[arrayname])
 
-                self._explored_range = [self._convert_data(x) for x in explore_list]
+                self._explored_range = [x for x in explore_list]
                 self._explored = True
 
         except KeyError:
@@ -1376,7 +1355,7 @@ class ArrayParameter(Parameter):
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
         dtype = type(data)
-        if dtype is tuple and len(data) == 0:
+        if dtype is tuple or dtype is list and len(data) == 0:
             return True  #  ArrayParameter does support empty tuples
         elif dtype is np.ndarray and data.size == 0 and data.ndim == 1:
                 return True  #  ArrayParameter supports empty numpy arrays
@@ -1770,10 +1749,6 @@ class PickleParameter(Parameter):
 
         """
         return True
-
-    def _convert_data(self, val):
-        """No conversion necessary, therefore we simply return the value."""
-        return val
 
     @staticmethod
     def _build_name(name_id):

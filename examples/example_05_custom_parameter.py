@@ -61,15 +61,12 @@ def euler_scheme(traj, diff_func):
 # to simply keep track of the source code we use ('git' would be, of course, the better solution
 # but this is just an illustrative example)
 class FunctionParameter(Parameter):
-    # We can go for a a cheap solution and make use of the function `_convert_data` of the parent.
-    # This gets called before adding data to the parameter to turn numpy arrays
-    # into read-only numpy arrays. But we will use the function for our purpose to extract
-    # the source code:
-    def _convert_data(self, val):
-        if callable(val):
-            return inspect.getsource(val)
-        else:
-            return super(FunctionParameter,self)._convert_data(val)
+    # We need to override the `f_set` function and simply extract the the source code if our
+    # item is callable and store this instead.
+    def f_set(self, data):
+        if callable(data):
+            data = inspect.getsource(data)
+        return super(FunctionParameter, self).f_set(data)
 
     # For more complicate parameters you might consider implementing:
     # `f_supports` (we do not need it since we convert the data to stuff the parameter already

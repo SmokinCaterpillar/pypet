@@ -3,12 +3,9 @@ __author__ = 'Robert Meyer'
 
 import os # For path names being viable under Windows and Linux
 import getopt
-
 import sys
-sys.path.append('/net/homes2/informatik/augustin/robm/python_lib/pypet-0.1b.13dev')
 
 from pypet import merge_all_in_folder
-
 from the_task import FunctionParameter
 
 

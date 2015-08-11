@@ -41,6 +41,8 @@ pypet 0.1b.13
 
 *   Removed BrianDurationParameter
 
+*   Parameters now support lists and no longer make numpy arrays unwritable
+
 
 pypet 0.1b.12
 

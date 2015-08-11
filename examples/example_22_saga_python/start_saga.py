@@ -1,3 +1,11 @@
+"""Example how to use pypet with SAGA python
+
+The example is based on `ssh` but using a cluster is almost analogous.
+For examples on how to submit jobs to cluster with SAGA python check
+the documentation: http://saga-python.readthedocs.org/en/latest/
+
+"""
+
 import sys
 import saga
 from saga.filesystem import OVERWRITE
@@ -5,7 +13,7 @@ import os
 import traceback
 
 
-ADDRESS = '130.149.250.12'
+ADDRESS = '130.149.250.16'
 USER = 'rmeyer'
 PASSWORD = 'sshvice87'
 WORKING_DIR = '/home/' + USER + '/python/saga-test'
@@ -76,8 +84,9 @@ def start_jobs(session):
 
     js = saga.job.Service('ssh://' + ADDRESS, session=session)
 
-    batches = range(2)
+    batches = range(3)
     jobs = []
+
     for batch in batches:
         print('Starting batch %d' % batch)
 
@@ -87,7 +96,7 @@ def start_jobs(session):
         jd.arguments       = ['the_task.py --batch=' + str(batch)]
         jd.output          = "mysagajob.stdout" + str(batch)
         jd.error           = "mysagajob.stderr" + str(batch)
-        jd.working_directory = '/net/homes2/informatik/augustin/robm/working_dir'
+        jd.working_directory = WORKING_DIR
 
         myjob = js.create_job(jd)
 
@@ -116,10 +125,11 @@ def main():
         session = create_session()
         upload_file('the_task.py', session)
         upload_file('merge_trajs.py', session)
+        # download_file('saga_0.hdf5', session)  # currently buggy, wait for SAGA python update
+        # To see the resulting file manually download it from the server!
 
         start_jobs(session)
         merge_trajectories(session)
-
         return 0
 
     except saga.SagaException as ex:
@@ -128,6 +138,7 @@ def main():
         # Trace back the exception. That can be helpful for debugging.
         traceback.print_exc()
         return -1
+
 
 if __name__ == "__main__":
     sys.exit(main())

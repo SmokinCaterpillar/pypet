@@ -2,7 +2,6 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import inspect
-import os # For path names being viable under Windows and Linux
 import getopt
 import sys
 
@@ -46,11 +45,12 @@ def euler_scheme(traj, diff_func):
 
 
 class FunctionParameter(Parameter):
-    def _convert_data(self, val):
-        if callable(val):
-            return inspect.getsource(val)
-        else:
-            return super(FunctionParameter,self)._convert_data(val)
+    # We need to override the `f_set` function and simply extract the the source code if our
+    # item is callable and store this instead.
+    def f_set(self, data):
+        if callable(data):
+            data = inspect.getsource(data)
+        return super(FunctionParameter, self).f_set(data)
 
 
 def add_parameters(traj):
@@ -108,8 +108,9 @@ def get_batch():
 
 
 def explore_batch(traj, batch):
+    """Chooses exploration according to `batch`"""
     explore_dict = {}
-    explore_dict['sigma'] = np.arange(0*batch, 10.0*(batch+1), 1.0).tolist()
+    explore_dict['sigma'] = np.arange(10.0 * batch, 10.0*(batch+1), 1.0).tolist()
     traj.f_explore(explore_dict)
 
 
