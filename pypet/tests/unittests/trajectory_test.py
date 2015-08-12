@@ -1165,6 +1165,11 @@ class CustomParam(Parameter):
     pass
 
 
+class GetStateFlunk(Parameter):
+    def __getstate__(self):
+        return {'haha': 42}
+
+
 class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'tree_copy'
@@ -1174,14 +1179,40 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj1.v_lazy_adding = True
         traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
 
+
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_from(traj2)
+
+
+        traj1._copy_from(traj2)
 
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
         self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+    def test_overwrite(self):
+
+        traj1 = Trajectory()
+        traj1.v_lazy_adding = True
+        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 42, 'hui')
+
+        traj1.my.v_annotations['test'] = 2
+
+        traj2 = Trajectory()
+        traj2.v_lazy_adding = True
+        traj2.par['hi.my.name.is.parameter'] = 43, 'Another'
+        traj2.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 77, 'buh')
+
+        traj1._copy_from(traj2, overwrite=True)
+
+        self.assertEqual(traj1.parameter, 43)
+        self.assertEqual(traj1.f_get('parameter').v_comment, 'Another')
+
+        self.assertEqual(traj1.f_get('parameter2').haha, 42)
+
+        self.assertTrue(traj1.my.v_annotations.f_is_empty())
 
     def test_copy_custom_parameter(self):
         traj1 = Trajectory()
@@ -1190,7 +1221,7 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
         traj2 = Trajectory()
         traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
-        traj1.f_copy_from(traj2)
+        traj1._copy_from(traj2)
 
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
@@ -1205,7 +1236,7 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj2 = Trajectory()
         traj2.v_lazy_adding = True
         traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj1.f_copy_from(traj2, copy_leaves=False)
+        traj1._copy_from(traj2, copy_leaves=False)
 
         self.assertTrue('another' in traj1)
         self.assertTrue(traj1.another, 43)
@@ -1226,7 +1257,7 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj2.res['ha.my3.name3.is3.res'] = 555, 55, 7
         traj2.hi.name.v_annotations['test'] = 'lll'
 
-        traj1.f_copy_from(traj2)
+        traj1._copy_from(traj2)
 
         self.assertTrue('another' in traj1)
         self.assertEqual(traj1.hi.v_annotations['test'], 'ddd')
@@ -1241,11 +1272,11 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2, with_links=False)
+        traj1._copy_from(traj2, with_links=False)
         with self.assertRaises(AttributeError):
             traj1.ands.test
 
-        traj1.f_copy_from(traj2, with_links=True)
+        traj1._copy_from(traj2, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
     def test_not_copy_from_node(self):
@@ -1258,13 +1289,13 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2.ands, with_links=False)
+        traj1._copy_from(traj2.ands, with_links=False)
         with self.assertRaises(AttributeError):
             traj1.ands.test
 
         self.assertEqual(traj1.moreover[1], 'Another')
 
-        traj1.f_copy_from(traj2.ands, with_links=True)
+        traj1._copy_from(traj2.ands, with_links=True)
         self.assertTrue(traj1.ands.test is traj1.name)
 
     def test_copy_explored(self):
@@ -1279,35 +1310,36 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
         traj1.f_explore({'parameter':[1,2,3,4]})
 
-        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=False)
+
+        traj1.v_full_copy = True
+        traj2 = traj1.f_copy(copy_leaves='explored')
 
         self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
         self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
-        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
 
         self.assertTrue(traj2.f_get('parameter').v_explored)
 
         self.assertTrue(traj2.f_get('parameter').f_has_range())
 
 
-        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=True)
+        traj1.v_full_copy = False
+        traj2 = traj1.f_copy(copy_leaves=True)
 
-        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
-        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
-        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('another') is not traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is not traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
 
         self.assertTrue(traj2.f_get('parameter').v_explored)
 
         self.assertFalse(traj2.f_get('parameter').f_has_range())
 
-
-        traj1.v_full_copy = True
-
-        traj2 = traj1.f_copy(copy_leaves=False, copy_explored=True, use_copy_module=True)
+        traj1.v_full_copy = False
+        traj2 = traj1.f_copy(copy_leaves=False)
 
         self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
         self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
-        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is traj1.f_get('parameter'))
 
         self.assertTrue(traj2.f_get('parameter').v_explored)
 
@@ -1369,8 +1401,8 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
             else:
                 self.assertEqual(val1, val2)
 
-        self.assertTrue(traj1.r_0.res32 is traj2.r_0.res32)
-        self.assertTrue(traj2.parameter is traj1.parameter)
+        self.assertTrue(traj1.r_0.res32 is not traj2.r_0.res32)
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
 
         self.assertEqual(len(list(traj1.f_iter_nodes())), len(list(traj2.f_iter_nodes())))
         self.assertEqual(len(traj1._new_nodes), len(traj2._new_nodes))
@@ -1388,7 +1420,7 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
         traj2['ands.moreover'] = 43, 'Another'
         traj2.ands.test = traj2.name
 
-        traj1.f_copy_from(traj2)
+        traj1._copy_from(traj2)
         self.assertEqual(traj1.name.resr.resr, 42)
 
         self.assertTrue(traj1.name.resr is not traj2.name.resr)

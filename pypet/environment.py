@@ -2031,7 +2031,8 @@ class Environment(HasLogger):
                     kwargs['runkwargs'] = iter_kwargs
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        copied_kwargs['traj'] = self._traj.__copy__()
+                        copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
+                                                                  with_links=True)
                         yield copied_kwargs
                     else:
                         yield kwargs
@@ -2039,7 +2040,8 @@ class Environment(HasLogger):
                 for n in self._make_index_iterator(start_run_idx):
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        copied_kwargs['traj'] = self._traj.__copy__()
+                        copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
+                                                                  with_links=True)
                         yield copied_kwargs
                     else:
                         yield kwargs

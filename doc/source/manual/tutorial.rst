@@ -219,7 +219,7 @@ Ok, so let's start with creating an environment:
                       add_time=False, # We don't want to add the current time to the name,
                       log_config='DEFAULT',
                       multiproc=True,
-                      ncores=2, #My laptop has 2 cores ;-)
+                      ncores=2, # My laptop has 2 cores ;-)
                       filename='./hdf5/', # We only pass a folder here, so the name is chosen
                       # automatically to be the same as the Trajectory
                       )

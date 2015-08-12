@@ -1141,50 +1141,25 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                            'from disk.' % param.v_full_name)
 
     def __copy__(self):
-        """Shallow copy, i.e copy all groups but no annotations and leaves except explored ones.
-
-        Note that if you `use_copy_module` setting `v_full_copy` is important regarding how
-        explored parameters are copied.
-
-        """
-        return self.f_copy(copy_annotations=False,
-                           copy_leaves=False,
-                           copy_explored=True,
-                           use_copy_module=True,
+        """Returns a shallow copy"""
+        return self.f_copy(copy_leaves=True,
                            with_links=True)
 
-    def f_copy(self, copy_annotations=True,
-                     copy_leaves=True,
-                     copy_explored=False,
-                     use_copy_module=True,
+    def f_copy(self, copy_leaves=True,
                      with_links=True):
         """Returns a *shallow* copy of a trajectory.
 
-        Note that if you `use_copy_module` setting `v_full_copy` is important regarding how
-        explored parameters are copied.
-
-        :param node: The node to insert
-
-        :param copy_annotations: If annotations should be **deep** copied
-
         :param copy_leaves:
 
-            If leaves should be **deep** copied or simply referred to by both trees.
-            **Deep** copying is established using the leaves ``_load`` and
-            ``_store`` functionality.
+            If leaves should be **shallow** copied or simply referred to by both trees.
+            **Shallow** copying is established using the copy module.
 
-        :param copy_explored:
-
-            If ``copy_leaves`` is ``False`` explored parameters are still copied.
-
-        :param use_copy_module:
-
-            If ``True`` leaves are copied using ``copy.deepcopy`` otherwise the
-            `store/load` functionality of leaves is used.
+            Accepts the setting ``'explored'`` to only copy explored parameters.
+            Note that ``v_full_copy`` determines how these will be copied.
 
         :param with_links: If links should be ignored or followed and copied as well
 
-        :return: The corresponding (new) node in the tree.
+        :return: A shallow copy
 
         """
         new_traj = Trajectory(_copy_traj=True)
@@ -1239,13 +1214,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         new_traj._storage_service = self._storage_service
 
-        new_traj.f_copy_from(self, copy_annotations=copy_annotations,
-                                   copy_leaves=copy_leaves,
-                                   copy_explored=copy_explored,
-                                   use_copy_module=use_copy_module,
-                                   with_links=with_links)
-
         new_traj._is_run = self._is_run
+
+        new_traj._copy_from(self, copy_leaves=copy_leaves,
+                                   with_links=with_links)
 
         # Copy references to new nodes and leaves
         for my_dict, new_dict in ((self._new_nodes, new_traj._new_nodes),
@@ -1265,12 +1237,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         return new_traj
 
-    @not_in_run
-    def f_copy_from(self, node,
-                          copy_annotations=True,
+    def _copy_from(self, node,
                           copy_leaves=True,
-                          copy_explored=False,
-                          use_copy_module=True,
+                          overwrite=False,
                           with_links=True):
         """Pass a ``node`` to insert the full tree to the trajectory.
 
@@ -1279,22 +1248,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         :param node: The node to insert
 
-        :param copy_annotations: If annotations should be **deep** copied
-
         :param copy_leaves:
 
-            If leaves should be **deep** copied or simply referred to by both trees.
-            **Deep** copying is established using the leaves ``_load`` and
-            ``_store`` functionality.
+            If leaves should be **shallow** copied or simply referred to by both trees.
+            **Shallow** copying is established using the copy module.
 
-        :param copy_explored:
+            Accepts the setting ``'explored'`` to only copy explored parameters.
+            Note that ``v_full_copy`` determines how these will be copied.
 
-            If ``copy_leaves`` is ``False`` explored parameters are still copied.
+        :param overwrite:
 
-        :param use_copy_module:
-
-            If ``True`` leaves are copied using ``copy.deepcopy`` otherwise the
-            `store/load` functionality of leaves is used.
+            If existing elemenst should be overwritten. Requries ``__getstate__`` and
+            ``__setstate__`` being implemented in the leaves.
 
         :param with_links: If links should be ignored or followed and copied as well
 
@@ -1304,10 +1269,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         def _copy_skeleton(node_in, node_out):
             """Copies the skeleton of from `node_out` to `node_in`"""
-            if copy_annotations:
-                new_annotations = cp.deepcopy(node_out.v_annotations)
-            else:
-                new_annotations = node_out.v_annotations
+            new_annotations = node_out.v_annotations
             node_in._annotations = new_annotations
             node_in.v_comment = node_out.v_comment
 
@@ -1319,20 +1281,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                         with_links=False,
                                         shortcuts=False,
                                         auto_load=False)
+                if overwrite:
+                    found_leaf.__setstate__(leaf.__getstate__())
                 return found_leaf
             except AttributeError:
                 pass
-            if copy_leaves or (copy_explored and leaf.v_is_parameter and leaf.v_explored):
-                if use_copy_module:
-                    new_leaf = self.f_add_leaf(cp.deepcopy(leaf))
-                else:
-                    new_leaf = self.f_add_leaf(leaf.__class__, leaf_full_name)
-                    _copy_skeleton(new_leaf, leaf)
-                    new_leaf._load(leaf._store())
+            if copy_leaves is True or (copy_leaves == 'explored' and
+                                           leaf.v_is_parameter and leaf.v_explored):
+                new_leaf = self.f_add_leaf(cp.copy(leaf))
             else:
                 new_leaf = self.f_add_leaf(leaf)
-            if leaf.v_is_parameter and leaf.v_explored:
-                new_leaf._explored = True
+            if new_leaf.v_is_parameter and new_leaf.v_explored:
                 self._explored_parameters[new_leaf.v_full_name] = new_leaf
             return new_leaf
 
@@ -1344,6 +1303,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                              with_links=False,
                                              shortcuts=False,
                                              auto_load=False)
+                if overwrite:
+                    _copy_skeleton(found_group, group)
                 return found_group
             except AttributeError:
                 pass
@@ -1351,39 +1312,44 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             _copy_skeleton(new_group, group)
             return new_group
 
-        if node.v_is_leaf:
-            return _add_leaf(node)
-        elif node.v_is_group:
-            other_root = node.v_root
-            if other_root is self:
-                raise RuntimeError('You cannot copy a given tree to itself!')
-            result = _add_group(node)
-            nodes_iterator = node.f_iter_nodes(recursive=True, with_links=with_links)
-            has_links = []
-            if node._links:
-                has_links.append(node)
-            for child in nodes_iterator:
-                if child.v_is_leaf:
-                    _add_leaf(child)
-                else:
-                    _add_group(child)
-                    if child._links:
-                        has_links.append(child)
+        is_run = self._is_run
+        self._is_run = False  # So that we can copy Config Groups and Config Data
+        try:
+            if node.v_is_leaf:
+                return _add_leaf(node)
+            elif node.v_is_group:
+                other_root = node.v_root
+                if other_root is self:
+                    raise RuntimeError('You cannot copy a given tree to itself!')
+                result = _add_group(node)
+                nodes_iterator = node.f_iter_nodes(recursive=True, with_links=with_links)
+                has_links = []
+                if node._links:
+                    has_links.append(node)
+                for child in nodes_iterator:
+                    if child.v_is_leaf:
+                        _add_leaf(child)
+                    else:
+                        _add_group(child)
+                        if child._links:
+                            has_links.append(child)
 
-            if with_links:
-                for current in has_links:
-                    mine = self.f_get(current.v_full_name, with_links=False,
-                                      shortcuts=False, auto_load=False)
-                    my_link_set = set(mine._links.keys())
-                    other_link_set = set(current._links.keys())
-                    new_links = other_link_set - my_link_set
-                    for link in new_links:
-                        where_full_name = current._links[link].v_full_name
-                        mine.f_add_link(link, where_full_name)
+                if with_links:
+                    for current in has_links:
+                        mine = self.f_get(current.v_full_name, with_links=False,
+                                          shortcuts=False, auto_load=False)
+                        my_link_set = set(mine._links.keys())
+                        other_link_set = set(current._links.keys())
+                        new_links = other_link_set - my_link_set
+                        for link in new_links:
+                            where_full_name = current._links[link].v_full_name
+                            mine.f_add_link(link, where_full_name)
 
-            return result
-        else:
-            raise RuntimeError('You shall not pass!')
+                return result
+            else:
+                raise RuntimeError('You shall not pass!')
+        except Exception:
+            self._is_run = is_run
 
     @not_in_run
     def f_explore(self, build_dict):
