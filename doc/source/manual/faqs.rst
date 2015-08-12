@@ -2,6 +2,23 @@
 FAQs and Known Issues
 =====================
 
+--------------------------------------
+Cluster Computing and Multiple Servers
+--------------------------------------
+
+**Q:** Can I use *pypet* on my computing cluster or can I distribute *pypet* runs among
+different servers?
+
+    **A:** Yes, you can, either by combining *pypet* with SCOOP_ or with
+    `SAGA Python`_ (see also :ref:`pypet-and-scoop`). Examples are provided here:
+    :ref:`example-21` and :ref:`example-22`.
+
+
+.. _SCOOP: https://scoop.readthedocs.org/
+
+.. _SAGA Python: http://saga-python.readthedocs.org/
+
+
 -----
 Tools
 -----

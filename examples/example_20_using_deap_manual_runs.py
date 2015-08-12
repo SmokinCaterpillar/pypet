@@ -12,14 +12,15 @@ This *OneMax* problem serves only as an example and is not a well suited problem
 Suitable would be the genetic optimization of neural networks where running and evaluating
 the network may take a few seconds.
 
-"""
+Here we avoid using an Environment and *manually* execute runs using multiprocessing.
 
+"""
 
 __author__ = 'Robert Meyer'
 
 import random
+
 import os
-import itertools as itools
 import multiprocessing as multip
 try:
     from itertools import izip
@@ -31,27 +32,37 @@ from deap import base
 from deap import creator
 from deap import tools
 
-
 from pypet import Trajectory, cartesian_product, manual_run, MultiprocContext
 
-@manual_run(store_meta_data=True)
+
+@manual_run(store_meta_data=True)   # Important decorator for manual execution of runs
 def eval_one_max(traj, individual):
     """The fitness function"""
-    #print traj.v_storage_service.queue
     traj.f_add_result('$set.$.individual', list(individual))
     fitness = sum(individual)
     traj.f_add_result('$set.$.fitness', fitness)
     traj.f_store()
-    return fitness,
+    return (fitness,)  # DEAP wants a tuple here!
+
 
 def eval_wrapper(the_tuple):
+    """Wrapper function that unpacks a single tuple as arguments to the fitness function.
+
+    The pool's map function only allows a single iterable so we need to zip it first
+    and then unpack it here.
+
+    """
     return eval_one_max(*the_tuple)
+
 
 def main():
 
+    # No environment here ;-)
     filename = os.path.join('experiments', 'example_20.hdf5')
     traj = Trajectory('onemax', filename=filename, overwrite_file=True)
 
+
+    # ------- Add parameters ------- #
     traj.f_add_parameter('popsize', 100)
     traj.f_add_parameter('CXPB', 0.5)
     traj.f_add_parameter('MUTPB', 0.2)
@@ -68,6 +79,7 @@ def main():
     traj.f_store(only_init=True)
 
 
+    # ------- Create and register functions with DEAP ------- #
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
 
@@ -86,40 +98,53 @@ def main():
     toolbox.register("evaluate", eval_wrapper)
 
     pool = multip.Pool(4)
-    toolbox.register("map", pool.imap)
+    toolbox.register("map", pool.map)  # We use the pool's map function!
 
+
+    # ------- Initialize Population -------- #
     random.seed(traj.seed)
 
     pop = toolbox.population(n=traj.popsize)
     CXPB, MUTPB, NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
 
-    start_idx = 0
+
+    start_idx = 0  # We need to count executed runs
+
     print("Start of evolution")
     for g in range(traj.NGEN):
         print("-- Generation %i --" % g)
 
+        # Determine individuals that need to be evaluated
         eval_pop = [ind for ind in pop if not ind.fitness.valid]
+
+        # Add as many explored runs as individuals that need to be evaluated
         traj.f_expand(cartesian_product({'generation': [g], 'ind_idx': range(len(eval_pop))}))
 
+        # We need to make the storage service multiprocessing safe
         mc = MultiprocContext(traj, wrap_mode='QUEUE')
         mc.f_start()
-        #print traj.v_storage_service.queue
-        zip_iterable = izip(traj.f_iter_runs(start_idx, yields='self'), eval_pop)
-        #print next(zip_iterable)
+
+        # Create a single iterable to be passed to our fitness function (wrapper).
+        # `yields='copy'` is important, the pool's `map` function will
+        # go over the whole iterator at once and store it in memory.
+        # So for every run we need a copy of the trajectory.
+        # Alternatively, you could use `yields='self'` and use the pool's `imap` function.
+        zip_iterable = izip(traj.f_iter_runs(start_idx, yields='copy'), eval_pop)
 
         fitnesses = toolbox.map(eval_wrapper, zip_iterable)
+        # fitnesses is just a list of tuples [(fitness,), ...]
         for idx, fitness in enumerate(fitnesses):
+            # Update fitnesses
+            # map returns everything in order, so we can just use enumerate
             eval_pop[idx].fitness.values = fitness
-            #print fitness
 
+        # Finalize the multiproc wrapper
         mc.f_finalize()
 
+        # Update start index
         start_idx += len(eval_pop)
 
-
-
         print("  Evaluated %i individuals" % len(eval_pop))
-
 
         # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]
@@ -134,7 +159,9 @@ def main():
         print("  Avg %s" % mean)
         print("  Std %s" % std)
 
-        if g < traj.NGEN -1:
+
+        # ------- Create the next generation by crossover and mutation -------- #
+        if g < traj.NGEN -1:   # not necessary for the last generation
             # Select the next generation individuals
             offspring = toolbox.select(pop, len(pop))
             # Clone the selected individuals
@@ -155,15 +182,15 @@ def main():
             # The population is entirely replaced by the offspring
             pop[:] = offspring
 
+    # Stop the multiprocessing pool
     pool.close()
     pool.join()
 
     print("-- End of (successful) evolution --")
-
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
-    traj.f_store()
+    traj.f_store()  # And store all the rest of the data
 
 
 if __name__ == "__main__":

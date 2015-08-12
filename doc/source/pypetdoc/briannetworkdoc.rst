@@ -5,9 +5,9 @@ Brian Network Framework
 .. automodule:: pypet.brian.network
 
 
------------
+----------
 Quicklinks
------------
+----------
 
 These function can directly be called or used by the user.
 
@@ -25,9 +25,9 @@ These function can directly be called or used by the user.
 The private functions of the runner and the manager are also listed below
 to allow fast browsing of the source code.
 
-------------------------------------------------
+-----------------------------------------------
 Functions that can be implemented by a Subclass
-------------------------------------------------
+-----------------------------------------------
 
 These functions can be implemented in the subclasses:
 
@@ -56,34 +56,34 @@ Top-Level run_network Function
 
 .. autofunction:: pypet.brian.network.run_network
 
------------------------
+--------------
 NetworkManager
------------------------
+--------------
 
 .. autoclass:: pypet.brian.network.NetworkManager
     :members:
     :private-members:
     :special-members:
 
------------------------
+-------------
 NetworkRunner
------------------------
+-------------
 
 .. autoclass:: pypet.brian.network.NetworkRunner
     :members:
     :private-members:
     :special-members:
 
------------------------
+----------------
 NetworkComponent
------------------------
+----------------
 
 .. autoclass:: pypet.brian.network.NetworkComponent
     :members:
 
------------------------
+---------------
 NetworkAnalyser
------------------------
+---------------
 
 .. autoclass:: pypet.brian.network.NetworkAnalyser
     :members:

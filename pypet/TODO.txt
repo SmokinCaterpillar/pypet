@@ -2,15 +2,15 @@
 
 * Write more tests for new map feature *DONE*
 
-* Doc manual runs
+* Doc manual runs *DONE*
 
 * Write tests for manual runs *DONE*
 
-* Add examples to docu
+* Add examples to docu *DONE*
 
 * Better document examples
 
-* DOc new wrapper
+* DOc new wrapper *DONE*
 
 * Test new wrapper  *DONE*
 
@@ -18,6 +18,6 @@
 
 * Doc new niceness feature  *DONE*
 
-* Doc new scoop feature
+* Doc new scoop feature *DONE*
 
 * Add gc.collect to queue and pipe feature *DONE*

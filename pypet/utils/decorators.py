@@ -13,6 +13,20 @@ def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
 
     This can be helpful if you want the run functionality without using an environment.
 
+    :param turn_into_run:
+
+        If the trajectory should become a `single run` with more specialized functionality
+        during a single run.
+
+    :param store_meta_data:
+
+        If meta-data like runtime should be automatically stored
+
+    :param clean_up:
+
+        If all data added during the single run should be removed, only works
+        if ``turn_into_run=True``.
+
     """
     def wrapper(func):
         @functools.wraps(func)
@@ -23,7 +37,7 @@ def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
             result = func(traj, *args, **kwargs)
             if do_wrap:
                 traj.f_finalize_run(store_meta_data=store_meta_data,
-                                  clean_up=clean_up,)
+                                    clean_up=clean_up)
             return result
 
         return new_func

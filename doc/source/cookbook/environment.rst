@@ -488,8 +488,8 @@ Thus, you can change the settings of the trajectory immediately.
 
 .. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
 
-.. _config-added-by-environment:
 
+.. _config-added-by-environment:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Config Data added by the Environment
@@ -640,12 +640,7 @@ The following code snippet shows how to enable multiprocessing with 4 CPUs, a po
 .. code-block:: python
 
     env = Environment(self, trajectory='trajectory',
-                 comment='',
-                 dynamic_imports=None,
-                 log_folder='../log/',
-                 use_hdf5=True,
                  filename='../experiments.h5',
-                 file_title='experiment',
                  multiproc=True,
                  ncores=4,
                  use_pool=True,
@@ -729,7 +724,8 @@ Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage s
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
 classes for the HDF5 storage service to allow safe data storage.
 There are two different modes that are supported. You can choose between them via setting
-``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, and ``'PIPE'`` wrapping. If you
+``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, and ``'PIPE'``, and
+``'LOCAL'`` wrapping. If you
 have your own service that is already thread safe you can also choose ``'NONE'`` to skip wrapping.
 
 If you chose the ``'QUEUE'`` mode, there will be an additional process spawned that is the only
@@ -761,7 +757,15 @@ data integrity checks are made. So there's no guarantee that all you data is rea
 Use this if you go for many runs that just produce small results, and use it carefully.
 Since this mode relies on forking of processes, it cannot be used under Windows.
 
-Finally, there also exist a lightweight multiprocessing environment
+``'LOCAL'`` wrapping means that all data is kept and feed back to your local main process as
+soon as a single run is completed. Your data is then stored by your main process.
+This wrap mode can be useful if you use *pypet* with SCOOP_ (see also :ref:`pypet-and-scoop`)
+in a cluster environment and your workers are distributed over a network.
+Note that freeing data with ``f_empty()`` during a single run has no effect
+on your memory because the local wrapper will keep references to all data
+until the single run is completed.
+
+Finally, there also exists a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
 For instance, you might use this if you also want to analyse the trajectory with
@@ -774,8 +778,50 @@ multiprocessing. You can find an example here: :ref:`example-16`.
 
 .. _multiprocessing pipe: https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Pipe
 
-.. _more-on-git:
 
+.. _pypet-and-scoop:
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Multiprocessing with a Cluster or a Multi-Server Framework
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*pypet* can be used on computing clusters as well as multiple servers shearing a
+home directory via SCOOP_.
+
+Simply create your environment as follows
+
+.. code-block:: python
+
+    env = Environment(self, trajectory='trajectory',
+                 filename='../experiments.h5',
+                 multiproc=True,
+                 use_scoop=True
+                 use_pool=False,
+                 wrap_mode='LOCAL')
+
+
+and start your script via ``python -m scoop my_script.py``.
+If using SCOOP_, the only multiprocessing wrap mode currently supported is
+``'LOCAL'``, i.e. all your data is actually stored
+by your local main python process and results are collected from all workers.
+In case SCOOP_ is configured correctly (see the `SCOOP docs`_ on how to set up
+start-up scripts for grid engines and/or multiple hosts), you can easily use
+*pypet* in a multi-server or cluster framework. :ref:`example-21` shows how to
+combine *pypet* and SCOOP_.
+
+Moreover, you can also use *pypet* with `SAGA Python`_ to manually schedule your experiments
+on a cluster environment. :ref:`example-22` shows how to submit batches of experiments
+and later on merge the trajectories from each experiment into one.
+
+
+.. _SCOOP docs: http://scoop.readthedocs.org/en/0.7/usage.html#use-with-a-scheduler
+
+.. _SCOOP: https://scoop.readthedocs.org/
+
+.. _SAGA Python: http://saga-python.readthedocs.org/
+
+
+.. _more-on-git:
 
 ^^^^^^^^^^^^^^^
 Git Integration
@@ -1282,9 +1328,16 @@ You can try to use both together, but there is **no** guarantee whatsoever that 
 crashed trajectory and post-processing with expanding will work together.
 
 
-
-.. _dill: https://pypi.python.org/pypi/dill
-
 .. _sumatra: http://neuralensemble.org/sumatra/
 
 .. _openBLAS: http://www.openblas.net/
+
+
+-----------
+Manual Runs
+-----------
+
+You are not obliged to use a trajectory with an environment. If you still want the
+distinction between single runs but manually schedule them, take a look at
+the :func:`pypet.utils.decorators.manual_run` decorator. An example of how to use it
+is given here :ref:`example-20`.

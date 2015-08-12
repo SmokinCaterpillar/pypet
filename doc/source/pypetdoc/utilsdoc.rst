@@ -32,6 +32,26 @@ It displays progress and estimates remaining time.
 
 .. autofunction:: pypet.progressbar
 
+
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Merging many Trajectories
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can easily merge several trajectories located in one directory into one with
+
+.. autofunction:: pypet.merge_all_in_folder
+
+
+^^^^^^^^^^^
+Manual Runs
+^^^^^^^^^^^
+
+If you don't want to use an Environment but manually schedule runs, take a look at the
+following decorator:
+
+.. autofunction:: pypet.manual_run
+
+
 -------------------------------------------------------------------
 General Equality Function and Comparisons of Parameters and Results
 -------------------------------------------------------------------

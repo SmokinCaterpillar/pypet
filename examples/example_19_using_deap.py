@@ -14,7 +14,6 @@ the network may take a few seconds.
 
 """
 
-
 __author__ = 'Robert Meyer'
 
 import random
@@ -30,32 +29,44 @@ def eval_one_max(traj, individual):
     traj.f_add_result('$set.$.individual', list(individual))
     fitness = sum(individual)
     traj.f_add_result('$set.$.fitness', fitness)
-    traj.f_store()
-    return fitness,
+    traj.f_store()  # We switched off automatic storing, so we need to store manually
+    return (fitness,)  # DEAP wants a tuple here!
 
 def main():
 
-    env = Environment(trajectory='deap', add_time=False,
-        overwrite_file=True, multiproc=True, ncores=4, log_level=50,
-                      log_stdout=False, wrap_mode='QUEUE',
-                      use_pool=True, automatic_storing=False)
+    env = Environment(trajectory='deap',
+                      overwrite_file=True,
+                      multiproc=True,
+                      ncores=4,
+                      log_level=50,  # only display ERRORS
+                      log_stdout=False,
+                      wrap_mode='QUEUE',
+                      use_pool=True,
+                      automatic_storing=False,  # This is important, we want to run several
+                      # batches with the Environment so we want to avoid re-storing all
+                      # data over and over again to save some overhead.
+                      comment='Using pypet and DEAP'
+                      )
     traj = env.v_traj
 
-    traj.f_add_parameter('popsize', 100)
-    traj.f_add_parameter('CXPB', 0.5)
-    traj.f_add_parameter('MUTPB', 0.2)
-    traj.f_add_parameter('NGEN', 20)
 
-    traj.f_add_parameter('generation', 0)
-    traj.f_add_parameter('ind_idx', 0)
-    traj.f_add_parameter('ind_len', 50)
+    # ------- Add parameters ------- #
+    traj.f_add_parameter('popsize', 100, comment='Population size')
+    traj.f_add_parameter('CXPB', 0.5, comment='Crossover term')
+    traj.f_add_parameter('MUTPB', 0.2, comment='Mutation probability')
+    traj.f_add_parameter('NGEN', 20, comment='Number of generations')
 
-    traj.f_add_parameter('indpb', 0.005)
-    traj.f_add_parameter('tournsize', 3)
+    traj.f_add_parameter('generation', 0, comment='Current generation')
+    traj.f_add_parameter('ind_idx', 0, comment='Index of individual')
+    traj.f_add_parameter('ind_len', 50, comment='Length of individual')
 
-    traj.f_add_parameter('seed', 42)
+    traj.f_add_parameter('indpb', 0.005, comment='Mutation parameter')
+    traj.f_add_parameter('tournsize', 3, comment='Selection parameter')
+
+    traj.f_add_parameter('seed', 42, comment='Seed for RNG')
 
 
+    # ------- Create and register functions with DEAP ------- #
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
 
@@ -72,31 +83,42 @@ def main():
     toolbox.register("mutate", tools.mutFlipBit, indpb=traj.indpb)
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
     toolbox.register("evaluate", eval_one_max)
-    toolbox.register("map", env.f_run_map)
+    toolbox.register("map", env.f_run_map)  # Important to use `f_run_map` instead of `f_run`
+    # because we pass an iterable argument to our fitness function
 
+
+    # ------- Initialize Population -------- #
     random.seed(traj.seed)
 
     pop = toolbox.population(n=traj.popsize)
     CXPB, MUTPB, NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
 
+
     print("Start of evolution")
-    times = []
     for g in range(traj.NGEN):
+
+        # ------- Evaluate current generation -------- #
         print("-- Generation %i --" % g)
 
+        # Determine individuals that need to be evaluated
         eval_pop = [ind for ind in pop if not ind.fitness.valid]
+
+        # Add as many explored runs as individuals that need to be evaluated
         traj.f_expand(cartesian_product({'generation': [g], 'ind_idx': range(len(eval_pop))}))
 
-        start_idx = env.v_current_idx
-        fitnesses = toolbox.map(toolbox.evaluate, eval_pop)
-        # env.f_run_map(eval_one_max, eval_pop)
+        fitnesses = toolbox.map(toolbox.evaluate, eval_pop)  # evaluate using our fitness function
 
-        for idx, fitness in fitnesses:
-            pop_idx = idx - start_idx
+        index_range = traj.f_get('ind_idx').f_get_range()
+        # fitnesses is a list of
+        # a nested tuple: [(run_idx, (fitness,)), ...]
+        for run_idx, fitness in fitnesses:
+            # Update fitnesses
+            pop_idx = index_range[run_idx]
+            # Results are in order of completion not runs,
+            # so we need to convert the run indices to population indices
             eval_pop[pop_idx].fitness.values = fitness
 
         print("  Evaluated %i individuals" % len(fitnesses))
-
 
         # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]
@@ -111,7 +133,9 @@ def main():
         print("  Avg %s" % mean)
         print("  Std %s" % std)
 
-        if g < traj.NGEN -1:
+
+        # ------- Create the next generation by crossover and mutation -------- #
+        if g < traj.NGEN -1:  # not necessary for the last generation
             # Select the next generation individuals
             offspring = toolbox.select(pop, len(pop))
             # Clone the selected individuals
@@ -133,11 +157,10 @@ def main():
             pop[:] = offspring
 
     print("-- End of (successful) evolution --")
-
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
-    traj.f_store()
+    traj.f_store()  # We switched off automatic storing, so we need to store manually
 
 
 if __name__ == "__main__":

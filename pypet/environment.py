@@ -123,7 +123,6 @@ def _scoop_single_run(kwargs):
     """Wrapper function for scoop, that does not configure logging"""
     try:
         pid = kwargs['main_pid']
-        scoop.logger.warn('%s != %s' % (os.getpid(), pid))
         if pid != os.getpid():
             # Hack to not reconfigure logging and niceness if scoop uses origin
             _configure_niceness(kwargs)

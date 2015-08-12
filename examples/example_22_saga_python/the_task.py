@@ -111,6 +111,9 @@ def explore_batch(traj, batch):
     """Chooses exploration according to `batch`"""
     explore_dict = {}
     explore_dict['sigma'] = np.arange(10.0 * batch, 10.0*(batch+1), 1.0).tolist()
+    # for batch = 0 explores sigma in [0.0, 1.0, 2.0, ..., 9.0],
+    # for batch = 1 explores sigma in [10.0, 11.0, 12.0, ..., 19.0]
+    # and so on
     traj.f_explore(explore_dict)
 
 
@@ -124,7 +127,7 @@ def main():
                       file_title='Example_22_Euler_Integration',
                       comment='Go for Euler!',
                       overwrite_file=True,
-                      multiproc=True,
+                      multiproc=True,  # Yes we can use multiprocessing within each batch!
                       ncores=4)
 
     traj = env.v_trajectory

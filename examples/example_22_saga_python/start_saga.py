@@ -4,6 +4,9 @@ The example is based on `ssh` but using a cluster is almost analogous.
 For examples on how to submit jobs to cluster with SAGA python check
 the documentation: http://saga-python.readthedocs.org/en/latest/
 
+We run `the_task` in batches and create several trajectories,
+later on we simply merge the batches into a single trajectory.
+
 """
 
 import sys
@@ -41,7 +44,7 @@ def download_file(filename, session):
 
 
 def create_session():
-    """ Creates and returns a new saga session """
+    """ Creates and returns a new SAGA session """
     ctx = saga.Context("UserPass")
     ctx.user_id = USER
     ctx.user_pass = PASSWORD
@@ -57,7 +60,7 @@ def merge_trajectories(session):
     jd = saga.job.Description()
 
     jd.executable      = 'python'
-    jd.arguments       = ['merge_trajs.py --folder=./']
+    jd.arguments       = ['merge_trajs.py']
     jd.output          = "mysagajob_merge.stdout"
     jd.error           = "mysagajob_merge.stderr"
     jd.working_directory = WORKING_DIR
