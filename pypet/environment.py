@@ -2379,9 +2379,9 @@ class Environment(HasLogger):
         total_runs = len(self._traj)
         expanded_by_postproc = False
 
-        if self._wrap_mode == pypetconstants.WRAP_MODE_NONE:
-            # We assume that storage and loading is multiprocessing safe
-            pass
+        if (self._wrap_mode == pypetconstants.WRAP_MODE_NONE or
+                self._storage_service.multiproc_safe):
+            self._logger.info('I assume that your storage service is multiprocessing safe.')
         else:
             use_manager = (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                            self._immediate_postproc)
