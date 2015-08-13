@@ -4773,11 +4773,15 @@ class HDF5StorageService(StorageService, HasLogger):
                 other_array = factory(self._hdf5file, where=group, name=key, obj=data,
                                                 filters=filters, **kwargs)
             except (ValueError, TypeError) as exc:
-                conv_data = data[:]
-                conv_data = np.core.defchararray.encode(conv_data, self.encoding)
-                other_array = factory(self._hdf5file, where=group, name=key,
-                                            obj=conv_data,
-                                            filters=filters, **kwargs)
+                try:
+                    conv_data = data[:]
+                    conv_data = np.core.defchararray.encode(conv_data, self.encoding)
+                    other_array = factory(self._hdf5file, where=group, name=key,
+                                                obj=conv_data,
+                                                filters=filters, **kwargs)
+                except Exception:
+                    # Re-raise original Error
+                    raise exc
 
             if data is not None:
                 # Remember the types of the original data to recall them on loading
@@ -4824,20 +4828,24 @@ class HDF5StorageService(StorageService, HasLogger):
                 array = ptcompat.create_array(self._hdf5file, where=group,
                                               name=key, obj=data, **kwargs)
             except (TypeError, ValueError) as exc:
-                if type(data) is dict and len(data) == 0:
-                    # We cannot store an empty dictionary,
-                    # but we can use an empty tuple as a dummy.
-                    conv_data = ()
-                elif isinstance(data, compat.unicode_type):
-                    conv_data = data.encode(self._encoding)
-                elif isinstance(data, compat.long_type):
-                    conv_data = np.int64(data)
-                else:
-                    conv_data = []
-                    for string in data:
-                        conv_data.append(string.encode(self._encoding))
-                array = ptcompat.create_array(self._hdf5file, where=group,
-                                              name=key, obj=conv_data, **kwargs)
+                try:
+                    if type(data) is dict and len(data) == 0:
+                        # We cannot store an empty dictionary,
+                        # but we can use an empty tuple as a dummy.
+                        conv_data = ()
+                    elif isinstance(data, compat.unicode_type):
+                        conv_data = data.encode(self._encoding)
+                    elif isinstance(data, compat.long_type):
+                        conv_data = np.int64(data)
+                    else:
+                        conv_data = []
+                        for string in data:
+                            conv_data.append(string.encode(self._encoding))
+                    array = ptcompat.create_array(self._hdf5file, where=group,
+                                                  name=key, obj=conv_data, **kwargs)
+                except Exception:
+                    # Re-raise original error
+                    raise exc
 
             if data is not None:
                 # Remember the types of the original data to recall them on loading
