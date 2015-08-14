@@ -62,9 +62,7 @@ If you use Python 2.6 you also need
 * unittest2
 
 
-^^^^^^^^^^^^^^^^^
-Optional Packages
-^^^^^^^^^^^^^^^^^
+There are also some optional packages that you can but do not have to install.
 
 If you want to combine *pypet* with SCOOP you need
 
