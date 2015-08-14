@@ -76,6 +76,9 @@ Main Features
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
   Sumatra_
 
+* *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
+  the `SCOOP framework`_
+
 
 ===============
 Getting Started
@@ -112,7 +115,7 @@ If you use Python 2.6 you also need
 Optional Packages
 ^^^^^^^^^^^^^^^^^
 
-If you want to combine *pypet* with SCOOP_ you need
+If you want to combine *pypet* with the `SCOOP framework`_ you need
 
 * scoop_ >= 0.7.1
 
@@ -514,7 +517,7 @@ Cheers,
 
 .. _logutils: https://pypi.python.org/pypi/logutils
 
-.. _SCOOP: http://scoop.readthedocs.org/
+.. _SCOOP framework: http://scoop.readthedocs.org/
 
 .. _scoop: https://pypi.python.org/pypi/scoop/
 

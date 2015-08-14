@@ -2,9 +2,18 @@
 FAQs and Known Issues
 =====================
 
---------------------------------------
-Cluster Computing and Multiple Servers
---------------------------------------
+--------------------
+Tools and Extensions
+--------------------
+
+**Q:** How can I open and inspect an HDF5 file created by *pypet*?
+
+    **A:** For inspection I mostly use these two tools: HDFview_ and ViTables_.
+
+.. _HDFview: http://www.hdfgroup.org/products/java/hdfview/
+
+.. _ViTables: http://vitables.org/
+
 
 **Q:** Can I use *pypet* on my computing cluster or can I distribute *pypet* runs among
 different servers?
@@ -19,17 +28,13 @@ different servers?
 .. _SAGA Python: http://saga-python.readthedocs.org/
 
 
------
-Tools
------
+**Q:** I not only need to explore but also tune parameters. Are there any optimization methods
+available in *pypet*?
 
-**Q:** How can I open and inspect an HDF5 file created by *pypet*?
+    **A:** Not directly, but you can easily combine *pypet* with the evolutionary optimization
+    toolkit DEAP_. :ref:`example-19` shows you how.
 
-    **A:** For inspection I mostly use these two tools: HDFview_ and ViTables_.
-
-.. _HDFview: http://www.hdfgroup.org/products/java/hdfview/
-
-.. _ViTables: http://vitables.org/
+.. _DEAP: http://deap.readthedocs.org/
 
 
 ------------------

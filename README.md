@@ -219,6 +219,9 @@ Main Features
 
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
   Sumatra (http://neuralensemble.org/sumatra/)
+  
+* *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
+  SCOOP (http://scoop.readthedocs.org/)
 
 
 =====================
