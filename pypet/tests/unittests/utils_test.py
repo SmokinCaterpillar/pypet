@@ -209,7 +209,7 @@ class TestDictionaryMethods(unittest.TestCase):
         self.assertTrue(flattened == expected)
 
 
-class TestResultSort(unittest.TestCase):
+class ResultSortFuncTest(unittest.TestCase):
     tags = 'unittest', 'utils', 'result_sort'
 
     def result_sort_sorted(the_list, start_index=0):
