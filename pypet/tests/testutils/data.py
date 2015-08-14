@@ -327,7 +327,7 @@ class TrajectoryComparator(unittest.TestCase):
     def are_results_in_order(self, results):
         self.assertGreater(len(results), 0)
         sorted_res = sorted(results, key=lambda key: key[0])
-        self.assertItemsEqual(results, sorted_res)
+        self.assertEqual(results, sorted_res)
 
     def clear_handlers(self):
         """Deletes all handlers and closes all log-files"""
