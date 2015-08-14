@@ -220,7 +220,7 @@ class TestResultSort(unittest.TestCase):
         return the_list
 
     def test_sort(self, start_index=0, n=100):
-        to_sort = range(n)
+        to_sort = list(range(n)) # list for Python 3
         random.shuffle(to_sort)
         to_sort = [(x,x) for x in to_sort]
         result_sort(to_sort, start_index)
