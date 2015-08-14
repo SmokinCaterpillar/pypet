@@ -349,7 +349,8 @@ class EnvironmentTest(TrajectoryComparator):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        results =  self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        self.are_results_in_order(results)
 
     def test_a_large_run(self):
         get_root_logger().info('Testing large run')
@@ -931,6 +932,7 @@ class ResultSortTest(TrajectoryComparator):
         self.explore(self.traj)
 
         results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
         self.assertEqual(len(results), len(self.traj))
 
 
@@ -960,7 +962,8 @@ class ResultSortTest(TrajectoryComparator):
         self.explore(self.traj)
 
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
@@ -1024,7 +1027,10 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        get_root_logger().info(self.env.f_run(multiply))
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
+        get_root_logger().info(results)
         traj = self.traj
         self.assertEqual(len(traj), len(list(compat.listvalues(self.explore_dict)[0])))
 
@@ -1044,7 +1050,9 @@ class ResultSortTest(TrajectoryComparator):
 
         self.expand(self.traj)
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
 
@@ -1063,7 +1071,9 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 

@@ -61,6 +61,15 @@ If you use Python 2.6 you also need
 
 * unittest2
 
+
+^^^^^^^^^^^^^^^^^
+Optional Packages
+^^^^^^^^^^^^^^^^^
+
+If you want to combine *pypet* with SCOOP you need
+
+* scoop >= 0.7.1
+
 For git integration you additionally need
 
 * GitPython >= 0.3.1

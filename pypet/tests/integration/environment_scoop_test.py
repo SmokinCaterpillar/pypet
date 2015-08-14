@@ -8,58 +8,72 @@ try:
 except ImportError:
     scoop = None
 
+
 def identity(x):
     return x
 
-class ScoopFuturesWrapper(object):
 
-    def __init__(self):
-        self.signal = True  # to only print check mock once!
-
-    def check_mock(self):
-        try:
-            list(original_futures.map_as_completed(identity, [1,2,3]))
-            if self.signal:
-                print('SCOOP mode functional!')
-            mock = False
-        except Exception:
-            if self.signal:
-                print('Not started in SCOOP mode, I will MOCK scoop futures!')
-            mock = True
-        if self.signal:
-            self.signal = False
-        return mock
-            
-    def mock_map_as_completed(self, func, iterator):
-        results = list(map(func, iterator))
-        return results
-
-    def map_as_completed(self, func, iterator):
-        mock = self.check_mock()
-        if mock:
-            return self.mock_map_as_completed(func, iterator)
-        else:
-            return original_futures.map_as_completed(func, iterator)
-
-    def __getattr__(self, item):
-        return getattr(original_futures, item)
-
-    def __setattr__(self, key, value):
-        setattr(original_futures, key, value)
+def check_mock():
+    try:
+        list(original_futures.map_as_completed(identity, [1,2,3]))
+        print('SCOOP mode functional!')
+        mock = False
+    except Exception:
+        print('NOT started in SCOOP!')
+        mock = True
+    return mock
 
 
-if scoop is not None:
-    scoop.futures = ScoopFuturesWrapper()
+
+# class ScoopFuturesWrapper(object):
+#
+#     def __init__(self):
+#         self.signal = True  # to only print check mock once!
+#
+#     def check_mock(self):
+#         try:
+#             list(original_futures.map_as_completed(identity, [1,2,3]))
+#             if self.signal:
+#                 print('SCOOP mode functional!')
+#             mock = False
+#         except Exception:
+#             if self.signal:
+#                 print('Not started in SCOOP mode, I will MOCK scoop futures!')
+#             mock = True
+#         if self.signal:
+#             self.signal = False
+#         return mock
+#
+#     def mock_map_as_completed(self, func, iterator):
+#         results = list(map(func, iterator))
+#         return results
+#
+#     def map_as_completed(self, func, iterator):
+#         mock = self.check_mock()
+#         if mock:
+#             return self.mock_map_as_completed(func, iterator)
+#         else:
+#             return original_futures.map_as_completed(func, iterator)
+#
+#     def __getattr__(self, item):
+#         return getattr(original_futures, item)
+#
+#     def __setattr__(self, key, value):
+#         setattr(original_futures, key, value)
+#
+#
+# if scoop is not None:
+#     scoop.futures = ScoopFuturesWrapper()
 
 
-import pypet.environment
-# Reload to replace futures
-try:
-    reload(pypet.environment)
-except NameError:
-    # Python 3
-    import importlib
-    importlib.reload(pypet.environment)
+# import pypet.environment
+# # Reload to replace futures
+# try:
+#     reload(pypet.environment)
+# except NameError:
+#     # Python 3
+#     import importlib
+#     importlib.reload(pypet.environment)
 
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice

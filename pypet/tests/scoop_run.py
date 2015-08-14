@@ -9,7 +9,7 @@ except ImportError:
 import scoop
 
 from pypet.tests.testutils.ioutils import discover_tests, parse_args, run_suite
-from pypet.tests.integration.environment_scoop_test import ScoopFuturesWrapper
+from pypet.tests.integration.environment_scoop_test import check_mock
 
 tests_include=set(('MultiprocSCOOPSortLocalTest',  'MultiprocSCOOPLocalTest'))
 scoop_suite = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
@@ -17,8 +17,7 @@ scoop_suite = discover_tests(lambda  class_name, test_name, tags: class_name in 
 
 
 if __name__ == '__main__':
-    wrapper = ScoopFuturesWrapper()
-    mock = wrapper.check_mock()
+    mock = check_mock()
     if mock:
         raise RuntimeError('Not running in SCOOP mode!')
     opt_dict = parse_args()

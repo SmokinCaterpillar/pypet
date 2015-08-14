@@ -70,7 +70,7 @@ from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, 
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
-from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_functions import is_debug, result_sort
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
@@ -417,6 +417,15 @@ class Environment(HasLogger):
         If you have *psutil* installed, you can set `ncores=0` to let *psutil* determine
         the number of CPUs available.
 
+    :param use_scoop:
+
+        If python should be used in a SCOOP_ framework to distribute runs amond a cluster
+        or multiple servers. If so you need to start your script via
+        ``python -m scoop my_script.py``. Currently, SCOOP_ only works with
+        ``'LOCAL'`` ``wrap_mode`` (see below).
+
+        .. _SCOOP: http://scoop.readthedocs.org/
+
     :param use_pool:
 
         Whether to use a fixed pool of processes or whether to spawn a new process
@@ -579,6 +588,9 @@ class Environment(HasLogger):
 
         Note that after the execution of the final run, your post-processing routine will
         be called again as usual.
+
+        **IMPORTANT**: If you use immediate post-processing, the results that are passed to
+        your post-processing function are not sorted by their run indices but by finishing time!
 
         .. _pool: https://docs.python.org/2/library/multiprocessing.html
 
@@ -1662,8 +1674,7 @@ class Environment(HasLogger):
             List of the individual results returned by `runfunc`.
 
             Returns a LIST OF TUPLES, where first entry is the run idx and second entry
-            is the actual result. In case of multiprocessing these are not necessarily
-            ordered according to their run index, but ordered according to their finishing time.
+            is the actual result. They are always ordered according to the run index.
 
             Does not contain results stored in the trajectory!
             In order to access these simply interact with the trajectory object,
@@ -1873,6 +1884,7 @@ class Environment(HasLogger):
             run_information = result_tuple[1]
             self._traj._update_run_information(run_information)
             new_result_list.append(result_tuple[0])
+        result_sort(new_result_list)
 
         # Add a config parameter signalling that an experiment was continued, and how many of them
         config_name = 'environment.%s.continued' % self.v_name
@@ -2433,7 +2445,7 @@ class Environment(HasLogger):
                 try:
                     mpool = multip.Pool(self._ncores, initializer=initializer,
                                         initargs=(init_kwargs,))
-                    pool_results = mpool.imap_unordered(target, iterator)
+                    pool_results = mpool.imap(target, iterator)
 
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
@@ -2462,7 +2474,7 @@ class Environment(HasLogger):
                 iterator = self._make_iterator(start_run_idx, copy_data=True)
                 target = _scoop_single_run
 
-                scoop_results = futures.map_as_completed(target, iterator)
+                scoop_results = futures.map(target, iterator)
 
                 # Signal start of progress calculation
                 self._show_progress(n - 1, total_runs)
@@ -2480,6 +2492,7 @@ class Environment(HasLogger):
                 else:
                     maxsize = total_runs
 
+                start_result_length = len(results)
                 result_queue = multip.Queue(maxsize=maxsize)
 
                 # Create a generator to generate the tasks for multiprocessing
@@ -2606,6 +2619,8 @@ class Environment(HasLogger):
                 result_queue.close()
                 result_queue.join_thread()
                 del result_queue
+
+                result_sort(results, start_result_length)
         finally:
 
             # Finalize the wrapper

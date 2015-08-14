@@ -6,6 +6,7 @@ else:
 import logging
 
 import numpy as np
+import time
 import pandas as pd
 from scipy import sparse as spsp
 from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, PickleParameter, \
@@ -164,6 +165,11 @@ def multiply_args(traj, arg1=0, arg2=0, arg3=0):
 
 
 def simple_calculations(traj, arg1, simple_kwarg):
+
+        if traj.v_idx == 0:
+            # to shuffle runs
+            time.sleep(0.1)
+
         rootlogger = get_root_logger()
 
         if not 'runs' in traj.res:
@@ -317,6 +323,11 @@ def to_dict_wo_config(traj):
 
 
 class TrajectoryComparator(unittest.TestCase):
+
+    def are_results_in_order(self, results):
+        self.assertGreater(len(results), 0)
+        sorted_res = sorted(results, key=lambda key: key[0])
+        self.assertItemsEqual(results, sorted_res)
 
     def clear_handlers(self):
         """Deletes all handlers and closes all log-files"""

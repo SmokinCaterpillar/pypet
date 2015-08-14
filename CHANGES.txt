@@ -43,6 +43,9 @@ pypet 0.1b.13
 
 *   Parameters now support lists and no longer make numpy arrays unwritable
 
+*   Results are now always sorted according to the run indices
+    (except for immediate post-processing)
+
 
 pypet 0.1b.12
 

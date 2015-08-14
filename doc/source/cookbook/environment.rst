@@ -132,6 +132,13 @@ because most of the time the default settings are sufficient.
     If you have psutil_ installed, you can set `ncores=0` to let psutil_ determine
     the number of CPUs available.
 
+* ``use_scoop``
+
+    If python should be used in a SCOOP_ framework to distribute runs amond a cluster
+    or multiple servers. If so you need to start your script via
+    ``python -m scoop my_script.py``. Currently, SCOOP_ only works with
+    ``'LOCAL'`` ``wrap_mode`` (see below).
+
 * ``use_pool``
 
     If you choose multiprocessing you can specify whether you want to spawn a new
@@ -293,6 +300,9 @@ because most of the time the default settings are sufficient.
 
     Note that after the execution of the final run, your post-processing routine will
     be called again as usual.
+
+    **IMPORTANT**: If you use immediate post-processing, the results that are passed to
+    your post-processing function are not sorted by their run indices but by finishing time!
 
 * ``continuable``
 
@@ -1057,9 +1067,9 @@ Whereas the first tuple entry is the index of the corresponding run and the seco
 of the tuple is the result returned by your run function.
 For the example above this would simply always be
 the string ``'fortytwo'``, i.e. ``((0, 'fortytwo'), (1, 'fortytwo'),...)``.
-In case you use multiprocessing these tuples are **not** in the order
-of the run indices but in the order of their finishing time!
-
+These will always be in order of the run indices even in case of multiprocessing.
+The only exception to this rule is if you use immediate postprocessing
+(see :ref:`more-about-postproc`) where results are in order of finishing time.
 
 using :func:`~pypet.environment.Environment.f_run` all ``args`` and ``kwargs`` are supposed to
 be static, that is all of them are passed to every function call.
@@ -1094,7 +1104,8 @@ You can add a post-processing function that is called after the execution of all
 runs via :func:`~pypet.environment.Environment.f_add_postprocessing`.
 
 Your post processing function must accept the trajectory container as the first argument,
-a list of tuples (containing the run indices and results), and arbitrary positional and
+a list of tuples (containing the run indices and results, normally in order of indices
+unless you use ``immediate_postproc``, see below), and arbitrary positional and
 keyword arguments. In order to pass arbitrary arguments to your post-processing function,
 simply pass these first to :func:`~pypet.environment.Environment.f_add_postprocessing`.
 
@@ -1191,6 +1202,9 @@ is executed in the main process (this makes writing actual post-processing funct
 because you don't have to wrap your head around dead-locks).
 Accordingly, post-processing should be rather quick in comparison to your single runs, otherwise
 post-processing will become the bottleneck in your parallel simulations.
+
+**IMPORTANT**: If you use immediate post-processing, the results that are passed to
+your post-processing function are not sorted by their run indices but by finishing time!
 
 
 ---------------------------

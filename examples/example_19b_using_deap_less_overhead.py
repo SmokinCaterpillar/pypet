@@ -114,23 +114,20 @@ def main():
                                          'individual':[list(x) for x in eval_pop]},
                                             [('ind_idx', 'individual'),'generation']))
 
-        fitnesses = toolbox.map(toolbox.evaluate)  # evaluate using our fitness function
+        fitnesses_results = toolbox.map(toolbox.evaluate)  # evaluate using our fitness function
 
-        index_range = traj.f_get('ind_idx').f_get_range()
-        # fitnesses is a list of
+        # fitnesses_results is a list of
         # a nested tuple: [(run_idx, (fitness,)), ...]
-        for run_idx, fitness in fitnesses:
+        for idx, result in enumerate(fitnesses_results):
             # Update fitnesses
-            pop_idx = index_range[run_idx]
-            # Results are in order of completion not runs,
-            # so we need to convert the run indices to population indices
-            eval_pop[pop_idx].fitness.values = fitness
+            _, fitness = result  # The environment returns tuples: [(run_idx, run), ...]
+            eval_pop[idx].fitness.values = fitness
 
         # Append all fitnesses (note that DEAP fitnesses are tuples of length 1
         # but we are only interested in the value
         traj.fitnesses.extend([x.fitness.values[0] for x in eval_pop])
 
-        print("  Evaluated %i individuals" % len(fitnesses))
+        print("  Evaluated %i individuals" % len(fitnesses_results))
 
         # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]

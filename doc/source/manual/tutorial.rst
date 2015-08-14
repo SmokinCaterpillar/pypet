@@ -674,9 +674,7 @@ The post-processing function has to take at least two arguments.
 First one is the trajectory, second one is the list of results.
 This list actually contains two-dimensional tuples. First entry of the tuple is the index
 of the run as an integer, and second entry is the result returned by our job-function
-``run_neuron`` in the corresponding run. Be aware that since we use multiprocessing,
-the list is not ordered according to the run indices, but according to the time the
-single runs did actually finish.
+``run_neuron`` in the corresponding run.
 
 .. code-block:: python
 

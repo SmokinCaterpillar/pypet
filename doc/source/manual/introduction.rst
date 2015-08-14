@@ -107,6 +107,15 @@ If you use Python 2.6 you also need
 
 * unittest2_
 
+
+^^^^^^^^^^^^^^^^^
+Optional Packages
+^^^^^^^^^^^^^^^^^
+
+If you want to combine *pypet* with SCOOP_ you need
+
+* scoop_ >= 0.7.1
+
 For git integration you additionally need
 
 * GitPython_ >= 0.3.1
@@ -504,4 +513,8 @@ Cheers,
 .. _unittest2: https://pypi.python.org/pypi/unittest2/1.0.1
 
 .. _logutils: https://pypi.python.org/pypi/logutils
+
+.. _SCOOP: http://scoop.readthedocs.org/
+
+.. _scoop: https://pypi.python.org/pypi/scoop/
 

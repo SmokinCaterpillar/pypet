@@ -7,6 +7,8 @@ from collections import Set, Sequence, Mapping
 
 import pandas as pd
 import numpy as np
+import random
+import copy as cp
 
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
     get_root_logger, parse_args
@@ -19,7 +21,8 @@ else:
     import unittest
 
 from pypet.utils.explore import cartesian_product, find_unique_points
-from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary
+from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary, \
+    result_sort
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
@@ -204,6 +207,34 @@ class TestDictionaryMethods(unittest.TestCase):
         flattened = flatten_dictionary(mydict, separator='.')
         expected = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
         self.assertTrue(flattened == expected)
+
+
+class TestResultSort(unittest.TestCase):
+    tags = 'unittest', 'utils', 'result_sort'
+
+    def result_sort_sorted(the_list, start_index=0):
+        to_sort = the_list[start_index:]
+        sorted_list = sorted(to_sort, key=lambda key: key[0])
+        for idx_count, elem in enumerate(sorted_list):
+            the_list[idx_count+start_index] = elem
+        return the_list
+
+    def test_sort(self, start_index=0, n=100):
+        to_sort = range(n)
+        random.shuffle(to_sort)
+        to_sort = [(x,x) for x in to_sort]
+        result_sort(to_sort, start_index)
+        if start_index == 0:
+            compare = [(x,x,) for x in range(n)]
+        else:
+            copy_to_sort = cp.deepcopy(to_sort)
+            compare = result_sort(copy_to_sort, start_index)
+        self.assertEqual(to_sort, compare)
+        if start_index != 0:
+            self.assertNotEqual(to_sort[:start_index], [(x,x,) for x in range(n)][:start_index])
+
+    def test_sort_with_index(self):
+        self.test_sort(500, 1000)
 
 
 @unittest.skipIf(compat.python_major >= 3, 'Only supported for python 2')

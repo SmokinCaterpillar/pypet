@@ -284,6 +284,25 @@ def get_matching_kwargs(func, kwargs):
         return {}
 
 
-def get_multiproc_pool(pool):
-    """Returns all processes of a pool as a list"""
-    return pool._pool
+def result_sort(result_list, start_index=0):
+    """Sorts a list of results in O(n) in place (since every run is unique)
+
+    :param result_list: List of tuples [(run_idx, res), ...]
+    :param start_index: Index with which to start, every entry before `start_index` is ignored
+
+    """
+    to_sort = result_list[start_index:]
+    minmax = [x[0] for x in to_sort]
+    minimum = min(minmax)
+    maximum = max(minmax)
+    #print minimum, maximum
+    sorted_list = [None for _ in range(minimum, maximum + 1)]
+    for elem in to_sort:
+        key = elem[0] - minimum
+        sorted_list[key] = elem
+    idx_count = start_index
+    for elem in sorted_list:
+        if elem is not None:
+            result_list[idx_count] = elem
+            idx_count += 1
+    return result_list

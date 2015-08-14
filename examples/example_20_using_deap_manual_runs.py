@@ -135,7 +135,6 @@ def main():
         # fitnesses is just a list of tuples [(fitness,), ...]
         for idx, fitness in enumerate(fitnesses):
             # Update fitnesses
-            # map returns everything in order, so we can just use enumerate
             eval_pop[idx].fitness.values = fitness
 
         # Finalize the multiproc wrapper

@@ -13,7 +13,7 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_dir,  \
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.storageservice import LockWrapper, ReferenceWrapper, QueueStorageServiceSender, \
     PipeStorageServiceSender
-
+import time
 
 class Multiply(object):
 
@@ -21,6 +21,9 @@ class Multiply(object):
         self.var=42
 
     def __call__(self, traj, i, w=0):
+        if traj.v_idx == 0:
+            # to shuffle results
+            time.sleep(0.2)
         z = traj.x * traj.y + i + w
         zres = traj.f_add_result('z', z)
         g=traj.res.f_add_group('I.link.to.$')
@@ -237,9 +240,13 @@ class TestPostProc(TrajectoryComparator):
         traj2.f_explore(exp_dict2)
 
 
-        env1.f_pipeline(pipeline=mypipeline)
+        res1 = env1.f_pipeline(pipeline=mypipeline)
 
-        env2.f_run(Multiply(), 22)
+        self.are_results_in_order(res1)
+
+        res2 = env2.f_run(Multiply(), 22)
+
+        self.are_results_in_order(res2)
 
         traj_name = traj1.v_name
         traj1 = Trajectory(traj_name, add_time=False, filename=filename)
@@ -273,9 +280,13 @@ class TestPostProc(TrajectoryComparator):
         traj2.f_explore(exp_dict2)
 
 
-        env1.f_pipeline_map(pipeline=mypipelin_with_iter_args)
+        res1 = env1.f_pipeline_map(pipeline=mypipelin_with_iter_args)
 
-        env2.f_run_map(Multiply(), [22,23,24,25,5,6,7,8], w=[5,6,7,8,7,8,9,10])
+        self.are_results_in_order(res1)
+
+        res2 = env2.f_run_map(Multiply(), [22,23,24,25,5,6,7,8], w=[5,6,7,8,7,8,9,10])
+
+        self.are_results_in_order(res2)
 
         traj1.f_load(load_data=2)
         traj2.f_load(load_data=2)
