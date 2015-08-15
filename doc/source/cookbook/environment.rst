@@ -814,10 +814,20 @@ and start your script via ``python -m scoop my_script.py``.
 If using SCOOP_, the only multiprocessing wrap mode currently supported is
 ``'LOCAL'``, i.e. all your data is actually stored
 by your local main python process and results are collected from all workers.
-In case SCOOP_ is configured correctly (see the `SCOOP docs`_ on how to set up
-start-up scripts for grid engines and/or multiple hosts), you can easily use
+In case SCOOP_ is configured correctly, you can easily use
 *pypet* in a multi-server or cluster framework. :ref:`example-21` shows how to
-combine *pypet* and SCOOP_.
+combine *pypet* and SCOOP_. For instance, if you have multiple servers sharing the
+same home directory you can distribute your runs on all of them via
+``python -m --hostfile hosts -vv -n 16 my_script.py`` to start 16 workers on your ``hosts``
+which is a file specifying the servers to use. It has the format
+
+   | ip_or_hostname_or_ip 8
+   | other_hostname
+   | third_hostname 4
+
+with the name of the host followed by the number of workers you want to launch (optional).
+See also the `SCOOP docs`_ and the `example start up scripts`_
+on how to set up multiple hosts and scripts for cluster grid engines, respectively.
 
 Moreover, you can also use *pypet* with `SAGA Python`_ to manually schedule your experiments
 on a cluster environment. :ref:`example-22` shows how to submit batches of experiments
@@ -829,6 +839,8 @@ and later on merge the trajectories from each experiment into one.
 .. _SCOOP: https://scoop.readthedocs.org/
 
 .. _SAGA Python: http://saga-python.readthedocs.org/
+
+.. _example start up scripts: https://github.com/soravux/scoop/tree/master/examples/submit_files
 
 
 .. _more-on-git:
@@ -867,7 +879,6 @@ commit in case of changed code, the program will throw a ``GitDiffError``.
 
 .. _git: http://git-scm.com/
 
-.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 .. _more-on-sumatra:
 
