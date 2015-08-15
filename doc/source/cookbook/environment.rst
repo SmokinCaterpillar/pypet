@@ -834,7 +834,7 @@ on a cluster environment. :ref:`example-22` shows how to submit batches of exper
 and later on merge the trajectories from each experiment into one.
 
 
-.. _SCOOP docs: http://scoop.readthedocs.org/en/0.7/usage.html#use-with-a-scheduler
+.. _SCOOP docs: http://scoop.readthedocs.org/en/0.7/usage.html#how-to-launch-scoop-programs
 
 .. _SCOOP: https://scoop.readthedocs.org/
 
