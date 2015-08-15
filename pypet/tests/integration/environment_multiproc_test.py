@@ -14,7 +14,6 @@ from pypet.tests.testutils.data import create_param_dict, add_params
 import pypet.compat as compat
 import platform
 
-
 try:
     import psutil
 except ImportError:
