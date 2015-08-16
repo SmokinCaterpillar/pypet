@@ -585,7 +585,10 @@ which are replaced during runtime:
     run set.
 
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
-    current process.
+    current process and its process id.
+
+    :const:`~pypet.pypetconstant.LOG_HOST` ($host) is replaced by the network name of the
+    current host (note that dots (.)  in the hostname are replaced by minus (-))
 
 Note that in contrast to the standard logging package, *pypet* will automatically create
 folders for your log-files if these don't exist.

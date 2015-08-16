@@ -102,14 +102,14 @@ def _configure_pool(kwargs):
     """Configures the pool and keeps the storage service"""
     _pool_single_run.storage_service = kwargs['storage_service']
     _configure_niceness(kwargs)
-    _configure_logging(kwargs)
+    _configure_logging(kwargs, extract=False)
 
 
 def _configure_frozen_pool(kwargs):
     """Configures the frozen pool and keeps all kwargs"""
     _frozen_pool_single_run.kwargs = kwargs
     _configure_niceness(kwargs)
-    _configure_logging(kwargs)
+    _configure_logging(kwargs, extract=False)
     # Reset full copy to it's old value
     traj = kwargs['traj']
     traj.v_full_copy = kwargs['full_copy']
@@ -122,25 +122,35 @@ def _process_single_run(kwargs):
     return _single_run(kwargs)
 
 
+_scoop_configured = False  # global variable to signal that scoop logging was configured
+
+
 def _scoop_single_run(kwargs):
     """Wrapper function for scoop, that does not configure logging"""
     try:
-        pid = kwargs['main_pid']
-        if pid != os.getpid():
-            # Hack to not reconfigure logging and niceness if scoop uses origin
+        global _scoop_configured
+        if not _scoop_configured:
+            # configure logging and niceness only once
             _configure_niceness(kwargs)
-            _configure_logging(kwargs)
+            _configure_logging(kwargs, extract=False)
+            _scoop_configured = True
         return _single_run(kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
 
 
-def _configure_logging(kwargs):
-    """Requests the logging manager to configure logging."""
+def _configure_logging(kwargs, extract=True):
+    """Requests the logging manager to configure logging.
+
+    :param extract:
+
+        If naming data should be extracted from the trajectory
+
+    """
     try:
         logging_manager = kwargs['logging_manager']
-        if 'traj' in kwargs:
+        if extract:
             logging_manager.extract_replacements(kwargs['traj'])
         logging_manager.make_logging_handlers_and_tools(multiproc=True)
     except Exception as exc:
@@ -255,7 +265,7 @@ def _single_run(kwargs):
 
 def _queue_handling(kwargs):
     """ Starts running a queue handler and creates a log file for the queue."""
-    _configure_logging(kwargs)
+    _configure_logging(kwargs, extract=False)
     # Main job, make the listener to the queue start receiving message for writing to disk.
     queue_handler=kwargs['queue_handler']
     # import cProfile as profile
@@ -2018,8 +2028,6 @@ class Environment(HasLogger):
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
                     del result_dict['niceness']
-            elif self._use_scoop:
-                result_dict['main_pid'] = os.getpid()
             else:
                 result_dict['clean_up_runs'] = False
         return result_dict
@@ -2484,6 +2492,9 @@ class Environment(HasLogger):
                 del mpool
             elif self._use_scoop:
                 self._logger.info('Starting SCOOP jobs')
+
+                global _scoop_configured  # We don't need to re-configure the main process
+                _scoop_configured = True
 
                 iterator = self._make_iterator(start_run_idx, copy_data=True)
                 target = _scoop_single_run

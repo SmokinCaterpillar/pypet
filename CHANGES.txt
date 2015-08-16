@@ -46,6 +46,8 @@ pypet 0.1b.13
 *   Results are now always sorted according to the run indices
     (except for immediate post-processing)
 
+*   Process ID and hostname are also added to the logfiles' naming scheme
+
 
 pypet 0.1b.12
 

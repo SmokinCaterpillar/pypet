@@ -27,6 +27,7 @@ import ast
 import copy
 import multiprocessing as multip
 import functools
+import socket
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
@@ -38,6 +39,8 @@ FILENAME_INDICATORS = set([pypetconstants.LOG_ENV,
                            pypetconstants.LOG_PROC,
                            pypetconstants.LOG_TRAJ,
                            pypetconstants.LOG_RUN,
+                           pypetconstants.LOG_HOST,
+                           pypetconstants.LOG_SET,
                            '.log',
                            '.txt'])
 """Set of strings that mark a log file"""
@@ -85,16 +88,18 @@ LOGGING_DICT = {
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
-                                                        pypetconstants.LOG_PROC))
+                                     '%s_%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
+                                                           pypetconstants.LOG_HOST,
+                                                           pypetconstants.LOG_PROC))
         },
         'file_error': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
-                                                          pypetconstants.LOG_PROC)),
+                                     '%s_%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
+                                                             pypetconstants.LOG_HOST,
+                                                             pypetconstants.LOG_PROC)),
             'level': 'ERROR'
         }
     }
@@ -205,7 +210,8 @@ def rename_log_file(filename, trajectory=None,
                     traj_name=None,
                     set_name=None,
                     run_name=None,
-                    process_name=None):
+                    process_name=None,
+                    host_name=None):
     """ Renames a given `filename` with valid wildcard placements.
 
     :const:`~pypet.pypetconstants.LOG_ENV` ($env) is replaces by the name of the
@@ -223,6 +229,8 @@ def rename_log_file(filename, trajectory=None,
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
 
+    :const:`~pypet.pypetconstant.LOG_HOST` ($host) is replaced by the name of the current host.
+
     :param filename:  A filename string
     :param traj:  A trajectory container, leave `None` if you provide all the parameters below
     :param env_name: Name of environemnt, leave `None` to get it from `traj`
@@ -233,6 +241,10 @@ def rename_log_file(filename, trajectory=None,
 
         The name of the desired process. If `None` the name of the current process is
         taken determined by the multiprocessing module.
+
+    :param host_name:
+
+        Name of host, leave `None` to determine it automatically with the platform module.
 
     :return: The new filename
 
@@ -255,8 +267,12 @@ def rename_log_file(filename, trajectory=None,
         filename = filename.replace(pypetconstants.LOG_SET, set_name)
     if pypetconstants.LOG_PROC in filename:
         if process_name is None:
-            process_name = multip.current_process().name
+            process_name = multip.current_process().name + '-' + str(os.getpid())
         filename = filename.replace(pypetconstants.LOG_PROC, process_name)
+    if pypetconstants.LOG_HOST in filename:
+        if host_name is None:
+            host_name = socket.getfqdn().replace('.', '-')
+        filename = filename.replace(pypetconstants.LOG_HOST, host_name)
     return filename
 
 
@@ -587,8 +603,8 @@ class LoggingManager(object):
         """Creates logging handlers and redirects stdout."""
 
         log_stdout = self.log_stdout
-        if multiproc and hasattr(os, 'fork'):
-            # If we allow forking and it is possible we already have a redirection of stdout
+        if isinstance(sys.stdout, StdoutToLogger):
+            # If we already redirected stdout we don't neet to redo it again
             log_stdout = False
 
         if self.log_config:

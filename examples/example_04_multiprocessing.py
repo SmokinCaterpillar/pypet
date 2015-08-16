@@ -36,6 +36,8 @@ def main():
                       ncores=4,
                       use_pool=True,  # Our runs are inexpensive we can get rid of overhead
                       # by using a pool
+                      freeze_pool_input=True, # We can avoid some
+                      # overhead by freezing the input to the pool
                       wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
                       overwrite_file=True)
 
