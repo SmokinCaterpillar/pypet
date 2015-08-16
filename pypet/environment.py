@@ -87,12 +87,15 @@ def _pool_single_run(kwargs):
     return _single_run(kwargs)
 
 
-def _frozen_pool_single_run(idx):
+def _frozen_pool_single_run(kwargs):
     """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
-    kwargs = _frozen_pool_single_run.kwargs
-    traj = kwargs['traj']
+    idx = kwargs.pop('idx')
+    frozen_kwargs = _frozen_pool_single_run.kwargs
+    frozen_kwargs.update(kwargs)  # in case of `f_run_map`
+    # we need to update job's args and kwargs
+    traj = frozen_kwargs['traj']
     traj.f_set_crun(idx)
-    return _single_run(kwargs)
+    return _single_run(frozen_kwargs)
 
 
 def _configure_pool(kwargs):
@@ -443,8 +446,9 @@ class Environment(HasLogger):
 
         Can be set to ``True`` if the run function as well as all additional arguments
         are immutable. This will prevent the trajectory from getting pickled again and again.
-        Thus, the run function, the trajectory as well as all arguments are passed to the pool
-        at initialisation.
+        Thus, the run function, the trajectory, as well as all arguments are passed to the pool
+        at initialisation. Works also under `f_run_map`.
+        In this case the iterable arguments are, of course, not frozen but passed for every run.
 
     :param queue_maxsize:
 
@@ -975,6 +979,10 @@ class Environment(HasLogger):
             raise ValueError('You cannot set `niceness` if your operating system does not '
                              'support the `nice` operation. Alternatively you can install '
                              '`psutil`.')
+
+        if freeze_pool_input and not use_pool:
+            raise ValueError('You can only use `freeze_pool_input=True` if you also '
+                             'set `self._use_pool=True`.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -2003,6 +2011,9 @@ class Environment(HasLogger):
                     # change this back once the trajectory is received by
                     # each process
                     result_dict['full_copy'] = self.v_traj.v_full_copy
+                    if self._map_arguments:
+                        del result_dict['runargs']
+                        del result_dict['runkwargs']
                 else:
                     result_dict['clean_up_runs'] = False
                     del result_dict['logging_manager']
@@ -2024,7 +2035,8 @@ class Environment(HasLogger):
 
     def _make_iterator(self, start_run_idx, copy_data=False, **kwargs):
         """ Returns an iterator over all runs and yields the keyword arguments """
-        kwargs = self._make_kwargs(**kwargs)
+        if not self._freeze_pool_input:
+            kwargs = self._make_kwargs(**kwargs)
 
         def _do_iter():
             if self._map_arguments:
@@ -2033,13 +2045,16 @@ class Environment(HasLogger):
                 for key in compat.listkeys(self._kwargs):
                     self._kwargs[key] = iter(self._kwargs[key])
 
-                for n in self._make_index_iterator(start_run_idx):
+                for idx in self._make_index_iterator(start_run_idx):
                     iter_args = tuple(next(x) for x in self._args)
                     iter_kwargs = {}
                     for key in self._kwargs:
                         iter_kwargs[key] = next(self._kwargs[key])
                     kwargs['runargs'] = iter_args
                     kwargs['runkwargs'] = iter_kwargs
+                    if self._freeze_pool_input:
+                        # Frozen pool needs current run index
+                        kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
                         copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
@@ -2048,7 +2063,10 @@ class Environment(HasLogger):
                     else:
                         yield kwargs
             else:
-                for n in self._make_index_iterator(start_run_idx):
+                for idx in self._make_index_iterator(start_run_idx):
+                    if self._freeze_pool_input:
+                        # Frozen pool needs current run index
+                        kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
                         copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
@@ -2166,10 +2184,6 @@ class Environment(HasLogger):
 
         """
         self._start_timestamp = time.time()
-
-        if self._map_arguments and self._freeze_pool_input:
-            raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
-                             'with frozen pool input.')
 
         if self._map_arguments and self._continuable:
             raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
@@ -2428,7 +2442,7 @@ class Environment(HasLogger):
                     self._traj.v_full_copy = True
 
                     initializer = _configure_frozen_pool
-                    iterator = self._make_index_iterator(start_run_idx)
+                    iterator = self._make_iterator(start_run_idx)
                     target = _frozen_pool_single_run
                 else:
                     # We don't want to pickle the storage service

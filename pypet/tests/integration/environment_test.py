@@ -426,19 +426,26 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(mp_traj, self.traj)
         self.multiproc = old_multiproc
 
-    def test_map_errors(self):
+    def test_errors(self):
         tmp = make_temp_dir('cont')
         env1 = Environment(continuable=True, continue_folder=tmp,
                            log_config=None, filename=self.filename)
         with self.assertRaises(ValueError):
             env1.f_run_map(multiply_args, [1], [2], [3])
-        env2 = Environment(multiproc=True, use_pool=True, freeze_pool_input=True,
-                           filename=self.filename, log_config=None)
         with self.assertRaises(ValueError):
-            env2.f_run_map(multiply_args, [1], [2], [3])
+            Environment(multiproc=True, use_pool=False, freeze_pool_input=True,
+                           filename=self.filename, log_config=None)
         env3 = Environment(log_config=None, filename=self.filename)
         with self.assertRaises(ValueError):
             env3.f_run_map(multiply_args)
+        with self.assertRaises(ValueError):
+            Environment(use_scoop=True, immediate_postproc=True)
+        with self.assertRaises(ValueError):
+            Environment(use_pool=True, immediate_postproc=True)
+        with self.assertRaises(ValueError):
+            Environment(continuable=True, wrap_mode='QUEUE')
+        with self.assertRaises(ValueError):
+            Environment(use_scoop=True, wrap_mode='QUEUE')
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')

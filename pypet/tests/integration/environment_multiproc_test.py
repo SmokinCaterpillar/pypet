@@ -262,11 +262,6 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
         self.use_pool=True
         self.gc_interval = 2
 
-    @unittest.skip('Cannot be run with frozen pool')
-    def test_if_results_are_sorted_correctly_using_map(self):
-        # sub-classed because it cannot be run by a frozen pool
-        pass
-
     def test_if_full_copy_is_old_value(self):
 
         ###Explore
@@ -337,11 +332,6 @@ class MultiprocFrozenPoolSortLockTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=True
 
-    @unittest.skip('Cannot be run with frozen pool')
-    def test_if_results_are_sorted_correctly_using_map(self):
-        # sub-classed because it cannot be run by a frozen pool
-        pass
-
 
 @unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
 class MultiprocFrozenPoolSortPipeTest(ResultSortTest):
@@ -356,11 +346,6 @@ class MultiprocFrozenPoolSortPipeTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=True
         self.gc_interval = 3
-
-    @unittest.skip('Cannot be run with frozen pool')
-    def test_if_results_are_sorted_correctly_using_map(self):
-        # sub-classed because it cannot be run by a frozen pool
-        pass
 
 
 @unittest.skipIf(psutil is None, 'Only makes sense if psutil is installed')

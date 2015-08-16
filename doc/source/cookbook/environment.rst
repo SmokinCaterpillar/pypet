@@ -161,7 +161,8 @@ because most of the time the default settings are sufficient.
     Can be set to ``True`` if the run function as well as all additional arguments
     are immutable. This will prevent the trajectory from getting pickled again and again.
     Thus, the run function, the trajectory as well as all arguments are passed to the pool
-    at initialisation.
+    at initialisation. Works also under :func:`~pypet.environment.Environment.f_run_map`.
+    In this case the iterable arguments are, of course, not frozen but passed for every run.
 
 * ``queue_maxsize``
 
@@ -694,7 +695,10 @@ gets pickled over and over again you can set ``freeze_pool_input=True``.
 The trajectory, the run function as well as the
 all additional function arguments are passed to the multiprocessing pool at
 initialization. Be aware that the run function as well as the the additional arguments must be
-immutable, otherwise your individual runs are no longer independent.
+immutable, otherwise your individual runs are no longer independent. In case you use
+`~pypet.environment.Environment.f_run_map` (see below), additional arguments are not frozen
+but passed for every run.
+
 
 Moreover, if you **enable** multiprocessing and **disable** pool usage,
 besides the maximum number of utilized processors ``ncores``,
@@ -828,6 +832,8 @@ which is a file specifying the servers to use. It has the format
 with the name of the host followed by the number of workers you want to launch (optional).
 See also the `SCOOP docs`_ and the `example start up scripts`_
 on how to set up multiple hosts and scripts for cluster grid engines, respectively.
+By the way, on SGE you need to use a parallel environment via the ``#$ -pe`` flag.
+This is also important to let SCOOP_ know how many workers it can start on the cluster.
 
 Moreover, you can also use *pypet* with `SAGA Python`_ to manually schedule your experiments
 on a cluster environment. :ref:`example-22` shows how to submit batches of experiments
