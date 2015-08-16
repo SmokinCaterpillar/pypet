@@ -51,7 +51,7 @@ except ImportError:
 
 try:
     import scoop
-    from scoop import futures
+    from scoop import futures, shared
 except ImportError:
     scoop = None
 
@@ -70,7 +70,7 @@ from pypet.storageservice import HDF5StorageService, QueueStorageServiceSender, 
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
-from pypet.utils.helpful_functions import is_debug, result_sort
+from pypet.utils.helpful_functions import is_debug, result_sort, format_time
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
@@ -122,18 +122,45 @@ def _process_single_run(kwargs):
     return _single_run(kwargs)
 
 
-_scoop_configured = False  # global variable to signal that scoop logging was configured
+def _configure_frozen_scoop(kwargs):
+    scoop_rev = kwargs.pop('scoop_rev')
+    # Check if we need to reconfigure SCOOP
+    try:
+        configured = scoop_rev in _frozen_scoop_single_run.kwargs
+    except AttributeError:
+        configured = False
+    if not configured:
+        _frozen_scoop_single_run.kwargs = shared.getConst(scoop_rev, timeout=4.2)
+        frozen_kwargs = _frozen_scoop_single_run.kwargs
+        frozen_kwargs[scoop_rev] = scoop_rev
+        frozen_kwargs['traj'].v_full_copy = frozen_kwargs['full_copy']
+        if not scoop.IS_ORIGIN:
+            _configure_niceness(frozen_kwargs)
+            _configure_logging(frozen_kwargs, extract=False)
+        logging.getLogger('pypet.scoop').info('Configured Worker %s' % str(scoop.worker))
+
+
+def _frozen_scoop_single_run(kwargs):
+    try:
+        _configure_frozen_scoop(kwargs)
+        idx = kwargs.pop('idx')
+        frozen_kwargs = _frozen_scoop_single_run.kwargs
+        frozen_kwargs.update(kwargs)
+        traj = frozen_kwargs['traj']
+        traj.f_set_crun(idx)
+        return _single_run(frozen_kwargs)
+    except Exception:
+        scoop.logger.exception('ERROR occurred during a single run!')
+        raise
 
 
 def _scoop_single_run(kwargs):
     """Wrapper function for scoop, that does not configure logging"""
     try:
-        global _scoop_configured
-        if not _scoop_configured:
-            # configure logging and niceness only once
+        if not scoop.IS_ORIGIN:
+            # configure logging and niceness if not the main process:
             _configure_niceness(kwargs)
-            _configure_logging(kwargs, extract=False)
-            _scoop_configured = True
+            _configure_logging(kwargs)
         return _single_run(kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
@@ -990,9 +1017,9 @@ class Environment(HasLogger):
                              'support the `nice` operation. Alternatively you can install '
                              '`psutil`.')
 
-        if freeze_pool_input and not use_pool:
-            raise ValueError('You can only use `freeze_pool_input=True` if you also '
-                             'set `self._use_pool=True`.')
+        if freeze_pool_input and not use_pool and not use_scoop:
+            raise ValueError('You can only use `freeze_pool_input=True` if you either use '
+                             'a pool or SCOOP.')
 
         if not isinstance(memory_cap, tuple):
             memory_cap = (memory_cap, 0.0)
@@ -1083,8 +1110,7 @@ class Environment(HasLogger):
             # If no new trajectory is created the time of the environment differs
             # from the trajectory and must be computed from the current time.
             init_time = time.time()
-            formatted_time = datetime.datetime.fromtimestamp(init_time).strftime(
-                '%Y_%m_%d_%Hh%Mm%Ss')
+            formatted_time = format_time(init_time)
             self._timestamp = init_time
             self._time = formatted_time
 
@@ -1277,6 +1303,11 @@ class Environment(HasLogger):
                                                     'which no new '
                                                     'processes are spawned').f_lock()
 
+                    config_name = 'environment.%s.immediate_postprocessing' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._immediate_postproc,
+                                            comment='Whether to use immediate '
+                                                    'postprocessing.').f_lock()
+
                 config_name = 'environment.%s.ncores' % self.v_name
                 self._traj.f_add_config(Parameter, config_name, self._ncores,
                                         comment='Number of processors in case of '
@@ -1334,6 +1365,12 @@ class Environment(HasLogger):
         config_name = 'environment.%s.hexsha' % self.v_name
         self._traj.f_add_config(Parameter, config_name, self.v_hexsha,
                                 comment='SHA-1 identifier of the environment').f_lock()
+
+        config_name = 'environment.%s.automatic_storing' % self.v_name
+        if not self._traj.f_contains('config.' + config_name):
+            self._traj.f_add_config(Parameter, config_name, self._automatic_storing,
+                                    comment='If trajectory should be stored automatically in the '
+                                            'end.').f_lock()
 
         try:
             config_name = 'environment.%s.script' % self.v_name
@@ -1810,15 +1847,21 @@ class Environment(HasLogger):
         sumatra_label = self._sumatra_record.label
 
         config_name = 'sumatra.record_%s.label' % str(sumatra_label)
+        conf_list = []
         if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(Parameter, config_name, sumatra_label,
+            conf1 = self._traj.f_add_config(Parameter, config_name, sumatra_label,
                                     comment='The label of the sumatra record')
+            conf_list.append(conf1)
 
         if self._sumatra_reason:
             config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
             if not self._traj.f_contains('config.' + config_name):
-                self._traj.f_add_config(Parameter, config_name, self._sumatra_reason,
+                conf2 = self._traj.f_add_config(Parameter, config_name, self._sumatra_reason,
                                         comment='Reason of sumatra run.')
+                conf_list.append(conf2)
+
+        if self._automatic_storing and conf_list:
+            self._traj.f_store_items(conf_list)
 
         self._logger.info('Saved sumatra project record with reason: %s' % self._sumatra_reason)
 
@@ -2015,7 +2058,7 @@ class Environment(HasLogger):
                        'niceness': self._niceness}
         result_dict.update(kwargs)
         if self._multiproc:
-            if self._use_pool:
+            if self._use_pool or self._use_scoop:
                 if self._freeze_pool_input:
                     # Remember the full copy setting for the frozen input to
                     # change this back once the trajectory is received by
@@ -2026,8 +2069,10 @@ class Environment(HasLogger):
                         del result_dict['runkwargs']
                 else:
                     result_dict['clean_up_runs'] = False
-                    del result_dict['logging_manager']
-                    del result_dict['niceness']
+                    if self._use_pool:
+                        # Needs only be deleted in case of using a pool but necessary for scoop
+                        del result_dict['logging_manager']
+                        del result_dict['niceness']
             else:
                 result_dict['clean_up_runs'] = False
         return result_dict
@@ -2065,7 +2110,8 @@ class Environment(HasLogger):
                         kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
+                        if not self._freeze_pool_input:
+                            copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
                                                                   with_links=True)
                         yield copied_kwargs
                     else:
@@ -2077,7 +2123,8 @@ class Environment(HasLogger):
                         kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
+                        if not self._freeze_pool_input:
+                            copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
                                                                   with_links=True)
                         yield copied_kwargs
                     else:
@@ -2213,12 +2260,6 @@ class Environment(HasLogger):
             finally:
                 self._traj._run_by_environment = False
 
-        config_name = 'environment.%s.automatic_storing' % self.v_name
-        if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(Parameter, config_name, self._automatic_storing,
-                                    comment='If trajectory should be stored automatically in the '
-                                            'end.').f_lock()
-
         self._add_wildcard_config()
 
         if self._automatic_storing:
@@ -2240,19 +2281,28 @@ class Environment(HasLogger):
         self._runtime = str(findatetime - startdatetime)
 
         conf_list = []
+        config_name = 'environment.%s.start_timestamp' % self.v_name
+        if not self._traj.f_contains('config.' + config_name):
+            conf1 = self._traj.f_add_config(Parameter, config_name, self._start_timestamp,
+                                    comment='Timestamp of starting of experiment '
+                                            '(when the actual simulation was '
+                                            'started (either by calling `f_run`, '
+                                            '`f_continue`, or `f_pipeline`).')
+            conf_list.append(conf1)
+
         config_name = 'environment.%s.finish_timestamp' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            conf1 = self._traj.f_add_config(Parameter, config_name, self._finish_timestamp,
+            conf2 = self._traj.f_add_config(Parameter, config_name, self._finish_timestamp,
                                             comment='Timestamp of finishing of an experiment.')
-            conf_list.append(conf1)
+            conf_list.append(conf2)
 
         config_name = 'environment.%s.runtime' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
-            conf2 = self._traj.f_add_config(Parameter, config_name, self._runtime,
+            conf3 = self._traj.f_add_config(Parameter, config_name, self._runtime,
                                             comment='Runtime of whole experiment.')
-            conf_list.append(conf2)
+            conf_list.append(conf3)
 
-        if conf_list:
+        if self._automatic_storing and conf_list:
             self._traj.f_store_items(conf_list)
 
         if hasattr(self._traj.v_storage_service, 'finalize'):
@@ -2309,22 +2359,6 @@ class Environment(HasLogger):
         """Performs the inner loop of the run execution"""
         start_run_idx = self._current_idx
         expanded_by_postproc = False
-
-        config_name = 'environment.%s.start_timestamp' % self.v_name
-        if not self._traj.f_contains('config.' + config_name):
-            self._traj.f_add_config(Parameter, config_name, self._start_timestamp,
-                                    comment='Timestamp of starting of experiment '
-                                            '(when the actual simulation was '
-                                            'started (either by calling `f_run`, '
-                                            '`f_continue`, or `f_pipeline`).')
-
-        if self._multiproc and self._postproc is not None:
-            config_name = 'environment.%s.immediate_postprocessing' % self.v_name
-            if not self._traj.f_contains('config.' + config_name):
-                self._traj.f_add_config(Parameter, config_name, self._immediate_postproc,
-                                        comment='Whether to use immediate '
-                                                'postprocessing, only added if '
-                                                'postprocessing was used at all.')
 
         self._storage_service = self._traj.v_storage_service
         self._multiproc_wrapper = None
@@ -2450,7 +2484,6 @@ class Environment(HasLogger):
                     self._traj.v_full_copy = True
 
                     initializer = _configure_frozen_pool
-                    iterator = self._make_iterator(start_run_idx)
                     target = _frozen_pool_single_run
                 else:
                     # We don't want to pickle the storage service
@@ -2461,10 +2494,10 @@ class Environment(HasLogger):
                                        storage_service=pool_service,
                                        niceness=self._niceness)
                     initializer = _configure_pool
-                    iterator = self._make_iterator(start_run_idx)
                     target = _pool_single_run
 
                 try:
+                    iterator = self._make_iterator(start_run_idx)
                     mpool = multip.Pool(self._ncores, initializer=initializer,
                                         initargs=(init_kwargs,))
                     pool_results = mpool.imap(target, iterator)
@@ -2493,22 +2526,52 @@ class Environment(HasLogger):
             elif self._use_scoop:
                 self._logger.info('Starting SCOOP jobs')
 
-                global _scoop_configured  # We don't need to re-configure the main process
-                _scoop_configured = True
+                if self._freeze_pool_input:
+                    self._logger.info('Freezing SCOOP input')
 
-                iterator = self._make_iterator(start_run_idx, copy_data=True)
-                target = _scoop_single_run
+                    if hasattr(_frozen_scoop_single_run, 'kwargs'):
+                        self._logger.warning('You already did run an experiment with '
+                                             'SCOOP and a frozen input. Frozen input '
+                                             'is realized as a shared constant, so'
+                                             'over time your memory might get bloated. '
+                                             'If you experience trouble, '
+                                             'restart your python intepreter and '
+                                             'SCOOP.')
+                    _frozen_scoop_single_run.kwargs = {}
 
-                scoop_results = futures.map(target, iterator)
+                    scoop_full_copy = self._traj.v_full_copy
+                    self._traj.v_full_copy = True
+                    init_kwargs = self._make_kwargs()
 
-                # Signal start of progress calculation
-                self._show_progress(n - 1, total_runs)
-                for result in scoop_results:
-                    self._check_and_store_references(result)
-                    self._traj._update_run_information(result[1])
-                    results.append(result[0])
-                    self._show_progress(n, total_runs)
-                    n += 1
+                    scoop_rev = self.v_name + '_' + str(time.time()).replace('.','_')
+                    shared.setConst(**{scoop_rev: init_kwargs})
+
+                    iterator = self._make_iterator(start_run_idx,
+                                                   copy_data=True,
+                                                   scoop_rev=scoop_rev)
+
+                    target = _frozen_scoop_single_run
+                else:
+                    iterator = self._make_iterator(start_run_idx,
+                                                   copy_data=True)
+                    target = _scoop_single_run
+
+                try:
+
+
+                    scoop_results = futures.map(target, iterator)
+
+                    # Signal start of progress calculation
+                    self._show_progress(n - 1, total_runs)
+                    for result in scoop_results:
+                        self._check_and_store_references(result)
+                        self._traj._update_run_information(result[1])
+                        results.append(result[0])
+                        self._show_progress(n, total_runs)
+                        n += 1
+                finally:
+                    if self._freeze_pool_input:
+                        self._traj.v_full_copy = scoop_full_copy
             else:
                 # If we spawn a single process for each run, we need an additional queue
                 # for the results of `runfunc`

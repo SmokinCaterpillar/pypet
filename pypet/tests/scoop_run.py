@@ -11,8 +11,7 @@ import scoop
 from pypet.tests.testutils.ioutils import discover_tests, parse_args, run_suite
 from pypet.tests.integration.environment_scoop_test import check_mock
 
-tests_include=set(('MultiprocSCOOPSortLocalTest',  'MultiprocSCOOPLocalTest'))
-scoop_suite = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
+scoop_suite = discover_tests(lambda  class_name, test_name, tags: 'scoop' in tags)
 
 
 

@@ -306,3 +306,10 @@ def result_sort(result_list, start_index=0):
             result_list[idx_count] = elem
             idx_count += 1
     return result_list
+
+
+def format_time(timestamp):
+    """Formats timestamp to human readable format"""
+    format_string = '%Y_%m_%d_%Hh%Mm%Ss'
+    formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime(format_string)
+    return formatted_time

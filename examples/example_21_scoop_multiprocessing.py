@@ -11,6 +11,9 @@ import os # For path names being viable under Windows and Linux
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
 
+from scoop import shared
+
+
 
 # Let's reuse the simple multiplication example
 def multiply(traj):
@@ -38,6 +41,7 @@ def main():
                       log_stdout=True,
                       comment='Multiprocessing example using SCOOP!',
                       multiproc=True,
+                      freeze_pool_input=True, # We want to save overhead and freeze input
                       use_scoop=True, # Yes we want SCOOP!
                       wrap_mode=pypetconstants.WRAP_MODE_LOCAL,  # SCOOP only works with 'LOCAL'
                       overwrite_file=True)

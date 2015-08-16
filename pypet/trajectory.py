@@ -40,7 +40,7 @@ import pypet.storageservice as storage
 import pypet.utils.dynamicimports as dynamicimports
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
     kwargs_mutual_exclusive, manual_run
-from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_functions import is_debug, format_time
 from pypet.utils.storagefactory import storage_factory
 
 
@@ -249,7 +249,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._set_logger()
 
             init_time = time.time()
-            formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
+            formatted_time = format_time(init_time)
             self._timestamp = init_time
             self._time = formatted_time
 
