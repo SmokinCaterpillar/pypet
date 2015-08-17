@@ -14,7 +14,6 @@ from pypet.tests.integration.environment_scoop_test import check_mock
 scoop_suite = discover_tests(lambda  class_name, test_name, tags: 'scoop' in tags)
 
 
-
 if __name__ == '__main__':
     mock = check_mock()
     if mock:

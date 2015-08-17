@@ -11,9 +11,6 @@ import os # For path names being viable under Windows and Linux
 from pypet import Environment, cartesian_product
 from pypet import pypetconstants
 
-from scoop import shared
-
-
 
 # Let's reuse the simple multiplication example
 def multiply(traj):

@@ -6,8 +6,6 @@ import time
 try:
     import scoop
     import random
-    from scoop import futures
-    from scoop import shared as original_shared
 except ImportError:
     scoop = None
 
@@ -17,11 +15,10 @@ def identity(x):
 
 
 def check_mock():
-    try:
-        original_shared.setConst(**{'test%d' % random.randint(0, 100000) : 42})
+    if scoop.IS_RUNNING:
         print('SCOOP mode functional!')
         mock = False
-    except Exception:
+    else:
         print('NOT started in SCOOP mode!')
         mock = True
     return mock
@@ -30,23 +27,17 @@ def check_mock():
 class SharedMock(object):
     def __init__(self):
         self.constants = {}
-        self.mocked = None
+
+    def mock(self):
+        scoop.IS_ORIGIN = True
+        scoop.worker = 'itsmemario'
+        scoop.shared = self
 
     def setConst(self, **kwargs):
-        if self.mocked is None:
-            self.mocked = check_mock()
-        if self.mocked:
-            scoop.IS_ORIGIN = True
-            scoop.worker = 'itsmemario'
-            self.constants.update(cp.deepcopy(kwargs))
-        else:
-            original_shared.setConst(**kwargs)
+        self.constants.update(cp.deepcopy(kwargs))
 
     def getConst(self, const, timeout):
-        if self.mocked:
-            return cp.deepcopy(self.constants[const])
-        else:
-            return original_shared.getConst(const, timeout=timeout)
+        return cp.deepcopy(self.constants[const])
 
 # class ScoopFuturesWrapper(object):
 #
@@ -88,17 +79,18 @@ class SharedMock(object):
 # if scoop is not None:
 #     scoop.futures = ScoopFuturesWrapper()
 
-
-scoop.shared = SharedMock()
-
 import pypet.environment
-# Reload to replace futures
-try:
-    reload(pypet.environment)
-except NameError:
-    # Python 3
-    import importlib
-    importlib.reload(pypet.environment)
+
+if check_mock():
+    shared_mock = SharedMock()
+    shared_mock.mock()
+    # Reload to replace futures
+    try:
+        reload(pypet.environment)
+    except NameError:
+        # Python 3
+        import importlib
+        importlib.reload(pypet.environment)
 
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice
@@ -188,6 +180,5 @@ class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
 
 
 if __name__ == '__main__':
-    check_mock()
     opt_args = parse_args()
     run_suite(**opt_args)
