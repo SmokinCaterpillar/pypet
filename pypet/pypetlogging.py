@@ -109,7 +109,7 @@ LOGGING_DICT = {
 
 def _change_logging_kwargs(kwargs):
     """ Helper function to turn the simple logging kwargs into a `log_config`."""
-    log_levels = kwargs.pop('log_levels', None)
+    log_levels = kwargs.pop('log_level', None)
     log_folder = kwargs.pop('log_folder', 'logs')
     logger_names = kwargs.pop('logger_names', '')
     if log_levels is None:
