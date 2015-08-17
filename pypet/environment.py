@@ -130,7 +130,7 @@ def _configure_frozen_scoop(kwargs):
     except AttributeError:
         configured = False
     if not configured:
-        _frozen_scoop_single_run.kwargs = shared.getConst(scoop_rev, timeout=4.2)
+        _frozen_scoop_single_run.kwargs = shared.getConst(scoop_rev, timeout=424.2)
         frozen_kwargs = _frozen_scoop_single_run.kwargs
         frozen_kwargs[scoop_rev] = scoop_rev
         frozen_kwargs['traj'].v_full_copy = frozen_kwargs['full_copy']
