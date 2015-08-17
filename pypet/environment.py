@@ -65,8 +65,9 @@ import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
-from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, PipeStorageServiceSender, \
-    PipeStorageServiceWriter, ReferenceWrapper, ReferenceStore
+from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
+    PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
+    ReferenceStore, QueueStorageServiceSender
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
