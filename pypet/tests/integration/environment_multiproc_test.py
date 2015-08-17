@@ -85,6 +85,31 @@ class MultiprocPoolSortQueueTest(ResultSortTest):
         self.use_pool=True
 
 
+class MultiprocNoPoolNetlockTest(EnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'nopool',
+
+    def set_mode(self):
+        super(MultiprocNoPoolNetlockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.ncores = 2
+        self.use_pool=False
+        self.niceness = check_nice(17)
+
+
+class MultiprocPoolSortNetlockTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
+
+    def set_mode(self):
+        super(MultiprocPoolSortNetlockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.ncores = 3
+        self.use_pool=True
+
+
 class MultiprocPoolSortLockTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',

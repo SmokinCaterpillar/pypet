@@ -67,11 +67,11 @@ from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
-    ReferenceStore, QueueStorageServiceSender
+    ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
-from pypet.utils.helpful_functions import is_debug, result_sort, format_time
+from pypet.utils.helpful_functions import is_debug, result_sort, format_time, port_to_tcp
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
@@ -284,15 +284,15 @@ def _single_run(kwargs):
         raise
 
 
-def _queue_handling(kwargs):
+def _wrap_handling(kwargs):
     """ Starts running a queue handler and creates a log file for the queue."""
     _configure_logging(kwargs, extract=False)
     # Main job, make the listener to the queue start receiving message for writing to disk.
-    queue_handler=kwargs['queue_handler']
+    handler=kwargs['handler']
     # import cProfile as profile
     # profiler = profile.Profile()
     # profiler.enable()
-    queue_handler.run()
+    handler.run()
     # profiler.disable()
     # profiler.dump_stats('./queue.profile2')
 
@@ -460,6 +460,13 @@ class Environment(HasLogger):
 
         Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
         ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+
+    :param url:
+
+        URL of lock server in case of ``'NETLOCK'`` wrapping. Please specify the local
+        network address of the current host in the form of ``'tcp://127.0.0.1:7777'``.
+        Leave `None` to determine it automatically. You can also pass an integer,
+        which will be the desired port on the automatically determined host address.
 
     :param cpu_cap:
 
@@ -923,6 +930,7 @@ class Environment(HasLogger):
                  use_pool=False,
                  freeze_input=False,
                  queue_maxsize=-1,
+                 url=None,
                  cpu_cap=100.0,
                  memory_cap=100.0,
                  swap_cap=100.0,
@@ -974,17 +982,19 @@ class Environment(HasLogger):
 
         if (wrap_mode not in (pypetconstants.WRAP_MODE_NONE,
                               pypetconstants.WRAP_MODE_LOCAL,
-                              pypetconstants.WRAP_MODE_LOCK) and
+                              pypetconstants.WRAP_MODE_LOCK,
+                              pypetconstants.WRAP_MODE_NETLOCK) and
                                 continuable):
             raise ValueError('Continuing trajectories does only work with '
-                             '`LOCK` or `LOCAL`wrap mode.')
+                             '`LOCK`, `NETLOCK` or `LOCAL`wrap mode.')
 
         if continuable and not automatic_storing:
             raise ValueError('Continuing only works with `automatic_storing=True`')
 
         if use_scoop and wrap_mode not in (pypetconstants.WRAP_MODE_LOCAL,
-                                           pypetconstants.WRAP_MODE_NONE):
-            raise ValueError('SCOOP mode only works with `LOCAL` wrap mode!')
+                                           pypetconstants.WRAP_MODE_NONE,
+                                           pypetconstants.WRAP_MODE_NETLOCK):
+            raise ValueError('SCOOP mode only works with `LOCAL` or `NETLOCK` wrap mode!')
 
         if niceness is not None and not hasattr(os, 'nice') and psutil is None:
             raise ValueError('You cannot set `niceness` if your operating system does not '
@@ -1015,6 +1025,9 @@ class Environment(HasLogger):
             raise ValueError('You cannot set `ncores=0` for auto detection of CPUs if you did not '
                              'installed psutil. Please install psutil or '
                              'set `ncores` manually.')
+
+        if url is not None and wrap_mode != pypetconstants.WRAP_MODE_NETLOCK:
+            raise ValueError('You can only specify a url for the `NETLOCK` wrapping.')
 
         unused_kwargs = set(kwargs.keys())
 
@@ -1195,6 +1208,11 @@ class Environment(HasLogger):
         self._do_single_runs = do_single_runs
         self._automatic_storing = automatic_storing
         self._clean_up_runs = clean_up_runs
+
+        if (wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and
+                (isinstance(url, int) or url is None)):
+                url = port_to_tcp(url)
+        self._url = url
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
         # Notify that in case of lazy debuggin we won't record anythin
@@ -1300,6 +1318,12 @@ class Environment(HasLogger):
                     self._traj.f_add_config(Parameter, config_name, self._queue_maxsize,
                                         comment='Maximum size of Storage Queue/Pipe in case of '
                                                 'multiprocessing and QUEUE/PIPE wrapping').f_lock()
+
+                if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK:
+                    config_name = 'environment.%s.url' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._url,
+                                        comment='URL of lock distribution server.').f_lock()
+
                 if (self._gc_interval and
                         (self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL or
                             self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
@@ -2471,6 +2495,7 @@ class Environment(HasLogger):
                                lock=None,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
+                               url=self._url,
                                gc_interval=self._gc_interval,
                                log_config=self._logging_manager.log_config,
                                log_stdout=self._logging_manager.log_stdout)
@@ -2825,6 +2850,11 @@ class MultiprocContext(HasLogger):
 
         Maximum size of queue if created new. 0 means infinite.
 
+    :param url:
+
+        URL and port of lock server (aka this machine), like ``'tcp://127.0.0.1:7777'``.
+        Leave `None` for automatic determining the network name and usage of port 7777.
+
     :param gc_interval:
 
         Interval (in runs or storage operations) with which ``gc.collect()``
@@ -2859,6 +2889,7 @@ class MultiprocContext(HasLogger):
                  lock=None,
                  queue=None,
                  queue_maxsize=0,
+                 url=None,
                  gc_interval=None,
                  log_config=None,
                  log_stdout=False):
@@ -2879,12 +2910,15 @@ class MultiprocContext(HasLogger):
         self._pipe = queue
         self._max_buffer_size = queue_maxsize
         self._lock = lock
+        self._lock_process = None
+        self._url = url
         self._use_manager = use_manager
         self._logging_manager = None
         self._gc_interval = gc_interval
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
-                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
+                        self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
+                            self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK):
             self._logging_manager = LoggingManager(log_config=log_config,
                                                    log_stdout=log_stdout)
             self._logging_manager.extract_replacements(self._traj)
@@ -2963,19 +2997,42 @@ class MultiprocContext(HasLogger):
             self._prepare_pipe()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._prepare_local()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK:
+            self._prepare_net_lock()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
-                                           'not supported, use %s`, `%s` or `%s`, or `%s`.'
+                                           'not supported, use %s`, `%s`, %s, `%s`, or `%s`.'
                                            % (self._wrap_mode, pypetconstants.WRAP_MODE_QUEUE,
                                               pypetconstants.WRAP_MODE_LOCK,
                                               pypetconstants.WRAP_MODE_PIPE,
-                                              pypetconstants.WRAP_MODE_LOCAL))
+                                              pypetconstants.WRAP_MODE_LOCAL,
+                                              pypetconstants.WRAP_MODE_NETLOCK))
 
     def _prepare_local(self):
         reference_wrapper = ReferenceWrapper()
         self._traj.v_storage_service = reference_wrapper
         self._reference_wrapper = reference_wrapper
         self._reference_store = ReferenceStore(self._storage_service, self._gc_interval)
+
+    def _prepare_net_lock(self):
+        """ Replaces the trajectory's service with a LockWrapper """
+        if self._url is None or isinstance(self._url, int):
+            self._url = port_to_tcp(self._url)
+            self._logger.info('Determined Server url `%s`' % self._url)
+        if self._lock is None:
+            self._lock = LockerClient(self._url)
+
+        lock_server = LockerServer(self._url)
+        self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
+                                            args=(dict(handler=lock_server,
+                                            logging_manager=self._logging_manager),))
+        self._lock_process.start()
+        # self._lock.start()
+        # Wrap around the storage service to allow the placement of locks around
+        # the storage procedure.
+        lock_wrapper = LockWrapper(self._storage_service, self._lock)
+        self._traj.v_storage_service = lock_wrapper
+        self._lock_wrapper = lock_wrapper
 
     def _prepare_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """
@@ -3009,8 +3066,8 @@ class MultiprocContext(HasLogger):
                                                 max_buffer_size=self._max_buffer_size)
 
         # Start the queue process
-        self._pipe_process = multip.Process(name='PipeProcess', target=_queue_handling,
-                                             args=(dict(queue_handler=pipe_handler,
+        self._pipe_process = multip.Process(name='PipeProcess', target=_wrap_handling,
+                                             args=(dict(handler=pipe_handler,
                                                         logging_manager=self._logging_manager),))
         self._pipe_process.start()
 
@@ -3040,8 +3097,8 @@ class MultiprocContext(HasLogger):
                                                   self._gc_interval)
 
         # Start the queue process
-        self._queue_process = multip.Process(name='QueueProcess', target=_queue_handling,
-                                             args=(dict(queue_handler=queue_handler,
+        self._queue_process = multip.Process(name='QueueProcess', target=_wrap_handling,
+                                             args=(dict(handler=queue_handler,
                                                         logging_manager=self._logging_manager),))
         self._queue_process.start()
 
@@ -3080,7 +3137,7 @@ class MultiprocContext(HasLogger):
                 self._queue.join_thread()
             self._logger.info('The Storage Queue has joined.')
 
-        if (self._wrap_mode == pypetconstants.WRAP_MODE_PIPE and
+        elif (self._wrap_mode == pypetconstants.WRAP_MODE_PIPE and
                     self._pipe_process is not None):
             self._logger.info('The Storage Pipe will no longer accept new data. '
                               'Hang in there for a little while. '
@@ -3091,6 +3148,10 @@ class MultiprocContext(HasLogger):
             self._pipe_process.join()
             self._pipe[1].close()
             self._pipe[0].close()
+        elif (self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and
+                self._lock_process is not None):
+            self._lock.send_done()
+            self._lock.finalize()
 
         if self._manager is not None:
             self._manager.shutdown()
@@ -3101,6 +3162,7 @@ class MultiprocContext(HasLogger):
         self._queue_wrapper = None
         self._lock = None
         self._lock_wrapper = None
+        self._lock_process = None
         self._reference_wrapper = None
         self._pipe = None
         self._pipe_process = None

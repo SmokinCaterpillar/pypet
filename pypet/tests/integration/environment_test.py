@@ -449,6 +449,8 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             Environment(automatic_storing=False,
                         continuable=True, continue_folder=tmp)
+        with self.assertRaises(ValueError):
+            Environment(url='www.nosi.de', wrap_mode='LOCK')
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')

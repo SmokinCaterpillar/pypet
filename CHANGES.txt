@@ -51,6 +51,9 @@ pypet 0.1b.13
 *   `freeze_pool_input` has been renamed to `freeze_input` because it can be used
     with SCOOP as well.
 
+*   New ``'NETLOCK'`` wrap mode, to allow locking over a network and usage
+    of servers with a shared home directory.
+
 
 pypet 0.1b.12
 

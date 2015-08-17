@@ -21,3 +21,5 @@
 * Doc new scoop feature *DONE*
 
 * Add gc.collect to queue and pipe feature *DONE*
+
+* Document new wrap mode

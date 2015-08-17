@@ -7,6 +7,7 @@ import datetime
 import numpy as np
 import inspect
 import logging
+import socket
 
 import pypet.compat as compat
 from pypet.utils.decorators import deprecated
@@ -315,3 +316,13 @@ def format_time(timestamp):
     format_string = '%Y_%m_%d_%Hh%Mm%Ss'
     formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime(format_string)
     return formatted_time
+
+
+def port_to_tcp(port):
+    """Returns local tcp address for a given `port`, 7777 if `None`"""
+    if port is None:
+        port = 7777
+    address = socket.gethostbyname(socket.getfqdn())
+    return 'tcp://' + address + ':' + str(port)
+
+

@@ -158,6 +158,8 @@ WRAP_MODE_PIPE = 'PIPE'
 """Pipe multiprocessing mode"""
 WRAP_MODE_LOCAL = 'LOCAL'
 """Data is only stored on the local machine"""
+WRAP_MODE_NETLOCK = 'NETLOCK'
+""" Lock multiprocessing mode over a network """
 
 
 ############ Loading Constants ###########################

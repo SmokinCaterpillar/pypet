@@ -62,18 +62,19 @@ def write_into_shared_storage(traj):
     vla = daarrays.vla
     vla.append(np.ones(idx+2)*idx)
     root.info('5. Block')
-    if idx > ncores+2:
-        x, y = a[idx-ncores], idx-ncores
-        if x != y:
+    the_range = list(range(max(0, idx-2*ncores), max(0, idx)))
+    for irun in the_range:
+        x, y = a[irun], irun
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = ca[idx-ncores], idx-ncores
-        if x != y:
+        x, y = ca[irun], irun
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = ea[idx-ncores, 9], ea[idx-ncores, 8]
-        if x != y:
+        x, y = ea[irun, 9], ea[irun, 8]
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = vla[idx-ncores][0], vla[idx-ncores][1]
-        if x != y:
+        x, y = vla[irun][0], vla[irun][1]
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
     root.info('6. !!!!!!!!!')
 
@@ -317,7 +318,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
     def test_run_large(self):
 
-        self.explore(self.traj, trials=30)
+        self.explore(self.traj, trials=15)
         self.add_array_params(self.traj)
 
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -413,8 +414,29 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
         StorageDataEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
-        self.ncores = 4
+        self.ncores = 3
         self.use_pool=True
+
+    def test_run_large(self):
+        return super(MultiprocStorageLockTest, self).test_run_large()
+
+
+
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
+class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
+
+    # def test_run(self):
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pool', 'shared', 'netlock'
+
+    def set_mode(self):
+        StorageDataEnvironmentTest.set_mode(self)
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.ncores = 3
+        self.use_pool=True
+
+    def test_run_large(self):
+        return super(MultiprocStorageNetlockTest, self).test_run_large()
 
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')

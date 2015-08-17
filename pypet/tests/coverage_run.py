@@ -53,6 +53,7 @@ if __name__ == '__main__':
                     'MultiprocLinkQueueTest',
                     'MultiprocPoolSortLocalTest',
                     'MultiprocSCOOPSortLocalTest',
+                    'MultiprocPoolSortNetlockTest',
                     'MultiprocFrozenSCOOPSortLocalTest',
                     'CapTest'))
     pred = lambda class_name, test_name, tags: (class_name in tests_include or

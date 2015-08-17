@@ -167,6 +167,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
     # def test_run(self):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
 
+
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
 
@@ -178,6 +179,38 @@ class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
         self.freeze_input = True
         self.multiproc = True
         self.ncores = 4
+        self.use_pool=False
+        self.use_scoop=True
+
+
+@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
+class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'scoop', 'freeze_input'
+
+    def set_mode(self):
+        super(MultiprocFrozenSCOOPSortNetlockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.freeze_input = True
+        self.multiproc = True
+        self.ncores = 4
+        self.use_pool=False
+        self.use_scoop=True
+
+
+@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
+class MultiprocSCOOPNetlockTest(EnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'scoop'
+
+    def set_mode(self):
+        super(MultiprocSCOOPNetlockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.freeze_input = False
+        self.ncores = 4
+        self.gc_interval = 3
+        self.niceness = check_nice(1)
         self.use_pool=False
         self.use_scoop=True
 
