@@ -971,11 +971,12 @@ class Environment(HasLogger):
         if use_scoop and scoop is None:
             raise ValueError('Cannot use `scoop` because it is not installed.')
 
-        if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE,
-                          pypetconstants.WRAP_MODE_PIPE) and
-                          continuable):
-            raise ValueError('Continuing trajectories does NOT work with '
-                             '`QUEUE` or `PIPE`wrap mode.')
+        if (wrap_mode not in (pypetconstants.WRAP_MODE_NONE,
+                              pypetconstants.WRAP_MODE_LOCAL,
+                              pypetconstants.WRAP_MODE_LOCK) and
+                                continuable):
+            raise ValueError('Continuing trajectories does only work with '
+                             '`LOCK` or `LOCAL`wrap mode.')
 
         if continuable and not automatic_storing:
             raise ValueError('Continuing only works with `automatic_storing=True`')

@@ -22,7 +22,7 @@ def check_mock():
         print('SCOOP mode functional!')
         mock = False
     except Exception:
-        print('NOT started in SCOOP!')
+        print('NOT started in SCOOP mode!')
         mock = True
     return mock
 
@@ -139,7 +139,7 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
     def set_mode(self):
         super(MultiprocSCOOPSortLocalTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
-        self.freeze_input = True
+        self.freeze_input = False
         self.multiproc = True
         self.ncores = 4
         self.use_pool=False

@@ -13,16 +13,9 @@ if [[ $TEST_SUITE == ON ]]
                 echo "Running test suite and keeping all files"
                 python ../../pypet/tests/all_tests.py -k
             else
-                echo "Running test suite"
-                python ../../pypet/tests/all_tests.py
+                echo "Running test suite (with SCOOP)"
+                python -m scoop -n 4 ../../pypet/tests/all_tests.py
             fi
-    fi
-
-if [[ $SCOOP == ON ]]
-    then
-        echo "Running SCOOP tests with SCOOP"
-        python -m scoop -n 4 ../../pypet/tests/scoop_run.py
-        echo "SCOOP tests complete"
     fi
 
 if [[ $GIT_TEST == ON ]]
