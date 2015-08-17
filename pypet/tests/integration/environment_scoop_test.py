@@ -1,7 +1,7 @@
 __author__ = 'robert'
 
 import copy as cp
-import time
+import sys
 
 try:
     import scoop
@@ -19,7 +19,6 @@ def check_mock():
         print('SCOOP mode functional!')
         mock = False
     else:
-        print('NOT started in SCOOP mode!')
         mock = True
     return mock
 
@@ -27,6 +26,7 @@ def check_mock():
 class SharedMock(object):
     def __init__(self):
         self.constants = {}
+        self.signal = True
 
     def mock(self):
         scoop.IS_ORIGIN = True
@@ -34,6 +34,9 @@ class SharedMock(object):
         scoop.shared = self
 
     def setConst(self, **kwargs):
+        if self.signal:
+            print('NO SCOOP mode, mocking setConst!')
+            self.signal = False
         self.constants.update(cp.deepcopy(kwargs))
 
     def getConst(self, const, timeout):

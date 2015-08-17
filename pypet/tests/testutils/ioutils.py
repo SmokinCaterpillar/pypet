@@ -120,13 +120,16 @@ def make_temp_dir(filename):
     except OSError:
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
 
-        sys.stderr.write('I used `tempfile.gettempdir()` to create the temporary folder '
-                         '`%s`.\n' % actual_tempdir)
+        if make_temp_dir.signal:
+            print('I used `tempfile.gettempdir()` to create the temporary folder '
+                             '`%s`.\n' % actual_tempdir)
+            make_temp_dir.signal = False
         testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir, filename)
     except:
         get_root_logger().error('Could not create a directory. Sorry cannot run them')
         raise
+make_temp_dir.signal = True  # To only print the message once!
 
 
 def run_suite(remove=None, folder=None, suite=None):

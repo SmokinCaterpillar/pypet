@@ -341,6 +341,8 @@ class TrajectoryComparator(unittest.TestCase):
                     if hasattr(handler, 'close'):
                         handler.close()
                 logger.handlers = []
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
 
     def tearDown(self):
         if hasattr(self, 'env') and hasattr(self.env, 'f_disable_logging'):
