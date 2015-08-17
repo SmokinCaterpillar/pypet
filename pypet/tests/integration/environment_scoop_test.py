@@ -214,6 +214,10 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.use_pool=False
         self.use_scoop=True
 
+    @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
+    def test_niceness(self):
+        pass
+
 
 if __name__ == '__main__':
     opt_args = parse_args()
