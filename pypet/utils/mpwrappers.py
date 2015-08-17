@@ -75,59 +75,74 @@ class LockerServer(HasLogger):
     WAIT = 'WAIT'
     DELIMITER = ':'
     DEFAULT_LOCK = '_DEFAULT_'
+    CLOSE = 'CLOSE'
 
     def __init__(self, url="tcp://*:7777"):
-        self.locks = {}
-        self.url = url
+        self._locks = {}
+        self._url = url
         self._set_logger()
 
     def _lock(self, name, id_):
-        if name not in self.locks:
-            self.locks[name] = id_
+        if name not in self._locks:
+            self._locks[name] = id_
             return self.GO
         else:
             return self.WAIT
 
     def _unlock(self, name, id_):
-        lock_id = self.locks[name]
-        if lock_id != id_:
-            return self.RELEASE_ERROR + (':Lock was acquired '
-                                         'by `%s` and not by `%s`!' % (lock_id, id_))
+        locker_id = self._locks[name]
+        if locker_id != id_:
+            response = (self.RELEASE_ERROR + self.DELIMITER +
+                        'Lock was acquired by `%s` and not by `%s`.' % (locker_id, id_))
+            self._logger.error(response)
+            return response
         else:
-            del self.locks[name]
+            del self._locks[name]
             return self.UNLOCKED
 
     def run(self):
         """Runs Server"""
-        cnt = zmq.Context()
-        sck = cnt.socket(zmq.REP)
-        sck.bind(self.url)
-        while True:
-            try:
-                msg = sck.recv_string()
-                name = self.DEFAULT_LOCK
-                id_ = ''
+        try:
+            self._logger.info('Starting Lock Server')
+            context = zmq.Context()
+            socket = context.socket(zmq.REP)
+            socket.bind(self._url)
+            while True:
+
+                msg = socket.recv_string()
+                name = None
+                id_ = None
                 if self.DELIMITER in msg:
-                    msg, name, id_ = msg.split(':')
+                    msg, name, id_ = msg.split(self.DELIMITER)
                 if msg == self.DONE:
-                    self._logger.debug('Closing Lock Server')
-                    sck.send_string('Closing Down!')
-                    sck.close()
+                    socket.send_string(self.CLOSE + self.DELIMITER + 'Closing Lock Server')
+                    self._logger.info('Closing Lock Server')
                     break
                 elif msg == self.LOCK:
-                    string = self._lock(name, id_)
-                    sck.send_string(string)
+                    if name is None or id_ is None:
+                        response = (self.MSG_ERROR + self.DELIMITER +
+                                    'Please provide name and id for locking')
+                        self._logger.error(response)
+                    else:
+                        response = self._lock(name, id_)
+                    socket.send_string(response)
                 elif msg == self.UNLOCK:
-                    string = self._unlock(name, id_)
-                    sck.send_string(string)
+                    if name is None or id_ is None:
+                        response = (self.MSG_ERROR + self.DELIMITER +
+                                    'Please provide name and id for unlocking')
+                        self._logger.error(response)
+                    else:
+                        response = self._unlock(name, id_)
+                    socket.send_string(response)
                 elif msg == self.PING:
-                    sck.send_string(self.PONG)
+                    socket.send_string(self.PONG)
                 else:
-                    sck.send_string(self.MSG_ERROR + ':MSG `%s` not understood' % msg)
-                    self._logger.error('MSG `%s` not understood' % msg)
-            except Exception:
-                self._logger.exception('Crashed Lock Server!')
-                raise
+                    response = self.MSG_ERROR + self.DELIMITER + 'MSG `%s` not understood' % msg
+                    self._logger.error(response)
+                    socket.send_string(response)
+        except Exception:
+            self._logger.exception('Crashed Lock Server!')
+            raise
 
 
 class LockerClient(object):
@@ -138,14 +153,15 @@ class LockerClient(object):
     def __init__(self, url="tcp://localhost:7777", lock_name=LockerServer.DEFAULT_LOCK):
         self.lock_name = lock_name
         self.url = url
-        self.cnt = None
-        self.sck = None
+        self._context = None
+        self._socket = None
         self.id = None
 
     def __getstate__(self):
         result_dict = self.__dict__.copy()
-        result_dict['cnt'] = None
-        result_dict['sck'] = None
+        # Do not pickle zmq data
+        result_dict['_context'] = None
+        result_dict['_socket'] = None
         return result_dict
 
     def start(self):
@@ -154,47 +170,48 @@ class LockerClient(object):
         Makes ping-pong test as well
 
         """
-        self.cnt = zmq.Context()
-        self.sck = self.cnt.socket(zmq.REQ)
-        self.sck.connect(self.url)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REQ)
+        self._socket.connect(self.url)
         self.test_ping()
         # create a unique id
-        self.id = socket.getfqdn().replace(':','-') + '__' + str(os.getpid())
+        self.id = socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
 
     def send_done(self):
         """Notifies the Server to shutown"""
-        if self.sck is None:
+        if self._socket is None:
             self.start()
-        self.sck.send_string(LockerServer.DONE)
-        self.sck.recv_string()
+        self._socket.send_string(LockerServer.DONE)
+        self._socket.recv_string()  # Final receiving of closing
 
     def test_ping(self):
         """Connection test"""
-        self.sck.send_string(LockerServer.PING)
-        response = self.sck.recv_string()
+        self._socket.send_string(LockerServer.PING)
+        response = self._socket.recv_string()
         if response != LockerServer.PONG:
-            raise RuntimeError('Connection Error to Lock Server')
+            raise RuntimeError('Connection Error to LockServer')
 
     def finalize(self):
         """Closes socket"""
-        if self.sck is not None:
-            self.sck.close()
-            self.sck = None
-            self.cnt = None
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
+            self._context = None
 
-    def acquire(self, blocking=True):
+    def acquire(self):
         """Acquires lock and returns `True`
 
         Blocks until lock is available.
 
         """
-        if self.cnt is None:
+        if self._context is None:
             self.start()
+        request = (LockerServer.LOCK + LockerServer.DELIMITER +
+                   self.lock_name + LockerServer.DELIMITER + self.id)
         while True:
-            self.sck.send_string(LockerServer.LOCK + ':' + self.lock_name + ':' + self.id)
-            response = self.sck.recv_string()
+            self._socket.send_string(request)
+            response = self._socket.recv_string()
             if response == LockerServer.GO:
-                #sys.stderr.write('LOCKED by %s \n' % self.id)
                 return True
             elif response == LockerServer.WAIT:
                 time.sleep(self.SLEEP)
@@ -203,12 +220,13 @@ class LockerClient(object):
 
     def release(self):
         """Releases lock"""
-        #sys.stderr.write('UNLOCK by %s \n' % self.id)
-        self.sck.send_string(LockerServer.UNLOCK + ':' + self.lock_name + ':' + self.id)
-        response = self.sck.recv_string()
+        request = (LockerServer.UNLOCK + LockerServer.DELIMITER +
+                   self.lock_name + LockerServer.DELIMITER + self.id)
+        self._socket.send_string(request)
+        response = self._socket.recv_string()
         if response != LockerServer.UNLOCKED:
-            raise ValueError('Could not release lock `%s` (`%s`) '
-                             'because of `%s`!' % (self.lock_name, self.id, response))
+            raise RuntimeError('Could not release lock `%s` (`%s`) '
+                               'because of `%s`!' % (self.lock_name, self.id, response))
 
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):

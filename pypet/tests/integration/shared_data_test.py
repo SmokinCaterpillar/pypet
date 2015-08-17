@@ -70,12 +70,18 @@ def write_into_shared_storage(traj):
         x, y = ca[irun], irun
         if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = ea[irun, 9], ea[irun, 8]
-        if x != y and x != 0:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = vla[irun][0], vla[irun][1]
-        if x != y and x != 0:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        try:
+            x, y = ea[irun, 9], ea[irun, 8]
+            if x != y and x != 0:
+                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        except IndexError:
+            pass  # Array is not at this size yet
+        try:
+            x, y = vla[irun][0], vla[irun][1]
+            if x != y and x != 0:
+                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        except IndexError:
+            pass  # Array is not at this size yet
     root.info('6. !!!!!!!!!')
 
     tabs = traj.tabs
@@ -96,6 +102,7 @@ def write_into_shared_storage(traj):
 
     df = traj.df
     df.append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
+
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataEnvironmentTest(TrajectoryComparator):

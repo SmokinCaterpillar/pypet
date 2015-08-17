@@ -2753,7 +2753,6 @@ class Environment(HasLogger):
 
                 result_sort(results, start_result_length)
         finally:
-
             # Finalize the wrapper
             if self._multiproc_wrapper is not None:
                 self._multiproc_wrapper.f_finalize()
