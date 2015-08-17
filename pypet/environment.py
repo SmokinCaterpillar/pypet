@@ -60,6 +60,11 @@ try:
 except ImportError:
     git = None
 
+try:
+    import zmq
+except ImportError:
+    zmq = None
+
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
@@ -968,6 +973,9 @@ class Environment(HasLogger):
 
         if sumatra_label is not None and '.' in sumatra_label:
             raise ValueError('Your sumatra label is not allowed to contain dots.')
+
+        if wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and zmq is None:
+            raise ValueError('You need to install `zmq` for `NETLOCK` wrapping.')
 
         if (use_pool or use_scoop) and immediate_postproc:
             raise ValueError('You CANNOT perform immediate post-processing if you DO '
