@@ -102,16 +102,21 @@ class ContinueTest(TrajectoryComparator):
     def _remove_nresults(self, traj, nresults, continue_folder):
 
         result_tuple_list = []
+
+        n = 0
         for filename in os.listdir(continue_folder):
             _, ext = os.path.splitext(filename)
 
             if ext != '.rcnt':
                 continue
 
+            n += 1
+
             cnt_file = open(os.path.join(continue_folder, filename), 'rb')
             try:
                 result = dill.load(cnt_file)
                 cnt_file.close()
+                result_tuple_list.append((result))
             except Exception:
                 # delete broken files
                 logging.getLogger().exception('Could not open continue snapshot '
@@ -119,12 +124,11 @@ class ContinueTest(TrajectoryComparator):
                 cnt_file.close()
                 os.remove(filename)
 
-            result_tuple_list.append((result))
+        self.assertGreaterEqual(n, nresults)
 
         result_tuple_list = sorted(result_tuple_list, key=lambda x: x[0])
         timestamp_list = [x[1]['finish_timestamp'] for x in result_tuple_list]
         timestamp_list = timestamp_list[-nresults:]
-
 
         for timestamp in timestamp_list:
             filename = os.path.join(continue_folder, 'result_%s.rcnt' % repr(timestamp).replace('.','_'))

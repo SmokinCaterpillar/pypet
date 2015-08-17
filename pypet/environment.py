@@ -212,8 +212,6 @@ def _single_run(kwargs):
 
         clean_up_after_run: Whether to clean up after the run
 
-        continue_path: Path for continue files, `None` if continue is not supported
-
         automatic_storing: Whether or not the data should be automatically stored
 
         result_queue: A queue object to store results into in case a pool is used, otherwise None
@@ -232,7 +230,6 @@ def _single_run(kwargs):
         runargs = kwargs['runargs']
         kwrunparams = kwargs['runkwargs']
         clean_up_after_run = kwargs['clean_up_runs']
-        continue_path = kwargs['continue_path']
         automatic_storing = kwargs['automatic_storing']
         wrap_mode = kwargs['wrap_mode']
 
@@ -274,10 +271,6 @@ def _single_run(kwargs):
             result = ((traj.v_idx, result),
                        traj.f_get_run_information(traj.v_idx, copy=False))
 
-        if continue_path is not None:
-            # Trigger Snapshot
-            _trigger_result_snapshot(result, continue_path)
-
         if result_queue is not None:
             result_queue.put(result)
             result_queue.close()
@@ -301,31 +294,6 @@ def _queue_handling(kwargs):
     queue_handler.run()
     # profiler.disable()
     # profiler.dump_stats('./queue.profile2')
-
-
-def _trigger_result_snapshot(result, continue_path):
-    """ Triggers a snapshot of the results for continuing
-
-    :param result: Currently computed result
-    :param continue_path: Path to continue folder
-
-    """
-    timestamp = result[1]['finish_timestamp']
-    timestamp_str = repr(timestamp).replace('.', '_')
-    filename = 'result_%s' % timestamp_str
-    extension = '.ncnt'
-    dump_filename = os.path.join(continue_path, filename + extension)
-
-    dump_file = open(dump_filename, 'wb')
-    dill.dump(result, dump_file, protocol=2)
-    dump_file.flush()
-    dump_file.close()
-
-    # We rename the file to be certain that the trajectory did not crash during taking
-    # the snapshot!
-    extension = '.rcnt'
-    rename_filename = os.path.join(continue_path, filename + extension)
-    shutil.move(dump_filename, rename_filename)
 
 
 class Environment(HasLogger):
@@ -1003,10 +971,14 @@ class Environment(HasLogger):
         if use_scoop and scoop is None:
             raise ValueError('Cannot use `scoop` because it is not installed.')
 
-        if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE, pypetconstants.WRAP_MODE_PIPE) and
-            continuable):
-            raise ValueError('Continuing trajectories does NOT work with `QUEUE` or `PIPE` '
-                             'wrap mode.')
+        if (wrap_mode in (pypetconstants.WRAP_MODE_QUEUE,
+                          pypetconstants.WRAP_MODE_PIPE) and
+                          continuable):
+            raise ValueError('Continuing trajectories does NOT work with '
+                             '`QUEUE` or `PIPE`wrap mode.')
+
+        if continuable and not automatic_storing:
+            raise ValueError('Continuing only works with `automatic_storing=True`')
 
         if use_scoop and wrap_mode not in (pypetconstants.WRAP_MODE_LOCAL,
                                            pypetconstants.WRAP_MODE_NONE):
@@ -2052,7 +2024,6 @@ class Environment(HasLogger):
                        'runargs': self._args,
                        'runkwargs': self._kwargs,
                        'clean_up_runs': self._clean_up_runs,
-                       'continue_path': self._continue_path,
                        'automatic_storing': self._automatic_storing,
                        'wrap_mode': self._wrap_mode,
                        'niceness': self._niceness}
@@ -2395,6 +2366,7 @@ class Environment(HasLogger):
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
+                    self._check_and_store_references(result)
                     self._traj._update_run_information(result[1])
                     results.append(result[0])
                     self._show_progress(n, total_runs)
@@ -2449,6 +2421,32 @@ class Environment(HasLogger):
         """Checks if reference wrapping and stores references."""
         if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._multiproc_wrapper.f_store_references(result[2])
+        if self._continuable:
+            # [0:2] to not store references
+            self._trigger_result_snapshot(result[0:2])
+
+    def _trigger_result_snapshot(self, result):
+        """ Triggers a snapshot of the results for continuing
+
+        :param result: Currently computed result
+
+        """
+        timestamp = result[1]['finish_timestamp']
+        timestamp_str = repr(timestamp).replace('.', '_')
+        filename = 'result_%s' % timestamp_str
+        extension = '.ncnt'
+        dump_filename = os.path.join(self._continue_path, filename + extension)
+
+        dump_file = open(dump_filename, 'wb')
+        dill.dump(result, dump_file, protocol=2)
+        dump_file.flush()
+        dump_file.close()
+
+        # We rename the file to be certain that the trajectory did not crash during taking
+        # the snapshot!
+        extension = '.rcnt'
+        rename_filename = os.path.join(self._continue_path, filename + extension)
+        shutil.move(dump_filename, rename_filename)
 
     def _execute_multiprocessing(self, start_run_idx, results):
         """Performs multiprocessing and signals expansion by postproc"""

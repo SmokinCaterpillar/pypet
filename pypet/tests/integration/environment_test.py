@@ -443,9 +443,12 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             Environment(use_pool=True, immediate_postproc=True)
         with self.assertRaises(ValueError):
-            Environment(continuable=True, wrap_mode='QUEUE')
+            Environment(continuable=True, wrap_mode='QUEUE', continue_folder=tmp)
         with self.assertRaises(ValueError):
             Environment(use_scoop=True, wrap_mode='QUEUE')
+        with self.assertRaises(ValueError):
+            Environment(automatic_storing=False,
+                        continuable=True, continue_folder=tmp)
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')

@@ -291,6 +291,8 @@ def result_sort(result_list, start_index=0):
     :param start_index: Index with which to start, every entry before `start_index` is ignored
 
     """
+    if len(result_list) < 2:
+        return result_list
     to_sort = result_list[start_index:]
     minmax = [x[0] for x in to_sort]
     minimum = min(minmax)

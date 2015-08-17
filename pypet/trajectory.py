@@ -3181,7 +3181,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._updated_run_information.add(self.v_idx)
 
         if store_meta_data:
-            self.f_store(store_data=pypetconstants.STORE_NOTHING)
+            self.f_store(only_init=True)
 
         return self
 
