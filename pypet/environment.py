@@ -1220,6 +1220,7 @@ class Environment(HasLogger):
         if (wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and
                 (isinstance(url, int) or url is None)):
                 url = port_to_tcp(url)
+                self._logger.info('Determined lock-server URL automatically, it is `%s`.' % url)
         self._url = url
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
