@@ -116,7 +116,7 @@ class MultiprocSCOOPLocalTest(EnvironmentTest):
         super(MultiprocSCOOPLocalTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
         self.multiproc = True
-        self.freeze_pool_input = False
+        self.freeze_input = False
         self.ncores = 4
         self.gc_interval = 3
         self.niceness = check_nice(1)
@@ -139,7 +139,7 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
     def set_mode(self):
         super(MultiprocSCOOPSortLocalTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
-        self.freeze_pool_input = True
+        self.freeze_input = True
         self.multiproc = True
         self.ncores = 4
         self.use_pool=False
@@ -157,7 +157,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
         super(MultiprocFrozenSCOOPLocalTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
         self.multiproc = True
-        self.freeze_pool_input = True
+        self.freeze_input = True
         self.ncores = 4
         self.gc_interval = 3
         self.niceness = check_nice(1)
@@ -180,7 +180,7 @@ class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
     def set_mode(self):
         super(MultiprocFrozenSCOOPSortLocalTest, self).set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
-        self.freeze_pool_input = True
+        self.freeze_input = True
         self.multiproc = True
         self.ncores = 4
         self.use_pool=False

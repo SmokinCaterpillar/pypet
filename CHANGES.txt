@@ -48,6 +48,9 @@ pypet 0.1b.13
 
 *   Process ID and hostname are also added to the logfiles' naming scheme
 
+*   `freeze_pool_input` has been renamed to `freeze_input` because it can be used
+    with SCOOP as well.
+
 
 pypet 0.1b.12
 

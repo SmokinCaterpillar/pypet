@@ -52,7 +52,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
         self.ncores = 1
         self.use_pool=True
         self.log_stdout=False
-        self.freeze_pool_input=False
+        self.freeze_input=False
 
     def explore(self,traj):
         self.explore_dict={'x':range(10),'y':range(10)}

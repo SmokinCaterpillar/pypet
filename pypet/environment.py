@@ -479,12 +479,12 @@ class Environment(HasLogger):
         If you choose ``use_pool=False`` you can also make use of the `cap` values,
         see below.
 
-    :param freeze_pool_input:
+    :param freeze_input:
 
         Can be set to ``True`` if the run function as well as all additional arguments
         are immutable. This will prevent the trajectory from getting pickled again and again.
         Thus, the run function, the trajectory, as well as all arguments are passed to the pool
-        at initialisation. Works also under `f_run_map`.
+        or SCOOP workers at initialisation. Works also under `f_run_map`.
         In this case the iterable arguments are, of course, not frozen but passed for every run.
 
     :param queue_maxsize:
@@ -934,8 +934,8 @@ class Environment(HasLogger):
     """
 
     @parse_config
+    @kwargs_api_change('freeze_pool_input', 'freeze_input')
     @kwargs_api_change('use_hdf5', 'storage_service')
-    @kwargs_api_change('log_level', 'log_levels')
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
     @kwargs_api_change('pandas_append')
     @simple_logging_config
@@ -952,7 +952,7 @@ class Environment(HasLogger):
                  ncores=1,
                  use_scoop=False,
                  use_pool=False,
-                 freeze_pool_input=False,
+                 freeze_input=False,
                  queue_maxsize=-1,
                  cpu_cap=100.0,
                  memory_cap=100.0,
@@ -1017,8 +1017,8 @@ class Environment(HasLogger):
                              'support the `nice` operation. Alternatively you can install '
                              '`psutil`.')
 
-        if freeze_pool_input and not use_pool and not use_scoop:
-            raise ValueError('You can only use `freeze_pool_input=True` if you either use '
+        if freeze_input and not use_pool and not use_scoop:
+            raise ValueError('You can only use `freeze_input=True` if you either use '
                              'a pool or SCOOP.')
 
         if not isinstance(memory_cap, tuple):
@@ -1214,7 +1214,7 @@ class Environment(HasLogger):
         # Whether to use a pool of processes
         self._use_pool = use_pool
         self._use_scoop = use_scoop
-        self._freeze_pool_input = freeze_pool_input
+        self._freeze_input = freeze_input
         self._gc_interval = gc_interval
         self._multiproc_wrapper = None # The wrapper Service
 
@@ -1275,8 +1275,8 @@ class Environment(HasLogger):
                                         comment='Niceness value of child processes.').f_lock()
 
                 if self._use_pool:
-                    config_name = 'environment.%s.freeze_pool_input' % self.v_name
-                    self._traj.f_add_config(Parameter, config_name, self._freeze_pool_input,
+                    config_name = 'environment.%s.freeze_input' % self.v_name
+                    self._traj.f_add_config(Parameter, config_name, self._freeze_input,
                                         comment='If inputs to each run are static and '
                                                 'are not mutated during each run, '
                                                 'can speed up pool running.').f_lock()
@@ -2059,7 +2059,7 @@ class Environment(HasLogger):
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool or self._use_scoop:
-                if self._freeze_pool_input:
+                if self._freeze_input:
                     # Remember the full copy setting for the frozen input to
                     # change this back once the trajectory is received by
                     # each process
@@ -2088,7 +2088,7 @@ class Environment(HasLogger):
 
     def _make_iterator(self, start_run_idx, copy_data=False, **kwargs):
         """ Returns an iterator over all runs and yields the keyword arguments """
-        if not self._freeze_pool_input:
+        if not self._freeze_input:
             kwargs = self._make_kwargs(**kwargs)
 
         def _do_iter():
@@ -2105,12 +2105,12 @@ class Environment(HasLogger):
                         iter_kwargs[key] = next(self._kwargs[key])
                     kwargs['runargs'] = iter_args
                     kwargs['runkwargs'] = iter_kwargs
-                    if self._freeze_pool_input:
+                    if self._freeze_input:
                         # Frozen pool needs current run index
                         kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        if not self._freeze_pool_input:
+                        if not self._freeze_input:
                             copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
                                                                   with_links=True)
                         yield copied_kwargs
@@ -2118,12 +2118,12 @@ class Environment(HasLogger):
                         yield kwargs
             else:
                 for idx in self._make_index_iterator(start_run_idx):
-                    if self._freeze_pool_input:
+                    if self._freeze_input:
                         # Frozen pool needs current run index
                         kwargs['idx'] = idx
                     if copy_data:
                         copied_kwargs = kwargs.copy()
-                        if not self._freeze_pool_input:
+                        if not self._freeze_input:
                             copied_kwargs['traj'] = self._traj.f_copy(copy_leaves='explored',
                                                                   with_links=True)
                         yield copied_kwargs
@@ -2482,7 +2482,7 @@ class Environment(HasLogger):
 
                 self._logger.info('Starting Pool with %d processes' % self._ncores)
 
-                if self._freeze_pool_input:
+                if self._freeze_input:
                     self._logger.info('Freezing pool input')
 
                     init_kwargs = self._make_kwargs()
@@ -2524,7 +2524,7 @@ class Environment(HasLogger):
                     mpool.close()
                     mpool.join()
                 finally:
-                    if self._freeze_pool_input:
+                    if self._freeze_input:
                         self._traj.v_full_copy = pool_full_copy
                     else:
                         self._traj.v_storage_service = pool_service
@@ -2535,7 +2535,7 @@ class Environment(HasLogger):
             elif self._use_scoop:
                 self._logger.info('Starting SCOOP jobs')
 
-                if self._freeze_pool_input:
+                if self._freeze_input:
                     self._logger.info('Freezing SCOOP input')
 
                     if hasattr(_frozen_scoop_single_run, 'kwargs'):
@@ -2579,7 +2579,7 @@ class Environment(HasLogger):
                         self._show_progress(n, total_runs)
                         n += 1
                 finally:
-                    if self._freeze_pool_input:
+                    if self._freeze_input:
                         self._traj.v_full_copy = scoop_full_copy
             else:
                 # If we spawn a single process for each run, we need an additional queue

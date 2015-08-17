@@ -22,7 +22,7 @@ def get_runtime(length):
                       overwrite_file=True, purge_duplicate_comments=False,
                       log_stdout=False,
                       multiproc=False, ncores=2, use_pool=True,
-                      wrap_mode='PIPE', #freeze_pool_input=True,
+                      wrap_mode='PIPE', #freeze_input=True,
                       summary_tables=False, small_overview_tables=False) as env:
 
         traj = env.v_traj

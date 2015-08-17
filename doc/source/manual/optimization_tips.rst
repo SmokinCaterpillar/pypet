@@ -74,9 +74,14 @@ For instance, if you don't really need config data during the runs, use the foll
 This may save a couple of milliseconds each run because
 the config data no longer needs to be pickled and send over the queue for storage.
 
-Moreover, you can further avoid unnecessary pickling for the pool by setting
-``freeze_pool_input=True``.
+Moreover, you can further avoid unnecessary pickling for the pool and SCOOP_ by setting
+``freeze_input=True``.
 Accordingly, the trajectory, your target function, and all additional arguments are passed
-to each pool process at initialisation and not for each run individually. However,
+to each pool or SCOOP_ process at initialisation and not for each run individually. However,
 in order to use this feature, you must make sure that neither your target function nor the
 additional arguments are mutated over the course of your runs.
+In case you use SCOOP_, try do avoid running many batches of experiments
+in one go with ``freeze_input=True`` because memory consumption of all the SCOOP_ workers
+may increase with every batch, see also :re:`pypet-and-scoop`.
+
+.. _SCOOP: http://scoop.readthedocs.org/

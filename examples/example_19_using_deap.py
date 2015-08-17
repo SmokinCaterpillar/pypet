@@ -42,7 +42,7 @@ def main():
                       log_stdout=False,
                       wrap_mode='QUEUE',
                       use_pool=True,
-                      freeze_pool_input=True,  # To avoid copying the trajectory for each run
+                      freeze_input=True,  # To avoid copying the trajectory for each run
                       automatic_storing=False,  # This is important, we want to run several
                       # batches with the Environment so we want to avoid re-storing all
                       # data over and over again to save some overhead.

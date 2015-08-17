@@ -109,9 +109,11 @@ LOGGING_DICT = {
 
 def _change_logging_kwargs(kwargs):
     """ Helper function to turn the simple logging kwargs into a `log_config`."""
+    log_levels = kwargs.pop('log_levels', None)
     log_folder = kwargs.pop('log_folder', 'logs')
     logger_names = kwargs.pop('logger_names', '')
-    log_levels = kwargs.pop('log_levels', logging.INFO)
+    if log_levels is None:
+        log_levels = kwargs.pop('log_levels', logging.INFO)
     log_multiproc = kwargs.pop('log_multiproc', True)
 
     if not isinstance(logger_names, (tuple, list)):
@@ -152,7 +154,7 @@ def _change_logging_kwargs(kwargs):
 def use_simple_logging(kwargs):
     """Checks if simple logging is requested"""
     return any([x in kwargs for x in ('log_folder', 'logger_names',
-                                      'log_levels', 'log_multiproc')])
+                                      'log_levels', 'log_multiproc', 'log_level')])
 
 
 def simple_logging_config(func):

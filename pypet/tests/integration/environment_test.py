@@ -124,7 +124,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.ncores = 1
         self.use_pool=True
         self.use_scoop=False
-        self.freeze_pool_input=False
+        self.freeze_input=False
         self.pandas_format='fixed'
         self.pandas_append=False
         self.complib = 'zlib'
@@ -253,7 +253,7 @@ class EnvironmentTest(TrajectoryComparator):
                           wrap_mode=self.mode,
                           use_pool=self.use_pool,
                           gc_interval=self.gc_interval,
-                          freeze_pool_input=self.freeze_pool_input,
+                          freeze_input=self.freeze_input,
                           fletcher32=self.fletcher32,
                           complevel=self.complevel,
                           complib=self.complib,
@@ -433,7 +433,7 @@ class EnvironmentTest(TrajectoryComparator):
         with self.assertRaises(ValueError):
             env1.f_run_map(multiply_args, [1], [2], [3])
         with self.assertRaises(ValueError):
-            Environment(multiproc=True, use_pool=False, freeze_pool_input=True,
+            Environment(multiproc=True, use_pool=False, freeze_input=True,
                            filename=self.filename, log_config=None)
         env3 = Environment(log_config=None, filename=self.filename)
         with self.assertRaises(ValueError):
@@ -819,7 +819,7 @@ class ResultSortTest(TrajectoryComparator):
         self.ncores = 1
         self.use_pool=True
         self.log_stdout=False
-        self.freeze_pool_input=False
+        self.freeze_input=False
         self.use_scoop = False
         self.log_config = True
 
@@ -843,7 +843,7 @@ class ResultSortTest(TrajectoryComparator):
                           ncores=self.ncores,
                           use_pool=self.use_pool,
                           use_scoop=self.use_scoop,
-                          freeze_pool_input=self.freeze_pool_input,)
+                          freeze_input=self.freeze_input,)
 
         traj = env.v_trajectory
 
