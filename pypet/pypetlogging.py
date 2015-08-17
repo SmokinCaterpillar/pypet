@@ -353,6 +353,7 @@ class LoggingManager(object):
         self._tools = []
         self._null_handler = NullHandler()
         self._format_string = 'PROGRESS: Finished %d/%d runs '
+        self._stdout_to_logger = None
 
         self.env_name = None
         self.traj_name = None
@@ -603,7 +604,7 @@ class LoggingManager(object):
         """Creates logging handlers and redirects stdout."""
 
         log_stdout = self.log_stdout
-        if isinstance(sys.stdout, StdoutToLogger):
+        if sys.stdout is self._stdout_to_logger:
             # If we already redirected stdout we don't neet to redo it again
             log_stdout = False
 
@@ -635,6 +636,7 @@ class LoggingManager(object):
         for tool in self._tools:
             tool.finalize()
         self._tools = []
+        self._stdout_to_logger = None
         for config in (self._sp_config, self._mp_config):
             if hasattr(config, 'close'):
                 config.close()

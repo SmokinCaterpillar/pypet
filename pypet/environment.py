@@ -2238,7 +2238,8 @@ class Environment(HasLogger):
             List of tuples, where each tuple contains the run idx and the result.
 
         """
-        self._start_timestamp = time.time()
+        if self._start_timestamp is None:
+            self._start_timestamp = time.time()
 
         if self._map_arguments and self._continuable:
             raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
@@ -2294,16 +2295,24 @@ class Environment(HasLogger):
         if not self._traj.f_contains('config.' + config_name):
             conf2 = self._traj.f_add_config(Parameter, config_name, self._finish_timestamp,
                                             comment='Timestamp of finishing of an experiment.')
-            conf_list.append(conf2)
+        else:
+            conf2 = self._traj.f_get('config.' + config_name)
+            conf2.f_unlock()
+            conf2.f_set(self._finish_timestamp)
+        conf_list.append(conf2)
 
         config_name = 'environment.%s.runtime' % self.v_name
         if not self._traj.f_contains('config.' + config_name):
             conf3 = self._traj.f_add_config(Parameter, config_name, self._runtime,
                                             comment='Runtime of whole experiment.')
-            conf_list.append(conf3)
+        else:
+            conf3 = self._traj.f_get('config.' + config_name)
+            conf3.f_unlock()
+            conf3.f_set(self._runtime)
+        conf_list.append(conf3)
 
-        if self._automatic_storing and conf_list:
-            self._traj.f_store_items(conf_list)
+        if self._automatic_storing:
+            self._traj.f_store_items(conf_list, store_data=pypetconstants.OVERWRITE_DATA)
 
         if hasattr(self._traj.v_storage_service, 'finalize'):
             # Finalize the storage service if this is supported
