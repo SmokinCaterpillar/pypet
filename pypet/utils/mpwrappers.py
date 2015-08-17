@@ -15,6 +15,10 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 from collections import deque
 import copy as cp
@@ -26,6 +30,9 @@ import time
 import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import HasLogger
 from pypet.utils.decorators import retry
+
+
+
 
 
 class MultiprocWrapper(object):

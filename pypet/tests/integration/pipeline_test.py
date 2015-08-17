@@ -11,7 +11,6 @@ from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir,  \
     get_root_logger, parse_args, get_log_config
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.storageservice import LockWrapper, ReferenceWrapper, PipeStorageServiceSender
 from pypet.utils.mpwrappers import QueueStorageServiceSender, PipeStorageServiceSender, LockWrapper, \
     ReferenceWrapper
 import time
