@@ -14,7 +14,7 @@ from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, 
 from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
 from pypet.utils.helpful_functions import flatten_dictionary
-from pypet.storageservice import LockWrapper
+from pypet.utils.mpwrappers import LockWrapper
 
 __author__ = 'Robert Meyer'
 
@@ -292,9 +292,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.object.f_set_annotations(test2=42.42)
 
         traj.f_add_result('$.here', 77, comment='huhu')
-        traj.f_add_result('or.not.$', dollah=77, comment='duh!')
-        traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
-        traj.f_add_result('or.not.rrr.crun.jjj', 777, comment='duh**2!')
+        traj.f_add_result('tor.hot.$', dollah=77, comment='duh!')
+        traj.f_add_result('tor.hot.rrr.$.j', 77, comment='duh!')
+        traj.f_add_result('tor.hot.rrr.crun.jjj', 777, comment='duh**2!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         rootlogger.info('<<<<<<Finished Simple Calculations')

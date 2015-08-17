@@ -1,3 +1,5 @@
+import pypet.utils.mpwrappers
+
 __author__ = 'Robert Meyer'
 
 
@@ -1523,7 +1525,7 @@ class SingleRunTest(unittest.TestCase):
 
     def test_if_single_run_can_be_pickled(self):
 
-        self.single_run._storageservice=stsv.QueueStorageServiceSender(None)
+        self.single_run._storageservice= pypet.utils.mpwrappers.QueueStorageServiceSender(None)
         dump = pickle.dumps(self.single_run)
 
         single_run_rec = pickle.loads(dump)
