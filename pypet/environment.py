@@ -3160,6 +3160,7 @@ class MultiprocContext(HasLogger):
                 self._lock_process is not None):
             self._lock.send_done()
             self._lock.finalize()
+            self._lock_process.join()
 
         if self._manager is not None:
             self._manager.shutdown()

@@ -105,17 +105,17 @@ class LockerServer(HasLogger):
         try:
             self._logger.info('Starting Lock Server')
             context = zmq.Context()
-            socket = context.socket(zmq.REP)
-            socket.bind(self._url)
+            socket_ = context.socket(zmq.REP)
+            socket_.bind(self._url)
             while True:
 
-                msg = socket.recv_string()
+                msg = socket_.recv_string()
                 name = None
                 id_ = None
                 if self.DELIMITER in msg:
                     msg, name, id_ = msg.split(self.DELIMITER)
                 if msg == self.DONE:
-                    socket.send_string(self.CLOSE + self.DELIMITER + 'Closing Lock Server')
+                    socket_.send_string(self.CLOSE + self.DELIMITER + 'Closing Lock Server')
                     self._logger.info('Closing Lock Server')
                     break
                 elif msg == self.LOCK:
@@ -125,7 +125,7 @@ class LockerServer(HasLogger):
                         self._logger.error(response)
                     else:
                         response = self._lock(name, id_)
-                    socket.send_string(response)
+                    socket_.send_string(response)
                 elif msg == self.UNLOCK:
                     if name is None or id_ is None:
                         response = (self.MSG_ERROR + self.DELIMITER +
@@ -133,13 +133,13 @@ class LockerServer(HasLogger):
                         self._logger.error(response)
                     else:
                         response = self._unlock(name, id_)
-                    socket.send_string(response)
+                    socket_.send_string(response)
                 elif msg == self.PING:
-                    socket.send_string(self.PONG)
+                    socket_.send_string(self.PONG)
                 else:
                     response = self.MSG_ERROR + self.DELIMITER + 'MSG `%s` not understood' % msg
                     self._logger.error(response)
-                    socket.send_string(response)
+                    socket_.send_string(response)
         except Exception:
             self._logger.exception('Crashed Lock Server!')
             raise
