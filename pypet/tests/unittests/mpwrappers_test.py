@@ -12,6 +12,10 @@ try:
     from scoop import futures
 except ImportError:
     scoop = None
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
     get_root_logger, parse_args, unittest, get_random_port_url
@@ -38,31 +42,53 @@ def the_job(args):
 
     random.seed()
 
-    sleep_time = random.uniform(0.0, 0.03)  # Random sleep time
+    sleep_time = random.uniform(0.0, 0.05)  # Random sleep time
+    lock.start()
+    sidx = ':' + str(lock.id) + ':' + str(idx) +'\n'
+
+    with open(filename, mode='a') as fh:
+        fh.write('PAR:__THIS__:0' + sidx)
+    time.sleep(sleep_time * 2.0)
+    with open(filename, mode='a') as fh:
+        fh.write('PAR:__HAPPENING__:1' + sidx)
+    time.sleep(sleep_time)
+    with open(filename, mode='a') as fh:
+        fh.write('PAR:__PARALLEL__:2' + sidx)
+    time.sleep(sleep_time * 1.5)
+    with open(filename, mode='a') as fh:
+        fh.write('PAR:__ALL__:3' + sidx)
+    time.sleep(sleep_time / 3.0)
+    with open(filename, mode='a') as fh:
+        fh.write('PAR:__TIMES__:4' + sidx)
+    time.sleep(sleep_time / 1.5)
 
     lock.acquire()
 
-
     with open(filename, mode='a') as fh:
-        sidx = ':' + str(lock.id) + ':' + str(idx) +'\n'
-        fh.write('BEGIN:0' + sidx)
-        time.sleep(sleep_time / 2.0)
-        fh.write('This:1' + sidx)
-        time.sleep(sleep_time)
-        fh.write('is:2' + sidx)
-        time.sleep(sleep_time * 1.5)
-        fh.write('a:3' + sidx)
-        time.sleep(sleep_time / 3.0)
-        fh.write('sequential:4' + sidx)
-        time.sleep(sleep_time / 1.5)
-        fh.write('block:5' + sidx)
-        time.sleep(sleep_time / 3.0)
-        fh.write('END:6' + sidx)
+        fh.write('SEQ:BEGIN:0' + sidx)
+    time.sleep(sleep_time / 2.0)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:This:1' + sidx)
+    time.sleep(sleep_time)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:is:2' + sidx)
+    time.sleep(sleep_time * 1.5)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:a:3' + sidx)
+    time.sleep(sleep_time / 3.0)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:sequential:4' + sidx)
+    time.sleep(sleep_time / 1.5)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:block:5' + sidx)
+    time.sleep(sleep_time / 3.0)
+    with open(filename, mode='a') as fh:
+        fh.write('SEQ:END:6' + sidx)
+
     lock.release()
 
-    time.sleep(sleep_time*3.0)
 
-
+@unittest.skipIf(zmq is None, 'Cannot be run without zmq')
 class TestNetLock(TrajectoryComparator):
 
     ITERATIONS = 250
@@ -76,7 +102,9 @@ class TestNetLock(TrajectoryComparator):
         iterations = set()
         with open(filename) as fh:
             for line in fh:
-                msg, counter, id_, iteration = line.split(':')
+                seq, msg, counter, id_, iteration = line.split(':')
+                if seq == 'PAR':
+                    continue
                 iteration = int(iteration)
                 counter = int(counter)
                 iterations.add(iteration)
@@ -115,9 +143,49 @@ class TestNetLock(TrajectoryComparator):
         fh = open(filename, mode='w')
         fh.close()
 
+    def test_errors(self):
+        url = get_random_port_url()
+        self.start_server(url)
+        ctx = zmq.Context()
+        sck = ctx.socket(zmq.REQ)
+        sck.connect(url)
+        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test'
+                        + LockerServer.DELIMITER + 'hi')
+        response = sck.recv_string()
+        self.assertTrue(response.startswith(LockerServer.RELEASE_ERROR))
+
+        sck.send_string(LockerServer.LOCK + LockerServer.DELIMITER + 'test'
+                        + LockerServer.DELIMITER + 'hi')
+        response = sck.recv_string()
+        self.assertEqual(response, LockerServer.GO)
+
+        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test'
+                        + LockerServer.DELIMITER + 'ha')
+        response = sck.recv_string()
+        self.assertTrue(response.startswith(LockerServer.RELEASE_ERROR))
+
+        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test')
+        response = sck.recv_string()
+        self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
+
+        sck.send_string(LockerServer.LOCK + LockerServer.DELIMITER + 'test')
+        response = sck.recv_string()
+        self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
+
+        sck.send_string('Wooopiee!')
+        response = sck.recv_string()
+        self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
+
+        sck.close()
+
+        lock = LockerClient(url)
+        lock.send_done()
+        self.lock_process.join()
+        lock.finalize()
+
     def test_single_core(self):
         url = get_random_port_url()
-        filename = make_temp_dir('locker_test/pool.txt')
+        filename = make_temp_dir('locker_test/score.txt')
         self.create_file(filename)
         self.start_server(url)
         lock = LockerClient(url)
@@ -145,7 +213,7 @@ class TestNetLock(TrajectoryComparator):
     @unittest.skipIf(scoop is None, 'Can only be run with scoop')
     def test_concurrent_scoop(self):
         url = get_random_port_url()
-        filename = make_temp_dir('locker_test/pool.txt')
+        filename = make_temp_dir('locker_test/scoop.txt')
         self.create_file(filename)
         self.start_server(url)
         lock = LockerClient(url)

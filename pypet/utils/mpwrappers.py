@@ -90,15 +90,22 @@ class LockerServer(HasLogger):
             return self.WAIT
 
     def _unlock(self, name, id_):
-        locker_id = self._locks[name]
-        if locker_id != id_:
+        if name not in self._locks:
             response = (self.RELEASE_ERROR + self.DELIMITER +
-                        'Lock was acquired by `%s` and not by `%s`.' % (locker_id, id_))
+                        'Lock `%s` cannot be found in database' % name)
             self._logger.error(response)
             return response
         else:
-            del self._locks[name]
-            return self.UNLOCKED
+            locker_id = self._locks[name]
+            if locker_id != id_:
+                response = (self.RELEASE_ERROR + self.DELIMITER +
+                            'Lock `%s` was acquired by `%s` and not by '
+                            '`%s`' % (name, locker_id, id_))
+                self._logger.error(response)
+                return response
+            else:
+                del self._locks[name]
+                return self.UNLOCKED
 
     def run(self):
         """Runs Server"""
@@ -112,8 +119,17 @@ class LockerServer(HasLogger):
                 msg = socket_.recv_string()
                 name = None
                 id_ = None
-                if self.DELIMITER in msg:
-                    msg, name, id_ = msg.split(self.DELIMITER)
+                split_msg = msg.split(self.DELIMITER)
+                if len(split_msg) == 3:
+                    msg, name, id_ = split_msg
+                elif len(split_msg) == 1:
+                    msg = split_msg[0]
+                else:
+                    response = (self.MSG_ERROR + self.DELIMITER +
+                                'Could not unpack your message `%s`' % msg)
+                    self._logger.error(response)
+                    socket_.send_string(response)
+                    continue
                 if msg == self.DONE:
                     socket_.send_string(self.CLOSE + self.DELIMITER + 'Closing Lock Server')
                     self._logger.info('Closing Lock Server')
@@ -137,7 +153,8 @@ class LockerServer(HasLogger):
                 elif msg == self.PING:
                     socket_.send_string(self.PONG)
                 else:
-                    response = self.MSG_ERROR + self.DELIMITER + 'MSG `%s` not understood' % msg
+                    response = (self.MSG_ERROR + self.DELIMITER +
+                                'Message `%s` not understood' % msg)
                     self._logger.error(response)
                     socket_.send_string(response)
         except Exception:
