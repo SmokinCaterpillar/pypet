@@ -216,7 +216,7 @@ class LockerClient(object):
             self._context = None
 
     @staticmethod
-    def _get_id():
+    def get_id():
         return socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
 
     def acquire(self):
@@ -227,7 +227,7 @@ class LockerClient(object):
         """
         if self._socket is None:
             self.start()
-        id_ = self._get_id()
+        id_ = self.get_id()
         request = (LockerServer.LOCK + LockerServer.DELIMITER +
                    self.lock_name + LockerServer.DELIMITER + id_)
         while True:
@@ -242,7 +242,7 @@ class LockerClient(object):
 
     def release(self):
         """Releases lock"""
-        id_ = self._get_id()
+        id_ = self.get_id()
         request = (LockerServer.UNLOCK + LockerServer.DELIMITER +
                    self.lock_name + LockerServer.DELIMITER + id_)
         self._socket.send_string(request)
@@ -597,10 +597,8 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
                     self._logger.error('Could not release lock `%s`!' % str(self.lock))
 
     def __del__(self):
-        """In order to prevent a dead-lock in case of error,
-         we close the storage on deletion and release the lock"""
-        if self._storage_service.is_open:
-            self._storage_service.store(pypetconstants.CLOSE_FILE, None)
+        # In order to prevent a dead-lock in case of error,
+        # we release the lock once again
         self.release_lock()
 
     def load(self, *args, **kwargs):

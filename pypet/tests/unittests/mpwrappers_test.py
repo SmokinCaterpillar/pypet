@@ -42,7 +42,7 @@ def the_job(args):
 
     sleep_time = random.uniform(0.0, 0.05)  # Random sleep time
     lock.start()
-    sidx = ':' + str(lock._get_id()) + ':' + str(idx) +'\n'
+    sidx = ':' + str(lock.get_id()) + ':' + str(idx) +'\n'
 
     with open(filename, mode='a') as fh:
         fh.write('PAR:__THIS__:0' + sidx)
@@ -188,7 +188,7 @@ class TestNetLock(TrajectoryComparator):
         self.start_server(url)
         lock = LockerClient(url)
         iterator = [(irun, lock, filename) for irun in range(self.ITERATIONS)]
-        map(the_job, iterator)
+        list(map(the_job, iterator))
         lock.send_done()
         self.check_file(filename)
         self.lock_process.join()
@@ -216,7 +216,7 @@ class TestNetLock(TrajectoryComparator):
         self.start_server(url)
         lock = LockerClient(url)
         iterator = [(irun, lock, filename) for irun in range(self.ITERATIONS)]
-        [x for x  in futures.map(the_job, iterator)]
+        list(futures.map(the_job, iterator))
         lock.send_done()
         self.check_file(filename)
         self.lock_process.join()

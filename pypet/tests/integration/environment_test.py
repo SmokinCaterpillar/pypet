@@ -24,6 +24,10 @@ try:
     import psutil
 except ImportError:
     psutil = None
+try:
+    import dill
+except ImportError:
+    dill = None
 
 import scipy.sparse as spsp
 import random
@@ -430,10 +434,11 @@ class EnvironmentTest(TrajectoryComparator):
 
     def test_errors(self):
         tmp = make_temp_dir('cont')
-        env1 = Environment(continuable=True, continue_folder=tmp,
+        if dill is not None:
+            env1 = Environment(continuable=True, continue_folder=tmp,
                            log_config=None, filename=self.filename)
-        with self.assertRaises(ValueError):
-            env1.f_run_map(multiply_args, [1], [2], [3])
+            with self.assertRaises(ValueError):
+                env1.f_run_map(multiply_args, [1], [2], [3])
         with self.assertRaises(ValueError):
             Environment(multiproc=True, use_pool=False, freeze_input=True,
                            filename=self.filename, log_config=None)
