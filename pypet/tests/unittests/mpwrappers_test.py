@@ -24,8 +24,6 @@ from pypet.utils.mpwrappers import LockerClient, LockerServer
 from pypet import progressbar
 
 
-
-
 def run_server(server):
     #logging.basicConfig(level=logging.INFO)
     server.run()
@@ -44,7 +42,7 @@ def the_job(args):
 
     sleep_time = random.uniform(0.0, 0.05)  # Random sleep time
     lock.start()
-    sidx = ':' + str(lock.id) + ':' + str(idx) +'\n'
+    sidx = ':' + str(lock._get_id()) + ':' + str(idx) +'\n'
 
     with open(filename, mode='a') as fh:
         fh.write('PAR:__THIS__:0' + sidx)

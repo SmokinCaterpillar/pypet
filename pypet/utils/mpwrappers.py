@@ -172,7 +172,6 @@ class LockerClient(object):
         self.url = url
         self._context = None
         self._socket = None
-        self.id = None
 
     def __getstate__(self):
         result_dict = self.__dict__.copy()
@@ -181,7 +180,7 @@ class LockerClient(object):
         result_dict['_socket'] = None
         return result_dict
 
-    def start(self):
+    def start(self, test_connection=True):
         """Starts connection to server.
 
         Makes ping-pong test as well
@@ -190,9 +189,8 @@ class LockerClient(object):
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect(self.url)
-        self.test_ping()
-        # create a unique id
-        self.id = socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
+        if test_connection:
+            self.test_ping()
 
     def send_done(self):
         """Notifies the Server to shutown"""
@@ -203,6 +201,8 @@ class LockerClient(object):
 
     def test_ping(self):
         """Connection test"""
+        if self._socket is None:
+            self.start(test_connection=False)
         self._socket.send_string(LockerServer.PING)
         response = self._socket.recv_string()
         if response != LockerServer.PONG:
@@ -215,16 +215,21 @@ class LockerClient(object):
             self._socket = None
             self._context = None
 
+    @staticmethod
+    def _get_id():
+        return socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
+
     def acquire(self):
         """Acquires lock and returns `True`
 
         Blocks until lock is available.
 
         """
-        if self._context is None:
+        if self._socket is None:
             self.start()
+        id_ = self._get_id()
         request = (LockerServer.LOCK + LockerServer.DELIMITER +
-                   self.lock_name + LockerServer.DELIMITER + self.id)
+                   self.lock_name + LockerServer.DELIMITER + id_)
         while True:
             self._socket.send_string(request)
             response = self._socket.recv_string()
@@ -237,13 +242,14 @@ class LockerClient(object):
 
     def release(self):
         """Releases lock"""
+        id_ = self._get_id()
         request = (LockerServer.UNLOCK + LockerServer.DELIMITER +
-                   self.lock_name + LockerServer.DELIMITER + self.id)
+                   self.lock_name + LockerServer.DELIMITER + id_)
         self._socket.send_string(request)
         response = self._socket.recv_string()
         if response != LockerServer.UNLOCKED:
             raise RuntimeError('Could not release lock `%s` (`%s`) '
-                               'because of `%s`!' % (self.lock_name, self.id, response))
+                               'because of `%s`!' % (self.lock_name, id_, response))
 
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
