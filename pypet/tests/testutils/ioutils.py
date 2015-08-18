@@ -142,7 +142,10 @@ def make_temp_dir(filename, signal=False):
                              '`%s`.' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
         if not os.path.isdir(testParams['actual_tempdir']):
-            os.makedirs(testParams['actual_tempdir'])
+            try:
+                os.makedirs(testParams['actual_tempdir'])
+            except Exception:
+                pass # race condition
 
         return os.path.join(actual_tempdir, filename)
     except:
