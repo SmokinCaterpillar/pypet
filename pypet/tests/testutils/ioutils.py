@@ -71,12 +71,7 @@ def get_log_path(traj, process_name=None):
 
 def get_random_port_url():
     """Determines the local server url with a random port"""
-    url = 'tcp://' + socket.gethostbyname(socket.getfqdn())
-    context = zmq.Context()
-    socket_ = context.socket(zmq.REP)
-    port = socket_.bind_to_random_port(url)
-    socket_.close()
-    url = port_to_tcp(port)
+    url = port_to_tcp()
     errwrite('USING URL: %s \n' % url)
     return url
 
@@ -139,13 +134,16 @@ def make_temp_dir(filename, signal=False):
             os.makedirs(testParams['actual_tempdir'])
 
         return os.path.join(testParams['actual_tempdir'], filename)
-    except OSError:
+    except OSError as exc:
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
 
         if signal:
             errwrite('I used `tempfile.gettempdir()` to create the temporary folder '
                              '`%s`.\n' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
+        if not os.path.isdir(testParams['actual_tempdir']):
+            os.makedirs(testParams['actual_tempdir'])
+
         return os.path.join(actual_tempdir, filename)
     except:
         get_root_logger().error('Could not create a directory. Sorry cannot run them')

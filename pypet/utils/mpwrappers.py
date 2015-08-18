@@ -77,7 +77,7 @@ class LockerServer(HasLogger):
     DEFAULT_LOCK = '_DEFAULT_'
     CLOSE = 'CLOSE'
 
-    def __init__(self, url="tcp://*:7777"):
+    def __init__(self, url="tcp://127.0.0.1:7777"):
         self._locks = {}
         self._url = url
         self._set_logger()
@@ -150,7 +150,7 @@ class LockerClient(object):
 
     SLEEP = 0.01
 
-    def __init__(self, url="tcp://localhost:7777", lock_name=LockerServer.DEFAULT_LOCK):
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         self.lock_name = lock_name
         self.url = url
         self._context = None

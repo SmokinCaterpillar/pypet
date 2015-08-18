@@ -2861,7 +2861,7 @@ class MultiprocContext(HasLogger):
     :param url:
 
         URL and port of lock server (aka this machine), like ``'tcp://127.0.0.1:7777'``.
-        Leave `None` for automatic determining the network name and usage of port 7777.
+        Leave `None` for automatic determining the network name and usage of a random port.
 
     :param gc_interval:
 

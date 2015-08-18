@@ -8,6 +8,10 @@ import numpy as np
 import inspect
 import logging
 import socket
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 import pypet.compat as compat
 from pypet.utils.decorators import deprecated
@@ -318,11 +322,15 @@ def format_time(timestamp):
     return formatted_time
 
 
-def port_to_tcp(port):
-    """Returns local tcp address for a given `port`, 7777 if `None`"""
+def port_to_tcp(port=None):
+    """Returns local tcp address for a given `port`, automatic port if `None`"""
+    address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
     if port is None:
-        port = 7777
-    address = socket.gethostbyname(socket.getfqdn())
-    return 'tcp://' + address + ':' + str(port)
+        # determine port automatically
+        context = zmq.Context()
+        socket_ = context.socket(zmq.REP)
+        port = socket_.bind_to_random_port(address)
+        socket_.close()
+    return address + ':' + str(port)
 
 
