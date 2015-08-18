@@ -98,7 +98,7 @@ if check_mock():
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice
 import pypet.pypetconstants as pypetconstants
-from pypet.tests.testutils.ioutils import parse_args, run_suite
+from pypet.tests.testutils.ioutils import parse_args, run_suite, get_random_port_url
 from pypet.tests.testutils.data import unittest
 
 
@@ -196,6 +196,7 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
+        self.url = get_random_port_url()
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -213,6 +214,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.niceness = check_nice(1)
         self.use_pool=False
         self.use_scoop=True
+        self.url = get_random_port_url()
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
     def test_niceness(self):

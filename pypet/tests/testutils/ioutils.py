@@ -15,12 +15,18 @@ except ImportError:
 import shutil
 import getopt
 import tempfile
+import socket
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet import HasLogger
 from pypet.pypetlogging import LoggingManager, rename_log_file
 from pypet.utils.decorators import copydoc
+from pypet.utils.helpful_functions import port_to_tcp
 
 #import pypet.utils.ptcompat as ptcompat
 #hdf5version = ptcompat.hdf5_version
@@ -36,12 +42,16 @@ testParams=dict(
     user_tempdir='',
     # Specified log level
     log_config='test'
-    # Specified log options
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
 
 generic_log_folder = None
+
+
+def errwrite(text):
+    """Writes to stderr with linebreak"""
+    sys.__stderr__.write(text + '\n')
 
 
 def get_root_logger():
@@ -57,6 +67,18 @@ def get_log_config():
 def get_log_path(traj, process_name=None):
     """Returns the path to the log files based on trajectory name etc."""
     return rename_log_file(generic_log_folder, trajectory=traj, process_name=process_name)
+
+
+def get_random_port_url():
+    """Determines the local server url with a random port"""
+    url = 'tcp://' + socket.gethostbyname(socket.getfqdn())
+    context = zmq.Context()
+    socket_ = context.socket(zmq.REP)
+    port = socket_.bind_to_random_port(url)
+    socket_.close()
+    url = port_to_tcp(port)
+    errwrite('USING URL: %s \n' % url)
+    return url
 
 
 def prepare_log_config():
@@ -121,7 +143,7 @@ def make_temp_dir(filename, signal=False):
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
 
         if signal:
-            print('I used `tempfile.gettempdir()` to create the temporary folder '
+            errwrite('I used `tempfile.gettempdir()` to create the temporary folder '
                              '`%s`.\n' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
         return os.path.join(actual_tempdir, filename)
@@ -301,15 +323,15 @@ def parse_args():
     for opt, arg in opt_list:
         if opt == '-k':
             opt_dict['remove'] = False
-            print('I will keep all files.')
+            errwrite('I will keep all files.')
 
         if opt == '--folder':
             opt_dict['folder'] = arg
-            print('I will put all data into folder `%s`.' % arg)
+            errwrite('I will put all data into folder `%s`.' % arg)
 
         if opt == '--suite':
             opt_dict['suite_no'] = arg
-            print('I will run suite `%s`.' % arg)
+            errwrite('I will run suite `%s`.' % arg)
 
     sys.argv = [sys.argv[0]]
     return opt_dict

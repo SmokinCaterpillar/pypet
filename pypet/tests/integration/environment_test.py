@@ -135,6 +135,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.log_stdout=False
         self.wildcard_functions = None
         self.niceness = None
+        self.url = None
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -262,7 +263,8 @@ class EnvironmentTest(TrajectoryComparator):
                           pandas_format=self.pandas_format,
                           encoding=self.encoding,
                           niceness=self.niceness,
-                          use_scoop=self.use_scoop)
+                          use_scoop=self.use_scoop,
+                          url=self.url)
 
         traj = env.v_trajectory
 
@@ -827,6 +829,7 @@ class ResultSortTest(TrajectoryComparator):
         self.freeze_input=False
         self.use_scoop = False
         self.log_config = True
+        self.url = None
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -848,6 +851,7 @@ class ResultSortTest(TrajectoryComparator):
                           ncores=self.ncores,
                           use_pool=self.use_pool,
                           use_scoop=self.use_scoop,
+                          url=self.url,
                           freeze_input=self.freeze_input,)
 
         traj = env.v_trajectory

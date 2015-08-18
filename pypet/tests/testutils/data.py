@@ -180,7 +180,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         my_dict2={}
         param_dict=traj.parameters.f_to_dict(fast_access=True,short_names=False)
-        for key in sorted(param_dict.keys())[0:10]:
+        for key in sorted(param_dict.keys())[0:5]:
             val = param_dict[key]
             if 'trial' in key:
                 continue
@@ -202,7 +202,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__NUMPY_BYTES'] = np.array([b'zweiundvierzig'])
 
         keys = sorted(to_dict_wo_config(traj).keys())
-        for idx,key in enumerate(keys[0:10]):
+        for idx,key in enumerate(keys[0:5]):
             keys[idx] = key.replace('.', '_')
 
         listy=traj.f_add_result_group('List', comment='Im a result group')

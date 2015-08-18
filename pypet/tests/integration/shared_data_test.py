@@ -12,11 +12,15 @@ else:
 
 import tables as pt
 import scipy.sparse as spsp
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 from pypet.shareddata import *
 from pypet import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
-     get_root_logger, parse_args, get_log_config
+     get_root_logger, parse_args, get_log_config, get_random_port_url
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
@@ -121,6 +125,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.shuffle=True
         self.fletcher32 = False
         self.encoding = 'utf8'
+        self.url = None
 
     def test_loading_run(self):
 
@@ -217,7 +222,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=False,
-
+                          url=self.url,
                           log_config=get_log_config(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
@@ -428,7 +433,7 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
         return super(MultiprocStorageLockTest, self).test_run_large()
 
 
-
+@unittest.skipIf(zmq is None, 'Can only be run with zmq')
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
 
@@ -441,6 +446,7 @@ class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
         self.multiproc = True
         self.ncores = 3
         self.use_pool=True
+        self.url = get_random_port_url()
 
     def test_run_large(self):
         return super(MultiprocStorageNetlockTest, self).test_run_large()
