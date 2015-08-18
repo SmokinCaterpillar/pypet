@@ -139,14 +139,14 @@ def make_temp_dir(filename, signal=False):
 
         if signal:
             errwrite('I used `tempfile.gettempdir()` to create the temporary folder '
-                             '`%s`.\n' % actual_tempdir)
+                             '`%s`.' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
         if not os.path.isdir(testParams['actual_tempdir']):
             os.makedirs(testParams['actual_tempdir'])
 
         return os.path.join(actual_tempdir, filename)
     except:
-        get_root_logger().error('Could not create a directory. Sorry cannot run them')
+        get_root_logger().error('Could not create a directory.')
         raise
 
 
