@@ -25,7 +25,7 @@ import pypet.pypetexceptions as pex
 from pypet._version import __version__ as VERSION
 from pypet.parameter import ObjectTable, Parameter
 import pypet.naturalnaming as nn
-from pypet.pypetlogging import HasLogger, DisableLogger
+from pypet.pypetlogging import HasLogger, DisableAllLogging
 from pypet.utils.decorators import deprecated
 import pypet.shareddata as shared
 
@@ -580,7 +580,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         self._overview_group_ = None  # to cache link to overview
 
-        self._disable_logger = DisableLogger()
+        self._disable_logger = DisableAllLogging()
 
 
         self._mode = None

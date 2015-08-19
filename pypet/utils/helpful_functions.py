@@ -331,6 +331,7 @@ def port_to_tcp(port=None):
         socket_ = context.socket(zmq.REP)
         port = socket_.bind_to_random_port(address)
         socket_.close()
+        context.term()
     return address + ':' + str(port)
 
 

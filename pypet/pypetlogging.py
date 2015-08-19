@@ -659,7 +659,7 @@ class NoInterpolationParser(cp.ConfigParser):
             cp.ConfigParser.__init__(self)
 
 
-class DisableLogger(object):
+class DisableAllLogging(object):
     """Context Manager that disables logging"""
 
     def __enter__(self):

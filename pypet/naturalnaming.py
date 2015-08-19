@@ -59,7 +59,7 @@ import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap, IteratorChain
 from pypet.utils.helpful_functions import is_debug
-from pypet.pypetlogging import HasLogger, DisableLogger
+from pypet.pypetlogging import HasLogger, DisableAllLogging
 
 
 # For fetching:
@@ -444,7 +444,7 @@ class NaturalNamingInterface(HasLogger):
         self._links_count =  {} # Dictionary of how often a link exists
 
         # Context Manager to disable logging for auto-loading
-        self._disable_logger = DisableLogger()
+        self._disable_logger = DisableAllLogging()
 
         # List of names that are taboo. The user cannot create parameters or results that
         # contain these names.

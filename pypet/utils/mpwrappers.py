@@ -62,6 +62,7 @@ class MultiprocWrapper(object):
 
 
 class LockerServer(HasLogger):
+    """ Manages a database of locks """
 
     PING = 'PING'
     PONG = 'PONG'
@@ -70,154 +71,221 @@ class LockerServer(HasLogger):
     RELEASE_ERROR = 'RELEASE_ERROR'
     MSG_ERROR = 'MSG_ERROR'
     UNLOCK = 'UNLOCK'
-    UNLOCKED = 'UNLOCKED'
+    RELEASED = 'RELEASED'
+    LOCK_ERROR = 'LOCK_ERROR'
     GO = 'GO'
     WAIT = 'WAIT'
-    DELIMITER = ':'
+    DELIMITER = ':::'
     DEFAULT_LOCK = '_DEFAULT_'
-    CLOSE = 'CLOSE'
+    CLOSED = 'CLOSED'
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
         self._locks = {}
         self._url = url
         self._set_logger()
+        self._context = None
+        self._socket = None
 
-    def _lock(self, name, id_):
-        if name not in self._locks:
-            self._locks[name] = id_
-            return self.GO
+    def _start(self):
+        self._logger.info('Starting Lock Server')
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REP)
+        self._socket.bind(self._url)
+
+    def _close(self):
+        self._logger.info('Closing Lock Server')
+        self._socket.close()
+        self._context.term()
+
+    def _pre_respond_hook(self, response):
+        """ Hook that can be used to temper with the server before responding
+
+        :param response: Response to be send
+
+        :return: Boolean value if response should be send or not
+
+        """
+        return True
+
+    def _lock(self, name, client_id, request_id):
+        if name in self._locks:
+            other_client_id, other_request_id = self._locks[name]
+            if other_client_id == client_id and request_id == request_id:
+                response = (self.LOCK_ERROR + self.DELIMITER +
+                            'Re-request of lock `%s` by `%s` (request id `%s`)' % (name,
+                                                                                   client_id,
+                                                                                   request_id))
+                self._logger.warning(response)
+                return response
+            else:
+                return self.WAIT
         else:
-            return self.WAIT
+            self._locks[name] = (client_id, request_id)
+            return self.GO
 
-    def _unlock(self, name, id_):
+    def _unlock(self, name, client_id):
         if name not in self._locks:
             response = (self.RELEASE_ERROR + self.DELIMITER +
                         'Lock `%s` cannot be found in database' % name)
-            self._logger.error(response)
+            self._logger.warning(response)
             return response
         else:
-            locker_id = self._locks[name]
-            if locker_id != id_:
+            other_client_id, _ = self._locks[name]
+            if other_client_id != client_id:
                 response = (self.RELEASE_ERROR + self.DELIMITER +
                             'Lock `%s` was acquired by `%s` and not by '
-                            '`%s`' % (name, locker_id, id_))
+                            '`%s`' % (name, other_client_id, client_id))
                 self._logger.error(response)
                 return response
             else:
                 del self._locks[name]
-                return self.UNLOCKED
+                return self.RELEASED
 
     def run(self):
         """Runs Server"""
         try:
-            self._logger.info('Starting Lock Server')
-            context = zmq.Context()
-            socket_ = context.socket(zmq.REP)
-            socket_.bind(self._url)
-            while True:
+            self._start()
 
-                msg = socket_.recv_string()
-                name = None
-                id_ = None
-                split_msg = msg.split(self.DELIMITER)
-                if len(split_msg) == 3:
-                    msg, name, id_ = split_msg
-                elif len(split_msg) == 1:
-                    msg = split_msg[0]
-                else:
-                    response = (self.MSG_ERROR + self.DELIMITER +
-                                'Could not unpack your message `%s`' % msg)
-                    self._logger.error(response)
-                    socket_.send_string(response)
-                    continue
-                if msg == self.DONE:
-                    socket_.send_string(self.CLOSE + self.DELIMITER + 'Closing Lock Server')
-                    self._logger.info('Closing Lock Server')
-                    break
-                elif msg == self.LOCK:
-                    if name is None or id_ is None:
-                        response = (self.MSG_ERROR + self.DELIMITER +
-                                    'Please provide name and id for locking')
-                        self._logger.error(response)
-                    else:
-                        response = self._lock(name, id_)
-                    socket_.send_string(response)
+            running = True
+            while running:
+                msg = ''
+                name = ''
+                client_id = ''
+                request_id = ''
+
+                request = self._socket.recv_string()
+                self._logger.log(1, 'Recevied REQ `%s`', request)
+
+                split_msg = request.split(self.DELIMITER)
+
+                if len(split_msg) == 4:
+                    msg, name, client_id, request_id = split_msg
+
+                if msg == self.LOCK:
+                    response = self._lock(name, client_id, request_id)
+
                 elif msg == self.UNLOCK:
-                    if name is None or id_ is None:
-                        response = (self.MSG_ERROR + self.DELIMITER +
-                                    'Please provide name and id for unlocking')
-                        self._logger.error(response)
-                    else:
-                        response = self._unlock(name, id_)
-                    socket_.send_string(response)
+                    response = self._unlock(name, client_id)
+
                 elif msg == self.PING:
-                    socket_.send_string(self.PONG)
+                    response = self.PONG
+
+                elif msg == self.DONE:
+                    response = self.CLOSED
+                    running = False
+
                 else:
                     response = (self.MSG_ERROR + self.DELIMITER +
-                                'Message `%s` not understood' % msg)
+                                'Request `%s` not understood '
+                                '(or wrong number of delimiters)' % request)
                     self._logger.error(response)
-                    socket_.send_string(response)
+
+                respond = self._pre_respond_hook(response)
+                if respond:
+                    self._logger.log(1, 'Sending REP `%s` to `%s` (request id `%s`)',
+                                     response, client_id, request_id)
+                    self._socket.send_string(response)
+
+            # Close everything in the end
+            self._close()
         except Exception:
             self._logger.exception('Crashed Lock Server!')
             raise
 
 
-class LockerClient(object):
+class LockerClient(HasLogger):
     """ Implements a Lock by requesting from LockServer"""
 
     SLEEP = 0.01
+    RETRIES = 9
+    TIMEOUT = 1111
 
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         self.lock_name = lock_name
         self.url = url
         self._context = None
         self._socket = None
+        self._poll = None
+        self.id = None
+        self._set_logger()
 
     def __getstate__(self):
-        result_dict = self.__dict__.copy()
+        result_dict = super(LockerClient, self).__getstate__()
         # Do not pickle zmq data
         result_dict['_context'] = None
         result_dict['_socket'] = None
+        result_dict['_poll'] = None
         return result_dict
 
-    def start(self, test_connection=True):
-        """Starts connection to server.
-
-        Makes ping-pong test as well
-
-        """
-        self._context = zmq.Context()
+    def _start_socket(self):
+        self.id = self._get_id()
+        cls = self.__class__
+        self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect(self.url)
-        if test_connection:
-            self.test_ping()
+        self._poll.register(self._socket, zmq.POLLIN)
+
+    def _close_socket(self, confused=False):
+        self.id = None
+        self._set_logger()
+        if confused:
+            self._socket.setsockopt(zmq.LINGER, 0)
+        self._socket.close()
+        self._poll.unregister(self._socket)
+        self._socket = None
+
+    def start(self, test_connection=True):
+        """Starts connection to server if not existent;
+
+        NO-OP if connection is already established.
+
+        Makes ping-pong test as well.
+
+        """
+        if self._context is None:
+            self._logger.debug('Starting Client')
+            self._context = zmq.Context()
+            self._poll = zmq.Poller()
+            self._start_socket()
+            if test_connection:
+                self.test_ping()
 
     def send_done(self):
         """Notifies the Server to shutown"""
-        if self._socket is None:
-            self.start()
-        self._socket.send_string(LockerServer.DONE)
-        self._socket.recv_string()  # Final receiving of closing
+        self.start()
+        self._logger.debug('Sending shutdown signal')
+        self._req_rep(LockerServer.DONE)
 
     def test_ping(self):
         """Connection test"""
-        if self._socket is None:
-            self.start(test_connection=False)
-        self._socket.send_string(LockerServer.PING)
-        response = self._socket.recv_string()
+        self.start(test_connection=False)
+        response = self._req_rep(LockerServer.PING)
         if response != LockerServer.PONG:
             raise RuntimeError('Connection Error to LockServer')
 
     def finalize(self):
-        """Closes socket"""
-        if self._socket is not None:
-            self._socket.close()
-            self._socket = None
+        """Closes socket and terminates context"""
+        if self._context is not None:
+            self._logger.debug('Closing client')
+            if self._socket is not None:
+                self._close_socket(confused=False)
+            self._context.term()
             self._context = None
+            self._poll = None
 
     @staticmethod
-    def get_id():
+    def _get_id():
         return socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
+
+    @staticmethod
+    def _get_request_id():
+        return str(time.time()).replace(LockerServer.DELIMITER, '-')
+
+    def _compose_request(self, request):
+        request = (request + LockerServer.DELIMITER +
+                   self.lock_name + LockerServer.DELIMITER + self.id +
+                   LockerServer.DELIMITER + self._get_request_id())
+        return request
 
     def acquire(self):
         """Acquires lock and returns `True`
@@ -225,31 +293,58 @@ class LockerClient(object):
         Blocks until lock is available.
 
         """
-        if self._socket is None:
-            self.start()
-        id_ = self.get_id()
-        request = (LockerServer.LOCK + LockerServer.DELIMITER +
-                   self.lock_name + LockerServer.DELIMITER + id_)
+        self.start()
         while True:
-            self._socket.send_string(request)
-            response = self._socket.recv_string()
-            if response == LockerServer.GO:
+            str_response, retries = self._req_rep_retry(LockerServer.LOCK)
+            response = str_response.split(LockerServer.DELIMITER)
+            if response[0] == LockerServer.GO:
                 return True
-            elif response == LockerServer.WAIT:
+            elif response[0] == LockerServer.LOCK_ERROR and retries > 0:
+                # Message was sent but Server response was lost and we tried again
+                self._logger.error(str_response + '; Probably due to retry')
+                return True
+            elif response[0] == LockerServer.WAIT:
                 time.sleep(self.SLEEP)
             else:
                 raise RuntimeError('Response `%s` not understood' % response)
 
     def release(self):
         """Releases lock"""
-        id_ = self.get_id()
-        request = (LockerServer.UNLOCK + LockerServer.DELIMITER +
-                   self.lock_name + LockerServer.DELIMITER + id_)
-        self._socket.send_string(request)
-        response = self._socket.recv_string()
-        if response != LockerServer.UNLOCKED:
-            raise RuntimeError('Could not release lock `%s` (`%s`) '
-                               'because of `%s`!' % (self.lock_name, id_, response))
+        str_response, retries = self._req_rep_retry(LockerServer.UNLOCK)
+        response = str_response.split(LockerServer.DELIMITER)
+        if response[0] == LockerServer.RELEASED:
+            pass  # Everything is fine
+        elif response[0] == LockerServer.RELEASE_ERROR and retries > 0:
+            # Message was sent but Server response was lost and we tried again
+            self._logger.error(str_response + '; Probably due to retry')
+        else:
+            raise RuntimeError('Response `%s` not understood' % response)
+
+    def _req_rep(self, request):
+        """Returns responses"""
+        return self._req_rep_retry(request)[0]
+
+    def _req_rep_retry(self, request):
+        """Returns response and number of retries"""
+        request = self._compose_request(request)
+        retries_left = self.RETRIES
+        while retries_left:
+            self._logger.log(1, 'Sending REQ `%s`', request)
+            self._socket.send_string(request)
+            socks = dict(self._poll.poll(self.TIMEOUT))
+            if socks.get(self._socket) == zmq.POLLIN:
+                response = self._socket.recv_string()
+                self._logger.log(1, 'Received REP `%s`', response)
+                return response, self.RETRIES - retries_left
+            else:
+                self._logger.debug('No response from server (%d retries left)' %
+                                   retries_left)
+                self._close_socket(confused=True)
+                retries_left -= 1
+                if retries_left == 0:
+                    raise RuntimeError('Server seems to be offline!')
+                time.sleep(self.SLEEP)
+                self._start_socket()
 
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
@@ -257,7 +352,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         original storage service.
 
         All storage requests are send over a queue to the process running the
-        :class:`~pypet.storageservice.QueueStorageServiceWriter`.
+        :class:`~pypet.storageservice.QdebugueueStorageServiceWriter`.
 
         Does not support loading of data!
 
