@@ -2,6 +2,7 @@ __author__ = 'robert'
 
 import copy as cp
 import sys
+#sys.path.append('/media/data/PYTHON_WORKSPACE/pypet-project')
 
 try:
     import scoop
@@ -29,7 +30,7 @@ class SharedMock(object):
         self.signal = True
 
     def mock(self):
-        # scoop.IS_ORIGIN = True no longer needed
+        scoop.IS_ORIGIN = True
         scoop.worker = 'itsmemario'
         scoop.shared = self
 

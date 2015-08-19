@@ -3041,6 +3041,10 @@ class MultiprocContext(HasLogger):
         self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
                                             args=(dict(handler=lock_server,
                                             logging_manager=self._logging_manager),))
+        # self._lock_process = threading.Thread(name='LockServer', target=_wrap_handling,
+        #                                       args=(dict(handler=lock_server,
+        #                                       logging_manager=self._logging_manager),))
+
         self._lock_process.start()
         # self._lock.start()
         # Wrap around the storage service to allow the placement of locks around

@@ -87,7 +87,7 @@ class LockerServer(HasLogger):
         self._socket = None
 
     def _start(self):
-        self._logger.info('Starting Lock Server')
+        self._logger.info('Starting Lock Server at `%s`' % self._url)
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REP)
         self._socket.bind(self._url)
@@ -211,6 +211,7 @@ class LockerClient(HasLogger):
         self._socket = None
         self._poll = None
         self.id = None
+        self._pid = None
         self._set_logger()
 
     def __getstate__(self):
@@ -222,9 +223,6 @@ class LockerClient(HasLogger):
         return result_dict
 
     def _start_socket(self):
-        self.id = self._get_id()
-        cls = self.__class__
-        self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect(self.url)
         self._poll.register(self._socket, zmq.POLLIN)
@@ -238,6 +236,18 @@ class LockerClient(HasLogger):
         self._poll.unregister(self._socket)
         self._socket = None
 
+    def _detect_fork(self):
+        """Detects if wrapper was forked"""
+        if self._context is not None:
+            current_pid = os.getpid()
+            if current_pid == self._pid:
+                return False
+            else:
+                self._logger.debug('Fork detected: My pid `%s` != os pid `%s`' % (str(self._pid),
+                                                                                 str(current_pid)))
+                5/0
+                return True
+
     def start(self, test_connection=True):
         """Starts connection to server if not existent.
 
@@ -245,7 +255,13 @@ class LockerClient(HasLogger):
         Makes ping-pong test as well.
 
         """
+        if self._detect_fork():
+            self._context = None
         if self._context is None:
+            self.id = self._get_id()
+            self._pid = os.getpid()
+            cls = self.__class__
+            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
             self._logger.debug('Starting Client')
             self._context = zmq.Context()
             self._poll = zmq.Poller()
@@ -255,7 +271,7 @@ class LockerClient(HasLogger):
 
     def send_done(self):
         """Notifies the Server to shutdown"""
-        self.start()
+        self.start(test_connection=False)
         self._logger.debug('Sending shutdown signal')
         self._req_rep(LockerServer.DONE)
 
@@ -300,7 +316,7 @@ class LockerClient(HasLogger):
         Blocks until lock is available.
 
         """
-        self.start()
+        self.start(test_connection=False)
         while True:
             str_response, retries = self._req_rep_retry(LockerServer.LOCK)
             response = str_response.split(LockerServer.DELIMITER)
@@ -317,6 +333,7 @@ class LockerClient(HasLogger):
 
     def release(self):
         """Releases lock"""
+        self.start(test_connection=False)
         str_response, retries = self._req_rep_retry(LockerServer.UNLOCK)
         response = str_response.split(LockerServer.DELIMITER)
         if response[0] == LockerServer.RELEASED:

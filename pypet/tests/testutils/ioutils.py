@@ -87,6 +87,10 @@ def prepare_log_config():
         conf_file = os.path.join(init_path, 'test.ini')
         conf_parser = handle_config_file(conf_file)
         conf = conf_parser
+    elif conf == 'debug':
+        conf_file = os.path.join(init_path, 'debug.ini')
+        conf_parser = handle_config_file(conf_file)
+        conf = conf_parser
 
     testParams['log_config'] = conf
 

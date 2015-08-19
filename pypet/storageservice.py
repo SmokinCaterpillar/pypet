@@ -1507,6 +1507,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                    '/' + self._trajectory_name)
                 else:
                     raise ValueError('I don`t know which trajectory to load')
+                self._logger.debug('Opening HDF5 file `%s` in mode `a` with trajectory `%s`' %
+                                   (self._filename, self._trajectory_name))
 
             elif mode == 'r':
 
@@ -1521,7 +1523,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                            complevel=self._complevel, fletcher32=self._fletcher32)
                 self._hdf5file = self._hdf5store._handle
 
-                if not self._trajectory_index is None:
+                if self._trajectory_index is not None:
                     # If an index is provided pick the trajectory at the corresponding
                     # position in the trajectory node list
                     nodelist = ptcompat.list_nodes(self._hdf5file, where='/')
@@ -1535,7 +1537,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     self._trajectory_group = nodelist[self._trajectory_index]
                     self._trajectory_name = self._trajectory_group._v_name
 
-                elif not self._trajectory_name is None:
+                elif self._trajectory_name is not None:
                     # Otherwise pick the trajectory group by name
                     if not '/' + self._trajectory_name in self._hdf5file:
                         raise ValueError('File %s does not contain trajectory %s.'
@@ -1546,6 +1548,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 else:
                     raise ValueError('Please specify a name of a trajectory to load or its '
                                      'index, otherwise I cannot open one.')
+
+                self._logger.debug('Opening HDF5 file `%s` in mode `r` with trajectory `%s`' %
+                                   (self._filename, self._trajectory_name))
 
             else:
                 raise RuntimeError('You shall not pass!')
@@ -1597,6 +1602,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._trajectory_name = None
             self._trajectory_index = None
             self._overview_group_ = None
+            self._logger.debug('Closing HDF5 file')
             return True
         else:
             return False
@@ -3832,6 +3838,7 @@ class HDF5StorageService(StorageService, HasLogger):
     def _prm_store_from_dict(self, fullname, store_dict, hdf5_group, store_flags, kwargs):
         """Stores a `store_dict`"""
         for key, data_to_store in store_dict.items():
+            # self._logger.log(1, 'SUB-Storing %s [%s]', key, str(store_dict[key]))
             original_hdf5_group = None
 
             flag = store_flags[key]
@@ -3861,12 +3868,15 @@ class HDF5StorageService(StorageService, HasLogger):
                 continue
 
             if flag == HDF5StorageService.TABLE:
+                # self._logger.log(1, 'SUB-Storing %s TABLE', key)
                 self._prm_write_into_pytable(key, data_to_store, hdf5_group, fullname,
                                              **kwargs)
             elif flag == HDF5StorageService.DICT:
+                # self._logger.log(1, 'SUB-Storing %s DICT', key)
                 self._prm_write_dict_as_table(key, data_to_store, hdf5_group, fullname,
                                               **kwargs)
             elif flag == HDF5StorageService.ARRAY:
+                # self._logger.log(1, 'SUB-Storing %s ARRAY', key)
                 self._prm_write_into_array(key, data_to_store, hdf5_group, fullname,
                                            **kwargs)
             elif flag in (HDF5StorageService.CARRAY,
@@ -3878,6 +3888,7 @@ class HDF5StorageService(StorageService, HasLogger):
             elif flag in (HDF5StorageService.SERIES,
                           HDF5StorageService.FRAME,
                           HDF5StorageService.PANEL):
+                # self._logger.log(1, 'SUB-Storing %s PANDAS', key)
                 self._prm_write_pandas_data(key, data_to_store, hdf5_group, fullname,
                                             flag, **kwargs)
             elif flag == HDF5StorageService.SHARED_DATA:
@@ -3945,7 +3956,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 overwrite = True
 
         fullname = instance.v_full_name
-        self._logger.debug('Storing %s.' % fullname)
+        self._logger.debug('Storing `%s`.' % fullname)
 
         if _hdf5_group is None:
             # If no group is provided we might need to create one
@@ -4021,6 +4032,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             instance._stored = True
 
+            #self._logger.debug('Finished Storing `%s`.' % fullname)
             # Signal completed node loading
             self._node_processing_timer.signal_update()
 
