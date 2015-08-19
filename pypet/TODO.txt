@@ -22,4 +22,4 @@
 
 * Add gc.collect to queue and pipe feature *DONE*
 
-* Document new wrap mode
+* Document new NETLOCK wrap mode

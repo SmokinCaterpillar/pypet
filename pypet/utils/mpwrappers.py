@@ -64,24 +64,24 @@ class MultiprocWrapper(object):
 class LockerServer(HasLogger):
     """ Manages a database of locks """
 
-    PING = 'PING'
-    PONG = 'PONG'
-    DONE = 'DONE'
-    LOCK = 'LOCK'
-    RELEASE_ERROR = 'RELEASE_ERROR'
-    MSG_ERROR = 'MSG_ERROR'
-    UNLOCK = 'UNLOCK'
-    RELEASED = 'RELEASED'
-    LOCK_ERROR = 'LOCK_ERROR'
-    GO = 'GO'
-    WAIT = 'WAIT'
-    DELIMITER = ':::'
-    DEFAULT_LOCK = '_DEFAULT_'
-    CLOSED = 'CLOSED'
+    PING = 'PING'  # for connection testing
+    PONG = 'PONG'  # for connection testing
+    DONE = 'DONE'  # signals stopping of server
+    LOCK = 'LOCK'  # command for locking a lock
+    RELEASE_ERROR = 'RELEASE_ERROR'  # signals unsuccessful attempt to unlock
+    MSG_ERROR = 'MSG_ERROR' # signals error in decoding client request
+    UNLOCK = 'UNLOCK'  # command for unlocking a lock
+    RELEASED = 'RELEASED'  # signals successful unlocking
+    LOCK_ERROR = 'LOCK_ERROR'  # signals unsuccessful attempt to lock
+    GO = 'GO'  # signals successful locking and and allwos continuing of client
+    WAIT = 'WAIT'  # signals lock is already in use and client has to wait for release
+    DELIMITER = ':::'  # delimiter to split messages
+    DEFAULT_LOCK = '_DEFAULT_'  # default lock name
+    CLOSED = 'CLOSED'  # signals closing of server
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
-        self._locks = {}
-        self._url = url
+        self._locks = {}  # lock DB, format 'lock_name': ('client_id', 'request_id')
+        self._url = url  # server url
         self._set_logger()
         self._context = None
         self._socket = None
@@ -110,11 +110,10 @@ class LockerServer(HasLogger):
     def _lock(self, name, client_id, request_id):
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
-            if other_client_id == client_id and request_id == request_id:
+            if other_client_id == client_id:
                 response = (self.LOCK_ERROR + self.DELIMITER +
-                            'Re-request of lock `%s` by `%s` (request id `%s`)' % (name,
-                                                                                   client_id,
-                                                                                   request_id))
+                            'Re-request of lock `%s` (old request id `%s`) by `%s` '
+                            '(request id `%s`)' % (name, client_id, other_request_id, request_id))
                 self._logger.warning(response)
                 return response
             else:
@@ -123,23 +122,28 @@ class LockerServer(HasLogger):
             self._locks[name] = (client_id, request_id)
             return self.GO
 
-    def _unlock(self, name, client_id):
-        if name not in self._locks:
-            response = (self.RELEASE_ERROR + self.DELIMITER +
-                        'Lock `%s` cannot be found in database' % name)
-            self._logger.warning(response)
-            return response
-        else:
-            other_client_id, _ = self._locks[name]
+    def _unlock(self, name, client_id, request_id):
+        if name in self._locks:
+            other_client_id, other_request_id = self._locks[name]
             if other_client_id != client_id:
                 response = (self.RELEASE_ERROR + self.DELIMITER +
-                            'Lock `%s` was acquired by `%s` and not by '
-                            '`%s`' % (name, other_client_id, client_id))
+                            'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
+                            '`%s` (request id `%s`)' % (name,
+                                                        other_client_id,
+                                                        other_request_id,
+                                                        client_id,
+                                                        request_id))
                 self._logger.error(response)
                 return response
             else:
                 del self._locks[name]
                 return self.RELEASED
+        else:
+            response = (self.RELEASE_ERROR + self.DELIMITER +
+                        'Lock `%s` cannot be found in database (client id `%s`, '
+                        'request id `%s`)' % (name, client_id, request_id))
+            self._logger.warning(response)
+            return response
 
     def run(self):
         """Runs Server"""
@@ -165,7 +169,7 @@ class LockerServer(HasLogger):
                     response = self._lock(name, client_id, request_id)
 
                 elif msg == self.UNLOCK:
-                    response = self._unlock(name, client_id)
+                    response = self._unlock(name, client_id, request_id)
 
                 elif msg == self.PING:
                     response = self.PONG
@@ -235,10 +239,9 @@ class LockerClient(HasLogger):
         self._socket = None
 
     def start(self, test_connection=True):
-        """Starts connection to server if not existent;
+        """Starts connection to server if not existent.
 
         NO-OP if connection is already established.
-
         Makes ping-pong test as well.
 
         """
@@ -251,7 +254,7 @@ class LockerClient(HasLogger):
                 self.test_ping()
 
     def send_done(self):
-        """Notifies the Server to shutown"""
+        """Notifies the Server to shutdown"""
         self.start()
         self._logger.debug('Sending shutdown signal')
         self._req_rep(LockerServer.DONE)
@@ -264,7 +267,11 @@ class LockerClient(HasLogger):
             raise RuntimeError('Connection Error to LockServer')
 
     def finalize(self):
-        """Closes socket and terminates context"""
+        """Closes socket and terminates context
+
+        NO-OP if already closed.
+
+        """
         if self._context is not None:
             self._logger.debug('Closing client')
             if self._socket is not None:
@@ -321,7 +328,7 @@ class LockerClient(HasLogger):
             raise RuntimeError('Response `%s` not understood' % response)
 
     def _req_rep(self, request):
-        """Returns responses"""
+        """Returns response"""
         return self._req_rep_retry(request)[0]
 
     def _req_rep_retry(self, request):
