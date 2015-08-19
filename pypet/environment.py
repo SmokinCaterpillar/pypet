@@ -163,7 +163,14 @@ def _frozen_scoop_single_run(kwargs):
 def _scoop_single_run(kwargs):
     """Wrapper function for scoop, that does not configure logging"""
     try:
-        if not scoop.IS_ORIGIN:
+        try:
+            is_origin = scoop.IS_ORIGIN
+        except AttributeError:
+            # scoop is not properly started, i.e. with `python -m scoop...`
+            # in this case scoop uses default `map` function, i.e.
+            # the main process
+            is_origin = True
+        if not is_origin:
             # configure logging and niceness if not the main process:
             _configure_niceness(kwargs)
             _configure_logging(kwargs)

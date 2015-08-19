@@ -29,7 +29,7 @@ class SharedMock(object):
         self.signal = True
 
     def mock(self):
-        scoop.IS_ORIGIN = True
+        # scoop.IS_ORIGIN = True no longer needed
         scoop.worker = 'itsmemario'
         scoop.shared = self
 

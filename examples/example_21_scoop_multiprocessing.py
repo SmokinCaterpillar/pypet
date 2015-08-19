@@ -41,6 +41,7 @@ def main():
                       freeze_input=True, # We want to save overhead and freeze input
                       use_scoop=True, # Yes we want SCOOP!
                       wrap_mode=pypetconstants.WRAP_MODE_LOCAL,  # SCOOP only works with 'LOCAL'
+                      # or 'NETLOCK' wrapping
                       overwrite_file=True)
 
     # Get the trajectory from the environment
