@@ -292,8 +292,6 @@ class LockerClient(HasLogger):
         self._poll.register(self._socket, zmq.POLLIN)
 
     def _close_socket(self, confused=False):
-        self.id = None
-        self._set_logger()
         if confused:
             self._socket.setsockopt(zmq.LINGER, 0)
         self._socket.close()
@@ -309,7 +307,6 @@ class LockerClient(HasLogger):
         """
         if self._context is None:
             self.id = self._get_id()
-            self._pid = os.getpid()
             cls = self.__class__
             self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
             self._logger.debug('Starting Client')

@@ -44,12 +44,12 @@ class FaultyServer(LockerServer):
             respond = False
         elif fail_int == 1:
             self._logger.warn('Simulating heavy CPU load')
-            time.sleep(0.22)
+            time.sleep(0.11)
         return respond
 
 
 def run_server(server):
-    #logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=1)
     server.run()
 
 
@@ -60,6 +60,7 @@ def the_job(args):
     Capital letter signal parallel printing
 
     """
+    # logging.basicConfig(level=1)
     idx, lock, filename = args
     client_id = 'N/A'
     try:
