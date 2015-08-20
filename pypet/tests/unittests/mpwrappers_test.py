@@ -44,7 +44,7 @@ class FaultyServer(LockerServer):
             respond = False
         elif fail_int == 1:
             self._logger.warn('Simulating heavy CPU load')
-            time.sleep(0.11)
+            time.sleep(0.05)
         return respond
 
 
@@ -251,16 +251,20 @@ class TestNetLock(TrajectoryComparator):
 
     @unittest.skipIf(scoop is None, 'Can only be run with scoop')
     def test_concurrent_scoop(self):
-        url = get_random_port_url()
-        filename = make_temp_dir('locker_test/scoop.txt')
-        self.create_file(filename)
-        self.start_server(url)
-        lock = LockerClient(url)
-        iterator = [(irun, lock, filename) for irun in range(self.ITERATIONS)]
-        list(futures.map(the_job, iterator))
-        lock.send_done()
-        self.check_file(filename)
-        self.lock_process.join()
+        for irun in range(100):
+            self.ITERATIONS = 4
+            url = get_random_port_url()
+            filename = make_temp_dir('locker_test/scoop.txt')
+            self.create_file(filename)
+            self.start_server(url)
+            lock = LockerClient(url)
+            lock.start()
+            iterator = [(irun, lock, filename) for irun in range(self.ITERATIONS)]
+            list(futures.map(the_job, iterator))
+            lock.send_done()
+            self.check_file(filename)
+            self.lock_process.join()
+            errwrite(str(irun))
 
 
 if __name__ == '__main__':

@@ -265,7 +265,7 @@ class LockerClient(HasLogger):
     """ Implements a Lock by requesting from LockServer"""
 
     SLEEP = 0.01
-    RETRIES = 9
+    RETRIES = 19
     TIMEOUT = 1111
 
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
