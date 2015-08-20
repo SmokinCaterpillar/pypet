@@ -118,6 +118,20 @@ class MultiprocPoolSortNetlockTest(ResultSortTest):
         self.url = get_random_port_url()
 
 
+@unittest.skipIf(zmq is None, 'Can only be run with zmq')
+class MultiprocNoPoolSortNetlockTest(ResultSortTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
+
+    def set_mode(self):
+        super(MultiprocNoPoolSortNetlockTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.ncores = 3
+        self.use_pool=False
+        self.url = None
+
+
 class MultiprocPoolSortLockTest(ResultSortTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool',

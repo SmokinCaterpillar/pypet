@@ -72,7 +72,7 @@ from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
-    ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient
+    ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, ForkAwareLockerClient
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
@@ -2607,8 +2607,6 @@ class Environment(HasLogger):
                     target = _scoop_single_run
 
                 try:
-
-
                     scoop_results = futures.map(target, iterator)
 
                     # Signal start of progress calculation
@@ -3035,7 +3033,10 @@ class MultiprocContext(HasLogger):
             self._url = port_to_tcp(self._url)
             self._logger.info('Determined Server url `%s`' % self._url)
         if self._lock is None:
-            self._lock = LockerClient(self._url)
+            if hasattr(os, 'fork'):
+                self._lock = ForkAwareLockerClient(self._url)
+            else:
+                self._lock = LockerClient(self._url)
 
         lock_server = LockerServer(self._url)
         self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
@@ -3046,7 +3047,7 @@ class MultiprocContext(HasLogger):
         #                                       logging_manager=self._logging_manager),))
 
         self._lock_process.start()
-        # self._lock.start()
+        self._lock.start()
         # Wrap around the storage service to allow the placement of locks around
         # the storage procedure.
         lock_wrapper = LockWrapper(self._storage_service, self._lock)

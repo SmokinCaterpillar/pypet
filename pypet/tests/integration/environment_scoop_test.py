@@ -10,6 +10,8 @@ try:
 except ImportError:
     scoop = None
 
+import pypet.compat as compat
+
 
 def identity(x):
     return x
@@ -184,6 +186,7 @@ class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
         self.use_scoop=True
 
 
+@unittest.skipIf(compat.python_major == 3, 'Does not work under Python 3')
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
 
@@ -200,6 +203,7 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.url = None
 
 
+@unittest.skipIf(compat.python_major == 3, 'Does not work under Python 3')
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocSCOOPNetlockTest(EnvironmentTest):
 

@@ -197,6 +197,70 @@ class LockerServer(HasLogger):
             raise
 
 
+# class TimeOutLockerServer(LockerServer):
+#
+#     def __init__(self, url, timeout):
+#         super(TimeOutLockerServer, self).__init__(url)
+#         self._timeout = timeout
+#         self._timeout_locks = {}
+#
+#     def _lock(self, name, client_id, request_id):
+#         if name in self._locks:
+#             other_client_id, other_request_id, lock_time = self._locks[name]
+#             if other_client_id == client_id:
+#                 response = (self.LOCK_ERROR + self.DELIMITER +
+#                             'Re-request of lock `%s` (old request id `%s`) by `%s` '
+#                             '(request id `%s`)' % (name, client_id, other_request_id, request_id))
+#                 self._logger.warning(response)
+#                 return response
+#             else:
+#                 current_time = time.time()
+#                 if current_time - lock_time < self._timeout:
+#                     return self.WAIT
+#                 else:
+#                     response = (self.GO + self.DELIMITER + 'Lock `%s` by `%s` (old request id `%s) '
+#                                                           'timed out' % (name,
+#                                                                          other_client_id,
+#                                                                          other_request_id))
+#                     self._logger.info(response)
+#                     self._locks[name] = (client_id, request_id, time.time())
+#                     self._timeout_locks[(name, other_client_id)] = (request_id, lock_time)
+#                     return response
+#         else:
+#             self._locks[name] = (client_id, request_id, time.time())
+#             return self.GO
+#
+#     def _unlock(self, name, client_id, request_id):
+#         if name in self._locks:
+#             other_client_id, other_request_id, lock_time = self._locks[name]
+#             if other_client_id != client_id:
+#                 response = (self.RELEASE_ERROR + self.DELIMITER +
+#                             'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
+#                             '`%s` (request id `%s`)' % (name,
+#                                                         other_client_id,
+#                                                         other_request_id,
+#                                                         client_id,
+#                                                         request_id))
+#                 self._logger.error(response)
+#                 return response
+#             else:
+#                 del self._locks[name]
+#                 return self.RELEASED
+#         elif (name, client_id) in self._timeout_locks:
+#             other_request_id, lock_time = self._timeout_locks[(name, client_id)]
+#             timeout = time.time() - lock_time - self._timeout
+#             response = (self.RELEASE_ERROR + self.DELIMITER +
+#                         'Lock `%s` timed out %f seconds ago (client id `%s`, '
+#                         'old request id `%s`)' % (name, client_id, timeout, other_request_id))
+#             return response
+#         else:
+#             response = (self.RELEASE_ERROR + self.DELIMITER +
+#                         'Lock `%s` cannot be found in database (client id `%s`, '
+#                         'request id `%s`)' % (name, client_id, request_id))
+#             self._logger.warning(response)
+#             return response
+
+
 class LockerClient(HasLogger):
     """ Implements a Lock by requesting from LockServer"""
 
@@ -211,7 +275,6 @@ class LockerClient(HasLogger):
         self._socket = None
         self._poll = None
         self.id = None
-        self._pid = None
         self._set_logger()
 
     def __getstate__(self):
@@ -220,6 +283,7 @@ class LockerClient(HasLogger):
         result_dict['_context'] = None
         result_dict['_socket'] = None
         result_dict['_poll'] = None
+        result_dict['id'] = None
         return result_dict
 
     def _start_socket(self):
@@ -236,18 +300,6 @@ class LockerClient(HasLogger):
         self._poll.unregister(self._socket)
         self._socket = None
 
-    def _detect_fork(self):
-        """Detects if wrapper was forked"""
-        if self._context is not None:
-            current_pid = os.getpid()
-            if current_pid == self._pid:
-                return False
-            else:
-                self._logger.debug('Fork detected: My pid `%s` != os pid `%s`' % (str(self._pid),
-                                                                                 str(current_pid)))
-                5/0
-                return True
-
     def start(self, test_connection=True):
         """Starts connection to server if not existent.
 
@@ -255,8 +307,6 @@ class LockerClient(HasLogger):
         Makes ping-pong test as well.
 
         """
-        if self._detect_fork():
-            self._context = None
         if self._context is None:
             self.id = self._get_id()
             self._pid = os.getpid()
@@ -333,7 +383,7 @@ class LockerClient(HasLogger):
 
     def release(self):
         """Releases lock"""
-        self.start(test_connection=False)
+        # self.start(test_connection=False)
         str_response, retries = self._req_rep_retry(LockerServer.UNLOCK)
         response = str_response.split(LockerServer.DELIMITER)
         if response[0] == LockerServer.RELEASED:
@@ -369,6 +419,27 @@ class LockerClient(HasLogger):
                     raise RuntimeError('Server seems to be offline!')
                 time.sleep(self.SLEEP)
                 self._start_socket()
+
+
+class ForkAwareLockerClient(LockerClient):
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
+        super(ForkAwareLockerClient, self).__init__(url, lock_name)
+        self._pid = None
+
+    def _detect_fork(self):
+        """Detects if lock client was forked"""
+        if self._pid is None:
+            self._pid = os.getpid()
+        if self._context is not None:
+            current_pid = os.getpid()
+            if current_pid != self._pid:
+                self._logger.debug('Fork detected: My pid `%s` != os pid `%s`. '
+                                   'Restarting connection.' % (str(self._pid), str(current_pid)))
+                self._context = None
+
+    def start(self, test_connection=True):
+        self._detect_fork()
+        super(ForkAwareLockerClient, self).start(test_connection)
 
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):

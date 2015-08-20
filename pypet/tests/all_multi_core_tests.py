@@ -58,6 +58,7 @@ tests_include=set(('MultiprocFrozenPoolQueueTest',
                    'MultiprocLinkLocalTest',
                    'TestMPImmediatePostProcPipe',
                    'MultiprocSCOOPNetlockTest',
+                   'MultiprocNoPoolSortNetlockTest',
                    'MultiprocFrozenSCOOPLocalTest'))
 big_suite_4 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 

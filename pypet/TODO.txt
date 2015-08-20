@@ -23,3 +23,9 @@
 * Add gc.collect to queue and pipe feature *DONE*
 
 * Document new NETLOCK wrap mode
+
+* Document to use it only in Python 2.7 with scoop
+
+* Create NETQUEUE mode (Mehmet)
+
+* Document TimeOutLockerServer
