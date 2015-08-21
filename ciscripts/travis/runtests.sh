@@ -43,7 +43,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
+                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/* git_check.py
             else
                 python git_check.py -f # Also test failing of git
             fi
@@ -52,7 +52,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
+                coverage run --parallel-mode --source=../../../pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/* git_check.py
                 mv -v .coverage* ../../../
             else
                 python git_check.py -n # Test that git is not failing

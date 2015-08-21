@@ -5,11 +5,11 @@ from pypet.tests.testutils.ioutils import run_suite, TEST_IMPORT_ERROR, discover
     parse_args
 
 unit_pred = lambda class_name, test_name, tags: ('unittest' in tags and
-                                                 'multiproc' not in tags)
+                                                 'multiproc' not in tags and 'shared' in tags)
 unit_suite = discover_tests(unit_pred)
 
 exclude_set = set(('hdf5_settings', 'multiproc', 'merge'))
-integration_pred = lambda class_name, test_name, tags: ('integration' in tags and
+integration_pred = lambda class_name, test_name, tags: ('integration' in tags and 'shared' in tags and
                                                          not bool(exclude_set & tags))
 integration_suite = discover_tests(integration_pred)
 
@@ -17,7 +17,7 @@ include_set = set(('hdf5_settings', 'links', 'merge'))
 integration_pred_2 = lambda class_name, test_name, tags: ('integration' in tags and
                                                           bool(include_set & tags) and
                                                           'multiproc' not in tags and
-                                                          'links' not in tags)
+                                                          'links' not in tags and 'shared' in tags)
 integration_suite_2 = discover_tests(integration_pred_2)
 
 suite_dict = {'1': unit_suite, '2': integration_suite, '3': integration_suite_2}
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     if suite is None:
         pred = lambda class_name, test_name, tags: ('multiproc' not in tags and
-                                                        class_name != TEST_IMPORT_ERROR)
+                                                        class_name != TEST_IMPORT_ERROR and 'shared' in tags)
         suite = discover_tests(pred)
 
     run_suite(suite=suite, **opt_dict)
