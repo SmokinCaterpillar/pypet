@@ -7,7 +7,6 @@ import logging
 import os
 import sys
 import threading
-from random import randint
 
 try:
     import scoop
@@ -22,35 +21,64 @@ except ImportError:
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
     get_root_logger, parse_args, unittest, get_random_port_url, errwrite
 from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.utils.mpwrappers import LockerClient, LockerServer
+from pypet.utils.mpwrappers import LockerClient, LockerServer, TimeOutLockerServer
 from pypet.pypetlogging import DisableAllLogging
 
 
 class FaultyServer(LockerServer):
     """Simulates a server that forgets to send from time to time"""
+    def __init__(self, url):
+        super(FaultyServer, self).__init__(url)
+        self._srep = 0
+
     def _pre_respond_hook(self, response):
-        fail_int = randint(0, 6)
+        fail_every = 37
+        load_every = 5
         respond = True
-        if fail_int == 0:
+        if self._srep % fail_every == 0:
             self._logger.warn('Simulating message loss; '
                               'Loosing: `%s`; '
                               'LockDB: %s' % (response, str(self._locks)))
             self._socket.close(0)
             self._context.term()
-            time.sleep(0.01)
+            time.sleep(2.5)
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REP)
             self._socket.bind(self._url)
             respond = False
-        elif fail_int == 1:
+        elif self._srep % load_every == 0:
             self._logger.warn('Simulating heavy CPU load')
-            time.sleep(0.05)
+            time.sleep(0.11)
+
+        self._srep += 1
+
         return respond
 
 
 def run_server(server):
     # logging.basicConfig(level=1)
     server.run()
+
+
+NTIMEOUTS = 10
+
+
+def time_out_job(args):
+
+    timed_out = False
+    idx, lock = args
+    lock.acquire()
+    if idx < NTIMEOUTS:
+        time.sleep(0.5)
+    try:
+        lock.release()
+    except RuntimeError:
+        if idx < NTIMEOUTS:
+            timed_out = True
+        else:
+            raise
+    return timed_out
+
 
 
 def the_job(args):
@@ -167,6 +195,11 @@ class TestNetLock(TrajectoryComparator):
         self.lock_process = mp.Process(target=run_server, args=(ls,))
         self.lock_process.start()
 
+    def start_timeout_server(self, url, timeout):
+        ls = TimeOutLockerServer(url, timeout)
+        self.lock_process = mp.Process(target=run_server, args=(ls,))
+        self.lock_process.start()
+
     def create_file(self, filename):
         path, file = os.path.split(filename)
         if not os.path.isdir(path):
@@ -251,8 +284,10 @@ class TestNetLock(TrajectoryComparator):
 
     @unittest.skipIf(scoop is None, 'Can only be run with scoop')
     def test_concurrent_scoop(self):
-        for irun in range(100):
-            self.ITERATIONS = 4
+        # test several restarts
+        old_iter = self.ITERATIONS
+        for jrun in range(3):
+            self.ITERATIONS = 33
             url = get_random_port_url()
             filename = make_temp_dir('locker_test/scoop.txt')
             self.create_file(filename)
@@ -264,8 +299,23 @@ class TestNetLock(TrajectoryComparator):
             lock.send_done()
             self.check_file(filename)
             self.lock_process.join()
-            errwrite(str(irun))
+            # errwrite(str(irun))
+        self.ITERATIONS = old_iter
 
+    def test_timout_pool(self):
+        pool = mp.Pool(5)
+        url = get_random_port_url()
+        self.start_timeout_server(url, 0.25)
+        lock = LockerClient(url)
+        lock.start()
+        iterator = [(irun, lock) for irun in range(self.ITERATIONS)]
+        potential_timeouts = list(pool.imap(time_out_job, iterator))
+        pool.close()
+        pool.join()
+        all_time_outs = [x for x in potential_timeouts if x]
+        self.assertEqual(len(all_time_outs), NTIMEOUTS)
+        lock.send_done()
+        self.lock_process.join()
 
 if __name__ == '__main__':
     opt_args = parse_args()

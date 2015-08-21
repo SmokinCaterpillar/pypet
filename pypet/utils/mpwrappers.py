@@ -197,76 +197,77 @@ class LockerServer(HasLogger):
             raise
 
 
-# class TimeOutLockerServer(LockerServer):
-#
-#     def __init__(self, url, timeout):
-#         super(TimeOutLockerServer, self).__init__(url)
-#         self._timeout = timeout
-#         self._timeout_locks = {}
-#
-#     def _lock(self, name, client_id, request_id):
-#         if name in self._locks:
-#             other_client_id, other_request_id, lock_time = self._locks[name]
-#             if other_client_id == client_id:
-#                 response = (self.LOCK_ERROR + self.DELIMITER +
-#                             'Re-request of lock `%s` (old request id `%s`) by `%s` '
-#                             '(request id `%s`)' % (name, client_id, other_request_id, request_id))
-#                 self._logger.warning(response)
-#                 return response
-#             else:
-#                 current_time = time.time()
-#                 if current_time - lock_time < self._timeout:
-#                     return self.WAIT
-#                 else:
-#                     response = (self.GO + self.DELIMITER + 'Lock `%s` by `%s` (old request id `%s) '
-#                                                           'timed out' % (name,
-#                                                                          other_client_id,
-#                                                                          other_request_id))
-#                     self._logger.info(response)
-#                     self._locks[name] = (client_id, request_id, time.time())
-#                     self._timeout_locks[(name, other_client_id)] = (request_id, lock_time)
-#                     return response
-#         else:
-#             self._locks[name] = (client_id, request_id, time.time())
-#             return self.GO
-#
-#     def _unlock(self, name, client_id, request_id):
-#         if name in self._locks:
-#             other_client_id, other_request_id, lock_time = self._locks[name]
-#             if other_client_id != client_id:
-#                 response = (self.RELEASE_ERROR + self.DELIMITER +
-#                             'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
-#                             '`%s` (request id `%s`)' % (name,
-#                                                         other_client_id,
-#                                                         other_request_id,
-#                                                         client_id,
-#                                                         request_id))
-#                 self._logger.error(response)
-#                 return response
-#             else:
-#                 del self._locks[name]
-#                 return self.RELEASED
-#         elif (name, client_id) in self._timeout_locks:
-#             other_request_id, lock_time = self._timeout_locks[(name, client_id)]
-#             timeout = time.time() - lock_time - self._timeout
-#             response = (self.RELEASE_ERROR + self.DELIMITER +
-#                         'Lock `%s` timed out %f seconds ago (client id `%s`, '
-#                         'old request id `%s`)' % (name, client_id, timeout, other_request_id))
-#             return response
-#         else:
-#             response = (self.RELEASE_ERROR + self.DELIMITER +
-#                         'Lock `%s` cannot be found in database (client id `%s`, '
-#                         'request id `%s`)' % (name, client_id, request_id))
-#             self._logger.warning(response)
-#             return response
+class TimeOutLockerServer(LockerServer):
+    """ Lock Server where each lock is valied only for a fixed period of time. """
+
+    def __init__(self, url, timeout):
+        super(TimeOutLockerServer, self).__init__(url)
+        self._timeout = timeout
+        self._timeout_locks = {}
+
+    def _lock(self, name, client_id, request_id):
+        if name in self._locks:
+            other_client_id, other_request_id, lock_time = self._locks[name]
+            if other_client_id == client_id:
+                response = (self.LOCK_ERROR + self.DELIMITER +
+                            'Re-request of lock `%s` (old request id `%s`) by `%s` '
+                            '(request id `%s`)' % (name, client_id, other_request_id, request_id))
+                self._logger.warning(response)
+                return response
+            else:
+                current_time = time.time()
+                if current_time - lock_time < self._timeout:
+                    return self.WAIT
+                else:
+                    response = (self.GO + self.DELIMITER + 'Lock `%s` by `%s` (old request id `%s) '
+                                                          'timed out' % (name,
+                                                                         other_client_id,
+                                                                         other_request_id))
+                    self._logger.info(response)
+                    self._locks[name] = (client_id, request_id, time.time())
+                    self._timeout_locks[(name, other_client_id)] = (request_id, lock_time)
+                    return response
+        else:
+            self._locks[name] = (client_id, request_id, time.time())
+            return self.GO
+
+    def _unlock(self, name, client_id, request_id):
+        if name in self._locks:
+            other_client_id, other_request_id, lock_time = self._locks[name]
+            if other_client_id != client_id:
+                response = (self.RELEASE_ERROR + self.DELIMITER +
+                            'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
+                            '`%s` (request id `%s`)' % (name,
+                                                        other_client_id,
+                                                        other_request_id,
+                                                        client_id,
+                                                        request_id))
+                self._logger.error(response)
+                return response
+            else:
+                del self._locks[name]
+                return self.RELEASED
+        elif (name, client_id) in self._timeout_locks:
+            other_request_id, lock_time = self._timeout_locks[(name, client_id)]
+            timeout = time.time() - lock_time - self._timeout
+            response = (self.RELEASE_ERROR + self.DELIMITER +
+                        'Lock `%s` timed out %f seconds ago (client id `%s`, '
+                        'old request id `%s`)' % (name, timeout, client_id, other_request_id))
+            return response
+        else:
+            response = (self.RELEASE_ERROR + self.DELIMITER +
+                        'Lock `%s` cannot be found in database (client id `%s`, '
+                        'request id `%s`)' % (name, client_id, request_id))
+            self._logger.warning(response)
+            return response
 
 
 class LockerClient(HasLogger):
     """ Implements a Lock by requesting from LockServer"""
 
     SLEEP = 0.01
-    RETRIES = 19
-    TIMEOUT = 1111
+    RETRIES = 9
+    TIMEOUT = 2222
 
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         self.lock_name = lock_name
@@ -342,6 +343,11 @@ class LockerClient(HasLogger):
             self._context.term()
             self._context = None
             self._poll = None
+
+    def __del__(self):
+        # For Python 3.4 to avoid dead-lock due to wrong object clearin
+        # i.e. deleting context before socket
+        self.finalize()
 
     @staticmethod
     def _get_id():
@@ -422,6 +428,11 @@ class ForkAwareLockerClient(LockerClient):
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         super(ForkAwareLockerClient, self).__init__(url, lock_name)
         self._pid = None
+
+    def __getstate__(self):
+        result_dict = super(ForkAwareLockerClient, self).__getstate__()
+        result_dict['_pid'] = None
+        return result_dict
 
     def _detect_fork(self):
         """Detects if lock client was forked"""

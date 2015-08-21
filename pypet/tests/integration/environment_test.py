@@ -140,6 +140,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.wildcard_functions = None
         self.niceness = None
         self.url = None
+        self.timeout = None
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -268,7 +269,8 @@ class EnvironmentTest(TrajectoryComparator):
                           encoding=self.encoding,
                           niceness=self.niceness,
                           use_scoop=self.use_scoop,
-                          url=self.url)
+                          url=self.url,
+                          timeout=self.timeout)
 
         traj = env.v_trajectory
 

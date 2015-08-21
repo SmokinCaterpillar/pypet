@@ -129,6 +129,7 @@ class MultiprocSCOOPLocalTest(EnvironmentTest):
     # def test_run(self):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
 
+
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocSCOOPSortLocalTest(ResultSortTest):
 
@@ -142,8 +143,6 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
-
-
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -186,7 +185,6 @@ class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
         self.use_scoop=True
 
 
-@unittest.skipIf(compat.python_major == 3, 'Does not work under Python 3')
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
 
@@ -203,7 +201,6 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.url = None
 
 
-@unittest.skipIf(compat.python_major == 3, 'Does not work under Python 3')
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocSCOOPNetlockTest(EnvironmentTest):
 
@@ -220,6 +217,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.use_pool=False
         self.use_scoop=True
         self.url = None
+        self.timeout = 9999.99
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
     def test_niceness(self):

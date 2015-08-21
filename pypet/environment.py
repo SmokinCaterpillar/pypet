@@ -72,7 +72,8 @@ from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
-    ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, ForkAwareLockerClient
+    ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, \
+    ForkAwareLockerClient, TimeOutLockerServer
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change
@@ -479,6 +480,11 @@ class Environment(HasLogger):
         network address of the current host in the form of ``'tcp://127.0.0.1:7777'``.
         Leave `None` to determine it automatically. You can also pass an integer,
         which will be the desired port on the automatically determined host address.
+
+    :param timeout:
+
+        Timeout parameter in seconds passed on to scoop and ``'NETLOCK'`` wrapping.
+        Leave `None` for no timeout.
 
     :param cpu_cap:
 
@@ -943,6 +949,7 @@ class Environment(HasLogger):
                  freeze_input=False,
                  queue_maxsize=-1,
                  url=None,
+                 timeout=None,
                  cpu_cap=100.0,
                  memory_cap=100.0,
                  swap_cap=100.0,
@@ -1229,6 +1236,7 @@ class Environment(HasLogger):
                 url = port_to_tcp(url)
                 self._logger.info('Determined lock-server URL automatically, it is `%s`.' % url)
         self._url = url
+        self._timeout = timeout
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
 
         # Notify that in case of lazy debuggin we won't record anythin
@@ -1339,6 +1347,15 @@ class Environment(HasLogger):
                     config_name = 'environment.%s.url' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._url,
                                         comment='URL of lock distribution server.').f_lock()
+
+                if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK or self._use_scoop:
+                    config_name = 'environment.%s.timeout' % self.v_name
+                    timeout = self._timeout
+                    if timeout is None:
+                        timeout = -1.0
+                    self._traj.f_add_config(Parameter, config_name, timeout,
+                                        comment='Timout for scoop and NETLOCK, '
+                                                '-1.0 means no timeout.').f_lock()
 
                 if (self._gc_interval and
                         (self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL or
@@ -2512,6 +2529,7 @@ class Environment(HasLogger):
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
                                url=self._url,
+                               timeout=self._timeout,
                                gc_interval=self._gc_interval,
                                log_config=self._logging_manager.log_config,
                                log_stdout=self._logging_manager.log_stdout)
@@ -2607,7 +2625,13 @@ class Environment(HasLogger):
                     target = _scoop_single_run
 
                 try:
-                    scoop_results = futures.map(target, iterator)
+                    if scoop.IS_RUNNING:
+                        scoop_results = futures.map(target, iterator, timeout=self._timeout)
+                    else:
+                        self._logger.error('SCOOP is NOT running, I will use Python`s map '
+                                             'function. To activate scoop, start your script via '
+                                             '`python -m scoop your_script.py`.')
+                        scoop_results = map(target, iterator)
 
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
@@ -2868,6 +2892,10 @@ class MultiprocContext(HasLogger):
         URL and port of lock server (aka this machine), like ``'tcp://127.0.0.1:7777'``.
         Leave `None` for automatic determining the network name and usage of a random port.
 
+    :param timeout:
+
+        Timeout for a NETLOCK wrapping in seconds.
+
     :param gc_interval:
 
         Interval (in runs or storage operations) with which ``gc.collect()``
@@ -2903,6 +2931,7 @@ class MultiprocContext(HasLogger):
                  queue=None,
                  queue_maxsize=0,
                  url=None,
+                 timeout=None,
                  gc_interval=None,
                  log_config=None,
                  log_stdout=False):
@@ -2925,6 +2954,7 @@ class MultiprocContext(HasLogger):
         self._lock = lock
         self._lock_process = None
         self._url = url
+        self._timeout = timeout
         self._use_manager = use_manager
         self._logging_manager = None
         self._gc_interval = gc_interval
@@ -3038,7 +3068,12 @@ class MultiprocContext(HasLogger):
             else:
                 self._lock = LockerClient(self._url)
 
-        lock_server = LockerServer(self._url)
+        if self._timeout is None:
+            lock_server = LockerServer(self._url)
+        else:
+            lock_server = TimeOutLockerServer(self._url, self._timeout)
+            self._logger.info('Using timeout aware lock server.')
+
         self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
                                             args=(dict(handler=lock_server,
                                             logging_manager=self._logging_manager),))
