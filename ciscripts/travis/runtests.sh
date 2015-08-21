@@ -66,7 +66,7 @@ if [[ $GIT_TEST == ON ]]
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --source=pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py ./pypet/tests/coverage_run.py
+        coverage run --parallel-mode --source=pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/* ./pypet/tests/coverage_run.py
         coverage combine
         coveralls --verbose
         cd ciscripts/travis
