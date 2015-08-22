@@ -13,7 +13,8 @@ class VersionMismatchError(TypeError):
         the trajectory was handled."""
     pass
 
-class PresettingError(Exception):
+
+class PresettingError(RuntimeError):
     """Exception raised if parameter presetting failed.
 
     Probable cause might be a typo in the parameter name.
