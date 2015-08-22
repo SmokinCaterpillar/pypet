@@ -151,6 +151,7 @@ def main():
     env = Environment(trajectory='Example_05_Euler_Integration',
                       filename=filename,
                       file_title='Example_05_Euler_Integration',
+                      overwrite_file=True,
                       comment='Go for Euler!')
 
 

@@ -30,6 +30,7 @@ def main():
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_12_Sharing_Data',
+                      overwrite_file=True,
                       comment='The first example!',
                       continuable=False, # We have shared data in terms of a multiprocessing list,
                       # so we CANNOT use the continue feature.

@@ -24,6 +24,7 @@ filename = os.path.join('hdf5','example_14.hdf5')
 env = Environment(trajectory='Multiplication',
                   filename=filename,
                   file_title='Example_14_Links',
+                  overwrite_file=True,
                   comment='How to use links')
 
 # The environment has created a trajectory container for us

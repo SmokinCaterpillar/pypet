@@ -19,6 +19,7 @@ def multiply(traj):
 filename = os.path.join('hdf5', 'example_10.hdf5')
 env = Environment(trajectory='Example10', filename=filename,
                   file_title='Example10',
+                  overwrite_file=True,
                   comment='Another example!')
 
 # Get the trajectory from the environment

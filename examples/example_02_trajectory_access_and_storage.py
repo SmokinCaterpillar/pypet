@@ -8,6 +8,7 @@ from pypet import Trajectory, NotUniqueNodeError
 # We first generate a new Trajectory
 filename = os.path.join('hdf5', 'example_02.hdf5')
 traj = Trajectory('Example', filename=filename,
+                  overwrite_file=True,
                   comment='Access and Storage!')
 
 
@@ -40,8 +41,8 @@ traj.f_add_parameter_group('spaceballs.characters')
 # Now our shortcuts no longer work, since we have two character groups!
 try:
     traj.characters
-except NotUniqueNodeError as e:
-    print('Damn it, there are two characters groups in the trajectory: %s' % e._msg)
+except NotUniqueNodeError as exc:
+    print('Damn it, there are two characters groups in the trajectory: %s' % repr(exc))
 
 # But if we are more specific we have again a unique finding
 characters = traj.starwars.characters

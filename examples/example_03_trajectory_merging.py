@@ -15,14 +15,18 @@ def multiply(traj):
 
 # Create 2 environments that handle running
 filename = os.path.join('hdf5', 'example_03.hdf5')
-env1 = Environment(trajectory='Traj1',filename=filename,
-                  file_title='Example_03',
-                  comment='I will be increased!')
+env1 = Environment(trajectory='Traj1',
+                   filename=filename,
+                   file_title='Example_03',
+                   add_time=True,  # Add the time of trajectory creation to its name
+                   comment='I will be increased!')
 
-env2 = Environment(trajectory='Traj2',filename=filename,
-                  file_title='Example_03', log_config=None, # One environment keeping log files
-                  # is enough
-                  comment = 'I am going to be merged into some other trajectory!')
+env2 = Environment(trajectory='Traj2',
+                   filename=filename,
+                   file_title='Example_03', log_config=None, # One environment keeping log files
+                   # is enough
+                   add_time=True,
+                   comment = 'I am going to be merged into some other trajectory!')
 
 # Get the trajectories from the environment
 traj1 = env1.v_trajectory
@@ -54,8 +58,11 @@ env2.f_run(multiply)
 # We want to move the hdf5 nodes from one trajectory to the other.
 # Thus we set move_nodes=True.
 # Finally,we want to delete the other trajectory afterwards since we already have a backup.
-traj1.f_merge(traj2, remove_duplicates=True, backup_filename=True,
-              move_data=True, delete_other_trajectory=True)
+traj1.f_merge(traj2,
+              remove_duplicates=True,
+              backup_filename=True,
+              move_data=True,
+              delete_other_trajectory=True)
 
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.
 # But before that we need to load the data we computed during the runs from disk.

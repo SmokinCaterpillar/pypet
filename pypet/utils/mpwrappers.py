@@ -284,60 +284,27 @@ class TimeOutLockerServer(LockerServer):
             return response
 
 
-class LockerClient(HasLogger):
-    """ Implements a Lock by requesting lock information from LockServer"""
+class ReliableClient(HasLogger):
+    """Implements a reliable client that reconnects on server failure"""
 
-    SLEEP = 0.01
-    RETRIES = 9
-    TIMEOUT = 2222
+    SLEEP = 0.01   # Sleep time before reconnect in seconds
+    RETRIES = 9   # Number of reconnect retries
+    TIMEOUT = 2222  # Waiting time to reconnect in seconds
 
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        self.lock_name = lock_name
+    def __init__(self, url):
         self.url = url
         self._context = None
         self._socket = None
         self._poll = None
-        self.id = None
         self._set_logger()
 
     def __getstate__(self):
-        result_dict = super(LockerClient, self).__getstate__()
+        result_dict = super(ReliableClient, self).__getstate__()
         # Do not pickle zmq data
         result_dict['_context'] = None
         result_dict['_socket'] = None
         result_dict['_poll'] = None
-        result_dict['id'] = None
         return result_dict
-
-    def _start_socket(self):
-        self._socket = self._context.socket(zmq.REQ)
-        self._socket.connect(self.url)
-        self._poll.register(self._socket, zmq.POLLIN)
-
-    def _close_socket(self, confused=False):
-        if confused:
-            self._socket.setsockopt(zmq.LINGER, 0)
-        self._socket.close()
-        self._poll.unregister(self._socket)
-        self._socket = None
-
-    def start(self, test_connection=True):
-        """Starts connection to server if not existent.
-
-        NO-OP if connection is already established.
-        Makes ping-pong test as well if desired.
-
-        """
-        if self._context is None:
-            self.id = self._get_id()
-            cls = self.__class__
-            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
-            self._logger.debug('Starting Client')
-            self._context = zmq.Context()
-            self._poll = zmq.Poller()
-            self._start_socket()
-            if test_connection:
-                self.test_ping()
 
     def send_done(self):
         """Notifies the Server to shutdown"""
@@ -366,10 +333,88 @@ class LockerClient(HasLogger):
             self._context = None
             self._poll = None
 
+    def start(self, test_connection=True):
+        """Starts connection to server if not existent.
+
+        NO-OP if connection is already established.
+        Makes ping-pong test as well if desired.
+
+        """
+        if self._context is None:
+            self._logger.debug('Starting Client')
+            self._context = zmq.Context()
+            self._poll = zmq.Poller()
+            self._start_socket()
+            if test_connection:
+                self.test_ping()
+
+    def _start_socket(self):
+        self._socket = self._context.socket(zmq.REQ)
+        self._socket.connect(self.url)
+        self._poll.register(self._socket, zmq.POLLIN)
+
+    def _close_socket(self, confused=False):
+        if confused:
+            self._socket.setsockopt(zmq.LINGER, 0)
+        self._socket.close()
+        self._poll.unregister(self._socket)
+        self._socket = None
+
     def __del__(self):
         # For Python 3.4 to avoid dead-lock due to wrong object clearing
         # i.e. deleting context before socket
         self.finalize()
+
+    def _req_rep(self, request_sketch):
+        """Returns server response on `request_sketch`"""
+        return self._req_rep_retry(request_sketch)[0]
+
+    def _req_rep_retry(self, request_sketch):
+        """Returns response and number of retries"""
+        request = self._compose_request(request_sketch)
+        retries_left = self.RETRIES
+        while retries_left:
+            self._logger.log(1, 'Sending REQ `%s`', request)
+            self._socket.send_string(request)
+            socks = dict(self._poll.poll(self.TIMEOUT))
+            if socks.get(self._socket) == zmq.POLLIN:
+                response = self._socket.recv_string()
+                self._logger.log(1, 'Received REP `%s`', response)
+                return response, self.RETRIES - retries_left
+            else:
+                self._logger.debug('No response from server (%d retries left)' %
+                                   retries_left)
+                self._close_socket(confused=True)
+                retries_left -= 1
+                if retries_left == 0:
+                    raise RuntimeError('Server seems to be offline!')
+                time.sleep(self.SLEEP)
+                self._start_socket()
+
+    def _compose_request(self, request_sketch):
+        """Hook called before sending a request so that information can be added or modified"""
+        return request_sketch
+
+
+class LockerClient(ReliableClient):
+    """ Implements a Lock by requesting lock information from LockServer"""
+
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
+        super(LockerClient, self).__init__(url)
+        self.lock_name = lock_name
+        self.id = None
+
+    def __getstate__(self):
+        result_dict = super(LockerClient, self).__getstate__()
+        result_dict['id'] = None
+        return result_dict
+
+    def start(self, test_connection=True):
+        if self._context is None:
+            self.id = self._get_id()
+            cls = self.__class__
+            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
+            super(LockerClient, self).start(test_connection)
 
     @staticmethod
     def _get_id():
@@ -379,8 +424,8 @@ class LockerClient(HasLogger):
     def _get_request_id():
         return str(time.time()).replace(LockerServer.DELIMITER, '-')
 
-    def _compose_request(self, request):
-        request = (request + LockerServer.DELIMITER +
+    def _compose_request(self, request_sketch):
+        request = (request_sketch + LockerServer.DELIMITER +
                    self.lock_name + LockerServer.DELIMITER + self.id +
                    LockerServer.DELIMITER + self._get_request_id())
         return request
@@ -418,32 +463,6 @@ class LockerClient(HasLogger):
             self._logger.error(str_response + '; Probably due to retry')
         else:
             raise RuntimeError('Response `%s` not understood' % response)
-
-    def _req_rep(self, request):
-        """Returns server response on `request`"""
-        return self._req_rep_retry(request)[0]
-
-    def _req_rep_retry(self, request):
-        """Returns response and number of retries"""
-        request = self._compose_request(request)
-        retries_left = self.RETRIES
-        while retries_left:
-            self._logger.log(1, 'Sending REQ `%s`', request)
-            self._socket.send_string(request)
-            socks = dict(self._poll.poll(self.TIMEOUT))
-            if socks.get(self._socket) == zmq.POLLIN:
-                response = self._socket.recv_string()
-                self._logger.log(1, 'Received REP `%s`', response)
-                return response, self.RETRIES - retries_left
-            else:
-                self._logger.debug('No response from server (%d retries left)' %
-                                   retries_left)
-                self._close_socket(confused=True)
-                retries_left -= 1
-                if retries_left == 0:
-                    raise RuntimeError('Server seems to be offline!')
-                time.sleep(self.SLEEP)
-                self._start_socket()
 
 
 class ForkAwareLockerClient(LockerClient):

@@ -23,6 +23,7 @@ def multiply(traj):
 filename = os.path.join('hdf5','example_01.hdf5')
 env = Environment(trajectory='Multiplication',
                   filename=filename,
+                  overwrite_file=True,
                   file_title='Example_01_First_Steps',
                   comment='The first example!',
                   large_overview_tables=True,  # To see a nice overview of all

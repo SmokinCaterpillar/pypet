@@ -1885,7 +1885,7 @@ class NaturalNamingInterface(HasLogger):
                 if candidate.v_depth - starting_depth <= max_depth:
                     # In case of several solutions raise an error:
                     if result_node is not None:
-                        raise pex.NotUniqueNodeError('Node `%s` has been found more than once,'
+                        raise pex.NotUniqueNodeError('Node `%s` has been found more than once, '
                                                      'full name of first occurrence is `%s` and of'
                                                      'second `%s`'
                                                      % (key, goal_name, result_node.v_full_name))
@@ -1953,7 +1953,7 @@ class NaturalNamingInterface(HasLogger):
                 # has found more than a single solution.
                 if result_node is not None:
                     raise pex.NotUniqueNodeError('Node `%s` has been found more than once within '
-                                                 'the same depth %d.'
+                                                 'the same depth %d. '
                                                  'Full name of first occurrence is `%s` and of '
                                                  'second `%s`'
                                                  % (key, child.v_depth, result_node.v_full_name,

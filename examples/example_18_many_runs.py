@@ -29,9 +29,11 @@ def main():
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_18_Many_Runs',
+                      overwrite_file=True,
                       comment='Contains many runs',
                       multiproc=True,
                       use_pool=True,
+                      freeze_input=True,
                       ncores=2,
                       wrap_mode='QUEUE')
 
