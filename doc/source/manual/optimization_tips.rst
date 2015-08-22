@@ -82,6 +82,6 @@ in order to use this feature, you must make sure that neither your target functi
 additional arguments are mutated over the course of your runs.
 In case you use SCOOP_, try do avoid running many batches of experiments
 in one go with ``freeze_input=True`` because memory consumption of all the SCOOP_ workers
-may increase with every batch, see also :re:`pypet-and-scoop`.
+may increase with every batch, see also :ref:`pypet-and-scoop`.
 
 .. _SCOOP: http://scoop.readthedocs.org/

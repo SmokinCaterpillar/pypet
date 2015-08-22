@@ -108,6 +108,14 @@ class LockerServer(HasLogger):
         return True
 
     def _lock(self, name, client_id, request_id):
+        """Hanldes locking of locks
+
+        If a lock is already locked sends a WAIT command,
+        else LOCKs it and sends GO.
+
+        Complains if a given client re-locks a lock without releasing it before.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id == client_id:
@@ -123,6 +131,13 @@ class LockerServer(HasLogger):
             return self.GO
 
     def _unlock(self, name, client_id, request_id):
+        """Handles unlocking
+
+        Complains if a non-existent lock should be released or
+        if a lock should be released that was acquired by
+        another client before.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id != client_id:
@@ -142,11 +157,11 @@ class LockerServer(HasLogger):
             response = (self.RELEASE_ERROR + self.DELIMITER +
                         'Lock `%s` cannot be found in database (client id `%s`, '
                         'request id `%s`)' % (name, client_id, request_id))
-            self._logger.warning(response)
+            self._logger.error(response)
             return response
 
     def run(self):
-        """Runs Server"""
+        """Runs server"""
         try:
             self._start()
 
@@ -198,7 +213,7 @@ class LockerServer(HasLogger):
 
 
 class TimeOutLockerServer(LockerServer):
-    """ Lock Server where each lock is valied only for a fixed period of time. """
+    """ Lock Server where each lock is valid only for a fixed period of time. """
 
     def __init__(self, url, timeout):
         super(TimeOutLockerServer, self).__init__(url)
@@ -206,6 +221,12 @@ class TimeOutLockerServer(LockerServer):
         self._timeout_locks = {}
 
     def _lock(self, name, client_id, request_id):
+        """Handles locking
+
+        Locking time is stored to determine time out.
+        If a lock is timed out it can be acquired by a different client.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id == client_id:
@@ -232,6 +253,7 @@ class TimeOutLockerServer(LockerServer):
             return self.GO
 
     def _unlock(self, name, client_id, request_id):
+        """Handles unlocking"""
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id != client_id:
@@ -263,7 +285,7 @@ class TimeOutLockerServer(LockerServer):
 
 
 class LockerClient(HasLogger):
-    """ Implements a Lock by requesting from LockServer"""
+    """ Implements a Lock by requesting lock information from LockServer"""
 
     SLEEP = 0.01
     RETRIES = 9
@@ -303,7 +325,7 @@ class LockerClient(HasLogger):
         """Starts connection to server if not existent.
 
         NO-OP if connection is already established.
-        Makes ping-pong test as well.
+        Makes ping-pong test as well if desired.
 
         """
         if self._context is None:
@@ -345,7 +367,7 @@ class LockerClient(HasLogger):
             self._poll = None
 
     def __del__(self):
-        # For Python 3.4 to avoid dead-lock due to wrong object clearin
+        # For Python 3.4 to avoid dead-lock due to wrong object clearing
         # i.e. deleting context before socket
         self.finalize()
 
@@ -398,7 +420,7 @@ class LockerClient(HasLogger):
             raise RuntimeError('Response `%s` not understood' % response)
 
     def _req_rep(self, request):
-        """Returns response"""
+        """Returns server response on `request`"""
         return self._req_rep_retry(request)[0]
 
     def _req_rep_retry(self, request):
@@ -425,6 +447,12 @@ class LockerClient(HasLogger):
 
 
 class ForkAwareLockerClient(LockerClient):
+    """Locker Client that can detect forking of processes.
+
+    In this case the context and socket are restarted.
+
+    """
+
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         super(ForkAwareLockerClient, self).__init__(url, lock_name)
         self._pid = None
@@ -435,7 +463,12 @@ class ForkAwareLockerClient(LockerClient):
         return result_dict
 
     def _detect_fork(self):
-        """Detects if lock client was forked"""
+        """Detects if lock client was forked.
+
+        Forking is detected by comparing the PID of the current
+        process with the stored PID.
+
+        """
         if self._pid is None:
             self._pid = os.getpid()
         if self._context is not None:
@@ -446,6 +479,7 @@ class ForkAwareLockerClient(LockerClient):
                 self._context = None
 
     def start(self, test_connection=True):
+        """Checks for forking and starts/restarts if desired"""
         self._detect_fork()
         super(ForkAwareLockerClient, self).start(test_connection)
 
@@ -474,7 +508,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def load(self, *args, **kwargs):
         raise NotImplementedError('Queue wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use the Lock '
+                                  'load data in a multiprocessing environment, use a Lock '
                                   'wrapping.')
 
     @retry(9, Exception, 0.01, 'pypet.retry')
@@ -825,8 +859,9 @@ class ReferenceWrapper(MultiprocWrapper):
         self.references[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
 
     def load(self, *args, **kwargs):
-        raise NotImplementedError('Queue wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use the Lock '
+        """Not implemented"""
+        raise NotImplementedError('Reference wrapping does not support loading. If you want to '
+                                  'load data in a multiprocessing environment, use a Lock '
                                   'wrapping.')
 
     def free_references(self):

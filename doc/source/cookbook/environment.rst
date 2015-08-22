@@ -165,10 +165,14 @@ because most of the time the default settings are sufficient.
     Works also under :func:`~pypet.environment.Environment.f_run_map`.
     In this case the iterable arguments are, of course, not frozen but passed for every run.
 
-* ``queue_maxsize``
+* ``timeout``
 
-    Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
-    ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+    Timeout parameter in seconds passed on to SCOOP_ and ``'NETLOCK'`` wrapping.
+    Leave `None` for no timeout. After `timeout` seconds SCOOP_ will assume
+    that a single run failed and skip waiting for it.
+    Moreover, if using ``'NETLOCK'`` wrapping, after `timeout` seconds
+    a lock is automatically released and again
+    available for other waiting processes.
 
 * ``cpu_cap``
 
@@ -225,7 +229,7 @@ because most of the time the default settings are sufficient.
     the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
     needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
-    There are four options:
+    There are a few options:
 
     :const:`pypet.pypetconstants.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
@@ -237,7 +241,7 @@ because most of the time the default settings are sufficient.
 
         Each individual process takes care about storage by itself. Before
         carrying out the storage, a lock is placed to prevent the other processes
-        to store data.
+        to store data. Allows loading of data during runs.
 
     :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
 
@@ -254,11 +258,35 @@ because most of the time the default settings are sufficient.
         whatsoever, because there are references kept for all data
         that is supposed to be stored.
 
+    :const:`~pypet.pypetconstant.WRAP_MODE_NETLOCK` ('NETLOCK')
+
+        Similar to 'LOCK' but locks can be shared acrross a network.
+        Sharing is established by running a lock server that
+        distributes locks to the individual processes.
+        Can be used with SCOOP_ if all hosts have access to
+        a shared home directory.
+        Allows loading of data during runs.
+
     If you don't want wrapping at all use
     :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
 
     If you have no clue what I am talking about, you might want to take a look at multiprocessing_
     in python to learn more about locks, queues and thread safety and so forth.
+
+* ``queue_maxsize``
+
+    Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
+    ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+
+* ``port``
+
+    Port to be used by lock server in case of ``'NETLOCK'`` wrapping.
+    Can be a single integer as well as a tuple ``(7777, 9999)`` to specify
+    a range of ports from which to pick a random one.
+    Leave `None` for using pyzmq's default range.
+    In case automatic determining of the host's IP address fails,
+    you can also pass the full address (including the protocol and
+    the port) of the host in the network like ``'tcp://127.0.0.1:7777'``.
 
 * ``param gc_interval``
 
@@ -741,9 +769,9 @@ Nicing works with ``use_pool`` as well. Leave ``None`` if you don't care about n
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
 classes for the HDF5 storage service to allow safe data storage.
-There are two different modes that are supported. You can choose between them via setting
-``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, and ``'PIPE'``, and
-``'LOCAL'`` wrapping. If you
+There are a couple different modes that are supported. You can choose between them via setting
+``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, ``'PIPE'``,
+``'LOCAL'``, and ``'NETLOCK'`` wrapping. If you
 have your own service that is already thread safe you can also choose ``'NONE'`` to skip wrapping.
 
 If you chose the ``'QUEUE'`` mode, there will be an additional process spawned that is the only
@@ -766,7 +794,7 @@ be quite large like the entire data gathered in a single run.
 If you chose the ``'LOCK'`` mode, every process will place a lock before it opens the HDF5 file
 for writing data. Thus, only one process at a time stores data. The advantages are the
 possibility to load data and that your data
-does not need to be send over a queue over and over again. Yet, your simulations might take longer
+does not need to be send over a queue over and over again. Yet, your simulations may take longer
 since processes have to wait often for each other to release locks.
 
 ``'PIPE'`` wrapping is a rather experimental mode where all processes feed their data into
@@ -783,6 +811,17 @@ Note that freeing data with ``f_empty()`` during a single run has no effect
 on your memory because the local wrapper will keep references to all data
 until the single run is completed.
 
+``'NETLOCK'`` wrapping is similar to ``'LOCK'`` wrapping but locks can be
+shared across a computer network. Lock distribution is established by
+a server process that listens at a particular ``port`` for lock requests.
+The server locks and releases locks accordingly.
+Like regular ``'LOCK'`` wrapping
+it allows to load data during the runs. This wrap mode can be used with
+SCOOP_ if all hosts have access to a shared home directory.
+``'NETLOCK'`` wrapping requires an installation of pyzmq_.
+However, installing SCOOP_ will automatically install pyzmq_
+if it is missing.
+
 Finally, there also exists a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
@@ -795,6 +834,8 @@ multiprocessing. You can find an example here: :ref:`example-16`.
 .. _psutil: http://psutil.readthedocs.org/
 
 .. _multiprocessing pipe: https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Pipe
+
+.. _pyzmq: https://zeromq.github.io/pyzmq/
 
 
 .. _pypet-and-scoop:
@@ -819,9 +860,13 @@ Simply create your environment as follows
 
 
 and start your script via ``python -m scoop my_script.py``.
-If using SCOOP_, the only multiprocessing wrap mode currently supported is
-``'LOCAL'``, i.e. all your data is actually stored
-by your local main python process and results are collected from all workers.
+If using SCOOP_, the only multiprocessing wrap modes currently supported are
+``'LOCAL'`` and ``'NETLOCK'``. That is in the former case
+all your data is actually stored by your local main python process and
+results are collected from all workers. The latter means locks are shared across
+the computer network to allow only one process to write data at a time. This requires
+a shared home directory across all hosts.
+
 In case SCOOP_ is configured correctly, you can easily use
 *pypet* in a multi-server or cluster framework. :ref:`example-21` shows how to
 combine *pypet* and SCOOP_. For instance, if you have multiple servers sharing the
@@ -862,6 +907,7 @@ and later on merge the trajectories from each experiment into one.
 .. _example start up scripts: https://github.com/soravux/scoop/tree/master/examples/submit_files
 
 .. _shared constants: http://scoop.readthedocs.org/en/latest/_modules/scoop/shared.html
+
 
 .. _more-on-git:
 

@@ -8,9 +8,9 @@
 
 * Add examples to docu *DONE*
 
-* Better document examples
+* Better document examples *DONE*
 
-* DOc new wrapper *DONE*
+* Doc new wrapper *DONE*
 
 * Test new wrapper  *DONE*
 
@@ -22,10 +22,8 @@
 
 * Add gc.collect to queue and pipe feature *DONE*
 
-* Document new NETLOCK wrap mode
-
-* Document to use it only in Python 2.7 with scoop
+* Document new NETLOCK wrap mode *DONE*
 
 * Create NETQUEUE mode (Mehmet)
 
-* Document TimeOutLockerServer
+* Document and test TimeOutLockerServer *DONE*

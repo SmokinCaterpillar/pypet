@@ -326,10 +326,12 @@ def port_to_tcp(port=None):
     """Returns local tcp address for a given `port`, automatic port if `None`"""
     address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
     if port is None:
+        port = ()
+    if not isinstance(port, int):
         # determine port automatically
         context = zmq.Context()
         socket_ = context.socket(zmq.REP)
-        port = socket_.bind_to_random_port(address)
+        port = socket_.bind_to_random_port(address, *port)
         socket_.close()
         context.term()
     return address + ':' + str(port)

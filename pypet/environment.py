@@ -469,22 +469,14 @@ class Environment(HasLogger):
         or SCOOP workers at initialisation. Works also under `f_run_map`.
         In this case the iterable arguments are, of course, not frozen but passed for every run.
 
-    :param queue_maxsize:
-
-        Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
-        ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
-
-    :param url:
-
-        URL of lock server in case of ``'NETLOCK'`` wrapping. Please specify the local
-        network address of the current host in the form of ``'tcp://127.0.0.1:7777'``.
-        Leave `None` to determine it automatically. You can also pass an integer,
-        which will be the desired port on the automatically determined host address.
-
     :param timeout:
 
-        Timeout parameter in seconds passed on to scoop and ``'NETLOCK'`` wrapping.
-        Leave `None` for no timeout.
+        Timeout parameter in seconds passed on to SCOOP_ and ``'NETLOCK'`` wrapping.
+        Leave `None` for no timeout. After `timeout` seconds SCOOP_ will assume
+        that a single run failed and skip waiting for it.
+        Moreover, if using ``'NETLOCK'`` wrapping, after `timeout` seconds
+        a lock is automatically released and again
+        available for other waiting processes.
 
     :param cpu_cap:
 
@@ -539,7 +531,7 @@ class Environment(HasLogger):
          If multiproc is ``True``, specifies how storage to disk is handled via
          the storage service.
 
-         There are four options:
+         There are a few options:
 
          :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`: ('QUEUE')
 
@@ -555,7 +547,7 @@ class Environment(HasLogger):
              carrying out the storage, a lock is placed to prevent the other processes
              to store data. Accordingly, sometimes this leads to a lot of processes
              waiting until the lock is released.
-             Yet, single runs do not need to be pickled before storage!
+             Allows loading of data during runs.
 
          :const:`~pypet.pypetconstants.WRAP_MODE_PIPE`: ('PIPE)
 
@@ -572,8 +564,32 @@ class Environment(HasLogger):
             whatsoever, because there are references kept for all data
             that is supposed to be stored.
 
+        :const:`~pypet.pypetconstant.WRAP_MODE_NETLOCK` ('NETLOCK')
+
+            Similar to 'LOCK' but locks can be shared acrross a network.
+            Sharing is established by running a lock server that
+            distributes locks to the individual processes.
+            Can be used with SCOOP_ if all hosts have access to
+            a shared home directory.
+            Allows loading of data during runs.
+
          If you don't want wrapping at all use
          :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')
+
+    :param queue_maxsize:
+
+        Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
+        ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+
+    :param port:
+
+        Port to be used by lock server in case of ``'NETLOCK'`` wrapping.
+        Can be a single integer as well as a tuple ``(7777, 9999)`` to specify
+        a range of ports from which to pick a random one.
+        Leave `None` for using pyzmq's default range.
+        In case automatic determining of the host's IP address fails,
+        you can also pass the full address (including the protocol and
+        the port) of the host in the network like ``'tcp://127.0.0.1:7777'``.
 
     :param gc_interval:
 
@@ -947,14 +963,14 @@ class Environment(HasLogger):
                  use_scoop=False,
                  use_pool=False,
                  freeze_input=False,
-                 queue_maxsize=-1,
-                 url=None,
                  timeout=None,
                  cpu_cap=100.0,
                  memory_cap=100.0,
                  swap_cap=100.0,
                  niceness=None,
                  wrap_mode=pypetconstants.WRAP_MODE_LOCK,
+                 queue_maxsize=-1,
+                 port=None,
                  gc_interval=None,
                  clean_up_runs=True,
                  immediate_postproc=False,
@@ -1048,8 +1064,8 @@ class Environment(HasLogger):
                              'installed psutil. Please install psutil or '
                              'set `ncores` manually.')
 
-        if url is not None and wrap_mode != pypetconstants.WRAP_MODE_NETLOCK:
-            raise ValueError('You can only specify a url for the `NETLOCK` wrapping.')
+        if port is not None and wrap_mode != pypetconstants.WRAP_MODE_NETLOCK:
+            raise ValueError('You can only specify a port for the `NETLOCK` wrapping.')
 
         unused_kwargs = set(kwargs.keys())
 
@@ -1232,9 +1248,11 @@ class Environment(HasLogger):
         self._clean_up_runs = clean_up_runs
 
         if (wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and
-                (isinstance(url, int) or url is None)):
-                url = port_to_tcp(url)
+                not isinstance(port, compat.base_type)):
+                url = port_to_tcp(port)
                 self._logger.info('Determined lock-server URL automatically, it is `%s`.' % url)
+        else:
+            url = port
         self._url = url
         self._timeout = timeout
         # self._deep_copy_data = False  # deep_copy_data # For future reference deep_copy_arguments
@@ -1346,7 +1364,8 @@ class Environment(HasLogger):
                 if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK:
                     config_name = 'environment.%s.url' % self.v_name
                     self._traj.f_add_config(Parameter, config_name, self._url,
-                                        comment='URL of lock distribution server.').f_lock()
+                                        comment='URL of lock distribution server, including '
+                                                'protocol and port.').f_lock()
 
                 if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK or self._use_scoop:
                     config_name = 'environment.%s.timeout' % self.v_name
@@ -2528,7 +2547,7 @@ class Environment(HasLogger):
                                lock=None,
                                queue=None,
                                queue_maxsize=self._queue_maxsize,
-                               url=self._url,
+                               port=self._url,
                                timeout=self._timeout,
                                gc_interval=self._gc_interval,
                                log_config=self._logging_manager.log_config,
@@ -2887,14 +2906,21 @@ class MultiprocContext(HasLogger):
 
         Maximum size of queue if created new. 0 means infinite.
 
-    :param url:
+    :param port:
 
-        URL and port of lock server (aka this machine), like ``'tcp://127.0.0.1:7777'``.
-        Leave `None` for automatic determining the network name and usage of a random port.
+        Port to be used by lock server in case of ``'NETLOCK'`` wrapping.
+        Can be a single integer as well as a tuple ``(7777, 9999)`` to specify
+        a range of ports from which to pick a random one.
+        Leave `None` for using pyzmq's default range.
+        In case automatic determining of the host's ip address fails,
+        you can also pass the full address (including the protocol and
+        the port) of the host in the network like ``'tcp://127.0.0.1:7777'``.
 
     :param timeout:
 
-        Timeout for a NETLOCK wrapping in seconds.
+        Timeout for a NETLOCK wrapping in seconds. After ``timeout``
+        seconds a lock is automatically released and free for other
+        processes.
 
     :param gc_interval:
 
@@ -2930,7 +2956,7 @@ class MultiprocContext(HasLogger):
                  lock=None,
                  queue=None,
                  queue_maxsize=0,
-                 url=None,
+                 port=None,
                  timeout=None,
                  gc_interval=None,
                  log_config=None,
@@ -2953,7 +2979,7 @@ class MultiprocContext(HasLogger):
         self._max_buffer_size = queue_maxsize
         self._lock = lock
         self._lock_process = None
-        self._url = url
+        self._port = port
         self._timeout = timeout
         self._use_manager = use_manager
         self._logging_manager = None
@@ -3059,19 +3085,22 @@ class MultiprocContext(HasLogger):
 
     def _prepare_net_lock(self):
         """ Replaces the trajectory's service with a LockWrapper """
-        if self._url is None or isinstance(self._url, int):
-            self._url = port_to_tcp(self._url)
-            self._logger.info('Determined Server url `%s`' % self._url)
+        if not isinstance(self._port, compat.base_type):
+            url = port_to_tcp(self._port)
+            self._logger.info('Determined Server URL: `%s`' % url)
+        else:
+            url = self._port
+
         if self._lock is None:
             if hasattr(os, 'fork'):
-                self._lock = ForkAwareLockerClient(self._url)
+                self._lock = ForkAwareLockerClient(url)
             else:
-                self._lock = LockerClient(self._url)
+                self._lock = LockerClient(url)
 
         if self._timeout is None:
-            lock_server = LockerServer(self._url)
+            lock_server = LockerServer(url)
         else:
-            lock_server = TimeOutLockerServer(self._url, self._timeout)
+            lock_server = TimeOutLockerServer(url, self._timeout)
             self._logger.info('Using timeout aware lock server.')
 
         self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
@@ -3223,5 +3252,6 @@ class MultiprocContext(HasLogger):
         self._pipe = None
         self._pipe_process = None
         self._pipe_wrapper = None
+        self._logging_manager = None
 
         self._traj._storage_service = self._storage_service

@@ -5,8 +5,6 @@ import time
 import multiprocessing as mp
 import logging
 import os
-import sys
-import threading
 
 try:
     import scoop
@@ -32,7 +30,7 @@ class FaultyServer(LockerServer):
         self._srep = 0
 
     def _pre_respond_hook(self, response):
-        fail_every = 37
+        fail_every = 27
         load_every = 5
         respond = True
         if self._srep % fail_every == 0:
@@ -146,7 +144,7 @@ def the_job(args):
 @unittest.skipIf(zmq is None, 'Cannot be run without zmq')
 class TestNetLock(TrajectoryComparator):
 
-    ITERATIONS = 111
+    ITERATIONS = 33
 
     tags = 'unittest', 'mpwrappers', 'netlock'
 
@@ -261,7 +259,7 @@ class TestNetLock(TrajectoryComparator):
 
     def test_concurrent_pool_faulty(self):
         prev = self.ITERATIONS
-        self.ITERATIONS = 22
+        self.ITERATIONS = 11
         #logging.basicConfig(level=1)
         with DisableAllLogging():
             self.test_concurrent_pool(faulty=True, filename='locker_test/faulty_pool.txt')
@@ -287,7 +285,7 @@ class TestNetLock(TrajectoryComparator):
         # test several restarts
         old_iter = self.ITERATIONS
         for jrun in range(3):
-            self.ITERATIONS = 33
+            self.ITERATIONS = 11
             url = get_random_port_url()
             filename = make_temp_dir('locker_test/scoop.txt')
             self.create_file(filename)
