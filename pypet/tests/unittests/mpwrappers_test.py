@@ -58,7 +58,7 @@ def run_server(server):
     server.run()
 
 
-NTIMEOUTS = 10
+NTIMEOUTS = 3
 
 
 def time_out_job(args):
