@@ -2,11 +2,14 @@ __author__ = 'mehmet'
 
 import numpy as np
 
-from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name
+from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, unittest
 from pypet.tests.testutils.data import TrajectoryComparator
 
 from pypet import Trajectory, SharedResult, SharedTable, SharedArray, load_trajectory
+import pypet.utils.ptcompat as ptcompat
 
+
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class SharedTableTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5', 'table', 'mehmet'
@@ -32,7 +35,7 @@ class SharedTableTest(TrajectoryComparator):
         pass
 
 
-
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class SharedArrayTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5', 'array', 'mehmet'
