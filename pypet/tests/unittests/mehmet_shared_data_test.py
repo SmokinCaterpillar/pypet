@@ -16,6 +16,7 @@ class SharedTableTest(TrajectoryComparator):
 
     def setUp(self):
         self.filename = make_temp_dir('shared_table_test.hdf5')
+
         self.traj = Trajectory(name=make_trajectory_name(self), filename=self.filename)
 
         self.traj.v_standard_result = SharedResult
