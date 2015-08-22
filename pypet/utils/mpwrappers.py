@@ -365,20 +365,19 @@ class ReliableClient(HasLogger):
         # i.e. deleting context before socket
         self.finalize()
 
-    def _req_rep(self, request_sketch):
+    def _req_rep(self, request):
         """Returns server response on `request_sketch`"""
-        return self._req_rep_retry(request_sketch)[0]
+        return self._req_rep_retry(request)[0]
 
-    def _req_rep_retry(self, request_sketch):
+    def _req_rep_retry(self, request):
         """Returns response and number of retries"""
-        request = self._compose_request(request_sketch)
         retries_left = self.RETRIES
         while retries_left:
             self._logger.log(1, 'Sending REQ `%s`', request)
-            self._socket.send_string(request)
+            self._send_request(request)
             socks = dict(self._poll.poll(self.TIMEOUT))
             if socks.get(self._socket) == zmq.POLLIN:
-                response = self._socket.recv_string()
+                response = self._receive_response()
                 self._logger.log(1, 'Received REP `%s`', response)
                 return response, self.RETRIES - retries_left
             else:
@@ -391,9 +390,13 @@ class ReliableClient(HasLogger):
                 time.sleep(self.SLEEP)
                 self._start_socket()
 
-    def _compose_request(self, request_sketch):
-        """Hook called before sending a request so that information can be added or modified"""
-        return request_sketch
+    def _send_request(self, request):
+        """Actual sending of the request over network"""
+        self._socket.send_string(request)
+
+    def _receive_response(self):
+        """Actual receiving of response"""
+        return self._socket.recv_string()
 
 
 class LockerClient(ReliableClient):
@@ -463,6 +466,10 @@ class LockerClient(ReliableClient):
             self._logger.error(str_response + '; Probably due to retry')
         else:
             raise RuntimeError('Response `%s` not understood' % response)
+
+    def _req_rep_retry(self, request):
+        request = self._compose_request(request)
+        return super(LockerClient, self)._req_rep_retry(request)
 
 
 class ForkAwareLockerClient(LockerClient):
