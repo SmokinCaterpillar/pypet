@@ -33,7 +33,7 @@ class FaultyServer(LockerServer):
         fail_every = 27
         load_every = 5
         respond = True
-        if self._srep % fail_every == 0:
+        if self._srep % fail_every == 0 and response != self.CLOSED:
             self._logger.warn('Simulating message loss; '
                               'Loosing: `%s`; '
                               'LockDB: %s' % (response, str(self._locks)))
