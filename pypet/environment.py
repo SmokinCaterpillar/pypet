@@ -130,20 +130,41 @@ def _process_single_run(kwargs):
 
 
 def _configure_frozen_scoop(kwargs):
+    """Wrapper function that configures a frozen SCOOP set up.
+
+    Deletes of data if necessary.
+
+    """
+    def _delete_old_scoop_rev_data(old_scoop_rev):
+        if old_scoop_rev is not None:
+            try:
+                elements = shared.elements
+                for key in elements:
+                    var_dict = elements[key]
+                    if old_scoop_rev in var_dict:
+                        del var_dict[old_scoop_rev]
+                logging.getLogger('pypet.scoop').debug('Deleted old SCOOP data from '
+                                                       'revolution `%s`.' % old_scoop_rev)
+            except AttributeError:
+                logging.getLogger('pypet.scoop').error('Could not delete old SCOOP data from '
+                                                       'revolution `%s`.' % old_scoop_rev)
     scoop_rev = kwargs.pop('scoop_rev')
     # Check if we need to reconfigure SCOOP
     try:
-        configured = scoop_rev in _frozen_scoop_single_run.kwargs
+        old_scoop_rev = _frozen_pool_single_run.kwargs['scoop_rev']
+        configured = old_scoop_rev == scoop_rev
     except AttributeError:
+        old_scoop_rev = None
         configured = False
     if not configured:
         _frozen_scoop_single_run.kwargs = shared.getConst(scoop_rev, timeout=424.2)
         frozen_kwargs = _frozen_scoop_single_run.kwargs
-        frozen_kwargs[scoop_rev] = scoop_rev
+        frozen_kwargs['scoop_rev'] = scoop_rev
         frozen_kwargs['traj'].v_full_copy = frozen_kwargs['full_copy']
         if not scoop.IS_ORIGIN:
             _configure_niceness(frozen_kwargs)
             _configure_logging(frozen_kwargs, extract=False)
+        _delete_old_scoop_rev_data(old_scoop_rev)
         logging.getLogger('pypet.scoop').info('Configured Worker %s' % str(scoop.worker))
 
 

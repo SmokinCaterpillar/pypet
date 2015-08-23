@@ -886,12 +886,6 @@ This is also important to let SCOOP_ know how many workers it can start on the c
 
 To avoid overhead of re-pickling the trajectory,
 SCOOP_ mode also supports setting ``freeze_input=True`` (see :ref:`more-on-multiprocessing`).
-However, freezing input for SCOOP_ is based on `shared constants`_ which will remain
-on every worker until they are shut down. Thus, if you run many experiments (i.e. multiple
-batches of ``f_run`` or ``f_run_map``) within
-the same Python interpreter session, memory consumed by all workers increases
-over time. If you experience memory problems simply restart your Python session
-and run less experiments in one go or set ``freeze_input=False``.
 
 Moreover, you can also use *pypet* with `SAGA Python`_ to manually schedule your experiments
 on a cluster environment. :ref:`example-22` shows how to submit batches of experiments
