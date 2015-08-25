@@ -73,7 +73,7 @@ traj1.f_load(load_parameters=2, load_results=2)
 for run_name in traj1.f_get_run_names():
     # We can make the trajectory belief it is a single run. All parameters will
     # be treated as they were in the specific run. And we can use the `crun` wildcard.
-    traj1.f_as_run(run_name)
+    traj1.f_set_crun(run_name)
     x=traj1.x
     y=traj1.y
     # We need to specify the current run, because there exists more than one z value

@@ -21,7 +21,7 @@ env = Environment(trajectory='Example08',filename=filename,
                   comment='Another example!')
 
 # Get the trajectory from the environment
-traj = env.v_trajectory
+traj = env.trajectory
 
 # Add both parameters
 traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -31,7 +31,7 @@ traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
 
 # Run the simulation
-env.f_run(multiply)
+env.run(multiply)
 
 # We load all results
 traj.f_load(load_results=pypetconstants.LOAD_DATA)
@@ -58,4 +58,4 @@ for idx in idx_iterator:
 traj.f_restore_default()
 
 # Finally disable logging and close all log-files
-env.f_disable_logging()
+env.disable_logging()

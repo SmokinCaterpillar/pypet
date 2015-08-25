@@ -263,3 +263,38 @@ def retry(n, errors, wait=0.0, logger_name=None):
         return new_func
 
     return wrapper
+
+
+def _old_attr_(obj, item):
+    """Replacement of __getattr__"""
+    if item.startswith('f_') or item.startswith('v_'):
+        return getattr(obj, item[2:])
+    raise AttributeError('`%s` object has no attribute `%s`' % (obj.__class__.__name__, item))
+
+
+def prefix_naming(cls):
+    """Decorate that adds the prefix naming scheme"""
+    if hasattr(cls, '__getattr__'):
+        raise TypeError('__getattr__ already defined')
+    cls.__getattr__ = _old_attr_
+    return cls
+
+
+def no_prefix_getattr(func):
+    """Decorator to be placed before `__getattr__` to allow leaving out `f_` and `v_` prefixes"""
+    def new_func(obj, item):
+        try:
+            return func(obj, item)
+        except Exception as exc:
+            if item.startswith('_'):
+                raise exc
+            v_item = 'v_' + item
+            f_item = 'f_' + item
+            if v_item in obj.__all_slots__ or hasattr(obj.__class__, v_item):
+                return getattr(obj, v_item)
+            if hasattr(obj.__class__, f_item):
+                return getattr(obj, f_item)
+            if v_item in obj.__dict__:
+                return obj.__dict__[v_item]
+            raise exc
+    return new_func

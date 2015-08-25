@@ -51,7 +51,7 @@ I would divide any numerical simulations into 3 phases:
 
         This top level function is handed over to the runtime environment in addition with
         some other arguments (like some objects not managed by your trajectory) to carry out the
-        simulation (see :func:`pypet.environment.Environment.f_run, and :ref:`more-on-running`).
+        simulation (see :func:`pypet.environment.Environment.run`, and :ref:`more-on-running`).
 
         Usually to speed up your simulations and to compute several runs in parallel, you can
         use multiprocessing at this stage, see :ref:`more-on-multiprocessing`.

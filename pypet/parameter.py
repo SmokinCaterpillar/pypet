@@ -75,7 +75,7 @@ from pandas import DataFrame, Series, Panel, Panel4D
 import pypet.pypetconstants as pypetconstants
 from pypet.naturalnaming import NNLeafNode
 import pypet.utils.comparisons as comparisons
-from pypet.utils.decorators import deprecated, copydoc
+from pypet.utils.decorators import deprecated, copydoc, no_prefix_getattr
 from pypet.utils.helpful_classes import HashArray
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
@@ -850,6 +850,7 @@ class Parameter(BaseParameter):
 
         return result
 
+    @no_prefix_getattr
     def __getattr__(self, item):
         """Allows to query for `.data` as an attribute"""
         if item == 'data':
@@ -2347,6 +2348,7 @@ class Result(BaseResult):
         else:
             self.f_set_single(key, value)
 
+    @no_prefix_getattr
     def __getattr__(self, name):
         return self.f_get(name)
 

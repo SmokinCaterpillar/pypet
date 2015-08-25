@@ -40,7 +40,7 @@ def main():
                       # data over and over again to save some overhead.
                       comment='Using pypet and DEAP with less overhead'
                       )
-    traj = env.v_traj
+    traj = env.traj
 
 
     # ------- Add parameters ------- #
@@ -82,7 +82,7 @@ def main():
     toolbox.register("mutate", tools.mutFlipBit, indpb=traj.indpb)
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
     toolbox.register("evaluate", eval_one_max)
-    toolbox.register("map", env.f_run)  # We pass the individual as part of traj, so
+    toolbox.register("map", env.run)  # We pass the individual as part of traj, so
     # we no longer need the `f_run_map` but just `f_run`
 
 

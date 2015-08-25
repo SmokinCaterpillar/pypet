@@ -32,7 +32,7 @@ env = Environment(trajectory='Multiplication',
                   )
 
 # The environment has created a trajectory container for us
-traj = env.v_trajectory
+traj = env.trajectory
 
 # Add both parameters
 traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -42,7 +42,7 @@ traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
 
 # Run the simulation
-env.f_run(multiply)
+env.run(multiply)
 
 
 
@@ -54,7 +54,7 @@ from pypet.trajectory import Trajectory
 # Yet, to be very clear let's delete all the old stuff.
 del traj
 # Before deleting the environment let's disable logging and close all log-files
-env.f_disable_logging()
+env.disable_logging()
 del env
 
 traj = Trajectory(filename=filename)

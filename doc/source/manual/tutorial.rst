@@ -200,9 +200,9 @@ Yet, we will shortly discuss the most important ones here.
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
     root folder here. *pypet* will automatically trigger the recording of your experiments
-    if you use :func:`~pypet.environment.Environment.f_run`,
-    :func:`~pypet.environment.Environment.f_continue` or
-    :func:`~pypet.environment.Environment.f_pipeline` to start your single runs or whole experiment.
+    if you use :func:`~pypet.environment.Environment.run`,
+    :func:`~pypet.environment.Environment.resume` or
+    :func:`~pypet.environment.Environment.pipeline` to start your single runs or whole experiment.
     If you use *pypet* + git_ + sumatra_ there's no doubt that you ensure
     the repeatability of your experiments!
 
@@ -229,7 +229,7 @@ The environment provides a new trajectory container for us:
 
 .. code-block:: python
 
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 
 ------------------------
@@ -790,10 +790,10 @@ after all runs have finished.
 .. code-block:: python
 
     # Ad the postprocessing function
-    env.f_add_postprocessing(neuron_postproc)
+    env.add_postprocessing(neuron_postproc)
 
     # Run the experiment
-    env.f_run(run_neuron)
+    env.run(run_neuron)
 
 
 Both function take additional arguments which will be automatically passed to the job and
@@ -803,7 +803,7 @@ For instance,
 
 .. code-block:: python
 
-    env.f_run(myjob, 42, 'fortytwo', test=33.3)
+    env.run(myjob, 42, 'fortytwo', test=33.3)
 
 
 will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.3`` as the
@@ -828,7 +828,7 @@ environment to stop logging and close all log files:
 .. code-block:: python
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 -----------

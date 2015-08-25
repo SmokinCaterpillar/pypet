@@ -292,7 +292,7 @@ Let's take a look at the snippet at once:
                       large_overview_tables=True)
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
@@ -302,10 +302,10 @@ Let's take a look at the snippet at once:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 And now let's go through it one by one. At first, we have a job to do, that is multiplying
@@ -368,7 +368,7 @@ the property ``v_trajectory``.
 .. code-block:: python
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
@@ -405,7 +405,7 @@ combinations.
 .. code-block:: python
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 
 Usually, if you let *pypet* manage logging for you, it is a good idea in the end to tell
@@ -414,7 +414,7 @@ the environment to stop logging and close all log files.
 .. code-block:: python
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 And that's it. The environment will evoke the function `multiply` now 12 times with

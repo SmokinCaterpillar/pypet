@@ -63,7 +63,7 @@ Moreover, to avoid re-pickling of unnecessary data of your trajectory,
 store and remove all data that is not needed during single runs.
 
 For instance, if you don't really need config data during the runs, use the following
-**before** calling the environment's :func:`~pypet.environment.Environment.f_run` function:
+**before** calling the environment's :func:`~pypet.environment.Environment.run` function:
 
 .. code-block:: python
 

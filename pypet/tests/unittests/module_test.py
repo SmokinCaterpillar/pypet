@@ -29,6 +29,17 @@ class TestAllImport(unittest.TestCase):
             if inspect.isclass(item) or inspect.isfunction(item):
                 self.assertTrue(item.__name__ in pypet.__all__)
 
+
+class TestRunningTests(unittest.TestCase):
+
+    tags = 'unittest', 'test', 'meta'
+
+    def test_run_one_test(self):
+        predicate = lambda class_name, test_name, tags:(test_name == 'test_import_star' and
+                                                        class_name == 'TestAllImport')
+        pypet.test(predicate=predicate)
+
+
 if __name__ == '__main__':
     opt_args = parse_args()
     run_suite(**opt_args)

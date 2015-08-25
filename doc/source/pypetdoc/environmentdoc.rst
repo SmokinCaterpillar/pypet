@@ -1,12 +1,12 @@
-=================================
+===============
 The Environment
-=================================
+===============
 
 :ref:`genindex`
 
------------
+----------
 Quicklinks
------------
+----------
 
 .. currentmodule:: pypet.environment
 
@@ -15,14 +15,14 @@ Quicklinks
     :nosignatures:
 
     Environment
-    ~Environment.f_run
-    ~Environment.f_continue
-    ~Environment.f_pipeline
-    ~Environment.v_trajectory
+    ~Environment.run
+    ~Environment.resume
+    ~Environment.pipeline
+    ~Environment.trajectory
 
--------------
+-----------
 Environment
--------------
+-----------
 
 .. automodule:: pypet.environment
 
@@ -30,9 +30,9 @@ Environment
     :members:
 
 
-------------------
+----------------
 MultiprocContext
-------------------
+----------------
 
 .. autoclass:: pypet.environment.MultiprocContext
     :members:

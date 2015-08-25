@@ -543,6 +543,35 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self.f_set_crun(run_name)
 
     @property
+    def v_crun_name_(self):
+        """
+        Similar to ``v_crun`` but returns ``'run_ALL'`` if ``v_crun`` is ``None``.
+        """
+        return self.v_crun_
+
+    @property
+    def v_crun_name(self):
+        """Run name if you want to access the trajectory as a single run.
+
+        You can turn the trajectory to behave as during a single run if you set
+        `v_crun_name` to a particular run name. Note that only string values are appropriate here,
+        not indices. Check the `v_idx` property if you want to provide an index.
+
+        Alternatively instead of directly setting `v_crun_name` you can call
+        :func:`~pypet.trajectory.Trajectory.f_set_crun:`.
+
+        Set to `None` to make the trajectory to turn everything back to default.
+
+        """
+        return self.v_crun
+
+    @v_crun_name.setter
+    @not_in_run
+    def v_crun_name(self, run_name):
+        """Changes the run name to make the trajectory behave as during a single run"""
+        self.v_crun = run_name
+
+    @property
     def v_full_copy(self):
         """Whether trajectory is copied fully during pickling or only the current
         parameter space point.
@@ -1764,10 +1793,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Load all parameters of the current and the other trajectory
         if self._stored:
             # To suppress warnings if nothing needs to be loaded
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 self.f_load_items(self._parameters.keys(), only_empties=True)
         if other_trajectory._stored:
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 other_trajectory.f_load_items(other_trajectory._parameters.keys(),
                                               only_empties=True)
 
@@ -2514,7 +2543,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             if other_instance.f_is_empty():
                 # To suppress warnings if nothing needs to be loaded
-                with self._nn_interface._disable_logger:
+                with self._nn_interface._disable_logging:
                     other_trajectory.f_load_item(other_instance)
 
             if not self.f_contains(new_key):

@@ -52,7 +52,7 @@ import itertools as itools
 import re
 from collections import deque
 
-from pypet.utils.decorators import deprecated, kwargs_api_change
+from pypet.utils.decorators import deprecated, kwargs_api_change, no_prefix_getattr
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
@@ -99,8 +99,10 @@ SHORTCUT_SET = set(['dpar', 'par', 'conf', 'res'])
 
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
+
 class _NEW_GROUP(object): pass
 new_group = _NEW_GROUP()  # Dummy for lazy adding of new group nodes
+
 
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
@@ -444,7 +446,7 @@ class NaturalNamingInterface(HasLogger):
         self._links_count =  {} # Dictionary of how often a link exists
 
         # Context Manager to disable logging for auto-loading
-        self._disable_logger = DisableAllLogging()
+        self._disable_logging = DisableAllLogging()
 
         # List of names that are taboo. The user cannot create parameters or results that
         # contain these names.
@@ -2212,7 +2214,7 @@ class NaturalNamingInterface(HasLogger):
         if run_idx > -1:
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
-            with self._disable_logger:
+            with self._disable_logging:
                 try:
                     if wildcard_positions:
                         for wildcard_pos, wildcard in wildcard_positions:
@@ -2827,16 +2829,16 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                                        auto_load=self.v_root.v_auto_load,
                                        with_links=self.v_root.v_with_links)
 
+    @no_prefix_getattr
     def __getattr__(self, name):
         if isinstance(name, compat.base_type) and name.startswith('_'):
-            raise AttributeError('Trajectory node does not contain `%s`' % name)
-
+            raise AttributeError('`%s` is not part of your trajectory or it\'s tree.' % name)
         return self._nn_interface._get(self, name,
-                                   fast_access=self.v_root.v_fast_access,
-                                   shortcuts=self.v_root.v_shortcuts,
-                                   max_depth=self.v_root.v_max_depth,
-                                   auto_load=self.v_root.v_auto_load,
-                                   with_links=self.v_root.v_with_links)
+                                       fast_access=self.v_root.v_fast_access,
+                                       shortcuts=self.v_root.v_shortcuts,
+                                       max_depth=self.v_root.v_max_depth,
+                                       auto_load=self.v_root.v_auto_load,
+                                       with_links=self.v_root.v_with_links)
 
     @property
     def v_root(self):

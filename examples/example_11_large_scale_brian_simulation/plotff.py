@@ -47,7 +47,7 @@ def main():
     plt.show()
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

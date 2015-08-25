@@ -28,7 +28,7 @@ env = Environment(trajectory='Multiplication',
                   comment='How to use links')
 
 # The environment has created a trajectory container for us
-traj = env.v_trajectory
+traj = env.trajectory
 
 # Add both parameters
 traj.v_lazy_adding = True
@@ -51,8 +51,8 @@ traj.f_add_link('parameters.mynewgroup.mylink2', traj.f_get('y'))
 
 
 # And, of course, we can also use the links during run:
-env.f_run(multiply)
+env.run(multiply)
 
 # Finally disable logging and close all log-files
-env.f_disable_logging()
+env.disable_logging()
 

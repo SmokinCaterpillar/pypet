@@ -172,7 +172,7 @@ An example *main script* might look like the following:
                   use_pool=False)
 
     #Get the trajectory container
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # We create a Manager and pass all our components to the Manager.
     # Note the order, MyNeuronGroupsComponent are scheduled before MyConnectionsComponent,
@@ -192,7 +192,7 @@ An example *main script* might look like the following:
     my_manager.pre_build(traj)
 
     # Run the network simulation
-    env.f_run(my_manager.run_network)
+    env.run(my_manager.run_network)
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

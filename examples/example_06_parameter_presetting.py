@@ -83,7 +83,7 @@ def main():
                       comment = 'Go for Euler!')
 
 
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # 1st a) phase parameter addition
     # Remember we have some control flow in the `add_parameters` function, the default parameter
@@ -118,7 +118,7 @@ def main():
     # 2nd phase let's run the experiment
     # We pass 'euler_scheme' as our top-level simulation function and
     # the Roessler function as an additional argument
-    env.f_run(euler_scheme, diff_eq)
+    env.run(euler_scheme, diff_eq)
 
     # Again no post-processing
 
@@ -159,7 +159,7 @@ def main():
         euler_result.f_empty()
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

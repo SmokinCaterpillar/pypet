@@ -130,7 +130,7 @@ def main():
                       multiproc=True,  # Yes we can use multiprocessing within each batch!
                       ncores=4)
 
-    traj = env.v_trajectory
+    traj = env.trajectory
     trajectory_name = traj.v_name
 
     # 1st a) phase parameter addition
@@ -147,7 +147,7 @@ def main():
     # 2nd phase let's run the experiment
     # We pass `euler_scheme` as our top-level simulation function and
     # the Lorenz equation 'diff_lorenz' as an additional argument
-    env.f_run(euler_scheme, diff_lorenz)
+    env.run(euler_scheme, diff_lorenz)
 
 
 if __name__ == '__main__':
