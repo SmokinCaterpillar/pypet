@@ -2484,11 +2484,15 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                                                 add_prefix=False,
                                                 check_naming=False)
 
+    def f_dir_data(self):
+        """Returns a list of all children names"""
+        return compat.listkeys(self._children)
+
     def __dir__(self):
         """Adds all children to auto-completion"""
         result = super(NNGroupNode, self).__dir__()
         if not is_debug():
-            result.extend(self._children.keys())
+            result.extend(self.f_dir_data())
         return result
 
     def __iter__(self):
