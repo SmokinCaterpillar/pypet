@@ -169,31 +169,36 @@ class TestNetLock(TrajectoryComparator):
         iterations = set()
         with open(filename) as fh:
             for line in fh:
-                seq, msg, counter, id_, iteration = line.split(':')
-                if seq == 'PAR':
-                    continue
-                iteration = int(iteration)
-                counter = int(counter)
-                iterations.add(iteration)
-                errstring = ('\nCurrent idx `%s` new `%s`;\n '
-                           'Current msg `%s`, new `%s`;\n'
-                           'Curent counter `%d`, '
-                           'new `%d`;\n '
-                           'Iteration %d' % (current_id, id_,
-                                             current_msg, msg,
-                                             current_counter, counter, iteration))
-                if msg == 'BEGIN':
-                    self.assertEqual(current_msg, 'END', 'MSG beginning in the middle.' +
-                                     errstring)
+                split_line = line.split(':')
+                if len(split_line) == 5:
+                    seq, msg, counter, id_, iteration = split_line
+                    if seq == 'PAR':
+                        continue
+                    iteration = int(iteration)
+                    counter = int(counter)
+                    iterations.add(iteration)
+                    errstring = ('\nCurrent idx `%s` new `%s`;\n '
+                               'Current msg `%s`, new `%s`;\n'
+                               'Curent counter `%d`, '
+                               'new `%d`;\n '
+                               'Iteration %d' % (current_id, id_,
+                                                 current_msg, msg,
+                                                 current_counter, counter, iteration))
+                    if msg == 'BEGIN':
+                        self.assertEqual(current_msg, 'END', 'MSG beginning in the middle.' +
+                                         errstring)
 
+                    else:
+                        self.assertEqual(current_counter, counter - 1,
+                                                   'Counters not matching.' + errstring)
+                        self.assertEqual(current_id, id_,
+                                                   'IDs not matching.' + errstring)
+                    current_counter = counter
+                    current_id = id_
+                    current_msg = msg
                 else:
-                    self.assertEqual(current_counter, counter - 1,
-                                               'Counters not matching.' + errstring)
-                    self.assertEqual(current_id, id_,
-                                               'IDs not matching.' + errstring)
-                current_counter = counter
-                current_id = id_
-                current_msg = msg
+                    self.assertEqual(len(split_line), 5, 'Cannot split `%s`' % str(split_line))
+
         self.assertEqual(len(iterations), self.ITERATIONS, '%d != %d, Iterations:\n'
                          % (len(iterations), self.ITERATIONS) +  str(iterations))
         for irun in range(self.ITERATIONS):
