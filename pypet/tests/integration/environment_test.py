@@ -141,6 +141,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.niceness = None
         self.port = None
         self.timeout = None
+        self.add_time=True
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -210,8 +211,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         traj.f_explore(self.explore_dict)
 
-
-
     def explore(self, traj):
         self.explored ={'Normal.trial': [0],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
@@ -270,6 +269,7 @@ class EnvironmentTest(TrajectoryComparator):
                           niceness=self.niceness,
                           use_scoop=self.use_scoop,
                           port=self.port,
+                          add_time=self.add_time,
                           timeout=self.timeout)
 
         traj = env.v_trajectory
