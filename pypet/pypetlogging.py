@@ -3,6 +3,12 @@
 __author__ = 'Robert Meyer'
 
 try:
+    # Python3
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
+try:
     import ConfigParser as cp
 except ImportError:
     import configparser as cp
@@ -32,6 +38,7 @@ import socket
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet.utils.helpful_functions import progressbar
+from pypet.utils.decorators import retry
 from pypet.slots import HasSlots
 
 
@@ -685,6 +692,18 @@ class PypetTestFileHandler(logging.FileHandler):
                     pass
         finally:
             self.release()
+
+    @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
+    def _open(self):
+        try:
+            return super(PypetTestFileHandler, self)._open()
+        except FileNotFoundError:
+            old_mode = self.mode
+            self.mode = 'w'
+            try:
+                return self._open()
+            finally:
+                self.mode = old_mode
 
 
 class StdoutToLogger(HasLogger):
