@@ -119,15 +119,20 @@ The entire source code of this example can be found here: :ref:`example-13`.
 Naming Convention
 -----------------
 
-To avoid confusion with natural naming scheme (see below)
-and the functionality provided by the environment, trajectory,
-parameter containers, and so on, I followed the idea by PyTables_ to use prefixes:
+To avoid confusion with natural naming scheme and the functionality provided by the
+trajectory tree - that includes all group and leaf nodes like
+parameters and results - I followed the idea by PyTables_ to use prefixes:
 ``f_`` for functions and ``v_`` for python variables/attributes/properties.
 
 For instance, given a *pypet* result container ``myresult``, ``myresult.v_comment`` is the object's
 comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
+
+If you don't like using prefixes, you can alternatively also use the properties
+``vars`` and ``func`` that are supported by each tree node. For example,
+``traj.f_iter_runs()`` is equivalent to ``traj.func.iter_runs()`` or
+``mygroup.v_full_name`` is equivalent to ``mygroup.vars.full_name``.
 
 
 -----------------

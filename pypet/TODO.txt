@@ -28,8 +28,8 @@
 
 * Document and test TimeOutLockerServer *DONE*
 
-* Add changes about naming
+* Add changes about naming *DONE*
 
-* Doc new naming
+* Doc new naming *DONE*
 
-* Doc Brian changes
+* Doc Brian changes *DONE*

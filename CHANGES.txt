@@ -54,6 +54,10 @@ pypet 0.1b.13
 *   New ``'NETLOCK'`` wrap mode, to allow locking over a network and usage
     of servers with a shared home directory.
 
+*   Prefixes are no longer mandatory if using `func` and `vars`:
+    `traj.f_iter_runs()` is equivalent to `traj.func.iter_runs()` or
+    `myresult.v_name` is equivalent to `myresult.vars.name`
+
 
 pypet 0.1b.12
 
