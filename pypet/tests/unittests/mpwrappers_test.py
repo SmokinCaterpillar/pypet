@@ -108,30 +108,31 @@ def the_job(args):
         with open(filename, mode='a') as fh:
             fh.write('PAR:__THIS__:0' + sidx)
         lock.release()
-        time.sleep(sleep_time * 2.0)
+        time.sleep(sleep_time / 2.0)
 
         lock.acquire()
         with open(filename, mode='a') as fh:
             fh.write('PAR:__HAPPENING__:1' + sidx)
         lock.release()
-        time.sleep(sleep_time)
-
-        lock.acquire()
-        with open(filename, mode='a') as fh:
-            fh.write('PAR:__PARALLEL__:2' + sidx)
         time.sleep(sleep_time * 1.5)
 
         lock.acquire()
         with open(filename, mode='a') as fh:
-            fh.write('PAR:__ALL__:3' + sidx)
+            fh.write('PAR:__PARALLEL__:2' + sidx)
         lock.release()
-        time.sleep(sleep_time / 3.0)
+        time.sleep(sleep_time)
 
-        lock.acquire()
-        with open(filename, mode='a') as fh:
-            fh.write('PAR:__TIMES__:4' + sidx)
-        lock.release()
-        time.sleep(sleep_time / 1.5)
+        # lock.acquire()
+        # with open(filename, mode='a') as fh:
+        #     fh.write('PAR:__ALL__:3' + sidx)
+        # lock.release()
+        # time.sleep(sleep_time / 3.0)
+        #
+        # lock.acquire()
+        # with open(filename, mode='a') as fh:
+        #     fh.write('PAR:__TIMES__:4' + sidx)
+        # lock.release()
+        # time.sleep(sleep_time / 1.5)
 
 
         lock.acquire()
