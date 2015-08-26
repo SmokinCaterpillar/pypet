@@ -696,12 +696,12 @@ class PypetTestFileHandler(logging.FileHandler):
     @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
     def _open(self):
         try:
-            return super(PypetTestFileHandler, self)._open()
+            return logging.FileHandler._open(self)
         except FileNotFoundError:
             old_mode = self.mode
             self.mode = 'w'
             try:
-                return self._open()
+                return logging.FileHandler._open(self)
             finally:
                 self.mode = old_mode
 
