@@ -669,6 +669,24 @@ class DisableAllLogging(object):
         logging.disable(logging.NOTSET)
 
 
+class PypetTestFileHandler(logging.FileHandler):
+    """Takes care that data is flushed using fsync"""
+    def flush(self):
+        """
+        Flushes the stream.
+        """
+        self.acquire()
+        try:
+            if self.stream and hasattr(self.stream, "flush"):
+                self.stream.flush()
+                try:
+                    os.fsync(self.stream.fileno())
+                except OSError:
+                    pass
+        finally:
+            self.release()
+
+
 class StdoutToLogger(HasLogger):
     """Fake file-like stream object that redirects writes to a logger instance."""
     def __init__(self, logger_name, log_level=logging.INFO):

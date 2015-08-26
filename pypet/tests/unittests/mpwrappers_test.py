@@ -78,6 +78,13 @@ def time_out_job(args):
     return timed_out
 
 
+def flush_and_sync(fh):
+    fh.flush()
+    try:
+        os.fsync(fh.fileno())
+    except OSError:
+        pass
+
 
 def the_job(args):
     """Simple job executed in parallel
@@ -117,24 +124,31 @@ def the_job(args):
 
         with open(filename, mode='a') as fh:
             fh.write('SEQ:BEGIN:0' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time / 2.0)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:This:1' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:is:2' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time * 1.5)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:a:3' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time / 3.0)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:sequential:4' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time / 1.5)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:block:5' + sidx)
+            flush_and_sync(fh)
         time.sleep(sleep_time / 3.0)
         with open(filename, mode='a') as fh:
             fh.write('SEQ:END:6' + sidx)
+            flush_and_sync(fh)
 
         lock.release()
     except:

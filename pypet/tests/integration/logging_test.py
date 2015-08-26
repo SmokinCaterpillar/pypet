@@ -115,7 +115,7 @@ class LoggingTest(TrajectoryComparator):
     def explore(self, traj):
         traj.f_explore({'p1': range(7)})
 
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_normal(self):
         # if not self.multiproc:
         #     return
@@ -230,7 +230,7 @@ class LoggingTest(TrajectoryComparator):
         # log_config = os.path.join(init_path, 'default.ini')
 
 
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_creation_with_errors(self):
          # if not self.multiproc:
         #     return
@@ -541,7 +541,7 @@ class LoggingTest(TrajectoryComparator):
         # self.assertEqual(total_info_count, 0)
         # self.assertLess(total_retry_count, len(traj))
 
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logging_stdout(self):
         filename = 'teststdoutlog.hdf5'
         filename = make_temp_dir(filename)
