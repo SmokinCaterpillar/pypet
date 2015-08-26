@@ -60,6 +60,7 @@ from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap, IteratorChain
 from pypet.utils.helpful_functions import is_debug
 from pypet.pypetlogging import HasLogger, DisableAllLogging
+from pypet.slots import HasSlots
 
 
 # For fetching:
@@ -104,11 +105,67 @@ class _NEW_GROUP(object): pass
 new_group = _NEW_GROUP()  # Dummy for lazy adding of new group nodes
 
 
+class NNTreeNodeFunc(HasSlots):
+
+    __slots__ = ('_node', '_prefix')
+
+    def __init__(self, node):
+        super(NNTreeNodeFunc, self).__init__()
+        self._node = node
+        self._prefix = 'f_'
+
+    def _is_part(self, name):
+        return hasattr(self._node.__class__, name)
+
+    def __getattr__(self, item):
+        f_item = self._prefix + item
+        if self._is_part(f_item):
+            return getattr(self._node, f_item)
+        else:
+            raise AttributeError('Function/Property `%s` unknown for %s '
+                                 '`%s`.' % (item, self._node.__class__.__name__,
+                                            self._node.v_full_name))
+
+    def __dir__(self):
+        result = [x for x in dir(self._node) if self._is_part(x)]
+        return result
+
+
+class NNTreeNodeVars(NNTreeNodeFunc):
+
+    __slots__ = ()
+
+    def __init__(self, node):
+        super(NNTreeNodeVars, self).__init__(node)
+        self._prefix = 'v_'
+
+    def _is_part(self, name):
+        if super(NNTreeNodeVars, self)._is_part(name):
+            return True
+        if name in self._node.__all_slots__:
+            return True
+        try:
+            return name in self._node.__dict__
+        except AttributeError:
+            return False
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return super(NNTreeNodeFunc, self).__setattr__(key, value)
+        v_key = 'v_' + key
+        if self._is_part(v_key):
+            setattr(self._node, v_key, value)
+        else:
+            raise AttributeError('Property `%s` unknown for %s '
+                                 '`%s`.' % (key, self._node.__class__.__name__,
+                                            self._node.v_full_name))
+
+
 class NNTreeNode(WithAnnotations):
     """ Abstract class to define the general node in the trajectory tree."""
 
     __slots__ = ('_is_leaf', '_stored', '_comment', '_depth', '_full_name', '_name',
-                 '_run_branch', '_branch')
+                 '_run_branch', '_branch', '_vars', '_func')
 
     def __init__(self, full_name, comment, is_leaf):
         super(NNTreeNode, self).__init__()
@@ -120,9 +177,24 @@ class NNTreeNode(WithAnnotations):
         self._name = None
         self._run_branch = 'trajectory'
         self._branch = None
+        self._vars = None
+        self._func = None
         self.v_comment = comment
 
         self._rename(full_name)
+
+    @property
+    def vars(self):
+        """Alternative naming, you can use `node.vars.name` instead of `node.v_name`"""
+        if self._vars is None:
+            self._vars = NNTreeNodeVars(self)
+        return self._vars
+
+    @property
+    def func(self):
+        if self._func is None:
+            self._func = NNTreeNodeFunc(self)
+        return self._func
 
     @property
     def v_stored(self):
@@ -782,6 +854,10 @@ class NaturalNamingInterface(HasLogger):
         # Finally remove all references in the dictionaries for fast search
         self._remove_from_nodes_and_leaves(node)
 
+        # Remove circular references
+        node._vars = None
+        node._func = None
+
     def _remove_from_nodes_and_leaves(self, node):
 
         run_name = node.v_run_branch
@@ -1362,11 +1438,6 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if parent_node is None:
-            parent_length = 0
-        else:
-            parent_length = len(parent_node.v_full_name)
-
         faulty_names = ''
 
         if parent_node is not None and parent_node.v_is_root and split_names[0] == 'overview':
@@ -1380,11 +1451,6 @@ class NaturalNamingInterface(HasLogger):
                                '(use only [A-Za-z0-9_-]),' % \
                                (faulty_names, split_name)
 
-            if split_name in self._not_admissible_names:
-                faulty_names = '%s `%s` is a method/attribute of the ' \
-                               'trajectory/treenode/naminginterface,' % \
-                               (faulty_names, split_name)
-
             if split_name[0] == '_':
                 faulty_names = '%s `%s` starts with a leading underscore,' % (
                     faulty_names, split_name)
@@ -1394,19 +1460,18 @@ class NaturalNamingInterface(HasLogger):
                     faulty_names = '%s `%s` contains `$` but has no associated ' \
                                    'wildcard function,' % (faulty_names, split_name)
 
+            if split_name in self._not_admissible_names:
+                self._logger.warning('`%s` is a method/attribute of the '
+                                     'trajectory/treenode/naminginterface, you may not be '
+                                     'able to access it via natural naming but only by using '
+                                     '`[]` square bracket notation. ' % split_name)
+
         name = split_names[-1]
-        location = '.'.join(split_names[:-1])
         if len(name) >= pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
             faulty_names = '%s `%s` is too long the name can only have %d characters but it has ' \
                            '%d,' % \
                            (faulty_names, name, len(name),
                             pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
-
-        # if parent_length + len(location) >= pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH:
-        #     faulty_names = '%s `%s` is too long the location can only have ' \
-        #                    '%d characters but it has %d,' % \
-        #                    (faulty_names, location, len(location),
-        #                     pypetconstants.HDF5_STRCOL_MAX_LOCATION_LENGTH)
 
         return faulty_names
 

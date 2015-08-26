@@ -31,3 +31,5 @@
 * Add changes about naming
 
 * Doc new naming
+
+* Doc Brian changes

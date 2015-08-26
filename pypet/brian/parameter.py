@@ -948,7 +948,7 @@ class BrianMonitorResult(Result):
 
     def _extract_multi_state_monitor(self, monitors):
 
-        self.f_set(vars=monitors.vars)
+        self.f_set(vars_=monitors.vars)
 
 
         if len(monitors.times) > 0:

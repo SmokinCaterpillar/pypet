@@ -184,7 +184,7 @@ class BrianMonitorTest(ResultTest):
             raise RuntimeError('You shall not pass!')
 
     def check_multi_state_monitor(self, res, monitor):
-        self.assertEqual(monitor.vars, res.vars)
+        self.assertEqual(monitor.vars, res.vars_)
 
         if len(monitor.times)>0:
             self.assertEqual('second', res.times_unit)
