@@ -124,10 +124,11 @@ class NNTreeNodeFunc(HasSlots):
         else:
             raise AttributeError('Function/Property `%s` unknown for %s '
                                  '`%s`.' % (item, self._node.__class__.__name__,
-                                            self._node.v_full_name))
+                                            self._node.v_name))
 
     def __dir__(self):
-        result = [x for x in dir(self._node) if self._is_part(x)]
+        result = [x[2:] for x in dir(self._node) if x.startswith(self._prefix) and
+                                                self._is_part(x)]
         return result
 
 
@@ -158,7 +159,7 @@ class NNTreeNodeVars(NNTreeNodeFunc):
         else:
             raise AttributeError('Property `%s` unknown for %s '
                                  '`%s`.' % (key, self._node.__class__.__name__,
-                                            self._node.v_full_name))
+                                            self._node.v_name))
 
 
 class NNTreeNode(WithAnnotations):

@@ -79,7 +79,7 @@ class FullStorageTest(TrajectoryComparator):
             self.assertTrue('hi' in traj)
 
 
-def test_niceness(traj):
+def with_niceness(traj):
     if traj.multiproc:
         if hasattr(os, 'nice'):
             trajnice = traj.niceness
@@ -291,7 +291,7 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(test_niceness)
+        self.env.f_run(with_niceness)
 
         self.assertTrue(self.traj.f_is_completed())
 

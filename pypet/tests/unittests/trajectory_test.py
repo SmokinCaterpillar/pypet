@@ -137,6 +137,25 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
         self.assertEqual(0, self.traj.v_idx)
 
+    def test_prefixes_dir(self):
+        f_dir = dir(self.traj.func)
+        v_dir = dir(self.traj.vars)
+        t_dir = dir(self.traj)
+        for f in f_dir:
+            self.assertIn('f_' + f, t_dir)
+        for v in v_dir:
+            self.assertIn('v_' + v, t_dir)
+        for g in t_dir:
+            if g.startswith('f_'):
+                self.assertIn(g[2:], f_dir)
+            elif g.startswith('v_'):
+                self.assertIn(g[2:], v_dir)
+
+    def test_data_dir(self):
+        memberset = set(self.traj.f_dir_data())
+        memberset2 = set(self.traj.func.get_children().keys())
+        self.assertEqual(memberset, memberset2)
+
 
     def test_deletion(self):
         x = []
