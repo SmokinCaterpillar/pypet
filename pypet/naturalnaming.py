@@ -52,7 +52,7 @@ import itertools as itools
 import re
 from collections import deque
 
-from pypet.utils.decorators import deprecated, kwargs_api_change, no_prefix_getattr
+from pypet.utils.decorators import deprecated, kwargs_api_change
 import pypet.pypetexceptions as pex
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
@@ -2829,7 +2829,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                                        auto_load=self.v_root.v_auto_load,
                                        with_links=self.v_root.v_with_links)
 
-    @no_prefix_getattr
+    # @no_prefix_getattr
     def __getattr__(self, name):
         if isinstance(name, compat.base_type) and name.startswith('_'):
             raise AttributeError('`%s` is not part of your trajectory or it\'s tree.' % name)

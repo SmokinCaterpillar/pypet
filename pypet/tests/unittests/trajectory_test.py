@@ -116,20 +116,20 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(self.traj.run_00000001.new, 5)
         self.assertEqual(self.traj['very.new'], 4)
 
-    def test_no_prefixes(self):
-        self.assertEqual(self.traj.name, self.traj.v_name)
-        res = self.traj.add_result('testgroup.test', k=42)
-        self.assertEqual(res.v_comment, res.comment)
-        with self.assertRaises(AttributeError):
-            res.v_k
-        tg = self.traj.testgroup
-        tg.add_result('test2', 43)
-        self.assertEqual(tg.v_location, tg.location)
-        self.assertEqual(self.traj.v_crun_name, self.traj.crun_name)
-        self.assertEqual(self.traj.v_crun_name_, self.traj.crun_name_)
-        self.assertEqual(self.traj.idx, self.traj.v_idx)
-        self.traj.add_leaf('ggg.idx', 12345)
-        self.assertNotEqual(self.traj.idx, self.traj.v_idx)
+    # def test_no_prefixes(self):
+    #     self.assertEqual(self.traj.name, self.traj.v_name)
+    #     res = self.traj.add_result('testgroup.test', k=42)
+    #     self.assertEqual(res.v_comment, res.comment)
+    #     with self.assertRaises(AttributeError):
+    #         res.v_k
+    #     tg = self.traj.testgroup
+    #     tg.add_result('test2', 43)
+    #     self.assertEqual(tg.v_location, tg.location)
+    #     self.assertEqual(self.traj.v_crun_name, self.traj.crun_name)
+    #     self.assertEqual(self.traj.v_crun_name_, self.traj.crun_name_)
+    #     self.assertEqual(self.traj.idx, self.traj.v_idx)
+    #     self.traj.add_leaf('ggg.idx', 12345)
+    #     self.assertNotEqual(self.traj.idx, self.traj.v_idx)
 
     def test_deletion(self):
         x = []

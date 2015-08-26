@@ -1231,7 +1231,7 @@ class Environment(HasLogger):
         if self._resumable:
             if resume_folder is None:
                 resume_folder = os.path.join(os.getcwd(), 'resume')
-            resume_path = os.path.join(resume_folder, self._traj.name)
+            resume_path = os.path.join(resume_folder, self._traj.v_name)
 
             try:
                 os.makedirs(resume_path)
@@ -1995,10 +1995,8 @@ class Environment(HasLogger):
         # Postproc Kwargs
         self._postproc_kwargs = resume_dict['postproc_kwargs']
 
-        old_start_timestamp = resume_dict['start_timestamp']
-
         # Unpack the trajectory
-        self._traj.full_copy = resume_dict['full_copy']
+        self._traj.v_full_copy = resume_dict['full_copy']
         # Load meta data
         self._traj.f_load(load_parameters=pypetconstants.LOAD_NOTHING,
                           load_derived_parameters=pypetconstants.LOAD_NOTHING,

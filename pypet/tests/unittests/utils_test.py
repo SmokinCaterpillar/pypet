@@ -548,36 +548,36 @@ class SlotsTest(unittest.TestCase):
         self.assertEqual(all_slots, new_slot.__all_slots__)
 
 
-class MyCustomLeaf(SparseParameter):
-    def __init__(self, full_name, data=None, comment=''):
-        super(MyCustomLeaf, self).__init__(full_name, data, comment)
-        self.v_my_property = 42
-
-
-class MyCustomLeaf2(PickleParameter):
-
-    __slots__ = 'v_my_property'
-
-    def __init__(self, full_name, data=None, comment=''):
-        super(MyCustomLeaf2, self).__init__(full_name, data, comment)
-        self.v_my_property = 42
-
-
-class NamingSchemeTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'naming', 'slots'
-
-    def test_v_property(self):
-        cp = MyCustomLeaf('test')
-        self.assertEqual(cp.my_property, cp.v_my_property)
-        with self.assertRaises(AttributeError):
-            cp.v_my_other
-
-    def test_v_property_slots(self):
-        cp = MyCustomLeaf2('test')
-        self.assertEqual(cp.my_property, cp.v_my_property)
-        with self.assertRaises(AttributeError):
-            cp.v_my_other
+# class MyCustomLeaf(SparseParameter):
+#     def __init__(self, full_name, data=None, comment=''):
+#         super(MyCustomLeaf, self).__init__(full_name, data, comment)
+#         self.v_my_property = 42
+#
+#
+# class MyCustomLeaf2(PickleParameter):
+#
+#     __slots__ = 'v_my_property'
+#
+#     def __init__(self, full_name, data=None, comment=''):
+#         super(MyCustomLeaf2, self).__init__(full_name, data, comment)
+#         self.v_my_property = 42
+#
+#
+# class NamingSchemeTest(unittest.TestCase):
+#
+#     tags = 'unittest', 'utils', 'naming', 'slots'
+#
+#     def test_v_property(self):
+#         cp = MyCustomLeaf('test')
+#         self.assertEqual(cp.my_property, cp.v_my_property)
+#         with self.assertRaises(AttributeError):
+#             cp.v_my_other
+#
+#     def test_v_property_slots(self):
+#         cp = MyCustomLeaf2('test')
+#         self.assertEqual(cp.my_property, cp.v_my_property)
+#         with self.assertRaises(AttributeError):
+#             cp.v_my_other
 
 
 if __name__ == '__main__':
