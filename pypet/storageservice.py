@@ -1480,7 +1480,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if 'a' in mode:
                 (path, filename) = os.path.split(self._filename)
-                racedirs(path)
+                racedirs(os.path.abspath(path))
 
                 self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
                                            complevel=self._complevel, fletcher32=self._fletcher32)

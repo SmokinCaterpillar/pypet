@@ -928,14 +928,14 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('hdfwarning.hdf5')
 
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter("always", DeprecationWarning, append=False)
             env = Environment(trajectory='test', filename=filename,
                               dynamically_imported_classes=[],
                               log_config=get_log_config(), add_time=True)
             self.assertEqual(len(w), 1)
 
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter("always", DeprecationWarning, append=False)
             traj = Trajectory(dynamically_imported_classes=[])
             self.assertEqual(len(w), 1)
 
@@ -943,7 +943,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_store()
 
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter("always", DeprecationWarning, append=False)
             traj.f_load(dynamically_imported_classes=[])
             self.assertEqual(len(w), 1)
 

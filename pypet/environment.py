@@ -1233,7 +1233,7 @@ class Environment(HasLogger):
             if resume_folder is None:
                 resume_folder = os.path.join(os.getcwd(), 'resume')
             resume_path = os.path.join(resume_folder, self._traj.v_name)
-            racedirs(resume_path)
+            racedirs(os.path.abspath(resume_path))
         else:
             resume_path = None
 

@@ -157,8 +157,7 @@ def kwargs_api_change(old_name, new_name=None):
                     warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
                                  'please use keyword `%s` instead.' % \
                                  (old_name, func.__name__, new_name)
-                warnings.warn(warning_string, category=DeprecationWarning,
-                              stacklevel=2)
+                warnings.warn(warning_string, category=DeprecationWarning)
                 value = kwargs.pop(old_name)
                 if new_name is not None:
                     kwargs[new_name] = value
