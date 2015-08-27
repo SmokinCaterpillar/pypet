@@ -723,32 +723,32 @@ class StdoutToLogger(HasLogger):
             self._original_steam = None
 
 
-class PypetTestFileHandler(logging.FileHandler):
-    """Takes care that data is flushed using fsync"""
-    def flush(self):
-        """
-        Flushes the stream.
-        """
-        self.acquire()
-        try:
-            if self.stream and hasattr(self.stream, "flush"):
-                self.stream.flush()
-                try:
-                    os.fsync(self.stream.fileno())
-                except OSError:
-                    pass
-        finally:
-            self.release()
-
-    @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
-    def _open(self):
-        try:
-            return logging.FileHandler._open(self)
-        except FileNotFoundError:
-            old_mode = self.mode
-            try:
-                self.mode = 'w'
-                try_make_dirs(self.baseFilename)
-                return logging.FileHandler._open(self)
-            finally:
-                self.mode = old_mode
+# class PypetTestFileHandler(logging.FileHandler):
+#     """Takes care that data is flushed using fsync"""
+#     def flush(self):
+#         """
+#         Flushes the stream.
+#         """
+#         self.acquire()
+#         try:
+#             if self.stream and hasattr(self.stream, "flush"):
+#                 self.stream.flush()
+#                 try:
+#                     os.fsync(self.stream.fileno())
+#                 except OSError:
+#                     pass
+#         finally:
+#             self.release()
+#
+#     @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
+#     def _open(self):
+#         try:
+#             return logging.FileHandler._open(self)
+#         except FileNotFoundError:
+#             old_mode = self.mode
+#             try:
+#                 self.mode = 'w'
+#                 try_make_dirs(self.baseFilename)
+#                 return logging.FileHandler._open(self)
+#             finally:
+#                 self.mode = old_mode

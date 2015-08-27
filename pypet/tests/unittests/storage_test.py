@@ -923,31 +923,31 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('results' in traj)
         self.assertTrue(res not in traj)
 
-    def test_throw_warning_if_old_kw_is_used(self):
-
-        filename = make_temp_dir('hdfwarning.hdf5')
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always", DeprecationWarning, append=False)
-            env = Environment(trajectory='test', filename=filename,
-                              dynamically_imported_classes=[],
-                              log_config=get_log_config(), add_time=True)
-            self.assertEqual(len(w), 1)
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always", DeprecationWarning, append=False)
-            traj = Trajectory(dynamically_imported_classes=[])
-            self.assertEqual(len(w), 1)
-
-        traj = env.v_trajectory
-        traj.f_store()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always", DeprecationWarning, append=False)
-            traj.f_load(dynamically_imported_classes=[])
-            self.assertEqual(len(w), 1)
-
-        env.f_disable_logging()
+    # def test_throw_warning_if_old_kw_is_used(self):
+    #
+    #     filename = make_temp_dir('hdfwarning.hdf5')
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         env = Environment(trajectory='test', filename=filename,
+    #                           dynamically_imported_classes=[],
+    #                           log_config=get_log_config(), add_time=True)
+    #         self.assertEqual(len(w), 1)
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         traj = Trajectory(dynamically_imported_classes=[])
+    #         self.assertEqual(len(w), 1)
+    #
+    #     traj = env.v_trajectory
+    #     traj.f_store()
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         traj.f_load(dynamically_imported_classes=[])
+    #         self.assertEqual(len(w), 1)
+    #
+    #     env.f_disable_logging()
 
     def test_overwrite_stuff(self):
         traj = Trajectory(name='TestOverwrite', filename=make_temp_dir('testowrite.hdf5'),
