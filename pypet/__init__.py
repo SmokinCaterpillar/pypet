@@ -23,7 +23,7 @@ from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
 from pypet.pypetlogging import HasLogger, rename_log_file
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
-from pypet.utils.helpful_functions import progressbar
+from pypet.utils.helpful_functions import progressbar, racedirs
 from pypet.shareddata import SharedArray, SharedCArray, SharedEArray,\
     SharedVLArray, SharedPandasFrame, SharedTable, SharedResult,\
     StorageContextManager, make_ordinary_result, make_shared_result
@@ -82,6 +82,7 @@ __all__ = [
     make_ordinary_result.__name__,
     make_shared_result.__name__,
     progressbar.__name__,
+    racedirs.__name__,
     find_unique_points.__name__,
     merge_all_in_folder.__name__,
     manual_run.__name__,

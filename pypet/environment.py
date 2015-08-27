@@ -77,7 +77,8 @@ from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
-from pypet.utils.helpful_functions import is_debug, result_sort, format_time, port_to_tcp
+from pypet.utils.helpful_functions import is_debug, result_sort, format_time, port_to_tcp, \
+    racedirs
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
@@ -1232,13 +1233,7 @@ class Environment(HasLogger):
             if resume_folder is None:
                 resume_folder = os.path.join(os.getcwd(), 'resume')
             resume_path = os.path.join(resume_folder, self._traj.v_name)
-
-            try:
-                os.makedirs(resume_path)
-            except OSError as exc:
-                # Directories already exist
-                if exc.errno != 17:
-                    raise
+            racedirs(resume_path)
         else:
             resume_path = None
 

@@ -37,7 +37,7 @@ import socket
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
-from pypet.utils.helpful_functions import progressbar
+from pypet.utils.helpful_functions import progressbar, racedirs
 from pypet.utils.decorators import retry
 from pypet.slots import HasSlots
 
@@ -194,12 +194,7 @@ def try_make_dirs(filename):
     """
     try:
         dirname = os.path.dirname(filename)
-        try:
-            os.makedirs(dirname)
-        except OSError as exc:
-            # Directories already exist
-            if exc.errno != 17:
-                raise
+        racedirs(dirname)
     except Exception as exc:
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
                          'filename `%s` because of: %s' % (filename, repr(exc)))
@@ -676,36 +671,6 @@ class DisableAllLogging(object):
         logging.disable(logging.NOTSET)
 
 
-class PypetTestFileHandler(logging.FileHandler):
-    """Takes care that data is flushed using fsync"""
-    def flush(self):
-        """
-        Flushes the stream.
-        """
-        self.acquire()
-        try:
-            if self.stream and hasattr(self.stream, "flush"):
-                self.stream.flush()
-                try:
-                    os.fsync(self.stream.fileno())
-                except OSError:
-                    pass
-        finally:
-            self.release()
-
-    @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
-    def _open(self):
-        try:
-            return logging.FileHandler._open(self)
-        except FileNotFoundError:
-            old_mode = self.mode
-            self.mode = 'w'
-            try:
-                return logging.FileHandler._open(self)
-            finally:
-                self.mode = old_mode
-
-
 class StdoutToLogger(HasLogger):
     """Fake file-like stream object that redirects writes to a logger instance."""
     def __init__(self, logger_name, log_level=logging.INFO):
@@ -757,3 +722,32 @@ class StdoutToLogger(HasLogger):
             self._redirection = False
             self._original_steam = None
 
+
+# class PypetTestFileHandler(logging.FileHandler):
+#     """Takes care that data is flushed using fsync"""
+#     def flush(self):
+#         """
+#         Flushes the stream.
+#         """
+#         self.acquire()
+#         try:
+#             if self.stream and hasattr(self.stream, "flush"):
+#                 self.stream.flush()
+#                 try:
+#                     os.fsync(self.stream.fileno())
+#                 except OSError:
+#                     pass
+#         finally:
+#             self.release()
+#
+#     @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
+#     def _open(self):
+#         try:
+#             return logging.FileHandler._open(self)
+#         except FileNotFoundError:
+#             old_mode = self.mode
+#             self.mode = 'w'
+#             try:
+#                 return logging.FileHandler._open(self)
+#             finally:
+#                 self.mode = old_mode

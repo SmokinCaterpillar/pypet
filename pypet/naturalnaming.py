@@ -48,6 +48,8 @@ Contains the following classes:
 __author__ = 'Robert Meyer'
 
 import inspect
+import warnings
+import keyword
 import itertools as itools
 import re
 from collections import deque
@@ -524,6 +526,7 @@ class NaturalNamingInterface(HasLogger):
         # List of names that are taboo. The user cannot create parameters or results that
         # contain these names.
         self._not_admissible_names = set(dir(self)) | set(dir(self._root_instance))
+        self._python_keywords = set(keyword.kwlist)
 
 
     def _map_type_to_dict(self, type_name):
@@ -1447,25 +1450,36 @@ class NaturalNamingInterface(HasLogger):
 
         for split_name in split_names:
 
-            if re.match(CHECK_REGEXP, split_name) is None:
+            if len(split_name) == 0:
+                faulty_names = '%s `%s` contains no characters, please use at least 1,' % (
+                    faulty_names, split_name)
+
+            elif split_name.startswith('_'):
+                faulty_names = '%s `%s` starts with a leading underscore,' % (
+                    faulty_names, split_name)
+
+            elif re.match(CHECK_REGEXP, split_name) is None:
                 faulty_names = '%s `%s` contains non-admissible characters ' \
                                '(use only [A-Za-z0-9_-]),' % \
                                (faulty_names, split_name)
 
-            if split_name[0] == '_':
-                faulty_names = '%s `%s` starts with a leading underscore,' % (
-                    faulty_names, split_name)
-
-            if '$' in split_name:
+            elif '$' in split_name:
                 if split_name not in self._root_instance._wildcard_keys:
                     faulty_names = '%s `%s` contains `$` but has no associated ' \
                                    'wildcard function,' % (faulty_names, split_name)
 
-            if split_name in self._not_admissible_names:
-                self._logger.warning('`%s` is a method/attribute of the '
-                                     'trajectory/treenode/naminginterface, you may not be '
-                                     'able to access it via natural naming but only by using '
-                                     '`[]` square bracket notation. ' % split_name)
+            elif split_name in self._not_admissible_names:
+                warnings.warn('`%s` is a method/attribute of the '
+                              'trajectory/treenode/naminginterface, you may not be '
+                              'able to access it via natural naming but only by using '
+                              '`[]` square bracket notation. ' % split_name,
+                              category=SyntaxWarning)
+
+            elif split_name in self._python_keywords:
+                warnings.warn('`%s` is a python keyword, you may not be '
+                              'able to access it via natural naming but only by using '
+                              '`[]` square bracket notation. ' % split_name,
+                              category=SyntaxWarning)
 
         name = split_names[-1]
         if len(name) >= pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:

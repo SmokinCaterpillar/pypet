@@ -3,6 +3,7 @@ from __future__ import print_function
 __author__ = 'Robert Meyer'
 
 import sys
+import os
 import datetime
 import numpy as np
 import inspect
@@ -337,3 +338,16 @@ def port_to_tcp(port=None):
     return address + ':' + str(port)
 
 
+def racedirs(path):
+    """Like os.makedirs but takes care about race conditions"""
+    while True:
+        try:
+            os.makedirs(path)
+        except EnvironmentError as exc:
+            # Part of the directory path already exist
+            if exc.errno != 17:
+                # This error won't be any good
+                raise
+            elif os.path.isdir(path):
+                # only break if full path has been created
+                break

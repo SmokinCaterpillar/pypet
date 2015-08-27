@@ -688,9 +688,26 @@ class TrajectoryTest(unittest.TestCase):
     def test_illegal_namings(self):
         self.traj=Trajectory('resulttest2')
 
-        # with warnings.catch_warnings(record=True) as w:
-        #     self.traj.f_add_parameter('f_get')
-        #     self.assertEqual(len(w), 1)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('f_get')
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('get')
+            self.assertEqual(len(w), 0)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('not.for.continue')
+            self.assertEqual(len(w), 3)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test..hh')
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test.::!.h')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_result('test.$.k.$dsa')

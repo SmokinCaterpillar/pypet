@@ -345,8 +345,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(renaming_2, solution_2)
 
 
-    # @unittest.skipIf(sys.version_info < (2, 7, 0), 'Not supported in python 2.6')
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_old_way_creation_with_errors(self):
          # if not self.multiproc:
         #     return
@@ -449,7 +448,7 @@ class LoggingTest(TrajectoryComparator):
         self.assertEqual(total_info_count, 0)
         self.assertLess(total_retry_count, len(traj))
 
-    @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
+    # @unittest.skipIf(platform.system() == 'Windows', 'Log file creation might fail under windows.')
     def test_logfile_old_way_disabling_mp_log(self):
          # if not self.multiproc:
         #     return

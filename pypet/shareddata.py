@@ -160,7 +160,8 @@ class SharedData(HasLogger):
     def get_data_node(self):
         if not self._storage_service.is_open:
             warnings.warn('You requesting the data item but your store is not open, '
-                                 'the item itself will be closed, too!')
+                          'the item itself will be closed, too!',
+                          category=RuntimeWarning)
         return self._request_data('__thenode__')
 
     @property

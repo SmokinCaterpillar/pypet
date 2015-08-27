@@ -28,6 +28,7 @@ import pypet.naturalnaming as nn
 from pypet.pypetlogging import HasLogger, DisableAllLogging
 from pypet.utils.decorators import deprecated
 import pypet.shareddata as shared
+from pypet.utils.helpful_functions import racedirs
 
 
 class StorageService(object):
@@ -1479,13 +1480,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if 'a' in mode:
                 (path, filename) = os.path.split(self._filename)
-
-                try:
-                    os.makedirs(path)
-                except OSError as exc:
-                    # Directories already exist
-                    if exc.errno != 17:
-                        raise
+                racedirs(path)
 
                 self._hdf5store = HDFStore(self._filename, mode=self._mode, complib=self._complib,
                                            complevel=self._complevel, fletcher32=self._fletcher32)

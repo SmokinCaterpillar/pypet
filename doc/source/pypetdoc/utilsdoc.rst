@@ -33,6 +33,15 @@ It displays progress and estimates remaining time.
 .. autofunction:: pypet.progressbar
 
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Multiprocessing Directory Creation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Function that calls ``os.makedirs`` but takes care about race conditions if multiple
+processes or threads try to create the directories at the same time.
+
+.. autofunction:: pypet.racedirs
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Merging many Trajectories
 ^^^^^^^^^^^^^^^^^^^^^^^^^
