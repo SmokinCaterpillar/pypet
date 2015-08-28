@@ -134,6 +134,11 @@ If you don't like using prefixes, you can alternatively also use the properties
 ``traj.f_iter_runs()`` is equivalent to ``traj.func.iter_runs()`` or
 ``mygroup.v_full_name`` is equivalent to ``mygroup.vars.full_name``.
 
+The prefix and ``vars``/``func`` notation only applies to tree data objects
+(group nodes and leaf nodes) but
+not to other aspects of pypet. For example, the :class:`~pypet.environment.Environment`
+does not rely on prefixes at all.
+
 
 -----------------
 #1 Pre-Processing

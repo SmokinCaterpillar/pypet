@@ -556,9 +556,9 @@ Thus, you will be able to track how your trajectory was built over time.
 
 .. _more-on-logging:
 
-^^^^^^^
+-------
 Logging
-^^^^^^^
+-------
 
 *pypet* comes with a full fledged logging environment.
 
@@ -672,9 +672,9 @@ This is equivalent to:
 
 .. _more-on-multiprocessing:
 
-^^^^^^^^^^^^^^^
+---------------
 Multiprocessing
-^^^^^^^^^^^^^^^
+---------------
 
 For an  example on multiprocessing see :ref:`example-04`.
 
@@ -905,9 +905,9 @@ and later on merge the trajectories from each experiment into one.
 
 .. _more-on-git:
 
-^^^^^^^^^^^^^^^
+---------------
 Git Integration
-^^^^^^^^^^^^^^^
+---------------
 
 The environment can make use of version control. If you manage your code with
 git_, you can trigger automatic commits with the environment to get a proper snapshot
@@ -942,9 +942,9 @@ commit in case of changed code, the program will throw a ``GitDiffError``.
 
 .. _more-on-sumatra:
 
-^^^^^^^^^^^^^^^^^^^
+-------------------
 Sumatra Integration
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 The environment can make use of a Sumatra_ experimental lab-book.
 
@@ -969,9 +969,9 @@ not crash.
 
 .. _more-on-overview:
 
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 HDF5 Overview Tables
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 The :class:`~pypet.storageservice.HDF5StorageService` creates summarizing information
 about your trajectory that can be found in the ``overview`` group within your HDF5 file.
@@ -1278,9 +1278,9 @@ post-processing will become the bottleneck in your parallel simulations.
 your post-processing function are not sorted by their run indices but by finishing time!
 
 
----------------------------
-Using a Experiment Pipeline
----------------------------
+----------------------------
+Using an Experiment Pipeline
+----------------------------
 
 Your numerical experiments usually work like the following: You add some parameters to
 your trajectory, you mark a few of these for exploration, and you pass your main function
@@ -1353,6 +1353,23 @@ the run function followed by the positional and keyword arguments:
     def mypipeline(traj):
         #...
         return myjobfunc, args, kwargs
+
+
+.. _more-on-optimization:
+
+----------------------
+Parameter Optimization
+----------------------
+
+Since *pypet* offers iterative post-processing and
+the ability to :func:`~pypet.trajectory.Trajectory.f_expand`
+trajectories, you can iteratively explore the parameter space.
+*pypet* does **not** provide built-in parameter optimization methods.
+However, *pypet* can be easily combined with frameworks like the evolutionary
+algorithms toolbox DEAP_ for adaptive parameter optimization.
+:ref:`example-19` shows how you can integrate *pypet* and DEAP_.
+
+.. _DEAP: http://deap.readthedocs.org/en/
 
 
 .. _more-on-continuing:

@@ -204,8 +204,10 @@ Main Features
 
 * Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
-* **Analyse** your data on-the-fly during multiprocessing for adaptive
-  exploration of the parameter space
+* **Analyse** your data on-the-fly during multiprocessing
+
+* **Adaptively** explore tha parameter space combining *pypet* with optimization
+  tools like the evolutionary algorithms framework DEAP (http://deap.readthedocs.org/en/)
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
