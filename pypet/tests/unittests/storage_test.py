@@ -1002,7 +1002,9 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.v_name == 'TestTraj')
 
-        self.assertTrue(len(traj) == 3)
+        self.assertEqual(len(traj), 3)
+
+        self.assertEqual(len(traj._explored_parameters), 2)
 
         traj.f_shrink()
 
