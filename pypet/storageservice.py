@@ -2026,10 +2026,10 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 traj._length = single_run_table.nrows
 
-            # Load explorations
-            self._trj_load_exploration(traj)
-            # Load the hdf5 config data:
-            self._srvc_load_hdf5_settings()
+        # Load explorations
+        self._trj_load_exploration(traj)
+        # Load the hdf5 config data:
+        self._srvc_load_hdf5_settings()
 
     def _srvc_load_hdf5_settings(self):
 
