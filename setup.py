@@ -10,7 +10,7 @@ except ImportError:
 
 install_requires=[
         'tables >= 2.3.1',
-        'pandas >= 0.12.0',
+        'pandas >= 0.14.1',
         'numpy >= 1.6.1',
         'scipy >= 0.9.0']
 
