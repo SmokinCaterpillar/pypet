@@ -1,4 +1,4 @@
-__author__ = 'Robert Meyer'
+__author__ = ('Robert Meyer', 'Mehmet Nevvaf Timur')
 
 import sys
 if sys.version_info < (2, 7, 0):
@@ -73,6 +73,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.f_store()
 
         data = myarray.read()
+        myarray.get_data_node()
         self.assertTrue(np.all(data == thedata))
 
         with StorageContextManager(traj):
@@ -176,7 +177,10 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         newrow = {'ha': 'hu', 'haha': 4.0}
 
-        with StorageContextManager(traj):
+        with self.assertRaises(TypeError):
+            traj.shared.t2.row
+
+        with StorageContextManager(traj) as cm:
             row = traj.shared.t2.row
             for irun in range(11):
                 for key, val in newrow.items():
@@ -185,6 +189,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
             traj.shared.t3.flush()
 
         data = myarray.read()
+        myarray.get_data_node()
         self.assertTrue(np.all(data == thedata))
 
         with StorageContextManager(traj):
@@ -220,6 +225,9 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         traj.f_store(only_init=True)
 
+        traj.f_add_result('My.Tree.Will.Be.Deleted', 42)
+        traj.f_add_result('Mine.Too.HomeBoy', 42, comment='Don`t cry for me!')
+
         res = traj.f_add_result(SharedResult, 'myres')
 
         res['myres'] = SharedTable()
@@ -227,6 +235,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         res['myres'].create_shared_data(first_row=first_row)
 
         with StorageContextManager(traj):
+            traj.myres
             for irun in range(10000):
                 row = traj.myres.row
                 for key in first_row:
