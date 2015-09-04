@@ -22,6 +22,19 @@ from pypet.naturalnaming import KnowsTrajectory
 
 
 class StorageContextManager(HasLogger):
+    """Context manager that can be used to open a storage file with multiprocessing.
+
+    For example:
+
+    .. code-block:: python
+
+        with StorageContextManager(traj) as scm:
+            # This is a block with open storage,
+            # this block is also multiprocessing safe,
+            # i.e. everything happens sequentially in here
+            do_stuff_to_open_storage_sequentially()
+
+    """
     def __init__(self, trajectory):
         self._traj = trajectory
 
@@ -40,6 +53,7 @@ class StorageContextManager(HasLogger):
                 return False
 
     def f_close_store(self):
+        """Closes store manually not needed if used with `with`"""
         service = self._traj.v_storage_service
         if not service.is_open:
             raise RuntimeError('The storage service is not open, '
@@ -47,6 +61,7 @@ class StorageContextManager(HasLogger):
         service.store(pypetconstants.CLOSE_FILE, None)
 
     def f_open_store(self):
+        """Opens store manually not needed if used with `with`"""
         service = self._traj.v_storage_service
         if service.is_open:
             raise RuntimeError('Your service is already open, there is no need to re-open it.')
@@ -54,6 +69,7 @@ class StorageContextManager(HasLogger):
                       trajectory_name=self._traj.v_name)
 
     def f_flush_store(self):
+        """Flushes data to the storage can be called at any time when storage is open."""
         service = self._traj.v_storage_service
         if not service.is_open:
             raise RuntimeError('The storage service is not open, '
@@ -62,9 +78,19 @@ class StorageContextManager(HasLogger):
 
 
 def make_ordinary_result(result, key, trajectory=None, reload=True):
-    """Turns a given shared result into a an ordinary one.
+    """Turns a given shared data item into a an ordinary one.
 
-    :return: The `result`
+    :param result: Result container with shared data
+    :param key: The name of the shared data
+    :param trajectory:
+
+        The trajectory, only needed if shared data has
+        no access to the trajectory, yet.
+
+    :param reload: If data should be reloaded after conversion
+
+    :return: The result
+
 
     """
     shared_data = result.f_get(key)
@@ -78,10 +104,18 @@ def make_ordinary_result(result, key, trajectory=None, reload=True):
 
 
 def make_shared_result(result, key, trajectory, new_class=None):
-    """Turns an ordinary result into a shared one.
+    """Turns an ordinary data item into a shared one.
 
     Removes the old result from the trajectory and replaces it.
     Empties the given result.
+
+    :param result: The result containing ordinary data
+    :param key: Name of ordinary data item
+    :param trajectory: Trajectory container
+    :param new_class:
+
+        Class of new shared data item.
+        Leave `None` for automatic detection.
 
     :return: The `result`
 
@@ -99,12 +133,70 @@ def make_shared_result(result, key, trajectory, new_class=None):
         else:
             raise RuntimeError('Your data `%s` is not understood.' % key)
     shared_data = new_class(result.f_translate_key(key), result, trajectory=trajectory)
-    shared_data._request_data('make_shared')
     result[key] = shared_data
+    shared_data._request_data('make_shared')
     return result
 
 
 class SharedData(HasLogger):
+    """ Piece of data that can be shared among many processes.
+
+    Could be a PyTables table or array or pandas DataFrame.
+    The data can be accessed and modified by all processes.
+
+    Can be added as follows:
+
+        >>> res = traj.f_add_result(SharedResult, 'shared_result')
+        >>> my_array = SharedArray(name='array', parent=res, trajectory=traj, add_to_parent=True)
+
+    Next, the shared array can be accessed via:
+
+        >>> my_array = traj.shared_result.array
+
+    So far the shared array is empty and we need to create shared data on the disk.
+    In order to do this we call
+
+        >>> my_array.create_shared_data(obj=np.zeros((100,100)))
+
+    Thus, within the HDF5 file, there exist now a 100 by 100 array that can be
+    accessed and modified by any process.
+
+    For example:
+
+    .. code-block:: python
+
+        with StorageContextManager(traj) as scm:
+            my_array = traj.shared_result
+            my_array[42, 42] = 1001.array
+
+    Now the value 1001 can be accessed from all processes at
+    position ``[42, 42]``.
+
+    :param name:
+
+        Name of shared data, must be the same name as in the parent node.
+
+    :param parent:
+
+        *pypet* result that will contain the shared data item.
+
+    :param trajectory:
+
+        Trajectory container
+
+    :param add_to_parent:
+
+        If shared data should automatically be added to the parent
+        with the given `name`.
+
+        >>> my_array = SharedArray(name='array', parent=res, trajectory=traj, add_to_parent=True)
+
+        is equivalent to
+
+        >>> my_array = SharedArray(name='array', parent=res, trajectory=traj, add_to_parent=False)
+        >>> res['array'] = my_array
+
+    """
 
     FLAG = None
 
@@ -118,7 +210,7 @@ class SharedData(HasLogger):
 
     def _check_state(self):
         if self.traj is None:
-            raise TypeError('Please pass the trajectory to the shared data, via'
+            raise TypeError('Please pass the trajectory to the shared data, via '
                             '`shared_data.traj = trajectory`, otherwise you cannot '
                             'access the data.')
         if self.parent is None:
@@ -129,12 +221,29 @@ class SharedData(HasLogger):
             raise TypeError('Please pass the name of the shared data, via'
                             '`shared_data.name = name`, otherwise you cannot '
                             'access the data.')
+
+        if self.name not in self.parent or self.parent.f_get(self.name) is not self:
+            raise TypeError('Please make sure that the SharedData is added to the '
+                            'parent with the name of the SharedData.')
+
     def _store_parent(self):
         self._check_state()
         if not self.parent._stored:
             self.traj.f_store_item(self.parent)
 
     def create_shared_data(self, **kwargs):
+        """Creates shared data on disk with a StorageService on disk.
+
+        Needs to be called before shared data can be used later on.
+
+        Actual arguments of ``kwargs`` depend on the type of data to be
+        created. For instance, creating an array one can use the keyword
+        ``obj`` to pass a numpy array (``obj=np.zeros((10,20,30))``).
+        Whereas for a PyTables table may need a description dictionary
+        (``description={'column_1': pt.StringCol(2, pos=0),'column_2': pt.FloatCol( pos=1)}``)
+        Refer to the PyTables documentation on how to create tables.
+
+        """
         if 'flag' not in kwargs:
             kwargs['flag'] = self.FLAG
         if 'data' in kwargs:
@@ -152,12 +261,27 @@ class SharedData(HasLogger):
         return self._request_data('create_shared_data', kwargs=kwargs)
 
     def _request_data(self, request, args=None, kwargs=None):
-        return self._storage_service.store(pypetconstants.ACCESS_DATA, self.parent.v_full_name,
+        """Interface with the underlying storage.
+
+        Passes request to the StorageService that performs the appropriate action.
+        For example, given a shared table ``t``.
+        ``t.remove_row(4)`` is parsed into ``request='remove_row', args=(4,)`` and
+        passed onto the storage service. In case of the HDF5StorageService,
+        this is again translated back into ``hdf5_table_node.remove_row(4)``.
+
+        """
+        return self._storage_service.store(pypetconstants.ACCESS_DATA,
+                                           self.parent.v_full_name,
                                            self.name,
                                            request, args, kwargs,
                                            trajectory_name=self.traj.v_name)
 
     def get_data_node(self):
+        """Returns the actula node of the underlying data.
+
+        In case one uses HDF5 this will be the HDF5 leaf node.
+
+        """
         if not self._storage_service.is_open:
             warnings.warn('You requesting the data item but your store is not open, '
                                  'the item itself will be closed, too!')
@@ -531,6 +655,7 @@ class SharedResult(Result, KnowsTrajectory):
             self._pass_to_shared(key, item)
 
     def create_shared_data(self, name=None, **kwargs):
+        """Calls the corresponding function of the shared data item"""
         if name is None:
             item = self.f_get()
         else:

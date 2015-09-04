@@ -2026,7 +2026,7 @@ class Result(BaseResult):
                              'longer have an effect. Data will always be printed.')
 
     def f_translate_key(self, key):
-        """Translates integer indeces into the appropriate names"""
+        """Translates integer indices into the appropriate names"""
         if isinstance(key, int):
             if key == 0:
                 key = self.v_name

@@ -3892,7 +3892,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._prm_write_pandas_data(key, data_to_store, hdf5_group, fullname,
                                             flag, **kwargs)
             elif flag == HDF5StorageService.SHARED_DATA:
-                pass  # Shared data needs to be explicelty created and is not stored on
+                pass  # Shared data needs to be explicitly created and is not stored on
                 # the fly
             else:
                 raise RuntimeError('You shall not pass!')

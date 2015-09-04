@@ -56,7 +56,8 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         res = traj.f_add_result('shared.dfs')
         res['df'] = SharedPandasFrame()
         res['df'].create_shared_data(data=pd.DataFrame(dadict), trajectory=traj)
-        frame = SharedPandasFrame('df1', traj.f_get('shared.dfs'), trajectory=traj)
+        frame = SharedPandasFrame('df1', traj.f_get('shared.dfs'), trajectory=traj,
+                                  add_to_parent=True)
         frame.create_shared_data(data=pd.DataFrame(dadict2),)
         res['df1'] = frame
 
