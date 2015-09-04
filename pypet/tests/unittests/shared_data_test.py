@@ -27,7 +27,7 @@ class MyTable(pt.IsDescription):
     id = pt.Int32Col()
     name = pt.StringCol(15)
     surname = pt.StringCol(15)
-    weight = pt.Float16Col()
+    weight = pt.FloatCol()
 
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
