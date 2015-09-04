@@ -186,7 +186,7 @@ class SharedArray(SharedData):
         return self._request_data('atom')
 
     def get_enum(self):
-        return self._request_data('get_enum')
+        return self._request_data('get_enum', args=())
 
     def read(self, start=None, stop=None, step=None, out=None):
         kwargs = dict(start=start, stop=stop, step=step, out=out)
@@ -194,7 +194,7 @@ class SharedArray(SharedData):
 
     def __iter__(self):
         if self._storage_service.is_open:
-            return self.iter_rows()
+            return self.iterrows()
         else:
             return iter(self.read())
 
@@ -208,7 +208,7 @@ class SharedArray(SharedData):
         return self.nrows
 
     @with_open_store
-    def iter_rows(self, start=None, stop=None, step=None):
+    def iterrows(self, start=None, stop=None, step=None):
         return self._request_data('iterrows', kwargs=dict(start=start, stop=stop, step=step))
 
     @with_open_store
@@ -413,15 +413,15 @@ class SharedTable(SharedData):
         return self._request_data('row')
 
     @with_open_store
-    def iter_rows(self, start=None, stop=None, step=None):
+    def iterrows(self, start=None, stop=None, step=None):
         return self._request_data('iterrows', kwargs=dict(start=start, stop=stop, step=step))
 
     @with_open_store
-    def iter_sequence(self, sequence):
+    def itersequence(self, sequence):
         return self._request_data('itersequence', args=(sequence,))
 
     @with_open_store
-    def iter_sorted(self, sortby, checkCSI=False, start=None, stop=None, step=None):
+    def itersorted(self, sortby, checkCSI=False, start=None, stop=None, step=None):
         kwargs = dict(checkCSI=checkCSI, start=start, stop=stop, step=step)
         return self._request_data('itersorted', args=(sortby,), kwargs=kwargs)
 
