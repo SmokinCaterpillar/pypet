@@ -424,17 +424,17 @@ class SharedTableTest(TrajectoryComparator):
 
         second_reading_table = traj2.results.shared_data.table
 
-        self.assertItemsEqual(the_reading_table.read(), second_reading_table.read())
+        self.assertTrue(np.all(the_reading_table.read() == second_reading_table.read()))
 
         second_reading_table.append([(21, 'aaa', 'bbb', 100)])
 
-        self.assertItemsEqual(the_reading_table.read(), second_reading_table.read())
+        self.assertTrue(np.all(the_reading_table.read() == second_reading_table.read()))
 
         traj3 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
 
         third_reading_table = traj3.results.shared_data.table
 
-        self.assertItemsEqual(the_reading_table.read(), third_reading_table.read())
+        self.assertTrue(np.all(the_reading_table.read() == third_reading_table.read()))
 
     def test_table_append(self):
         the_append_table = self.traj.results.shared_data.table
@@ -466,10 +466,10 @@ class SharedTableTest(TrajectoryComparator):
 
             second_append_table.append([(30, 'mehmet', 'timur', 65.5)])
 
-            self.assertEqual((second_append_table.read(field='id')[-1]), 30)
-            self.assertEqual((second_append_table.read(field='name')[-1]), 'mehmet')
-            self.assertEqual((second_append_table.read(field='surname')[-1]), 'timur')
-            self.assertEqual((second_append_table.read(field='weight')[-1]), 65.5)
+            self.assertEqual(second_append_table.read(field='id')[-1], 30)
+            self.assertEqual(str(second_append_table.read(field='name')[-1]), 'mehmet')
+            self.assertEqual(str(second_append_table.read(field='surname')[-1]), 'timur')
+            self.assertEqual(second_append_table.read(field='weight')[-1], 65.5)
 
         traj2.f_store()
 
