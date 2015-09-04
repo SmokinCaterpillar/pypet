@@ -61,12 +61,35 @@ class MultiprocWrapper(object):
         raise NotImplementedError('Implement this!')
 
 
-class LockerServer(HasLogger):
-    """ Manages a database of locks """
+class ZMQServer(HasLogger):
+    """ Generic zmq server """
 
     PING = 'PING'  # for connection testing
     PONG = 'PONG'  # for connection testing
     DONE = 'DONE'  # signals stopping of server
+    CLOSED = 'CLOSED'  # signals closing of server
+
+    def __init__(self, url="tcp://127.0.0.1:7777"):
+        self._url = url  # server url
+        self._set_logger()
+        self._context = None
+        self._socket = None
+
+    def _start(self):
+        self._logger.info('Starting Server at `%s`' % self._url)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REP)
+        self._socket.bind(self._url)
+
+    def _close(self):
+        self._logger.info('Closing Server')
+        self._socket.close()
+        self._context.term()
+
+
+class LockerServer(ZMQServer):
+    """ Manages a database of locks """
+
     LOCK = 'LOCK'  # command for locking a lock
     RELEASE_ERROR = 'RELEASE_ERROR'  # signals unsuccessful attempt to unlock
     MSG_ERROR = 'MSG_ERROR' # signals error in decoding client request
@@ -77,25 +100,11 @@ class LockerServer(HasLogger):
     WAIT = 'WAIT'  # signals lock is already in use and client has to wait for release
     DELIMITER = ':::'  # delimiter to split messages
     DEFAULT_LOCK = '_DEFAULT_'  # default lock name
-    CLOSED = 'CLOSED'  # signals closing of server
+
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
+        super(LockerServer, self).__init__(url)
         self._locks = {}  # lock DB, format 'lock_name': ('client_id', 'request_id')
-        self._url = url  # server url
-        self._set_logger()
-        self._context = None
-        self._socket = None
-
-    def _start(self):
-        self._logger.info('Starting Lock Server at `%s`' % self._url)
-        self._context = zmq.Context()
-        self._socket = self._context.socket(zmq.REP)
-        self._socket.bind(self._url)
-
-    def _close(self):
-        self._logger.info('Closing Lock Server')
-        self._socket.close()
-        self._context.term()
 
     def _pre_respond_hook(self, response):
         """ Hook that can be used to temper with the server before responding
@@ -310,13 +319,13 @@ class ReliableClient(HasLogger):
         """Notifies the Server to shutdown"""
         self.start(test_connection=False)
         self._logger.debug('Sending shutdown signal')
-        self._req_rep(LockerServer.DONE)
+        self._req_rep(ZMQServer.DONE)
 
     def test_ping(self):
         """Connection test"""
         self.start(test_connection=False)
-        response = self._req_rep(LockerServer.PING)
-        if response != LockerServer.PONG:
+        response = self._req_rep(ZMQServer.PING)
+        if response != ZMQServer.PONG:
             raise RuntimeError('Connection Error to LockServer')
 
     def finalize(self):
@@ -470,6 +479,53 @@ class LockerClient(ReliableClient):
     def _req_rep_retry(self, request):
         request = self._compose_request(request)
         return super(LockerClient, self)._req_rep_retry(request)
+
+
+class QueuingServerMessageListener(ZMQServer):
+
+    def __init__(self, url, queue, queue_maxsize):
+        super(ZMQServer, self).__init__(url)
+        self.queue = queue
+        self.queue_maxsize = queue_maxsize
+
+    def listen(self):
+        # TODO by Mehmet
+        # 1. Listen to Client requests
+        # 2. Check size of queue
+        # 3. If there is space ask for data
+        # 4. put data on queue
+        pass
+
+
+class QueuingServer(HasLogger):
+    # TODO by Mehmet
+
+    def __init__(self, url, storage_service, queue_maxsize, gc_interval):
+       pass
+
+    def run(self):
+        # 1. Create a threading queue and a QueingServerMessageListener
+        # 2. Create a QueueStorageServiceWriter and pass it the queue
+        # 2. Start a thread with QueingServerMessageListener.listen()
+        # 3. run the QueueStorageServiceWriter
+        pass
+
+
+class QueuingClient(ReliableClient):
+    # TODO by Mehmet
+
+    def put(self, data, block=True):
+
+        self.start(test_connection=False)
+        while True:
+            # 1. Ask Server if space on queue available
+            # 2a. If not wait some time and redo 1
+            # 2b. If yes send data and that's it
+            # use _req_rep_retry()
+            pass
+
+    def _send_request(self, request):
+        return self._socket.send_pyobj(request)
 
 
 class ForkAwareLockerClient(LockerClient):
