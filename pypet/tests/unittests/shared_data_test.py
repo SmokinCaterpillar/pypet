@@ -20,7 +20,7 @@ from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, u
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet import Trajectory, SharedResult, SharedTable, SharedArray, load_trajectory, StorageContextManager
 import pypet.utils.ptcompat as ptcompat
-
+import pypet.compat as compat
 
 class MyTable(pt.IsDescription):
 
@@ -467,8 +467,8 @@ class SharedTableTest(TrajectoryComparator):
             second_append_table.append([(30, 'mehmet', 'timur', 65.5)])
 
             self.assertEqual(second_append_table.read(field='id')[-1], 30)
-            self.assertEqual(str(second_append_table.read(field='name')[-1]), 'mehmet')
-            self.assertEqual(str(second_append_table.read(field='surname')[-1]), 'timur')
+            self.assertEqual(second_append_table.read(field='name')[-1], compat.tobytes('mehmet'))
+            self.assertEqual(second_append_table.read(field='surname')[-1], compat.tobytes('timur'))
             self.assertEqual(second_append_table.read(field='weight')[-1], 65.5)
 
         traj2.f_store()
@@ -478,15 +478,15 @@ class SharedTableTest(TrajectoryComparator):
         third_append_table = traj3.results.shared_data.table
 
         self.assertEqual((third_append_table.read(field='id')[-1]), 30)
-        self.assertEqual((third_append_table.read(field='name')[-1]), 'mehmet')
-        self.assertEqual((third_append_table.read(field='surname')[-1]), 'timur')
+        self.assertEqual((third_append_table.read(field='name')[-1]), compat.tobytes('mehmet'))
+        self.assertEqual((third_append_table.read(field='surname')[-1]), compat.tobytes('timur'))
         self.assertEqual((third_append_table.read(field='weight')[-1]), 65.5)
 
         third_append_table.append([(33, 'Harrison', 'Ford', 95.5)])
 
         self.assertEqual((third_append_table.read(field='id')[-1]), 33)
-        self.assertEqual((third_append_table.read(field='name')[-1]), 'Harrison')
-        self.assertEqual((third_append_table.read(field='surname')[-1]), 'Ford')
+        self.assertEqual((third_append_table.read(field='name')[-1]), compat.tobytes('Harrison'))
+        self.assertEqual((third_append_table.read(field='surname')[-1]), compat.tobytes('Ford'))
         self.assertEqual((third_append_table.read(field='weight')[-1]), 95.5)
 
     def test_table_iterrows(self):
