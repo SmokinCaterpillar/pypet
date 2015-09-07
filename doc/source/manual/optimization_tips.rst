@@ -63,7 +63,7 @@ Moreover, to avoid re-pickling of unnecessary data of your trajectory,
 store and remove all data that is not needed during single runs.
 
 For instance, if you don't really need config data during the runs, use the following
-**before** calling the environment's :func:`~pypet.environment.Environment.f_run` function:
+**before** calling the environment's :func:`~pypet.environment.Environment.run` function:
 
 .. code-block:: python
 
@@ -82,6 +82,6 @@ in order to use this feature, you must make sure that neither your target functi
 additional arguments are mutated over the course of your runs.
 In case you use SCOOP_, try do avoid running many batches of experiments
 in one go with ``freeze_input=True`` because memory consumption of all the SCOOP_ workers
-may increase with every batch, see also :re:`pypet-and-scoop`.
+may increase with every batch, see also :ref:`pypet-and-scoop`.
 
 .. _SCOOP: http://scoop.readthedocs.org/

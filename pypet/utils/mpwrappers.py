@@ -108,6 +108,14 @@ class LockerServer(HasLogger):
         return True
 
     def _lock(self, name, client_id, request_id):
+        """Hanldes locking of locks
+
+        If a lock is already locked sends a WAIT command,
+        else LOCKs it and sends GO.
+
+        Complains if a given client re-locks a lock without releasing it before.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id == client_id:
@@ -123,6 +131,13 @@ class LockerServer(HasLogger):
             return self.GO
 
     def _unlock(self, name, client_id, request_id):
+        """Handles unlocking
+
+        Complains if a non-existent lock should be released or
+        if a lock should be released that was acquired by
+        another client before.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id != client_id:
@@ -142,11 +157,11 @@ class LockerServer(HasLogger):
             response = (self.RELEASE_ERROR + self.DELIMITER +
                         'Lock `%s` cannot be found in database (client id `%s`, '
                         'request id `%s`)' % (name, client_id, request_id))
-            self._logger.warning(response)
+            self._logger.error(response)
             return response
 
     def run(self):
-        """Runs Server"""
+        """Runs server"""
         try:
             self._start()
 
@@ -198,7 +213,7 @@ class LockerServer(HasLogger):
 
 
 class TimeOutLockerServer(LockerServer):
-    """ Lock Server where each lock is valied only for a fixed period of time. """
+    """ Lock Server where each lock is valid only for a fixed period of time. """
 
     def __init__(self, url, timeout):
         super(TimeOutLockerServer, self).__init__(url)
@@ -206,6 +221,12 @@ class TimeOutLockerServer(LockerServer):
         self._timeout_locks = {}
 
     def _lock(self, name, client_id, request_id):
+        """Handles locking
+
+        Locking time is stored to determine time out.
+        If a lock is timed out it can be acquired by a different client.
+
+        """
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id == client_id:
@@ -232,6 +253,7 @@ class TimeOutLockerServer(LockerServer):
             return self.GO
 
     def _unlock(self, name, client_id, request_id):
+        """Handles unlocking"""
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id != client_id:
@@ -262,60 +284,27 @@ class TimeOutLockerServer(LockerServer):
             return response
 
 
-class LockerClient(HasLogger):
-    """ Implements a Lock by requesting from LockServer"""
+class ReliableClient(HasLogger):
+    """Implements a reliable client that reconnects on server failure"""
 
-    SLEEP = 0.01
-    RETRIES = 9
-    TIMEOUT = 2222
+    SLEEP = 0.01   # Sleep time before reconnect in seconds
+    RETRIES = 9   # Number of reconnect retries
+    TIMEOUT = 2222  # Waiting time to reconnect in seconds
 
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        self.lock_name = lock_name
+    def __init__(self, url):
         self.url = url
         self._context = None
         self._socket = None
         self._poll = None
-        self.id = None
         self._set_logger()
 
     def __getstate__(self):
-        result_dict = super(LockerClient, self).__getstate__()
+        result_dict = super(ReliableClient, self).__getstate__()
         # Do not pickle zmq data
         result_dict['_context'] = None
         result_dict['_socket'] = None
         result_dict['_poll'] = None
-        result_dict['id'] = None
         return result_dict
-
-    def _start_socket(self):
-        self._socket = self._context.socket(zmq.REQ)
-        self._socket.connect(self.url)
-        self._poll.register(self._socket, zmq.POLLIN)
-
-    def _close_socket(self, confused=False):
-        if confused:
-            self._socket.setsockopt(zmq.LINGER, 0)
-        self._socket.close()
-        self._poll.unregister(self._socket)
-        self._socket = None
-
-    def start(self, test_connection=True):
-        """Starts connection to server if not existent.
-
-        NO-OP if connection is already established.
-        Makes ping-pong test as well.
-
-        """
-        if self._context is None:
-            self.id = self._get_id()
-            cls = self.__class__
-            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
-            self._logger.debug('Starting Client')
-            self._context = zmq.Context()
-            self._poll = zmq.Poller()
-            self._start_socket()
-            if test_connection:
-                self.test_ping()
 
     def send_done(self):
         """Notifies the Server to shutdown"""
@@ -344,10 +333,91 @@ class LockerClient(HasLogger):
             self._context = None
             self._poll = None
 
+    def start(self, test_connection=True):
+        """Starts connection to server if not existent.
+
+        NO-OP if connection is already established.
+        Makes ping-pong test as well if desired.
+
+        """
+        if self._context is None:
+            self._logger.debug('Starting Client')
+            self._context = zmq.Context()
+            self._poll = zmq.Poller()
+            self._start_socket()
+            if test_connection:
+                self.test_ping()
+
+    def _start_socket(self):
+        self._socket = self._context.socket(zmq.REQ)
+        self._socket.connect(self.url)
+        self._poll.register(self._socket, zmq.POLLIN)
+
+    def _close_socket(self, confused=False):
+        if confused:
+            self._socket.setsockopt(zmq.LINGER, 0)
+        self._socket.close()
+        self._poll.unregister(self._socket)
+        self._socket = None
+
     def __del__(self):
-        # For Python 3.4 to avoid dead-lock due to wrong object clearin
+        # For Python 3.4 to avoid dead-lock due to wrong object clearing
         # i.e. deleting context before socket
         self.finalize()
+
+    def _req_rep(self, request):
+        """Returns server response on `request_sketch`"""
+        return self._req_rep_retry(request)[0]
+
+    def _req_rep_retry(self, request):
+        """Returns response and number of retries"""
+        retries_left = self.RETRIES
+        while retries_left:
+            self._logger.log(1, 'Sending REQ `%s`', request)
+            self._send_request(request)
+            socks = dict(self._poll.poll(self.TIMEOUT))
+            if socks.get(self._socket) == zmq.POLLIN:
+                response = self._receive_response()
+                self._logger.log(1, 'Received REP `%s`', response)
+                return response, self.RETRIES - retries_left
+            else:
+                self._logger.debug('No response from server (%d retries left)' %
+                                   retries_left)
+                self._close_socket(confused=True)
+                retries_left -= 1
+                if retries_left == 0:
+                    raise RuntimeError('Server seems to be offline!')
+                time.sleep(self.SLEEP)
+                self._start_socket()
+
+    def _send_request(self, request):
+        """Actual sending of the request over network"""
+        self._socket.send_string(request)
+
+    def _receive_response(self):
+        """Actual receiving of response"""
+        return self._socket.recv_string()
+
+
+class LockerClient(ReliableClient):
+    """ Implements a Lock by requesting lock information from LockServer"""
+
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
+        super(LockerClient, self).__init__(url)
+        self.lock_name = lock_name
+        self.id = None
+
+    def __getstate__(self):
+        result_dict = super(LockerClient, self).__getstate__()
+        result_dict['id'] = None
+        return result_dict
+
+    def start(self, test_connection=True):
+        if self._context is None:
+            self.id = self._get_id()
+            cls = self.__class__
+            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
+            super(LockerClient, self).start(test_connection)
 
     @staticmethod
     def _get_id():
@@ -357,8 +427,8 @@ class LockerClient(HasLogger):
     def _get_request_id():
         return str(time.time()).replace(LockerServer.DELIMITER, '-')
 
-    def _compose_request(self, request):
-        request = (request + LockerServer.DELIMITER +
+    def _compose_request(self, request_sketch):
+        request = (request_sketch + LockerServer.DELIMITER +
                    self.lock_name + LockerServer.DELIMITER + self.id +
                    LockerServer.DELIMITER + self._get_request_id())
         return request
@@ -397,34 +467,18 @@ class LockerClient(HasLogger):
         else:
             raise RuntimeError('Response `%s` not understood' % response)
 
-    def _req_rep(self, request):
-        """Returns response"""
-        return self._req_rep_retry(request)[0]
-
     def _req_rep_retry(self, request):
-        """Returns response and number of retries"""
         request = self._compose_request(request)
-        retries_left = self.RETRIES
-        while retries_left:
-            self._logger.log(1, 'Sending REQ `%s`', request)
-            self._socket.send_string(request)
-            socks = dict(self._poll.poll(self.TIMEOUT))
-            if socks.get(self._socket) == zmq.POLLIN:
-                response = self._socket.recv_string()
-                self._logger.log(1, 'Received REP `%s`', response)
-                return response, self.RETRIES - retries_left
-            else:
-                self._logger.debug('No response from server (%d retries left)' %
-                                   retries_left)
-                self._close_socket(confused=True)
-                retries_left -= 1
-                if retries_left == 0:
-                    raise RuntimeError('Server seems to be offline!')
-                time.sleep(self.SLEEP)
-                self._start_socket()
+        return super(LockerClient, self)._req_rep_retry(request)
 
 
 class ForkAwareLockerClient(LockerClient):
+    """Locker Client that can detect forking of processes.
+
+    In this case the context and socket are restarted.
+
+    """
+
     def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
         super(ForkAwareLockerClient, self).__init__(url, lock_name)
         self._pid = None
@@ -435,7 +489,12 @@ class ForkAwareLockerClient(LockerClient):
         return result_dict
 
     def _detect_fork(self):
-        """Detects if lock client was forked"""
+        """Detects if lock client was forked.
+
+        Forking is detected by comparing the PID of the current
+        process with the stored PID.
+
+        """
         if self._pid is None:
             self._pid = os.getpid()
         if self._context is not None:
@@ -446,6 +505,7 @@ class ForkAwareLockerClient(LockerClient):
                 self._context = None
 
     def start(self, test_connection=True):
+        """Checks for forking and starts/restarts if desired"""
         self._detect_fork()
         super(ForkAwareLockerClient, self).start(test_connection)
 
@@ -474,7 +534,7 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
 
     def load(self, *args, **kwargs):
         raise NotImplementedError('Queue wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use the Lock '
+                                  'load data in a multiprocessing environment, use a Lock '
                                   'wrapping.')
 
     @retry(9, Exception, 0.01, 'pypet.retry')
@@ -825,8 +885,9 @@ class ReferenceWrapper(MultiprocWrapper):
         self.references[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
 
     def load(self, *args, **kwargs):
-        raise NotImplementedError('Queue wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use the Lock '
+        """Not implemented"""
+        raise NotImplementedError('Reference wrapping does not support loading. If you want to '
+                                  'load data in a multiprocessing environment, use a Lock '
                                   'wrapping.')
 
     def free_references(self):

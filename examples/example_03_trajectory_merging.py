@@ -15,14 +15,18 @@ def multiply(traj):
 
 # Create 2 environments that handle running
 filename = os.path.join('hdf5', 'example_03.hdf5')
-env1 = Environment(trajectory='Traj1',filename=filename,
-                  file_title='Example_03',
-                  comment='I will be increased!')
+env1 = Environment(trajectory='Traj1',
+                   filename=filename,
+                   file_title='Example_03',
+                   add_time=True,  # Add the time of trajectory creation to its name
+                   comment='I will be increased!')
 
-env2 = Environment(trajectory='Traj2',filename=filename,
-                  file_title='Example_03', log_config=None, # One environment keeping log files
-                  # is enough
-                  comment = 'I am going to be merged into some other trajectory!')
+env2 = Environment(trajectory='Traj2',
+                   filename=filename,
+                   file_title='Example_03', log_config=None, # One environment keeping log files
+                   # is enough
+                   add_time=True,
+                   comment = 'I am going to be merged into some other trajectory!')
 
 # Get the trajectories from the environment
 traj1 = env1.v_trajectory
@@ -54,8 +58,11 @@ env2.f_run(multiply)
 # We want to move the hdf5 nodes from one trajectory to the other.
 # Thus we set move_nodes=True.
 # Finally,we want to delete the other trajectory afterwards since we already have a backup.
-traj1.f_merge(traj2, remove_duplicates=True, backup_filename=True,
-              move_data=True, delete_other_trajectory=True)
+traj1.f_merge(traj2,
+              remove_duplicates=True,
+              backup_filename=True,
+              move_data=True,
+              delete_other_trajectory=True)
 
 # And that's it, now we can take a look at the new trajectory and print all x,y,z triplets.
 # But before that we need to load the data we computed during the runs from disk.
@@ -66,7 +73,7 @@ traj1.f_load(load_parameters=2, load_results=2)
 for run_name in traj1.f_get_run_names():
     # We can make the trajectory belief it is a single run. All parameters will
     # be treated as they were in the specific run. And we can use the `crun` wildcard.
-    traj1.f_as_run(run_name)
+    traj1.f_set_crun(run_name)
     x=traj1.x
     y=traj1.y
     # We need to specify the current run, because there exists more than one z value

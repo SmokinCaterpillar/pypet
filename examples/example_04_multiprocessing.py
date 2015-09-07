@@ -42,7 +42,7 @@ def main():
                       overwrite_file=True)
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='I am the first dimension!')
@@ -53,10 +53,10 @@ def main():
                                       'y':[float(y) for y in range(20)]}))
 
     # Run the simulation
-    env.f_run(multiply)
+    env.run(multiply)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

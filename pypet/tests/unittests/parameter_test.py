@@ -28,16 +28,6 @@ class ParameterTest(TrajectoryComparator):
 
     tags = 'unittest', 'parameter'
 
-    def test_throw_warning_if_stored_and_changed(self):
-        for param in self.param.values():
-            param._stored = True
-
-            with warnings.catch_warnings(record=True) as w:
-                param.f_unlock()
-                if param.f_has_range():
-                    param._shrink()
-                param.f_set(3)
-
     def test_type_error_for_not_supported_data(self):
 
         for param in self.param.values():
@@ -95,7 +85,7 @@ class ParameterTest(TrajectoryComparator):
                 warnings.simplefilter("always")
                 # Trigger a warning.
                 self.assertEqual(param.v_parameter, param.v_is_parameter)
-                self.assertEqual(param.v_leaf, param.v_is_leaf)
+                self.assertEqual(param.vars.leaf, param.v_is_leaf)
                 self.assertEqual(param.f_is_root(), param.v_is_root)
                 self.assertEqual(param.v_fast_accessible, param.f_supports_fast_access())
                 # Verify some things

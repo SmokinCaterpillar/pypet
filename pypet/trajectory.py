@@ -1764,10 +1764,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Load all parameters of the current and the other trajectory
         if self._stored:
             # To suppress warnings if nothing needs to be loaded
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 self.f_load_items(self._parameters.keys(), only_empties=True)
         if other_trajectory._stored:
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 other_trajectory.f_load_items(other_trajectory._parameters.keys(),
                                               only_empties=True)
 
@@ -2514,7 +2514,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             if other_instance.f_is_empty():
                 # To suppress warnings if nothing needs to be loaded
-                with self._nn_interface._disable_logger:
+                with self._nn_interface._disable_logging:
                     other_trajectory.f_load_item(other_instance)
 
             if not self.f_contains(new_key):

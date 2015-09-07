@@ -32,7 +32,6 @@ def main():
     env = Environment(trajectory='faster_deap',
                       overwrite_file=True,
                       multiproc=False,
-                      ncores=4,
                       log_stdout=False,
                       log_level=50,  # only display ERRORS
                       automatic_storing=False,  # This is important, we want to run several
@@ -40,7 +39,7 @@ def main():
                       # data over and over again to save some overhead.
                       comment='Using pypet and DEAP with less overhead'
                       )
-    traj = env.v_traj
+    traj = env.traj
 
 
     # ------- Add parameters ------- #
@@ -82,7 +81,7 @@ def main():
     toolbox.register("mutate", tools.mutFlipBit, indpb=traj.indpb)
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
     toolbox.register("evaluate", eval_one_max)
-    toolbox.register("map", env.f_run)  # We pass the individual as part of traj, so
+    toolbox.register("map", env.run)  # We pass the individual as part of traj, so
     # we no longer need the `f_run_map` but just `f_run`
 
 
@@ -124,7 +123,7 @@ def main():
             eval_pop[idx].fitness.values = fitness
 
         # Append all fitnesses (note that DEAP fitnesses are tuples of length 1
-        # but we are only interested in the value
+        # but we are only interested in the value)
         traj.fitnesses.extend([x.fitness.values[0] for x in eval_pop])
 
         print("  Evaluated %i individuals" % len(fitnesses_results))

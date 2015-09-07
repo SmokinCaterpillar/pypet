@@ -30,6 +30,7 @@ def main():
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_12_Sharing_Data',
+                      overwrite_file=True,
                       comment='The first example!',
                       continuable=False, # We have shared data in terms of a multiprocessing list,
                       # so we CANNOT use the continue feature.
@@ -37,7 +38,7 @@ def main():
                       ncores=2)
 
     # The environment has created a trajectory container for us
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -52,7 +53,7 @@ def main():
     result_list[:] =[0 for _dummy in range(len(traj))]
 
     # Run the simulation
-    env.f_run(multiply, result_list)
+    env.run(multiply, result_list)
 
     # Now we want to store the final list as numpy array
     traj.f_add_result('z', np.array(result_list))
@@ -61,7 +62,7 @@ def main():
     print(traj.z)
 
     #Disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 if __name__ == '__main__':
     main()

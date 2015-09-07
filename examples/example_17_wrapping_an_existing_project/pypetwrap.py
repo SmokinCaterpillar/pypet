@@ -69,7 +69,7 @@ def main():
                       overwrite_file=True)
 
     # extract the trajectory
-    traj = env.v_traj
+    traj = env.traj
 
     traj.v_lazy_adding = True
     traj.par.ncells = 400, 'Number of cells'
@@ -92,7 +92,7 @@ def main():
 
     # Run the simulation
     logger.info('Starting Simulation')
-    env.f_run(wrap_automaton)
+    env.run(wrap_automaton)
 
     # Load all data
     traj.f_load(load_data=2)
@@ -105,7 +105,7 @@ def main():
         progressbar(idx, len(traj), logger=logger)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

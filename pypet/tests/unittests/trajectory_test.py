@@ -4,6 +4,7 @@ __author__ = 'Robert Meyer'
 
 
 import numpy as np
+import warnings
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -92,7 +93,6 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_config('make.impossible.promises',1)
 
-
         with self.assertRaises(AttributeError):
             self.traj.markus.peter
 
@@ -117,6 +117,46 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(self.traj.run_00000001.new, 5)
         self.assertEqual(self.traj['very.new'], 4)
 
+    def test_no_prefixes(self):
+        self.assertEqual(self.traj.vars.name, self.traj.v_name)
+        res = self.traj.func.add_result('testgroup.test', k=42)
+        self.assertEqual(res.v_comment, res.vars.comment)
+        with self.assertRaises(AttributeError):
+            res.vars.k
+        with self.assertRaises(AttributeError):
+            res.func.k
+        tg = self.traj.testgroup
+        tg.func.add_result('test2', 43)
+        self.assertEqual(tg.v_location, tg.vars.location)
+        self.assertEqual(self.traj.v_crun, self.traj.vars.crun)
+        self.assertEqual(self.traj.v_crun_, self.traj.vars.crun_)
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.traj.func.add_leaf('ggg.idx', 12345)
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.traj.vars.idx = 0
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.assertEqual(0, self.traj.v_idx)
+
+    def test_prefixes_dir(self):
+        f_dir = dir(self.traj.func)
+        v_dir = dir(self.traj.vars)
+        t_dir = dir(self.traj)
+        for f in f_dir:
+            self.assertIn('f_' + f, t_dir)
+        for v in v_dir:
+            self.assertIn('v_' + v, t_dir)
+        for g in t_dir:
+            if g.startswith('f_'):
+                self.assertIn(g[2:], f_dir)
+            elif g.startswith('v_'):
+                self.assertIn(g[2:], v_dir)
+
+    def test_data_dir(self):
+        memberset = set(self.traj.f_dir_data())
+        memberset2 = set(self.traj.func.get_children().keys())
+        self.assertEqual(memberset, memberset2)
+
+
     def test_deletion(self):
         x = []
         self.traj.f_add_result('fff', x)
@@ -131,7 +171,10 @@ class TrajectoryTest(unittest.TestCase):
 
         p = self.traj.parameters
 
-        self.assertEqual(sys.getrefcount(p),7)
+        self.assertEqual(p.vars.name, p.v_name)
+        self.assertEqual(p.func.get_children, p.f_get_children)
+
+        self.assertEqual(sys.getrefcount(p),9)
         self.traj.f_remove_child('parameters', recursive=True)
         self.assertEqual(sys.getrefcount(p),2)
 
@@ -645,12 +688,29 @@ class TrajectoryTest(unittest.TestCase):
     def test_illegal_namings(self):
         self.traj=Trajectory('resulttest2')
 
-        with self.assertRaises(ValueError):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             self.traj.f_add_parameter('f_get')
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('get')
+            self.assertEqual(len(w), 0)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('not.for.continue')
+            self.assertEqual(len(w), 3)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test..hh')
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test.::!.h')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_result('test.$.k.$dsa')
-
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('e'*129)

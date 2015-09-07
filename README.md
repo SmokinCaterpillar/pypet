@@ -204,8 +204,10 @@ Main Features
 
 * Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
-* **Analyse** your data on-the-fly during multiprocessing for adaptive
-  exploration of the parameter space
+* **Analyse** your data on-the-fly during multiprocessing
+
+* **Adaptively** explore tha parameter space combining *pypet* with optimization
+  tools like the evolutionary algorithms framework DEAP (http://deap.readthedocs.org/en/)
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
@@ -258,7 +260,7 @@ Let's take a look at the snippet at once:
                       comment = 'I am the first example!')
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
@@ -268,7 +270,7 @@ Let's take a look at the snippet at once:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 And now let's go through it one by one. At first we have a job to do, that is multiplying two
 values:
@@ -314,7 +316,7 @@ The environment will automatically generate a trajectory for us which we can acc
 ::
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
 of `x=y=1.0`.
@@ -341,7 +343,7 @@ combinations.
 ::
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
 all parameter combinations. Every time it will pass a `traj` container with another one of these

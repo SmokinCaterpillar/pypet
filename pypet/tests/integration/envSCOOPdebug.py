@@ -62,7 +62,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
                           encoding=self.encoding,
                           niceness=self.niceness,
                           use_scoop=self.use_scoop,
-                          url=self.url)
+                          port=self.url)
 
         traj = env.v_trajectory
 

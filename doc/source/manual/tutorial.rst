@@ -119,15 +119,25 @@ The entire source code of this example can be found here: :ref:`example-13`.
 Naming Convention
 -----------------
 
-To avoid confusion with natural naming scheme (see below)
-and the functionality provided by the environment, trajectory,
-parameter containers, and so on, I followed the idea by PyTables_ to use prefixes:
+To avoid confusion with natural naming scheme and the functionality provided by the
+trajectory tree - that includes all group and leaf nodes like
+parameters and results - I followed the idea by PyTables_ to use prefixes:
 ``f_`` for functions and ``v_`` for python variables/attributes/properties.
 
 For instance, given a *pypet* result container ``myresult``, ``myresult.v_comment`` is the object's
 comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
+
+If you don't like using prefixes, you can alternatively also use the properties
+``vars`` and ``func`` that are supported by each tree node. For example,
+``traj.f_iter_runs()`` is equivalent to ``traj.func.iter_runs()`` or
+``mygroup.v_full_name`` is equivalent to ``mygroup.vars.full_name``.
+
+The prefix and ``vars``/``func`` notation only applies to tree data objects
+(group nodes and leaf nodes) but
+not to other aspects of pypet. For example, the :class:`~pypet.environment.Environment`
+does not rely on prefixes at all.
 
 
 -----------------
@@ -200,9 +210,9 @@ Yet, we will shortly discuss the most important ones here.
 
     If your experiments are recorded with sumatra_ you can specify the path to your sumatra_
     root folder here. *pypet* will automatically trigger the recording of your experiments
-    if you use :func:`~pypet.environment.Environment.f_run`,
-    :func:`~pypet.environment.Environment.f_continue` or
-    :func:`~pypet.environment.Environment.f_pipeline` to start your single runs or whole experiment.
+    if you use :func:`~pypet.environment.Environment.run`,
+    :func:`~pypet.environment.Environment.resume` or
+    :func:`~pypet.environment.Environment.pipeline` to start your single runs or whole experiment.
     If you use *pypet* + git_ + sumatra_ there's no doubt that you ensure
     the repeatability of your experiments!
 
@@ -229,7 +239,7 @@ The environment provides a new trajectory container for us:
 
 .. code-block:: python
 
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 
 ------------------------
@@ -790,10 +800,10 @@ after all runs have finished.
 .. code-block:: python
 
     # Ad the postprocessing function
-    env.f_add_postprocessing(neuron_postproc)
+    env.add_postprocessing(neuron_postproc)
 
     # Run the experiment
-    env.f_run(run_neuron)
+    env.run(run_neuron)
 
 
 Both function take additional arguments which will be automatically passed to the job and
@@ -803,7 +813,7 @@ For instance,
 
 .. code-block:: python
 
-    env.f_run(myjob, 42, 'fortytwo', test=33.3)
+    env.run(myjob, 42, 'fortytwo', test=33.3)
 
 
 will additionally pass ``42, 'fortytwo'`` as positional arguments and ``test=33.3`` as the
@@ -828,7 +838,7 @@ environment to stop logging and close all log files:
 .. code-block:: python
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 -----------

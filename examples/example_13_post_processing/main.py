@@ -164,7 +164,7 @@ def main():
                       filename=filename,
                       overwrite_file=True)
 
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add parameters
     add_parameters(traj)
@@ -173,13 +173,13 @@ def main():
     add_exploration(traj)
 
     # Ad the postprocessing function
-    env.f_add_postprocessing(neuron_postproc)
+    env.add_postprocessing(neuron_postproc)
 
     # Run the experiment
-    env.f_run(run_neuron)
+    env.run(run_neuron)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 if __name__ == '__main__':
     main()

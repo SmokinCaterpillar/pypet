@@ -151,10 +151,11 @@ def main():
     env = Environment(trajectory='Example_05_Euler_Integration',
                       filename=filename,
                       file_title='Example_05_Euler_Integration',
+                      overwrite_file=True,
                       comment='Go for Euler!')
 
 
-    traj = env.v_trajectory
+    traj = env.trajectory
     trajectory_name = traj.v_name
 
     # 1st a) phase parameter addition
@@ -176,7 +177,7 @@ def main():
     # 2nd phase let's run the experiment
     # We pass `euler_scheme` as our top-level simulation function and
     # the Lorenz equation 'diff_lorenz' as an additional argument
-    env.f_run(euler_scheme, diff_lorenz)
+    env.run(euler_scheme, diff_lorenz)
 
     # We don't have a 3rd phase of post-processing here
 
@@ -242,7 +243,7 @@ def main():
     # You have to click through the images to stop the example_05 module!
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

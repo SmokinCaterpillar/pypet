@@ -462,13 +462,13 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError("Should have implemented this.")
 
-    def __getitem__(self, idx):
-        """Equivalent to `f_get_range[idx]`
+    def __getitem__(self, item):
+        """Equivalent to `f_get_range()[idx]`
 
         :raises: TypeError if parameter has no range
 
         """
-        return self.f_get_range().__getitem__(idx)
+        return self.f_get_range().__getitem__(item)
 
     def f_get(self):
         """Returns the current data value of the parameter and locks the parameter.
@@ -850,6 +850,7 @@ class Parameter(BaseParameter):
 
         return result
 
+    # @no_prefix_getattr
     def __getattr__(self, item):
         """Allows to query for `.data` as an attribute"""
         if item == 'data':
@@ -2347,6 +2348,7 @@ class Result(BaseResult):
         else:
             self.f_set_single(key, value)
 
+    # @no_prefix_getattr
     def __getattr__(self, name):
         return self.f_get(name)
 

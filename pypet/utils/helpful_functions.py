@@ -3,6 +3,7 @@ from __future__ import print_function
 __author__ = 'Robert Meyer'
 
 import sys
+import os
 import datetime
 import numpy as np
 import inspect
@@ -326,12 +327,30 @@ def port_to_tcp(port=None):
     """Returns local tcp address for a given `port`, automatic port if `None`"""
     address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
     if port is None:
+        port = ()
+    if not isinstance(port, int):
         # determine port automatically
         context = zmq.Context()
         socket_ = context.socket(zmq.REP)
-        port = socket_.bind_to_random_port(address)
+        port = socket_.bind_to_random_port(address, *port)
         socket_.close()
         context.term()
     return address + ':' + str(port)
 
+
+def racedirs(path):
+    """Like os.makedirs but takes care about race conditions"""
+    if os.path.isfile(path):
+        raise IOError('Path `%s` is already a file not a directory')
+    while True:
+        try:
+            if os.path.isdir(path):
+                # only break if full path has been created or exists
+                break
+            os.makedirs(path)
+        except EnvironmentError as exc:
+            # Part of the directory path already exist
+            if exc.errno != 17:
+                # This error won't be any good
+                raise
 

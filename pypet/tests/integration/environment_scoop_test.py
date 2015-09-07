@@ -198,7 +198,7 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
-        self.url = None
+        self.port = (10000, 60000)
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -216,7 +216,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.niceness = check_nice(1)
         self.use_pool=False
         self.use_scoop=True
-        self.url = None
+        self.port = None
         self.timeout = 9999.99
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')

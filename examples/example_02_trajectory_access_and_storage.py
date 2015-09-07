@@ -8,6 +8,7 @@ from pypet import Trajectory, NotUniqueNodeError
 # We first generate a new Trajectory
 filename = os.path.join('hdf5', 'example_02.hdf5')
 traj = Trajectory('Example', filename=filename,
+                  overwrite_file=True,
                   comment='Access and Storage!')
 
 
@@ -40,8 +41,8 @@ traj.f_add_parameter_group('spaceballs.characters')
 # Now our shortcuts no longer work, since we have two character groups!
 try:
     traj.characters
-except NotUniqueNodeError as e:
-    print('Damn it, there are two characters groups in the trajectory: %s' % e._msg)
+except NotUniqueNodeError as exc:
+    print('Damn it, there are two characters groups in the trajectory: %s' % repr(exc))
 
 # But if we are more specific we have again a unique finding
 characters = traj.starwars.characters
@@ -60,10 +61,14 @@ traj.f_store()
 # result that we want to store to disk immediately and than empty it
 traj.f_add_result('starwars.gross_income_of_film', amount=10.1 ** 11, currency='$$$',
                   comment='George Lucas is rich, dude!')
+
 # This is a large number, we better store it and than free the memory:
 traj.f_store_item('gross_income_of_film')
 traj.gross_income_of_film.f_empty()
 
+# Moreover, if you don't like prefixes `f_` and `v_` you can also use `func` and `vars`:
+traj.func.add_result('starwars.robots', c3p0='android', r2d2='beeep!', comment='Help me Obiwan!')
+print(traj.results.starwars.robots.vars.comment)
 
 # Now lets reload the trajectory
 del traj

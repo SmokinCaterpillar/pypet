@@ -79,7 +79,7 @@ class FullStorageTest(TrajectoryComparator):
             self.assertTrue('hi' in traj)
 
 
-def test_niceness(traj):
+def with_niceness(traj):
     if traj.multiproc:
         if hasattr(os, 'nice'):
             trajnice = traj.niceness
@@ -139,8 +139,9 @@ class EnvironmentTest(TrajectoryComparator):
         self.log_stdout=False
         self.wildcard_functions = None
         self.niceness = None
-        self.url = None
+        self.port = None
         self.timeout = None
+        self.add_time=True
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -210,8 +211,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         traj.f_explore(self.explore_dict)
 
-
-
     def explore(self, traj):
         self.explored ={'Normal.trial': [0],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
@@ -269,7 +268,8 @@ class EnvironmentTest(TrajectoryComparator):
                           encoding=self.encoding,
                           niceness=self.niceness,
                           use_scoop=self.use_scoop,
-                          url=self.url,
+                          port=self.port,
+                          add_time=self.add_time,
                           timeout=self.timeout)
 
         traj = env.v_trajectory
@@ -291,7 +291,7 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(test_niceness)
+        self.env.f_run(with_niceness)
 
         self.assertTrue(self.traj.f_is_completed())
 
@@ -459,7 +459,7 @@ class EnvironmentTest(TrajectoryComparator):
             Environment(automatic_storing=False,
                         continuable=True, continue_folder=tmp)
         with self.assertRaises(ValueError):
-            Environment(url='www.nosi.de', wrap_mode='LOCK')
+            Environment(port='www.nosi.de', wrap_mode='LOCK')
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -836,7 +836,7 @@ class ResultSortTest(TrajectoryComparator):
         self.freeze_input=False
         self.use_scoop = False
         self.log_config = True
-        self.url = None
+        self.port = None
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -858,7 +858,7 @@ class ResultSortTest(TrajectoryComparator):
                           ncores=self.ncores,
                           use_pool=self.use_pool,
                           use_scoop=self.use_scoop,
-                          url=self.url,
+                          port=self.port,
                           freeze_input=self.freeze_input,)
 
         traj = env.v_trajectory
