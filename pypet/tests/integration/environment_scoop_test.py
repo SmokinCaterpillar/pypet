@@ -201,11 +201,11 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.port = (10000, 60000)
 
 
-@unittest.skip('Mehmet has to delete this')
+#@unittest.skip('Mehmet has to delete this')
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
 
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop', 'freeze_input'
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop', 'freeze_input', 'mehmet'
 
     def set_mode(self):
         super(MultiprocFrozenSCOOPSortNetqueueTest, self).set_mode()
