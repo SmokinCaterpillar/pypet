@@ -3016,7 +3016,8 @@ class MultiprocContext(HasLogger):
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                         self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
-                            self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK):
+                            self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK or
+                                self._wrap_mode == pypetconstants.WRAP_MODE_NETQUEUE):
             self._logging_manager = LoggingManager(log_config=log_config,
                                                    log_stdout=log_stdout)
             self._logging_manager.extract_replacements(self._traj)

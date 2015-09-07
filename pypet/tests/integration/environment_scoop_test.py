@@ -215,7 +215,7 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
         self.ncores = 4
         self.use_pool=False
         self.use_scoop=True
-        self.port = (10000, 60000)
+        self.port = 'tcp://localhost:22334'
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
