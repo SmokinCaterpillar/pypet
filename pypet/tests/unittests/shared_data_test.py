@@ -248,7 +248,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
             tb = traj.myres.get_data_node()
             ptcompat.remove_rows(tb, 1000, 10000)
 
-            cm.f_flush_store()
+            cm.flush_store()
             self.assertTrue(traj.myres.nrows == 1001)
 
         traj.f_delete_item(traj.My, recursive=True)
@@ -374,7 +374,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
                     pass
             self.assertTrue(traj.v_storage_service.is_open)
             with self.assertRaises(RuntimeError):
-                StorageContextManager(traj).f_open_store()
+                StorageContextManager(traj).open_store()
 
         self.assertFalse(traj.v_storage_service.is_open)
 

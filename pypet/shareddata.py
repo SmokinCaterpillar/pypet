@@ -16,11 +16,12 @@ import numpy as np
 
 import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import HasLogger
-from pypet.utils.decorators import with_open_store
+from pypet.utils.decorators import with_open_store, prefix_naming
 from pypet.parameter import ObjectTable, Result
 from pypet.naturalnaming import KnowsTrajectory
 
 
+@prefix_naming
 class StorageContextManager(HasLogger):
     """Context manager that can be used to open a storage file with multiprocessing.
 
@@ -39,12 +40,12 @@ class StorageContextManager(HasLogger):
         self._traj = trajectory
 
     def __enter__(self):
-        self.f_open_store()
+        self.open_store()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            self.f_close_store()
+            self.close_store()
         except Exception as exc:
             self._logger.error('Could not close file because of `%s`' % repr(exc))
             if exc_type is None:
@@ -52,7 +53,7 @@ class StorageContextManager(HasLogger):
             else:
                 return False
 
-    def f_close_store(self):
+    def close_store(self):
         """Closes store manually not needed if used with `with`"""
         service = self._traj.v_storage_service
         if not service.is_open:
@@ -60,7 +61,7 @@ class StorageContextManager(HasLogger):
                                'please open via `f_open_storage`.')
         service.store(pypetconstants.CLOSE_FILE, None)
 
-    def f_open_store(self):
+    def open_store(self):
         """Opens store manually not needed if used with `with`"""
         service = self._traj.v_storage_service
         if service.is_open:
@@ -68,7 +69,7 @@ class StorageContextManager(HasLogger):
         service.store(pypetconstants.OPEN_FILE, None,
                       trajectory_name=self._traj.v_name)
 
-    def f_flush_store(self):
+    def flush_store(self):
         """Flushes data to the storage can be called at any time when storage is open."""
         service = self._traj.v_storage_service
         if not service.is_open:
@@ -628,7 +629,7 @@ class SharedResult(Result, KnowsTrajectory):
         super(SharedResult, self).__init__(full_name, *args, **kwargs)
 
     @property
-    def traj(self):
+    def v_traj(self):
         return self._traj
 
     def _supports(self, item):
@@ -639,7 +640,7 @@ class SharedResult(Result, KnowsTrajectory):
 
     def _pass_to_shared(self, name, item):
         try:
-            item.traj = self.traj
+            item.traj = self.v_traj
             item.name = name
             item.parent = self
         except AttributeError:

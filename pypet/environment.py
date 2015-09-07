@@ -1931,14 +1931,16 @@ class Environment(HasLogger):
         if self._sumatra_reason:
             config_name = 'sumatra.record_%s.reason' % str(sumatra_label)
             if not self._traj.f_contains('config.' + config_name):
-                conf2 = self._traj.f_add_config(Parameter, config_name, str(self._sumatra_reason),
-                                        comment='Reason of sumatra run.')
+                conf2 = self._traj.f_add_config(Parameter, config_name,
+                                                str(self._sumatra_reason),
+                                                comment='Reason of sumatra run.')
                 conf_list.append(conf2)
 
         if self._automatic_storing and conf_list:
             self._traj.f_store_items(conf_list)
 
-        self._logger.info('Saved sumatra project record with reason: %s' % str(self._sumatra_reason))
+        self._logger.info('Saved sumatra project record with reason: '
+                          '%s' % str(self._sumatra_reason))
 
     def _prepare_resume(self):
         """ Prepares the continuation of a crashed trajectory """
