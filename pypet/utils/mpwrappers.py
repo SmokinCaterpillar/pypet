@@ -512,7 +512,7 @@ class QueuingServer(HasLogger):
 
 
 class QueuingClient(ReliableClient):
-    # TODO by Mehmet
+    # TODO by Mehmet here
 
     def put(self, data, block=True):
 
