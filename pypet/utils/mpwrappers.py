@@ -24,7 +24,7 @@ from collections import deque
 import copy as cp
 import gc
 import sys
-from threading import ThreadError
+from threading import Thread
 import time
 import os
 import socket
@@ -92,7 +92,7 @@ class LockerServer(ZMQServer):
 
     LOCK = 'LOCK'  # command for locking a lock
     RELEASE_ERROR = 'RELEASE_ERROR'  # signals unsuccessful attempt to unlock
-    MSG_ERROR = 'MSG_ERROR' # signals error in decoding client request
+    MSG_ERROR = 'MSG_ERROR'  # signals error in decoding client request
     UNLOCK = 'UNLOCK'  # command for unlocking a lock
     RELEASED = 'RELEASED'  # signals successful unlocking
     LOCK_ERROR = 'LOCK_ERROR'  # signals unsuccessful attempt to lock
@@ -100,7 +100,6 @@ class LockerServer(ZMQServer):
     WAIT = 'WAIT'  # signals lock is already in use and client has to wait for release
     DELIMITER = ':::'  # delimiter to split messages
     DEFAULT_LOCK = '_DEFAULT_'  # default lock name
-
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
         super(LockerServer, self).__init__(url)
@@ -482,47 +481,112 @@ class LockerClient(ReliableClient):
 
 
 class QueuingServerMessageListener(ZMQServer):
+    """ Manages the listening requests"""
+
+    SPACE = 'SPACE'  # for space in the queue
+    DATA = 'DATA'  # for sending data
+    SPACE_AVAILABLE = 'SPACE_AVAILABLE'
+    SPACE_NOT_AVAILABLE = 'SPACE_NOT_AVAILABLE'
+    STORING = 'STORING'
+
 
     def __init__(self, url, queue, queue_maxsize):
-        super(ZMQServer, self).__init__(url)
+        super(QueuingServerMessageListener, self).__init__(url)
         self.queue = queue
+        if queue_maxsize == 0:
+            queue_maxsize = float('inf')
         self.queue_maxsize = queue_maxsize
 
     def listen(self):
-        # TODO by Mehmet
-        # 1. Listen to Client requests
-        # 2. Check size of queue
-        # 3. If there is space ask for data
-        # 4. put data on queue
-        pass
+        """ Handles listening requests from the client.
+
+        There are 4 types of requests:
+
+        1- Check space in the queue
+        2- Tests the socket
+        3- If there is a space, it sends data
+        4- after data is sent, puts it to queue for storing
+
+        """
+        count = 0
+        self._start()
+        while True:
+            result = self._socket.recv_pyobj()
+
+            if isinstance(result, tuple):
+                request, data = result
+            else:
+                request = result
+                data = None
+
+            if request == self.SPACE:
+                if self.queue.qsize() + count < self.queue_maxsize:
+                    self._socket.send_string(self.SPACE_AVAILABLE)
+                    count += 1
+                else:
+                    self._socket.send_string(self.SPACE_NOT_AVAILABLE)
+
+            elif request == self.PING:
+                self._socket.send_string(self.PONG)
+
+            elif request == self.DATA:
+                self._socket.send_string(self.STORING)
+                self.queue.put(data)
+                count -= 1
+
+            elif request == self.DONE:
+                self._socket.send_string(ZMQServer.CLOSED)
+                self.queue.put(('DONE', [], {}))
+                self._close()
+                break
+
+            else:
+                raise RuntimeError('I did not understand your request %s' % request)
 
 
 class QueuingServer(HasLogger):
-    # TODO by Mehmet
+    """ Implements server architecture for Queueing"""
 
     def __init__(self, url, storage_service, queue_maxsize, gc_interval):
-       pass
+        self._url = url
+        self._storage_service = storage_service
+        self._queue_maxsize = queue_maxsize
+        self._gc_interval = gc_interval
 
     def run(self):
-        # 1. Create a threading queue and a QueingServerMessageListener
-        # 2. Create a QueueStorageServiceWriter and pass it the queue
-        # 2. Start a thread with QueingServerMessageListener.listen()
-        # 3. run the QueueStorageServiceWriter
-        pass
+        main_queue = queue.Queue(maxsize=self._queue_maxsize)
+        server_message_listener = QueuingServerMessageListener(self._url, main_queue, self._queue_maxsize)
+        storage_writer = QueueStorageServiceWriter(self._storage_service, main_queue, self._gc_interval)
+
+        server_queue = Thread(target=server_message_listener.listen, args=())
+        server_queue.start()
+
+        storage_writer.run()
+        server_queue.join()
 
 
 class QueuingClient(ReliableClient):
-    # TODO by Mehmet here
+    """ Manages the returning requests"""
 
     def put(self, data, block=True):
+        """ If there is space it sends data to server
+
+        If no space in the queue
+
+        It returns the request in every 10 millisecond
+
+        until there will be space in the queue.
+
+        """
 
         self.start(test_connection=False)
         while True:
-            # 1. Ask Server if space on queue available
-            # 2a. If not wait some time and redo 1
-            # 2b. If yes send data and that's it
-            # use _req_rep_retry()
-            pass
+            response = self._req_rep(QueuingServerMessageListener.SPACE)
+            if response == QueuingServerMessageListener.SPACE_AVAILABLE:
+                self._req_rep((QueuingServerMessageListener.DATA, data))
+                break
+            else:
+                time.sleep(0.01)
 
     def _send_request(self, request):
         return self._socket.send_pyobj(request)
@@ -684,13 +748,13 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
             self.conn.send_bytes(chunk)
             # print('S: sent chunk %s' % chunk[0:10])
             # print('S: recv signal')
-            self.conn.recv() # wait for signal that message was received
+            self.conn.recv()  # wait for signal that message was received
             # print('S: read signal')
         # print('S: sending True')
         self.conn.send(True)
         # print('S: sent True')
         # print('S: recving last signal')
-        self.conn.recv() # wait for signal that message was received
+        self.conn.recv()  # wait for signal that message was received
         # print('S: read last signal')
         # print('S; DONE SENDING data')
 
@@ -967,7 +1031,5 @@ class ReferenceStore(HasLogger):
     def store_references(self, references):
         """Stores references to disk and may collect garbage."""
         for trajectory_name in references:
-            self._storage_service.store(pypetconstants.LIST,
-                                  references[trajectory_name],
-                                  trajectory_name=trajectory_name)
+            self._storage_service.store(pypetconstants.LIST, references[trajectory_name], trajectory_name=trajectory_name)
         self._check_and_collect_garbage()

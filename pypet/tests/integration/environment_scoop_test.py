@@ -213,9 +213,29 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
         self.freeze_input = True
         self.multiproc = True
         self.ncores = 4
+        self.use_pool = False
+        self.use_scoop = True
+        self.port = 'tcp://127.0.0.1:22334'
+
+
+@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
+class MultiprocSCOOPNetqueueTest(EnvironmentTest):
+
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop'
+
+    def set_mode(self):
+        super(MultiprocSCOOPNetqueueTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETQUEUE
+        self.multiproc = True
+        self.freeze_input = False
+        self.ncores = 4
+        self.gc_interval = 3
+        self.niceness = check_nice(1)
         self.use_pool=False
         self.use_scoop=True
-        self.port = 'tcp://localhost:22334'
+        self.port = None
+        self.timeout = 9999.99
+        self.port = 'tcp://127.0.0.1:22334'
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -235,6 +255,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.use_scoop=True
         self.port = None
         self.timeout = 9999.99
+        self.port = 'tcp://127.0.0.1:22334'
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
     def test_niceness(self):

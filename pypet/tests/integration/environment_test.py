@@ -88,6 +88,10 @@ def with_niceness(traj):
             trajnice = traj.niceness
             osnice = psutil.Process().nice()
         if trajnice != osnice:
+            if traj.use_scoop:
+                import scoop
+                if (not scoop.IS_RUNNING or scoop.IS_ORIGIN):
+                    return
             raise RuntimeError('traj niceness != os niceness; '
                                '%s != %s' % (str(trajnice), str(osnice)))
 
