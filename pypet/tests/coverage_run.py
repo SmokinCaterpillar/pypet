@@ -45,18 +45,20 @@ from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT
 
 if __name__ == '__main__':
     opt_dict = parse_args()
-    tests_include = set(('TestMPImmediatePostProcLock',
-                    'MultiprocFrozenPoolSortQueueTest',
-                    'MultiprocFrozenPoolSortPipeTest',
-                    'MultiprocLinkNoPoolLockTest',
-                    'MultiprocLinkNoPoolQueueTest',
-                    'MultiprocLinkQueueTest',
-                    'MultiprocPoolSortLocalTest',
-                    'MultiprocSCOOPSortLocalTest',
-                    'MultiprocNoPoolSortNetlockTest',
-                    'MultiprocFrozenSCOOPSortLocalTest',
-                    'CapTest'))
-    pred = lambda class_name, test_name, tags: (class_name in tests_include or
-                                                 'multiproc' not in tags)
-    suite = discover_tests(pred)
+    # tests_include = set(('TestMPImmediatePostProcLock',
+    #                 'MultiprocFrozenPoolSortQueueTest',
+    #                 'MultiprocFrozenPoolSortPipeTest',
+    #                 'MultiprocLinkNoPoolLockTest',
+    #                 'MultiprocLinkNoPoolQueueTest',
+    #                 'MultiprocLinkQueueTest',
+    #                 'MultiprocPoolSortLocalTest',
+    #                 'MultiprocSCOOPSortLocalTest',
+    #                 'MultiprocNoPoolSortNetlockTest',
+    #                 'MultiprocFrozenSCOOPSortLocalTest',
+    #                 'CapTest'))
+    # pred = lambda class_name, test_name, tags: (class_name in tests_include or
+    #                                              'multiproc' not in tags)
+    # suite = discover_tests(pred)
+    suite = discover_tests(predicate=lambda class_name, test_name, tags:
+                                                class_name != TEST_IMPORT_ERROR and 'mehmet' in tags)
     run_suite(suite=suite, **opt_dict)

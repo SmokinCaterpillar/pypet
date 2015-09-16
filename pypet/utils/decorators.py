@@ -168,6 +168,7 @@ def kwargs_api_change(old_name, new_name=None):
 
     return wrapper
 
+
 def not_in_run(func):
     """This is a decorator that signaling that a function is not available during a single run.
 
@@ -189,6 +190,7 @@ def not_in_run(func):
         return func(self, *args, **kwargs)
 
     return new_func
+
 
 def with_open_store(func):
     """This is a decorator that signaling that a function is only available if the storage is open.
