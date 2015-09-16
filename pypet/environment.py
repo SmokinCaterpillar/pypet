@@ -73,7 +73,8 @@ from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
     ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, \
-    ForkAwareLockerClient, TimeOutLockerServer, QueuingClient, QueuingServer
+    ForkAwareLockerClient, TimeOutLockerServer, QueuingClient, QueuingServer, \
+    ForkAwareQueuingClient
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
@@ -3238,7 +3239,11 @@ class MultiprocContext(HasLogger):
         else:
             url = self._port
 
-        self._queue = QueuingClient(url)
+        if self._queue is None:
+            if hasattr(os, 'fork'):
+                self._queue = ForkAwareQueuingClient(url)
+            else:
+                self._queue = QueuingClient(url)
 
         # Wrap a queue writer around the storage service
         queuing_server_handler = QueuingServer(url,

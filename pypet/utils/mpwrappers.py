@@ -1,6 +1,6 @@
 """Module containing wrappers for multiprocessing"""
 
-__author__ = 'Robert Meyer'
+__author__ = 'Robert Meyer', 'Mehmet Nevvaf Timur'
 
 try:
     from thread import error as ThreadError
@@ -592,22 +592,7 @@ class QueuingClient(ReliableClient):
         return self._socket.send_pyobj(request)
 
 
-class ForkAwareLockerClient(LockerClient):
-    """Locker Client that can detect forking of processes.
-
-    In this case the context and socket are restarted.
-
-    """
-
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        super(ForkAwareLockerClient, self).__init__(url, lock_name)
-        self._pid = None
-
-    def __getstate__(self):
-        result_dict = super(ForkAwareLockerClient, self).__getstate__()
-        result_dict['_pid'] = None
-        return result_dict
-
+class ForkDetector(HasLogger):
     def _detect_fork(self):
         """Detects if lock client was forked.
 
@@ -623,6 +608,45 @@ class ForkAwareLockerClient(LockerClient):
                 self._logger.debug('Fork detected: My pid `%s` != os pid `%s`. '
                                    'Restarting connection.' % (str(self._pid), str(current_pid)))
                 self._context = None
+                self._pid = current_pid
+
+
+class ForkAwareQueuingClient(QueuingClient, ForkDetector):
+    """ Queuing Client can detect forking of process.
+
+    In this case the context and socket are restarted.
+
+    """
+
+    def __init__(self, url='tcp://127.0.0.1:22334'):
+        super(ForkAwareQueuingClient, self).__init__(url)
+        self._pid = None
+
+    def __getstate__(self):
+        result_dict = super(ForkAwareQueuingClient, self).__getstate__()
+        result_dict['_pid'] = None
+        return result_dict
+
+    def start(self, test_connection=True):
+        self._detect_fork()
+        super(ForkAwareQueuingClient, self).start(test_connection)
+
+
+class ForkAwareLockerClient(LockerClient, ForkDetector):
+    """Locker Client that can detect forking of processes.
+
+    In this case the context and socket are restarted.
+
+    """
+
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
+        super(ForkAwareLockerClient, self).__init__(url, lock_name)
+        self._pid = None
+
+    def __getstate__(self):
+        result_dict = super(ForkAwareLockerClient, self).__getstate__()
+        result_dict['_pid'] = None
+        return result_dict
 
     def start(self, test_connection=True):
         """Checks for forking and starts/restarts if desired"""
