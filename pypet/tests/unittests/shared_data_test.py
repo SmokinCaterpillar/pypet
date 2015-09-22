@@ -517,6 +517,99 @@ class SharedTableTest(TrajectoryComparator):
             for idx, row in enumerate(second_iterrows_table.iterrows()):
                 self.assertEqual(row['id'], idx)
 
+    def test_table_col(self):
+        pass
+
+    def test_table_itersequence(self):
+        pass
+
+    def test_table_itersorted(self):
+        pass
+
+    def test_table_read_coordinates(self):
+        pass
+
+    def test_table_read_sorted(self):
+        pass
+
+    def test_table_getitem(self):
+        pass
+
+    def test_table_iter(self):
+        pass
+
+    def test_table_modify_column(self):
+        pass
+
+    def test_table_modify_columns(self):
+        pass
+
+    def test_table_modify_coordinates(self):
+        pass
+
+    def test_table_modify_rows(self):
+        pass
+
+    def test_table_remove_rows(self):
+        pass
+
+    def test_table_remove_row(self):
+        pass
+
+    def test_table_setitem(self):
+        pass
+
+    def test_table_get_where_list(self):
+        pass
+
+    def test_table_read_where(self):
+        pass
+
+    def test_table_where(self):
+        pass
+
+    def test_table_append_where(self):
+        pass
+
+    def test_table_will_query_use_indexing(self):
+        pass
+
+    def test_table_copy(self):
+        pass
+
+    def test_table_flush_rows_to_index(self):
+        pass
+
+    def test_table_get_enum(self):
+        pass
+
+    def test_table_reindex(self):
+        pass
+
+    def test_table_reindex_dirty(self):
+        pass
+
+    def test_table_remove_index(self):
+        pass
+
+    def test_table_create_index(self):
+        pass
+
+    def test_table_create_cindex(self):
+        pass
+
+    def test_table_colindexes(self):
+        pass
+
+    def test_table_cols(self):
+        pass
+
+    def test_table_row(self):
+        pass
+
+    def test_table_flush(self):
+        pass
+
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class SharedArrayTest(TrajectoryComparator):
@@ -636,6 +729,52 @@ class SharedArrayTest(TrajectoryComparator):
         second_setitem_array[3, 3] = 17
 
         self.assertEqual(second_setitem_array[3, 3], 17)
+
+    def test_array_iter(self):
+
+        the_iterrows_array = np.random.randint(0, 100, (100, 100))
+
+        first_iterrows_array = self.traj.results.shared_data.array
+
+        first_iterrows_array.create_shared_data(obj=the_iterrows_array)
+
+        with StorageContextManager(self.traj):
+            for idx, row in enumerate(first_iterrows_array.iterrows()):
+                self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
+
+        self.traj.f_store()
+
+        self.assertTrue(np.all(the_iterrows_array == first_iterrows_array.read()))
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_iterrows_array = traj2.results.shared_data.array
+
+        with StorageContextManager(traj2):
+            for idx, row in enumerate(second_iterrows_array.iterrows()):
+                self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
+
+        self.assertTrue(np.all(the_iterrows_array == second_iterrows_array.read()))
+
+    def test_array_len(self):
+        the_len_array = np.ones((100, 100))
+
+        first_len_array = self.traj.results.shared_data.array
+
+        self.assertTrue(first_len_array is self.shared_array)
+
+        first_len_array.create_shared_data(obj=the_len_array)
+
+        self.assertEqual(first_len_array.__len__(), 100)
+
+        self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_len_array = traj2.results.shared_data.array
+
+        self.assertEqual(second_len_array.__len__(), 100)
+
 
 if __name__ == '__main__':
     opt_args = parse_args()
