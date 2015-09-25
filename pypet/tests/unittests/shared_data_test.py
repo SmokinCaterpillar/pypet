@@ -518,7 +518,39 @@ class SharedTableTest(TrajectoryComparator):
                 self.assertEqual(row['id'], idx)
 
     def test_table_col(self):
-        pass
+        the_col_table = self.traj.results.shared_data.table
+
+        self.assertTrue(the_col_table is self.shared_table)
+
+        the_col_table.create_shared_data(description=MyTable)
+
+        with StorageContextManager(self.traj):
+            row = the_col_table.row
+            for i in range(10):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i * 1.5
+                row.append()
+            the_col_table.flush()
+
+            for idx, row in enumerate(the_col_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+
+        self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_col_table = traj2.results.shared_data.table
+
+        with StorageContextManager(traj2):
+            for idx, row in enumerate(second_col_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+
+        self.assertTrue(np.all(second_col_table.read(field='id') == second_col_table.col('id')))
+        self.assertTrue(np.all(second_col_table.read(field='name') == second_col_table.col('name')))
+        self.assertTrue(np.all(second_col_table.read(field='surname') == second_col_table.col('surname')))
+        self.assertTrue(np.all(second_col_table.read(field='weight') == second_col_table.col('weight')))
 
     def test_table_itersequence(self):
         pass
@@ -533,7 +565,54 @@ class SharedTableTest(TrajectoryComparator):
         pass
 
     def test_table_getitem(self):
-        pass
+        the_getitem_table = self.traj.results.shared_data.table
+
+        self.assertTrue(the_getitem_table is self.shared_table)
+
+        the_getitem_table.create_shared_data(description=MyTable)
+
+        with StorageContextManager(self.traj):
+            row = the_getitem_table.row
+            for i in range(10):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i * 1.5
+                row.append()
+            the_getitem_table.flush()
+
+            for idx, row in enumerate(the_getitem_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+
+        self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_getitem_table = traj2.results.shared_data.table
+
+        self.assertEqual((second_getitem_table.read(field='id')[0]), 0)
+        self.assertEqual((second_getitem_table.read(field='name')[0]), 'mehmet 0')
+        self.assertEqual((second_getitem_table.read(field='surname')[0]), 'Timur')
+        self.assertEqual((second_getitem_table.read(field='weight')[0]), 65.5)
+
+        with StorageContextManager(traj2):
+            second_getitem_table.append([(30, 'mehmet nevvaf', 'timur', 65.5)])
+
+        self.assertEqual(second_getitem_table.read(field='id')[-1], 30)
+        self.assertEqual(second_getitem_table.read(field='name')[-1], compat.tobytes('mehmet nevvaf'))
+        self.assertEqual(second_getitem_table.read(field='surname')[-1], compat.tobytes('timur'))
+        self.assertEqual(second_getitem_table.read(field='weight')[-1], 65.5)
+
+        traj2.f_store()
+
+        traj3 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        third_getitem_table = traj3.results.shared_data.table
+
+        self.assertEqual(third_getitem_table.read(field='id')[-1], 30)
+        self.assertEqual(third_getitem_table.read(field='name')[-1], compat.tobytes('mehmet nevvaf'))
+        self.assertEqual(third_getitem_table.read(field='surname')[-1], compat.tobytes('timur'))
+        self.assertEqual(third_getitem_table.read(field='weight')[-1], 65.5)
 
     def test_table_iter(self):
         pass
@@ -557,7 +636,48 @@ class SharedTableTest(TrajectoryComparator):
         pass
 
     def test_table_setitem(self):
-        pass
+        the_setitem_table = self.traj.results.shared_data.table
+
+        self.assertTrue(the_setitem_table is self.shared_table)
+
+        the_setitem_table.create_shared_data(description=MyTable)
+
+        with StorageContextManager(self.traj):
+            row = the_setitem_table.row
+            for i in range(10):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i * 1.5
+                row.append()
+            the_setitem_table.flush()
+
+            for idx, row in enumerate(the_setitem_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+
+        self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_setitem_table = traj2.results.shared_data.table
+
+        second_setitem_table[0] = [(100, 'Mehmet Nevvaf', 'TIMUR', 75.5)]
+
+        self.assertEqual(second_setitem_table.read(field='id')[0], 100)
+        self.assertEqual(second_setitem_table.read(field='name')[0], compat.tobytes('Mehmet Nevvaf'))
+        self.assertEqual(second_setitem_table.read(field='surname')[0], compat.tobytes('TIMUR'))
+        self.assertEqual(second_setitem_table.read(field='weight')[0], 75.5)
+
+        traj2.f_store()
+
+        traj3 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        third_setitem_table = traj3.results.shared_data.table
+
+        self.assertEqual(third_setitem_table.read(field='id')[0], 100)
+        self.assertEqual(third_setitem_table.read(field='name')[0], compat.tobytes('Mehmet Nevvaf'))
+        self.assertEqual(third_setitem_table.read(field='surname')[0], compat.tobytes('TIMUR'))
+        self.assertEqual(third_setitem_table.read(field='weight')[0], 75.5)
 
     def test_table_get_where_list(self):
         pass
@@ -566,7 +686,37 @@ class SharedTableTest(TrajectoryComparator):
         pass
 
     def test_table_where(self):
-        pass
+        the_where_table = self.traj.results.shared_data.table
+
+        self.assertTrue(the_where_table is self.shared_table)
+
+        the_where_table.create_shared_data(description=MyTable)
+
+        with StorageContextManager(self.traj):
+            row = the_where_table.row
+            for i in range(10):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i
+                row.append()
+            the_where_table.flush()
+
+            for idx, row in enumerate(the_where_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+
+            self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_where_table = traj2.results.shared_data.table
+
+        with StorageContextManager(traj2):
+            result = second_where_table.where('(id == 2)&(name == "mehmet 2")&(surname =="Timur")&(weight == 67.5)')
+            there = False
+            for row in result:
+                there = True
+            self.assertTrue(there)
 
     def test_table_append_where(self):
         pass
@@ -608,7 +758,55 @@ class SharedTableTest(TrajectoryComparator):
         pass
 
     def test_table_flush(self):
-        pass
+        the_flush_table = self.traj.results.shared_data.table
+
+        self.assertTrue(the_flush_table is self.shared_table)
+
+        the_flush_table.create_shared_data(description=MyTable)
+
+        with StorageContextManager(self.traj):
+            row = the_flush_table.row
+            for i in range(10):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i
+                row.append()
+            the_flush_table.flush()
+
+            for idx, row in enumerate(the_flush_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+                self.assertEqual(row['name'], 'mehmet %d' % idx)
+                self.assertEqual(row['surname'], 'Timur')
+                self.assertEqual(row['weight'], 65.5+idx)
+
+        self.traj.f_store()
+
+        traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
+
+        second_flush_table = traj2.results.shared_data.table
+
+        with StorageContextManager(traj2):
+            for idx, row in enumerate(second_flush_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+                self.assertEqual(row['name'], 'mehmet %d' % idx)
+                self.assertEqual(row['surname'], 'Timur')
+                self.assertEqual(row['weight'], 65.5+idx)
+
+            row = second_flush_table.row
+            for i in range(10, 11):
+                row['id'] = i
+                row['name'] = 'mehmet %d' % i
+                row['surname'] = 'Timur'
+                row['weight'] = 65.5 + i
+                row.append()
+            second_flush_table.flush()
+
+            for idx, row in enumerate(second_flush_table.iterrows()):
+                self.assertEqual(row['id'], idx)
+                self.assertEqual(row['name'], ('mehmet %d') % idx)
+                self.assertEqual(row['surname'], ('Timur'))
+                self.assertEqual(row['weight'], 65.5+idx)
 
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
@@ -779,7 +977,7 @@ class SharedArrayTest(TrajectoryComparator):
 
         second_len_array = traj2.results.shared_data.array
 
-        self.assertEqual(second_len_array.len(), 100)
+        self.assertEqual(len(second_len_array), 100)
 
 
 if __name__ == '__main__':
