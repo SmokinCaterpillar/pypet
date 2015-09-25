@@ -739,22 +739,25 @@ class SharedArrayTest(TrajectoryComparator):
         first_iterrows_array.create_shared_data(obj=the_iterrows_array)
 
         with StorageContextManager(self.traj):
-            for idx, row in enumerate(first_iterrows_array.iterrows()):
+            for idx, row in enumerate(first_iterrows_array):
                 self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
 
-        self.traj.f_store()
-
         self.assertTrue(np.all(the_iterrows_array == first_iterrows_array.read()))
+
+        self.traj.f_store()
 
         traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
 
         second_iterrows_array = traj2.results.shared_data.array
 
         with StorageContextManager(traj2):
-            for idx, row in enumerate(second_iterrows_array.iterrows()):
+            for idx, row in enumerate(second_iterrows_array):
                 self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
 
         self.assertTrue(np.all(the_iterrows_array == second_iterrows_array.read()))
+
+        for idx, row in enumerate(second_iterrows_array):
+            self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
 
     def test_array_len(self):
         the_len_array = np.ones((100, 100))
@@ -765,7 +768,7 @@ class SharedArrayTest(TrajectoryComparator):
 
         first_len_array.create_shared_data(obj=the_len_array)
 
-        self.assertEqual(first_len_array.__len__(), 100)
+        self.assertEqual(len(first_len_array), 100)
 
         self.traj.f_store()
 
@@ -773,7 +776,7 @@ class SharedArrayTest(TrajectoryComparator):
 
         second_len_array = traj2.results.shared_data.array
 
-        self.assertEqual(second_len_array.__len__(), 100)
+        self.assertEqual(second_len_array.len(), 100)
 
 
 if __name__ == '__main__':
