@@ -776,8 +776,8 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(the_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], 'mehmet %d' % idx)
-                self.assertEqual(row['surname'], 'Timur')
+                self.assertEqual(row['name'], compat.tobytes('mehmet %d') % idx)
+                self.assertEqual(row['surname'], compat.tobytes('Timur'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
         self.traj.f_store()
@@ -789,8 +789,8 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], 'mehmet %d' % idx)
-                self.assertEqual(row['surname'], 'Timur')
+                self.assertEqual(row['name'], compat.tobytes('mehmet %d') % idx)
+                self.assertEqual(row['surname'], compat.tobytes('Timur'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
             row = second_flush_table.row
@@ -804,8 +804,8 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], ('mehmet %d') % idx)
-                self.assertEqual(row['surname'], ('Timur'))
+                self.assertEqual(row['name'], compat.tobytes('mehmet %d') % idx)
+                self.assertEqual(row['surname'], compat.tobytes('Timur'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
 
