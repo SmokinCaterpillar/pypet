@@ -591,8 +591,8 @@ class SharedTableTest(TrajectoryComparator):
         second_getitem_table = traj2.results.shared_data.table
 
         self.assertEqual((second_getitem_table.read(field='id')[0]), 0)
-        self.assertEqual((second_getitem_table.read(field='name')[0]), 'mehmet 0')
-        self.assertEqual((second_getitem_table.read(field='surname')[0]), 'Timur')
+        self.assertEqual((second_getitem_table.read(field='name')[0]), compat.tobytes('mehmet 0'))
+        self.assertEqual((second_getitem_table.read(field='surname')[0]), compat.tobytes('Timur'))
         self.assertEqual((second_getitem_table.read(field='weight')[0]), 65.5)
 
         with StorageContextManager(traj2):
