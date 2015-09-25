@@ -744,6 +744,9 @@ class SharedArrayTest(TrajectoryComparator):
 
         self.assertTrue(np.all(the_iterrows_array == first_iterrows_array.read()))
 
+        for idx, row in enumerate(the_iterrows_array):
+            self.assertTrue(np.all(row == the_iterrows_array[idx, :]))
+
         self.traj.f_store()
 
         traj2 = load_trajectory(name=self.traj.v_name, filename=self.filename, load_all=2, dynamic_imports=SharedResult)
