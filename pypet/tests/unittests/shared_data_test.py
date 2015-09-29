@@ -453,6 +453,9 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(the_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
+                self.assertEqual(row['name'], compat.tobytes('name %d' % idx))
+                self.assertEqual(row['surname'], compat.tobytes('%d surname' % idx))
+                self.assertEqual(row['weight'], idx*0.5+50.0)
 
         self.traj.f_store()
 
@@ -463,6 +466,9 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
+                self.assertEqual(row['name'], compat.tobytes('name %d' % idx))
+                self.assertEqual(row['surname'], compat.tobytes('%d surname' % idx))
+                self.assertEqual(row['weight'], idx*0.5+50.0)
 
             second_append_table.append([(30, 'mehmet', 'timur', 65.5)])
 
@@ -552,17 +558,17 @@ class SharedTableTest(TrajectoryComparator):
         self.assertTrue(np.all(second_col_table.read(field='surname') == second_col_table.col('surname')))
         self.assertTrue(np.all(second_col_table.read(field='weight') == second_col_table.col('weight')))
 
-    def test_table_itersequence(self):
-        pass
-
-    def test_table_itersorted(self):
-        pass
-
-    def test_table_read_coordinates(self):
-        pass
-
-    def test_table_read_sorted(self):
-        pass
+    # def test_table_itersequence(self):
+    #     pass
+    #
+    # def test_table_itersorted(self):
+    #     pass
+    #
+    # def test_table_read_coordinates(self):
+    #     pass
+    #
+    # def test_table_read_sorted(self):
+    #     pass
 
     def test_table_getitem(self):
         the_getitem_table = self.traj.results.shared_data.table
@@ -590,18 +596,17 @@ class SharedTableTest(TrajectoryComparator):
 
         second_getitem_table = traj2.results.shared_data.table
 
-        self.assertEqual((second_getitem_table.read(field='id')[0]), 0)
-        self.assertEqual((second_getitem_table.read(field='name')[0]), compat.tobytes('mehmet 0'))
-        self.assertEqual((second_getitem_table.read(field='surname')[0]), compat.tobytes('Timur'))
-        self.assertEqual((second_getitem_table.read(field='weight')[0]), 65.5)
-
         with StorageContextManager(traj2):
+            for idx, row in enumerate(second_getitem_table.iterrows()):
+                self.assertTrue(np.all(second_getitem_table.read()[idx] == second_getitem_table[idx]))
+
             second_getitem_table.append([(30, 'mehmet nevvaf', 'timur', 65.5)])
 
-        self.assertEqual(second_getitem_table.read(field='id')[-1], 30)
-        self.assertEqual(second_getitem_table.read(field='name')[-1], compat.tobytes('mehmet nevvaf'))
-        self.assertEqual(second_getitem_table.read(field='surname')[-1], compat.tobytes('timur'))
-        self.assertEqual(second_getitem_table.read(field='weight')[-1], 65.5)
+            for idx, row in enumerate(second_getitem_table.iterrows(-1)):
+                self.assertEqual(row['id'], 30)
+                self.assertEqual(row['name'], compat.tobytes('mehmet nevvaf'))
+                self.assertEqual(row['surname'], compat.tobytes('timur'))
+                self.assertEqual(row['weight'], 65.5)
 
         traj2.f_store()
 
@@ -609,31 +614,30 @@ class SharedTableTest(TrajectoryComparator):
 
         third_getitem_table = traj3.results.shared_data.table
 
-        self.assertEqual(third_getitem_table.read(field='id')[-1], 30)
-        self.assertEqual(third_getitem_table.read(field='name')[-1], compat.tobytes('mehmet nevvaf'))
-        self.assertEqual(third_getitem_table.read(field='surname')[-1], compat.tobytes('timur'))
-        self.assertEqual(third_getitem_table.read(field='weight')[-1], 65.5)
+        with StorageContextManager(traj3):
+            for idx, row in enumerate(third_getitem_table.iterrows()):
+                self.assertTrue(np.all(third_getitem_table.read()[idx] == third_getitem_table[idx]))
 
-    def test_table_iter(self):
-        pass
-
-    def test_table_modify_column(self):
-        pass
-
-    def test_table_modify_columns(self):
-        pass
-
-    def test_table_modify_coordinates(self):
-        pass
-
-    def test_table_modify_rows(self):
-        pass
-
-    def test_table_remove_rows(self):
-        pass
-
-    def test_table_remove_row(self):
-        pass
+    # def test_table_iter(self):
+    #     pass
+    #
+    # def test_table_modify_column(self):
+    #     pass
+    #
+    # def test_table_modify_columns(self):
+    #     pass
+    #
+    # def test_table_modify_coordinates(self):
+    #     pass
+    #
+    # def test_table_modify_rows(self):
+    #     pass
+    #
+    # def test_table_remove_rows(self):
+    #     pass
+    #
+    # def test_table_remove_row(self):
+    #     pass
 
     def test_table_setitem(self):
         the_setitem_table = self.traj.results.shared_data.table
@@ -679,11 +683,11 @@ class SharedTableTest(TrajectoryComparator):
         self.assertEqual(third_setitem_table.read(field='surname')[0], compat.tobytes('TIMUR'))
         self.assertEqual(third_setitem_table.read(field='weight')[0], 75.5)
 
-    def test_table_get_where_list(self):
-        pass
-
-    def test_table_read_where(self):
-        pass
+    # def test_table_get_where_list(self):
+    #     pass
+    #
+    # def test_table_read_where(self):
+    #     pass
 
     def test_table_where(self):
         the_where_table = self.traj.results.shared_data.table
@@ -712,50 +716,50 @@ class SharedTableTest(TrajectoryComparator):
         second_where_table = traj2.results.shared_data.table
 
         with StorageContextManager(traj2):
-            result = second_where_table.where('(id == 2)&(name == "mehmet 2")&(surname =="Timur")&(weight == 67.5)')
+            result = second_where_table.where('(id == 2)&(name == b"mehmet 2")&(surname ==b"Timur")&(weight == 67.5)')
             there = False
             for row in result:
                 there = True
             self.assertTrue(there)
 
-    def test_table_append_where(self):
-        pass
-
-    def test_table_will_query_use_indexing(self):
-        pass
-
-    def test_table_copy(self):
-        pass
-
-    def test_table_flush_rows_to_index(self):
-        pass
-
-    def test_table_get_enum(self):
-        pass
-
-    def test_table_reindex(self):
-        pass
-
-    def test_table_reindex_dirty(self):
-        pass
-
-    def test_table_remove_index(self):
-        pass
-
-    def test_table_create_index(self):
-        pass
-
-    def test_table_create_cindex(self):
-        pass
-
-    def test_table_colindexes(self):
-        pass
-
-    def test_table_cols(self):
-        pass
-
-    def test_table_row(self):
-        pass
+    # def test_table_append_where(self):
+    #     pass
+    #
+    # def test_table_will_query_use_indexing(self):
+    #     pass
+    #
+    # def test_table_copy(self):
+    #     pass
+    #
+    # def test_table_flush_rows_to_index(self):
+    #     pass
+    #
+    # def test_table_get_enum(self):
+    #     pass
+    #
+    # def test_table_reindex(self):
+    #     pass
+    #
+    # def test_table_reindex_dirty(self):
+    #     pass
+    #
+    # def test_table_remove_index(self):
+    #     pass
+    #
+    # def test_table_create_index(self):
+    #     pass
+    #
+    # def test_table_create_cindex(self):
+    #     pass
+    #
+    # def test_table_colindexes(self):
+    #     pass
+    #
+    # def test_table_cols(self):
+    #     pass
+    #
+    # def test_table_row(self):
+    #     pass
 
     def test_table_flush(self):
         the_flush_table = self.traj.results.shared_data.table
