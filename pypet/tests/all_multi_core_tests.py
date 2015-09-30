@@ -17,7 +17,7 @@ tests_include=set(('MultiprocNoPoolLockTest',
                    'MultiprocNoPoolNetlockTest',
                    'MultiprocStorageNetlockTest',
                    'MultiprocSCOOPLocalTest'))
-big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include and 'mehmet' in tags)
+big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocNoPoolQueueTest',
                    'MultiprocPoolQueueTest',
@@ -33,7 +33,7 @@ tests_include=set((#'MultiprocNoPoolQueueTest',
                    'TestMPImmediatePostProcLocal',
                    'MultiprocPoolSortNetlockTest',
                    'MultiprocSCOOPSortLocalTest'))
-big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include and 'mehmet' in tags)
+big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocFrozenPoolLockTest',
                    'MultiprocNoPoolSortQueueTest',
@@ -45,7 +45,7 @@ tests_include=set((#'MultiprocFrozenPoolLockTest',
                    'MultiprocNoPoolLockLoggingTest',
                    'MultiprocFrozenSCOOPSortNetlockTest',
                    'MultiprocFrozenSCOOPSortLocalTest'))
-big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include and 'mehmet' in tags)
+big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set(('MultiprocFrozenPoolQueueTest',
                    'MultiprocFrozenPoolSortPipeTest',
@@ -60,7 +60,7 @@ tests_include=set(('MultiprocFrozenPoolQueueTest',
                    'MultiprocSCOOPNetlockTest',
                    'MultiprocNoPoolSortNetlockTest',
                    'MultiprocFrozenSCOOPLocalTest'))
-big_suite_4 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include and 'mehmet' in tags)
+big_suite_4 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 
 suite_dict = {'1': big_suite_1, '2': big_suite_2, '3': big_suite_3, '4': big_suite_4}
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     if suite is None:
         pred = lambda class_name, test_name, tags: ('multiproc' in tags and
-                                                    class_name != TEST_IMPORT_ERROR and 'mehmet' in tags)
+                                                    class_name != TEST_IMPORT_ERROR)
         suite = discover_tests(pred)
 
     run_suite(suite=suite, **opt_dict)
