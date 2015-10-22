@@ -160,6 +160,8 @@ WRAP_MODE_LOCAL = 'LOCAL'
 """Data is only stored on the local machine"""
 WRAP_MODE_NETLOCK = 'NETLOCK'
 """ Lock multiprocessing mode over a network """
+WRAP_MODE_NETQUEUE = 'NETQUEUE'
+""" Queue multiprocessing mode over a network """
 
 
 ############ Loading Constants ###########################

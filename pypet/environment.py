@@ -73,7 +73,8 @@ from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     PipeStorageServiceSender, PipeStorageServiceWriter, ReferenceWrapper, \
     ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, \
-    ForkAwareLockerClient, TimeOutLockerServer
+    ForkAwareLockerClient, TimeOutLockerServer, QueuingClient, QueuingServer, \
+    ForkAwareQueuingClient
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
@@ -1057,8 +1058,10 @@ class Environment(HasLogger):
 
         if use_scoop and wrap_mode not in (pypetconstants.WRAP_MODE_LOCAL,
                                            pypetconstants.WRAP_MODE_NONE,
-                                           pypetconstants.WRAP_MODE_NETLOCK):
-            raise ValueError('SCOOP mode only works with `LOCAL` or `NETLOCK` wrap mode!')
+                                           pypetconstants.WRAP_MODE_NETLOCK,
+                                           pypetconstants.WRAP_MODE_NETQUEUE):
+            raise ValueError('SCOOP mode only works with `LOCAL`, `NETLOCK` or '
+                             '`NETQUEUE` wrap mode!')
 
         if niceness is not None and not hasattr(os, 'nice') and psutil is None:
             raise ValueError('You cannot set `niceness` if your operating system does not '
@@ -1090,7 +1093,8 @@ class Environment(HasLogger):
                              'installed psutil. Please install psutil or '
                              'set `ncores` manually.')
 
-        if port is not None and wrap_mode != pypetconstants.WRAP_MODE_NETLOCK:
+        if port is not None and wrap_mode not in (pypetconstants.WRAP_MODE_NETLOCK,
+                                                  pypetconstants.WRAP_MODE_NETQUEUE):
             raise ValueError('You can only specify a port for the `NETLOCK` wrapping.')
 
         unused_kwargs = set(kwargs.keys())
@@ -3013,7 +3017,8 @@ class MultiprocContext(HasLogger):
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                         self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
-                            self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK):
+                            self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK or
+                                self._wrap_mode == pypetconstants.WRAP_MODE_NETQUEUE):
             self._logging_manager = LoggingManager(log_config=log_config,
                                                    log_stdout=log_stdout)
             self._logging_manager.extract_replacements(self._traj)
@@ -3093,7 +3098,9 @@ class MultiprocContext(HasLogger):
         elif self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._prepare_local()
         elif self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK:
-            self._prepare_net_lock()
+            self._prepare_netlock()
+        elif self._wrap_mode == pypetconstants.WRAP_MODE_NETQUEUE:
+            self._prepare_netqueue()
         else:
             raise RuntimeError('The mutliprocessing mode %s, your choice is '
                                            'not supported, use %s`, `%s`, %s, `%s`, or `%s`.'
@@ -3109,7 +3116,7 @@ class MultiprocContext(HasLogger):
         self._reference_wrapper = reference_wrapper
         self._reference_store = ReferenceStore(self._storage_service, self._gc_interval)
 
-    def _prepare_net_lock(self):
+    def _prepare_netlock(self):
         """ Replaces the trajectory's service with a LockWrapper """
         if not isinstance(self._port, compat.base_type):
             url = port_to_tcp(self._port)
@@ -3220,6 +3227,45 @@ class MultiprocContext(HasLogger):
         self._queue_wrapper = QueueStorageServiceSender(self._queue)
         self._traj.v_storage_service = self._queue_wrapper
 
+    def _prepare_netqueue(self):
+        """ Replaces the trajectory's service with a queue sender and starts the queue process.
+
+        """
+        self._logger.info('Starting Network Queue!')
+
+        if not isinstance(self._port, compat.base_type):
+            url = port_to_tcp(self._port)
+            self._logger.info('Determined Server URL: `%s`' % url)
+        else:
+            url = self._port
+
+        if self._queue is None:
+            if hasattr(os, 'fork'):
+                self._queue = ForkAwareQueuingClient(url)
+            else:
+                self._queue = QueuingClient(url)
+
+        # Wrap a queue writer around the storage service
+        queuing_server_handler = QueuingServer(url,
+                                               self._storage_service,
+                                               self._queue_maxsize,
+                                               self._gc_interval)
+
+        # Start the queue process
+        self._queue_process = multip.Process(name='QueuingServerProcess', target=_wrap_handling,
+                                             args=(dict(handler=queuing_server_handler,
+                                                        logging_manager=self._logging_manager),))
+        self._queue_process.start()
+        self._queue.start()
+
+        # Replace the storage service of the trajectory by a sender.
+        # The sender will put all data onto the queue.
+        # The writer from above will receive the data from
+        # the queue and hand it over to
+        # the storage service
+        self._queue_wrapper = QueueStorageServiceSender(self._queue)
+        self._traj.v_storage_service = self._queue_wrapper
+
     def finalize(self):
         """ Restores the original storage service.
 
@@ -3263,6 +3309,11 @@ class MultiprocContext(HasLogger):
             self._lock.send_done()
             self._lock.finalize()
             self._lock_process.join()
+        elif (self._wrap_mode == pypetconstants.WRAP_MODE_NETQUEUE and
+                self._queue_process is not None):
+            self._queue.send_done()
+            self._queue.finalize()
+            self._queue_process.join()
 
         if self._manager is not None:
             self._manager.shutdown()

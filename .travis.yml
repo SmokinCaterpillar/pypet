@@ -91,6 +91,5 @@ branches:
   only:
     - develop
     - master
-    - scoop_feature
-    - nested_storage
+    - netqueue_feature
 

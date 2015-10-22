@@ -1,6 +1,6 @@
 """Module containing wrappers for multiprocessing"""
 
-__author__ = 'Robert Meyer'
+__author__ = 'Robert Meyer', 'Mehmet Nevvaf Timur'
 
 try:
     from thread import error as ThreadError
@@ -24,7 +24,7 @@ from collections import deque
 import copy as cp
 import gc
 import sys
-from threading import ThreadError
+from threading import Thread
 import time
 import os
 import socket
@@ -61,15 +61,38 @@ class MultiprocWrapper(object):
         raise NotImplementedError('Implement this!')
 
 
-class LockerServer(HasLogger):
-    """ Manages a database of locks """
+class ZMQServer(HasLogger):
+    """ Generic zmq server """
 
     PING = 'PING'  # for connection testing
     PONG = 'PONG'  # for connection testing
     DONE = 'DONE'  # signals stopping of server
+    CLOSED = 'CLOSED'  # signals closing of server
+
+    def __init__(self, url="tcp://127.0.0.1:7777"):
+        self._url = url  # server url
+        self._set_logger()
+        self._context = None
+        self._socket = None
+
+    def _start(self):
+        self._logger.info('Starting Server at `%s`' % self._url)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REP)
+        self._socket.bind(self._url)
+
+    def _close(self):
+        self._logger.info('Closing Server')
+        self._socket.close()
+        self._context.term()
+
+
+class LockerServer(ZMQServer):
+    """ Manages a database of locks """
+
     LOCK = 'LOCK'  # command for locking a lock
     RELEASE_ERROR = 'RELEASE_ERROR'  # signals unsuccessful attempt to unlock
-    MSG_ERROR = 'MSG_ERROR' # signals error in decoding client request
+    MSG_ERROR = 'MSG_ERROR'  # signals error in decoding client request
     UNLOCK = 'UNLOCK'  # command for unlocking a lock
     RELEASED = 'RELEASED'  # signals successful unlocking
     LOCK_ERROR = 'LOCK_ERROR'  # signals unsuccessful attempt to lock
@@ -77,25 +100,10 @@ class LockerServer(HasLogger):
     WAIT = 'WAIT'  # signals lock is already in use and client has to wait for release
     DELIMITER = ':::'  # delimiter to split messages
     DEFAULT_LOCK = '_DEFAULT_'  # default lock name
-    CLOSED = 'CLOSED'  # signals closing of server
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
+        super(LockerServer, self).__init__(url)
         self._locks = {}  # lock DB, format 'lock_name': ('client_id', 'request_id')
-        self._url = url  # server url
-        self._set_logger()
-        self._context = None
-        self._socket = None
-
-    def _start(self):
-        self._logger.info('Starting Lock Server at `%s`' % self._url)
-        self._context = zmq.Context()
-        self._socket = self._context.socket(zmq.REP)
-        self._socket.bind(self._url)
-
-    def _close(self):
-        self._logger.info('Closing Lock Server')
-        self._socket.close()
-        self._context.term()
 
     def _pre_respond_hook(self, response):
         """ Hook that can be used to temper with the server before responding
@@ -310,13 +318,13 @@ class ReliableClient(HasLogger):
         """Notifies the Server to shutdown"""
         self.start(test_connection=False)
         self._logger.debug('Sending shutdown signal')
-        self._req_rep(LockerServer.DONE)
+        self._req_rep(ZMQServer.DONE)
 
     def test_ping(self):
         """Connection test"""
         self.start(test_connection=False)
-        response = self._req_rep(LockerServer.PING)
-        if response != LockerServer.PONG:
+        response = self._req_rep(ZMQServer.PING)
+        if response != ZMQServer.PONG:
             raise RuntimeError('Connection Error to LockServer')
 
     def finalize(self):
@@ -472,22 +480,119 @@ class LockerClient(ReliableClient):
         return super(LockerClient, self)._req_rep_retry(request)
 
 
-class ForkAwareLockerClient(LockerClient):
-    """Locker Client that can detect forking of processes.
+class QueuingServerMessageListener(ZMQServer):
+    """ Manages the listening requests"""
 
-    In this case the context and socket are restarted.
+    SPACE = 'SPACE'  # for space in the queue
+    DATA = 'DATA'  # for sending data
+    SPACE_AVAILABLE = 'SPACE_AVAILABLE'
+    SPACE_NOT_AVAILABLE = 'SPACE_NOT_AVAILABLE'
+    STORING = 'STORING'
 
-    """
 
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        super(ForkAwareLockerClient, self).__init__(url, lock_name)
-        self._pid = None
+    def __init__(self, url, queue, queue_maxsize):
+        super(QueuingServerMessageListener, self).__init__(url)
+        self.queue = queue
+        if queue_maxsize == 0:
+            queue_maxsize = float('inf')
+        self.queue_maxsize = queue_maxsize
 
-    def __getstate__(self):
-        result_dict = super(ForkAwareLockerClient, self).__getstate__()
-        result_dict['_pid'] = None
-        return result_dict
+    def listen(self):
+        """ Handles listening requests from the client.
 
+        There are 4 types of requests:
+
+        1- Check space in the queue
+        2- Tests the socket
+        3- If there is a space, it sends data
+        4- after data is sent, puts it to queue for storing
+
+        """
+        count = 0
+        self._start()
+        while True:
+            result = self._socket.recv_pyobj()
+
+            if isinstance(result, tuple):
+                request, data = result
+            else:
+                request = result
+                data = None
+
+            if request == self.SPACE:
+                if self.queue.qsize() + count < self.queue_maxsize:
+                    self._socket.send_string(self.SPACE_AVAILABLE)
+                    count += 1
+                else:
+                    self._socket.send_string(self.SPACE_NOT_AVAILABLE)
+
+            elif request == self.PING:
+                self._socket.send_string(self.PONG)
+
+            elif request == self.DATA:
+                self._socket.send_string(self.STORING)
+                self.queue.put(data)
+                count -= 1
+
+            elif request == self.DONE:
+                self._socket.send_string(ZMQServer.CLOSED)
+                self.queue.put(('DONE', [], {}))
+                self._close()
+                break
+
+            else:
+                raise RuntimeError('I did not understand your request %s' % request)
+
+
+class QueuingServer(HasLogger):
+    """ Implements server architecture for Queueing"""
+
+    def __init__(self, url, storage_service, queue_maxsize, gc_interval):
+        self._url = url
+        self._storage_service = storage_service
+        self._queue_maxsize = queue_maxsize
+        self._gc_interval = gc_interval
+
+    def run(self):
+        main_queue = queue.Queue(maxsize=self._queue_maxsize)
+        server_message_listener = QueuingServerMessageListener(self._url, main_queue, self._queue_maxsize)
+        storage_writer = QueueStorageServiceWriter(self._storage_service, main_queue, self._gc_interval)
+
+        server_queue = Thread(target=server_message_listener.listen, args=())
+        server_queue.start()
+
+        storage_writer.run()
+        server_queue.join()
+
+
+class QueuingClient(ReliableClient):
+    """ Manages the returning requests"""
+
+    def put(self, data, block=True):
+        """ If there is space it sends data to server
+
+        If no space in the queue
+
+        It returns the request in every 10 millisecond
+
+        until there will be space in the queue.
+
+        """
+
+        self.start(test_connection=False)
+        while True:
+            response = self._req_rep(QueuingServerMessageListener.SPACE)
+            if response == QueuingServerMessageListener.SPACE_AVAILABLE:
+                self._req_rep((QueuingServerMessageListener.DATA, data))
+                break
+            else:
+                time.sleep(0.01)
+
+    def _send_request(self, request):
+        return self._socket.send_pyobj(request)
+
+
+class ForkDetector(HasLogger):
     def _detect_fork(self):
         """Detects if lock client was forked.
 
@@ -503,6 +608,45 @@ class ForkAwareLockerClient(LockerClient):
                 self._logger.debug('Fork detected: My pid `%s` != os pid `%s`. '
                                    'Restarting connection.' % (str(self._pid), str(current_pid)))
                 self._context = None
+                self._pid = current_pid
+
+
+class ForkAwareQueuingClient(QueuingClient, ForkDetector):
+    """ Queuing Client can detect forking of process.
+
+    In this case the context and socket are restarted.
+
+    """
+
+    def __init__(self, url='tcp://127.0.0.1:22334'):
+        super(ForkAwareQueuingClient, self).__init__(url)
+        self._pid = None
+
+    def __getstate__(self):
+        result_dict = super(ForkAwareQueuingClient, self).__getstate__()
+        result_dict['_pid'] = None
+        return result_dict
+
+    def start(self, test_connection=True):
+        self._detect_fork()
+        super(ForkAwareQueuingClient, self).start(test_connection)
+
+
+class ForkAwareLockerClient(LockerClient, ForkDetector):
+    """Locker Client that can detect forking of processes.
+
+    In this case the context and socket are restarted.
+
+    """
+
+    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
+        super(ForkAwareLockerClient, self).__init__(url, lock_name)
+        self._pid = None
+
+    def __getstate__(self):
+        result_dict = super(ForkAwareLockerClient, self).__getstate__()
+        result_dict['_pid'] = None
+        return result_dict
 
     def start(self, test_connection=True):
         """Checks for forking and starts/restarts if desired"""
@@ -628,13 +772,13 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
             self.conn.send_bytes(chunk)
             # print('S: sent chunk %s' % chunk[0:10])
             # print('S: recv signal')
-            self.conn.recv() # wait for signal that message was received
+            self.conn.recv()  # wait for signal that message was received
             # print('S: read signal')
         # print('S: sending True')
         self.conn.send(True)
         # print('S: sent True')
         # print('S: recving last signal')
-        self.conn.recv() # wait for signal that message was received
+        self.conn.recv()  # wait for signal that message was received
         # print('S: read last signal')
         # print('S; DONE SENDING data')
 
@@ -911,7 +1055,5 @@ class ReferenceStore(HasLogger):
     def store_references(self, references):
         """Stores references to disk and may collect garbage."""
         for trajectory_name in references:
-            self._storage_service.store(pypetconstants.LIST,
-                                  references[trajectory_name],
-                                  trajectory_name=trajectory_name)
+            self._storage_service.store(pypetconstants.LIST, references[trajectory_name], trajectory_name=trajectory_name)
         self._check_and_collect_garbage()
