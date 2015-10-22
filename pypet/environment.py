@@ -152,9 +152,9 @@ def _configure_frozen_scoop(kwargs):
     scoop_rev = kwargs.pop('scoop_rev')
     # Check if we need to reconfigure SCOOP
     try:
-        old_scoop_rev = _frozen_pool_single_run.kwargs['scoop_rev']
+        old_scoop_rev = _frozen_scoop_single_run.kwargs['scoop_rev']
         configured = old_scoop_rev == scoop_rev
-    except AttributeError:
+    except (AttributeError, KeyError):
         old_scoop_rev = None
         configured = False
     if not configured:
@@ -2647,7 +2647,7 @@ class Environment(HasLogger):
                                              'is realized as a shared constant, so'
                                              'over time your memory might get bloated. '
                                              'If you experience trouble, '
-                                             'restart your python intepreter and '
+                                             'restart your python interpreter and '
                                              'SCOOP.')
                     _frozen_scoop_single_run.kwargs = {}
 
