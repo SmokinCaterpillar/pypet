@@ -590,12 +590,18 @@ class Environment(HasLogger):
 
         :const:`~pypet.pypetconstant.WRAP_MODE_NETLOCK` ('NETLOCK')
 
-            Similar to 'LOCK' but locks can be shared acrross a network.
+            Similar to 'LOCK' but locks can be shared across a network.
             Sharing is established by running a lock server that
             distributes locks to the individual processes.
             Can be used with SCOOP_ if all hosts have access to
             a shared home directory.
             Allows loading of data during runs.
+
+        :const:`~pypet.pypetconstant.WRAP_MODE_NETQUEUE` ('NETQUEUE')
+
+            Similar to 'QUEUE' but data can be shared across a network.
+            Sharing is established by running a queue server that
+            distributes locks to the individual processes.
 
          If you don't want wrapping at all use
          :const:`~pypet.pypetconstants.WRAP_MODE_NONE` ('NONE')

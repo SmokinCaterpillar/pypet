@@ -260,12 +260,18 @@ because most of the time the default settings are sufficient.
 
     :const:`~pypet.pypetconstant.WRAP_MODE_NETLOCK` ('NETLOCK')
 
-        Similar to 'LOCK' but locks can be shared acrross a network.
+        Similar to 'LOCK' but locks can be shared across a network.
         Sharing is established by running a lock server that
         distributes locks to the individual processes.
         Can be used with SCOOP_ if all hosts have access to
         a shared home directory.
         Allows loading of data during runs.
+
+    :const:`~pypet.pypetconstant.WRAP_MODE_NETQUEUE` ('NETQUEUE')
+
+        Similar to 'QUEUE' but data can be shared across a network.
+        Sharing is established by running a queue server that
+        distributes locks to the individual processes.
 
     If you don't want wrapping at all use
     :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
@@ -771,7 +777,7 @@ box. However, if you want multiprocessing, the environment will automatically pr
 classes for the HDF5 storage service to allow safe data storage.
 There are a couple different modes that are supported. You can choose between them via setting
 ``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, ``'PIPE'``,
-``'LOCAL'``, and ``'NETLOCK'`` wrapping. If you
+``'LOCAL'``,``'NETLOCK'``, and ``'NETQUEUE'`` wrapping. If you
 have your own service that is already thread safe you can also choose ``'NONE'`` to skip wrapping.
 
 If you chose the ``'QUEUE'`` mode, there will be an additional process spawned that is the only
@@ -822,6 +828,10 @@ SCOOP_ if all hosts have access to a shared home directory.
 However, installing SCOOP_ will automatically install pyzmq_
 if it is missing.
 
+``'NETQUEUE'`` wrapping is similar to ``'QUEUE'`` wrapping but data
+can be shared across a computer network. Data is collected by a server process that listens
+at a particular ``port``. As above this wrap mode can be used with SCOOP_ and requires pyzmq_.
+
 Finally, there also exists a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
@@ -861,7 +871,7 @@ Simply create your environment as follows
 
 and start your script via ``python -m scoop my_script.py``.
 If using SCOOP_, the only multiprocessing wrap modes currently supported are
-``'LOCAL'`` and ``'NETLOCK'``. That is in the former case
+``'LOCAL'``, ``'NETLOCK'``, and ``'NETQUEUE'``. That is in the former case
 all your data is actually stored by your local main python process and
 results are collected from all workers. The latter means locks are shared across
 the computer network to allow only one process to write data at a time. This requires
