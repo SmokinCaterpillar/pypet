@@ -413,7 +413,7 @@ class CapTest(EnvironmentTest):
                                                     'tests',
                                                     'HDF5',
                                                     '%s.hdf5' % self.trajname))
-        self.logfolder = make_temp_dir(os.path.join('experiments','tests','Log'))
+        self.logfolder = make_temp_dir(os.path.join('experiments', 'tests', 'Log'))
 
         random.seed()
 
@@ -434,7 +434,8 @@ class CapTest(EnvironmentTest):
                           niceness = check_nice(11),
                           **cap_dict)
 
-        logging.getLogger('test').error('Using Cap: %s' % str(cap_dict))
+        logging.getLogger('test').error('Using Cap: %s and file: %s' % (str(cap_dict),
+                                                                        str(self.filename)))
         # Loop through all possible cap configurations
         # and test one at a time
         CapTest.cap_count += 1
