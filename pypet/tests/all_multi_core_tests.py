@@ -14,9 +14,9 @@ tests_include=set(('MultiprocNoPoolLockTest',
                    'MultiprocNoPoolQueueLoggingTest',
                    'MultiprocFrozenPoolLocalTest',
                    'TestMPImmediatePostProcQueue',
-                   'MultiprocNoPoolNetlockTest',
                    'MultiprocStorageNetlockTest',
-                   'MultiprocSCOOPLocalTest'))
+                   'MultiprocSCOOPSortNetqueueTest'))
+
 big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocNoPoolQueueTest',
@@ -31,8 +31,8 @@ tests_include=set((#'MultiprocNoPoolQueueTest',
                    'MultiprocPoolLockLoggingTest',
                    'MultiprocNoPoolSortLocalTest',
                    'TestMPImmediatePostProcLocal',
-                   'MultiprocPoolSortNetlockTest',
-                   'MultiprocSCOOPSortLocalTest'))
+                   'MultiprocSCOOPSortLocalTest',
+                   'MultiprocFrozenSCOOPLocalTest'))
 big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set((#'MultiprocFrozenPoolLockTest',
@@ -44,7 +44,8 @@ tests_include=set((#'MultiprocFrozenPoolLockTest',
                    'MultiprocStorageNoPoolLockTest',
                    'MultiprocNoPoolLockLoggingTest',
                    'MultiprocFrozenSCOOPSortNetlockTest',
-                   'MultiprocFrozenSCOOPSortLocalTest'))
+                   #'MultiprocFrozenSCOOPSortLocalTest',
+                   'MultiprocSCOOPNetqueueTest'))
 big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 tests_include=set(('MultiprocFrozenPoolQueueTest',
@@ -58,7 +59,6 @@ tests_include=set(('MultiprocFrozenPoolQueueTest',
                    'MultiprocLinkLocalTest',
                    'TestMPImmediatePostProcPipe',
                    'MultiprocSCOOPNetlockTest',
-                   'MultiprocNoPoolSortNetlockTest',
                    'MultiprocFrozenSCOOPLocalTest'))
 big_suite_4 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 

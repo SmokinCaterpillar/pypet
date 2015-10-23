@@ -48,12 +48,12 @@ def create_param_dict(param_dict):
     param_dict['Numpy_2D']['double'] = np.matrix([[1.0,2.0],[3.0,4.0]])
     param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
 
-    spsparse_csc = spsp.lil_matrix((2222,22))
+    spsparse_csc = spsp.lil_matrix((222,22))
     spsparse_csc[1,2] = 44.6
     spsparse_csc[1,9] = 44.5
     spsparse_csc = spsparse_csc.tocsc()
 
-    spsparse_csr = spsp.lil_matrix((2222,22))
+    spsparse_csr = spsp.lil_matrix((222,22))
     spsparse_csr[1,3] = 44.7
     spsparse_csr[17,17] = 44.755555
     spsparse_csr = spsparse_csr.tocsr()
@@ -236,10 +236,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
         except TypeError:
             pass
 
-        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
-            raise RuntimeError()
-        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
-            raise RuntimeError()
+        # if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
+        #     raise RuntimeError()
+        # if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
+        #     raise RuntimeError()
         if not traj.f_contains('results.runs.' + traj.v_crun + '.hhg', shortcuts=False):
             raise RuntimeError()
 
@@ -271,18 +271,21 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.f_get('DictsNFrame').f_set(myframe)
 
-        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2).v_comment='test'
+        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0),
+                          'Iamstring',
+                          (1,2,3), [4,5,6],
+                          zwei=2).v_comment='test'
         traj.f_add_derived_parameter('super.mega',33, comment='It is huuuuge!')
         traj.super.f_set_annotations(AgainATestAnnotations='I am a string!111elf')
 
-        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1, comment='p1')
-        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2, comment='p2')
-        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0, comment='p0')
+        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict2, protocol=1, comment='p1')
+        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict2, protocol=2, comment='p2')
+        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict2, protocol=0, comment='p0')
 
-        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csc', traj.csc_mat, 42).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.bsr', traj.bsr_mat, 52).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csr', traj.csr_mat, 62).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.dia', traj.dia_mat, 72).v_comment='sdsa'
 
         traj.sparse.v_comment = 'I contain sparse data!'
 

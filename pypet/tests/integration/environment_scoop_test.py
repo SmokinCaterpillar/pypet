@@ -106,13 +106,13 @@ from pypet.tests.testutils.data import unittest
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
-class MultiprocSCOOPLocalTest(EnvironmentTest):
+class MultiprocSCOOPNetqueueTest(EnvironmentTest):
 
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop'
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop'
 
     def set_mode(self):
-        super(MultiprocSCOOPLocalTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCAL
+        super(MultiprocSCOOPNetqueueTest, self).set_mode()
+        self.mode = pypetconstants.WRAP_MODE_NETQUEUE
         self.multiproc = True
         self.freeze_input = False
         self.ncores = 4
@@ -168,19 +168,19 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
     #     return super(MultiprocSCOOPLocalTest, self).test_run()
 
 
-@unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
-class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop', 'freeze_input'
-
-    def set_mode(self):
-        super(MultiprocFrozenSCOOPSortLocalTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_LOCAL
-        self.freeze_input = True
-        self.multiproc = True
-        self.ncores = 4
-        self.use_pool = False
-        self.use_scoop = True
+# @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
+# class MultiprocFrozenSCOOPSortLocalTest(ResultSortTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop', 'freeze_input'
+#
+#     def set_mode(self):
+#         super(MultiprocFrozenSCOOPSortLocalTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_LOCAL
+#         self.freeze_input = True
+#         self.multiproc = True
+#         self.ncores = 4
+#         self.use_pool = False
+#         self.use_scoop = True
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -250,7 +250,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.use_pool = False
         self.use_scoop = True
         self.port = None
-        self.timeout = 9999.99
+        self.timeout = 1099.99
         # self.port = 'tcp://127.0.0.1:22334'
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')

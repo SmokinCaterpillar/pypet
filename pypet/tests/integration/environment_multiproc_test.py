@@ -89,47 +89,47 @@ class MultiprocPoolSortQueueTest(ResultSortTest):
         self.use_pool=True
 
 
-@unittest.skipIf(zmq is None, 'Can only be run with zmq')
-class MultiprocNoPoolNetlockTest(EnvironmentTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'nopool',
-
-    def set_mode(self):
-        super(MultiprocNoPoolNetlockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_NETLOCK
-        self.multiproc = True
-        self.ncores = 2
-        self.use_pool=False
-        self.niceness = check_nice(17)
-        self.url = get_random_port_url()
-
-
-@unittest.skipIf(zmq is None, 'Can only be run with zmq')
-class MultiprocPoolSortNetlockTest(ResultSortTest):
-
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
-
-    def set_mode(self):
-        super(MultiprocPoolSortNetlockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_NETLOCK
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=True
-        self.url = get_random_port_url()
+# @unittest.skipIf(zmq is None, 'Can only be run with zmq')
+# class MultiprocNoPoolNetlockTest(EnvironmentTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'nopool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolNetlockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_NETLOCK
+#         self.multiproc = True
+#         self.ncores = 2
+#         self.use_pool=False
+#         self.niceness = check_nice(17)
+#         self.url = get_random_port_url()
 
 
-@unittest.skipIf(zmq is None, 'Can only be run with zmq')
-class MultiprocNoPoolSortNetlockTest(ResultSortTest):
+# @unittest.skipIf(zmq is None, 'Can only be run with zmq')
+# class MultiprocPoolSortNetlockTest(ResultSortTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
+#
+#     def set_mode(self):
+#         super(MultiprocPoolSortNetlockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_NETLOCK
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=True
+#         self.url = get_random_port_url()
 
-    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
 
-    def set_mode(self):
-        super(MultiprocNoPoolSortNetlockTest, self).set_mode()
-        self.mode = pypetconstants.WRAP_MODE_NETLOCK
-        self.multiproc = True
-        self.ncores = 3
-        self.use_pool=False
-        self.url = None
+# @unittest.skipIf(zmq is None, 'Can only be run with zmq')
+# class MultiprocNoPoolSortNetlockTest(ResultSortTest):
+#
+#     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'pool',
+#
+#     def set_mode(self):
+#         super(MultiprocNoPoolSortNetlockTest, self).set_mode()
+#         self.mode = pypetconstants.WRAP_MODE_NETLOCK
+#         self.multiproc = True
+#         self.ncores = 3
+#         self.use_pool=False
+#         self.url = None
 
 
 class MultiprocPoolSortLockTest(ResultSortTest):

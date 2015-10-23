@@ -97,13 +97,13 @@ def with_niceness(traj):
 
 
 def add_large_data(traj):
-    np_array = np.random.rand(100,1000,10)
+    np_array = np.random.rand(100, 1000, 10)
     traj.f_add_result('l4rge', np_array)
     traj.f_store_item('l4rge')
     traj.f_remove_item('l4rge')
 
     array_list = []
-    for irun in range(1000):
+    for irun in range(111):
         array_list.append(np.random.rand(10))
     traj.f_add_result('m4ny', *array_list)
 
