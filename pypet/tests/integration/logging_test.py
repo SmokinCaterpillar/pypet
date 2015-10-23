@@ -28,9 +28,11 @@ class LogWhenStored(Result):
         self._logger.log(self._level, 'STORE_Test! in parameter')
         return super(LogWhenStored, self)._store()
 
+
 def add_result(traj, level=logging.ERROR):
     traj.f_ares(LogWhenStored, 'logging.test',
                 42, level=level, comment='STORE_Test!')
+
 
 def log_error(traj):
     add_result(traj)
@@ -42,6 +44,7 @@ def log_wo_error_levels(traj):
     logging.getLogger('pypet.DEBUG').debug('DEBUG_Test!')
     logging.getLogger('pypet.INFO').info('INFO_Test!')
     logging.getLogger('pypet.WARNING').warning('WARNING_Test!')
+
 
 def log_all_levels(traj):
     add_result(traj)
@@ -156,6 +159,8 @@ class LoggingTest(TrajectoryComparator):
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
+            if len(text) == 0:
+                continue
             count = text.count('INFO_Test!')
             total_info_count += count
             error_count = text.count('ERROR_Test!')
@@ -272,6 +277,8 @@ class LoggingTest(TrajectoryComparator):
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
+            if len(text) == 0:
+                continue
             count = text.count('INFO_Test!')
             total_info_count += count
             error_count = text.count('ERROR_Test!')
@@ -390,6 +397,8 @@ class LoggingTest(TrajectoryComparator):
         for file in file_list:
             with open(os.path.join(log_path, file), mode='r') as fh:
                 text = fh.read()
+            if len(text) == 0:
+                continue
             count = text.count('INFO_Test!')
             total_info_count += count
             error_count = text.count('ERROR_Test!')
