@@ -193,7 +193,7 @@ def try_make_dirs(filename):
 
     """
     try:
-        dirname = os.path.dirname(os.path.abspath(filename))
+        dirname = os.path.dirname(os.path.normpath(filename))
         racedirs(dirname)
     except Exception as exc:
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
@@ -443,10 +443,10 @@ class LoggingManager(object):
                 newstring = rename_func(string)
                 if make_dirs:
                     try_make_dirs(newstring)
-                # # To work with windows path specifications we need this replacement:
-                # raw_string = string.replace('\\', '\\\\')
-                # raw_newstring = newstring.replace('\\', '\\\\')
-                args = args.replace(string, newstring)
+                # To work with windows path specifications we need this replacement:
+                raw_string = string.replace('\\', '\\\\')
+                raw_newstring = newstring.replace('\\', '\\\\')
+                args = args.replace(raw_string, raw_newstring)
                 replace = True
         if replace:
             parser.set(section, option, args)
