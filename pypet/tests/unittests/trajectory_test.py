@@ -107,6 +107,36 @@ class TrajectoryTest(unittest.TestCase):
     #     self.assertEqual(self.traj.new, 5)
     #     self.assertEqual(self.traj.very.new, 4)
 
+    def test_re_raise_old_wildcard_error(self):
+        self.traj.v_idx = 0
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn(self.traj.v_crun, str(exc))
+                raise
+        self.traj.f_add_result('hhh.crun.ewrrew', 42)
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn(self.traj.v_crun, str(exc))
+                raise
+        self.traj.v_idx = -1
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn('ALL', str(exc))
+                raise
+        self.traj.f_add_result('hhh.crun.ewrrew', 42)
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn('ALL', str(exc))
+                raise
+
     def test_lazy_setitem(self):
         self.traj.v_lazy_adding = True
         self.traj['r_1.very.very.new'] = 4

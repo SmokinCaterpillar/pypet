@@ -2285,34 +2285,44 @@ class NaturalNamingInterface(HasLogger):
                 if root.f_wildcard(key, -1) not in self._nodes_and_leaves:
                     try_auto_load_directly2 = True
 
-        if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
-            raise AttributeError('%s is not part of your trajectory or it\'s tree.' %
-                                 str(name))
-
         run_idx = root.v_idx
+        wildcard_exception = None # Helper variable to store the exception thrown in case
+        # of using a wildcard, to be re-thrown later on.
+
+        if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
+            for wildcard_pos, wildcard in wildcard_positions:
+                split_name[wildcard_pos] = root.f_wildcard(wildcard, run_idx)
+            raise AttributeError('%s is not part of your trajectory or it\'s tree. ' %
+                                 str('.'.join(split_name)))
 
         if run_idx > -1:
             # If we count the wildcard we have to perform the search twice,
             # one with a run name and one with the dummy:
             with self._disable_logging:
                 try:
-                    if wildcard_positions:
-                        for wildcard_pos, wildcard in wildcard_positions:
-                            split_name[wildcard_pos] = root.f_wildcard(wildcard, run_idx)
+                    for wildcard_pos, wildcard in wildcard_positions:
+                        split_name[wildcard_pos] = root.f_wildcard(wildcard, run_idx)
 
                     result = self._perform_get(node, split_name, fast_access,
                                                shortcuts, max_depth, auto_load, with_links,
                                                try_auto_load_directly1)
                     return result
-                except (pex.DataNotInStorageError, AttributeError):
-                    pass
+                except (pex.DataNotInStorageError, AttributeError) as exc:
+                    wildcard_exception = exc
+
         if wildcard_positions:
             for wildcard_pos, wildcard in wildcard_positions:
                 split_name[wildcard_pos] = root.f_wildcard(wildcard, -1)
-
-        return self._perform_get(node, split_name, fast_access,
-                                 shortcuts, max_depth, auto_load, with_links,
-                                 try_auto_load_directly2)
+        try:
+            return self._perform_get(node, split_name, fast_access,
+                                     shortcuts, max_depth, auto_load, with_links,
+                                     try_auto_load_directly2)
+        except (pex.DataNotInStorageError, AttributeError):
+            # Re-raise the old error in case it was thronw already
+            if wildcard_exception is not None:
+                raise wildcard_exception
+            else:
+                raise
 
     def _perform_get(self, node, split_name, fast_access,
                      shortcuts, max_depth, auto_load, with_links,

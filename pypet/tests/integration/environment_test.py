@@ -754,7 +754,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.overview.results_summary=0
         self.make_run()
 
-
         hdf5file = pt.openFile(self.filename, mode='a')
 
         ncomments = {}
