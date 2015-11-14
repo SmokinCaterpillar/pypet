@@ -327,7 +327,10 @@ def port_to_tcp(port=None):
     """Returns local tcp address for a given `port`, automatic port if `None`"""
     #address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
     domain_name = socket.getfqdn()
-    addr_list = socket.getaddrinfo(domain_name,None)
+    try:
+        addr_list = socket.getaddrinfo(domain_name, None)
+    except Exception:
+        addr_list = socket.getaddrinfo('localhost', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     address =  'tcp://' + sockaddr[0]
     if port is None:
