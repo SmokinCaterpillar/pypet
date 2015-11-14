@@ -219,7 +219,8 @@ def make_trajectory_name(testcase):
     randintstr = str(random.randint(0, 10 ** 4))
     testid = testcase.id()
     split_names = testid.split('.')
-    name = 'T__' + '__'.join(split_names[-2:]) + '__' + randintstr
+    #name = 'T__' + '__'.join(split_names[-2:]) + '__' + randintstr
+    name = 'T__' + split_names[-1] + '__' + randintstr
     maxlen = pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH - 22
 
     if len(name) > maxlen:
