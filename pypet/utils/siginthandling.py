@@ -1,39 +1,72 @@
+"""Module that handles KeyboardInterrupt to exit gracefully"""
+
+
+__author__ = 'Robert Meyer'
+
+
 import signal
 import sys
-import functools
 
 
-SIGINT = '__SIGINT__'
-terminated = False
+class _SigintHandler(object):
 
+    SIGINT = '__SIGINT__'
 
-def _handle_sigint(signum, frame):
-    global terminated
-    if terminated:
-        prompt = 'Exiting immediately!'
-        raise KeyboardInterrupt(prompt)
-    else:
-        terminated = True
-        prompt = ('\nYou killed the process(es) via `SIGINT` (`CTRL+C`). I am trying to exit '
-                  'gracefully. Using `SIGINT` (`CTRL+C`) again will cause an immediate exit.\n')
-        sys.stderr.write(prompt)
+    def __init__(self):
+        self.original_handler = signal.getsignal(signal.SIGINT)
+        self.terminated = False  # variable to signal if SIGINT has been encountered before
 
+    def finalize(self):
+        self.terminated = False
+        signal.signal(signal.SIGINT, self.original_handler)
 
-def sigint_handling(add_sigterm=True):
-    def wrapper(func):
-        @functools.wraps(func)
-        def new_func(*args, **kwargs):
-            if terminated:
-                if add_sigterm:
-                    return (SIGINT, None)
+    def _handle_sigint(self, signum, frame):
+        """Handler of SIGINT
+
+        Does nothing if SIGINT is encountered once but raises a KeyboardInterrupt in case it
+        is encountered twice.
+        immediatly.
+
+        """
+        if self.terminated:
+            prompt = 'Exiting immediately!'
+            raise KeyboardInterrupt(prompt)
+        else:
+            self.terminated = True
+            prompt = ('\nYou killed the process(es) via `SIGINT` (`CTRL+C`). I am trying to exit '
+                      'gracefully. Using `SIGINT` (`CTRL+C`) again will cause an immediate exit.\n')
+            sys.stderr.write(prompt)
+
+    def __call__(self, exit_graceful, add_sigint, func, *args, **kwargs):
+        """Allows a function to end gracefully on SIGINT (CTRL+C).
+
+        All further calls of the wrapped function will return `None` immediately as soon as
+        SIGINT is encountered once.
+
+        :return:
+
+            ``('__SIGINT__', result)```result`` is ``None`` if function
+            is called again after a SIGINT.
+
+        """
+        if exit_graceful:
+            if signal.getsignal(signal.SIGINT) is not self._handle_sigint:
+                signal.signal(signal.SIGINT, self._handle_sigint)
+            # sys.__stdout__.write('HA %s' % signal.getsignal(signal.SIGINT))
+            if self.terminated:
+                if add_sigint:
+                    return (self.SIGINT, None)
                 else:
                     return None
-            current_handler = signal.getsignal(signal.SIGINT)
-            if current_handler is not _handle_sigint:
-                signal.signal(signal.SIGINT, _handle_sigint)
             result = func(*args, **kwargs)
-            if terminated and add_sigterm:
-                result = (SIGINT, result)
+            if self.terminated and add_sigint:
+                result = (self.SIGINT, result)
             return result
-        return new_func
-    return wrapper
+        else:
+            # sys.__stdout__.write('HERE %s' % signal.getsignal(signal.SIGINT))
+            return func(*args, **kwargs)
+
+
+sigint_handling = _SigintHandler()
+
+
