@@ -80,7 +80,7 @@ from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
-from pypet.utils.sigtermhandling import sigterm_handling, SIGTERM
+from pypet.utils.siginthandling import sigint_handling, SIGINT
 from pypet.utils.helpful_functions import is_debug, result_sort, format_time, port_to_tcp, \
     racedirs
 from pypet.utils.storagefactory import storage_factory
@@ -237,7 +237,7 @@ def _configure_niceness(kwargs):
             psutil.Process().nice(niceness)
 
 
-@sigterm_handling
+@sigint_handling(add_sigterm=True)
 def _single_run(kwargs):
     """ Performs a single run of the experiment.
 
@@ -324,7 +324,7 @@ def _single_run(kwargs):
         raise
 
 
-@sigterm_handling
+@sigint_handling(add_sigterm=True)
 def _wrap_handling(kwargs):
     """ Starts running a queue handler and creates a log file for the queue."""
     _configure_logging(kwargs, extract=False)
@@ -2461,7 +2461,7 @@ class Environment(HasLogger):
             except Exception:
                 pass  # We cannot find the source, just leave it
 
-    @sigterm_handling
+    @sigint_handling(add_sigterm=False)
     def _inner_run_loop(self, results):
         """Performs the inner loop of the run execution"""
         start_run_idx = self._current_idx
@@ -2493,7 +2493,7 @@ class Environment(HasLogger):
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
-                    result, n = self._check_result_and_store_references(result, results,
+                    n = self._check_result_and_store_references(result, results,
                                                                         n, total_runs)
 
             repeat = False
@@ -2538,10 +2538,10 @@ class Environment(HasLogger):
         return n
 
     def _check_result_and_store_references(self, result, results, n, total_runs):
-        """Checks for SIGTERM and if reference wrapping and stores references."""
-        if result[0] == SIGTERM:
+        """Checks for SIGINT and if reference wrapping and stores references."""
+        if result[0] == SIGINT:
             self._stop_iteration = True
-            result = result[1]  # If SIGTERM result is a nested tuple
+            result = result[1]  # If SIGINT result is a nested tuple
         if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._multiproc_wrapper.store_references(result[2])
         if result is not None:
