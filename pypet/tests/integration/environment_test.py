@@ -990,6 +990,8 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    @unittest.skipIf(compat.python_major == 2 and compat.python_minor == 6,
+                     'Does not run under 2.6')
     def test_graceful_exit(self):
 
         ###Explore

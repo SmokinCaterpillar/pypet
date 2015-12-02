@@ -2388,6 +2388,7 @@ class Environment(HasLogger):
                 self._inner_run_loop(results)
             finally:
                 self._traj._run_by_environment = False
+                self._stop_iteration = False
                 if self._graceful_exit:
                     sigint_handling.finalize()
 
