@@ -52,7 +52,7 @@ class _SigintHandler(object):
         if exit_graceful:
             if signal.getsignal(signal.SIGINT) is not self._handle_sigint:
                 signal.signal(signal.SIGINT, self._handle_sigint)
-            # sys.__stdout__.write('HA %s' % signal.getsignal(signal.SIGINT))
+            #sys.__stdout__.write('HA %s' % signal.getsignal(signal.SIGINT))
             if self.terminated:
                 if add_sigint:
                     return (self.SIGINT, None)
@@ -63,7 +63,7 @@ class _SigintHandler(object):
                 result = (self.SIGINT, result)
             return result
         else:
-            # sys.__stdout__.write('HERE %s' % signal.getsignal(signal.SIGINT))
+            #sys.__stdout__.write('HERE %s func %s' % (signal.getsignal(signal.SIGINT), func.__name__))
             return func(*args, **kwargs)
 
 
